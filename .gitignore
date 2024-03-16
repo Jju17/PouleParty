@@ -3,4 +3,4 @@
 *.dSYM.zip
 *.dSYM
 
-ChickenRush/GoogleService-Info.plist
+*GoogleService-Info.plist
