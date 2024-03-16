@@ -7,19 +7,49 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		6464E5092BA4A6AA0039C387 /* Selection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6464E5082BA4A6AA0039C387 /* Selection.swift */; };
+		6464E50B2BA4A8280039C387 /* Chicken.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6464E50A2BA4A8280039C387 /* Chicken.swift */; };
+		6464E50D2BA4A82F0039C387 /* Hunter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6464E50C2BA4A82F0039C387 /* Hunter.swift */; };
+		6464E50F2BA4AA010039C387 /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6464E50E2BA4AA010039C387 /* App.swift */; };
+		6464E5122BA4BAAC0039C387 /* CountdownView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6464E5112BA4BAAC0039C387 /* CountdownView.swift */; };
+		6464E5152BA4BB770039C387 /* DateComponents+Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6464E5142BA4BB770039C387 /* DateComponents+Utils.swift */; };
+		6464E5172BA4BBA40039C387 /* Date+Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6464E5162BA4BBA40039C387 /* Date+Utils.swift */; };
+		6464E5192BA5C3230039C387 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 6464E5182BA5C3230039C387 /* GoogleService-Info.plist */; };
+		6464E51C2BA5C3ED0039C387 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 6464E51B2BA5C3ED0039C387 /* FirebaseAnalytics */; };
+		6464E51E2BA5C3ED0039C387 /* FirebaseAnalyticsSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 6464E51D2BA5C3ED0039C387 /* FirebaseAnalyticsSwift */; };
+		6464E5202BA5C3ED0039C387 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 6464E51F2BA5C3ED0039C387 /* FirebaseAuth */; };
+		6464E5222BA5C3ED0039C387 /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = 6464E5212BA5C3ED0039C387 /* FirebaseCrashlytics */; };
+		6464E5242BA5C3ED0039C387 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 6464E5232BA5C3ED0039C387 /* FirebaseFirestore */; };
+		6464E5262BA5C3ED0039C387 /* FirebaseFirestoreCombine-Community in Frameworks */ = {isa = PBXBuildFile; productRef = 6464E5252BA5C3ED0039C387 /* FirebaseFirestoreCombine-Community */; };
+		6464E5282BA5C3ED0039C387 /* FirebaseFirestoreSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 6464E5272BA5C3ED0039C387 /* FirebaseFirestoreSwift */; };
+		6464E52A2BA5C3ED0039C387 /* FirebaseFunctions in Frameworks */ = {isa = PBXBuildFile; productRef = 6464E5292BA5C3ED0039C387 /* FirebaseFunctions */; };
+		6464E52C2BA5C3ED0039C387 /* FirebaseFunctionsCombine-Community in Frameworks */ = {isa = PBXBuildFile; productRef = 6464E52B2BA5C3ED0039C387 /* FirebaseFunctionsCombine-Community */; };
+		6464E52E2BA5C3ED0039C387 /* FirebaseInAppMessaging-Beta in Frameworks */ = {isa = PBXBuildFile; productRef = 6464E52D2BA5C3ED0039C387 /* FirebaseInAppMessaging-Beta */; };
 		647D9FC52BA3ABF2005B6566 /* ChickenRushApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 647D9FC42BA3ABF2005B6566 /* ChickenRushApp.swift */; };
-		647D9FC72BA3ABF2005B6566 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 647D9FC62BA3ABF2005B6566 /* ContentView.swift */; };
+		647D9FC72BA3ABF2005B6566 /* Map.swift in Sources */ = {isa = PBXBuildFile; fileRef = 647D9FC62BA3ABF2005B6566 /* Map.swift */; };
 		647D9FC92BA3ABF3005B6566 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 647D9FC82BA3ABF3005B6566 /* Assets.xcassets */; };
 		647D9FCD2BA3ABF3005B6566 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 647D9FCC2BA3ABF3005B6566 /* Preview Assets.xcassets */; };
+		64C21F0A2BA484CD003B25B3 /* ComposableArchitecture in Frameworks */ = {isa = PBXBuildFile; productRef = 64C21F092BA484CD003B25B3 /* ComposableArchitecture */; };
+		64C21F0C2BA486E6003B25B3 /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64C21F0B2BA486E6003B25B3 /* LocationManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		64620C802BA3C81C006B329C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		6464E5082BA4A6AA0039C387 /* Selection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Selection.swift; sourceTree = "<group>"; };
+		6464E50A2BA4A8280039C387 /* Chicken.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Chicken.swift; sourceTree = "<group>"; };
+		6464E50C2BA4A82F0039C387 /* Hunter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Hunter.swift; sourceTree = "<group>"; };
+		6464E50E2BA4AA010039C387 /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
+		6464E5112BA4BAAC0039C387 /* CountdownView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountdownView.swift; sourceTree = "<group>"; };
+		6464E5142BA4BB770039C387 /* DateComponents+Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DateComponents+Utils.swift"; sourceTree = "<group>"; };
+		6464E5162BA4BBA40039C387 /* Date+Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Date+Utils.swift"; sourceTree = "<group>"; };
+		6464E5182BA5C3230039C387 /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		647D9FC12BA3ABF2005B6566 /* ChickenRush.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ChickenRush.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		647D9FC42BA3ABF2005B6566 /* ChickenRushApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChickenRushApp.swift; sourceTree = "<group>"; };
-		647D9FC62BA3ABF2005B6566 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		647D9FC62BA3ABF2005B6566 /* Map.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Map.swift; sourceTree = "<group>"; };
 		647D9FC82BA3ABF3005B6566 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		647D9FCA2BA3ABF3005B6566 /* ChickenRush.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ChickenRush.entitlements; sourceTree = "<group>"; };
 		647D9FCC2BA3ABF3005B6566 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		64C21F0B2BA486E6003B25B3 /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -27,12 +57,51 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6464E51E2BA5C3ED0039C387 /* FirebaseAnalyticsSwift in Frameworks */,
+				6464E51C2BA5C3ED0039C387 /* FirebaseAnalytics in Frameworks */,
+				6464E5222BA5C3ED0039C387 /* FirebaseCrashlytics in Frameworks */,
+				6464E52C2BA5C3ED0039C387 /* FirebaseFunctionsCombine-Community in Frameworks */,
+				6464E52A2BA5C3ED0039C387 /* FirebaseFunctions in Frameworks */,
+				64C21F0A2BA484CD003B25B3 /* ComposableArchitecture in Frameworks */,
+				6464E52E2BA5C3ED0039C387 /* FirebaseInAppMessaging-Beta in Frameworks */,
+				6464E5202BA5C3ED0039C387 /* FirebaseAuth in Frameworks */,
+				6464E5242BA5C3ED0039C387 /* FirebaseFirestore in Frameworks */,
+				6464E5262BA5C3ED0039C387 /* FirebaseFirestoreCombine-Community in Frameworks */,
+				6464E5282BA5C3ED0039C387 /* FirebaseFirestoreSwift in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		6464E5072BA4A65A0039C387 /* Screens */ = {
+			isa = PBXGroup;
+			children = (
+				6464E5082BA4A6AA0039C387 /* Selection.swift */,
+				6464E50A2BA4A8280039C387 /* Chicken.swift */,
+				6464E50C2BA4A82F0039C387 /* Hunter.swift */,
+				647D9FC62BA3ABF2005B6566 /* Map.swift */,
+			);
+			name = Screens;
+			sourceTree = "<group>";
+		};
+		6464E5102BA4BA9E0039C387 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				6464E5112BA4BAAC0039C387 /* CountdownView.swift */,
+			);
+			name = Views;
+			sourceTree = "<group>";
+		};
+		6464E5132BA4BB660039C387 /* Utils */ = {
+			isa = PBXGroup;
+			children = (
+				6464E5142BA4BB770039C387 /* DateComponents+Utils.swift */,
+				6464E5162BA4BBA40039C387 /* Date+Utils.swift */,
+			);
+			name = Utils;
+			sourceTree = "<group>";
+		};
 		647D9FB82BA3ABF2005B6566 = {
 			isa = PBXGroup;
 			children = (
@@ -52,11 +121,17 @@
 		647D9FC32BA3ABF2005B6566 /* ChickenRush */ = {
 			isa = PBXGroup;
 			children = (
+				6464E5132BA4BB660039C387 /* Utils */,
+				6464E5102BA4BA9E0039C387 /* Views */,
+				6464E5072BA4A65A0039C387 /* Screens */,
+				64620C802BA3C81C006B329C /* Info.plist */,
+				6464E50E2BA4AA010039C387 /* App.swift */,
 				647D9FC42BA3ABF2005B6566 /* ChickenRushApp.swift */,
-				647D9FC62BA3ABF2005B6566 /* ContentView.swift */,
+				6464E5182BA5C3230039C387 /* GoogleService-Info.plist */,
 				647D9FC82BA3ABF3005B6566 /* Assets.xcassets */,
 				647D9FCA2BA3ABF3005B6566 /* ChickenRush.entitlements */,
 				647D9FCB2BA3ABF3005B6566 /* Preview Content */,
+				64C21F0B2BA486E6003B25B3 /* LocationManager.swift */,
 			);
 			path = ChickenRush;
 			sourceTree = "<group>";
@@ -79,12 +154,26 @@
 				647D9FBD2BA3ABF2005B6566 /* Sources */,
 				647D9FBE2BA3ABF2005B6566 /* Frameworks */,
 				647D9FBF2BA3ABF2005B6566 /* Resources */,
+				6464E52F2BA5C54D0039C387 /* Crashlytics */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
 			name = ChickenRush;
+			packageProductDependencies = (
+				64C21F092BA484CD003B25B3 /* ComposableArchitecture */,
+				6464E51B2BA5C3ED0039C387 /* FirebaseAnalytics */,
+				6464E51D2BA5C3ED0039C387 /* FirebaseAnalyticsSwift */,
+				6464E51F2BA5C3ED0039C387 /* FirebaseAuth */,
+				6464E5212BA5C3ED0039C387 /* FirebaseCrashlytics */,
+				6464E5232BA5C3ED0039C387 /* FirebaseFirestore */,
+				6464E5252BA5C3ED0039C387 /* FirebaseFirestoreCombine-Community */,
+				6464E5272BA5C3ED0039C387 /* FirebaseFirestoreSwift */,
+				6464E5292BA5C3ED0039C387 /* FirebaseFunctions */,
+				6464E52B2BA5C3ED0039C387 /* FirebaseFunctionsCombine-Community */,
+				6464E52D2BA5C3ED0039C387 /* FirebaseInAppMessaging-Beta */,
+			);
 			productName = ChickenRush;
 			productReference = 647D9FC12BA3ABF2005B6566 /* ChickenRush.app */;
 			productType = "com.apple.product-type.application";
@@ -113,6 +202,10 @@
 				Base,
 			);
 			mainGroup = 647D9FB82BA3ABF2005B6566;
+			packageReferences = (
+				64C21F082BA484CD003B25B3 /* XCRemoteSwiftPackageReference "swift-composable-architecture" */,
+				6464E51A2BA5C3ED0039C387 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
 			productRefGroup = 647D9FC22BA3ABF2005B6566 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -128,19 +221,55 @@
 			buildActionMask = 2147483647;
 			files = (
 				647D9FCD2BA3ABF3005B6566 /* Preview Assets.xcassets in Resources */,
+				6464E5192BA5C3230039C387 /* GoogleService-Info.plist in Resources */,
 				647D9FC92BA3ABF3005B6566 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		6464E52F2BA5C54D0039C387 /* Crashlytics */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}",
+				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF/${PRODUCT_NAME}",
+				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Info.plist",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/GoogleService-Info.plist",
+				"$(TARGET_BUILD_DIR)/$(EXECUTABLE_PATH)",
+			);
+			name = Crashlytics;
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# ⚠️ Have to be the last build phase, otherwise Crashlytics won't properly process dSYMs\n\n\"${BUILD_DIR%/Build/*}/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		647D9FBD2BA3ABF2005B6566 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				647D9FC72BA3ABF2005B6566 /* ContentView.swift in Sources */,
+				6464E5092BA4A6AA0039C387 /* Selection.swift in Sources */,
+				647D9FC72BA3ABF2005B6566 /* Map.swift in Sources */,
+				6464E5152BA4BB770039C387 /* DateComponents+Utils.swift in Sources */,
+				6464E5122BA4BAAC0039C387 /* CountdownView.swift in Sources */,
 				647D9FC52BA3ABF2005B6566 /* ChickenRushApp.swift in Sources */,
+				6464E5172BA4BBA40039C387 /* Date+Utils.swift in Sources */,
+				6464E50B2BA4A8280039C387 /* Chicken.swift in Sources */,
+				64C21F0C2BA486E6003B25B3 /* LocationManager.swift in Sources */,
+				6464E50F2BA4AA010039C387 /* App.swift in Sources */,
+				6464E50D2BA4A82F0039C387 /* Hunter.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -181,7 +310,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -199,6 +328,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -254,6 +384,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
@@ -274,6 +405,12 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ChickenRush/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Chicken Rush";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Need location";
+				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "Need location";
+				INFOPLIST_KEY_NSLocationUsageDescription = "Need location";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Need location";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -284,18 +421,19 @@
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 17.4;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.4;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = dev.rahier.ChickenRush;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.rahier.chickenrush;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -312,6 +450,12 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ChickenRush/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Chicken Rush";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Need location";
+				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "Need location";
+				INFOPLIST_KEY_NSLocationUsageDescription = "Need location";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Need location";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -322,18 +466,19 @@
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 17.4;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.4;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = dev.rahier.ChickenRush;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.rahier.chickenrush;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
@@ -359,6 +504,83 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		6464E51A2BA5C3ED0039C387 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 10.22.1;
+			};
+		};
+		64C21F082BA484CD003B25B3 /* XCRemoteSwiftPackageReference "swift-composable-architecture" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/pointfreeco/swift-composable-architecture.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.9.2;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		6464E51B2BA5C3ED0039C387 /* FirebaseAnalytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6464E51A2BA5C3ED0039C387 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalytics;
+		};
+		6464E51D2BA5C3ED0039C387 /* FirebaseAnalyticsSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6464E51A2BA5C3ED0039C387 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalyticsSwift;
+		};
+		6464E51F2BA5C3ED0039C387 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6464E51A2BA5C3ED0039C387 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		6464E5212BA5C3ED0039C387 /* FirebaseCrashlytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6464E51A2BA5C3ED0039C387 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCrashlytics;
+		};
+		6464E5232BA5C3ED0039C387 /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6464E51A2BA5C3ED0039C387 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+		6464E5252BA5C3ED0039C387 /* FirebaseFirestoreCombine-Community */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6464E51A2BA5C3ED0039C387 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = "FirebaseFirestoreCombine-Community";
+		};
+		6464E5272BA5C3ED0039C387 /* FirebaseFirestoreSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6464E51A2BA5C3ED0039C387 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestoreSwift;
+		};
+		6464E5292BA5C3ED0039C387 /* FirebaseFunctions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6464E51A2BA5C3ED0039C387 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFunctions;
+		};
+		6464E52B2BA5C3ED0039C387 /* FirebaseFunctionsCombine-Community */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6464E51A2BA5C3ED0039C387 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = "FirebaseFunctionsCombine-Community";
+		};
+		6464E52D2BA5C3ED0039C387 /* FirebaseInAppMessaging-Beta */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6464E51A2BA5C3ED0039C387 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = "FirebaseInAppMessaging-Beta";
+		};
+		64C21F092BA484CD003B25B3 /* ComposableArchitecture */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 64C21F082BA484CD003B25B3 /* XCRemoteSwiftPackageReference "swift-composable-architecture" */;
+			productName = ComposableArchitecture;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 647D9FB92BA3ABF2005B6566 /* Project object */;
 }

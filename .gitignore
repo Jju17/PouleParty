@@ -1,0 +1,6 @@
+## App packaging
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+GoogleService-Info.plist
