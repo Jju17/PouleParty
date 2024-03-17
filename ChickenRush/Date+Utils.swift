@@ -29,12 +29,12 @@ extension Date {
         return calendar.date(from: dateComponents) ?? Date()
     }
 
-    static func countdownDateComponents(from fromDate: Date, to toDate: Date) -> DateComponents {
-        return Calendar.current.dateComponents([.day, .hour, .minute, .second], from: fromDate, to: toDate)
+    func countdownDateComponents(to toDate: Date) -> DateComponents {
+        return Calendar.current.dateComponents([.day, .hour, .minute, .second], from: self, to: toDate)
     }
 
-    static func countDownString(from fromDate: Date, to toDate: Date) -> String {
-        let components = Date.countdownDateComponents(from: fromDate, to: toDate)
+    func countDownString(to toDate: Date) -> String {
+        let components = self.countdownDateComponents(to: toDate)
 
         return String(format: "%02d:%02d:%02d:%02d",
                               components.day ?? 00,

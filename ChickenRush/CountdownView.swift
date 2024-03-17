@@ -8,29 +8,24 @@
 import SwiftUI
 
 struct CountdownView: View {
-    @State var nowDate: Date = .now
-    @Binding var nextRadiusUpdate: Date
+    @Binding var nowDate: Date
+    @Binding var nextUpdateDate: Date?
 
-    private var timer: Timer {
-        Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
-            if nowDate < nextRadiusUpdate {
-                self.nowDate = Date()
-            }
-        }
+    var minutesRemaining: Int {
+        let dateCompponent = self.nowDate.countdownDateComponents(to: nextUpdateDate ?? .now)
+        return dateCompponent.minute ?? 00
     }
 
-    private var countDownComponents: DateComponents {
-        return Date.countdownDateComponents(from: self.nowDate, to: self.nextRadiusUpdate)
+    var secondsRemaining: Int {
+        let dateCompponent = self.nowDate.countdownDateComponents(to: nextUpdateDate ?? .now)
+        return dateCompponent.second ?? 00
     }
 
     var body: some View {
-        Text("Map update in: \(self.countDownComponents.formattedMinutes):\(self.countDownComponents.formattedSeconds)")
-            .onAppear {
-                let _ = self.timer
-            }
+        Text("Map update in: \(self.minutesRemaining):\(self.secondsRemaining)")
     }
 }
 
 #Preview {
-    CountdownView(nextRadiusUpdate: .constant(Date.now.addingTimeInterval(100)))
+    CountdownView(nowDate: .constant(.now), nextUpdateDate: .constant(.now.addingTimeInterval(60)))
 }

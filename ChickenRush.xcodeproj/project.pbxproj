@@ -8,7 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		6464E5092BA4A6AA0039C387 /* Selection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6464E5082BA4A6AA0039C387 /* Selection.swift */; };
-		6464E50B2BA4A8280039C387 /* Chicken.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6464E50A2BA4A8280039C387 /* Chicken.swift */; };
+		6464E50B2BA4A8280039C387 /* ChickenConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6464E50A2BA4A8280039C387 /* ChickenConfig.swift */; };
 		6464E50D2BA4A82F0039C387 /* Hunter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6464E50C2BA4A82F0039C387 /* Hunter.swift */; };
 		6464E50F2BA4AA010039C387 /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6464E50E2BA4AA010039C387 /* App.swift */; };
 		6464E5122BA4BAAC0039C387 /* CountdownView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6464E5112BA4BAAC0039C387 /* CountdownView.swift */; };
@@ -25,8 +25,14 @@
 		6464E52A2BA5C3ED0039C387 /* FirebaseFunctions in Frameworks */ = {isa = PBXBuildFile; productRef = 6464E5292BA5C3ED0039C387 /* FirebaseFunctions */; };
 		6464E52C2BA5C3ED0039C387 /* FirebaseFunctionsCombine-Community in Frameworks */ = {isa = PBXBuildFile; productRef = 6464E52B2BA5C3ED0039C387 /* FirebaseFunctionsCombine-Community */; };
 		6464E52E2BA5C3ED0039C387 /* FirebaseInAppMessaging-Beta in Frameworks */ = {isa = PBXBuildFile; productRef = 6464E52D2BA5C3ED0039C387 /* FirebaseInAppMessaging-Beta */; };
+		6464E5322BA5DBAA0039C387 /* Game.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6464E5312BA5DBAA0039C387 /* Game.swift */; };
+		6464E5342BA5DE190039C387 /* GeoPoint+Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6464E5332BA5DE190039C387 /* GeoPoint+Utils.swift */; };
+		6464E5362BA603F00039C387 /* ChickenLocation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6464E5352BA603F00039C387 /* ChickenLocation.swift */; };
+		6464E5382BA6090B0039C387 /* Graveyard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6464E5372BA6090B0039C387 /* Graveyard.swift */; };
+		6464E53A2BA61F9A0039C387 /* ChickenMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6464E5392BA61F9A0039C387 /* ChickenMap.swift */; };
+		6464E53D2BA744DD0039C387 /* ApiClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6464E53C2BA744DD0039C387 /* ApiClient.swift */; };
 		647D9FC52BA3ABF2005B6566 /* ChickenRushApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 647D9FC42BA3ABF2005B6566 /* ChickenRushApp.swift */; };
-		647D9FC72BA3ABF2005B6566 /* Map.swift in Sources */ = {isa = PBXBuildFile; fileRef = 647D9FC62BA3ABF2005B6566 /* Map.swift */; };
+		647D9FC72BA3ABF2005B6566 /* HunterMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 647D9FC62BA3ABF2005B6566 /* HunterMap.swift */; };
 		647D9FC92BA3ABF3005B6566 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 647D9FC82BA3ABF3005B6566 /* Assets.xcassets */; };
 		647D9FCD2BA3ABF3005B6566 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 647D9FCC2BA3ABF3005B6566 /* Preview Assets.xcassets */; };
 		64C21F0A2BA484CD003B25B3 /* ComposableArchitecture in Frameworks */ = {isa = PBXBuildFile; productRef = 64C21F092BA484CD003B25B3 /* ComposableArchitecture */; };
@@ -36,16 +42,22 @@
 /* Begin PBXFileReference section */
 		64620C802BA3C81C006B329C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		6464E5082BA4A6AA0039C387 /* Selection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Selection.swift; sourceTree = "<group>"; };
-		6464E50A2BA4A8280039C387 /* Chicken.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Chicken.swift; sourceTree = "<group>"; };
+		6464E50A2BA4A8280039C387 /* ChickenConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChickenConfig.swift; sourceTree = "<group>"; };
 		6464E50C2BA4A82F0039C387 /* Hunter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Hunter.swift; sourceTree = "<group>"; };
 		6464E50E2BA4AA010039C387 /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
 		6464E5112BA4BAAC0039C387 /* CountdownView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountdownView.swift; sourceTree = "<group>"; };
 		6464E5142BA4BB770039C387 /* DateComponents+Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DateComponents+Utils.swift"; sourceTree = "<group>"; };
 		6464E5162BA4BBA40039C387 /* Date+Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Date+Utils.swift"; sourceTree = "<group>"; };
 		6464E5182BA5C3230039C387 /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		6464E5312BA5DBAA0039C387 /* Game.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Game.swift; sourceTree = "<group>"; };
+		6464E5332BA5DE190039C387 /* GeoPoint+Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "GeoPoint+Utils.swift"; sourceTree = "<group>"; };
+		6464E5352BA603F00039C387 /* ChickenLocation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChickenLocation.swift; sourceTree = "<group>"; };
+		6464E5372BA6090B0039C387 /* Graveyard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Graveyard.swift; path = ../../../Documents/Graveyard.swift; sourceTree = "<group>"; };
+		6464E5392BA61F9A0039C387 /* ChickenMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChickenMap.swift; sourceTree = "<group>"; };
+		6464E53C2BA744DD0039C387 /* ApiClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApiClient.swift; sourceTree = "<group>"; };
 		647D9FC12BA3ABF2005B6566 /* ChickenRush.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ChickenRush.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		647D9FC42BA3ABF2005B6566 /* ChickenRushApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChickenRushApp.swift; sourceTree = "<group>"; };
-		647D9FC62BA3ABF2005B6566 /* Map.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Map.swift; sourceTree = "<group>"; };
+		647D9FC62BA3ABF2005B6566 /* HunterMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HunterMap.swift; sourceTree = "<group>"; };
 		647D9FC82BA3ABF3005B6566 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		647D9FCA2BA3ABF3005B6566 /* ChickenRush.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ChickenRush.entitlements; sourceTree = "<group>"; };
 		647D9FCC2BA3ABF3005B6566 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
@@ -78,9 +90,10 @@
 			isa = PBXGroup;
 			children = (
 				6464E5082BA4A6AA0039C387 /* Selection.swift */,
-				6464E50A2BA4A8280039C387 /* Chicken.swift */,
+				6464E50A2BA4A8280039C387 /* ChickenConfig.swift */,
 				6464E50C2BA4A82F0039C387 /* Hunter.swift */,
-				647D9FC62BA3ABF2005B6566 /* Map.swift */,
+				647D9FC62BA3ABF2005B6566 /* HunterMap.swift */,
+				6464E5392BA61F9A0039C387 /* ChickenMap.swift */,
 			);
 			name = Screens;
 			sourceTree = "<group>";
@@ -98,8 +111,26 @@
 			children = (
 				6464E5142BA4BB770039C387 /* DateComponents+Utils.swift */,
 				6464E5162BA4BBA40039C387 /* Date+Utils.swift */,
+				6464E5332BA5DE190039C387 /* GeoPoint+Utils.swift */,
 			);
 			name = Utils;
+			sourceTree = "<group>";
+		};
+		6464E5302BA5DBA10039C387 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				6464E5312BA5DBAA0039C387 /* Game.swift */,
+				6464E5352BA603F00039C387 /* ChickenLocation.swift */,
+			);
+			name = Models;
+			sourceTree = "<group>";
+		};
+		6464E53B2BA744CD0039C387 /* Clients */ = {
+			isa = PBXGroup;
+			children = (
+				6464E53C2BA744DD0039C387 /* ApiClient.swift */,
+			);
+			name = Clients;
 			sourceTree = "<group>";
 		};
 		647D9FB82BA3ABF2005B6566 = {
@@ -121,17 +152,20 @@
 		647D9FC32BA3ABF2005B6566 /* ChickenRush */ = {
 			isa = PBXGroup;
 			children = (
+				6464E53B2BA744CD0039C387 /* Clients */,
+				6464E5302BA5DBA10039C387 /* Models */,
 				6464E5132BA4BB660039C387 /* Utils */,
 				6464E5102BA4BA9E0039C387 /* Views */,
 				6464E5072BA4A65A0039C387 /* Screens */,
 				64620C802BA3C81C006B329C /* Info.plist */,
 				6464E50E2BA4AA010039C387 /* App.swift */,
 				647D9FC42BA3ABF2005B6566 /* ChickenRushApp.swift */,
+				6464E5372BA6090B0039C387 /* Graveyard.swift */,
+				64C21F0B2BA486E6003B25B3 /* LocationManager.swift */,
 				6464E5182BA5C3230039C387 /* GoogleService-Info.plist */,
 				647D9FC82BA3ABF3005B6566 /* Assets.xcassets */,
 				647D9FCA2BA3ABF3005B6566 /* ChickenRush.entitlements */,
 				647D9FCB2BA3ABF3005B6566 /* Preview Content */,
-				64C21F0B2BA486E6003B25B3 /* LocationManager.swift */,
 			);
 			path = ChickenRush;
 			sourceTree = "<group>";
@@ -261,12 +295,18 @@
 			buildActionMask = 2147483647;
 			files = (
 				6464E5092BA4A6AA0039C387 /* Selection.swift in Sources */,
-				647D9FC72BA3ABF2005B6566 /* Map.swift in Sources */,
+				6464E5382BA6090B0039C387 /* Graveyard.swift in Sources */,
+				6464E5362BA603F00039C387 /* ChickenLocation.swift in Sources */,
+				6464E53D2BA744DD0039C387 /* ApiClient.swift in Sources */,
+				6464E53A2BA61F9A0039C387 /* ChickenMap.swift in Sources */,
+				647D9FC72BA3ABF2005B6566 /* HunterMap.swift in Sources */,
 				6464E5152BA4BB770039C387 /* DateComponents+Utils.swift in Sources */,
 				6464E5122BA4BAAC0039C387 /* CountdownView.swift in Sources */,
 				647D9FC52BA3ABF2005B6566 /* ChickenRushApp.swift in Sources */,
 				6464E5172BA4BBA40039C387 /* Date+Utils.swift in Sources */,
-				6464E50B2BA4A8280039C387 /* Chicken.swift in Sources */,
+				6464E5322BA5DBAA0039C387 /* Game.swift in Sources */,
+				6464E5342BA5DE190039C387 /* GeoPoint+Utils.swift in Sources */,
+				6464E50B2BA4A8280039C387 /* ChickenConfig.swift in Sources */,
 				64C21F0C2BA486E6003B25B3 /* LocationManager.swift in Sources */,
 				6464E50F2BA4AA010039C387 /* App.swift in Sources */,
 				6464E50D2BA4A82F0039C387 /* Hunter.swift in Sources */,

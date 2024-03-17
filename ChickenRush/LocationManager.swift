@@ -6,10 +6,12 @@
 //
 
 import CoreLocation
-import CoreLocationUI
+import FirebaseFirestore
 
 class LocationManager: NSObject, CLLocationManagerDelegate {
-    var locationManager: CLLocationManager?
+    private var locationManager: CLLocationManager?
+    private let db = Firestore.firestore()
+    private var lastUpdateTime: Date = .now
 
     override init() {
         super.init()
@@ -23,22 +25,30 @@ class LocationManager: NSObject, CLLocationManagerDelegate {
     func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
         switch status {
         case .authorizedWhenInUse, .authorizedAlways:
-            print("JR: authorizedAlways")
             locationManager?.startUpdatingLocation()
         case .denied, .restricted:
-            // Handle case where user denied or restricted access to location
-            // You may want to prompt the user to enable location services in settings
             print("Location access denied")
-            print("JR: Location access denied")
         default:
             break
         }
     }
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        // Handle updated locations
-        if let location = locations.last {
-            print("Updated location: \(location)")
+        if let location = locations.last,
+           Date.now >= lastUpdateTime.addingTimeInterval(30)
+        {
+            do {
+                let chickenLocation = ChickenLocation(
+                    location: GeoPoint(latitude: location.coordinate.latitude, longitude: location.coordinate.longitude),
+                    timestamp: Timestamp(date: .now)
+                )
+                let chickenLocationRef = self.db.collection("chickenLocations").document()
+                try chickenLocationRef.setData(from: chickenLocation)
+                self.lastUpdateTime = .now
+                print("Updated location successfully!")
+            } catch {
+              print("Error adding document: \(error)")
+            }
         }
     }
 

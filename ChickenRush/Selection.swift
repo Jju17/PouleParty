@@ -12,9 +12,7 @@ import SwiftUI
 struct SelectionFeature {
 
     @ObservableState
-    struct State {
-
-    }
+    struct State { }
 
     enum Action {
         case chickenButtonTapped
