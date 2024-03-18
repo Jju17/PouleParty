@@ -35,6 +35,9 @@ struct AppFeature {
     var body: some ReducerOf<Self> {
         Reduce { state, action in
             switch action {
+            case .chickenConfig(.goBackButtonTriggered):
+                state = AppFeature.State.selection(SelectionFeature.State())
+                return .none
             case let .chickenConfig(.startGameTriggered(game)):
                 state = AppFeature.State.chickenMap(ChickenMapFeature.State(game: game))
                 return .none

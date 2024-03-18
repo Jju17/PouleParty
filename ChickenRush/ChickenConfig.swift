@@ -18,7 +18,7 @@ struct ChickenConfigFeature {
         var startDate: Date = .now.addingTimeInterval(600)
         var latitude: String = ""
         var longitude: String = ""
-        var radiusIntervalUpdate: String = "2"
+        var radiusIntervalUpdate: Double = 2
         var gameMod: GameMod = .followTheChicken
         var radiusSize: Double = 1500
         var radiusDecline: Double = 100
@@ -31,6 +31,7 @@ struct ChickenConfigFeature {
 
     enum Action: BindableAction {
         case binding(BindingAction<State>)
+        case goBackButtonTriggered
         case startGameButtonTapped
         case startGameTriggered(Game)
     }
@@ -43,6 +44,8 @@ struct ChickenConfigFeature {
         Reduce { state, action in
             switch action {
             case .binding:
+                return .none
+            case .goBackButtonTriggered:
                 return .none
             case .startGameButtonTapped:
                 return .run { [state = state] send in
@@ -101,13 +104,13 @@ struct ChickenConfigView: View {
                         .multilineTextAlignment(.trailing)
                         .frame(width:100)
                 }
-                HStack(spacing: 0) {
-                    Text("Radius interval update")
-                    Spacer()
-                    TextField("15", text: $store.radiusIntervalUpdate)
-                        .multilineTextAlignment(.trailing)
-                        .frame(width:50)
-                    Text(" mins")
+                VStack(alignment: .leading) {
+                    HStack {
+                        Text("Radius interval update")
+                        Spacer()
+                        Text("\(Int(self.store.radiusIntervalUpdate)) minutes")
+                    }
+                    Slider(value: self.$store.radiusIntervalUpdate, in: 1...60, step: 1)
                 }
                 VStack(alignment: .leading) {
                     HStack {
@@ -130,6 +133,19 @@ struct ChickenConfigView: View {
                 }
             }
             .navigationTitle("Game Settings")
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        store.send(.goBackButtonTriggered)
+                    } label: {
+                        HStack(spacing: 3) {
+                            Image(systemName: "chevron.left")
+                            Text("Back")
+                        }
+                    }
+
+                }
+            }
         }
 
     }

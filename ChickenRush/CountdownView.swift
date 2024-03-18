@@ -22,7 +22,7 @@ struct CountdownView: View {
     }
 
     var body: some View {
-        Text("Map update in: \(self.minutesRemaining):\(self.secondsRemaining)")
+        Text("Map update in: \(String(format: "%02d", self.minutesRemaining)):\(String(format: "%02d", self.secondsRemaining))")
     }
 }
 

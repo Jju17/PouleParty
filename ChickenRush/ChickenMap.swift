@@ -27,10 +27,9 @@ struct ChickenMapFeature {
     enum Action: BindableAction {
         case barButtonTapped
         case binding(BindingAction<State>)
-        case chickenLocationFetched(CLLocationCoordinate2D)
-        case onAppear
+        case newLocationFetched(CLLocationCoordinate2D)
         case onTask
-        case setGameTriggered(to: Game)
+        case setGameTriggered
         case stopGameButtonTapped
         case timerTicked
     }
@@ -47,14 +46,12 @@ struct ChickenMapFeature {
                 return .none
             case .binding:
                 return .none
-            case let .chickenLocationFetched(location):
+            case let .newLocationFetched(location):
                 let mapCircle = MapCircle(
                     center: location,
                     radius: CLLocationDistance(state.radius)
                 )
                 state.mapCircle = mapCircle
-                return .none
-            case .onAppear:
                 return .none
             case .onTask:
                 return .run { send in
@@ -62,39 +59,38 @@ struct ChickenMapFeature {
                         await send(.timerTicked)
                     }
                 }
-            case let .setGameTriggered(game):
-                state.game = game
-                state.radius = game.initialRadius
-                state.nextRadiusUpdate = game.gameStartDate
+            case .setGameTriggered:
+                let (lastUpdate, lastRadius) = state.game.findLastUpdate()
+
+                state.radius = lastRadius
+                state.nextRadiusUpdate = lastUpdate
                 let mapCircle = MapCircle(
-                    center: game.initialCoordinates.toCLCoordinates,
-                    radius: CLLocationDistance(game.initialRadius)
+                    center: state.game.initialCoordinates.toCLCoordinates,
+                    radius: CLLocationDistance(state.game.initialRadius)
                 )
                 state.mapCircle = mapCircle
                 return .none
             case .stopGameButtonTapped:
                 return .none
             case .timerTicked:
-                guard let nextRadiusUpdate = state.nextRadiusUpdate
-                else { return .none }
-                let game = state.game
-
-                if .now >= nextRadiusUpdate {
-                    state.nextRadiusUpdate?.addTimeInterval(TimeInterval(game.radiusIntervalUpdate * 60))
-                    state.radius = state.radius - game.radiusDeclinePerUpdate
-                    return .run { send in
-                        do {
-                            if let location = try await apiClient.getLastChickenLocation() {
-                                await send(.chickenLocationFetched(location))
-                            }
-                        } catch {
-                            print("Error getting documents: \(error)")
-                        }
-                    }
-                } else {
+                guard let nextRadiusUpdate = state.nextRadiusUpdate,
+                      .now >= nextRadiusUpdate
+                else {
                     state.nowDate = .now
+                    return .none
                 }
-                return .none
+                let game = state.game
+                state.nextRadiusUpdate?.addTimeInterval(TimeInterval(game.radiusIntervalUpdate * 60))
+                state.radius = state.radius - game.radiusDeclinePerUpdate
+                return .run { send in
+                    do {
+                        if let location = try await apiClient.getLastChickenLocation() {
+                            await send(.newLocationFetched(location))
+                        }
+                    } catch {
+                        print("Error getting chicken location: \(error)")
+                    }
+                }
             }
         }
     }
@@ -154,7 +150,7 @@ struct ChickenMapView: View {
             .background(.thinMaterial)
         }
         .onAppear {
-            self.store.send(.onAppear)
+            self.store.send(.setGameTriggered)
         }
         .task {
             store.send(.onTask)

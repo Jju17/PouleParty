@@ -13,7 +13,7 @@ struct Game: Codable {
     let name: String
     let timeLimit: Int
     let numberOfPlayers: Int
-    let radiusIntervalUpdate: Int
+    let radiusIntervalUpdate: Int // In minutes
     let gameStartTimestamp: Timestamp
     let initialCoordinates: GeoPoint
     let initialRadius: Int
@@ -23,6 +23,18 @@ struct Game: Codable {
 extension Game {
     var gameStartDate: Date {
         self.gameStartTimestamp.dateValue()
+    }
+
+    func findLastUpdate() -> (Date, Int) {
+        var lastUpdate: Date = self.gameStartDate
+        var lastRadius: Int = self.initialRadius
+
+        while lastUpdate < .now {
+            lastUpdate.addTimeInterval(TimeInterval(self.radiusIntervalUpdate * 60))
+            lastRadius -= self.radiusDeclinePerUpdate
+        }
+
+        return (lastUpdate, lastRadius)
     }
 }
 

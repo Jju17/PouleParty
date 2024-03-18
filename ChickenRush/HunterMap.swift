@@ -15,6 +15,7 @@ struct HunterMapFeature {
 
     @ObservableState
     struct State {
+        @Presents var destination: Destination.State?
         var locationManager = CLLocationManager()
         var game: Game?
         var nextRadiusUpdate: Date?
@@ -27,14 +28,41 @@ struct HunterMapFeature {
     enum Action: BindableAction {
         case barButtonTapped
         case binding(BindingAction<State>)
-        case chickenLocationFetched(CLLocationCoordinate2D)
+        case destination(PresentationAction<Destination.Action>)
+        case dismissDrinksLottery
+        case newLocationFetched(CLLocationCoordinate2D)
+        case noGameFound
         case onAppear
         case onTask
         case setGameTriggered(to: Game)
         case timerTicked
     }
 
+    @Reducer
+    struct Destination {
+        enum State {
+            case alert(AlertState<Action.Alert>)
+            case drinksLottery(DrinksLotteryFeature.State)
+        }
+
+        enum Action {
+            case alert(Alert)
+            case drinksLottery(DrinksLotteryFeature.Action)
+
+            enum Alert {
+                case noGameFound
+            }
+        }
+
+        var body: some ReducerOf<Self> {
+            Scope(state: \.drinksLottery, action: \.drinksLottery) {
+                DrinksLotteryFeature()
+            }
+        }
+    }
+
     @Dependency(\.continuousClock) var clock
+    @Dependency(\.apiClient) var apiClient
 
     var body: some ReducerOf<Self> {
         BindingReducer()
@@ -42,16 +70,30 @@ struct HunterMapFeature {
         Reduce { state, action in
             switch action {
             case .barButtonTapped:
+//                state.randomDrink = .de
                 return .none
             case .binding:
                 return .none
-            case let .chickenLocationFetched(location):
+            case .destination(.presented(.alert(.noGameFound))):
+                return .none
+            case .destination:
+                return .none
+            case .dismissDrinksLottery:
+                state.destination = nil
+                return .none
+            case let .newLocationFetched(location):
                 let mapCircle = MapCircle(
                     center: location,
                     radius: CLLocationDistance(state.radius)
                 )
                 state.mapCircle = mapCircle
-
+                return .none
+            case .noGameFound:
+                state.destination = .alert(
+                    AlertState {
+                        TextState("No game found, please wait or create one.")
+                    }
+                )
                 return .none
             case .onAppear:
                 state.locationManager.requestAlwaysAuthorization()
@@ -70,13 +112,16 @@ struct HunterMapFeature {
             case .onTask:
                 return .run { send in
                     for await _ in self.clock.timer(interval: .seconds(1)) {
+                        print("onTask")
                         await send(.timerTicked)
                     }
                 }
             case let .setGameTriggered(game):
+                let (lastUpdate, lastRadius) = game.findLastUpdate()
+
                 state.game = game
-                state.radius = game.initialRadius
-                state.nextRadiusUpdate = game.gameStartDate
+                state.radius = lastRadius
+                state.nextRadiusUpdate = lastUpdate
                 let mapCircle = MapCircle(
                     center: game.initialCoordinates.toCLCoordinates,
                     radius: CLLocationDistance(game.initialRadius)
@@ -85,35 +130,27 @@ struct HunterMapFeature {
                 return .none
             case .timerTicked:
                 guard let nextRadiusUpdate = state.nextRadiusUpdate,
-                      let game = state.game
-                else { return .none }
-
-                if .now >= nextRadiusUpdate {
-                    state.nextRadiusUpdate?.addTimeInterval(TimeInterval(game.radiusIntervalUpdate * 60))
-                    state.radius = state.radius - game.radiusDeclinePerUpdate
-                    return .run { send in
-                        do {
-                            let snapshot = try await Firestore.firestore()
-                                .collection("chickenLocations")
-                                .order(by: "timestamp", descending: true)
-                                .limit(to: 1)
-                                .getDocuments()
-
-                            let chickenLocation = try snapshot.documents.first?.data(as: ChickenLocation.self)
-                            if let lat = chickenLocation?.location.latitude,
-                               let long = chickenLocation?.location.longitude {
-                                let location = CLLocationCoordinate2D(latitude: lat, longitude: long)
-                                await send(.chickenLocationFetched(location))
-                            }
-                        } catch {
-                            print("Error getting documents: \(error)")
-                        }
-                    }
-                } else {
+                      let game = state.game,
+                      .now >= nextRadiusUpdate
+                else {
                     state.nowDate = .now
+                    return .none
                 }
-                return .none
+
+                guard state.radius - game.radiusDeclinePerUpdate > 0
+                else {  return .none }
+
+                state.nextRadiusUpdate?.addTimeInterval(TimeInterval(game.radiusIntervalUpdate * 60))
+                state.radius = state.radius - game.radiusDeclinePerUpdate
+                return .run { send in
+                    if let location = try await apiClient.getLastChickenLocation() {
+                        await send(.newLocationFetched(location))
+                    }
+                }
             }
+        }
+        .ifLet(\.$destination, action: \.destination) {
+          Destination()
         }
     }
 }
@@ -177,7 +214,28 @@ struct HunterMapView: View {
             self.store.send(.onAppear)
         }
         .task {
-            store.send(.onTask)
+            self.store.send(.onTask)
+        }
+        .sheet(
+            item: $store.scope(
+                state: \.destination?.drinksLottery,
+                action: \.destination.drinksLottery
+            )
+        ) { store in
+            NavigationStack {
+                DrinksLotteryView(store: store)
+                    .toolbar {
+                        ToolbarItem {
+                            Button {
+                                self.store.send(.dismissDrinksLottery)
+                            } label: {
+                                Image(systemName: "xmark")
+                                    .foregroundStyle(.white)
+                            }
+
+                        }
+                    }
+            }
         }
     }
 }
