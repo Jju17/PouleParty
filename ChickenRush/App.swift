@@ -13,7 +13,6 @@ struct AppFeature {
 
     @ObservableState
     enum State {
-        case chickenConfig(ChickenConfigFeature.State)
         case chickenMap(ChickenMapFeature.State)
         case hunter(HunterFeature.State)
         case hunterMap(HunterMapFeature.State)
@@ -21,10 +20,7 @@ struct AppFeature {
     }
 
     enum Action {
-        case chickenConfig(ChickenConfigFeature.Action)
         case chickenMap(ChickenMapFeature.Action)
-        case goToChickenMapTriggered(Game)
-        case goToSettingsTriggered
         case hunter(HunterFeature.Action)
         case hunterMap(HunterMapFeature.Action)
         case selection(SelectionFeature.Action)
@@ -35,40 +31,24 @@ struct AppFeature {
     var body: some ReducerOf<Self> {
         Reduce { state, action in
             switch action {
-            case .chickenConfig(.goBackButtonTriggered):
-                state = AppFeature.State.selection(SelectionFeature.State())
-                return .none
-            case let .chickenConfig(.startGameTriggered(game)):
-                state = AppFeature.State.chickenMap(ChickenMapFeature.State(game: game))
-                return .none
             case .chickenMap(.stopGameButtonTapped):
                 state = AppFeature.State.selection(SelectionFeature.State())
                 return .run { send in
                     try await apiClient.deleteConfig()
                 }
-            case let .goToChickenMapTriggered(game):
-                state = AppFeature.State.chickenMap(ChickenMapFeature.State(game: game))
+            case .hunterMap(.goToChickenConfig):
+                state = AppFeature.State.selection(SelectionFeature.State(destination: .chickenConfig(ChickenConfigFeature.State())))
+//                state = AppFeature.State.selection(SelectionFeature.State())
                 return .none
-            case .goToSettingsTriggered:
-                state = AppFeature.State.chickenConfig(ChickenConfigFeature.State())
-                return .none
-            case .selection(.chickenButtonTapped):
-                return .run { send in
-                    if let game = await apiClient.getConfig() {
-                        await send(.goToChickenMapTriggered(game))
-                    } else {
-                        await send(.goToSettingsTriggered)
-                    }
-                }
             case .selection(.hunterButtonTapped):
                 state = AppFeature.State.hunterMap(HunterMapFeature.State())
                 return .none
-            case .chickenConfig, .chickenMap, .hunter, .hunterMap, .selection:
+            case let .selection(.goToChickenMapTriggered(game)):
+                state = AppFeature.State.chickenMap(ChickenMapFeature.State(game: game))
+                return .none
+            case .chickenMap, .hunter, .hunterMap, .selection:
                 return .none
             }
-        }
-        .ifCaseLet(\.chickenConfig, action: \.chickenConfig) {
-            ChickenConfigFeature()
         }
         .ifCaseLet(\.chickenMap, action: \.chickenMap) {
             ChickenMapFeature()
@@ -90,10 +70,6 @@ struct AppView: View {
 
     var body: some View {
         switch store.state {
-        case .chickenConfig:
-            if let store = store.scope(state: \.chickenConfig, action: \.chickenConfig) {
-                ChickenConfigView(store: store)
-            }
         case .chickenMap:
             if let store = store.scope(state: \.chickenMap, action: \.chickenMap) {
                 ChickenMapView(store: store)

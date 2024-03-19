@@ -15,7 +15,8 @@ struct ChickenConfigFeature {
 
     @ObservableState
     struct State {
-        var startDate: Date = .now.addingTimeInterval(600)
+        var endDate: Date = .now.addingTimeInterval(3900)
+        var startDate: Date = .now.addingTimeInterval(300)
         var latitude: String = ""
         var longitude: String = ""
         var radiusIntervalUpdate: Double = 2
@@ -55,10 +56,10 @@ struct ChickenConfigFeature {
                     let newGame = Game(
                         id: UUID().uuidString,
                         name: "Partie 1",
-                        timeLimit: 60,
                         numberOfPlayers: 10,
-                        radiusIntervalUpdate: Int(state.radiusIntervalUpdate) ?? 15,
+                        radiusIntervalUpdate: Int(state.radiusIntervalUpdate),
                         gameStartTimestamp: Timestamp(date: state.startDate),
+                        gameEndTimestamp: Timestamp(date: state.endDate),
                         initialCoordinates: GeoPoint(latitude: lat, longitude: long),
                         initialRadius: Int(state.radiusSize), 
                         radiusDeclinePerUpdate: 100
@@ -86,8 +87,12 @@ struct ChickenConfigView: View {
     var body: some View {
         NavigationStack {
             Form {
-                DatePicker(selection: $store.startDate){
+                DatePicker(selection: $store.startDate, in: .now.addingTimeInterval(60)...){
                     Text("Start at")
+                }
+                .datePickerStyle(.compact)
+                DatePicker(selection: $store.endDate, in: store.startDate.addingTimeInterval(300)..., displayedComponents: .hourAndMinute){
+                    Text("End at")
                 }
                 .datePickerStyle(.compact)
                 HStack {
@@ -133,19 +138,6 @@ struct ChickenConfigView: View {
                 }
             }
             .navigationTitle("Game Settings")
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        store.send(.goBackButtonTriggered)
-                    } label: {
-                        HStack(spacing: 3) {
-                            Image(systemName: "chevron.left")
-                            Text("Back")
-                        }
-                    }
-
-                }
-            }
         }
 
     }

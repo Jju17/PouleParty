@@ -15,6 +15,7 @@ struct ChickenMapFeature {
 
     @ObservableState
     struct State {
+        @Presents var destination: Destination.State?
         var game: Game
         var locationManager: LocationManager = LocationManager()
         var nextRadiusUpdate: Date?
@@ -27,11 +28,37 @@ struct ChickenMapFeature {
     enum Action: BindableAction {
         case barButtonTapped
         case binding(BindingAction<State>)
+        case destination(PresentationAction<Destination.Action>)
+        case dismissEndGameCode
+        case endGameCodeButtonTapped
         case newLocationFetched(CLLocationCoordinate2D)
         case onTask
         case setGameTriggered
         case stopGameButtonTapped
         case timerTicked
+    }
+
+    @Reducer
+    struct Destination {
+        enum State {
+            case alert(AlertState<Action.Alert>)
+            case endGameCode(EndGameCodeFeature.State)
+        }
+
+        enum Action {
+            case alert(Alert)
+            case endGameCode(EndGameCodeFeature.Action)
+
+            enum Alert {
+                case noGameFound
+            }
+        }
+
+        var body: some ReducerOf<Self> {
+            Scope(state: \.endGameCode, action: \.endGameCode) {
+                EndGameCodeFeature()
+            }
+        }
     }
 
     @Dependency(\.apiClient) var apiClient
@@ -45,6 +72,14 @@ struct ChickenMapFeature {
             case .barButtonTapped:
                 return .none
             case .binding:
+                return .none
+            case .destination:
+                return .none
+            case .dismissEndGameCode:
+                state.destination = nil
+                return .none
+            case .endGameCodeButtonTapped:
+                state.destination = .endGameCode(EndGameCodeFeature.State())
                 return .none
             case let .newLocationFetched(location):
                 let mapCircle = MapCircle(
@@ -93,6 +128,9 @@ struct ChickenMapFeature {
                 }
             }
         }
+        .ifLet(\.$destination, action: \.destination) {
+          Destination()
+        }
     }
 }
 
@@ -132,6 +170,20 @@ struct ChickenMapView: View {
                 }
                 Spacer()
                 Button {
+                    self.store.send(.endGameCodeButtonTapped)
+                } label: {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 5)
+                            .fill(.red)
+                        Image(systemName: "stop.circle.fill")
+                            .resizable()
+                            .scaledToFit()
+                            .foregroundStyle(.white)
+                            .frame(width: 25, height: 25)
+                    }
+                }
+                .frame(width: 45, height: 40)
+                Button {
                     self.store.send(.stopGameButtonTapped)
                 } label: {
                     ZStack {
@@ -154,6 +206,33 @@ struct ChickenMapView: View {
         }
         .task {
             store.send(.onTask)
+        }
+        .alert(
+            $store.scope(
+                state: \.destination?.alert,
+                action: \.destination.alert
+            )
+        )
+        .sheet(
+            item: $store.scope(
+                state: \.destination?.endGameCode,
+                action: \.destination.endGameCode
+            )
+        ) { store in
+            NavigationStack {
+                EndGameCodeView(store: store)
+                    .toolbar {
+                        ToolbarItem {
+                            Button {
+                                self.store.send(.dismissEndGameCode)
+                            } label: {
+                                Image(systemName: "xmark")
+                                    .foregroundStyle(.white)
+                            }
+
+                        }
+                    }
+            }
         }
     }
 }

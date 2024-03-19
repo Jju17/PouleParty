@@ -30,6 +30,7 @@ struct HunterMapFeature {
         case binding(BindingAction<State>)
         case destination(PresentationAction<Destination.Action>)
         case dismissDrinksLottery
+        case goToChickenConfig
         case newLocationFetched(CLLocationCoordinate2D)
         case noGameFound
         case onAppear
@@ -50,7 +51,7 @@ struct HunterMapFeature {
             case drinksLottery(DrinksLotteryFeature.Action)
 
             enum Alert {
-                case noGameFound
+                case beTheChicken
             }
         }
 
@@ -70,13 +71,17 @@ struct HunterMapFeature {
         Reduce { state, action in
             switch action {
             case .barButtonTapped:
-//                state.randomDrink = .de
+                state.destination = .drinksLottery(DrinksLotteryFeature.State())
                 return .none
             case .binding:
                 return .none
-            case .destination(.presented(.alert(.noGameFound))):
-                return .none
+            case .destination(.presented(.alert(.beTheChicken))):
+                return .run { send in
+                    await send(.goToChickenConfig)
+                }
             case .destination:
+                return .none
+            case .goToChickenConfig:
                 return .none
             case .dismissDrinksLottery:
                 state.destination = nil
@@ -91,7 +96,14 @@ struct HunterMapFeature {
             case .noGameFound:
                 state.destination = .alert(
                     AlertState {
-                        TextState("No game found, please wait or create one.")
+                        TextState("No game found, please wait on this page or create one and be the chicken. 🐔")
+                    } actions: {
+                        ButtonState(role: .cancel) {
+                            TextState("I'll wait")
+                        }
+                        ButtonState(action: .beTheChicken) {
+                            TextState("Be the 🐔")
+                        }
                     }
                 )
                 return .none
@@ -107,6 +119,7 @@ struct HunterMapFeature {
                         await send(.setGameTriggered(to: game))
                     } catch {
                         print("Error getting documents: \(error)")
+                        await send(.noGameFound)
                     }
                 }
             case .onTask:
@@ -216,6 +229,12 @@ struct HunterMapView: View {
         .task {
             self.store.send(.onTask)
         }
+        .alert(
+            $store.scope(
+                state: \.destination?.alert,
+                action: \.destination.alert
+            )
+        )
         .sheet(
             item: $store.scope(
                 state: \.destination?.drinksLottery,
