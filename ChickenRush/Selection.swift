@@ -55,9 +55,18 @@ struct SelectionFeature {
             switch action {
             case .chickenButtonTapped:
                 return .run { send in
-                    if let game = await apiClient.getConfig() {
-                        await send(.goToChickenMapTriggered(game))
-                    } else {
+                    let game = await apiClient.getConfig()
+
+                    guard game != nil
+                    else { 
+                        await send(.goToChickenConfigTriggered)
+                        return
+                    }
+
+                    if game!.endDate < .now {
+                        await send(.goToChickenMapTriggered(game!))
+                    } else if game!.endDate > .now {
+                        try await apiClient.deleteConfig()
                         await send(.goToChickenConfigTriggered)
                     }
                 }
@@ -93,25 +102,29 @@ struct SelectionView: View {
 
     var body: some View {
         VStack(alignment: .center, spacing: 30) {
-            Button(
-                action: {
-                    self.store.send(.chickenButtonTapped)
-                },
-                label: {
-                    Text("Chicken")
-                }
-            )
-            
-            Text("VS")
-            Button(
-                action: {
-                    self.store.send(.hunterButtonTapped)
-                },
-                label: {
-                    Text("Hunter")
-                }
-            )
+            VStack(alignment: .center, spacing: 0) {
+                Button(
+                    action: {
+                        self.store.send(.chickenButtonTapped)
+                    },
+                    label: {
+                        Text("Chicken")
+                    }
+                )
+
+                Text("VS")
+                Button(
+                    action: {
+                        self.store.send(.hunterButtonTapped)
+                    },
+                    label: {
+                        Text("Hunter")
+                    }
+                )
+            }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(LinearGradient(colors: [.crOrange, .crPink], startPoint: .top, endPoint: .bottom))
         .sheet(
             item: $store.scope(
                 state: \.destination?.chickenConfig,

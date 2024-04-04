@@ -58,8 +58,8 @@ struct ChickenConfigFeature {
                         name: "Partie 1",
                         numberOfPlayers: 10,
                         radiusIntervalUpdate: Int(state.radiusIntervalUpdate),
-                        gameStartTimestamp: Timestamp(date: state.startDate),
-                        gameEndTimestamp: Timestamp(date: state.endDate),
+                        startTimestamp: Timestamp(date: state.startDate),
+                        endTimestamp: Timestamp(date: state.endDate),
                         initialCoordinates: GeoPoint(latitude: lat, longitude: long),
                         initialRadius: Int(state.radiusSize), 
                         radiusDeclinePerUpdate: 100
@@ -67,17 +67,17 @@ struct ChickenConfigFeature {
 
                     do {
                         try await apiClient.setConfig(newGame)
-                        return await send(.startGameTriggered(newGame))
+                        await send(.startGameTriggered(newGame))
                     } catch {
                         print("Error adding document: \(error)")
                     }
                 }
             case .startGameTriggered:
                 return .none
+
             }
         }
     }
-
 }
 
 

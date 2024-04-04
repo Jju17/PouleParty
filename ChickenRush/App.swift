@@ -38,7 +38,6 @@ struct AppFeature {
                 }
             case .hunterMap(.goToChickenConfig):
                 state = AppFeature.State.selection(SelectionFeature.State(destination: .chickenConfig(ChickenConfigFeature.State())))
-//                state = AppFeature.State.selection(SelectionFeature.State())
                 return .none
             case .selection(.hunterButtonTapped):
                 state = AppFeature.State.hunterMap(HunterMapFeature.State())
