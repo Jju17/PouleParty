@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		6400630F2BBDC7B100C6C08C /* SelectionButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6400630E2BBDC7B100C6C08C /* SelectionButton.swift */; };
 		6401DFCB2BC9BB3C00BA8967 /* Location.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6401DFCA2BC9BB3C00BA8967 /* Location.swift */; };
+		643A59972BCA90BA002B53B6 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 643A59962BCA90BA002B53B6 /* GoogleService-Info.plist */; };
 		6464E5092BA4A6AA0039C387 /* Selection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6464E5082BA4A6AA0039C387 /* Selection.swift */; };
 		6464E50B2BA4A8280039C387 /* ChickenConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6464E50A2BA4A8280039C387 /* ChickenConfig.swift */; };
 		6464E50D2BA4A82F0039C387 /* Hunter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6464E50C2BA4A82F0039C387 /* Hunter.swift */; };
@@ -16,7 +17,6 @@
 		6464E5122BA4BAAC0039C387 /* CountdownView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6464E5112BA4BAAC0039C387 /* CountdownView.swift */; };
 		6464E5152BA4BB770039C387 /* DateComponents+Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6464E5142BA4BB770039C387 /* DateComponents+Utils.swift */; };
 		6464E5172BA4BBA40039C387 /* Date+Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6464E5162BA4BBA40039C387 /* Date+Utils.swift */; };
-		6464E5192BA5C3230039C387 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 6464E5182BA5C3230039C387 /* GoogleService-Info.plist */; };
 		6464E51C2BA5C3ED0039C387 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 6464E51B2BA5C3ED0039C387 /* FirebaseAnalytics */; };
 		6464E51E2BA5C3ED0039C387 /* FirebaseAnalyticsSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 6464E51D2BA5C3ED0039C387 /* FirebaseAnalyticsSwift */; };
 		6464E5202BA5C3ED0039C387 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 6464E51F2BA5C3ED0039C387 /* FirebaseAuth */; };
@@ -61,6 +61,7 @@
 		6401DFCA2BC9BB3C00BA8967 /* Location.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Location.swift; sourceTree = "<group>"; };
 		643A59942BC9C1E8002B53B6 /* Lasne.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = Lasne.gpx; sourceTree = "<group>"; };
 		643A59952BC9C38B002B53B6 /* Namur.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = Namur.gpx; sourceTree = "<group>"; };
+		643A59962BCA90BA002B53B6 /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		64620C802BA3C81C006B329C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		6464E5082BA4A6AA0039C387 /* Selection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Selection.swift; sourceTree = "<group>"; };
 		6464E50A2BA4A8280039C387 /* ChickenConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChickenConfig.swift; sourceTree = "<group>"; };
@@ -69,7 +70,6 @@
 		6464E5112BA4BAAC0039C387 /* CountdownView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountdownView.swift; sourceTree = "<group>"; };
 		6464E5142BA4BB770039C387 /* DateComponents+Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DateComponents+Utils.swift"; sourceTree = "<group>"; };
 		6464E5162BA4BBA40039C387 /* Date+Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Date+Utils.swift"; sourceTree = "<group>"; };
-		6464E5182BA5C3230039C387 /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		6464E5312BA5DBAA0039C387 /* Game.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Game.swift; sourceTree = "<group>"; };
 		6464E5332BA5DE190039C387 /* GeoPoint+Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "GeoPoint+Utils.swift"; sourceTree = "<group>"; };
 		6464E5352BA603F00039C387 /* ChickenLocation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChickenLocation.swift; sourceTree = "<group>"; };
@@ -207,7 +207,7 @@
 			children = (
 				64B216F52BBEFE63005E0DC7 /* Tips */,
 				647D9FCA2BA3ABF3005B6566 /* ChickenRush.entitlements */,
-				6464E5182BA5C3230039C387 /* GoogleService-Info.plist */,
+				643A59962BCA90BA002B53B6 /* GoogleService-Info.plist */,
 				64620C802BA3C81C006B329C /* Info.plist */,
 				6464E50E2BA4AA010039C387 /* App.swift */,
 				647D9FC42BA3ABF2005B6566 /* ChickenRushApp.swift */,
@@ -336,10 +336,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				64B216F92BBF0293005E0DC7 /* Launch Screen.storyboard in Resources */,
+				643A59972BCA90BA002B53B6 /* GoogleService-Info.plist in Resources */,
 				64B216F22BBEF382005E0DC7 /* OFL.txt in Resources */,
 				64B216F12BBEF382005E0DC7 /* Bangers-Regular.ttf in Resources */,
 				647D9FCD2BA3ABF3005B6566 /* Preview Assets.xcassets in Resources */,
-				6464E5192BA5C3230039C387 /* GoogleService-Info.plist in Resources */,
 				647D9FC92BA3ABF3005B6566 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -566,7 +566,7 @@
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.4;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = dev.rahier.chickenrush;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.rahier.chickenrush1;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -613,7 +613,7 @@
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.4;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = dev.rahier.chickenrush;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.rahier.chickenrush1;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
