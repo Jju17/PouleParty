@@ -6,7 +6,6 @@
 //
 
 import ComposableArchitecture
-import FirebaseFirestore
 import MapKit
 import SwiftUI
 
@@ -17,7 +16,7 @@ struct ChickenMapFeature {
     struct State {
         @Presents var destination: Destination.State?
         var game: Game
-        var locationManager: LocationManager = LocationManager()
+        var locationManager: LocationManager = LocationManager(isTrackingActive: true, updatingMethod: .alwaysUpdating)
         var nextRadiusUpdate: Date?
         var nowDate: Date = .now
         var radius: Int = 1500
@@ -30,11 +29,12 @@ struct ChickenMapFeature {
         case binding(BindingAction<State>)
         case destination(PresentationAction<Destination.Action>)
         case dismissEndGameCode
-        case endGameCodeButtonTapped
+        case cancelGameButtonTapped
+        case beenFoundButtonTapped
+        case goToMenu
         case newLocationFetched(CLLocationCoordinate2D)
         case onTask
         case setGameTriggered
-        case stopGameButtonTapped
         case timerTicked
     }
 
@@ -50,6 +50,7 @@ struct ChickenMapFeature {
             case endGameCode(EndGameCodeFeature.Action)
 
             enum Alert {
+                case cancelGame
                 case noGameFound
             }
         }
@@ -73,13 +74,35 @@ struct ChickenMapFeature {
                 return .none
             case .binding:
                 return .none
+            case .destination(.presented(.alert(.cancelGame))):
+                return .run { send in
+                    await send(.goToMenu)
+                }
             case .destination:
                 return .none
             case .dismissEndGameCode:
                 state.destination = nil
                 return .none
-            case .endGameCodeButtonTapped:
+            case .cancelGameButtonTapped:
+                state.destination = .alert(
+                    AlertState {
+                        TextState("Cancel game")
+                    } actions: {
+                        ButtonState(role: .cancel) {
+                            TextState("Never mind")
+                        }
+                        ButtonState(role: .destructive ,action: .cancelGame) {
+                            TextState("Cancel game")
+                        }
+                    } message: {
+                        TextState("Are you sure you want to cancel and finish the game now ?")
+                    }
+                )
+                return .none
+            case .beenFoundButtonTapped:
                 state.destination = .endGameCode(EndGameCodeFeature.State())
+                return .none
+            case .goToMenu:
                 return .none
             case let .newLocationFetched(location):
                 let mapCircle = MapCircle(
@@ -105,8 +128,6 @@ struct ChickenMapFeature {
                 )
                 state.mapCircle = mapCircle
                 return .none
-            case .stopGameButtonTapped:
-                return .none
             case .timerTicked:
                 guard let nextRadiusUpdate = state.nextRadiusUpdate,
                       .now >= nextRadiusUpdate
@@ -116,7 +137,7 @@ struct ChickenMapFeature {
                 }
                 let game = state.game
                 state.nextRadiusUpdate?.addTimeInterval(TimeInterval(game.radiusIntervalUpdate * 60))
-                state.radius = state.radius - game.radiusDeclinePerUpdate
+                state.radius = Int(state.radius) - Int(game.radiusDeclinePerUpdate)
                 return .run { send in
                     do {
                         if let location = try await apiClient.getLastChickenLocation() {
@@ -153,7 +174,7 @@ struct ChickenMapView: View {
             HStack {
                 Spacer()
                 VStack {
-                    Text("You are the Chicken")
+                    Text("You are the 🐔")
                     Text("Don't be seen !")
                         .font(.system(size: 14))
                 }
@@ -170,21 +191,20 @@ struct ChickenMapView: View {
                 }
                 Spacer()
                 Button {
-                    self.store.send(.endGameCodeButtonTapped)
+                    self.store.send(.beenFoundButtonTapped)
                 } label: {
                     ZStack {
                         RoundedRectangle(cornerRadius: 5)
                             .fill(.red)
-                        Image(systemName: "stop.circle.fill")
-                            .resizable()
-                            .scaledToFit()
+                        Text("FOUND")
+                            .font(Font.system(size: 11))
+                            .fontWeight(.bold)
                             .foregroundStyle(.white)
-                            .frame(width: 25, height: 25)
                     }
                 }
-                .frame(width: 45, height: 40)
+                .frame(width: 50, height: 40)
                 Button {
-                    self.store.send(.stopGameButtonTapped)
+                    self.store.send(.cancelGameButtonTapped)
                 } label: {
                     ZStack {
                         RoundedRectangle(cornerRadius: 5)
@@ -196,7 +216,7 @@ struct ChickenMapView: View {
                             .frame(width: 25, height: 25)
                     }
                 }
-                .frame(width: 45, height: 40)
+                .frame(width: 50, height: 40)
             }
             .padding()
             .background(.thinMaterial)

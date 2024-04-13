@@ -19,30 +19,28 @@ struct SelectionButton: View {
     }
 
     var body: some View {
-        ZStack(alignment: .center) {
-            RoundedRectangle(cornerRadius: 15)
-                .fill(Color.CKRYellow)
+        Button(action: self.action) {
+            Text(self.titleKey)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .shadow(color: .gray, radius: 2, x: 3, y: 3)
-            Button {
-                self.action()
-            } label: {
-                Text(self.titleKey)
-                    .fontWeight(.bold)
-                    .foregroundStyle(.black)
-            }
+                .font(.banger(size: 20))
+                .foregroundStyle(.white)
+                .padding()
+                .background(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(.white, lineWidth: 2)
+                )
         }
-        .frame(maxHeight: 100)
+
     }
 }
 
 #Preview {
     ZStack {
-        SelectionButton("Sign up") {
+        SelectionButton(" Sign up ") {
 
         }
         .frame(width: 300, height: 90)
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
-    .background { Color.CRPink.ignoresSafeArea() }
+    .background(.linearGradient(Gradient(colors: [.CROrange, .CRPink]), startPoint: .top, endPoint: .bottom))
 }

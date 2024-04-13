@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		6400630F2BBDC7B100C6C08C /* SelectionButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6400630E2BBDC7B100C6C08C /* SelectionButton.swift */; };
+		6401DFCB2BC9BB3C00BA8967 /* Location.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6401DFCA2BC9BB3C00BA8967 /* Location.swift */; };
 		6464E5092BA4A6AA0039C387 /* Selection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6464E5082BA4A6AA0039C387 /* Selection.swift */; };
 		6464E50B2BA4A8280039C387 /* ChickenConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6464E50A2BA4A8280039C387 /* ChickenConfig.swift */; };
 		6464E50D2BA4A82F0039C387 /* Hunter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6464E50C2BA4A82F0039C387 /* Hunter.swift */; };
@@ -43,13 +44,23 @@
 		649F06802BA8A11F00DDE737 /* UUID+Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 649F067F2BA8A11F00DDE737 /* UUID+Utils.swift */; };
 		64AF0B002BA79BCB0081EA97 /* DrinksLottery.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64AF0AFF2BA79BCB0081EA97 /* DrinksLottery.swift */; };
 		64AF0B022BA7A0110081EA97 /* Color+Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64AF0B012BA7A0110081EA97 /* Color+Utils.swift */; };
+		64B216F12BBEF382005E0DC7 /* Bangers-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 64B216EE2BBEF382005E0DC7 /* Bangers-Regular.ttf */; };
+		64B216F22BBEF382005E0DC7 /* OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = 64B216EF2BBEF382005E0DC7 /* OFL.txt */; };
+		64B216F42BBEF41C005E0DC7 /* Font+Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64B216F32BBEF41C005E0DC7 /* Font+Utils.swift */; };
+		64B216F72BBEFE73005E0DC7 /* Tips.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64B216F62BBEFE73005E0DC7 /* Tips.swift */; };
+		64B216F92BBF0293005E0DC7 /* Launch Screen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 64B216F82BBF0293005E0DC7 /* Launch Screen.storyboard */; };
+		64B216FD2BBF162C005E0DC7 /* ChickenMapConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64B216FC2BBF162C005E0DC7 /* ChickenMapConfig.swift */; };
 		64C21F0A2BA484CD003B25B3 /* ComposableArchitecture in Frameworks */ = {isa = PBXBuildFile; productRef = 64C21F092BA484CD003B25B3 /* ComposableArchitecture */; };
 		64C21F0C2BA486E6003B25B3 /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64C21F0B2BA486E6003B25B3 /* LocationManager.swift */; };
 		64F10C2A2BA9E04D001D83D8 /* EndGameCode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64F10C292BA9E04D001D83D8 /* EndGameCode.swift */; };
+		64FDBE372BC0278E0073DC85 /* Onboarding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64FDBE362BC0278E0073DC85 /* Onboarding.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		6400630E2BBDC7B100C6C08C /* SelectionButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectionButton.swift; sourceTree = "<group>"; };
+		6401DFCA2BC9BB3C00BA8967 /* Location.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Location.swift; sourceTree = "<group>"; };
+		643A59942BC9C1E8002B53B6 /* Lasne.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = Lasne.gpx; sourceTree = "<group>"; };
+		643A59952BC9C38B002B53B6 /* Namur.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = Namur.gpx; sourceTree = "<group>"; };
 		64620C802BA3C81C006B329C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		6464E5082BA4A6AA0039C387 /* Selection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Selection.swift; sourceTree = "<group>"; };
 		6464E50A2BA4A8280039C387 /* ChickenConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChickenConfig.swift; sourceTree = "<group>"; };
@@ -78,8 +89,16 @@
 		649F067F2BA8A11F00DDE737 /* UUID+Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UUID+Utils.swift"; sourceTree = "<group>"; };
 		64AF0AFF2BA79BCB0081EA97 /* DrinksLottery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrinksLottery.swift; sourceTree = "<group>"; };
 		64AF0B012BA7A0110081EA97 /* Color+Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Utils.swift"; sourceTree = "<group>"; };
+		64B216EE2BBEF382005E0DC7 /* Bangers-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Bangers-Regular.ttf"; sourceTree = "<group>"; };
+		64B216EF2BBEF382005E0DC7 /* OFL.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = OFL.txt; sourceTree = "<group>"; };
+		64B216F32BBEF41C005E0DC7 /* Font+Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Font+Utils.swift"; sourceTree = "<group>"; };
+		64B216F62BBEFE73005E0DC7 /* Tips.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tips.swift; sourceTree = "<group>"; };
+		64B216F82BBF0293005E0DC7 /* Launch Screen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = "Launch Screen.storyboard"; sourceTree = "<group>"; };
+		64B216FC2BBF162C005E0DC7 /* ChickenMapConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChickenMapConfig.swift; sourceTree = "<group>"; };
 		64C21F0B2BA486E6003B25B3 /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
 		64F10C292BA9E04D001D83D8 /* EndGameCode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EndGameCode.swift; sourceTree = "<group>"; };
+		64FDBE362BC0278E0073DC85 /* Onboarding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Onboarding.swift; sourceTree = "<group>"; };
+		64FDBE382BC32AD60073DC85 /* La Rochelle.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = "La Rochelle.gpx"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -107,13 +126,15 @@
 		6464E5072BA4A65A0039C387 /* Screens */ = {
 			isa = PBXGroup;
 			children = (
-				6464E5082BA4A6AA0039C387 /* Selection.swift */,
 				6464E50A2BA4A8280039C387 /* ChickenConfig.swift */,
-				6464E50C2BA4A82F0039C387 /* Hunter.swift */,
-				647D9FC62BA3ABF2005B6566 /* HunterMap.swift */,
 				6464E5392BA61F9A0039C387 /* ChickenMap.swift */,
+				64B216FC2BBF162C005E0DC7 /* ChickenMapConfig.swift */,
 				64AF0AFF2BA79BCB0081EA97 /* DrinksLottery.swift */,
 				64F10C292BA9E04D001D83D8 /* EndGameCode.swift */,
+				6464E50C2BA4A82F0039C387 /* Hunter.swift */,
+				647D9FC62BA3ABF2005B6566 /* HunterMap.swift */,
+				64FDBE362BC0278E0073DC85 /* Onboarding.swift */,
+				6464E5082BA4A6AA0039C387 /* Selection.swift */,
 			);
 			name = Screens;
 			sourceTree = "<group>";
@@ -132,12 +153,13 @@
 		6464E5132BA4BB660039C387 /* Utils */ = {
 			isa = PBXGroup;
 			children = (
-				6464E5142BA4BB770039C387 /* DateComponents+Utils.swift */,
-				6464E5162BA4BBA40039C387 /* Date+Utils.swift */,
-				6464E5332BA5DE190039C387 /* GeoPoint+Utils.swift */,
 				64AF0B012BA7A0110081EA97 /* Color+Utils.swift */,
-				649F067F2BA8A11F00DDE737 /* UUID+Utils.swift */,
+				6464E5162BA4BBA40039C387 /* Date+Utils.swift */,
+				6464E5142BA4BB770039C387 /* DateComponents+Utils.swift */,
+				64B216F32BBEF41C005E0DC7 /* Font+Utils.swift */,
+				6464E5332BA5DE190039C387 /* GeoPoint+Utils.swift */,
 				649BE2082BAF43CC00520CE3 /* Image+Utils.swift */,
+				649F067F2BA8A11F00DDE737 /* UUID+Utils.swift */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -148,6 +170,7 @@
 				6464E5312BA5DBAA0039C387 /* Game.swift */,
 				6464E5352BA603F00039C387 /* ChickenLocation.swift */,
 				649BE2062BAF201600520CE3 /* Drink.swift */,
+				6401DFCA2BC9BB3C00BA8967 /* Location.swift */,
 			);
 			name = Models;
 			sourceTree = "<group>";
@@ -163,6 +186,9 @@
 		647D9FB82BA3ABF2005B6566 = {
 			isa = PBXGroup;
 			children = (
+				64FDBE382BC32AD60073DC85 /* La Rochelle.gpx */,
+				643A59942BC9C1E8002B53B6 /* Lasne.gpx */,
+				643A59952BC9C38B002B53B6 /* Namur.gpx */,
 				647D9FC32BA3ABF2005B6566 /* ChickenRush */,
 				647D9FC22BA3ABF2005B6566 /* Products */,
 			);
@@ -179,20 +205,23 @@
 		647D9FC32BA3ABF2005B6566 /* ChickenRush */ = {
 			isa = PBXGroup;
 			children = (
-				6464E53B2BA744CD0039C387 /* Clients */,
-				6464E5302BA5DBA10039C387 /* Models */,
-				6464E5132BA4BB660039C387 /* Utils */,
-				6464E5102BA4BA9E0039C387 /* Views */,
-				6464E5072BA4A65A0039C387 /* Screens */,
+				64B216F52BBEFE63005E0DC7 /* Tips */,
+				647D9FCA2BA3ABF3005B6566 /* ChickenRush.entitlements */,
+				6464E5182BA5C3230039C387 /* GoogleService-Info.plist */,
 				64620C802BA3C81C006B329C /* Info.plist */,
 				6464E50E2BA4AA010039C387 /* App.swift */,
 				647D9FC42BA3ABF2005B6566 /* ChickenRushApp.swift */,
 				6464E5372BA6090B0039C387 /* Graveyard.swift */,
 				64C21F0B2BA486E6003B25B3 /* LocationManager.swift */,
-				6464E5182BA5C3230039C387 /* GoogleService-Info.plist */,
 				647D9FC82BA3ABF3005B6566 /* Assets.xcassets */,
-				647D9FCA2BA3ABF3005B6566 /* ChickenRush.entitlements */,
+				6464E53B2BA744CD0039C387 /* Clients */,
+				64B216ED2BBEF32F005E0DC7 /* Fonts */,
+				6464E5302BA5DBA10039C387 /* Models */,
 				647D9FCB2BA3ABF3005B6566 /* Preview Content */,
+				6464E5072BA4A65A0039C387 /* Screens */,
+				6464E5132BA4BB660039C387 /* Utils */,
+				6464E5102BA4BA9E0039C387 /* Views */,
+				64B216F82BBF0293005E0DC7 /* Launch Screen.storyboard */,
 			);
 			path = ChickenRush;
 			sourceTree = "<group>";
@@ -203,6 +232,31 @@
 				647D9FCC2BA3ABF3005B6566 /* Preview Assets.xcassets */,
 			);
 			path = "Preview Content";
+			sourceTree = "<group>";
+		};
+		64B216ED2BBEF32F005E0DC7 /* Fonts */ = {
+			isa = PBXGroup;
+			children = (
+				64B216F02BBEF382005E0DC7 /* Bangers */,
+			);
+			name = Fonts;
+			sourceTree = "<group>";
+		};
+		64B216F02BBEF382005E0DC7 /* Bangers */ = {
+			isa = PBXGroup;
+			children = (
+				64B216EE2BBEF382005E0DC7 /* Bangers-Regular.ttf */,
+				64B216EF2BBEF382005E0DC7 /* OFL.txt */,
+			);
+			path = Bangers;
+			sourceTree = "<group>";
+		};
+		64B216F52BBEFE63005E0DC7 /* Tips */ = {
+			isa = PBXGroup;
+			children = (
+				64B216F62BBEFE73005E0DC7 /* Tips.swift */,
+			);
+			name = Tips;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -281,6 +335,9 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				64B216F92BBF0293005E0DC7 /* Launch Screen.storyboard in Resources */,
+				64B216F22BBEF382005E0DC7 /* OFL.txt in Resources */,
+				64B216F12BBEF382005E0DC7 /* Bangers-Regular.ttf in Resources */,
 				647D9FCD2BA3ABF3005B6566 /* Preview Assets.xcassets in Resources */,
 				6464E5192BA5C3230039C387 /* GoogleService-Info.plist in Resources */,
 				647D9FC92BA3ABF3005B6566 /* Assets.xcassets in Resources */,
@@ -323,6 +380,7 @@
 			files = (
 				64AF0B002BA79BCB0081EA97 /* DrinksLottery.swift in Sources */,
 				6464E5092BA4A6AA0039C387 /* Selection.swift in Sources */,
+				64B216F72BBEFE73005E0DC7 /* Tips.swift in Sources */,
 				6464E5382BA6090B0039C387 /* Graveyard.swift in Sources */,
 				6464E5362BA603F00039C387 /* ChickenLocation.swift in Sources */,
 				6464E53D2BA744DD0039C387 /* ApiClient.swift in Sources */,
@@ -339,12 +397,16 @@
 				649F06802BA8A11F00DDE737 /* UUID+Utils.swift in Sources */,
 				6464E50B2BA4A8280039C387 /* ChickenConfig.swift in Sources */,
 				64C21F0C2BA486E6003B25B3 /* LocationManager.swift in Sources */,
+				64B216F42BBEF41C005E0DC7 /* Font+Utils.swift in Sources */,
 				649BE2072BAF201600520CE3 /* Drink.swift in Sources */,
 				649BE2092BAF43CC00520CE3 /* Image+Utils.swift in Sources */,
+				6401DFCB2BC9BB3C00BA8967 /* Location.swift in Sources */,
+				64FDBE372BC0278E0073DC85 /* Onboarding.swift in Sources */,
 				6464E50F2BA4AA010039C387 /* App.swift in Sources */,
 				6400630F2BBDC7B100C6C08C /* SelectionButton.swift in Sources */,
 				649BE2052BAF19AF00520CE3 /* DrinksListView.swift in Sources */,
 				6464E50D2BA4A82F0039C387 /* Hunter.swift in Sources */,
+				64B216FD2BBF162C005E0DC7 /* ChickenMapConfig.swift in Sources */,
 				64AF0B022BA7A0110081EA97 /* Color+Utils.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -473,6 +535,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = ChickenRush/ChickenRush.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -493,6 +556,7 @@
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = "Launch Screen.storyboard";
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -518,6 +582,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = ChickenRush/ChickenRush.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -538,6 +603,7 @@
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = "Launch Screen.storyboard";
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -594,8 +660,8 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/pointfreeco/swift-composable-architecture.git";
 			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.9.2;
+				branch = "shared-state-beta";
+				kind = branch;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */

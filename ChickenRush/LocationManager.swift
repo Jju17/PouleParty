@@ -6,26 +6,61 @@
 //
 
 import CoreLocation
-import FirebaseFirestore
+import Dependencies
+import MapKit
 
-class LocationManager: NSObject, CLLocationManagerDelegate {
-    private var locationManager: CLLocationManager?
-    private let db = Firestore.firestore()
+final class LocationManager: NSObject, ObservableObject {
+    @Dependency(\.apiClient) var apiClient
+    var location: CLLocationCoordinate2D?
     private var lastUpdateTime: Date = .now
+    private var locationManager: CLLocationManager = CLLocationManager()
+    private var isTrackingActive: Bool = false
+    private var updatingMethod: TrackingMethod = .alwaysUpdating
+
+    enum TrackingMethod {
+        case alwaysUpdating, updatingOnce
+    }
 
     override init() {
         super.init()
-        locationManager = CLLocationManager()
-        locationManager?.delegate = self
-        locationManager?.desiredAccuracy = kCLLocationAccuracyBest
-        locationManager?.allowsBackgroundLocationUpdates = true
-        locationManager?.requestAlwaysAuthorization()
+        self.locationManager.delegate = self
+        self.locationManager.desiredAccuracy = kCLLocationAccuracyBest
+        self.locationManager.allowsBackgroundLocationUpdates = true
+        self.locationManager.requestAlwaysAuthorization()
     }
 
+    convenience init(isTrackingActive: Bool, updatingMethod: TrackingMethod) {
+        self.init()
+        self.isTrackingActive = isTrackingActive
+        self.updatingMethod = updatingMethod
+    }
+
+    private func updateChickenLocation(with location: CLLocation) {
+        do {
+            try apiClient.setChickenLocation(location.coordinate)
+            self.lastUpdateTime = .now
+            print("Updated location successfully!")
+        } catch {
+            print("Error adding document: \(error)")
+        }
+    }
+
+    private func startTrackingLocation() {
+        switch self.updatingMethod {
+        case .alwaysUpdating:
+            self.locationManager.startUpdatingLocation()
+        case .updatingOnce:
+            self.locationManager.stopUpdatingLocation()
+            self.locationManager.requestLocation()
+        }
+    }
+}
+
+extension LocationManager: CLLocationManagerDelegate {
     func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
         switch status {
         case .authorizedWhenInUse, .authorizedAlways:
-            locationManager?.startUpdatingLocation()
+            self.startTrackingLocation()
         case .denied, .restricted:
             print("Location access denied")
         default:
@@ -33,27 +68,25 @@ class LocationManager: NSObject, CLLocationManagerDelegate {
         }
     }
 
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        guard manager.authorizationStatus == .authorizedWhenInUse ||
+              manager.authorizationStatus == .authorizedAlways
+        else { return }
+        self.startTrackingLocation()
+    }
+
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        if let location = locations.last,
+        self.location = locations.last.map { $0.coordinate }
+
+        if self.isTrackingActive,
+           let location = locations.last,
            Date.now >= lastUpdateTime.addingTimeInterval(30)
         {
-            do {
-                let chickenLocation = ChickenLocation(
-                    location: GeoPoint(latitude: location.coordinate.latitude, longitude: location.coordinate.longitude),
-                    timestamp: Timestamp(date: .now)
-                )
-                let chickenLocationRef = self.db.collection("chickenLocations").document()
-                try chickenLocationRef.setData(from: chickenLocation)
-                self.lastUpdateTime = .now
-                print("Updated location successfully!")
-            } catch {
-              print("Error adding document: \(error)")
-            }
+            self.updateChickenLocation(with: location)
         }
     }
 
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        // Handle error
         print("Location manager failed with error: \(error)")
     }
 }

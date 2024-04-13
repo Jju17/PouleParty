@@ -6,7 +6,6 @@
 //
 
 import ComposableArchitecture
-import FirebaseFirestore
 import MapKit
 import SwiftUI
 
@@ -16,7 +15,7 @@ struct HunterMapFeature {
     @ObservableState
     struct State {
         @Presents var destination: Destination.State?
-        var locationManager = CLLocationManager()
+        var locationManager = LocationManager()
         var game: Game?
         var nextRadiusUpdate: Date?
         var nowDate: Date = .now
@@ -96,7 +95,7 @@ struct HunterMapFeature {
             case .noGameFound:
                 state.destination = .alert(
                     AlertState {
-                        TextState("No game found, please wait on this page or create one and be the chicken. 🐔")
+                        TextState("No game found")
                     } actions: {
                         ButtonState(role: .cancel) {
                             TextState("I'll wait")
@@ -104,21 +103,16 @@ struct HunterMapFeature {
                         ButtonState(action: .beTheChicken) {
                             TextState("Be the 🐔")
                         }
+                    } message: {
+                        TextState("Please wait on this page or create one and be the chicken.")
                     }
                 )
                 return .none
             case .onAppear:
-                state.locationManager.requestAlwaysAuthorization()
                 return .run { send in
-                    do {
-                        let game = try await Firestore.firestore()
-                            .collection("games")
-                            .document("sRhFcVTSpPvWOQe947cz")
-                            .getDocument(as: Game.self)
-
+                    if let game = await apiClient.getConfig() {
                         await send(.setGameTriggered(to: game))
-                    } catch {
-                        print("Error getting documents: \(error)")
+                    } else {
                         await send(.noGameFound)
                     }
                 }
@@ -150,11 +144,11 @@ struct HunterMapFeature {
                     return .none
                 }
 
-                guard state.radius - game.radiusDeclinePerUpdate > 0
+                guard Int(state.radius) - Int(game.radiusDeclinePerUpdate) > 0
                 else {  return .none }
 
                 state.nextRadiusUpdate?.addTimeInterval(TimeInterval(game.radiusIntervalUpdate * 60))
-                state.radius = state.radius - game.radiusDeclinePerUpdate
+                state.radius = Int(state.radius) - Int(game.radiusDeclinePerUpdate)
                 return .run { send in
                     if let location = try await apiClient.getLastChickenLocation() {
                         await send(.newLocationFetched(location))
@@ -188,7 +182,7 @@ struct HunterMapView: View {
                 Spacer()
                 VStack {
                     Text("You are the Hunter")
-                    Text("Catch the Chicken !")
+                    Text("Catch the 🐔 !")
                         .font(.system(size: 12))
                 }
                 Spacer()
@@ -216,7 +210,7 @@ struct HunterMapView: View {
                             .frame(width: 25, height: 25)
                     }
                 }
-                .frame(width: 45, height: 40)
+                .frame(width: 50, height: 40)
 
 
             }

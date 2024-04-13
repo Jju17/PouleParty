@@ -15,24 +15,15 @@ struct ChickenConfigFeature {
 
     @ObservableState
     struct State {
-        var endDate: Date = .now.addingTimeInterval(3900)
-        var startDate: Date = .now.addingTimeInterval(300)
-        var latitude: String = ""
-        var longitude: String = ""
-        var radiusIntervalUpdate: Double = 2
-        var gameMod: GameMod = .followTheChicken
-        var radiusSize: Double = 1500
-        var radiusDecline: Double = 100
-
-        enum GameMod: String, CaseIterable {
-            case followTheChicken = "Follow the chicken 🐔"
-            case stayInTheZone = "Stay in tha zone 📍"
-        }
+        @Shared var game: Game
+        var manager = LocationManager(isTrackingActive: false, updatingMethod: .alwaysUpdating)
+        var path = StackState<ChickenMapConfigFeature.State>()
     }
 
     enum Action: BindableAction {
         case binding(BindingAction<State>)
         case goBackButtonTriggered
+        case path(StackAction<ChickenMapConfigFeature.State, ChickenMapConfigFeature.Action>)
         case startGameButtonTapped
         case startGameTriggered(Game)
     }
@@ -48,26 +39,13 @@ struct ChickenConfigFeature {
                 return .none
             case .goBackButtonTriggered:
                 return .none
+            case .path:
+                return .none
             case .startGameButtonTapped:
                 return .run { [state = state] send in
-                    let lat: Double = Double(state.latitude) ?? 50.8466
-                    let long: Double = Double(state.longitude) ?? 4.3528
-
-                    let newGame = Game(
-                        id: UUID().uuidString,
-                        name: "Partie 1",
-                        numberOfPlayers: 10,
-                        radiusIntervalUpdate: Int(state.radiusIntervalUpdate),
-                        startTimestamp: Timestamp(date: state.startDate),
-                        endTimestamp: Timestamp(date: state.endDate),
-                        initialCoordinates: GeoPoint(latitude: lat, longitude: long),
-                        initialRadius: Int(state.radiusSize), 
-                        radiusDeclinePerUpdate: 100
-                    )
-
                     do {
-                        try await apiClient.setConfig(newGame)
-                        await send(.startGameTriggered(newGame))
+                        try apiClient.setConfig(state.game)
+                        await send(.startGameTriggered(state.game))
                     } catch {
                         print("Error adding document: \(error)")
                     }
@@ -77,6 +55,9 @@ struct ChickenConfigFeature {
 
             }
         }
+        .forEach(\.path, action: \.path) {
+            ChickenMapConfigFeature()
+        }
     }
 }
 
@@ -85,66 +66,48 @@ struct ChickenConfigView: View {
     @Bindable var store: StoreOf<ChickenConfigFeature>
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $store.scope(state: \.path, action: \.path)) {
             Form {
-                DatePicker(selection: $store.startDate, in: .now.addingTimeInterval(60)...){
+                DatePicker(selection: $store.game.startDate, in: .now.addingTimeInterval(60)...){
                     Text("Start at")
                 }
                 .datePickerStyle(.compact)
-                DatePicker(selection: $store.endDate, in: store.startDate.addingTimeInterval(300)..., displayedComponents: .hourAndMinute){
+                DatePicker(selection: $store.game.endDate, in: store.game.startDate.addingTimeInterval(300)..., displayedComponents: .hourAndMinute){
                     Text("End at")
                 }
                 .datePickerStyle(.compact)
-                HStack {
-                    Text("Latitude")
-                    Spacer()
-                    TextField("50.8466", text: $store.latitude)
-                        .multilineTextAlignment(.trailing)
-                        .frame(width:100)
-                }
-                HStack {
-                    Text("Longitude")
-                    Spacer()
-                    TextField("4.3528", text: $store.longitude)
-                        .multilineTextAlignment(.trailing)
-                        .frame(width:100)
+                NavigationLink(state: ChickenMapConfigFeature.State(game: store.$game)) {
+                    Text("Map setup")
                 }
                 VStack(alignment: .leading) {
                     HStack {
                         Text("Radius interval update")
                         Spacer()
-                        Text("\(Int(self.store.radiusIntervalUpdate)) minutes")
+                        Text("\(Int(self.store.game.radiusIntervalUpdate)) minutes")
                     }
-                    Slider(value: self.$store.radiusIntervalUpdate, in: 1...60, step: 1)
-                }
-                VStack(alignment: .leading) {
-                    HStack {
-                        Text("Radius size")
-                        Spacer()
-                        Text("\(Int(self.store.radiusSize)) meters")
-                    }
-                    Slider(value: self.$store.radiusSize, in: 500...2000, step: 100)
+                    Slider(value: self.$store.game.radiusIntervalUpdate, in: 1...60, step: 1)
                 }
                 VStack(alignment: .leading) {
                     HStack {
                         Text("Radius decline")
                         Spacer()
-                        Text("\(Int(self.store.radiusDecline)) meters")
+                        Text("\(Int(self.store.game.radiusDeclinePerUpdate)) meters")
                     }
-                    Slider(value: self.$store.radiusDecline, in: 50...1000, step: 10)
+                    Slider(value: self.$store.game.radiusDeclinePerUpdate, in: 50...1000, step: 10)
                 }
                 Button("Start game") {
                     store.send(.startGameButtonTapped)
                 }
             }
             .navigationTitle("Game Settings")
+        } destination: { store in
+            ChickenMapConfigView(store: store)
         }
-
     }
 }
 
 #Preview {
-    ChickenConfigView(store: Store(initialState: ChickenConfigFeature.State()) {
+    ChickenConfigView(store: Store(initialState: ChickenConfigFeature.State(game: Shared(Game.mock))) {
         ChickenConfigFeature()
     })
 }

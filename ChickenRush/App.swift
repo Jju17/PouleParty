@@ -31,13 +31,13 @@ struct AppFeature {
     var body: some ReducerOf<Self> {
         Reduce { state, action in
             switch action {
-            case .chickenMap(.stopGameButtonTapped):
+            case .chickenMap(.goToMenu):
                 state = AppFeature.State.selection(SelectionFeature.State())
                 return .run { send in
                     try await apiClient.deleteConfig()
                 }
             case .hunterMap(.goToChickenConfig):
-                state = AppFeature.State.selection(SelectionFeature.State(destination: .chickenConfig(ChickenConfigFeature.State())))
+                state = AppFeature.State.selection(SelectionFeature.State(destination: .chickenConfig(ChickenConfigFeature.State(game: Shared(Game.mock)))))
                 return .none
             case .selection(.hunterButtonTapped):
                 state = AppFeature.State.hunterMap(HunterMapFeature.State())

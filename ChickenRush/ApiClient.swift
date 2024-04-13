@@ -10,17 +10,15 @@ import CoreLocation
 import FirebaseFirestore
 
 struct ApiClient {
-    var setConfig: (Game) async throws -> Void
     var deleteConfig: () async throws -> Void
     var getConfig: () async -> Game?
     var getLastChickenLocation: () async throws -> CLLocationCoordinate2D?
+    var setChickenLocation: (CLLocationCoordinate2D) throws -> Void
+    var setConfig: (Game) throws -> Void
 }
 
 extension ApiClient: DependencyKey {
     static var liveValue = ApiClient(
-        setConfig: { newGame in
-            try Firestore.firestore().collection("games").document("sRhFcVTSpPvWOQe947cz").setData(from: newGame)
-        },
         deleteConfig: {
             try await Firestore.firestore().collection("games").document("sRhFcVTSpPvWOQe947cz").delete()
         },
@@ -48,6 +46,18 @@ extension ApiClient: DependencyKey {
             }
 
             return location
+        },
+        setChickenLocation: { coordinate in
+            let chickenLocation = ChickenLocation(
+                location: GeoPoint(latitude: coordinate.latitude, longitude: coordinate.longitude),
+                timestamp: Timestamp(date: .now)
+            )
+
+            let chickenLocationRef = Firestore.firestore().collection("chickenLocations").document()
+            try chickenLocationRef.setData(from: chickenLocation)
+        },
+        setConfig: { newGame in
+            try Firestore.firestore().collection("games").document("sRhFcVTSpPvWOQe947cz").setData(from: newGame)
         }
     )
 }
