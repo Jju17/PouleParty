@@ -16,7 +16,7 @@ struct ChickenMapFeature {
     struct State {
         @Presents var destination: Destination.State?
         var game: Game
-        var locationManager: LocationManager = LocationManager(isTrackingActive: true, updatingMethod: .alwaysUpdating)
+//        var locationManager: LocationManager = LocationManager(isTrackingActive: true, updatingMethod: .alwaysUpdating)
         var nextRadiusUpdate: Date?
         var nowDate: Date = .now
         var radius: Int = 1500

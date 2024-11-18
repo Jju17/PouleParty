@@ -22,13 +22,6 @@ struct ChickenMapConfigFeature {
         @Shared var game: Game
         var marker: Marker<Text>?
         var mapCircle: MapCircle?
-
-        init(cameraPosition: MapCameraPosition, game: Game, marker: Marker<Text>? = nil, mapCircle: MapCircle? = nil) {
-            self.cameraPosition = cameraPosition
-            self.game = game
-            self.marker = marker
-            self.mapCircle = mapCircle
-        }
     }
     enum Action: BindableAction {
         case binding(BindingAction<State>)
@@ -101,10 +94,13 @@ struct ChickenMapConfigView: View {
 #Preview {
     ChickenMapConfigView(
         store: Store(
-            initialState: ChickenMapConfigFeature.State(cameraPosition: MapCameraPosition.region(MKCoordinateRegion(
-                center: .init(latitude: 50.4233, longitude: 4.5343),
-                span: MKCoordinateSpan(latitudeDelta: 0.2, longitudeDelta: 0.2)
-            )), game: Shared(Game.mock)),
+            initialState: ChickenMapConfigFeature.State(
+                cameraPosition: MapCameraPosition.region(MKCoordinateRegion(
+                    center: .init(latitude: 50.4233, longitude: 4.5343),
+                    span: MKCoordinateSpan(latitudeDelta: 0.2, longitudeDelta: 0.2)
+                )),
+                game: Shared(Game.mock)
+            ),
             reducer: { ChickenMapConfigFeature() }
         )
     )

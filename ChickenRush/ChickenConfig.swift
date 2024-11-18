@@ -16,7 +16,7 @@ struct ChickenConfigFeature {
     @ObservableState
     struct State {
         @Shared var game: Game
-        var manager = LocationManager(isTrackingActive: false, updatingMethod: .alwaysUpdating)
+//        var manager = LocationManager(isTrackingActive: false, updatingMethod: .alwaysUpdating)
         var path = StackState<ChickenMapConfigFeature.State>()
     }
 

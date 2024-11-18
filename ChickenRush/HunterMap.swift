@@ -15,7 +15,6 @@ struct HunterMapFeature {
     @ObservableState
     struct State {
         @Presents var destination: Destination.State?
-        var locationManager = LocationManager()
         var game: Game?
         var nextRadiusUpdate: Date?
         var nowDate: Date = .now

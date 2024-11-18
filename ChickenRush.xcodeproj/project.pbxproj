@@ -8,7 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		6400630F2BBDC7B100C6C08C /* SelectionButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6400630E2BBDC7B100C6C08C /* SelectionButton.swift */; };
-		6401DFCB2BC9BB3C00BA8967 /* Location.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6401DFCA2BC9BB3C00BA8967 /* Location.swift */; };
+		6401DFCB2BC9BB3C00BA8967 /* Coordinate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6401DFCA2BC9BB3C00BA8967 /* Coordinate.swift */; };
+		642E2D1B2BCC1C6400290B58 /* LocationClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 642E2D1A2BCC1C6400290B58 /* LocationClient.swift */; };
 		643A59972BCA90BA002B53B6 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 643A59962BCA90BA002B53B6 /* GoogleService-Info.plist */; };
 		6464E5092BA4A6AA0039C387 /* Selection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6464E5082BA4A6AA0039C387 /* Selection.swift */; };
 		6464E50B2BA4A8280039C387 /* ChickenConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6464E50A2BA4A8280039C387 /* ChickenConfig.swift */; };
@@ -52,13 +53,17 @@
 		64B216FD2BBF162C005E0DC7 /* ChickenMapConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64B216FC2BBF162C005E0DC7 /* ChickenMapConfig.swift */; };
 		64C21F0A2BA484CD003B25B3 /* ComposableArchitecture in Frameworks */ = {isa = PBXBuildFile; productRef = 64C21F092BA484CD003B25B3 /* ComposableArchitecture */; };
 		64C21F0C2BA486E6003B25B3 /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64C21F0B2BA486E6003B25B3 /* LocationManager.swift */; };
+		64C9CAE22CEBD6C70087BE13 /* Early GameBoy.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 64C9CAE12CEBD6C70087BE13 /* Early GameBoy.ttf */; };
+		64C9CAE42CEBEDE00087BE13 /* background-music.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 64C9CAE32CEBEDE00087BE13 /* background-music.mp3 */; };
 		64F10C2A2BA9E04D001D83D8 /* EndGameCode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64F10C292BA9E04D001D83D8 /* EndGameCode.swift */; };
 		64FDBE372BC0278E0073DC85 /* Onboarding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64FDBE362BC0278E0073DC85 /* Onboarding.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		6400630E2BBDC7B100C6C08C /* SelectionButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectionButton.swift; sourceTree = "<group>"; };
-		6401DFCA2BC9BB3C00BA8967 /* Location.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Location.swift; sourceTree = "<group>"; };
+		6401DFCA2BC9BB3C00BA8967 /* Coordinate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Coordinate.swift; sourceTree = "<group>"; };
+		6405C2912BFC871B00A35A50 /* Bxl.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = Bxl.gpx; sourceTree = "<group>"; };
+		642E2D1A2BCC1C6400290B58 /* LocationClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationClient.swift; sourceTree = "<group>"; };
 		643A59942BC9C1E8002B53B6 /* Lasne.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = Lasne.gpx; sourceTree = "<group>"; };
 		643A59952BC9C38B002B53B6 /* Namur.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = Namur.gpx; sourceTree = "<group>"; };
 		643A59962BCA90BA002B53B6 /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
@@ -96,6 +101,8 @@
 		64B216F82BBF0293005E0DC7 /* Launch Screen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = "Launch Screen.storyboard"; sourceTree = "<group>"; };
 		64B216FC2BBF162C005E0DC7 /* ChickenMapConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChickenMapConfig.swift; sourceTree = "<group>"; };
 		64C21F0B2BA486E6003B25B3 /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
+		64C9CAE12CEBD6C70087BE13 /* Early GameBoy.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Early GameBoy.ttf"; sourceTree = "<group>"; };
+		64C9CAE32CEBEDE00087BE13 /* background-music.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "background-music.mp3"; sourceTree = "<group>"; };
 		64F10C292BA9E04D001D83D8 /* EndGameCode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EndGameCode.swift; sourceTree = "<group>"; };
 		64FDBE362BC0278E0073DC85 /* Onboarding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Onboarding.swift; sourceTree = "<group>"; };
 		64FDBE382BC32AD60073DC85 /* La Rochelle.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = "La Rochelle.gpx"; sourceTree = "<group>"; };
@@ -170,22 +177,24 @@
 				6464E5312BA5DBAA0039C387 /* Game.swift */,
 				6464E5352BA603F00039C387 /* ChickenLocation.swift */,
 				649BE2062BAF201600520CE3 /* Drink.swift */,
-				6401DFCA2BC9BB3C00BA8967 /* Location.swift */,
+				6401DFCA2BC9BB3C00BA8967 /* Coordinate.swift */,
 			);
 			name = Models;
 			sourceTree = "<group>";
 		};
-		6464E53B2BA744CD0039C387 /* Clients */ = {
+		6464E53B2BA744CD0039C387 /* Dependencies */ = {
 			isa = PBXGroup;
 			children = (
 				6464E53C2BA744DD0039C387 /* ApiClient.swift */,
+				642E2D1A2BCC1C6400290B58 /* LocationClient.swift */,
 			);
-			name = Clients;
+			name = Dependencies;
 			sourceTree = "<group>";
 		};
 		647D9FB82BA3ABF2005B6566 = {
 			isa = PBXGroup;
 			children = (
+				6405C2912BFC871B00A35A50 /* Bxl.gpx */,
 				64FDBE382BC32AD60073DC85 /* La Rochelle.gpx */,
 				643A59942BC9C1E8002B53B6 /* Lasne.gpx */,
 				643A59952BC9C38B002B53B6 /* Namur.gpx */,
@@ -209,12 +218,13 @@
 				647D9FCA2BA3ABF3005B6566 /* ChickenRush.entitlements */,
 				643A59962BCA90BA002B53B6 /* GoogleService-Info.plist */,
 				64620C802BA3C81C006B329C /* Info.plist */,
+				64C9CAE32CEBEDE00087BE13 /* background-music.mp3 */,
 				6464E50E2BA4AA010039C387 /* App.swift */,
 				647D9FC42BA3ABF2005B6566 /* ChickenRushApp.swift */,
 				6464E5372BA6090B0039C387 /* Graveyard.swift */,
 				64C21F0B2BA486E6003B25B3 /* LocationManager.swift */,
 				647D9FC82BA3ABF3005B6566 /* Assets.xcassets */,
-				6464E53B2BA744CD0039C387 /* Clients */,
+				6464E53B2BA744CD0039C387 /* Dependencies */,
 				64B216ED2BBEF32F005E0DC7 /* Fonts */,
 				6464E5302BA5DBA10039C387 /* Models */,
 				647D9FCB2BA3ABF3005B6566 /* Preview Content */,
@@ -238,6 +248,7 @@
 			isa = PBXGroup;
 			children = (
 				64B216F02BBEF382005E0DC7 /* Bangers */,
+				64C9CAE12CEBD6C70087BE13 /* Early GameBoy.ttf */,
 			);
 			name = Fonts;
 			sourceTree = "<group>";
@@ -301,7 +312,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1530;
-				LastUpgradeCheck = 1530;
+				LastUpgradeCheck = 1600;
 				TargetAttributes = {
 					647D9FC02BA3ABF2005B6566 = {
 						CreatedOnToolsVersion = 15.3;
@@ -336,7 +347,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				64B216F92BBF0293005E0DC7 /* Launch Screen.storyboard in Resources */,
+				64C9CAE42CEBEDE00087BE13 /* background-music.mp3 in Resources */,
 				643A59972BCA90BA002B53B6 /* GoogleService-Info.plist in Resources */,
+				64C9CAE22CEBD6C70087BE13 /* Early GameBoy.ttf in Resources */,
 				64B216F22BBEF382005E0DC7 /* OFL.txt in Resources */,
 				64B216F12BBEF382005E0DC7 /* Bangers-Regular.ttf in Resources */,
 				647D9FCD2BA3ABF3005B6566 /* Preview Assets.xcassets in Resources */,
@@ -382,6 +395,7 @@
 				6464E5092BA4A6AA0039C387 /* Selection.swift in Sources */,
 				64B216F72BBEFE73005E0DC7 /* Tips.swift in Sources */,
 				6464E5382BA6090B0039C387 /* Graveyard.swift in Sources */,
+				642E2D1B2BCC1C6400290B58 /* LocationClient.swift in Sources */,
 				6464E5362BA603F00039C387 /* ChickenLocation.swift in Sources */,
 				6464E53D2BA744DD0039C387 /* ApiClient.swift in Sources */,
 				6464E53A2BA61F9A0039C387 /* ChickenMap.swift in Sources */,
@@ -400,7 +414,7 @@
 				64B216F42BBEF41C005E0DC7 /* Font+Utils.swift in Sources */,
 				649BE2072BAF201600520CE3 /* Drink.swift in Sources */,
 				649BE2092BAF43CC00520CE3 /* Image+Utils.swift in Sources */,
-				6401DFCB2BC9BB3C00BA8967 /* Location.swift in Sources */,
+				6401DFCB2BC9BB3C00BA8967 /* Coordinate.swift in Sources */,
 				64FDBE372BC0278E0073DC85 /* Onboarding.swift in Sources */,
 				6464E50F2BA4AA010039C387 /* App.swift in Sources */,
 				6400630F2BBDC7B100C6C08C /* SelectionButton.swift in Sources */,
@@ -448,6 +462,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -510,6 +525,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -539,13 +555,14 @@
 				CODE_SIGN_ENTITLEMENTS = ChickenRush/ChickenRush.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"ChickenRush/Preview Content\"";
 				DEVELOPMENT_TEAM = YXXNH92P5F;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ChickenRush/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Chicken Rush";
+				INFOPLIST_KEY_CFBundleDisplayName = "Poule Party";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Need location";
 				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "Need location";
 				INFOPLIST_KEY_NSLocationUsageDescription = "Need location";
@@ -586,13 +603,14 @@
 				CODE_SIGN_ENTITLEMENTS = ChickenRush/ChickenRush.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"ChickenRush/Preview Content\"";
 				DEVELOPMENT_TEAM = YXXNH92P5F;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ChickenRush/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Chicken Rush";
+				INFOPLIST_KEY_CFBundleDisplayName = "Poule Party";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Need location";
 				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "Need location";
 				INFOPLIST_KEY_NSLocationUsageDescription = "Need location";
@@ -660,8 +678,8 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/pointfreeco/swift-composable-architecture.git";
 			requirement = {
-				branch = "shared-state-beta";
-				kind = branch;
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.10.4;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */

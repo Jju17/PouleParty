@@ -10,27 +10,28 @@ import SwiftUI
 struct SelectionButton: View {
     var titleKey: LocalizedStringKey
     var color: Color
+    var lineWidth: CGFloat
     var action: () -> Void
 
-    init(_ titleKey: LocalizedStringKey, color: Color = .black, action: @escaping () -> Void) {
+    init(_ titleKey: LocalizedStringKey, color: Color = .black, lineWidth: CGFloat = 2.0, action: @escaping () -> Void) {
         self.titleKey = titleKey
         self.color = color
         self.action = action
+        self.lineWidth = lineWidth
     }
 
     var body: some View {
         Button(action: self.action) {
             Text(self.titleKey)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .font(.banger(size: 20))
-                .foregroundStyle(.white)
+                .font(.gameboy(size: 20))
                 .padding()
+                .foregroundStyle(self.color)
                 .background(
                     RoundedRectangle(cornerRadius: 10)
-                        .stroke(.white, lineWidth: 2)
+                        .stroke(self.color, lineWidth: self.lineWidth)
                 )
         }
-
     }
 }
 

@@ -12,6 +12,7 @@ struct DrinkView: View {
 
     var body: some View {
         ZStack(alignment: .center) {
+
             RoundedRectangle(cornerRadius: 20)
                 .fill(.white)
             drink.symbol

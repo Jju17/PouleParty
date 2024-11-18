@@ -4,6 +4,7 @@
 <dict>
 	<key>UIAppFonts</key>
 	<array>
+		<string>Early GameBoy.ttf</string>
 		<string>Bangers-Regular.ttf</string>
 	</array>
 	<key>UIBackgroundModes</key>
