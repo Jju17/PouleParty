@@ -203,6 +203,7 @@ struct SelectionView: View {
 
                     Text("Press start to play")
                         .font(.gameboy(size: 12))
+                        .foregroundStyle(Color.black)
                 }
                 Spacer()
             }

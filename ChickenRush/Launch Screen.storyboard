@@ -16,14 +16,18 @@
                         <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
+                            <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="uO6-Ok-7kE">
+                                <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
+                                <color key="backgroundColor" red="0.99215686274509807" green="0.97647058823529409" blue="0.83529411764705885" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                            </view>
                             <label opaque="NO" clipsSubviews="YES" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Made with ❤️ by Julien" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" minimumFontSize="9" translatesAutoresizingMaskIntoConstraints="NO" id="obG-Y5-kRd">
-                                <rect key="frame" x="0.0" y="817.66666666666663" width="393" height="14.333333333333371"/>
+                                <rect key="frame" x="0.0" y="803.66666666666663" width="393" height="14.333333333333371"/>
                                 <fontDescription key="fontDescription" type="system" pointSize="12"/>
-                                <nil key="textColor"/>
+                                <color key="textColor" white="0.0" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                 <nil key="highlightedColor"/>
                             </label>
                             <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="logo" translatesAutoresizingMaskIntoConstraints="NO" id="f6P-lG-wFr">
-                                <rect key="frame" x="96.666666666666686" y="326" width="200" height="200"/>
+                                <rect key="frame" x="96.666666666666686" y="301" width="200" height="200"/>
                                 <constraints>
                                     <constraint firstAttribute="height" constant="200" id="0XX-Nv-5d6"/>
                                     <constraint firstAttribute="width" constant="200" id="qdD-lV-kA7"/>
@@ -33,11 +37,15 @@
                         <viewLayoutGuide key="safeArea" id="Bcu-3y-fUS"/>
                         <color key="backgroundColor" name="CRBeige"/>
                         <constraints>
+                            <constraint firstItem="uO6-Ok-7kE" firstAttribute="trailing" secondItem="Bcu-3y-fUS" secondAttribute="trailing" id="1x8-Tz-yMr"/>
                             <constraint firstItem="Bcu-3y-fUS" firstAttribute="centerX" secondItem="obG-Y5-kRd" secondAttribute="centerX" id="5cz-MP-9tL"/>
-                            <constraint firstItem="f6P-lG-wFr" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" id="A7Z-5R-ciF"/>
+                            <constraint firstItem="f6P-lG-wFr" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" constant="-25" id="A7Z-5R-ciF"/>
+                            <constraint firstAttribute="bottom" secondItem="uO6-Ok-7kE" secondAttribute="bottom" id="JcZ-Wd-DYj"/>
                             <constraint firstItem="f6P-lG-wFr" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="PfT-cY-hgA"/>
                             <constraint firstItem="obG-Y5-kRd" firstAttribute="leading" secondItem="Bcu-3y-fUS" secondAttribute="leading" symbolic="YES" id="SfN-ll-jLj"/>
-                            <constraint firstAttribute="bottom" secondItem="obG-Y5-kRd" secondAttribute="bottom" constant="20" id="Y44-ml-fuU"/>
+                            <constraint firstItem="Bcu-3y-fUS" firstAttribute="bottom" secondItem="obG-Y5-kRd" secondAttribute="bottom" id="Y44-ml-fuU"/>
+                            <constraint firstItem="uO6-Ok-7kE" firstAttribute="leading" secondItem="Bcu-3y-fUS" secondAttribute="leading" id="cnc-Cb-YyC"/>
+                            <constraint firstItem="uO6-Ok-7kE" firstAttribute="top" secondItem="Ze5-6b-2t3" secondAttribute="top" id="kwf-Yd-PCf"/>
                         </constraints>
                     </view>
                 </viewController>
