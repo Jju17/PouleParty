@@ -11,7 +11,6 @@
 		6401DFCB2BC9BB3C00BA8967 /* Coordinate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6401DFCA2BC9BB3C00BA8967 /* Coordinate.swift */; };
 		642E2D1B2BCC1C6400290B58 /* LocationClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 642E2D1A2BCC1C6400290B58 /* LocationClient.swift */; };
 		643A59972BCA90BA002B53B6 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 643A59962BCA90BA002B53B6 /* GoogleService-Info.plist */; };
-		6463D7F92CEBFE500045D3D8 /* CustomAlertView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6463D7F82CEBFE4C0045D3D8 /* CustomAlertView.swift */; };
 		6464E5092BA4A6AA0039C387 /* Selection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6464E5082BA4A6AA0039C387 /* Selection.swift */; };
 		6464E50B2BA4A8280039C387 /* ChickenConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6464E50A2BA4A8280039C387 /* ChickenConfig.swift */; };
 		6464E50F2BA4AA010039C387 /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6464E50E2BA4AA010039C387 /* App.swift */; };
@@ -54,6 +53,7 @@
 		64C21F0C2BA486E6003B25B3 /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64C21F0B2BA486E6003B25B3 /* LocationManager.swift */; };
 		64C9CAE22CEBD6C70087BE13 /* Early GameBoy.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 64C9CAE12CEBD6C70087BE13 /* Early GameBoy.ttf */; };
 		64C9CAE42CEBEDE00087BE13 /* background-music.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 64C9CAE32CEBEDE00087BE13 /* background-music.mp3 */; };
+		64DA4FE92CED56EE00F477C6 /* SwiftLocation in Frameworks */ = {isa = PBXBuildFile; productRef = 64DA4FE82CED56EE00F477C6 /* SwiftLocation */; };
 		64F10C2A2BA9E04D001D83D8 /* EndGameCode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64F10C292BA9E04D001D83D8 /* EndGameCode.swift */; };
 		64FDBE372BC0278E0073DC85 /* Onboarding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64FDBE362BC0278E0073DC85 /* Onboarding.swift */; };
 /* End PBXBuildFile section */
@@ -67,7 +67,6 @@
 		643A59952BC9C38B002B53B6 /* Namur.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = Namur.gpx; sourceTree = "<group>"; };
 		643A59962BCA90BA002B53B6 /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		64620C802BA3C81C006B329C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
-		6463D7F82CEBFE4C0045D3D8 /* CustomAlertView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomAlertView.swift; sourceTree = "<group>"; };
 		6464E5082BA4A6AA0039C387 /* Selection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Selection.swift; sourceTree = "<group>"; };
 		6464E50A2BA4A8280039C387 /* ChickenConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChickenConfig.swift; sourceTree = "<group>"; };
 		6464E50E2BA4AA010039C387 /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
@@ -118,6 +117,7 @@
 				6464E52A2BA5C3ED0039C387 /* FirebaseFunctions in Frameworks */,
 				64C21F0A2BA484CD003B25B3 /* ComposableArchitecture in Frameworks */,
 				6464E52E2BA5C3ED0039C387 /* FirebaseInAppMessaging-Beta in Frameworks */,
+				64DA4FE92CED56EE00F477C6 /* SwiftLocation in Frameworks */,
 				6464E5202BA5C3ED0039C387 /* FirebaseAuth in Frameworks */,
 				6464E5242BA5C3ED0039C387 /* FirebaseFirestore in Frameworks */,
 				6464E5262BA5C3ED0039C387 /* FirebaseFirestoreCombine-Community in Frameworks */,
@@ -146,7 +146,6 @@
 		6464E5102BA4BA9E0039C387 /* Views */ = {
 			isa = PBXGroup;
 			children = (
-				6463D7F82CEBFE4C0045D3D8 /* CustomAlertView.swift */,
 				6464E5112BA4BAAC0039C387 /* CountdownView.swift */,
 				649BE2022BAE037A00520CE3 /* DrinkView.swift */,
 				649BE2042BAF19AF00520CE3 /* DrinksListView.swift */,
@@ -288,6 +287,7 @@
 				6464E5292BA5C3ED0039C387 /* FirebaseFunctions */,
 				6464E52B2BA5C3ED0039C387 /* FirebaseFunctionsCombine-Community */,
 				6464E52D2BA5C3ED0039C387 /* FirebaseInAppMessaging-Beta */,
+				64DA4FE82CED56EE00F477C6 /* SwiftLocation */,
 			);
 			productName = ChickenRush;
 			productReference = 647D9FC12BA3ABF2005B6566 /* ChickenRush.app */;
@@ -320,6 +320,7 @@
 			packageReferences = (
 				64C21F082BA484CD003B25B3 /* XCRemoteSwiftPackageReference "swift-composable-architecture" */,
 				6464E51A2BA5C3ED0039C387 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				64DA4FE72CED56EE00F477C6 /* XCRemoteSwiftPackageReference "SwiftLocation" */,
 			);
 			productRefGroup = 647D9FC22BA3ABF2005B6566 /* Products */;
 			projectDirPath = "";
@@ -408,7 +409,6 @@
 				6400630F2BBDC7B100C6C08C /* SelectionButton.swift in Sources */,
 				649BE2052BAF19AF00520CE3 /* DrinksListView.swift in Sources */,
 				64B216FD2BBF162C005E0DC7 /* ChickenMapConfig.swift in Sources */,
-				6463D7F92CEBFE500045D3D8 /* CustomAlertView.swift in Sources */,
 				64AF0B022BA7A0110081EA97 /* Color+Utils.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -551,10 +551,10 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ChickenRush/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Poule Party";
-				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Need location";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "This app need your location to provide best feature based on location";
 				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "Need location";
 				INFOPLIST_KEY_NSLocationUsageDescription = "Need location";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Need location";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "This app need your location to provide best feature based on location";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -599,10 +599,10 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ChickenRush/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Poule Party";
-				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Need location";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "This app need your location to provide best feature based on location";
 				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "Need location";
 				INFOPLIST_KEY_NSLocationUsageDescription = "Need location";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Need location";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "This app need your location to provide best feature based on location";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -670,6 +670,14 @@
 				minimumVersion = 1.10.4;
 			};
 		};
+		64DA4FE72CED56EE00F477C6 /* XCRemoteSwiftPackageReference "SwiftLocation" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/malcommac/SwiftLocation.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 6.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -727,6 +735,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 64C21F082BA484CD003B25B3 /* XCRemoteSwiftPackageReference "swift-composable-architecture" */;
 			productName = ComposableArchitecture;
+		};
+		64DA4FE82CED56EE00F477C6 /* SwiftLocation */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 64DA4FE72CED56EE00F477C6 /* XCRemoteSwiftPackageReference "SwiftLocation" */;
+			productName = SwiftLocation;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

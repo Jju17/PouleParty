@@ -5,11 +5,10 @@
 //  Created by Julien Rahier on 15/03/2024.
 //
 
-import ComposableArchitecture
-import Combine
-import CoreLocation
-import SwiftUI
 import AVFAudio
+import ComposableArchitecture
+import SwiftLocation
+import SwiftUI
 
 @Reducer
 struct SelectionFeature {
@@ -34,17 +33,11 @@ struct SelectionFeature {
     @Reducer
     struct Destination {
         enum State {
-            case alert(AlertState<Action.Alert>)
             case chickenConfig(ChickenConfigFeature.State)
         }
 
         enum Action {
-            case alert(Alert)
             case chickenConfig(ChickenConfigFeature.Action)
-
-            enum Alert {
-                case askForPassword
-            }
         }
 
         var body: some ReducerOf<Self> {
@@ -55,6 +48,7 @@ struct SelectionFeature {
     }
 
     @Dependency(\.apiClient) var apiClient
+    @Dependency(\.locationClient) var locationClient
 
     var body: some ReducerOf<Self> {
         BindingReducer()
@@ -64,7 +58,7 @@ struct SelectionFeature {
             case .binding:
                 return .none
             case .validatePasswordButtonTapped:
-                guard state.password == "jujurahier"
+                guard state.password == ""
                 else {
                     state.password = ""
                     return .none
@@ -73,20 +67,15 @@ struct SelectionFeature {
                 state.isAuthenticating = false
 
                 return .run { send in
-                    let game = await apiClient.getConfig()
-
-                    guard game != nil
+                    guard let game = await apiClient.getConfig(),
+                          game.endDate > .now
                     else {
+                        try await apiClient.deleteConfig()
                         await send(.goToChickenConfigTriggered)
                         return
                     }
 
-                    if game!.endDate > .now {
-                        await send(.goToChickenMapTriggered(game!))
-                    } else if game!.endDate < .now {
-                        try await apiClient.deleteConfig()
-                        await send(.goToChickenConfigTriggered)
-                    }
+                    await send(.goToChickenMapTriggered(game))
                 }
             case let .destination(.presented(.chickenConfig(.startGameTriggered(game)))):
                 state.destination = nil
@@ -162,7 +151,7 @@ struct SelectionView: View {
             Button {
                 store.isAuthenticating.toggle()
             } label: {
-                Text("C'est moi la poule")
+                Text("I am la poule")
                     .padding()
                     .foregroundColor(.black)
                     .font(.gameboy(size: 8))
@@ -184,14 +173,15 @@ struct SelectionView: View {
         }
         .task {
             self.playSound()
+            let location = Location()
+            do {
+                let obtaninedStatus = try await location.requestPermission(.always)
+                print("obtaninedStatus : \(String(describing: obtaninedStatus))")
+            } catch {
+                print("error: \(error)")
+            }
             await self.animateBlinking()
         }
-        .alert(
-            $store.scope(
-                state: \.destination?.alert,
-                action: \.destination.alert
-            )
-        )
         .sheet(
             item: $store.scope(
                 state: \.destination?.chickenConfig,

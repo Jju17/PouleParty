@@ -107,7 +107,7 @@ struct HunterMapFeature {
                 }
             case .onTask:
                 return .run { send in
-                    for await _ in self.clock.timer(interval: .seconds(1)) {
+                    for await _ in self.clock.timer(interval: .seconds(5)) {
                         print("onTask")
                         await send(.timerTicked)
                     }

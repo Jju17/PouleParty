@@ -1,5 +1,5 @@
 {
-  "originHash" : "1d5ebc45c842938e61f65942b4b56fac69574fb86e0c2462e7d493da38cab919",
+  "originHash" : "6f2ccf4679e7856896d4becf327c2e6c2501d73213340739e1f62612dd7cd0ce",
   "pins" : [
     {
       "identity" : "abseil-cpp-binary",
@@ -215,6 +215,15 @@
       "state" : {
         "revision" : "fa8f95c2d536d6620cc2f504ebe8a6167c9fc2dd",
         "version" : "510.0.1"
+      }
+    },
+    {
+      "identity" : "swiftlocation",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/malcommac/SwiftLocation.git",
+      "state" : {
+        "revision" : "010073e62cea4daefea61042a51b8619d23cdc35",
+        "version" : "6.0.0"
       }
     },
     {
