@@ -28,7 +28,6 @@ struct HunterMapFeature {
         case binding(BindingAction<State>)
         case destination(PresentationAction<Destination.Action>)
         case dismissDrinksLottery
-        case goToChickenConfig
         case newLocationFetched(CLLocationCoordinate2D)
         case noGameFound
         case onAppear
@@ -73,13 +72,7 @@ struct HunterMapFeature {
                 return .none
             case .binding:
                 return .none
-            case .destination(.presented(.alert(.beTheChicken))):
-                return .run { send in
-                    await send(.goToChickenConfig)
-                }
             case .destination:
-                return .none
-            case .goToChickenConfig:
                 return .none
             case .dismissDrinksLottery:
                 state.destination = nil
@@ -99,11 +92,8 @@ struct HunterMapFeature {
                         ButtonState(role: .cancel) {
                             TextState("I'll wait")
                         }
-                        ButtonState(action: .beTheChicken) {
-                            TextState("Be the 🐔")
-                        }
                     } message: {
-                        TextState("Please wait on this page or create one and be the chicken.")
+                        TextState("Please wait on this page until the 🐔 create a new game.")
                     }
                 )
                 return .none

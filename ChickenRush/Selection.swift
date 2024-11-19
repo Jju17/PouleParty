@@ -17,20 +17,18 @@ struct SelectionFeature {
     @ObservableState
     struct State {
         @Presents var destination: Destination.State?
-        var location: CLLocation?
+        var password: String = ""
+        var isAuthenticating = false
     }
 
-    enum Action {
-        case chickenButtonTapped
+    enum Action: BindableAction {
+        case binding(BindingAction<State>)
         case destination(PresentationAction<Destination.Action>)
         case dismissChickenConfig
         case goToChickenConfigTriggered
         case goToChickenMapTriggered(Game)
-        case hunterButtonTapped
-        case locationAuthorizationStatus(CLAuthorizationStatus)
-        case locationError(String)
-        case locationResponse(CLLocation)
-        case locationTask
+        case startButtonTapped
+        case validatePasswordButtonTapped
     }
 
     @Reducer
@@ -45,7 +43,7 @@ struct SelectionFeature {
             case chickenConfig(ChickenConfigFeature.Action)
 
             enum Alert {
-                case addAlertHere
+                case askForPassword
             }
         }
 
@@ -57,12 +55,23 @@ struct SelectionFeature {
     }
 
     @Dependency(\.apiClient) var apiClient
-    @Dependency(\.locationClient) var locationClient
 
     var body: some ReducerOf<Self> {
+        BindingReducer()
+
         Reduce { state, action in
             switch action {
-            case .chickenButtonTapped:
+            case .binding:
+                return .none
+            case .validatePasswordButtonTapped:
+                guard state.password == "jujurahier"
+                else {
+                    state.password = ""
+                    return .none
+                }
+
+                state.isAuthenticating = false
+
                 return .run { send in
                     let game = await apiClient.getConfig()
 
@@ -96,43 +105,8 @@ struct SelectionFeature {
                 return .none
             case .goToChickenMapTriggered:
                 return .none
-            case .hunterButtonTapped:
+            case .startButtonTapped:
                 return .none
-            case let .locationAuthorizationStatus(status):
-                switch status {
-                case .notDetermined:
-                    return .run { _ in
-                        self.locationClient.requestAlwaysAuthorization()
-                    }
-                case .restricted:
-                    // TODO: show an alert
-                    break
-                case .denied:
-                    // TODO: show an alert
-                    break
-                case .authorizedAlways, .authorizedWhenInUse:
-                    return .run { _ in
-                        self.locationClient.requestAlwaysAuthorization()
-                    }
-                @unknown default:
-                    break
-                }
-                return .none
-            case let .locationError(error):
-                _ = error
-                return .none
-            case let .locationResponse(location):
-                state.location = location
-                print("\nLocation Response: ", state.location ?? CLLocation())
-                return .none
-            case .locationTask:
-                self.locationClient.requestAlwaysAuthorization()
-                self.locationClient.startUpdatingLocation()
-                return .run { _ in
-                    for await value in self.locationClient.delegate {
-                        print("JR triggered: \(value) ")
-                    }
-                }
             }
         }
         .ifLet(\.$destination, action: \.destination) {
@@ -141,30 +115,8 @@ struct SelectionFeature {
     }
 }
 
-extension SelectionFeature {
-    private func mapEventToAction(action: LocationClient.DelegateAction) -> SelectionFeature.Action {
-        print("JR receive action: \(action)")
-        switch action {
-        case let .didChangeAuthorization(status):
-            print("JR Status: \(status)")
-            return { Action.locationAuthorizationStatus(status) }()
-        case let .didUpdateLocations(locations):
-            if let location = locations.last {
-                return { Action.locationResponse(location) }()
-            } else {
-                return { Action.locationResponse(CLLocation()) }()
-            }
-
-        case let .didFailWithError(error):
-            return { Action.locationError(error) }()
-        }
-    }
-}
-
 struct SelectionView: View {
     @Bindable var store: StoreOf<SelectionFeature>
-    private let selectionChickenTip = SelectChickenTip()
-    private let selectionHunterTip = SelectHunterTip()
     @State private var isVisible = true
     @State private var audioPlayer: AVAudioPlayer?
 
@@ -179,7 +131,7 @@ struct SelectionView: View {
                         .frame(width: 200, height: 200)
 
                     Button {
-                        self.store.send(.hunterButtonTapped)
+                        self.store.send(.startButtonTapped)
                     } label: {
                         Text("START")
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -190,13 +142,9 @@ struct SelectionView: View {
                                 RoundedRectangle(cornerRadius: 10)
                                     .stroke(.black, lineWidth: 4)
                             )
-                            .opacity(isVisible ? 1 : 0)
-                            .animation(
-                                Animation.easeInOut(duration: 0.5)
-                                    .repeatForever(autoreverses: true)
-                            )
+                            .opacity(self.isVisible ? 1 : 0)
                             .onAppear {
-                                isVisible.toggle()
+                                self.isVisible.toggle()
                             }
                     }
                     .frame(width: 200, height: 50)
@@ -210,8 +158,9 @@ struct SelectionView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color.CRBeige)
 
+
             Button {
-                // Action for bottom-right button
+                store.isAuthenticating.toggle()
             } label: {
                 Text("C'est moi la poule")
                     .padding()
@@ -223,10 +172,26 @@ struct SelectionView: View {
                     )
             }
             .padding()
+            .alert("Password", isPresented: $store.isAuthenticating) {
+                SecureField("Password", text: $store.password)
+                Button("Ok") {
+                    self.store.send(.validatePasswordButtonTapped)
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("Please enter admin password.")
+            }
         }
-        .onAppear {
+        .task {
             self.playSound()
+            await self.animateBlinking()
         }
+        .alert(
+            $store.scope(
+                state: \.destination?.alert,
+                action: \.destination.alert
+            )
+        )
         .sheet(
             item: $store.scope(
                 state: \.destination?.chickenConfig,
@@ -249,8 +214,22 @@ struct SelectionView: View {
         }
     }
 
+    private func animateBlinking() async {
+        let animation = Animation.easeInOut(duration: 0.5)
+        while true {
+            await MainActor.run {
+                withAnimation(animation) {
+                    self.isVisible.toggle()
+                }
+            }
+            try? await Task.sleep(nanoseconds: UInt64(0.5 * 1_000_000_000))
+        }
+    }
+
     private func playSound() {
-        guard let path = Bundle.main.path(forResource: "background-music", ofType: "mp3") else { return }
+        guard let path = Bundle.main.path(forResource: "background-music", ofType: "mp3"),
+            false
+        else { return }
         let url = URL(fileURLWithPath: path)
 
         do {
