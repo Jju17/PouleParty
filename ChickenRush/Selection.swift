@@ -217,8 +217,7 @@ struct SelectionView: View {
     }
 
     private func playSound() {
-        guard let path = Bundle.main.path(forResource: "background-music", ofType: "mp3"),
-            false
+        guard let path = Bundle.main.path(forResource: "background-music", ofType: "mp3")
         else { return }
         let url = URL(fileURLWithPath: path)
 
