@@ -53,7 +53,6 @@
 		64C9CAE22CEBD6C70087BE13 /* Early GameBoy.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 64C9CAE12CEBD6C70087BE13 /* Early GameBoy.ttf */; };
 		64C9CAE42CEBEDE00087BE13 /* background-music.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 64C9CAE32CEBEDE00087BE13 /* background-music.mp3 */; };
 		64DA4FE92CED56EE00F477C6 /* SwiftLocation in Frameworks */ = {isa = PBXBuildFile; productRef = 64DA4FE82CED56EE00F477C6 /* SwiftLocation */; };
-		64DA4FEF2CED6B0400F477C6 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 64DA4FEE2CED6B0400F477C6 /* GoogleService-Info.plist */; };
 		64F10C2A2BA9E04D001D83D8 /* EndGameCode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64F10C292BA9E04D001D83D8 /* EndGameCode.swift */; };
 		64FDBE372BC0278E0073DC85 /* Onboarding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64FDBE362BC0278E0073DC85 /* Onboarding.swift */; };
 /* End PBXBuildFile section */
@@ -99,7 +98,7 @@
 		64C21F0B2BA486E6003B25B3 /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
 		64C9CAE12CEBD6C70087BE13 /* Early GameBoy.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Early GameBoy.ttf"; sourceTree = "<group>"; };
 		64C9CAE32CEBEDE00087BE13 /* background-music.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "background-music.mp3"; sourceTree = "<group>"; };
-		64DA4FEE2CED6B0400F477C6 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		64CE0F7F2CEE1ED000762232 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		64F10C292BA9E04D001D83D8 /* EndGameCode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EndGameCode.swift; sourceTree = "<group>"; };
 		64FDBE362BC0278E0073DC85 /* Onboarding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Onboarding.swift; sourceTree = "<group>"; };
 		64FDBE382BC32AD60073DC85 /* La Rochelle.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = "La Rochelle.gpx"; sourceTree = "<group>"; };
@@ -192,7 +191,6 @@
 			isa = PBXGroup;
 			children = (
 				6405C2912BFC871B00A35A50 /* Bxl.gpx */,
-				64DA4FEE2CED6B0400F477C6 /* GoogleService-Info.plist */,
 				64FDBE382BC32AD60073DC85 /* La Rochelle.gpx */,
 				643A59942BC9C1E8002B53B6 /* Lasne.gpx */,
 				643A59952BC9C38B002B53B6 /* Namur.gpx */,
@@ -213,6 +211,7 @@
 			isa = PBXGroup;
 			children = (
 				647D9FCA2BA3ABF3005B6566 /* ChickenRush.entitlements */,
+				64CE0F7F2CEE1ED000762232 /* GoogleService-Info.plist */,
 				64620C802BA3C81C006B329C /* Info.plist */,
 				64C9CAE32CEBEDE00087BE13 /* background-music.mp3 */,
 				6464E50E2BA4AA010039C387 /* App.swift */,
@@ -338,7 +337,6 @@
 			files = (
 				64B216F92BBF0293005E0DC7 /* Launch Screen.storyboard in Resources */,
 				64C9CAE42CEBEDE00087BE13 /* background-music.mp3 in Resources */,
-				64DA4FEF2CED6B0400F477C6 /* GoogleService-Info.plist in Resources */,
 				64C9CAE22CEBD6C70087BE13 /* Early GameBoy.ttf in Resources */,
 				64B216F22BBEF382005E0DC7 /* OFL.txt in Resources */,
 				64B216F12BBEF382005E0DC7 /* Bangers-Regular.ttf in Resources */,
