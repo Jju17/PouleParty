@@ -76,7 +76,7 @@
 		6464E5352BA603F00039C387 /* ChickenLocation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChickenLocation.swift; sourceTree = "<group>"; };
 		6464E5392BA61F9A0039C387 /* ChickenMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChickenMap.swift; sourceTree = "<group>"; };
 		6464E53C2BA744DD0039C387 /* ApiClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApiClient.swift; sourceTree = "<group>"; };
-		647D9FC12BA3ABF2005B6566 /* ChickenRush.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ChickenRush.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		647D9FC12BA3ABF2005B6566 /* PouleParty.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PouleParty.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		647D9FC42BA3ABF2005B6566 /* ChickenRushApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChickenRushApp.swift; sourceTree = "<group>"; };
 		647D9FC62BA3ABF2005B6566 /* HunterMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HunterMap.swift; sourceTree = "<group>"; };
 		647D9FC82BA3ABF3005B6566 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -202,7 +202,7 @@
 		647D9FC22BA3ABF2005B6566 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				647D9FC12BA3ABF2005B6566 /* ChickenRush.app */,
+				647D9FC12BA3ABF2005B6566 /* PouleParty.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -258,9 +258,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		647D9FC02BA3ABF2005B6566 /* ChickenRush */ = {
+		647D9FC02BA3ABF2005B6566 /* PouleParty */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 647D9FD02BA3ABF3005B6566 /* Build configuration list for PBXNativeTarget "ChickenRush" */;
+			buildConfigurationList = 647D9FD02BA3ABF3005B6566 /* Build configuration list for PBXNativeTarget "PouleParty" */;
 			buildPhases = (
 				647D9FBD2BA3ABF2005B6566 /* Sources */,
 				647D9FBE2BA3ABF2005B6566 /* Frameworks */,
@@ -271,7 +271,7 @@
 			);
 			dependencies = (
 			);
-			name = ChickenRush;
+			name = PouleParty;
 			packageProductDependencies = (
 				64C21F092BA484CD003B25B3 /* ComposableArchitecture */,
 				6464E51B2BA5C3ED0039C387 /* FirebaseAnalytics */,
@@ -287,7 +287,7 @@
 				64DA4FE82CED56EE00F477C6 /* SwiftLocation */,
 			);
 			productName = ChickenRush;
-			productReference = 647D9FC12BA3ABF2005B6566 /* ChickenRush.app */;
+			productReference = 647D9FC12BA3ABF2005B6566 /* PouleParty.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -305,7 +305,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 647D9FBC2BA3ABF2005B6566 /* Build configuration list for PBXProject "ChickenRush" */;
+			buildConfigurationList = 647D9FBC2BA3ABF2005B6566 /* Build configuration list for PBXProject "PouleParty" */;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -323,7 +323,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				647D9FC02BA3ABF2005B6566 /* ChickenRush */,
+				647D9FC02BA3ABF2005B6566 /* PouleParty */,
 			);
 		};
 /* End PBXProject section */
@@ -552,13 +552,17 @@
 				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "Need location";
 				INFOPLIST_KEY_NSLocationUsageDescription = "Need location";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "This app need your location to provide best feature based on location";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = "Launch Screen.storyboard";
+				INFOPLIST_KEY_UIStatusBarStyle = UIStatusBarStyleDefault;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -568,7 +572,7 @@
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.4;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = dev.rahier.chickenrush1;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.rahier.pouleparty;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -601,13 +605,17 @@
 				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "Need location";
 				INFOPLIST_KEY_NSLocationUsageDescription = "Need location";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "This app need your location to provide best feature based on location";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = "Launch Screen.storyboard";
+				INFOPLIST_KEY_UIStatusBarStyle = UIStatusBarStyleDefault;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -617,7 +625,7 @@
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.4;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = dev.rahier.chickenrush1;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.rahier.pouleparty;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -631,7 +639,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		647D9FBC2BA3ABF2005B6566 /* Build configuration list for PBXProject "ChickenRush" */ = {
+		647D9FBC2BA3ABF2005B6566 /* Build configuration list for PBXProject "PouleParty" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				647D9FCE2BA3ABF3005B6566 /* Debug */,
@@ -640,7 +648,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		647D9FD02BA3ABF3005B6566 /* Build configuration list for PBXNativeTarget "ChickenRush" */ = {
+		647D9FD02BA3ABF3005B6566 /* Build configuration list for PBXNativeTarget "PouleParty" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				647D9FD12BA3ABF3005B6566 /* Debug */,

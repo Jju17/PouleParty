@@ -16,9 +16,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "647D9FC02BA3ABF2005B6566"
-               BuildableName = "ChickenRush.app"
-               BlueprintName = "ChickenRush"
-               ReferencedContainer = "container:ChickenRush.xcodeproj">
+               BuildableName = "PouleParty.app"
+               BlueprintName = "PouleParty"
+               ReferencedContainer = "container:PouleParty.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -45,9 +45,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "647D9FC02BA3ABF2005B6566"
-            BuildableName = "ChickenRush.app"
-            BlueprintName = "ChickenRush"
-            ReferencedContainer = "container:ChickenRush.xcodeproj">
+            BuildableName = "PouleParty.app"
+            BlueprintName = "PouleParty"
+            ReferencedContainer = "container:PouleParty.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
       <LocationScenarioReference
@@ -66,9 +66,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "647D9FC02BA3ABF2005B6566"
-            BuildableName = "ChickenRush.app"
-            BlueprintName = "ChickenRush"
-            ReferencedContainer = "container:ChickenRush.xcodeproj">
+            BuildableName = "PouleParty.app"
+            BlueprintName = "PouleParty"
+            ReferencedContainer = "container:PouleParty.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>
