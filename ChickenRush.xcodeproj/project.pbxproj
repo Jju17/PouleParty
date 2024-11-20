@@ -51,6 +51,7 @@
 		64C21F0C2BA486E6003B25B3 /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64C21F0B2BA486E6003B25B3 /* LocationManager.swift */; };
 		64C9CAE22CEBD6C70087BE13 /* Early GameBoy.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 64C9CAE12CEBD6C70087BE13 /* Early GameBoy.ttf */; };
 		64C9CAE42CEBEDE00087BE13 /* background-music.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 64C9CAE32CEBEDE00087BE13 /* background-music.mp3 */; };
+		64CE0F822CEE2D1500762232 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 64CE0F812CEE2A1F00762232 /* GoogleService-Info.plist */; };
 		64DA4FE92CED56EE00F477C6 /* SwiftLocation in Frameworks */ = {isa = PBXBuildFile; productRef = 64DA4FE82CED56EE00F477C6 /* SwiftLocation */; };
 		64F10C2A2BA9E04D001D83D8 /* EndGameCode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64F10C292BA9E04D001D83D8 /* EndGameCode.swift */; };
 		64FDBE372BC0278E0073DC85 /* Onboarding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64FDBE362BC0278E0073DC85 /* Onboarding.swift */; };
@@ -333,6 +334,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				64B216F92BBF0293005E0DC7 /* Launch Screen.storyboard in Resources */,
+				64CE0F822CEE2D1500762232 /* GoogleService-Info.plist in Resources */,
 				64C9CAE42CEBEDE00087BE13 /* background-music.mp3 in Resources */,
 				64C9CAE22CEBD6C70087BE13 /* Early GameBoy.ttf in Resources */,
 				64B216F22BBEF382005E0DC7 /* OFL.txt in Resources */,
@@ -542,6 +544,7 @@
 				DEVELOPMENT_TEAM = YXXNH92P5F;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ChickenRush/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Poule Party";
@@ -590,6 +593,7 @@
 				DEVELOPMENT_TEAM = YXXNH92P5F;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ChickenRush/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Poule Party";
