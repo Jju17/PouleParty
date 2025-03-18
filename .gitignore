@@ -5,3 +5,6 @@
 GoogleService-Info.plist
 
 *.xcbkptlist
+
+
+*.resolved
