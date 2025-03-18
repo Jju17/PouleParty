@@ -3,4 +3,300 @@
    uuid = "F2072A27-D5AC-4547-83B2-3BDF58D6C79B"
    type = "1"
    version = "2.0">
+   <Breakpoints>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "BDB952F1-CEF3-4073-86D2-8FF0612BC798"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../../Library/Developer/Xcode/DerivedData/PouleParty-glpqlflfbsgnmvchqnjwdockrobs/SourcePackages/checkouts/SwiftLocation/Sources/SwiftLocation/Location.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "478"
+            endingLineNumber = "478"
+            landmarkName = "requestAlwaysPermission()"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "726AD691-5896-4DB5-8185-FA91E1A0D875"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../../Library/Developer/Xcode/DerivedData/PouleParty-glpqlflfbsgnmvchqnjwdockrobs/SourcePackages/checkouts/SwiftLocation/Sources/SwiftLocation/Support/LocationDelegate.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "57"
+            endingLineNumber = "57"
+            landmarkName = "locationManager(_:didFailWithError:)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "CD645F8F-BE82-44CD-ADAD-41F267D2B251"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../../Library/Developer/Xcode/DerivedData/PouleParty-glpqlflfbsgnmvchqnjwdockrobs/SourcePackages/checkouts/SwiftLocation/Sources/SwiftLocation/Support/LocationDelegate.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "53"
+            endingLineNumber = "53"
+            landmarkName = "locationManager(_:didUpdateLocations:)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "02307254-63F5-4E04-B45C-BAD729416DB5"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../../Library/Developer/Xcode/DerivedData/PouleParty-glpqlflfbsgnmvchqnjwdockrobs/SourcePackages/checkouts/SwiftLocation/Sources/SwiftLocation/Async Tasks/SingleUpdateLocation.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "60"
+            endingLineNumber = "60"
+            landmarkName = "run()"
+            landmarkType = "7">
+            <Locations>
+               <Location
+                  uuid = "02307254-63F5-4E04-B45C-BAD729416DB5 - e45898cda09c789"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "(1) suspend resume partial function for SwiftLocation.Tasks.SingleUpdateLocation.run() async throws -&gt; SwiftLocation.Tasks.ContinuousUpdateLocation.StreamEvent"
+                  moduleName = "PouleParty.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/jrahier/Library/Developer/Xcode/DerivedData/PouleParty-glpqlflfbsgnmvchqnjwdockrobs/SourcePackages/checkouts/SwiftLocation/Sources/SwiftLocation/Async%20Tasks/SingleUpdateLocation.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "60"
+                  endingLineNumber = "60">
+               </Location>
+               <Location
+                  uuid = "02307254-63F5-4E04-B45C-BAD729416DB5 - d57eade12a71dd83"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "(2) await resume partial function for SwiftLocation.Tasks.SingleUpdateLocation.run() async throws -&gt; SwiftLocation.Tasks.ContinuousUpdateLocation.StreamEvent"
+                  moduleName = "PouleParty.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/jrahier/Library/Developer/Xcode/DerivedData/PouleParty-glpqlflfbsgnmvchqnjwdockrobs/SourcePackages/checkouts/SwiftLocation/Sources/SwiftLocation/Async%20Tasks/SingleUpdateLocation.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "60"
+                  endingLineNumber = "60">
+               </Location>
+               <Location
+                  uuid = "02307254-63F5-4E04-B45C-BAD729416DB5 - 21e923a904308077"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "(3) suspend resume partial function for SwiftLocation.Tasks.SingleUpdateLocation.run() async throws -&gt; SwiftLocation.Tasks.ContinuousUpdateLocation.StreamEvent"
+                  moduleName = "PouleParty.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/jrahier/Library/Developer/Xcode/DerivedData/PouleParty-glpqlflfbsgnmvchqnjwdockrobs/SourcePackages/checkouts/SwiftLocation/Sources/SwiftLocation/Async%20Tasks/SingleUpdateLocation.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "60"
+                  endingLineNumber = "60">
+               </Location>
+               <Location
+                  uuid = "02307254-63F5-4E04-B45C-BAD729416DB5 - 4ebef0db52cfe276"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "(4) suspend resume partial function for SwiftLocation.Tasks.SingleUpdateLocation.run() async throws -&gt; SwiftLocation.Tasks.ContinuousUpdateLocation.StreamEvent"
+                  moduleName = "PouleParty.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/jrahier/Library/Developer/Xcode/DerivedData/PouleParty-glpqlflfbsgnmvchqnjwdockrobs/SourcePackages/checkouts/SwiftLocation/Sources/SwiftLocation/Async%20Tasks/SingleUpdateLocation.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "60"
+                  endingLineNumber = "60">
+               </Location>
+               <Location
+                  uuid = "02307254-63F5-4E04-B45C-BAD729416DB5 - 25279e28c8e102f8"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "closure #1 (Swift.CheckedContinuation&lt;SwiftLocation.Tasks.ContinuousUpdateLocation.StreamEvent, Swift.Error&gt;) -&gt; () in SwiftLocation.Tasks.SingleUpdateLocation.run() async throws -&gt; SwiftLocation.Tasks.ContinuousUpdateLocation.StreamEvent"
+                  moduleName = "PouleParty.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/jrahier/Library/Developer/Xcode/DerivedData/PouleParty-glpqlflfbsgnmvchqnjwdockrobs/SourcePackages/checkouts/SwiftLocation/Sources/SwiftLocation/Async%20Tasks/SingleUpdateLocation.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "61"
+                  endingLineNumber = "61">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "BA925321-8BCC-41D4-AD02-CE36BB78F980"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../../Library/Developer/Xcode/DerivedData/PouleParty-glpqlflfbsgnmvchqnjwdockrobs/SourcePackages/checkouts/SwiftLocation/Sources/SwiftLocation/Async Tasks/SingleUpdateLocation.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "61"
+            endingLineNumber = "61"
+            landmarkName = "run()"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "BF1F7D5E-9CDD-43EE-BA0B-5BB4A8A80BB1"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../../Library/Developer/Xcode/DerivedData/PouleParty-glpqlflfbsgnmvchqnjwdockrobs/SourcePackages/checkouts/SwiftLocation/Sources/SwiftLocation/Async Tasks/SingleUpdateLocation.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "63"
+            endingLineNumber = "63"
+            landmarkName = "run()"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "3A3BCB91-3A23-469E-AEFC-5DAAA613118E"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../../Library/Developer/Xcode/DerivedData/PouleParty-glpqlflfbsgnmvchqnjwdockrobs/SourcePackages/checkouts/SwiftLocation/Sources/SwiftLocation/Async Tasks/SingleUpdateLocation.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "94"
+            endingLineNumber = "94"
+            landmarkName = "willStart()"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "363D2241-41FE-4169-8E72-E22949F2EDFB"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../../Library/Developer/Xcode/DerivedData/PouleParty-glpqlflfbsgnmvchqnjwdockrobs/SourcePackages/checkouts/SwiftLocation/Sources/SwiftLocation/Async Tasks/SingleUpdateLocation.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "98"
+            endingLineNumber = "98"
+            landmarkName = "willStart()"
+            landmarkType = "7">
+            <Locations>
+               <Location
+                  uuid = "363D2241-41FE-4169-8E72-E22949F2EDFB - 55be0e9fdedcf038"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "SwiftLocation.Tasks.SingleUpdateLocation.willStart() -&gt; ()"
+                  moduleName = "PouleParty.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/jrahier/Library/Developer/Xcode/DerivedData/PouleParty-glpqlflfbsgnmvchqnjwdockrobs/SourcePackages/checkouts/SwiftLocation/Sources/SwiftLocation/Async%20Tasks/SingleUpdateLocation.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "98"
+                  endingLineNumber = "98">
+               </Location>
+               <Location
+                  uuid = "363D2241-41FE-4169-8E72-E22949F2EDFB - e38824b372373d9d"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "closure #1 @Swift.MainActor () -&gt; () in SwiftLocation.Tasks.SingleUpdateLocation.willStart() -&gt; ()"
+                  moduleName = "PouleParty.debug.dylib"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/jrahier/Library/Developer/Xcode/DerivedData/PouleParty-glpqlflfbsgnmvchqnjwdockrobs/SourcePackages/checkouts/SwiftLocation/Sources/SwiftLocation/Async%20Tasks/SingleUpdateLocation.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "98"
+                  endingLineNumber = "98">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "1D9E2F76-2995-4B8B-A5AE-721A15731115"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../../Library/Developer/Xcode/DerivedData/PouleParty-glpqlflfbsgnmvchqnjwdockrobs/SourcePackages/checkouts/SwiftLocation/Sources/SwiftLocation/Async Tasks/SingleUpdateLocation.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "99"
+            endingLineNumber = "99"
+            landmarkName = "willStart()"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "2354866F-420A-49E3-A0AE-DBE559AEE2C0"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../../Library/Developer/Xcode/DerivedData/PouleParty-glpqlflfbsgnmvchqnjwdockrobs/SourcePackages/checkouts/SwiftLocation/Sources/SwiftLocation/Async Tasks/SingleUpdateLocation.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "72"
+            endingLineNumber = "72"
+            landmarkName = "receivedLocationManagerEvent(_:)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "399ACFB7-789A-40FD-B234-D23DC0E6BBAE"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../../Library/Developer/Xcode/DerivedData/PouleParty-glpqlflfbsgnmvchqnjwdockrobs/SourcePackages/checkouts/SwiftLocation/Sources/SwiftLocation/Async Tasks/SingleUpdateLocation.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "81"
+            endingLineNumber = "81"
+            landmarkName = "receivedLocationManagerEvent(_:)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "AD3BBF11-37D6-4CD2-BCDF-B61A0F098E3F"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../../Library/Developer/Xcode/DerivedData/PouleParty-glpqlflfbsgnmvchqnjwdockrobs/SourcePackages/checkouts/SwiftLocation/Sources/SwiftLocation/Async Tasks/SingleUpdateLocation.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "95"
+            endingLineNumber = "95"
+            landmarkName = "willStart()"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+   </Breakpoints>
 </Bucket>

@@ -26,6 +26,7 @@ struct SelectionFeature {
         case dismissChickenConfig
         case goToChickenConfigTriggered
         case goToChickenMapTriggered(Game)
+        case onTask
         case startButtonTapped
         case validatePasswordButtonTapped
     }
@@ -48,7 +49,6 @@ struct SelectionFeature {
     }
 
     @Dependency(\.apiClient) var apiClient
-    @Dependency(\.locationClient) var locationClient
 
     var body: some ReducerOf<Self> {
         BindingReducer()
@@ -94,6 +94,15 @@ struct SelectionFeature {
                 return .none
             case .goToChickenMapTriggered:
                 return .none
+            case .onTask:
+                return .run { _ in
+//                    do {
+//                        let obtaninedStatus = try await locationClient.requestAlwaysPermission()
+//                        print("JR: obtaninedStatus : \(String(describing: obtaninedStatus))")
+//                    } catch {
+//                        print("JR: error: \(error)")
+//                    }
+                }
             case .startButtonTapped:
                 return .none
             }
@@ -171,16 +180,14 @@ struct SelectionView: View {
                 Text("Please enter admin password.")
             }
         }
+        .onDisappear {
+            self.audioPlayer?.stop()
+            self.audioPlayer = nil
+        }
         .task {
+            self.store.send(.onTask)
             self.playSound()
-            let location = Location()
-            do {
-                let obtaninedStatus = try await location.requestPermission(.always)
-                print("obtaninedStatus : \(String(describing: obtaninedStatus))")
-            } catch {
-                print("error: \(error)")
-            }
-            await self.animateBlinking()
+            self.animateBlinking()
         }
         .sheet(
             item: $store.scope(
@@ -204,20 +211,22 @@ struct SelectionView: View {
         }
     }
 
-    private func animateBlinking() async {
-        let animation = Animation.easeInOut(duration: 0.5)
-        while true {
-            await MainActor.run {
-                withAnimation(animation) {
-                    self.isVisible.toggle()
+    private func animateBlinking() {
+        Task {
+            while true {
+                await MainActor.run {
+                    withAnimation(Animation.easeInOut(duration: 0.5)) {
+                        self.isVisible.toggle()
+                    }
                 }
+                try? await Task.sleep(nanoseconds: UInt64(0.5 * 1_000_000_000))
             }
-            try? await Task.sleep(nanoseconds: UInt64(0.5 * 1_000_000_000))
         }
     }
 
     private func playSound() {
-        guard let path = Bundle.main.path(forResource: "background-music", ofType: "mp3")
+        guard let path = Bundle.main.path(forResource: "background-music", ofType: "mp3"),
+              false
         else { return }
         let url = URL(fileURLWithPath: path)
 

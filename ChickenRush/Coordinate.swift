@@ -5,9 +5,11 @@
 //  Created by Julien Rahier on 12/04/2024.
 //
 
+import FirebaseFirestore
 import Foundation
 
-struct Coordinate: Codable, Equatable {
+struct LocationData: Codable, Equatable {
     let latitude: Double
     let longiture: Double
+    let timestamp: Timestamp
 }

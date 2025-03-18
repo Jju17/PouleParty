@@ -16,7 +16,6 @@ struct ChickenMapFeature {
     struct State {
         @Presents var destination: Destination.State?
         var game: Game
-//        var locationManager: LocationManager = LocationManager(isTrackingActive: true, updatingMethod: .alwaysUpdating)
         var nextRadiusUpdate: Date?
         var nowDate: Date = .now
         var radius: Int = 1500
@@ -75,6 +74,7 @@ struct ChickenMapFeature {
             case .binding:
                 return .none
             case .destination(.presented(.alert(.cancelGame))):
+                LocationManager.shared.stopUpdatingLocation()
                 return .run { send in
                     await send(.goToMenu)
                 }
@@ -112,6 +112,8 @@ struct ChickenMapFeature {
                 state.mapCircle = mapCircle
                 return .none
             case .onTask:
+                LocationManager.shared.askForLocationServicesAuthorization()
+                LocationManager.shared.updateLocation(every: 10)
                 return .run { send in
                     for await _ in self.clock.timer(interval: .seconds(1)) {
                         await send(.timerTicked)
@@ -138,15 +140,11 @@ struct ChickenMapFeature {
                 let game = state.game
                 state.nextRadiusUpdate?.addTimeInterval(TimeInterval(game.radiusIntervalUpdate * 60))
                 state.radius = Int(state.radius) - Int(game.radiusDeclinePerUpdate)
-                return .run { send in
-                    do {
-                        if let location = try await apiClient.getLastChickenLocation() {
-                            await send(.newLocationFetched(location))
-                        }
-                    } catch {
-                        print("Error getting chicken location: \(error)")
-                    }
-                }
+
+                let location = LocationManager.shared
+
+//                (.newLocationFetched(location))
+                return .none
             }
         }
         .ifLet(\.$destination, action: \.destination) {
@@ -223,9 +221,10 @@ struct ChickenMapView: View {
         }
         .onAppear {
             self.store.send(.setGameTriggered)
+            self.store.send(.onTask)
         }
         .task {
-            store.send(.onTask)
+
         }
         .alert(
             $store.scope(
@@ -261,4 +260,18 @@ struct ChickenMapView: View {
     ChickenMapView(store: Store(initialState: ChickenMapFeature.State(game: .mock)) {
         ChickenMapFeature()
     })
+}
+
+
+class LocationDelegate: NSObject, CLLocationManagerDelegate {
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        if let location = locations.first {
+            print("Found location: \(location)")
+            //do something with the location
+        }
+    }
+
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        print("Failed to find user's location: \(error.localizedDescription)")
+    }
 }

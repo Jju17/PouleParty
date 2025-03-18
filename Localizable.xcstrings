@@ -1,0 +1,337 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " "
+          }
+        }
+      }
+    },
+    "%lld meters" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld mètres"
+          }
+        }
+      }
+    },
+    "%lld minutes" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld minutes"
+          }
+        }
+      }
+    },
+    "Are you sure you want to cancel and finish the game now ?" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Es-tu sûr de vouloir annuler et finir le jeu maintenant ?"
+          }
+        }
+      }
+    },
+    "Cancel" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Annuler"
+          }
+        }
+      }
+    },
+    "Cancel game" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Annuler le jeu"
+          }
+        }
+      }
+    },
+    "Catch the 🐔 !" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Attrape le 🐔 !"
+          }
+        }
+      }
+    },
+    "Don't be seen !" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ne te fais pas remarquer !"
+          }
+        }
+      }
+    },
+    "End at" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fini à"
+          }
+        }
+      }
+    },
+    "FOUND" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TROUVÉ"
+          }
+        }
+      }
+    },
+    "Game Settings" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réglages du jeu"
+          }
+        }
+      }
+    },
+    "Hello, World!" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bonjour le monde!"
+          }
+        }
+      }
+    },
+    "I am la poule" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Je suis la poule"
+          }
+        }
+      }
+    },
+    "I'll wait" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "J’attends"
+          }
+        }
+      }
+    },
+    "Map setup" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réglages de la carte"
+          }
+        }
+      }
+    },
+    "Map update in: %@:%@" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Màj de la carte dans: %1$@:%2$@"
+          }
+        }
+      }
+    },
+    "Never mind" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Autant pour moi"
+          }
+        }
+      }
+    },
+    "No game found" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucune partie en cours"
+          }
+        }
+      }
+    },
+    "Ok" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ok"
+          }
+        }
+      }
+    },
+    "Password" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mot de passe"
+          }
+        }
+      }
+    },
+    "Please enter admin password." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Merci d’enter le mot de passe admin."
+          }
+        }
+      }
+    },
+    "Please wait on this page until the 🐔 create a new game." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Merci d’attendre sur cette page jusqu’à ce qu’un 🐔 crée une nouvelle partie."
+          }
+        }
+      }
+    },
+    "Press start to play" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Press start to play"
+          }
+        }
+      }
+    },
+    "Radius : %lldm" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rayon: %lldm"
+          }
+        }
+      }
+    },
+    "Radius decline" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rétrécissement du rayon de"
+          }
+        }
+      }
+    },
+    "Radius interval update" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Update du rayon toutes les"
+          }
+        }
+      }
+    },
+    "Radius: %lld" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rayon: %lld"
+          }
+        }
+      }
+    },
+    "START" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "START"
+          }
+        }
+      }
+    },
+    "Start at" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Départ à"
+          }
+        }
+      }
+    },
+    "Start game" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Commencer le jeu"
+          }
+        }
+      }
+    },
+    "Was the Chicken inside the bar ?" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Est-ce que le poulet était dans le bar ?"
+          }
+        }
+      }
+    },
+    "You are the 🐔" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu es le 🐔"
+          }
+        }
+      }
+    },
+    "You are the Hunter" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu es le Chasseur"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

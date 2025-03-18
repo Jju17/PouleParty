@@ -24,13 +24,10 @@ struct HunterMapFeature {
     }
 
     enum Action: BindableAction {
-        case barButtonTapped
         case binding(BindingAction<State>)
         case destination(PresentationAction<Destination.Action>)
-        case dismissDrinksLottery
         case newLocationFetched(CLLocationCoordinate2D)
         case noGameFound
-        case onAppear
         case onTask
         case setGameTriggered(to: Game)
         case timerTicked
@@ -40,21 +37,13 @@ struct HunterMapFeature {
     struct Destination {
         enum State {
             case alert(AlertState<Action.Alert>)
-            case drinksLottery(DrinksLotteryFeature.State)
         }
 
         enum Action {
             case alert(Alert)
-            case drinksLottery(DrinksLotteryFeature.Action)
 
             enum Alert {
                 case beTheChicken
-            }
-        }
-
-        var body: some ReducerOf<Self> {
-            Scope(state: \.drinksLottery, action: \.drinksLottery) {
-                DrinksLotteryFeature()
             }
         }
     }
@@ -67,15 +56,9 @@ struct HunterMapFeature {
 
         Reduce { state, action in
             switch action {
-            case .barButtonTapped:
-                state.destination = .drinksLottery(DrinksLotteryFeature.State())
-                return .none
             case .binding:
                 return .none
             case .destination:
-                return .none
-            case .dismissDrinksLottery:
-                state.destination = nil
                 return .none
             case let .newLocationFetched(location):
                 let mapCircle = MapCircle(
@@ -97,16 +80,14 @@ struct HunterMapFeature {
                     }
                 )
                 return .none
-            case .onAppear:
+            case .onTask:
                 return .run { send in
                     if let game = await apiClient.getConfig() {
                         await send(.setGameTriggered(to: game))
                     } else {
                         await send(.noGameFound)
                     }
-                }
-            case .onTask:
-                return .run { send in
+
                     for await _ in self.clock.timer(interval: .seconds(5)) {
                         print("onTask")
                         await send(.timerTicked)
@@ -186,28 +167,9 @@ struct HunterMapView: View {
                     CountdownView(nowDate: self.$store.nowDate, nextUpdateDate: self.$store.nextRadiusUpdate)
                 }
                 Spacer()
-                Button {
-                    self.store.send(.barButtonTapped)
-                } label: {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 5)
-                            .fill(.blue)
-                        Image("Bar")
-                            .resizable()
-                            .scaledToFit()
-                            .foregroundStyle(.white)
-                            .frame(width: 25, height: 25)
-                    }
-                }
-                .frame(width: 50, height: 40)
-
-
             }
             .padding()
             .background(.thinMaterial)
-        }
-        .onAppear {
-            self.store.send(.onAppear)
         }
         .task {
             self.store.send(.onTask)
@@ -218,27 +180,6 @@ struct HunterMapView: View {
                 action: \.destination.alert
             )
         )
-        .sheet(
-            item: $store.scope(
-                state: \.destination?.drinksLottery,
-                action: \.destination.drinksLottery
-            )
-        ) { store in
-            NavigationStack {
-                DrinksLotteryView(store: store)
-                    .toolbar {
-                        ToolbarItem {
-                            Button {
-                                self.store.send(.dismissDrinksLottery)
-                            } label: {
-                                Image(systemName: "xmark")
-                                    .foregroundStyle(.white)
-                            }
-
-                        }
-                    }
-            }
-        }
     }
 }
 

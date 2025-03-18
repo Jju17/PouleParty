@@ -3,3 +3,5 @@
 *.dSYM
 .env
 GoogleService-Info.plist
+
+*.xcbkptlist

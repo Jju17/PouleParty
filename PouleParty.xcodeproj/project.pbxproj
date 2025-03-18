@@ -9,7 +9,10 @@
 /* Begin PBXBuildFile section */
 		6400630F2BBDC7B100C6C08C /* SelectionButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6400630E2BBDC7B100C6C08C /* SelectionButton.swift */; };
 		6401DFCB2BC9BB3C00BA8967 /* Coordinate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6401DFCA2BC9BB3C00BA8967 /* Coordinate.swift */; };
-		642E2D1B2BCC1C6400290B58 /* LocationClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 642E2D1A2BCC1C6400290B58 /* LocationClient.swift */; };
+		642E2D1B2BCC1C6400290B58 /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 642E2D1A2BCC1C6400290B58 /* LocationManager.swift */; };
+		645DF8282D306D0B005D8731 /* Lille.gpx in Resources */ = {isa = PBXBuildFile; fileRef = 645DF8272D306D0B005D8731 /* Lille.gpx */; };
+		645DF8292D306D0B005D8731 /* Bondu.gpx in Resources */ = {isa = PBXBuildFile; fileRef = 645DF8262D306D0B005D8731 /* Bondu.gpx */; };
+		645DF82B2D306E5D005D8731 /* Stockholm.gpx in Resources */ = {isa = PBXBuildFile; fileRef = 645DF82A2D306E5D005D8731 /* Stockholm.gpx */; };
 		6464E5092BA4A6AA0039C387 /* Selection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6464E5082BA4A6AA0039C387 /* Selection.swift */; };
 		6464E50B2BA4A8280039C387 /* ChickenConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6464E50A2BA4A8280039C387 /* ChickenConfig.swift */; };
 		6464E50F2BA4AA010039C387 /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6464E50E2BA4AA010039C387 /* App.swift */; };
@@ -35,23 +38,22 @@
 		647D9FC72BA3ABF2005B6566 /* HunterMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 647D9FC62BA3ABF2005B6566 /* HunterMap.swift */; };
 		647D9FC92BA3ABF3005B6566 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 647D9FC82BA3ABF3005B6566 /* Assets.xcassets */; };
 		647D9FCD2BA3ABF3005B6566 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 647D9FCC2BA3ABF3005B6566 /* Preview Assets.xcassets */; };
+		648F56402CF3DC4900B1BC28 /* ComposableArchitecture in Frameworks */ = {isa = PBXBuildFile; productRef = 648F563F2CF3DC4900B1BC28 /* ComposableArchitecture */; };
 		649BE2032BAE037A00520CE3 /* DrinkView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 649BE2022BAE037A00520CE3 /* DrinkView.swift */; };
 		649BE2052BAF19AF00520CE3 /* DrinksListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 649BE2042BAF19AF00520CE3 /* DrinksListView.swift */; };
 		649BE2072BAF201600520CE3 /* Drink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 649BE2062BAF201600520CE3 /* Drink.swift */; };
 		649BE2092BAF43CC00520CE3 /* Image+Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 649BE2082BAF43CC00520CE3 /* Image+Utils.swift */; };
 		649F06802BA8A11F00DDE737 /* UUID+Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 649F067F2BA8A11F00DDE737 /* UUID+Utils.swift */; };
-		64AF0B002BA79BCB0081EA97 /* DrinksLottery.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64AF0AFF2BA79BCB0081EA97 /* DrinksLottery.swift */; };
 		64AF0B022BA7A0110081EA97 /* Color+Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64AF0B012BA7A0110081EA97 /* Color+Utils.swift */; };
 		64B216F12BBEF382005E0DC7 /* Bangers-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 64B216EE2BBEF382005E0DC7 /* Bangers-Regular.ttf */; };
 		64B216F22BBEF382005E0DC7 /* OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = 64B216EF2BBEF382005E0DC7 /* OFL.txt */; };
 		64B216F42BBEF41C005E0DC7 /* Font+Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64B216F32BBEF41C005E0DC7 /* Font+Utils.swift */; };
 		64B216F92BBF0293005E0DC7 /* Launch Screen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 64B216F82BBF0293005E0DC7 /* Launch Screen.storyboard */; };
 		64B216FD2BBF162C005E0DC7 /* ChickenMapConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64B216FC2BBF162C005E0DC7 /* ChickenMapConfig.swift */; };
-		64C21F0A2BA484CD003B25B3 /* ComposableArchitecture in Frameworks */ = {isa = PBXBuildFile; productRef = 64C21F092BA484CD003B25B3 /* ComposableArchitecture */; };
-		64C21F0C2BA486E6003B25B3 /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64C21F0B2BA486E6003B25B3 /* LocationManager.swift */; };
+		64C21F0C2BA486E6003B25B3 /* LocationManag.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64C21F0B2BA486E6003B25B3 /* LocationManag.swift */; };
 		64C9CAE22CEBD6C70087BE13 /* Early GameBoy.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 64C9CAE12CEBD6C70087BE13 /* Early GameBoy.ttf */; };
 		64C9CAE42CEBEDE00087BE13 /* background-music.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 64C9CAE32CEBEDE00087BE13 /* background-music.mp3 */; };
-		64CE0F822CEE2D1500762232 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 64CE0F812CEE2A1F00762232 /* GoogleService-Info.plist */; };
+		64CE0F842CEE8E8200762232 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 64CE0F832CEE8E8200762232 /* Localizable.xcstrings */; };
 		64DA4FE92CED56EE00F477C6 /* SwiftLocation in Frameworks */ = {isa = PBXBuildFile; productRef = 64DA4FE82CED56EE00F477C6 /* SwiftLocation */; };
 		64F10C2A2BA9E04D001D83D8 /* EndGameCode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64F10C292BA9E04D001D83D8 /* EndGameCode.swift */; };
 		64FDBE372BC0278E0073DC85 /* Onboarding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64FDBE362BC0278E0073DC85 /* Onboarding.swift */; };
@@ -61,9 +63,12 @@
 		6400630E2BBDC7B100C6C08C /* SelectionButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectionButton.swift; sourceTree = "<group>"; };
 		6401DFCA2BC9BB3C00BA8967 /* Coordinate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Coordinate.swift; sourceTree = "<group>"; };
 		6405C2912BFC871B00A35A50 /* Bxl.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = Bxl.gpx; sourceTree = "<group>"; };
-		642E2D1A2BCC1C6400290B58 /* LocationClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationClient.swift; sourceTree = "<group>"; };
+		642E2D1A2BCC1C6400290B58 /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
 		643A59942BC9C1E8002B53B6 /* Lasne.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = Lasne.gpx; sourceTree = "<group>"; };
 		643A59952BC9C38B002B53B6 /* Namur.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = Namur.gpx; sourceTree = "<group>"; };
+		645DF8262D306D0B005D8731 /* Bondu.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = Bondu.gpx; sourceTree = "<group>"; };
+		645DF8272D306D0B005D8731 /* Lille.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = Lille.gpx; sourceTree = "<group>"; };
+		645DF82A2D306E5D005D8731 /* Stockholm.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = Stockholm.gpx; sourceTree = "<group>"; };
 		64620C802BA3C81C006B329C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		6464E5082BA4A6AA0039C387 /* Selection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Selection.swift; sourceTree = "<group>"; };
 		6464E50A2BA4A8280039C387 /* ChickenConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChickenConfig.swift; sourceTree = "<group>"; };
@@ -87,17 +92,16 @@
 		649BE2062BAF201600520CE3 /* Drink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Drink.swift; sourceTree = "<group>"; };
 		649BE2082BAF43CC00520CE3 /* Image+Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Image+Utils.swift"; sourceTree = "<group>"; };
 		649F067F2BA8A11F00DDE737 /* UUID+Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UUID+Utils.swift"; sourceTree = "<group>"; };
-		64AF0AFF2BA79BCB0081EA97 /* DrinksLottery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrinksLottery.swift; sourceTree = "<group>"; };
 		64AF0B012BA7A0110081EA97 /* Color+Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Utils.swift"; sourceTree = "<group>"; };
 		64B216EE2BBEF382005E0DC7 /* Bangers-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Bangers-Regular.ttf"; sourceTree = "<group>"; };
 		64B216EF2BBEF382005E0DC7 /* OFL.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = OFL.txt; sourceTree = "<group>"; };
 		64B216F32BBEF41C005E0DC7 /* Font+Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Font+Utils.swift"; sourceTree = "<group>"; };
 		64B216F82BBF0293005E0DC7 /* Launch Screen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = "Launch Screen.storyboard"; sourceTree = "<group>"; };
 		64B216FC2BBF162C005E0DC7 /* ChickenMapConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChickenMapConfig.swift; sourceTree = "<group>"; };
-		64C21F0B2BA486E6003B25B3 /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
+		64C21F0B2BA486E6003B25B3 /* LocationManag.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManag.swift; sourceTree = "<group>"; };
 		64C9CAE12CEBD6C70087BE13 /* Early GameBoy.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Early GameBoy.ttf"; sourceTree = "<group>"; };
 		64C9CAE32CEBEDE00087BE13 /* background-music.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "background-music.mp3"; sourceTree = "<group>"; };
-		64CE0F812CEE2A1F00762232 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		64CE0F832CEE8E8200762232 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		64F10C292BA9E04D001D83D8 /* EndGameCode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EndGameCode.swift; sourceTree = "<group>"; };
 		64FDBE362BC0278E0073DC85 /* Onboarding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Onboarding.swift; sourceTree = "<group>"; };
 		64FDBE382BC32AD60073DC85 /* La Rochelle.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = "La Rochelle.gpx"; sourceTree = "<group>"; };
@@ -110,10 +114,10 @@
 			files = (
 				6464E51E2BA5C3ED0039C387 /* FirebaseAnalyticsSwift in Frameworks */,
 				6464E51C2BA5C3ED0039C387 /* FirebaseAnalytics in Frameworks */,
+				648F56402CF3DC4900B1BC28 /* ComposableArchitecture in Frameworks */,
 				6464E5222BA5C3ED0039C387 /* FirebaseCrashlytics in Frameworks */,
 				6464E52C2BA5C3ED0039C387 /* FirebaseFunctionsCombine-Community in Frameworks */,
 				6464E52A2BA5C3ED0039C387 /* FirebaseFunctions in Frameworks */,
-				64C21F0A2BA484CD003B25B3 /* ComposableArchitecture in Frameworks */,
 				6464E52E2BA5C3ED0039C387 /* FirebaseInAppMessaging-Beta in Frameworks */,
 				64DA4FE92CED56EE00F477C6 /* SwiftLocation in Frameworks */,
 				6464E5202BA5C3ED0039C387 /* FirebaseAuth in Frameworks */,
@@ -132,7 +136,6 @@
 				6464E50A2BA4A8280039C387 /* ChickenConfig.swift */,
 				6464E5392BA61F9A0039C387 /* ChickenMap.swift */,
 				64B216FC2BBF162C005E0DC7 /* ChickenMapConfig.swift */,
-				64AF0AFF2BA79BCB0081EA97 /* DrinksLottery.swift */,
 				64F10C292BA9E04D001D83D8 /* EndGameCode.swift */,
 				647D9FC62BA3ABF2005B6566 /* HunterMap.swift */,
 				64FDBE362BC0278E0073DC85 /* Onboarding.swift */,
@@ -181,7 +184,7 @@
 			isa = PBXGroup;
 			children = (
 				6464E53C2BA744DD0039C387 /* ApiClient.swift */,
-				642E2D1A2BCC1C6400290B58 /* LocationClient.swift */,
+				642E2D1A2BCC1C6400290B58 /* LocationManager.swift */,
 			);
 			name = Dependencies;
 			sourceTree = "<group>";
@@ -189,9 +192,12 @@
 		647D9FB82BA3ABF2005B6566 = {
 			isa = PBXGroup;
 			children = (
-				64CE0F812CEE2A1F00762232 /* GoogleService-Info.plist */,
+				64CE0F832CEE8E8200762232 /* Localizable.xcstrings */,
 				6405C2912BFC871B00A35A50 /* Bxl.gpx */,
 				64FDBE382BC32AD60073DC85 /* La Rochelle.gpx */,
+				645DF8262D306D0B005D8731 /* Bondu.gpx */,
+				645DF8272D306D0B005D8731 /* Lille.gpx */,
+				645DF82A2D306E5D005D8731 /* Stockholm.gpx */,
 				643A59942BC9C1E8002B53B6 /* Lasne.gpx */,
 				643A59952BC9C38B002B53B6 /* Namur.gpx */,
 				647D9FC32BA3ABF2005B6566 /* ChickenRush */,
@@ -215,7 +221,7 @@
 				64C9CAE32CEBEDE00087BE13 /* background-music.mp3 */,
 				6464E50E2BA4AA010039C387 /* App.swift */,
 				647D9FC42BA3ABF2005B6566 /* ChickenRushApp.swift */,
-				64C21F0B2BA486E6003B25B3 /* LocationManager.swift */,
+				64C21F0B2BA486E6003B25B3 /* LocationManag.swift */,
 				647D9FC82BA3ABF3005B6566 /* Assets.xcassets */,
 				6464E53B2BA744CD0039C387 /* Dependencies */,
 				64B216ED2BBEF32F005E0DC7 /* Fonts */,
@@ -273,7 +279,6 @@
 			);
 			name = PouleParty;
 			packageProductDependencies = (
-				64C21F092BA484CD003B25B3 /* ComposableArchitecture */,
 				6464E51B2BA5C3ED0039C387 /* FirebaseAnalytics */,
 				6464E51D2BA5C3ED0039C387 /* FirebaseAnalyticsSwift */,
 				6464E51F2BA5C3ED0039C387 /* FirebaseAuth */,
@@ -285,6 +290,7 @@
 				6464E52B2BA5C3ED0039C387 /* FirebaseFunctionsCombine-Community */,
 				6464E52D2BA5C3ED0039C387 /* FirebaseInAppMessaging-Beta */,
 				64DA4FE82CED56EE00F477C6 /* SwiftLocation */,
+				648F563F2CF3DC4900B1BC28 /* ComposableArchitecture */,
 			);
 			productName = ChickenRush;
 			productReference = 647D9FC12BA3ABF2005B6566 /* PouleParty.app */;
@@ -311,13 +317,14 @@
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
+				fr,
 				Base,
 			);
 			mainGroup = 647D9FB82BA3ABF2005B6566;
 			packageReferences = (
-				64C21F082BA484CD003B25B3 /* XCRemoteSwiftPackageReference "swift-composable-architecture" */,
 				6464E51A2BA5C3ED0039C387 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 				64DA4FE72CED56EE00F477C6 /* XCRemoteSwiftPackageReference "SwiftLocation" */,
+				648F563E2CF3DC4900B1BC28 /* XCRemoteSwiftPackageReference "swift-composable-architecture" */,
 			);
 			productRefGroup = 647D9FC22BA3ABF2005B6566 /* Products */;
 			projectDirPath = "";
@@ -334,13 +341,16 @@
 			buildActionMask = 2147483647;
 			files = (
 				64B216F92BBF0293005E0DC7 /* Launch Screen.storyboard in Resources */,
-				64CE0F822CEE2D1500762232 /* GoogleService-Info.plist in Resources */,
 				64C9CAE42CEBEDE00087BE13 /* background-music.mp3 in Resources */,
 				64C9CAE22CEBD6C70087BE13 /* Early GameBoy.ttf in Resources */,
+				645DF8282D306D0B005D8731 /* Lille.gpx in Resources */,
+				645DF8292D306D0B005D8731 /* Bondu.gpx in Resources */,
+				645DF82B2D306E5D005D8731 /* Stockholm.gpx in Resources */,
 				64B216F22BBEF382005E0DC7 /* OFL.txt in Resources */,
 				64B216F12BBEF382005E0DC7 /* Bangers-Regular.ttf in Resources */,
 				647D9FCD2BA3ABF3005B6566 /* Preview Assets.xcassets in Resources */,
 				647D9FC92BA3ABF3005B6566 /* Assets.xcassets in Resources */,
+				64CE0F842CEE8E8200762232 /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -378,9 +388,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				64AF0B002BA79BCB0081EA97 /* DrinksLottery.swift in Sources */,
 				6464E5092BA4A6AA0039C387 /* Selection.swift in Sources */,
-				642E2D1B2BCC1C6400290B58 /* LocationClient.swift in Sources */,
+				642E2D1B2BCC1C6400290B58 /* LocationManager.swift in Sources */,
 				6464E5362BA603F00039C387 /* ChickenLocation.swift in Sources */,
 				6464E53D2BA744DD0039C387 /* ApiClient.swift in Sources */,
 				6464E53A2BA61F9A0039C387 /* ChickenMap.swift in Sources */,
@@ -395,7 +404,7 @@
 				6464E5342BA5DE190039C387 /* GeoPoint+Utils.swift in Sources */,
 				649F06802BA8A11F00DDE737 /* UUID+Utils.swift in Sources */,
 				6464E50B2BA4A8280039C387 /* ChickenConfig.swift in Sources */,
-				64C21F0C2BA486E6003B25B3 /* LocationManager.swift in Sources */,
+				64C21F0C2BA486E6003B25B3 /* LocationManag.swift in Sources */,
 				64B216F42BBEF41C005E0DC7 /* Font+Utils.swift in Sources */,
 				649BE2072BAF201600520CE3 /* Drink.swift in Sources */,
 				649BE2092BAF43CC00520CE3 /* Image+Utils.swift in Sources */,
@@ -471,6 +480,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
 			name = Debug;
@@ -527,6 +537,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_EMIT_LOC_STRINGS = YES;
 			};
 			name = Release;
 		};
@@ -548,6 +559,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ChickenRush/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Poule Party";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.games";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "This app need your location to provide best feature based on location";
 				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "Need location";
 				INFOPLIST_KEY_NSLocationUsageDescription = "Need location";
@@ -565,8 +577,8 @@
 				INFOPLIST_KEY_UIStatusBarStyle = UIStatusBarStyleDefault;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
@@ -601,6 +613,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ChickenRush/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Poule Party";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.games";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "This app need your location to provide best feature based on location";
 				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "Need location";
 				INFOPLIST_KEY_NSLocationUsageDescription = "Need location";
@@ -618,8 +631,8 @@
 				INFOPLIST_KEY_UIStatusBarStyle = UIStatusBarStyleDefault;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
@@ -668,20 +681,20 @@
 				minimumVersion = 10.22.1;
 			};
 		};
-		64C21F082BA484CD003B25B3 /* XCRemoteSwiftPackageReference "swift-composable-architecture" */ = {
+		648F563E2CF3DC4900B1BC28 /* XCRemoteSwiftPackageReference "swift-composable-architecture" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/pointfreeco/swift-composable-architecture.git";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 1.10.4;
+				minimumVersion = 1.16.1;
 			};
 		};
 		64DA4FE72CED56EE00F477C6 /* XCRemoteSwiftPackageReference "SwiftLocation" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/malcommac/SwiftLocation.git";
 			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 6.0.0;
+				branch = master;
+				kind = branch;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
@@ -737,9 +750,9 @@
 			package = 6464E51A2BA5C3ED0039C387 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = "FirebaseInAppMessaging-Beta";
 		};
-		64C21F092BA484CD003B25B3 /* ComposableArchitecture */ = {
+		648F563F2CF3DC4900B1BC28 /* ComposableArchitecture */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 64C21F082BA484CD003B25B3 /* XCRemoteSwiftPackageReference "swift-composable-architecture" */;
+			package = 648F563E2CF3DC4900B1BC28 /* XCRemoteSwiftPackageReference "swift-composable-architecture" */;
 			productName = ComposableArchitecture;
 		};
 		64DA4FE82CED56EE00F477C6 /* SwiftLocation */ = {
