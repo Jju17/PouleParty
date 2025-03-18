@@ -11,7 +11,6 @@
 		6401DFCB2BC9BB3C00BA8967 /* Coordinate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6401DFCA2BC9BB3C00BA8967 /* Coordinate.swift */; };
 		642E2D1B2BCC1C6400290B58 /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 642E2D1A2BCC1C6400290B58 /* LocationManager.swift */; };
 		645DF8282D306D0B005D8731 /* Lille.gpx in Resources */ = {isa = PBXBuildFile; fileRef = 645DF8272D306D0B005D8731 /* Lille.gpx */; };
-		645DF8292D306D0B005D8731 /* Bondu.gpx in Resources */ = {isa = PBXBuildFile; fileRef = 645DF8262D306D0B005D8731 /* Bondu.gpx */; };
 		645DF82B2D306E5D005D8731 /* Stockholm.gpx in Resources */ = {isa = PBXBuildFile; fileRef = 645DF82A2D306E5D005D8731 /* Stockholm.gpx */; };
 		6464E5092BA4A6AA0039C387 /* Selection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6464E5082BA4A6AA0039C387 /* Selection.swift */; };
 		6464E50B2BA4A8280039C387 /* ChickenConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6464E50A2BA4A8280039C387 /* ChickenConfig.swift */; };
@@ -44,6 +43,7 @@
 		649BE2072BAF201600520CE3 /* Drink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 649BE2062BAF201600520CE3 /* Drink.swift */; };
 		649BE2092BAF43CC00520CE3 /* Image+Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 649BE2082BAF43CC00520CE3 /* Image+Utils.swift */; };
 		649F06802BA8A11F00DDE737 /* UUID+Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 649F067F2BA8A11F00DDE737 /* UUID+Utils.swift */; };
+		64A034112D8A13E20055183E /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 64A034102D8A13E20055183E /* GoogleService-Info.plist */; };
 		64AF0B022BA7A0110081EA97 /* Color+Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64AF0B012BA7A0110081EA97 /* Color+Utils.swift */; };
 		64B216F12BBEF382005E0DC7 /* Bangers-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 64B216EE2BBEF382005E0DC7 /* Bangers-Regular.ttf */; };
 		64B216F22BBEF382005E0DC7 /* OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = 64B216EF2BBEF382005E0DC7 /* OFL.txt */; };
@@ -66,7 +66,6 @@
 		642E2D1A2BCC1C6400290B58 /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
 		643A59942BC9C1E8002B53B6 /* Lasne.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = Lasne.gpx; sourceTree = "<group>"; };
 		643A59952BC9C38B002B53B6 /* Namur.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = Namur.gpx; sourceTree = "<group>"; };
-		645DF8262D306D0B005D8731 /* Bondu.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = Bondu.gpx; sourceTree = "<group>"; };
 		645DF8272D306D0B005D8731 /* Lille.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = Lille.gpx; sourceTree = "<group>"; };
 		645DF82A2D306E5D005D8731 /* Stockholm.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = Stockholm.gpx; sourceTree = "<group>"; };
 		64620C802BA3C81C006B329C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -92,6 +91,7 @@
 		649BE2062BAF201600520CE3 /* Drink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Drink.swift; sourceTree = "<group>"; };
 		649BE2082BAF43CC00520CE3 /* Image+Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Image+Utils.swift"; sourceTree = "<group>"; };
 		649F067F2BA8A11F00DDE737 /* UUID+Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UUID+Utils.swift"; sourceTree = "<group>"; };
+		64A034102D8A13E20055183E /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		64AF0B012BA7A0110081EA97 /* Color+Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Utils.swift"; sourceTree = "<group>"; };
 		64B216EE2BBEF382005E0DC7 /* Bangers-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Bangers-Regular.ttf"; sourceTree = "<group>"; };
 		64B216EF2BBEF382005E0DC7 /* OFL.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = OFL.txt; sourceTree = "<group>"; };
@@ -193,9 +193,9 @@
 			isa = PBXGroup;
 			children = (
 				64CE0F832CEE8E8200762232 /* Localizable.xcstrings */,
+				64A034102D8A13E20055183E /* GoogleService-Info.plist */,
 				6405C2912BFC871B00A35A50 /* Bxl.gpx */,
 				64FDBE382BC32AD60073DC85 /* La Rochelle.gpx */,
-				645DF8262D306D0B005D8731 /* Bondu.gpx */,
 				645DF8272D306D0B005D8731 /* Lille.gpx */,
 				645DF82A2D306E5D005D8731 /* Stockholm.gpx */,
 				643A59942BC9C1E8002B53B6 /* Lasne.gpx */,
@@ -344,11 +344,11 @@
 				64C9CAE42CEBEDE00087BE13 /* background-music.mp3 in Resources */,
 				64C9CAE22CEBD6C70087BE13 /* Early GameBoy.ttf in Resources */,
 				645DF8282D306D0B005D8731 /* Lille.gpx in Resources */,
-				645DF8292D306D0B005D8731 /* Bondu.gpx in Resources */,
 				645DF82B2D306E5D005D8731 /* Stockholm.gpx in Resources */,
 				64B216F22BBEF382005E0DC7 /* OFL.txt in Resources */,
 				64B216F12BBEF382005E0DC7 /* Bangers-Regular.ttf in Resources */,
 				647D9FCD2BA3ABF3005B6566 /* Preview Assets.xcassets in Resources */,
+				64A034112D8A13E20055183E /* GoogleService-Info.plist in Resources */,
 				647D9FC92BA3ABF3005B6566 /* Assets.xcassets in Resources */,
 				64CE0F842CEE8E8200762232 /* Localizable.xcstrings in Resources */,
 			);
