@@ -34,16 +34,16 @@
 			<key>text-context</key>
 			<dict>
 				<key>focused</key>
-				<string>                NavigationLink(state: ChickenMapConfigFeature.State(game: store.$game)) {
+				<string>                    } catch {
 </string>
 				<key>leading</key>
-				<string>                }
-                .datePickerStyle(.compact)
+				<string>                        try apiClient.setConfig(state.game)
+                        await send(.startGameTriggered(state.game))
 </string>
 				<key>trailing</key>
-				<string>                    Text("Map setup")
+				<string>                        await send(.configSaveFailed)
+                    }
                 }
-                VStack(alignment: .leading) {
 </string>
 			</dict>
 			<key>title</key>

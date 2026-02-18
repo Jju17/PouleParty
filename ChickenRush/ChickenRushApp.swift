@@ -9,23 +9,21 @@ import ComposableArchitecture
 import Firebase
 import SwiftUI
 import Foundation
-import TipKit
 
 @main
 struct ChickenRushApp: App {
 
     init() {
         FirebaseApp.configure()
-        try? Tips.configure([
-            .displayFrequency(.immediate)
-        ])
     }
 
     var body: some Scene {
         WindowGroup {
             AppView(
                 store: Store(
-                    initialState: AppFeature.State.selection(SelectionFeature.State())
+                    initialState: UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
+                        ? AppFeature.State.selection(SelectionFeature.State())
+                        : AppFeature.State.onboarding(OnboardingFeature.State())
                 ) {
                     AppFeature()
                 }

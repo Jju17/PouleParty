@@ -66,78 +66,6 @@
             endingLineNumber = "60"
             landmarkName = "run()"
             landmarkType = "7">
-            <Locations>
-               <Location
-                  uuid = "02307254-63F5-4E04-B45C-BAD729416DB5 - e45898cda09c789"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "(1) suspend resume partial function for SwiftLocation.Tasks.SingleUpdateLocation.run() async throws -&gt; SwiftLocation.Tasks.ContinuousUpdateLocation.StreamEvent"
-                  moduleName = "PouleParty.debug.dylib"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/jrahier/Library/Developer/Xcode/DerivedData/PouleParty-glpqlflfbsgnmvchqnjwdockrobs/SourcePackages/checkouts/SwiftLocation/Sources/SwiftLocation/Async%20Tasks/SingleUpdateLocation.swift"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "60"
-                  endingLineNumber = "60">
-               </Location>
-               <Location
-                  uuid = "02307254-63F5-4E04-B45C-BAD729416DB5 - d57eade12a71dd83"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "(2) await resume partial function for SwiftLocation.Tasks.SingleUpdateLocation.run() async throws -&gt; SwiftLocation.Tasks.ContinuousUpdateLocation.StreamEvent"
-                  moduleName = "PouleParty.debug.dylib"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/jrahier/Library/Developer/Xcode/DerivedData/PouleParty-glpqlflfbsgnmvchqnjwdockrobs/SourcePackages/checkouts/SwiftLocation/Sources/SwiftLocation/Async%20Tasks/SingleUpdateLocation.swift"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "60"
-                  endingLineNumber = "60">
-               </Location>
-               <Location
-                  uuid = "02307254-63F5-4E04-B45C-BAD729416DB5 - 21e923a904308077"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "(3) suspend resume partial function for SwiftLocation.Tasks.SingleUpdateLocation.run() async throws -&gt; SwiftLocation.Tasks.ContinuousUpdateLocation.StreamEvent"
-                  moduleName = "PouleParty.debug.dylib"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/jrahier/Library/Developer/Xcode/DerivedData/PouleParty-glpqlflfbsgnmvchqnjwdockrobs/SourcePackages/checkouts/SwiftLocation/Sources/SwiftLocation/Async%20Tasks/SingleUpdateLocation.swift"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "60"
-                  endingLineNumber = "60">
-               </Location>
-               <Location
-                  uuid = "02307254-63F5-4E04-B45C-BAD729416DB5 - 4ebef0db52cfe276"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "(4) suspend resume partial function for SwiftLocation.Tasks.SingleUpdateLocation.run() async throws -&gt; SwiftLocation.Tasks.ContinuousUpdateLocation.StreamEvent"
-                  moduleName = "PouleParty.debug.dylib"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/jrahier/Library/Developer/Xcode/DerivedData/PouleParty-glpqlflfbsgnmvchqnjwdockrobs/SourcePackages/checkouts/SwiftLocation/Sources/SwiftLocation/Async%20Tasks/SingleUpdateLocation.swift"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "60"
-                  endingLineNumber = "60">
-               </Location>
-               <Location
-                  uuid = "02307254-63F5-4E04-B45C-BAD729416DB5 - 25279e28c8e102f8"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "closure #1 (Swift.CheckedContinuation&lt;SwiftLocation.Tasks.ContinuousUpdateLocation.StreamEvent, Swift.Error&gt;) -&gt; () in SwiftLocation.Tasks.SingleUpdateLocation.run() async throws -&gt; SwiftLocation.Tasks.ContinuousUpdateLocation.StreamEvent"
-                  moduleName = "PouleParty.debug.dylib"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/jrahier/Library/Developer/Xcode/DerivedData/PouleParty-glpqlflfbsgnmvchqnjwdockrobs/SourcePackages/checkouts/SwiftLocation/Sources/SwiftLocation/Async%20Tasks/SingleUpdateLocation.swift"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "61"
-                  endingLineNumber = "61">
-               </Location>
-            </Locations>
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -202,36 +130,6 @@
             endingLineNumber = "98"
             landmarkName = "willStart()"
             landmarkType = "7">
-            <Locations>
-               <Location
-                  uuid = "363D2241-41FE-4169-8E72-E22949F2EDFB - 55be0e9fdedcf038"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "SwiftLocation.Tasks.SingleUpdateLocation.willStart() -&gt; ()"
-                  moduleName = "PouleParty.debug.dylib"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/jrahier/Library/Developer/Xcode/DerivedData/PouleParty-glpqlflfbsgnmvchqnjwdockrobs/SourcePackages/checkouts/SwiftLocation/Sources/SwiftLocation/Async%20Tasks/SingleUpdateLocation.swift"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "98"
-                  endingLineNumber = "98">
-               </Location>
-               <Location
-                  uuid = "363D2241-41FE-4169-8E72-E22949F2EDFB - e38824b372373d9d"
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "closure #1 @Swift.MainActor () -&gt; () in SwiftLocation.Tasks.SingleUpdateLocation.willStart() -&gt; ()"
-                  moduleName = "PouleParty.debug.dylib"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/jrahier/Library/Developer/Xcode/DerivedData/PouleParty-glpqlflfbsgnmvchqnjwdockrobs/SourcePackages/checkouts/SwiftLocation/Sources/SwiftLocation/Async%20Tasks/SingleUpdateLocation.swift"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "98"
-                  endingLineNumber = "98">
-               </Location>
-            </Locations>
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy

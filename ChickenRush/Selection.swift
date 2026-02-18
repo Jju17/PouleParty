@@ -7,7 +7,6 @@
 
 import AVFAudio
 import ComposableArchitecture
-import SwiftLocation
 import SwiftUI
 
 @Reducer
@@ -17,17 +16,22 @@ struct SelectionFeature {
     struct State {
         @Presents var destination: Destination.State?
         var password: String = ""
+        var gameCode: String = ""
         var isAuthenticating = false
+        var isJoiningGame = false
     }
 
     enum Action: BindableAction {
         case binding(BindingAction<State>)
         case destination(PresentationAction<Destination.Action>)
         case dismissChickenConfig
+        case gameNotFound
         case goToChickenConfigTriggered
         case goToChickenMapTriggered(Game)
+        case goToHunterMapTriggered(Game)
         case onTask
         case startButtonTapped
+        case joinGameButtonTapped
         case validatePasswordButtonTapped
     }
 
@@ -35,10 +39,16 @@ struct SelectionFeature {
     struct Destination {
         enum State {
             case chickenConfig(ChickenConfigFeature.State)
+            case alert(AlertState<Action.Alert>)
         }
 
         enum Action {
             case chickenConfig(ChickenConfigFeature.Action)
+            case alert(Alert)
+
+            enum Alert {
+                case ok
+            }
         }
 
         var body: some ReducerOf<Self> {
@@ -67,15 +77,7 @@ struct SelectionFeature {
                 state.isAuthenticating = false
 
                 return .run { send in
-                    guard let game = await apiClient.getConfig(),
-                          game.endDate > .now
-                    else {
-                        try await apiClient.deleteConfig()
-                        await send(.goToChickenConfigTriggered)
-                        return
-                    }
-
-                    await send(.goToChickenMapTriggered(game))
+                    await send(.goToChickenConfigTriggered)
                 }
             case let .destination(.presented(.chickenConfig(.startGameTriggered(game)))):
                 state.destination = nil
@@ -87,24 +89,46 @@ struct SelectionFeature {
             case .dismissChickenConfig:
                 state.destination = nil
                 return .none
+            case .gameNotFound:
+                state.destination = .alert(
+                    AlertState {
+                        TextState("Game not found")
+                    } actions: {
+                        ButtonState(role: .cancel) {
+                            TextState("OK")
+                        }
+                    } message: {
+                        TextState("No active game found with this code. Check the code and try again.")
+                    }
+                )
+                return .none
             case .goToChickenConfigTriggered:
                 state.destination = .chickenConfig(
-                    ChickenConfigFeature.State(game:Shared(Game(id: UUID().uuidString)))
+                    ChickenConfigFeature.State(game: Shared(value: Game(id: UUID().uuidString)))
                 )
                 return .none
             case .goToChickenMapTriggered:
                 return .none
-            case .onTask:
-                return .run { _ in
-//                    do {
-//                        let obtaninedStatus = try await locationClient.requestAlwaysPermission()
-//                        print("JR: obtaninedStatus : \(String(describing: obtaninedStatus))")
-//                    } catch {
-//                        print("JR: error: \(error)")
-//                    }
-                }
-            case .startButtonTapped:
+            case .goToHunterMapTriggered:
                 return .none
+            case .onTask:
+                return .none
+            case .startButtonTapped:
+                state.isJoiningGame = true
+                return .none
+            case .joinGameButtonTapped:
+                let code = state.gameCode.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !code.isEmpty else { return .none }
+
+                state.isJoiningGame = false
+                return .run { send in
+                    if let game = try? await apiClient.findGameByCode(code),
+                       game.endDate > .now {
+                        await send(.goToHunterMapTriggered(game))
+                    } else {
+                        await send(.gameNotFound)
+                    }
+                }
             }
         }
         .ifLet(\.$destination, action: \.destination) {
@@ -117,9 +141,10 @@ struct SelectionView: View {
     @Bindable var store: StoreOf<SelectionFeature>
     @State private var isVisible = true
     @State private var audioPlayer: AVAudioPlayer?
+    @State private var showingGameRules = false
 
     var body: some View {
-        ZStack(alignment: .bottomTrailing) {
+        ZStack {
             VStack(alignment: .center, spacing: 0) {
                 Spacer()
                 VStack(alignment: .center, spacing: 10) {
@@ -156,20 +181,41 @@ struct SelectionView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color.CRBeige)
 
-
-            Button {
-                store.isAuthenticating.toggle()
-            } label: {
-                Text("I am la poule")
+            VStack {
+                HStack {
+                    Spacer()
+                    Button {
+                        showingGameRules = true
+                    } label: {
+                        Text("Rules")
+                            .padding()
+                            .foregroundColor(.black)
+                            .font(.gameboy(size: 8))
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(.black, lineWidth: 1.5)
+                            )
+                    }
                     .padding()
-                    .foregroundColor(.black)
-                    .font(.gameboy(size: 8))
-                    .background(
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(.black, lineWidth: 1.5)
-                    )
+                }
+                Spacer()
+                HStack {
+                    Spacer()
+                    Button {
+                        store.isAuthenticating.toggle()
+                    } label: {
+                        Text("I am la poule")
+                            .padding()
+                            .foregroundColor(.black)
+                            .font(.gameboy(size: 8))
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(.black, lineWidth: 1.5)
+                            )
+                    }
+                    .padding()
+                }
             }
-            .padding()
             .alert("Password", isPresented: $store.isAuthenticating) {
                 SecureField("Password", text: $store.password)
                 Button("Ok") {
@@ -178,6 +224,15 @@ struct SelectionView: View {
                 Button("Cancel", role: .cancel) { }
             } message: {
                 Text("Please enter admin password.")
+            }
+            .alert("Join Game", isPresented: $store.isJoiningGame) {
+                TextField("Game code", text: $store.gameCode)
+                Button("Join") {
+                    self.store.send(.joinGameButtonTapped)
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("Enter the game code from the chicken.")
             }
         }
         .onDisappear {
@@ -205,6 +260,27 @@ struct SelectionView: View {
                                 Image(systemName: "xmark")
                             }
 
+                        }
+                    }
+            }
+        }
+        .alert(
+            $store.scope(
+                state: \.destination?.alert,
+                action: \.destination.alert
+            )
+        )
+        .sheet(isPresented: $showingGameRules) {
+            NavigationStack {
+                GameRulesView()
+                    .toolbar {
+                        ToolbarItem {
+                            Button {
+                                showingGameRules = false
+                            } label: {
+                                Image(systemName: "xmark")
+                                    .foregroundStyle(.black)
+                            }
                         }
                     }
             }

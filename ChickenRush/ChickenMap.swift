@@ -9,6 +9,12 @@ import ComposableArchitecture
 import MapKit
 import SwiftUI
 
+struct HunterAnnotation: Equatable, Identifiable {
+    let id: String
+    var coordinate: CLLocationCoordinate2D
+    var displayName: String
+}
+
 @Reducer
 struct ChickenMapFeature {
 
@@ -16,10 +22,10 @@ struct ChickenMapFeature {
     struct State {
         @Presents var destination: Destination.State?
         var game: Game
+        var hunterAnnotations: [HunterAnnotation] = []
         var nextRadiusUpdate: Date?
         var nowDate: Date = .now
         var radius: Int = 1500
-        var timer: Timer?
         var mapCircle: MapCircle?
     }
 
@@ -31,6 +37,7 @@ struct ChickenMapFeature {
         case cancelGameButtonTapped
         case beenFoundButtonTapped
         case goToMenu
+        case hunterLocationsUpdated([HunterLocation])
         case newLocationFetched(CLLocationCoordinate2D)
         case onTask
         case setGameTriggered
@@ -63,6 +70,7 @@ struct ChickenMapFeature {
 
     @Dependency(\.apiClient) var apiClient
     @Dependency(\.continuousClock) var clock
+    @Dependency(\.locationClient) var locationClient
 
     var body: some ReducerOf<Self> {
         BindingReducer()
@@ -74,7 +82,7 @@ struct ChickenMapFeature {
             case .binding:
                 return .none
             case .destination(.presented(.alert(.cancelGame))):
-                LocationManager.shared.stopUpdatingLocation()
+                locationClient.stopTracking()
                 return .run { send in
                     await send(.goToMenu)
                 }
@@ -104,6 +112,19 @@ struct ChickenMapFeature {
                 return .none
             case .goToMenu:
                 return .none
+            case let .hunterLocationsUpdated(hunters):
+                let sorted = hunters.sorted { $0.hunterId < $1.hunterId }
+                state.hunterAnnotations = sorted.enumerated().map { index, hunter in
+                    HunterAnnotation(
+                        id: hunter.hunterId,
+                        coordinate: CLLocationCoordinate2D(
+                            latitude: hunter.location.latitude,
+                            longitude: hunter.location.longitude
+                        ),
+                        displayName: "Hunter \(index + 1)"
+                    )
+                }
+                return .none
             case let .newLocationFetched(location):
                 let mapCircle = MapCircle(
                     center: location,
@@ -112,13 +133,46 @@ struct ChickenMapFeature {
                 state.mapCircle = mapCircle
                 return .none
             case .onTask:
-                LocationManager.shared.askForLocationServicesAuthorization()
-                LocationManager.shared.updateLocation(every: 10)
-                return .run { send in
-                    for await _ in self.clock.timer(interval: .seconds(1)) {
-                        await send(.timerTicked)
+                let gameId = state.game.id
+                let gameMod = state.game.gameMod
+
+                var effects: [Effect<Action>] = [
+                    .run { send in
+                        for await _ in self.clock.timer(interval: .seconds(1)) {
+                            await send(.timerTicked)
+                        }
                     }
+                ]
+
+                // followTheChicken & mutualTracking: chicken sends position to hunters
+                // stayInTheZone: no position sharing, zone is fixed
+                if gameMod != .stayInTheZone {
+                    effects.append(
+                        .run { send in
+                            var lastWrite = Date.distantPast
+                            for await coordinate in locationClient.startTracking() {
+                                await send(.newLocationFetched(coordinate))
+                                if Date.now.timeIntervalSince(lastWrite) >= 5 {
+                                    try apiClient.setChickenLocation(gameId, coordinate)
+                                    lastWrite = .now
+                                }
+                            }
+                        }
+                    )
                 }
+
+                // mutualTracking: chicken can see all hunters
+                if gameMod == .mutualTracking {
+                    effects.append(
+                        .run { send in
+                            for await hunters in apiClient.hunterLocationsStream(gameId) {
+                                await send(.hunterLocationsUpdated(hunters))
+                            }
+                        }
+                    )
+                }
+
+                return .merge(effects)
             case .setGameTriggered:
                 let (lastUpdate, lastRadius) = state.game.findLastUpdate()
 
@@ -137,13 +191,21 @@ struct ChickenMapFeature {
                     state.nowDate = .now
                     return .none
                 }
+
                 let game = state.game
+                guard Int(state.radius) - Int(game.radiusDeclinePerUpdate) > 0
+                else { return .none }
+
                 state.nextRadiusUpdate?.addTimeInterval(TimeInterval(game.radiusIntervalUpdate * 60))
                 state.radius = Int(state.radius) - Int(game.radiusDeclinePerUpdate)
 
-                let location = LocationManager.shared
-
-//                (.newLocationFetched(location))
+                // In stayInTheZone, circle is fixed so update it with the new radius
+                if game.gameMod == .stayInTheZone {
+                    state.mapCircle = MapCircle(
+                        center: game.initialCoordinates.toCLCoordinates,
+                        radius: CLLocationDistance(state.radius)
+                    )
+                }
                 return .none
             }
         }
@@ -156,12 +218,28 @@ struct ChickenMapFeature {
 struct ChickenMapView: View {
     @Bindable var store: StoreOf<ChickenMapFeature>
 
+    private var chickenSubtitle: String {
+        switch store.game.gameMod {
+        case .followTheChicken:
+            return "Don't be seen !"
+        case .stayInTheZone:
+            return "Stay in the zone 📍"
+        case .mutualTracking:
+            return "You can see them 👀"
+        }
+    }
+
     var body: some View {
         Map {
-            self.store.mapCircle
-                .foregroundStyle(.green.opacity(0.5))
-                .mapOverlayLevel(level: .aboveRoads)
+            if let circle = self.store.mapCircle {
+                circle
+                    .foregroundStyle(.green.opacity(0.5))
+                    .mapOverlayLevel(level: .aboveRoads)
+            }
             UserAnnotation()
+            ForEach(self.store.hunterAnnotations) { hunter in
+                hunterAnnotationView(for: hunter)
+            }
         }
         .mapControls {
             MapUserLocationButton()
@@ -173,7 +251,7 @@ struct ChickenMapView: View {
                 Spacer()
                 VStack {
                     Text("You are the 🐔")
-                    Text("Don't be seen !")
+                    Text(chickenSubtitle)
                         .font(.system(size: 14))
                 }
                 Spacer()
@@ -219,12 +297,9 @@ struct ChickenMapView: View {
             .padding()
             .background(.thinMaterial)
         }
-        .onAppear {
+        .task {
             self.store.send(.setGameTriggered)
             self.store.send(.onTask)
-        }
-        .task {
-
         }
         .alert(
             $store.scope(
@@ -254,24 +329,20 @@ struct ChickenMapView: View {
             }
         }
     }
+
+    private func hunterAnnotationView(for hunter: HunterAnnotation) -> some MapContent {
+        Annotation(hunter.displayName, coordinate: hunter.coordinate) {
+            Image(systemName: "figure.walk")
+                .foregroundStyle(.white)
+                .padding(6)
+                .background(.orange)
+                .clipShape(Circle())
+        }
+    }
 }
 
 #Preview {
     ChickenMapView(store: Store(initialState: ChickenMapFeature.State(game: .mock)) {
         ChickenMapFeature()
     })
-}
-
-
-class LocationDelegate: NSObject, CLLocationManagerDelegate {
-    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        if let location = locations.first {
-            print("Found location: \(location)")
-            //do something with the location
-        }
-    }
-
-    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        print("Failed to find user's location: \(error.localizedDescription)")
-    }
 }

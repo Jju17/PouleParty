@@ -24,6 +24,7 @@ struct Game: Codable, Equatable {
     enum GameMod: String, CaseIterable, Equatable, Codable {
         case followTheChicken
         case stayInTheZone
+        case mutualTracking
 
         var title: String {
             switch self {
@@ -31,6 +32,8 @@ struct Game: Codable, Equatable {
                 return "Follow the chicken 🐔"
             case .stayInTheZone:
                 return "Stay in tha zone 📍"
+            case .mutualTracking:
+                return "Mutual tracking 👀"
             }
         }
     }
@@ -63,6 +66,10 @@ extension Game {
         set {
             self.endTimestamp = Timestamp(date: newValue)
         }
+    }
+
+    var gameCode: String {
+        String(id.prefix(6)).uppercased()
     }
 
     func findLastUpdate() -> (Date, Int) {

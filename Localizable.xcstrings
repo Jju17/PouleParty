@@ -31,6 +31,39 @@
         }
       }
     },
+    ">" : {
+
+    },
+    "🎉" : {
+
+    },
+    "🐔" : {
+
+    },
+    "👀" : {
+
+    },
+    "📍" : {
+
+    },
+    "🗺️" : {
+
+    },
+    "😢" : {
+
+    },
+    "Allow Always" : {
+
+    },
+    "Allow Location Access" : {
+
+    },
+    "Almost there! The game needs to track the Chicken even when the app is in the background.\n\nPlease select \"Always Allow\" so the Hunters can find you!" : {
+
+    },
+    "Always allowed!" : {
+
+    },
     "Are you sure you want to cancel and finish the game now ?" : {
       "localizations" : {
         "fr" : {
@@ -40,6 +73,9 @@
           }
         }
       }
+    },
+    "Back" : {
+
     },
     "Cancel" : {
       "localizations" : {
@@ -62,6 +98,7 @@
       }
     },
     "Catch the 🐔 !" : {
+      "extractionState" : "stale",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -71,7 +108,14 @@
         }
       }
     },
+    "Close in on the Chicken. Complete challenges for points. Unleash weapons.\n\nIt's Mario Kart rules — anything goes." : {
+
+    },
+    "Could not create the game. Please check your connection and try again." : {
+
+    },
     "Don't be seen !" : {
+      "extractionState" : "stale",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -91,6 +135,12 @@
         }
       }
     },
+    "Enter the game code from the chicken." : {
+
+    },
+    "Error" : {
+
+    },
     "FOUND" : {
       "localizations" : {
         "fr" : {
@@ -100,6 +150,21 @@
           }
         }
       }
+    },
+    "Game code" : {
+
+    },
+    "Game Code" : {
+
+    },
+    "Game Mode" : {
+
+    },
+    "Game Modes" : {
+
+    },
+    "Game not found" : {
+
     },
     "Game Settings" : {
       "localizations" : {
@@ -121,6 +186,12 @@
         }
       }
     },
+    "How to play" : {
+
+    },
+    "Hunt Them Down" : {
+
+    },
     "I am la poule" : {
       "localizations" : {
         "fr" : {
@@ -132,6 +203,7 @@
       }
     },
     "I'll wait" : {
+      "extractionState" : "stale",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -140,6 +212,18 @@
           }
         }
       }
+    },
+    "Join" : {
+
+    },
+    "Join Game" : {
+
+    },
+    "Let's go!" : {
+
+    },
+    "Location access was denied.\nPlease enable it in Settings to play." : {
+
     },
     "Map setup" : {
       "localizations" : {
@@ -171,7 +255,14 @@
         }
       }
     },
+    "Next" : {
+
+    },
+    "No active game found with this code. Check the code and try again." : {
+
+    },
     "No game found" : {
+      "extractionState" : "stale",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -180,6 +271,9 @@
           }
         }
       }
+    },
+    "Nominate a Chicken" : {
+
     },
     "Ok" : {
       "localizations" : {
@@ -191,6 +285,12 @@
         }
       }
     },
+    "OK" : {
+
+    },
+    "Open Settings" : {
+
+    },
     "Password" : {
       "localizations" : {
         "fr" : {
@@ -200,6 +300,9 @@
           }
         }
       }
+    },
+    "Pick the Stag, the Birthday Girl, or whoever just really wants to be a Chicken.\n\nTheir job is to hide." : {
+
     },
     "Please enter admin password." : {
       "localizations" : {
@@ -212,6 +315,7 @@
       }
     },
     "Please wait on this page until the 🐔 create a new game." : {
+      "extractionState" : "stale",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -271,6 +375,12 @@
         }
       }
     },
+    "Rules" : {
+
+    },
+    "Split into squads. Use the map to track them.\n\nThe Chicken could be hiding in any pub or bar." : {
+
+    },
     "START" : {
       "localizations" : {
         "fr" : {
@@ -301,6 +411,12 @@
         }
       }
     },
+    "The Endgame" : {
+
+    },
+    "The ultimate hide-and-seek\npub crawl game" : {
+
+    },
     "Was the Chicken inside the bar ?" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -311,6 +427,15 @@
           }
         }
       }
+    },
+    "We Need Your Location" : {
+
+    },
+    "Welcome to\nPouleParty!" : {
+
+    },
+    "Without it, the game can't work.\nNo location = no map = no fun.\n\nWe promise we only use it during the game!" : {
+
     },
     "You are the 🐔" : {
       "localizations" : {
@@ -331,6 +456,9 @@
           }
         }
       }
+    },
+    "You're all set! The game will track location even in the background.\n\nMaximum fun guaranteed!" : {
+
     }
   },
   "version" : "1.0"

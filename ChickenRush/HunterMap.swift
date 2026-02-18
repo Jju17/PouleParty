@@ -15,11 +15,11 @@ struct HunterMapFeature {
     @ObservableState
     struct State {
         @Presents var destination: Destination.State?
-        var game: Game?
+        var game: Game
+        var hunterId: String = UUID().uuidString
         var nextRadiusUpdate: Date?
         var nowDate: Date = .now
         var radius: Int = 1500
-        var timer: Timer?
         var mapCircle: MapCircle?
     }
 
@@ -27,7 +27,6 @@ struct HunterMapFeature {
         case binding(BindingAction<State>)
         case destination(PresentationAction<Destination.Action>)
         case newLocationFetched(CLLocationCoordinate2D)
-        case noGameFound
         case onTask
         case setGameTriggered(to: Game)
         case timerTicked
@@ -43,13 +42,14 @@ struct HunterMapFeature {
             case alert(Alert)
 
             enum Alert {
-                case beTheChicken
+                case ok
             }
         }
     }
 
-    @Dependency(\.continuousClock) var clock
     @Dependency(\.apiClient) var apiClient
+    @Dependency(\.continuousClock) var clock
+    @Dependency(\.locationClient) var locationClient
 
     var body: some ReducerOf<Self> {
         BindingReducer()
@@ -67,32 +67,63 @@ struct HunterMapFeature {
                 )
                 state.mapCircle = mapCircle
                 return .none
-            case .noGameFound:
-                state.destination = .alert(
-                    AlertState {
-                        TextState("No game found")
-                    } actions: {
-                        ButtonState(role: .cancel) {
-                            TextState("I'll wait")
-                        }
-                    } message: {
-                        TextState("Please wait on this page until the 🐔 create a new game.")
-                    }
-                )
-                return .none
             case .onTask:
-                return .run { send in
-                    if let game = await apiClient.getConfig() {
-                        await send(.setGameTriggered(to: game))
-                    } else {
-                        await send(.noGameFound)
-                    }
+                let gameId = state.game.id
+                let gameMod = state.game.gameMod
+                let hunterId = state.hunterId
+                let (lastUpdate, lastRadius) = state.game.findLastUpdate()
+                state.radius = lastRadius
+                state.nextRadiusUpdate = lastUpdate
+                state.mapCircle = MapCircle(
+                    center: state.game.initialCoordinates.toCLCoordinates,
+                    radius: CLLocationDistance(state.game.initialRadius)
+                )
 
-                    for await _ in self.clock.timer(interval: .seconds(5)) {
-                        print("onTask")
-                        await send(.timerTicked)
+                var effects: [Effect<Action>] = [
+                    .run { send in
+                        for await game in apiClient.gameConfigStream(gameId) {
+                            if let game {
+                                await send(.setGameTriggered(to: game))
+                            }
+                        }
+                    },
+                    .run { send in
+                        for await _ in self.clock.timer(interval: .seconds(1)) {
+                            await send(.timerTicked)
+                        }
                     }
+                ]
+
+                // followTheChicken & mutualTracking: circle follows the chicken
+                // stayInTheZone: circle stays fixed on initial coordinates (no chicken stream)
+                if gameMod != .stayInTheZone {
+                    effects.append(
+                        .run { send in
+                            for await location in apiClient.chickenLocationStream(gameId) {
+                                if let location {
+                                    await send(.newLocationFetched(location))
+                                }
+                            }
+                        }
+                    )
                 }
+
+                // mutualTracking: hunter sends its own position
+                if gameMod == .mutualTracking {
+                    effects.append(
+                        .run { _ in
+                            var lastWrite = Date.distantPast
+                            for await coordinate in locationClient.startTracking() {
+                                if Date.now.timeIntervalSince(lastWrite) >= 5 {
+                                    try apiClient.setHunterLocation(gameId, hunterId, coordinate)
+                                    lastWrite = .now
+                                }
+                            }
+                        }
+                    )
+                }
+
+                return .merge(effects)
             case let .setGameTriggered(game):
                 let (lastUpdate, lastRadius) = game.findLastUpdate()
 
@@ -107,23 +138,27 @@ struct HunterMapFeature {
                 return .none
             case .timerTicked:
                 guard let nextRadiusUpdate = state.nextRadiusUpdate,
-                      let game = state.game,
                       .now >= nextRadiusUpdate
                 else {
                     state.nowDate = .now
                     return .none
                 }
 
+                let game = state.game
                 guard Int(state.radius) - Int(game.radiusDeclinePerUpdate) > 0
-                else {  return .none }
+                else { return .none }
 
                 state.nextRadiusUpdate?.addTimeInterval(TimeInterval(game.radiusIntervalUpdate * 60))
                 state.radius = Int(state.radius) - Int(game.radiusDeclinePerUpdate)
-                return .run { send in
-                    if let location = try await apiClient.getLastChickenLocation() {
-                        await send(.newLocationFetched(location))
-                    }
+
+                // In stayInTheZone, the circle center is fixed, so update it with the new radius
+                if game.gameMod == .stayInTheZone {
+                    state.mapCircle = MapCircle(
+                        center: game.initialCoordinates.toCLCoordinates,
+                        radius: CLLocationDistance(state.radius)
+                    )
                 }
+                return .none
             }
         }
         .ifLet(\.$destination, action: \.destination) {
@@ -134,6 +169,17 @@ struct HunterMapFeature {
 
 struct HunterMapView: View {
     @Bindable var store: StoreOf<HunterMapFeature>
+
+    private var hunterSubtitle: String {
+        switch store.game.gameMod {
+        case .followTheChicken:
+            return "Catch the 🐔 !"
+        case .stayInTheZone:
+            return "Stay in the zone 📍"
+        case .mutualTracking:
+            return "Catch the 🐔 (she sees you! 👀)"
+        }
+    }
 
     var body: some View {
         Map {
@@ -152,7 +198,7 @@ struct HunterMapView: View {
                 Spacer()
                 VStack {
                     Text("You are the Hunter")
-                    Text("Catch the 🐔 !")
+                    Text(hunterSubtitle)
                         .font(.system(size: 12))
                 }
                 Spacer()
@@ -184,7 +230,7 @@ struct HunterMapView: View {
 }
 
 #Preview {
-    HunterMapView(store: Store(initialState: HunterMapFeature.State()) {
+    HunterMapView(store: Store(initialState: HunterMapFeature.State(game: .mock)) {
         HunterMapFeature()
     })
 }
