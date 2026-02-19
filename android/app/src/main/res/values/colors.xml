@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="cr_beige">#FDF9D5</color>
+    <color name="cr_orange">#FE6A00</color>
+    <color name="cr_pink">#EF0778</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+</resources>

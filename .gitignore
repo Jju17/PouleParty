@@ -1,10 +1,27 @@
+# === iOS ===
 *.ipa
 *.dSYM.zip
 *.dSYM
 .env
 GoogleService-Info.plist
-
 *.xcbkptlist
-
-
 *.resolved
+
+# === Android ===
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/google-services.json
+android/app/google-services.json
+*.apk
+*.aab
+
+# === IDE ===
+.idea/
+*.iml
+
+# === macOS ===
+.DS_Store
+
+.claude/settings.local.json

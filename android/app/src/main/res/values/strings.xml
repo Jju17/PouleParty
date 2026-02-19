@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PouleParty</string>
+    <string name="start">START</string>
+    <string name="press_start">Press start to play</string>
+    <string name="rules">Rules</string>
+    <string name="i_am_la_poule">I am la poule</string>
+    <string name="game_settings">Game Settings</string>
+    <string name="game_code">Game Code</string>
+    <string name="start_at">Start at</string>
+    <string name="end_at">End at</string>
+    <string name="game_mode">Game Mode</string>
+    <string name="map_setup">Map setup</string>
+    <string name="start_game">Start game</string>
+    <string name="cancel_game">Cancel game</string>
+    <string name="join_game">Join Game</string>
+    <string name="password">Password</string>
+</resources>

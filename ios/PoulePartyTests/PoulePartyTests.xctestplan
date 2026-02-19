@@ -1,0 +1,24 @@
+{
+  "configurations" : [
+    {
+      "id" : "D4DBAEEF-3862-4497-903F-2FC8AF27AF68",
+      "name" : "Configuration 1",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:PouleParty.xcodeproj",
+        "identifier" : "646D8E382F467E520068ABBF",
+        "name" : "PoulePartyTests"
+      }
+    }
+  ],
+  "version" : 1
+}
