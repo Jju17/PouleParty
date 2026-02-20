@@ -25,7 +25,9 @@ struct HunterMapFeature {
 
     enum Action: BindableAction {
         case binding(BindingAction<State>)
+        case cancelGameButtonTapped
         case destination(PresentationAction<Destination.Action>)
+        case goToMenu
         case newLocationFetched(CLLocationCoordinate2D)
         case onTask
         case setGameTriggered(to: Game)
@@ -43,7 +45,8 @@ struct HunterMapFeature {
             case alert(Alert)
 
             enum Alert: Equatable {
-                case ok
+                case leaveGame
+                case gameOver
             }
         }
     }
@@ -59,7 +62,34 @@ struct HunterMapFeature {
             switch action {
             case .binding:
                 return .none
+            case .cancelGameButtonTapped:
+                state.destination = .alert(
+                    AlertState {
+                        TextState("Leave game")
+                    } actions: {
+                        ButtonState(role: .cancel) {
+                            TextState("Never mind")
+                        }
+                        ButtonState(role: .destructive, action: .leaveGame) {
+                            TextState("Leave game")
+                        }
+                    } message: {
+                        TextState("Are you sure you want to leave the game?")
+                    }
+                )
+                return .none
+            case .destination(.presented(.alert(.leaveGame))):
+                locationClient.stopTracking()
+                return .run { send in
+                    await send(.goToMenu)
+                }
+            case .destination(.presented(.alert(.gameOver))):
+                return .run { send in
+                    await send(.goToMenu)
+                }
             case .destination:
+                return .none
+            case .goToMenu:
                 return .none
             case let .newLocationFetched(location):
                 state.mapCircle = CircleOverlay(
@@ -144,19 +174,51 @@ struct HunterMapFeature {
                 }
                 return .none
             case .timerTicked:
-                guard let nextRadiusUpdate = state.nextRadiusUpdate,
-                      .now >= nextRadiusUpdate
-                else {
-                    state.nowDate = .now
+                state.nowDate = .now
+
+                guard state.destination == nil else { return .none }
+
+                if .now >= state.game.endDate {
+                    locationClient.stopTracking()
+                    state.destination = .alert(
+                        AlertState {
+                            TextState("Game Over")
+                        } actions: {
+                            ButtonState(action: .gameOver) {
+                                TextState("OK")
+                            }
+                        } message: {
+                            TextState("Time's up! The Chicken survived!")
+                        }
+                    )
                     return .none
                 }
 
-                let game = state.game
-                guard Int(state.radius) - Int(game.radiusDeclinePerUpdate) > 0
+                guard let nextRadiusUpdate = state.nextRadiusUpdate,
+                      .now >= nextRadiusUpdate
                 else { return .none }
 
+                let game = state.game
+                let newRadius = Int(state.radius) - Int(game.radiusDeclinePerUpdate)
+
+                guard newRadius > 0 else {
+                    locationClient.stopTracking()
+                    state.destination = .alert(
+                        AlertState {
+                            TextState("Game Over")
+                        } actions: {
+                            ButtonState(action: .gameOver) {
+                                TextState("OK")
+                            }
+                        } message: {
+                            TextState("The zone has collapsed!")
+                        }
+                    )
+                    return .none
+                }
+
                 state.nextRadiusUpdate?.addTimeInterval(TimeInterval(game.radiusIntervalUpdate * 60))
-                state.radius = Int(state.radius) - Int(game.radiusDeclinePerUpdate)
+                state.radius = newRadius
 
                 if game.gameMod == .stayInTheZone {
                     state.mapCircle = CircleOverlay(
@@ -226,6 +288,20 @@ struct HunterMapView: View {
                     CountdownView(nowDate: self.$store.nowDate, nextUpdateDate: self.$store.nextRadiusUpdate)
                 }
                 Spacer()
+                Button {
+                    self.store.send(.cancelGameButtonTapped)
+                } label: {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 5)
+                            .fill(.red)
+                        Image(systemName: "stop.circle.fill")
+                            .resizable()
+                            .scaledToFit()
+                            .foregroundStyle(.white)
+                            .frame(width: 25, height: 25)
+                    }
+                }
+                .frame(width: 50, height: 40)
             }
             .padding()
             .background(.thinMaterial)
