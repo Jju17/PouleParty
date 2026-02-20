@@ -30,7 +30,6 @@
 		6464E5362BA603F00039C387 /* ChickenLocation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6464E5352BA603F00039C387 /* ChickenLocation.swift */; };
 		6464E53A2BA61F9A0039C387 /* ChickenMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6464E5392BA61F9A0039C387 /* ChickenMap.swift */; };
 		6464E53D2BA744DD0039C387 /* ApiClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6464E53C2BA744DD0039C387 /* ApiClient.swift */; };
-		6475FBAD2F451F5100B41ECE /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 6475FBAC2F451F5100B41ECE /* GoogleService-Info.plist */; };
 		647D9FC52BA3ABF2005B6566 /* PoulePartyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 647D9FC42BA3ABF2005B6566 /* PoulePartyApp.swift */; };
 		647D9FC72BA3ABF2005B6566 /* HunterMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 647D9FC62BA3ABF2005B6566 /* HunterMap.swift */; };
 		647D9FC92BA3ABF3005B6566 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 647D9FC82BA3ABF3005B6566 /* Assets.xcassets */; };
@@ -59,6 +58,7 @@
 		BB0000072F47000100000001 /* Dependencies in Frameworks */ = {isa = PBXBuildFile; productRef = BB0000082F47000100000001 /* Dependencies */; };
 		BB0000092F47000100000001 /* SwiftNavigation in Frameworks */ = {isa = PBXBuildFile; productRef = BB00000A2F47000100000001 /* SwiftNavigation */; };
 		CC0000012F47100100000001 /* SwiftNavigation in Frameworks */ = {isa = PBXBuildFile; productRef = CC0000022F47100100000001 /* SwiftNavigation */; };
+		F986A3732F48A1B80086DF16 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = F986A3722F48A1B80086DF16 /* GoogleService-Info.plist */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -92,7 +92,6 @@
 		6464E5392BA61F9A0039C387 /* ChickenMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChickenMap.swift; sourceTree = "<group>"; };
 		6464E53C2BA744DD0039C387 /* ApiClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApiClient.swift; sourceTree = "<group>"; };
 		646D8E392F467E520068ABBF /* PoulePartyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PoulePartyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		6475FBAC2F451F5100B41ECE /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		647D9FC12BA3ABF2005B6566 /* PouleParty.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PouleParty.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		647D9FC42BA3ABF2005B6566 /* PoulePartyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoulePartyApp.swift; sourceTree = "<group>"; };
 		647D9FC62BA3ABF2005B6566 /* HunterMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HunterMap.swift; sourceTree = "<group>"; };
@@ -116,6 +115,7 @@
 		64F10C292BA9E04D001D83D8 /* EndGameCode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EndGameCode.swift; sourceTree = "<group>"; };
 		64FDBE382BC32AD60073DC85 /* La Rochelle.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = "La Rochelle.gpx"; sourceTree = "<group>"; };
 		AA0000052F46900100000001 /* MapOverlays.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapOverlays.swift; sourceTree = "<group>"; };
+		F986A3722F48A1B80086DF16 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -218,7 +218,7 @@
 			isa = PBXGroup;
 			children = (
 				64CE0F832CEE8E8200762232 /* Localizable.xcstrings */,
-				6475FBAC2F451F5100B41ECE /* GoogleService-Info.plist */,
+				F986A3722F48A1B80086DF16 /* GoogleService-Info.plist */,
 				6405C2912BFC871B00A35A50 /* Bxl.gpx */,
 				64FDBE382BC32AD60073DC85 /* La Rochelle.gpx */,
 				645DF8272D306D0B005D8731 /* Lille.gpx */,
@@ -409,10 +409,10 @@
 				64C9CAE22CEBD6C70087BE13 /* Early GameBoy.ttf in Resources */,
 				645DF8282D306D0B005D8731 /* Lille.gpx in Resources */,
 				645DF82B2D306E5D005D8731 /* Stockholm.gpx in Resources */,
+				F986A3732F48A1B80086DF16 /* GoogleService-Info.plist in Resources */,
 				64B216F22BBEF382005E0DC7 /* OFL.txt in Resources */,
 				64B216F12BBEF382005E0DC7 /* Bangers-Regular.ttf in Resources */,
 				647D9FCD2BA3ABF3005B6566 /* Preview Assets.xcassets in Resources */,
-				6475FBAD2F451F5100B41ECE /* GoogleService-Info.plist in Resources */,
 				647D9FC92BA3ABF3005B6566 /* Assets.xcassets in Resources */,
 				64CE0F842CEE8E8200762232 /* Localizable.xcstrings in Resources */,
 			);

@@ -76,12 +76,13 @@ extension Game {
         var lastUpdate: Date = self.startDate
         var lastRadius: Int = Int(self.initialRadius)
 
-        while lastUpdate < .now {
+        while lastUpdate.addingTimeInterval(TimeInterval(self.radiusIntervalUpdate * 60)) < .now {
             lastUpdate.addTimeInterval(TimeInterval(self.radiusIntervalUpdate * 60))
             lastRadius -= Int(self.radiusDeclinePerUpdate)
         }
 
-        return (lastUpdate, lastRadius)
+        let nextUpdate = lastUpdate.addingTimeInterval(TimeInterval(self.radiusIntervalUpdate * 60))
+        return (nextUpdate, lastRadius)
     }
 }
 

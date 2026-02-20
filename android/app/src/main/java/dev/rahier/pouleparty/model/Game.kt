@@ -42,12 +42,13 @@ data class Game(
         val now = Date()
         val intervalMs = (radiusIntervalUpdate * 60 * 1000).toLong()
 
-        while (lastUpdate.before(now)) {
+        while (Date(lastUpdate.time + intervalMs).before(now)) {
             lastUpdate = Date(lastUpdate.time + intervalMs)
             lastRadius -= radiusDeclinePerUpdate.toInt()
         }
 
-        return Pair(lastUpdate, lastRadius)
+        val nextUpdate = Date(lastUpdate.time + intervalMs)
+        return Pair(nextUpdate, lastRadius)
     }
 
     fun withStartDate(date: Date): Game = copy(startTimestamp = Timestamp(date))
