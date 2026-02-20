@@ -150,10 +150,14 @@ struct HunterMapFeature {
                 state.nextRadiusUpdate?.addTimeInterval(TimeInterval(game.radiusIntervalUpdate * 60))
                 state.radius = Int(state.radius) - Int(game.radiusDeclinePerUpdate)
 
-                // In stayInTheZone, the circle center is fixed, so update it with the new radius
                 if game.gameMod == .stayInTheZone {
                     state.mapCircle = CircleOverlay(
                         center: game.initialCoordinates.toCLCoordinates,
+                        radius: CLLocationDistance(state.radius)
+                    )
+                } else if let currentCircle = state.mapCircle {
+                    state.mapCircle = CircleOverlay(
+                        center: currentCircle.center,
                         radius: CLLocationDistance(state.radius)
                     )
                 }
