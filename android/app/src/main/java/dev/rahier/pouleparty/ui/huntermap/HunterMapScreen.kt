@@ -2,7 +2,9 @@ package dev.rahier.pouleparty.ui.huntermap
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -15,6 +17,7 @@ import dev.rahier.pouleparty.ui.components.CountdownView
 
 @Composable
 fun HunterMapScreen(
+    onGoToMenu: () -> Unit,
     viewModel: HunterMapViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -86,6 +89,43 @@ fun HunterMapScreen(
                     nextUpdateDate = state.nextRadiusUpdate
                 )
             }
+
+            TextButton(onClick = { viewModel.onLeaveGameTapped() }) {
+                Text("Quit", fontSize = 14.sp, color = Color.Gray)
+            }
         }
+    }
+
+    // Quit game alert
+    if (state.showLeaveAlert) {
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissLeaveAlert() },
+            title = { Text("Quit game") },
+            text = { Text("Are you sure you want to quit the game?") },
+            confirmButton = {
+                TextButton(onClick = { viewModel.confirmLeaveGame(onGoToMenu) }) {
+                    Text("Quit")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.dismissLeaveAlert() }) {
+                    Text("Never mind")
+                }
+            }
+        )
+    }
+
+    // Game over alert
+    if (state.showGameOverAlert) {
+        AlertDialog(
+            onDismissRequest = { },
+            title = { Text("Game Over") },
+            text = { Text(state.gameOverMessage) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.confirmGameOver(onGoToMenu) }) {
+                    Text("OK")
+                }
+            }
+        )
     }
 }

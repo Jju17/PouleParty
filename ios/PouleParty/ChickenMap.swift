@@ -58,6 +58,7 @@ struct ChickenMapFeature {
 
             enum Alert: Equatable {
                 case cancelGame
+                case gameOver
                 case noGameFound
             }
         }
@@ -84,6 +85,10 @@ struct ChickenMapFeature {
                 return .none
             case .destination(.presented(.alert(.cancelGame))):
                 locationClient.stopTracking()
+                return .run { send in
+                    await send(.goToMenu)
+                }
+            case .destination(.presented(.alert(.gameOver))):
                 return .run { send in
                     await send(.goToMenu)
                 }
@@ -180,23 +185,55 @@ struct ChickenMapFeature {
                 state.nextRadiusUpdate = lastUpdate
                 state.mapCircle = CircleOverlay(
                     center: state.game.initialCoordinates.toCLCoordinates,
-                    radius: CLLocationDistance(state.game.initialRadius)
+                    radius: CLLocationDistance(state.radius)
                 )
                 return .none
             case .timerTicked:
-                guard let nextRadiusUpdate = state.nextRadiusUpdate,
-                      .now >= nextRadiusUpdate
-                else {
-                    state.nowDate = .now
+                state.nowDate = .now
+
+                guard state.destination == nil else { return .none }
+
+                if .now >= state.game.endDate {
+                    locationClient.stopTracking()
+                    state.destination = .alert(
+                        AlertState {
+                            TextState("Game Over")
+                        } actions: {
+                            ButtonState(action: .gameOver) {
+                                TextState("OK")
+                            }
+                        } message: {
+                            TextState("Time's up! The Chicken survived!")
+                        }
+                    )
                     return .none
                 }
 
-                let game = state.game
-                guard Int(state.radius) - Int(game.radiusDeclinePerUpdate) > 0
+                guard let nextRadiusUpdate = state.nextRadiusUpdate,
+                      .now >= nextRadiusUpdate
                 else { return .none }
 
+                let game = state.game
+                let newRadius = Int(state.radius) - Int(game.radiusDeclinePerUpdate)
+
+                guard newRadius > 0 else {
+                    locationClient.stopTracking()
+                    state.destination = .alert(
+                        AlertState {
+                            TextState("Game Over")
+                        } actions: {
+                            ButtonState(action: .gameOver) {
+                                TextState("OK")
+                            }
+                        } message: {
+                            TextState("The zone has collapsed!")
+                        }
+                    )
+                    return .none
+                }
+
                 state.nextRadiusUpdate?.addTimeInterval(TimeInterval(game.radiusIntervalUpdate * 60))
-                state.radius = Int(state.radius) - Int(game.radiusDeclinePerUpdate)
+                state.radius = newRadius
 
                 if game.gameMod == .stayInTheZone {
                     state.mapCircle = CircleOverlay(

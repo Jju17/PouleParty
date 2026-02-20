@@ -54,6 +54,9 @@ struct AppFeature {
             case let .selection(.goToChickenMapTriggered(game)):
                 state = AppFeature.State.chickenMap(ChickenMapFeature.State(game: game))
                 return .none
+            case .hunterMap(.goToMenu):
+                state = AppFeature.State.selection(SelectionFeature.State())
+                return .none
             case .chickenMap, .hunterMap, .selection:
                 return .none
             }

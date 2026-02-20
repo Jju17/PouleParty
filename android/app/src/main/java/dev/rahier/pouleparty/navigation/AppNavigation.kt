@@ -101,7 +101,13 @@ fun AppNavigation() {
             route = Routes.HUNTER_MAP,
             arguments = listOf(navArgument("gameId") { type = NavType.StringType })
         ) {
-            HunterMapScreen()
+            HunterMapScreen(
+                onGoToMenu = {
+                    navController.navigate(Routes.SELECTION) {
+                        popUpTo(Routes.SELECTION) { inclusive = true }
+                    }
+                }
+            )
         }
     }
 }

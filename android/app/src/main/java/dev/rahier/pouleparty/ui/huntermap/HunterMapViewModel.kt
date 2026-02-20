@@ -23,7 +23,10 @@ data class HunterMapUiState(
     val nextRadiusUpdate: Date? = null,
     val nowDate: Date = Date(),
     val radius: Int = 1500,
-    val circleCenter: LatLng? = null
+    val circleCenter: LatLng? = null,
+    val showLeaveAlert: Boolean = false,
+    val showGameOverAlert: Boolean = false,
+    val gameOverMessage: String = ""
 )
 
 @HiltViewModel
@@ -69,6 +72,16 @@ class HunterMapViewModel @Inject constructor(
                 val state = _uiState.value
                 _uiState.value = state.copy(nowDate = Date())
 
+                if (state.showGameOverAlert) continue
+
+                if (Date().after(state.game.endDate)) {
+                    _uiState.value = _uiState.value.copy(
+                        showGameOverAlert = true,
+                        gameOverMessage = "Time's up! The Chicken survived!"
+                    )
+                    continue
+                }
+
                 val nextUpdate = state.nextRadiusUpdate ?: continue
                 if (Date().after(nextUpdate)) {
                     val game = state.game
@@ -87,6 +100,11 @@ class HunterMapViewModel @Inject constructor(
                                 circleCenter = game.initialLocation
                             )
                         }
+                    } else {
+                        _uiState.value = _uiState.value.copy(
+                            showGameOverAlert = true,
+                            gameOverMessage = "The zone has collapsed!"
+                        )
                     }
                 }
             }
@@ -102,9 +120,14 @@ class HunterMapViewModel @Inject constructor(
                     _uiState.value = _uiState.value.copy(
                         game = updatedGame,
                         radius = lastRadius,
-                        nextRadiusUpdate = lastUpdate,
-                        circleCenter = updatedGame.initialLocation
+                        nextRadiusUpdate = lastUpdate
                     )
+                    // Only reset circle center for stayInTheZone (fixed zone)
+                    if (updatedGame.gameModEnum == GameMod.STAY_IN_THE_ZONE) {
+                        _uiState.value = _uiState.value.copy(
+                            circleCenter = updatedGame.initialLocation
+                        )
+                    }
                 }
             }
         }
@@ -142,6 +165,24 @@ class HunterMapViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    fun onLeaveGameTapped() {
+        _uiState.value = _uiState.value.copy(showLeaveAlert = true)
+    }
+
+    fun dismissLeaveAlert() {
+        _uiState.value = _uiState.value.copy(showLeaveAlert = false)
+    }
+
+    fun confirmLeaveGame(onGoToMenu: () -> Unit) {
+        _uiState.value = _uiState.value.copy(showLeaveAlert = false)
+        onGoToMenu()
+    }
+
+    fun confirmGameOver(onGoToMenu: () -> Unit) {
+        _uiState.value = _uiState.value.copy(showGameOverAlert = false)
+        onGoToMenu()
     }
 
     val hunterSubtitle: String

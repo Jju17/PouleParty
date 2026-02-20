@@ -31,7 +31,9 @@ data class ChickenMapUiState(
     val nowDate: Date = Date(),
     val radius: Int = 1500,
     val circleCenter: LatLng? = null,
-    val showCancelAlert: Boolean = false
+    val showCancelAlert: Boolean = false,
+    val showGameOverAlert: Boolean = false,
+    val gameOverMessage: String = ""
 )
 
 @HiltViewModel
@@ -75,6 +77,16 @@ class ChickenMapViewModel @Inject constructor(
                 val state = _uiState.value
                 _uiState.value = state.copy(nowDate = Date())
 
+                if (state.showGameOverAlert) continue
+
+                if (Date().after(state.game.endDate)) {
+                    _uiState.value = _uiState.value.copy(
+                        showGameOverAlert = true,
+                        gameOverMessage = "Time's up! The Chicken survived!"
+                    )
+                    continue
+                }
+
                 val nextUpdate = state.nextRadiusUpdate ?: continue
                 if (Date().after(nextUpdate)) {
                     val game = state.game
@@ -93,6 +105,11 @@ class ChickenMapViewModel @Inject constructor(
                                 circleCenter = game.initialLocation
                             )
                         }
+                    } else {
+                        _uiState.value = _uiState.value.copy(
+                            showGameOverAlert = true,
+                            gameOverMessage = "The zone has collapsed!"
+                        )
                     }
                 }
             }
@@ -155,6 +172,11 @@ class ChickenMapViewModel @Inject constructor(
             firestoreRepository.deleteConfig(gameId)
             onGoToMenu()
         }
+    }
+
+    fun confirmGameOver(onGoToMenu: () -> Unit) {
+        _uiState.value = _uiState.value.copy(showGameOverAlert = false)
+        onGoToMenu()
     }
 
     val chickenSubtitle: String

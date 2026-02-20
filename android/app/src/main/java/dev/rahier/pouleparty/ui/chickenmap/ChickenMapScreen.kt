@@ -149,4 +149,18 @@ fun ChickenMapScreen(
             }
         )
     }
+
+    // Game over alert
+    if (state.showGameOverAlert) {
+        AlertDialog(
+            onDismissRequest = { },
+            title = { Text("Game Over") },
+            text = { Text(state.gameOverMessage) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.confirmGameOver(onGoToMenu) }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
 }
