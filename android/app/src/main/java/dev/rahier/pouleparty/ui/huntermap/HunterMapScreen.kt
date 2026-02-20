@@ -2,10 +2,7 @@ package dev.rahier.pouleparty.ui.huntermap
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
@@ -93,27 +90,21 @@ fun HunterMapScreen(
                 )
             }
 
-            Button(
-                onClick = { viewModel.onLeaveGameTapped() },
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
-                shape = RoundedCornerShape(5.dp),
-                modifier = Modifier.size(width = 50.dp, height = 40.dp),
-                contentPadding = PaddingValues(0.dp)
-            ) {
-                Text("\u23F9", fontSize = 20.sp, color = Color.White)
+            TextButton(onClick = { viewModel.onLeaveGameTapped() }) {
+                Text("Quit", fontSize = 14.sp, color = Color.Gray)
             }
         }
     }
 
-    // Leave game alert
+    // Quit game alert
     if (state.showLeaveAlert) {
         AlertDialog(
             onDismissRequest = { viewModel.dismissLeaveAlert() },
-            title = { Text("Leave game") },
-            text = { Text("Are you sure you want to leave the game?") },
+            title = { Text("Quit game") },
+            text = { Text("Are you sure you want to quit the game?") },
             confirmButton = {
                 TextButton(onClick = { viewModel.confirmLeaveGame(onGoToMenu) }) {
-                    Text("Leave game", color = Color.Red)
+                    Text("Quit")
                 }
             },
             dismissButton = {

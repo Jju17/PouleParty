@@ -65,16 +65,16 @@ struct HunterMapFeature {
             case .cancelGameButtonTapped:
                 state.destination = .alert(
                     AlertState {
-                        TextState("Leave game")
+                        TextState("Quit game")
                     } actions: {
                         ButtonState(role: .cancel) {
                             TextState("Never mind")
                         }
-                        ButtonState(role: .destructive, action: .leaveGame) {
-                            TextState("Leave game")
+                        ButtonState(action: .leaveGame) {
+                            TextState("Quit")
                         }
                     } message: {
-                        TextState("Are you sure you want to leave the game?")
+                        TextState("Are you sure you want to quit the game?")
                     }
                 )
                 return .none
@@ -291,17 +291,14 @@ struct HunterMapView: View {
                 Button {
                     self.store.send(.cancelGameButtonTapped)
                 } label: {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 5)
-                            .fill(.red)
-                        Image(systemName: "stop.circle.fill")
-                            .resizable()
-                            .scaledToFit()
-                            .foregroundStyle(.white)
-                            .frame(width: 25, height: 25)
-                    }
+                    Text("Quit")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(.ultraThinMaterial)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
-                .frame(width: 50, height: 40)
             }
             .padding()
             .background(.thinMaterial)
