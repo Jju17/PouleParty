@@ -102,9 +102,14 @@ class HunterMapViewModel @Inject constructor(
                     _uiState.value = _uiState.value.copy(
                         game = updatedGame,
                         radius = lastRadius,
-                        nextRadiusUpdate = lastUpdate,
-                        circleCenter = updatedGame.initialLocation
+                        nextRadiusUpdate = lastUpdate
                     )
+                    // Only reset circle center for stayInTheZone (fixed zone)
+                    if (updatedGame.gameModEnum == GameMod.STAY_IN_THE_ZONE) {
+                        _uiState.value = _uiState.value.copy(
+                            circleCenter = updatedGame.initialLocation
+                        )
+                    }
                 }
             }
         }

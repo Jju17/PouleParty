@@ -76,7 +76,7 @@ struct HunterMapFeature {
                 state.nextRadiusUpdate = lastUpdate
                 state.mapCircle = CircleOverlay(
                     center: state.game.initialCoordinates.toCLCoordinates,
-                    radius: CLLocationDistance(state.game.initialRadius)
+                    radius: CLLocationDistance(state.radius)
                 )
 
                 var effects: [Effect<Action>] = [
@@ -130,10 +130,18 @@ struct HunterMapFeature {
                 state.game = game
                 state.radius = lastRadius
                 state.nextRadiusUpdate = lastUpdate
-                state.mapCircle = CircleOverlay(
-                    center: game.initialCoordinates.toCLCoordinates,
-                    radius: CLLocationDistance(game.initialRadius)
-                )
+
+                if game.gameMod != .stayInTheZone, let currentCircle = state.mapCircle {
+                    state.mapCircle = CircleOverlay(
+                        center: currentCircle.center,
+                        radius: CLLocationDistance(state.radius)
+                    )
+                } else {
+                    state.mapCircle = CircleOverlay(
+                        center: game.initialCoordinates.toCLCoordinates,
+                        radius: CLLocationDistance(state.radius)
+                    )
+                }
                 return .none
             case .timerTicked:
                 guard let nextRadiusUpdate = state.nextRadiusUpdate,

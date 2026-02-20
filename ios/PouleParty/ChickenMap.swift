@@ -180,7 +180,7 @@ struct ChickenMapFeature {
                 state.nextRadiusUpdate = lastUpdate
                 state.mapCircle = CircleOverlay(
                     center: state.game.initialCoordinates.toCLCoordinates,
-                    radius: CLLocationDistance(state.game.initialRadius)
+                    radius: CLLocationDistance(state.radius)
                 )
                 return .none
             case .timerTicked:
