@@ -58,7 +58,7 @@
 		BB0000072F47000100000001 /* Dependencies in Frameworks */ = {isa = PBXBuildFile; productRef = BB0000082F47000100000001 /* Dependencies */; };
 		BB0000092F47000100000001 /* SwiftNavigation in Frameworks */ = {isa = PBXBuildFile; productRef = BB00000A2F47000100000001 /* SwiftNavigation */; };
 		CC0000012F47100100000001 /* SwiftNavigation in Frameworks */ = {isa = PBXBuildFile; productRef = CC0000022F47100100000001 /* SwiftNavigation */; };
-		F986A3732F48A1B80086DF16 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = F986A3722F48A1B80086DF16 /* GoogleService-Info.plist */; };
+		F986A3752F48AAC00086DF16 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = F986A3742F48AAC00086DF16 /* GoogleService-Info.plist */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -115,7 +115,7 @@
 		64F10C292BA9E04D001D83D8 /* EndGameCode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EndGameCode.swift; sourceTree = "<group>"; };
 		64FDBE382BC32AD60073DC85 /* La Rochelle.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = "La Rochelle.gpx"; sourceTree = "<group>"; };
 		AA0000052F46900100000001 /* MapOverlays.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapOverlays.swift; sourceTree = "<group>"; };
-		F986A3722F48A1B80086DF16 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		F986A3742F48AAC00086DF16 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -218,8 +218,8 @@
 			isa = PBXGroup;
 			children = (
 				64CE0F832CEE8E8200762232 /* Localizable.xcstrings */,
-				F986A3722F48A1B80086DF16 /* GoogleService-Info.plist */,
 				6405C2912BFC871B00A35A50 /* Bxl.gpx */,
+				F986A3742F48AAC00086DF16 /* GoogleService-Info.plist */,
 				64FDBE382BC32AD60073DC85 /* La Rochelle.gpx */,
 				645DF8272D306D0B005D8731 /* Lille.gpx */,
 				645DF82A2D306E5D005D8731 /* Stockholm.gpx */,
@@ -409,10 +409,10 @@
 				64C9CAE22CEBD6C70087BE13 /* Early GameBoy.ttf in Resources */,
 				645DF8282D306D0B005D8731 /* Lille.gpx in Resources */,
 				645DF82B2D306E5D005D8731 /* Stockholm.gpx in Resources */,
-				F986A3732F48A1B80086DF16 /* GoogleService-Info.plist in Resources */,
 				64B216F22BBEF382005E0DC7 /* OFL.txt in Resources */,
 				64B216F12BBEF382005E0DC7 /* Bangers-Regular.ttf in Resources */,
 				647D9FCD2BA3ABF3005B6566 /* Preview Assets.xcassets in Resources */,
+				F986A3752F48AAC00086DF16 /* GoogleService-Info.plist in Resources */,
 				647D9FC92BA3ABF3005B6566 /* Assets.xcassets in Resources */,
 				64CE0F842CEE8E8200762232 /* Localizable.xcstrings in Resources */,
 			);
