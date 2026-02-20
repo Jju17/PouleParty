@@ -27,6 +27,7 @@ struct ChickenMapFeature {
         var nowDate: Date = .now
         var radius: Int = 1500
         var mapCircle: CircleOverlay?
+        var showGameInfo: Bool = false
     }
 
     enum Action: BindableAction {
@@ -38,6 +39,8 @@ struct ChickenMapFeature {
         case beenFoundButtonTapped
         case goToMenu
         case hunterLocationsUpdated([HunterLocation])
+        case infoButtonTapped
+        case dismissGameInfo
         case newLocationFetched(CLLocationCoordinate2D)
         case onTask
         case setGameTriggered
@@ -117,6 +120,12 @@ struct ChickenMapFeature {
                 state.destination = .endGameCode(EndGameCodeFeature.State())
                 return .none
             case .goToMenu:
+                return .none
+            case .infoButtonTapped:
+                state.showGameInfo = true
+                return .none
+            case .dismissGameInfo:
+                state.showGameInfo = false
                 return .none
             case let .hunterLocationsUpdated(hunters):
                 let sorted = hunters.sorted { $0.hunterId < $1.hunterId }
@@ -295,6 +304,14 @@ struct ChickenMapView: View {
                         .font(.system(size: 14))
                 }
                 Spacer()
+                Button {
+                    self.store.send(.infoButtonTapped)
+                } label: {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 20))
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.trailing, 4)
             }
             .padding()
             .background(.thinMaterial)
@@ -368,6 +385,12 @@ struct ChickenMapView: View {
                     }
             }
         }
+        .sheet(isPresented: Binding(
+            get: { self.store.showGameInfo },
+            set: { _ in self.store.send(.dismissGameInfo) }
+        )) {
+            GameInfoSheet(game: self.store.game)
+        }
     }
 
     private func hunterAnnotationView(for hunter: HunterAnnotation) -> some MapContent {
@@ -378,6 +401,75 @@ struct ChickenMapView: View {
                 .background(.orange)
                 .clipShape(Circle())
         }
+    }
+}
+
+private struct GameInfoSheet: View {
+    let game: Game
+    @State private var codeCopied = false
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section("Game Code") {
+                    HStack {
+                        Spacer()
+                        Text(game.gameCode)
+                            .font(.gameboy(size: 24))
+                        Spacer()
+                        Button {
+                            UIPasteboard.general.string = game.gameCode
+                            withAnimation {
+                                codeCopied = true
+                            }
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                                withAnimation {
+                                    codeCopied = false
+                                }
+                            }
+                        } label: {
+                            Image(systemName: codeCopied ? "checkmark" : "doc.on.doc")
+                                .foregroundStyle(codeCopied ? .green : .gray)
+                                .contentTransition(.symbolEffect(.replace))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+
+                Section("Game Mode") {
+                    Text(game.gameMod.title)
+                }
+
+                Section("Schedule") {
+                    HStack {
+                        Text("Start")
+                        Spacer()
+                        Text(game.startDate, style: .time)
+                            .foregroundStyle(.secondary)
+                    }
+                    HStack {
+                        Text("End")
+                        Spacer()
+                        Text(game.endDate, style: .time)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .navigationTitle("Game Info")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }
+        .presentationDetents([.medium])
     }
 }
 

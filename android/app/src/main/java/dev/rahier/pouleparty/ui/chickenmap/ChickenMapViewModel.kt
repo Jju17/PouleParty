@@ -33,7 +33,9 @@ data class ChickenMapUiState(
     val circleCenter: LatLng? = null,
     val showCancelAlert: Boolean = false,
     val showGameOverAlert: Boolean = false,
-    val gameOverMessage: String = ""
+    val gameOverMessage: String = "",
+    val showGameInfo: Boolean = false,
+    val codeCopied: Boolean = false
 )
 
 @HiltViewModel
@@ -177,6 +179,22 @@ class ChickenMapViewModel @Inject constructor(
     fun confirmGameOver(onGoToMenu: () -> Unit) {
         _uiState.value = _uiState.value.copy(showGameOverAlert = false)
         onGoToMenu()
+    }
+
+    fun onInfoTapped() {
+        _uiState.value = _uiState.value.copy(showGameInfo = true)
+    }
+
+    fun dismissGameInfo() {
+        _uiState.value = _uiState.value.copy(showGameInfo = false)
+    }
+
+    fun onCodeCopied() {
+        _uiState.value = _uiState.value.copy(codeCopied = true)
+        viewModelScope.launch {
+            delay(1000)
+            _uiState.value = _uiState.value.copy(codeCopied = false)
+        }
     }
 
     val chickenSubtitle: String
