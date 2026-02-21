@@ -36,6 +36,10 @@ workflows:
         - project_path: "$BITRISE_PROJECT_PATH"
         - scheme: "$BITRISE_SCHEME"
         - xcodebuild_options: "-skipPackagePluginValidation -skipMacroValidation"
+        - xcconfig_content: |
+            COMPILER_INDEX_STORE_ENABLE = NO
+            CODE_SIGN_STYLE = Manual
+            CODE_SIGN_IDENTITY = Apple Distribution
         - distribution_method: app-store
         - automatic_code_signing: api-key
     - save-spm-cache@1: {}
