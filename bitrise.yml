@@ -16,7 +16,6 @@ workflows:
     - BITRISE_PROJECT_PATH: ios/PouleParty.xcodeproj
     - BITRISE_SCHEME: PouleParty
     steps:
-    - activate-ssh-key@4: {}
     - git-clone@8: {}
     - restore-spm-cache@2: {}
     - save-spm-cache@1: {}
@@ -73,7 +72,6 @@ workflows:
     description: Clones the repo, restores Gradle cache, builds a signed release
       AAB and uploads it to Play Store internal testing track.
     steps:
-    - activate-ssh-key@4: {}
     - git-clone@8: {}
     - restore-gradle-cache@1: {}
     - script@1:
