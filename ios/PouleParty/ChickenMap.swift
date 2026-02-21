@@ -25,9 +25,11 @@ struct ChickenMapFeature {
         var hunterAnnotations: [HunterAnnotation] = []
         var nextRadiusUpdate: Date?
         var nowDate: Date = .now
+        var previousWinnersCount: Int = 0
         var radius: Int = 1500
         var mapCircle: CircleOverlay?
         var showGameInfo: Bool = false
+        var winnerNotification: String? = nil
     }
 
     enum Action: BindableAction {
@@ -35,8 +37,10 @@ struct ChickenMapFeature {
         case binding(BindingAction<State>)
         case destination(PresentationAction<Destination.Action>)
         case dismissEndGameCode
+        case dismissWinnerNotification
         case cancelGameButtonTapped
         case beenFoundButtonTapped
+        case gameUpdated(Game)
         case goToMenu
         case hunterLocationsUpdated([HunterLocation])
         case infoButtonTapped
@@ -100,6 +104,26 @@ struct ChickenMapFeature {
             case .dismissEndGameCode:
                 state.destination = nil
                 return .none
+            case .dismissWinnerNotification:
+                state.winnerNotification = nil
+                return .none
+            case let .gameUpdated(game):
+                state.game = game
+                let previousCount = state.previousWinnersCount
+                if game.winners.count > previousCount {
+                    let newWinners = Array(game.winners.suffix(from: previousCount))
+                    if let latest = newWinners.last {
+                        state.winnerNotification = "\(latest.hunterName) a trouvé la poule !"
+                    }
+                    state.previousWinnersCount = game.winners.count
+                    if state.winnerNotification != nil {
+                        return .run { send in
+                            try await clock.sleep(for: .seconds(4))
+                            await send(.dismissWinnerNotification)
+                        }
+                    }
+                }
+                return .none
             case .cancelGameButtonTapped:
                 state.destination = .alert(
                     AlertState {
@@ -117,7 +141,7 @@ struct ChickenMapFeature {
                 )
                 return .none
             case .beenFoundButtonTapped:
-                state.destination = .endGameCode(EndGameCodeFeature.State())
+                state.destination = .endGameCode(EndGameCodeFeature.State(foundCode: state.game.foundCode))
                 return .none
             case .goToMenu:
                 return .none
@@ -154,6 +178,13 @@ struct ChickenMapFeature {
                     .run { send in
                         for await _ in self.clock.timer(interval: .seconds(1)) {
                             await send(.timerTicked)
+                        }
+                    },
+                    .run { send in
+                        for await game in apiClient.gameConfigStream(gameId) {
+                            if let game {
+                                await send(.gameUpdated(game))
+                            }
                         }
                     }
                 ]
@@ -390,6 +421,20 @@ struct ChickenMapView: View {
             set: { _ in self.store.send(.dismissGameInfo) }
         )) {
             GameInfoSheet(game: self.store.game)
+        }
+        .overlay(alignment: .top) {
+            if let notification = store.winnerNotification {
+                Text(notification)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(.green.opacity(0.9))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .padding(.top, 100)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .animation(.easeInOut, value: store.winnerNotification)
+            }
         }
     }
 

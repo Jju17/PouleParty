@@ -150,4 +150,62 @@ class GameTest {
         assertEquals(10, mock.numberOfPlayers)
         assertEquals(1500.0, mock.initialRadius, 0.01)
     }
+
+    // MARK: - Found code tests
+
+    @Test
+    fun `foundCode defaults to empty`() {
+        val game = Game(id = "test")
+        assertEquals("", game.foundCode)
+    }
+
+    @Test
+    fun `generateFoundCode is 4 digits`() {
+        val code = Game.generateFoundCode()
+        assertEquals(4, code.length)
+        assertNotNull(code.toIntOrNull())
+    }
+
+    @Test
+    fun `generateFoundCode is in range`() {
+        repeat(50) {
+            val code = Game.generateFoundCode()
+            val value = code.toInt()
+            assertTrue("Code should be >= 0", value >= 0)
+            assertTrue("Code should be <= 9999", value <= 9999)
+        }
+    }
+
+    @Test
+    fun `generateFoundCode pads with zeros`() {
+        repeat(100) {
+            val code = Game.generateFoundCode()
+            assertEquals("Code should always be 4 chars", 4, code.length)
+        }
+    }
+
+    // MARK: - Winners tests
+
+    @Test
+    fun `winners defaults to empty`() {
+        val game = Game(id = "test")
+        assertTrue(game.winners.isEmpty())
+    }
+
+    @Test
+    fun `winner data class works correctly`() {
+        val winner = Winner(
+            hunterId = "hunter-1",
+            hunterName = "Julien",
+            timestamp = Timestamp.now()
+        )
+        assertEquals("hunter-1", winner.hunterId)
+        assertEquals("Julien", winner.hunterName)
+    }
+
+    @Test
+    fun `mock game has foundCode`() {
+        val mock = Game.mock
+        assertEquals("1234", mock.foundCode)
+    }
 }

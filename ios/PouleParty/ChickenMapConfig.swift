@@ -20,7 +20,7 @@ struct ChickenMapConfigFeature {
         var marker: MarkerOverlay?
         var mapCircle: CircleOverlay?
     }
-    private static let brusselsCoordinate = CLLocationCoordinate2D(latitude: 50.8503, longitude: 4.3517)
+    private static let defaultCoordinate = CLLocationCoordinate2D(latitude: 50.8503, longitude: 4.3517)
 
     enum Action: BindableAction {
         case binding(BindingAction<State>)
@@ -49,8 +49,9 @@ struct ChickenMapConfigFeature {
                 self.updateMapComponents(state: &state)
                 return .none
             case .onTask:
+                let gameLocation = state.game.initialLocation
                 return .run { send in
-                    var firstLocation: CLLocationCoordinate2D = Self.brusselsCoordinate
+                    var firstLocation = gameLocation
                     for await coordinate in locationClient.startTracking() {
                         firstLocation = coordinate
                         break

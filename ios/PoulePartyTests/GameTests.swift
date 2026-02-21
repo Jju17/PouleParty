@@ -89,4 +89,62 @@ struct GameTests {
             #expect(decoded == mod)
         }
     }
+
+    // MARK: - Found code tests
+
+    @Test func foundCodeDefaultsToEmpty() {
+        let game = Game(id: "test")
+        #expect(game.foundCode == "")
+    }
+
+    @Test func generateFoundCodeIsFourDigits() {
+        let code = Game.generateFoundCode()
+        #expect(code.count == 4)
+        #expect(Int(code) != nil)
+    }
+
+    @Test func generateFoundCodeIsInRange() {
+        for _ in 0..<50 {
+            let code = Game.generateFoundCode()
+            let value = Int(code)!
+            #expect(value >= 0 && value <= 9999)
+        }
+    }
+
+    @Test func generateFoundCodePadsWithZeros() {
+        // Run multiple times to increase chance of hitting a low number
+        // At minimum, verify format is always 4 chars
+        for _ in 0..<100 {
+            let code = Game.generateFoundCode()
+            #expect(code.count == 4)
+        }
+    }
+
+    // MARK: - Winners tests
+
+    @Test func winnersDefaultsToEmpty() {
+        let game = Game(id: "test")
+        #expect(game.winners.isEmpty)
+    }
+
+    @Test func winnerCodableRoundTrip() throws {
+        let encoder = JSONEncoder()
+        let decoder = JSONDecoder()
+
+        let winner = Winner(
+            hunterId: "hunter-1",
+            hunterName: "Julien",
+            timestamp: .init(date: .now)
+        )
+        let data = try encoder.encode(winner)
+        let decoded = try decoder.decode(Winner.self, from: data)
+
+        #expect(decoded.hunterId == winner.hunterId)
+        #expect(decoded.hunterName == winner.hunterName)
+    }
+
+    @Test func mockGameHasFoundCode() {
+        let mock = Game.mock
+        #expect(mock.foundCode == "1234")
+    }
 }

@@ -5,9 +5,11 @@ import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.GeoPoint
 import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.FieldValue
 import dev.rahier.pouleparty.model.ChickenLocation
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.HunterLocation
+import dev.rahier.pouleparty.model.Winner
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -42,6 +44,17 @@ class FirestoreRepository @Inject constructor(
 
     fun setConfig(game: Game) {
         firestore.collection("games").document(game.id).set(game)
+    }
+
+    suspend fun addWinner(gameId: String, winner: Winner) {
+        val winnerMap = mapOf(
+            "hunterId" to winner.hunterId,
+            "hunterName" to winner.hunterName,
+            "timestamp" to winner.timestamp
+        )
+        firestore.collection("games").document(gameId)
+            .update("winners", FieldValue.arrayUnion(winnerMap))
+            .await()
     }
 
     // ── Chicken location ──────────────────────────────────

@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.google.maps.android.compose.*
 import dev.rahier.pouleparty.ui.components.CountdownView
+import dev.rahier.pouleparty.ui.endgamecode.EndGameCodeContent
 import dev.rahier.pouleparty.ui.theme.GameBoyFont
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -31,8 +32,19 @@ fun ChickenMapScreen(
     viewModel: ChickenMapViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    // Show winner notification as snackbar
+    LaunchedEffect(state.winnerNotification) {
+        state.winnerNotification?.let { message ->
+            snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Short)
+        }
+    }
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { paddingValues ->
+    Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
         // Google Map
         val cameraPositionState = rememberCameraPositionState()
 
@@ -124,7 +136,7 @@ fun ChickenMapScreen(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 // FOUND button
                 Button(
-                    onClick = { /* EndGameCode — stub */ },
+                    onClick = { viewModel.onFoundButtonTapped() },
                     colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
                     shape = RoundedCornerShape(5.dp),
                     modifier = Modifier.size(width = 50.dp, height = 40.dp),
@@ -145,6 +157,7 @@ fun ChickenMapScreen(
                 }
             }
         }
+    }
     }
 
     // Cancel alert
@@ -175,6 +188,20 @@ fun ChickenMapScreen(
             confirmButton = {
                 TextButton(onClick = { viewModel.confirmGameOver(onGoToMenu) }) {
                     Text("OK")
+                }
+            }
+        )
+    }
+
+    // Found code dialog
+    if (state.showFoundCode) {
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissFoundCode() },
+            title = null,
+            text = { EndGameCodeContent(foundCode = state.game.foundCode) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.dismissFoundCode() }) {
+                    Text("Close")
                 }
             }
         )

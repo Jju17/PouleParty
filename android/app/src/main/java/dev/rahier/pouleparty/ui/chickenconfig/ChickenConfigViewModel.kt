@@ -5,11 +5,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.rahier.pouleparty.data.FirestoreRepository
+import dev.rahier.pouleparty.data.LocationRepository
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameMod
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.util.Date
 import javax.inject.Inject
@@ -24,6 +26,7 @@ data class ChickenConfigUiState(
 @HiltViewModel
 class ChickenConfigViewModel @Inject constructor(
     private val firestoreRepository: FirestoreRepository,
+    private val locationRepository: LocationRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -38,11 +41,31 @@ class ChickenConfigViewModel @Inject constructor(
                 radiusIntervalUpdate = 5.0,
                 initialRadius = 1500.0,
                 radiusDeclinePerUpdate = 100.0,
-                gameMod = GameMod.FOLLOW_THE_CHICKEN.firestoreValue
+                gameMod = GameMod.FOLLOW_THE_CHICKEN.firestoreValue,
+                foundCode = Game.generateFoundCode()
             )
         )
     )
     val uiState: StateFlow<ChickenConfigUiState> = _uiState.asStateFlow()
+
+    init {
+        resolveInitialLocation()
+    }
+
+    private fun resolveInitialLocation() {
+        if (locationRepository.hasFineLocationPermission()) {
+            viewModelScope.launch {
+                try {
+                    val location = locationRepository.locationFlow().first()
+                    _uiState.value = _uiState.value.copy(
+                        game = _uiState.value.game.withInitialLocation(location)
+                    )
+                } catch (_: Exception) {
+                    // Fallback: keep Brussels default
+                }
+            }
+        }
+    }
 
     fun updateStartDate(date: Date) {
         _uiState.value = _uiState.value.copy(game = _uiState.value.game.withStartDate(date))

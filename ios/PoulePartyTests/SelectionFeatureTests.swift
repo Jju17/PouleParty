@@ -41,4 +41,9 @@ struct SelectionFeatureTests {
         #expect(state.isJoiningGame == false)
         #expect(state.destination == nil)
     }
+
+    @Test func initialStateHasEmptyHunterName() {
+        let state = SelectionFeature.State()
+        #expect(state.hunterName == "")
+    }
 }

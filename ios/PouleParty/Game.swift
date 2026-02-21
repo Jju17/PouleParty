@@ -9,6 +9,12 @@ import CoreLocation
 import Foundation
 import FirebaseFirestore
 
+struct Winner: Codable, Equatable {
+    let hunterId: String
+    let hunterName: String
+    let timestamp: Timestamp
+}
+
 struct Game: Codable, Equatable {
     let id: String
     var name: String = ""
@@ -20,6 +26,8 @@ struct Game: Codable, Equatable {
     var initialRadius: Double = 1500
     var radiusDeclinePerUpdate: Double = 100
     var gameMod: GameMod = .followTheChicken
+    var foundCode: String = ""
+    var winners: [Winner] = []
 
     enum GameMod: String, CaseIterable, Equatable, Codable {
         case followTheChicken
@@ -72,6 +80,10 @@ extension Game {
         String(id.prefix(6)).uppercased()
     }
 
+    static func generateFoundCode() -> String {
+        String(format: "%04d", Int.random(in: 0...9999))
+    }
+
     func findLastUpdate() -> (Date, Int) {
         var lastUpdate: Date = self.startDate
         var lastRadius: Int = Int(self.initialRadius)
@@ -97,8 +109,9 @@ extension Game {
             endTimestamp: Timestamp(date: .now.addingTimeInterval(3900)),
             initialCoordinates: GeoPoint(latitude: 50.8466, longitude: 4.3528),
             initialRadius: 1500,
-            radiusDeclinePerUpdate: 100, 
-            gameMod: .followTheChicken
+            radiusDeclinePerUpdate: 100,
+            gameMod: .followTheChicken,
+            foundCode: "1234"
         )
     }
 }

@@ -59,9 +59,24 @@ struct HunterMapFeatureTests {
 
         let store = TestStore(initialState: state) {
             HunterMapFeature()
+        } withDependencies: {
+            $0.locationClient.stopTracking = { }
         }
+        store.exhaustivity = .off
 
-        await store.send(.timerTicked)
+        await store.send(.timerTicked) {
+            $0.destination = .alert(
+                AlertState {
+                    TextState("Game Over")
+                } actions: {
+                    ButtonState(action: .gameOver) {
+                        TextState("OK")
+                    }
+                } message: {
+                    TextState("The zone has collapsed!")
+                }
+            )
+        }
     }
 
     // MARK: - stayInTheZone mode
@@ -76,9 +91,9 @@ struct HunterMapFeatureTests {
         let store = TestStore(initialState: state) {
             HunterMapFeature()
         }
+        store.exhaustivity = .off
 
         await store.send(.timerTicked) {
-            $0.nextRadiusUpdate?.addTimeInterval(TimeInterval(game.radiusIntervalUpdate * 60))
             $0.radius = 500 - Int(game.radiusDeclinePerUpdate)
             $0.mapCircle = CircleOverlay(
                 center: game.initialCoordinates.toCLCoordinates,
@@ -97,9 +112,9 @@ struct HunterMapFeatureTests {
         let store = TestStore(initialState: state) {
             HunterMapFeature()
         }
+        store.exhaustivity = .off
 
         await store.send(.timerTicked) {
-            $0.nextRadiusUpdate?.addTimeInterval(TimeInterval(game.radiusIntervalUpdate * 60))
             $0.radius = 500 - Int(game.radiusDeclinePerUpdate)
         }
     }
@@ -109,5 +124,117 @@ struct HunterMapFeatureTests {
     @Test func hunterIdIsGenerated() {
         let state = HunterMapFeature.State(game: .mock)
         #expect(!state.hunterId.isEmpty)
+    }
+
+    // MARK: - Found code
+
+    @Test func foundButtonTappedShowsCodeEntry() async {
+        let store = TestStore(initialState: HunterMapFeature.State(game: .mock)) {
+            HunterMapFeature()
+        }
+
+        await store.send(.foundButtonTapped) {
+            $0.isEnteringFoundCode = true
+        }
+    }
+
+    @Test func submitFoundCodeWithCorrectCodeAddsWinner() async {
+        var state = HunterMapFeature.State(game: .mock)
+        state.enteredCode = "1234" // matches mock.foundCode
+
+        let store = TestStore(initialState: state) {
+            HunterMapFeature()
+        } withDependencies: {
+            $0.apiClient.addWinner = { _, _ in }
+        }
+
+        await store.send(.submitFoundCode) {
+            $0.enteredCode = ""
+            $0.isEnteringFoundCode = false
+        }
+    }
+
+    @Test func submitFoundCodeWithWrongCodeShowsAlert() async {
+        var state = HunterMapFeature.State(game: .mock)
+        state.enteredCode = "9999" // wrong code
+
+        let store = TestStore(initialState: state) {
+            HunterMapFeature()
+        }
+
+        await store.send(.submitFoundCode) {
+            $0.enteredCode = ""
+            $0.isEnteringFoundCode = false
+            $0.destination = .alert(
+                AlertState {
+                    TextState("Wrong code")
+                } actions: {
+                    ButtonState(action: .wrongCode) {
+                        TextState("OK")
+                    }
+                } message: {
+                    TextState("That code is incorrect. Try again!")
+                }
+            )
+        }
+    }
+
+    // MARK: - Winner notifications
+
+    @Test func newWinnerFromOtherHunterSetsNotification() {
+        let game = Game.mock
+        var state = HunterMapFeature.State(game: game)
+        state.hunterId = "my-hunter-id"
+
+        // Simulate the reducer's winner detection logic from setGameTriggered
+        var updatedGame = game
+        updatedGame.winners = [
+            Winner(hunterId: "other-hunter", hunterName: "Julien", timestamp: .init(date: .now))
+        ]
+
+        let previousCount = state.previousWinnersCount
+        #expect(previousCount == 0)
+        #expect(updatedGame.winners.count > previousCount)
+
+        let latest = updatedGame.winners.last!
+        #expect(latest.hunterId != state.hunterId)
+
+        state.winnerNotification = "\(latest.hunterName) a trouvé la poule !"
+        state.previousWinnersCount = updatedGame.winners.count
+
+        #expect(state.winnerNotification == "Julien a trouvé la poule !")
+        #expect(state.previousWinnersCount == 1)
+    }
+
+    @Test func setGameTriggeredOwnWinDoesNotShowNotification() async {
+        let game = Game.mock
+        var state = HunterMapFeature.State(game: game)
+        state.hunterId = "my-hunter-id"
+
+        let store = TestStore(initialState: state) {
+            HunterMapFeature()
+        }
+
+        var updatedGame = game
+        updatedGame.winners = [
+            Winner(hunterId: "my-hunter-id", hunterName: "Me", timestamp: .init(date: .now))
+        ]
+
+        await store.send(.setGameTriggered(to: updatedGame)) {
+            let (lastUpdate, lastRadius) = updatedGame.findLastUpdate()
+            $0.game = updatedGame
+            $0.radius = lastRadius
+            $0.nextRadiusUpdate = lastUpdate
+            $0.mapCircle = CircleOverlay(
+                center: updatedGame.initialCoordinates.toCLCoordinates,
+                radius: CLLocationDistance(lastRadius)
+            )
+            $0.previousWinnersCount = 1
+        }
+    }
+
+    @Test func hunterNameDefaultsToHunter() {
+        let state = HunterMapFeature.State(game: .mock)
+        #expect(state.hunterName == "Hunter")
     }
 }

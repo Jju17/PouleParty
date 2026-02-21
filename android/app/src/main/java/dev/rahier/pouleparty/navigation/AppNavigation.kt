@@ -1,6 +1,7 @@
 package dev.rahier.pouleparty.navigation
 
 import android.content.Context
+import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavType
@@ -21,11 +22,11 @@ object Routes {
     const val SELECTION = "selection"
     const val CHICKEN_CONFIG = "chicken_config/{gameId}"
     const val CHICKEN_MAP = "chicken_map/{gameId}"
-    const val HUNTER_MAP = "hunter_map/{gameId}"
+    const val HUNTER_MAP = "hunter_map/{gameId}/{hunterName}"
 
     fun chickenConfig(gameId: String) = "chicken_config/$gameId"
     fun chickenMap(gameId: String) = "chicken_map/$gameId"
-    fun hunterMap(gameId: String) = "hunter_map/$gameId"
+    fun hunterMap(gameId: String, hunterName: String) = "hunter_map/$gameId/${Uri.encode(hunterName)}"
 }
 
 @Composable
@@ -60,8 +61,8 @@ fun AppNavigation() {
                         popUpTo(Routes.SELECTION) { inclusive = false }
                     }
                 },
-                onNavigateToHunterMap = { gameId ->
-                    navController.navigate(Routes.hunterMap(gameId)) {
+                onNavigateToHunterMap = { gameId, hunterName ->
+                    navController.navigate(Routes.hunterMap(gameId, hunterName)) {
                         popUpTo(Routes.SELECTION) { inclusive = false }
                     }
                 }
@@ -99,7 +100,10 @@ fun AppNavigation() {
 
         composable(
             route = Routes.HUNTER_MAP,
-            arguments = listOf(navArgument("gameId") { type = NavType.StringType })
+            arguments = listOf(
+                navArgument("gameId") { type = NavType.StringType },
+                navArgument("hunterName") { type = NavType.StringType }
+            )
         ) {
             HunterMapScreen(
                 onGoToMenu = {

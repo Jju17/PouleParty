@@ -1,8 +1,10 @@
 package dev.rahier.pouleparty.ui
 
 import com.google.android.gms.maps.model.LatLng
+import com.google.firebase.Timestamp
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameMod
+import dev.rahier.pouleparty.model.Winner
 import dev.rahier.pouleparty.ui.huntermap.HunterMapUiState
 import org.junit.Assert.*
 import org.junit.Test
@@ -79,5 +81,69 @@ class HunterMapViewModelTest {
 
         val state = HunterMapUiState(game = newGame, circleCenter = newGame.initialLocation)
         assertEquals(2000.0, state.game.initialRadius, 0.01)
+    }
+
+    // MARK: - Found code state
+
+    @Test
+    fun `initial state has found code fields at defaults`() {
+        val state = HunterMapUiState()
+        assertFalse(state.isEnteringFoundCode)
+        assertEquals("", state.enteredCode)
+        assertFalse(state.showWrongCodeAlert)
+    }
+
+    @Test
+    fun `found button shows code entry`() {
+        val state = HunterMapUiState()
+        val updated = state.copy(isEnteringFoundCode = true)
+        assertTrue(updated.isEnteringFoundCode)
+    }
+
+    @Test
+    fun `wrong code alert can be shown and dismissed`() {
+        var state = HunterMapUiState()
+        assertFalse(state.showWrongCodeAlert)
+
+        state = state.copy(showWrongCodeAlert = true)
+        assertTrue(state.showWrongCodeAlert)
+
+        state = state.copy(showWrongCodeAlert = false)
+        assertFalse(state.showWrongCodeAlert)
+    }
+
+    @Test
+    fun `entered code can be updated`() {
+        val state = HunterMapUiState()
+        val updated = state.copy(enteredCode = "1234")
+        assertEquals("1234", updated.enteredCode)
+    }
+
+    // MARK: - Winner notification state
+
+    @Test
+    fun `winner notification defaults to null`() {
+        val state = HunterMapUiState()
+        assertNull(state.winnerNotification)
+    }
+
+    @Test
+    fun `winner notification can be set and cleared`() {
+        var state = HunterMapUiState()
+        state = state.copy(winnerNotification = "Julien a trouvé la poule !")
+        assertEquals("Julien a trouvé la poule !", state.winnerNotification)
+
+        state = state.copy(winnerNotification = null)
+        assertNull(state.winnerNotification)
+    }
+
+    @Test
+    fun `previousWinnersCount tracks winner count`() {
+        val winner = Winner(hunterId = "h1", hunterName = "Julien", timestamp = Timestamp.now())
+        val game = Game(id = "test", foundCode = "1234", winners = listOf(winner))
+        val state = HunterMapUiState(game = game, previousWinnersCount = 1)
+
+        assertEquals(1, state.previousWinnersCount)
+        assertEquals(1, state.game.winners.size)
     }
 }

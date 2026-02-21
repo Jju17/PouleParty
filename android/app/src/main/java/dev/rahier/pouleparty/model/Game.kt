@@ -15,7 +15,9 @@ data class Game(
     val initialCoordinates: GeoPoint = GeoPoint(50.8466, 4.3528),
     val initialRadius: Double = 1500.0,
     val radiusDeclinePerUpdate: Double = 100.0,
-    val gameMod: String = GameMod.FOLLOW_THE_CHICKEN.firestoreValue
+    val gameMod: String = GameMod.FOLLOW_THE_CHICKEN.firestoreValue,
+    val foundCode: String = "",
+    val winners: List<Winner> = emptyList()
 ) {
     /** Computed: CLLocationCoordinate2D equivalent */
     val initialLocation: LatLng
@@ -58,6 +60,8 @@ data class Game(
     )
 
     companion object {
+        fun generateFoundCode(): String = "%04d".format((0..9999).random())
+
         val mock = Game(
             id = java.util.UUID.randomUUID().toString(),
             name = "Mock",
@@ -68,7 +72,8 @@ data class Game(
             initialCoordinates = GeoPoint(50.8466, 4.3528),
             initialRadius = 1500.0,
             radiusDeclinePerUpdate = 100.0,
-            gameMod = GameMod.FOLLOW_THE_CHICKEN.firestoreValue
+            gameMod = GameMod.FOLLOW_THE_CHICKEN.firestoreValue,
+            foundCode = "1234"
         )
     }
 }

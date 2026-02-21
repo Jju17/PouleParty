@@ -10,6 +10,7 @@ import CoreLocation
 import FirebaseFirestore
 
 struct ApiClient {
+    var addWinner: (String, Winner) async throws -> Void
     var deleteConfig: (String) async throws -> Void
     var getConfig: (String) async throws -> Game?
     var findGameByCode: (String) async throws -> Game?
@@ -23,6 +24,18 @@ struct ApiClient {
 
 extension ApiClient: DependencyKey {
     static var liveValue = ApiClient(
+        addWinner: { gameId, winner in
+            let ref = Firestore.firestore().collection("games").document(gameId)
+            try await ref.updateData([
+                "winners": FieldValue.arrayUnion([
+                    [
+                        "hunterId": winner.hunterId,
+                        "hunterName": winner.hunterName,
+                        "timestamp": winner.timestamp
+                    ] as [String: Any]
+                ])
+            ])
+        },
         deleteConfig: { gameId in
             try await Firestore.firestore().collection("games").document(gameId).delete()
         },

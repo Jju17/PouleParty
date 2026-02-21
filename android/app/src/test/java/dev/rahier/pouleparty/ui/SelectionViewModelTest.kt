@@ -44,4 +44,17 @@ class SelectionViewModelTest {
         val updated = state.copy(isShowingGameNotFound = true)
         assertTrue(updated.isShowingGameNotFound)
     }
+
+    @Test
+    fun `initial state has empty hunterName`() {
+        val state = SelectionUiState()
+        assertEquals("", state.hunterName)
+    }
+
+    @Test
+    fun `hunterName can be updated`() {
+        val state = SelectionUiState()
+        val updated = state.copy(hunterName = "Julien")
+        assertEquals("Julien", updated.hunterName)
+    }
 }

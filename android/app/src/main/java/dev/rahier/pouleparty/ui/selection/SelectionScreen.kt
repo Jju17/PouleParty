@@ -25,7 +25,7 @@ import dev.rahier.pouleparty.ui.theme.*
 fun SelectionScreen(
     onNavigateToChickenConfig: (String) -> Unit,
     onNavigateToChickenMap: (String) -> Unit,
-    onNavigateToHunterMap: (String) -> Unit,
+    onNavigateToHunterMap: (String, String) -> Unit,
     viewModel: SelectionViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -159,7 +159,7 @@ fun SelectionScreen(
             title = { Text("Join Game") },
             text = {
                 Column {
-                    Text("Enter the game code from the chicken.")
+                    Text("Enter the game code and your nickname.")
                     Spacer(Modifier.height(8.dp))
                     OutlinedTextField(
                         value = state.gameCode,
@@ -167,12 +167,19 @@ fun SelectionScreen(
                         label = { Text("Game code") },
                         singleLine = true
                     )
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = state.hunterName,
+                        onValueChange = { viewModel.onHunterNameChanged(it) },
+                        label = { Text("Your nickname") },
+                        singleLine = true
+                    )
                 }
             },
             confirmButton = {
                 TextButton(onClick = {
-                    viewModel.joinGame { gameId ->
-                        onNavigateToHunterMap(gameId)
+                    viewModel.joinGame { gameId, hunterName ->
+                        onNavigateToHunterMap(gameId, hunterName)
                     }
                 }) { Text("Join") }
             },

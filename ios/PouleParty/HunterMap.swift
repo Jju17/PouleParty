@@ -17,20 +17,28 @@ struct HunterMapFeature {
         @Presents var destination: Destination.State?
         var game: Game
         var hunterId: String = UUID().uuidString
+        var hunterName: String = "Hunter"
+        var enteredCode: String = ""
+        var isEnteringFoundCode: Bool = false
         var nextRadiusUpdate: Date?
         var nowDate: Date = .now
+        var previousWinnersCount: Int = 0
         var radius: Int = 1500
         var mapCircle: CircleOverlay?
+        var winnerNotification: String? = nil
     }
 
     enum Action: BindableAction {
         case binding(BindingAction<State>)
         case cancelGameButtonTapped
         case destination(PresentationAction<Destination.Action>)
+        case dismissWinnerNotification
+        case foundButtonTapped
         case goToMenu
         case newLocationFetched(CLLocationCoordinate2D)
         case onTask
         case setGameTriggered(to: Game)
+        case submitFoundCode
         case timerTicked
     }
 
@@ -47,6 +55,7 @@ struct HunterMapFeature {
             enum Alert: Equatable {
                 case leaveGame
                 case gameOver
+                case wrongCode
             }
         }
     }
@@ -89,6 +98,41 @@ struct HunterMapFeature {
                 }
             case .destination:
                 return .none
+            case .dismissWinnerNotification:
+                state.winnerNotification = nil
+                return .none
+            case .foundButtonTapped:
+                state.isEnteringFoundCode = true
+                return .none
+            case .submitFoundCode:
+                let code = state.enteredCode.trimmingCharacters(in: .whitespacesAndNewlines)
+                state.enteredCode = ""
+                state.isEnteringFoundCode = false
+
+                guard code == state.game.foundCode else {
+                    state.destination = .alert(
+                        AlertState {
+                            TextState("Wrong code")
+                        } actions: {
+                            ButtonState(action: .wrongCode) {
+                                TextState("OK")
+                            }
+                        } message: {
+                            TextState("That code is incorrect. Try again!")
+                        }
+                    )
+                    return .none
+                }
+
+                let winner = Winner(
+                    hunterId: state.hunterId,
+                    hunterName: state.hunterName,
+                    timestamp: .init(date: .now)
+                )
+                let gameId = state.game.id
+                return .run { _ in
+                    try await apiClient.addWinner(gameId, winner)
+                }
             case .goToMenu:
                 return .none
             case let .newLocationFetched(location):
@@ -171,6 +215,22 @@ struct HunterMapFeature {
                         center: game.initialCoordinates.toCLCoordinates,
                         radius: CLLocationDistance(state.radius)
                     )
+                }
+
+                // Detect new winners
+                let previousCount = state.previousWinnersCount
+                if game.winners.count > previousCount {
+                    let newWinners = Array(game.winners.suffix(from: previousCount))
+                    if let latest = newWinners.last, latest.hunterId != state.hunterId {
+                        state.winnerNotification = "\(latest.hunterName) a trouvé la poule !"
+                    }
+                    state.previousWinnersCount = game.winners.count
+                    if state.winnerNotification != nil {
+                        return .run { send in
+                            try await clock.sleep(for: .seconds(4))
+                            await send(.dismissWinnerNotification)
+                        }
+                    }
                 }
                 return .none
             case .timerTicked:
@@ -289,6 +349,19 @@ struct HunterMapView: View {
                 }
                 Spacer()
                 Button {
+                    self.store.send(.foundButtonTapped)
+                } label: {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 5)
+                            .fill(.red)
+                        Text("FOUND")
+                            .font(Font.system(size: 11))
+                            .fontWeight(.bold)
+                            .foregroundStyle(.white)
+                    }
+                }
+                .frame(width: 50, height: 40)
+                Button {
                     self.store.send(.cancelGameButtonTapped)
                 } label: {
                     Text("Quit")
@@ -312,6 +385,30 @@ struct HunterMapView: View {
                 action: \.destination.alert
             )
         )
+        .alert("Enter Found Code", isPresented: $store.isEnteringFoundCode) {
+            TextField("4-digit code", text: $store.enteredCode)
+                .keyboardType(.numberPad)
+            Button("Submit") {
+                self.store.send(.submitFoundCode)
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("Enter the 4-digit code shown by the chicken.")
+        }
+        .overlay(alignment: .top) {
+            if let notification = store.winnerNotification {
+                Text(notification)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(.green.opacity(0.9))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .padding(.top, 100)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .animation(.easeInOut, value: store.winnerNotification)
+            }
+        }
     }
 }
 

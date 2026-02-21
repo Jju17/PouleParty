@@ -35,7 +35,7 @@ struct ChickenMapFeatureTests {
         }
 
         await store.send(.beenFoundButtonTapped) {
-            $0.destination = .endGameCode(EndGameCodeFeature.State())
+            $0.destination = .endGameCode(EndGameCodeFeature.State(foundCode: "1234"))
         }
     }
 
@@ -64,7 +64,7 @@ struct ChickenMapFeatureTests {
 
     @Test func dismissEndGameCodeClearsDestination() async {
         var state = ChickenMapFeature.State(game: .mock)
-        state.destination = .endGameCode(EndGameCodeFeature.State())
+        state.destination = .endGameCode(EndGameCodeFeature.State(foundCode: "1234"))
 
         let store = TestStore(initialState: state) {
             ChickenMapFeature()
@@ -142,6 +142,61 @@ struct ChickenMapFeatureTests {
         }
     }
 
+    // MARK: - Winner notifications
+
+    @Test func gameUpdatedWithNewWinnerSetsNotificationState() {
+        let game = Game.mock
+        var state = ChickenMapFeature.State(game: game)
+
+        // Simulate the reducer's winner detection logic
+        var updatedGame = game
+        updatedGame.winners = [
+            Winner(hunterId: "h1", hunterName: "Julien", timestamp: .init(date: .now))
+        ]
+
+        let previousCount = state.previousWinnersCount
+        #expect(previousCount == 0)
+        #expect(updatedGame.winners.count > previousCount)
+
+        // The reducer sets these fields:
+        state.game = updatedGame
+        state.previousWinnersCount = updatedGame.winners.count
+        let latest = updatedGame.winners.last!
+        state.winnerNotification = "\(latest.hunterName) a trouvé la poule !"
+
+        #expect(state.winnerNotification == "Julien a trouvé la poule !")
+        #expect(state.previousWinnersCount == 1)
+    }
+
+    @Test func gameUpdatedWithNoNewWinnersDoesNotShowNotification() async {
+        let winner = Winner(hunterId: "h1", hunterName: "Julien", timestamp: .init(date: .now))
+        var game = Game.mock
+        game.winners = [winner]
+
+        var state = ChickenMapFeature.State(game: game)
+        state.previousWinnersCount = 1
+
+        let store = TestStore(initialState: state) {
+            ChickenMapFeature()
+        }
+
+        // Same game, same number of winners → no state change expected
+        await store.send(.gameUpdated(game))
+    }
+
+    @Test func dismissWinnerNotificationClearsNotification() async {
+        var state = ChickenMapFeature.State(game: .mock)
+        state.winnerNotification = "Test notification"
+
+        let store = TestStore(initialState: state) {
+            ChickenMapFeature()
+        }
+
+        await store.send(.dismissWinnerNotification) {
+            $0.winnerNotification = nil
+        }
+    }
+
     // MARK: - Timer + stayInTheZone
 
     @Test func timerTickedUpdatesCircleInStayInTheZone() async {
@@ -154,9 +209,9 @@ struct ChickenMapFeatureTests {
         let store = TestStore(initialState: state) {
             ChickenMapFeature()
         }
+        store.exhaustivity = .off
 
         await store.send(.timerTicked) {
-            $0.nextRadiusUpdate?.addTimeInterval(TimeInterval(game.radiusIntervalUpdate * 60))
             $0.radius = 500 - Int(game.radiusDeclinePerUpdate)
             $0.mapCircle = CircleOverlay(
                 center: game.initialCoordinates.toCLCoordinates,

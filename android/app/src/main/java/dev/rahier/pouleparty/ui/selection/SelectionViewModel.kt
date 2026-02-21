@@ -18,7 +18,8 @@ data class SelectionUiState(
     val isShowingGameRules: Boolean = false,
     val isShowingGameNotFound: Boolean = false,
     val password: String = "",
-    val gameCode: String = ""
+    val gameCode: String = "",
+    val hunterName: String = ""
 )
 
 @HiltViewModel
@@ -38,11 +39,15 @@ class SelectionViewModel @Inject constructor(
     }
 
     fun onJoinDialogDismissed() {
-        _uiState.value = _uiState.value.copy(isShowingJoinDialog = false, gameCode = "")
+        _uiState.value = _uiState.value.copy(isShowingJoinDialog = false, gameCode = "", hunterName = "")
     }
 
     fun onGameCodeChanged(code: String) {
         _uiState.value = _uiState.value.copy(gameCode = code)
+    }
+
+    fun onHunterNameChanged(name: String) {
+        _uiState.value = _uiState.value.copy(hunterName = name)
     }
 
     fun onPasswordChanged(password: String) {
@@ -78,16 +83,17 @@ class SelectionViewModel @Inject constructor(
     /**
      * Join a game by code. Returns the gameId if found, or shows error.
      */
-    fun joinGame(onGameFound: (String) -> Unit) {
+    fun joinGame(onGameFound: (String, String) -> Unit) {
         val code = _uiState.value.gameCode.trim()
         if (code.isEmpty()) return
 
-        _uiState.value = _uiState.value.copy(isShowingJoinDialog = false, gameCode = "")
+        val hunterName = _uiState.value.hunterName.trim().ifEmpty { "Hunter" }
+        _uiState.value = _uiState.value.copy(isShowingJoinDialog = false, gameCode = "", hunterName = "")
 
         viewModelScope.launch {
             val game = firestoreRepository.findGameByCode(code)
             if (game != null && game.endDate.after(Date())) {
-                onGameFound(game.id)
+                onGameFound(game.id, hunterName)
             } else {
                 _uiState.value = _uiState.value.copy(isShowingGameNotFound = true)
             }

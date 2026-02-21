@@ -7,8 +7,10 @@ import com.google.android.gms.maps.model.LatLng
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.rahier.pouleparty.data.FirestoreRepository
 import dev.rahier.pouleparty.data.LocationRepository
+import com.google.firebase.Timestamp
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameMod
+import dev.rahier.pouleparty.model.Winner
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -26,7 +28,12 @@ data class HunterMapUiState(
     val circleCenter: LatLng? = null,
     val showLeaveAlert: Boolean = false,
     val showGameOverAlert: Boolean = false,
-    val gameOverMessage: String = ""
+    val gameOverMessage: String = "",
+    val isEnteringFoundCode: Boolean = false,
+    val enteredCode: String = "",
+    val showWrongCodeAlert: Boolean = false,
+    val previousWinnersCount: Int = 0,
+    val winnerNotification: String? = null
 )
 
 @HiltViewModel
@@ -37,6 +44,7 @@ class HunterMapViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val gameId: String = savedStateHandle["gameId"] ?: ""
+    private val hunterName: String = savedStateHandle["hunterName"] ?: "Hunter"
     private val hunterId: String = UUID.randomUUID().toString()
 
     private val _uiState = MutableStateFlow(HunterMapUiState())
@@ -117,16 +125,32 @@ class HunterMapViewModel @Inject constructor(
             firestoreRepository.gameConfigFlow(gameId).collect { updatedGame ->
                 if (updatedGame != null) {
                     val (lastUpdate, lastRadius) = updatedGame.findLastUpdate()
+                    val previousCount = _uiState.value.previousWinnersCount
+
                     _uiState.value = _uiState.value.copy(
                         game = updatedGame,
                         radius = lastRadius,
-                        nextRadiusUpdate = lastUpdate
+                        nextRadiusUpdate = lastUpdate,
+                        previousWinnersCount = updatedGame.winners.size
                     )
+
                     // Only reset circle center for stayInTheZone (fixed zone)
                     if (updatedGame.gameModEnum == GameMod.STAY_IN_THE_ZONE) {
                         _uiState.value = _uiState.value.copy(
                             circleCenter = updatedGame.initialLocation
                         )
+                    }
+
+                    // Detect new winners
+                    if (updatedGame.winners.size > previousCount) {
+                        val latest = updatedGame.winners.last()
+                        if (latest.hunterId != hunterId) {
+                            _uiState.value = _uiState.value.copy(
+                                winnerNotification = "${latest.hunterName} a trouvé la poule !"
+                            )
+                            delay(4000)
+                            _uiState.value = _uiState.value.copy(winnerNotification = null)
+                        }
                     }
                 }
             }
@@ -165,6 +189,41 @@ class HunterMapViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    fun onFoundButtonTapped() {
+        _uiState.value = _uiState.value.copy(isEnteringFoundCode = true)
+    }
+
+    fun onEnteredCodeChanged(code: String) {
+        _uiState.value = _uiState.value.copy(enteredCode = code)
+    }
+
+    fun dismissFoundCodeEntry() {
+        _uiState.value = _uiState.value.copy(isEnteringFoundCode = false, enteredCode = "")
+    }
+
+    fun submitFoundCode() {
+        val code = _uiState.value.enteredCode.trim()
+        _uiState.value = _uiState.value.copy(isEnteringFoundCode = false, enteredCode = "")
+
+        if (code != _uiState.value.game.foundCode) {
+            _uiState.value = _uiState.value.copy(showWrongCodeAlert = true)
+            return
+        }
+
+        viewModelScope.launch {
+            val winner = Winner(
+                hunterId = hunterId,
+                hunterName = hunterName,
+                timestamp = Timestamp.now()
+            )
+            firestoreRepository.addWinner(gameId, winner)
+        }
+    }
+
+    fun dismissWrongCodeAlert() {
+        _uiState.value = _uiState.value.copy(showWrongCodeAlert = false)
     }
 
     fun onLeaveGameTapped() {

@@ -35,7 +35,10 @@ data class ChickenMapUiState(
     val showGameOverAlert: Boolean = false,
     val gameOverMessage: String = "",
     val showGameInfo: Boolean = false,
-    val codeCopied: Boolean = false
+    val codeCopied: Boolean = false,
+    val showFoundCode: Boolean = false,
+    val previousWinnersCount: Int = 0,
+    val winnerNotification: String? = null
 )
 
 @HiltViewModel
@@ -69,6 +72,7 @@ class ChickenMapViewModel @Inject constructor(
             startTimer()
             startLocationTracking(game)
             startHunterTracking(game)
+            startGameConfigStream()
         }
     }
 
@@ -160,6 +164,31 @@ class ChickenMapViewModel @Inject constructor(
         }
     }
 
+    /** Stream game config to detect winners in real time */
+    private fun startGameConfigStream() {
+        viewModelScope.launch {
+            firestoreRepository.gameConfigFlow(gameId).collect { updatedGame ->
+                if (updatedGame != null) {
+                    val previousCount = _uiState.value.previousWinnersCount
+                    _uiState.value = _uiState.value.copy(
+                        game = updatedGame,
+                        previousWinnersCount = updatedGame.winners.size
+                    )
+
+                    // Detect new winners
+                    if (updatedGame.winners.size > previousCount) {
+                        val latest = updatedGame.winners.last()
+                        _uiState.value = _uiState.value.copy(
+                            winnerNotification = "${latest.hunterName} a trouvé la poule !"
+                        )
+                        delay(4000)
+                        _uiState.value = _uiState.value.copy(winnerNotification = null)
+                    }
+                }
+            }
+        }
+    }
+
     fun onCancelGameTapped() {
         _uiState.value = _uiState.value.copy(showCancelAlert = true)
     }
@@ -187,6 +216,14 @@ class ChickenMapViewModel @Inject constructor(
 
     fun dismissGameInfo() {
         _uiState.value = _uiState.value.copy(showGameInfo = false)
+    }
+
+    fun onFoundButtonTapped() {
+        _uiState.value = _uiState.value.copy(showFoundCode = true)
+    }
+
+    fun dismissFoundCode() {
+        _uiState.value = _uiState.value.copy(showFoundCode = false)
     }
 
     fun onCodeCopied() {

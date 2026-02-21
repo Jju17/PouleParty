@@ -7,6 +7,7 @@
 
 import AVFAudio
 import ComposableArchitecture
+import CoreLocation
 import SwiftUI
 
 @Reducer
@@ -17,6 +18,7 @@ struct SelectionFeature {
         @Presents var destination: Destination.State?
         var password: String = ""
         var gameCode: String = ""
+        var hunterName: String = ""
         var isAuthenticating = false
         var isJoiningGame = false
     }
@@ -28,7 +30,8 @@ struct SelectionFeature {
         case gameNotFound
         case goToChickenConfigTriggered
         case goToChickenMapTriggered(Game)
-        case goToHunterMapTriggered(Game)
+        case initialLocationResolved(CLLocationCoordinate2D?)
+        case goToHunterMapTriggered(Game, String)
         case onTask
         case startButtonTapped
         case joinGameButtonTapped
@@ -60,6 +63,7 @@ struct SelectionFeature {
     }
 
     @Dependency(\.apiClient) var apiClient
+    @Dependency(\.locationClient) var locationClient
 
     var body: some ReducerOf<Self> {
         BindingReducer()
@@ -104,8 +108,23 @@ struct SelectionFeature {
                 )
                 return .none
             case .goToChickenConfigTriggered:
+                return .run { [locationClient] send in
+                    var location: CLLocationCoordinate2D? = nil
+                    for await coordinate in locationClient.startTracking() {
+                        location = coordinate
+                        break
+                    }
+                    locationClient.stopTracking()
+                    await send(.initialLocationResolved(location))
+                }
+            case let .initialLocationResolved(location):
+                var game = Game(id: UUID().uuidString)
+                game.foundCode = Game.generateFoundCode()
+                if let location {
+                    game.initialLocation = location
+                }
                 state.destination = .chickenConfig(
-                    ChickenConfigFeature.State(game: Shared(value: Game(id: UUID().uuidString)))
+                    ChickenConfigFeature.State(game: Shared(value: game))
                 )
                 return .none
             case .goToChickenMapTriggered:
@@ -121,11 +140,13 @@ struct SelectionFeature {
                 let code = state.gameCode.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !code.isEmpty else { return .none }
 
+                let hunterName = state.hunterName.trimmingCharacters(in: .whitespacesAndNewlines)
+                let finalName = hunterName.isEmpty ? "Hunter" : hunterName
                 state.isJoiningGame = false
                 return .run { send in
                     if let game = try? await apiClient.findGameByCode(code),
                        game.endDate > .now {
-                        await send(.goToHunterMapTriggered(game))
+                        await send(.goToHunterMapTriggered(game, finalName))
                     } else {
                         await send(.gameNotFound)
                     }
@@ -228,12 +249,13 @@ struct SelectionView: View {
             }
             .alert("Join Game", isPresented: $store.isJoiningGame) {
                 TextField("Game code", text: $store.gameCode)
+                TextField("Your nickname", text: $store.hunterName)
                 Button("Join") {
                     self.store.send(.joinGameButtonTapped)
                 }
                 Button("Cancel", role: .cancel) { }
             } message: {
-                Text("Enter the game code from the chicken.")
+                Text("Enter the game code and your nickname.")
             }
         }
         .onDisappear {
