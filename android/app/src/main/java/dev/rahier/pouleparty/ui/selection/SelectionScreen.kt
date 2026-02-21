@@ -26,6 +26,7 @@ fun SelectionScreen(
     onNavigateToChickenConfig: (String) -> Unit,
     onNavigateToChickenMap: (String) -> Unit,
     onNavigateToHunterMap: (String, String) -> Unit,
+    onNavigateToVictory: (String) -> Unit,
     viewModel: SelectionViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -178,9 +179,14 @@ fun SelectionScreen(
             },
             confirmButton = {
                 TextButton(onClick = {
-                    viewModel.joinGame { gameId, hunterName ->
-                        onNavigateToHunterMap(gameId, hunterName)
-                    }
+                    viewModel.joinGame(
+                        onGameFound = { gameId, hunterName ->
+                            onNavigateToHunterMap(gameId, hunterName)
+                        },
+                        onGameDone = { gameId ->
+                            onNavigateToVictory(gameId)
+                        }
+                    )
                 }) { Text("Join") }
             },
             dismissButton = {
@@ -197,6 +203,18 @@ fun SelectionScreen(
             text = { Text("No active game found with this code. Check the code and try again.") },
             confirmButton = {
                 TextButton(onClick = { viewModel.onGameNotFoundDismissed() }) { Text("OK") }
+            }
+        )
+    }
+
+    // Game in progress alert
+    if (state.isShowingGameInProgress) {
+        AlertDialog(
+            onDismissRequest = { viewModel.onGameInProgressDismissed() },
+            title = { Text("Game in progress") },
+            text = { Text("This game is already in progress. You cannot join anymore.") },
+            confirmButton = {
+                TextButton(onClick = { viewModel.onGameInProgressDismissed() }) { Text("OK") }
             }
         )
     }

@@ -34,16 +34,19 @@ fun VictoryScreen(
     viewModel: VictoryViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
+    val isSpectator = state.hunterId.isEmpty()
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(CRBeige)
     ) {
-        // Confetti overlay
-        ConfettiOverlay(
-            modifier = Modifier.fillMaxSize()
-        )
+        // Confetti overlay (only for participants)
+        if (!isSpectator) {
+            ConfettiOverlay(
+                modifier = Modifier.fillMaxSize()
+            )
+        }
 
         // Main content
         Column(
@@ -64,7 +67,7 @@ fun VictoryScreen(
             Spacer(Modifier.height(16.dp))
 
             Text(
-                text = "You found\nthe chicken!",
+                text = if (isSpectator) "Game Results" else "You found\nthe chicken!",
                 style = gameboyStyle(16),
                 textAlign = TextAlign.Center
             )

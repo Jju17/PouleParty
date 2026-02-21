@@ -10,6 +10,7 @@ import dev.rahier.pouleparty.data.LocationRepository
 import com.google.firebase.Timestamp
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameMod
+import dev.rahier.pouleparty.model.GameStatus
 import dev.rahier.pouleparty.model.Winner
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -163,6 +164,16 @@ class HunterMapViewModel @Inject constructor(
         viewModelScope.launch {
             firestoreRepository.gameConfigFlow(gameId).collect { updatedGame ->
                 if (updatedGame != null) {
+                    // React to game cancelled/ended by chicken or Cloud Function
+                    if (updatedGame.gameStatusEnum == GameStatus.DONE && !_uiState.value.showGameOverAlert) {
+                        _uiState.value = _uiState.value.copy(
+                            game = updatedGame,
+                            showGameOverAlert = true,
+                            gameOverMessage = "The game has ended!"
+                        )
+                        return@collect
+                    }
+
                     val (lastUpdate, lastRadius) = updatedGame.findLastUpdate()
                     val previousCount = _uiState.value.previousWinnersCount
 

@@ -294,6 +294,7 @@ struct ChickenMapFeature {
 
                 if .now >= state.game.endDate {
                     locationClient.stopTracking()
+                    let gameId = state.game.id
                     state.destination = .alert(
                         AlertState {
                             TextState("Game Over")
@@ -305,7 +306,9 @@ struct ChickenMapFeature {
                             TextState("Time's up! The Chicken survived!")
                         }
                     )
-                    return .none
+                    return .run { _ in
+                        try? await apiClient.updateGameStatus(gameId, .done)
+                    }
                 }
 
                 guard let nextRadiusUpdate = state.nextRadiusUpdate,
@@ -317,6 +320,7 @@ struct ChickenMapFeature {
 
                 guard newRadius > 0 else {
                     locationClient.stopTracking()
+                    let gameId = state.game.id
                     state.destination = .alert(
                         AlertState {
                             TextState("Game Over")
@@ -328,7 +332,9 @@ struct ChickenMapFeature {
                             TextState("The zone has collapsed!")
                         }
                     )
-                    return .none
+                    return .run { _ in
+                        try? await apiClient.updateGameStatus(gameId, .done)
+                    }
                 }
 
                 state.nextRadiusUpdate?.addTimeInterval(TimeInterval(game.radiusIntervalUpdate * 60))

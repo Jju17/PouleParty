@@ -9,6 +9,7 @@ import dev.rahier.pouleparty.data.FirestoreRepository
 import dev.rahier.pouleparty.data.LocationRepository
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameMod
+import dev.rahier.pouleparty.model.GameStatus
 import dev.rahier.pouleparty.model.HunterLocation
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -127,6 +128,7 @@ class ChickenMapViewModel @Inject constructor(
                         showGameOverAlert = true,
                         gameOverMessage = "Time's up! The Chicken survived!"
                     )
+                    try { firestoreRepository.updateGameStatus(gameId, GameStatus.DONE) } catch (_: Exception) {}
                     continue
                 }
 
@@ -153,6 +155,7 @@ class ChickenMapViewModel @Inject constructor(
                             showGameOverAlert = true,
                             gameOverMessage = "The zone has collapsed!"
                         )
+                        try { firestoreRepository.updateGameStatus(gameId, GameStatus.DONE) } catch (_: Exception) {}
                     }
                 }
             }
@@ -249,7 +252,7 @@ class ChickenMapViewModel @Inject constructor(
     fun confirmCancelGame(onGoToMenu: () -> Unit) {
         _uiState.value = _uiState.value.copy(showCancelAlert = false)
         viewModelScope.launch {
-            firestoreRepository.deleteConfig(gameId)
+            try { firestoreRepository.updateGameStatus(gameId, GameStatus.DONE) } catch (_: Exception) {}
             onGoToMenu()
         }
     }

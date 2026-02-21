@@ -53,13 +53,17 @@ struct VictoryFeature {
 struct VictoryView: View {
     let store: StoreOf<VictoryFeature>
 
+    private var isSpectator: Bool { store.hunterId.isEmpty }
+
     var body: some View {
         ZStack {
             Color.CRBeige.ignoresSafeArea()
 
-            ConfettiView()
-                .ignoresSafeArea()
-                .allowsHitTesting(false)
+            if !isSpectator {
+                ConfettiView()
+                    .ignoresSafeArea()
+                    .allowsHitTesting(false)
+            }
 
             VStack(spacing: 24) {
                 Spacer()
@@ -68,7 +72,7 @@ struct VictoryView: View {
                 Text("🏆")
                     .font(.system(size: 60))
 
-                Text("You found\nthe chicken!")
+                Text(isSpectator ? "Game Results" : "You found\nthe chicken!")
                     .font(.gameboy(size: 16))
                     .multilineTextAlignment(.center)
 

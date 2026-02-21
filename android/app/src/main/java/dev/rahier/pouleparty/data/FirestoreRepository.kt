@@ -8,6 +8,7 @@ import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.FieldValue
 import dev.rahier.pouleparty.model.ChickenLocation
 import dev.rahier.pouleparty.model.Game
+import dev.rahier.pouleparty.model.GameStatus
 import dev.rahier.pouleparty.model.HunterLocation
 import dev.rahier.pouleparty.model.Winner
 import kotlinx.coroutines.channels.awaitClose
@@ -60,6 +61,12 @@ class FirestoreRepository @Inject constructor(
     suspend fun registerHunter(gameId: String, hunterId: String) {
         firestore.collection("games").document(gameId)
             .update("hunterIds", FieldValue.arrayUnion(hunterId))
+            .await()
+    }
+
+    suspend fun updateGameStatus(gameId: String, status: GameStatus) {
+        firestore.collection("games").document(gameId)
+            .update("status", status.firestoreValue)
             .await()
     }
 

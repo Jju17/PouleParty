@@ -48,8 +48,15 @@ struct AppFeature {
                 }
                 state = AppFeature.State.selection(SelectionFeature.State())
                 return .run { _ in
-                    try? await apiClient.deleteConfig(gameId)
+                    try? await apiClient.updateGameStatus(gameId, .done)
                 }
+            case let .selection(.goToVictoryAsSpectator(game)):
+                state = .victory(VictoryFeature.State(
+                    game: game,
+                    hunterId: "",
+                    hunterName: ""
+                ))
+                return .none
             case let .selection(.goToHunterMapTriggered(game, hunterName)):
                 state = AppFeature.State.hunterMap(HunterMapFeature.State(game: game, hunterName: hunterName))
                 return .none

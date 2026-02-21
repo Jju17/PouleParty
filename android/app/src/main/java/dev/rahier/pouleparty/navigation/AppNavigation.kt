@@ -69,6 +69,11 @@ fun AppNavigation() {
                     navController.navigate(Routes.hunterMap(gameId, hunterName)) {
                         popUpTo(Routes.SELECTION) { inclusive = false }
                     }
+                },
+                onNavigateToVictory = { gameId ->
+                    navController.navigate(Routes.victory(gameId, "", "")) {
+                        popUpTo(Routes.SELECTION) { inclusive = false }
+                    }
                 }
             )
         }

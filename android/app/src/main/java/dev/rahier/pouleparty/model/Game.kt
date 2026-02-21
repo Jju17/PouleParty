@@ -19,6 +19,7 @@ data class Game(
     val gameMod: String = GameMod.FOLLOW_THE_CHICKEN.firestoreValue,
     val foundCode: String = "",
     val hunterIds: List<String> = emptyList(),
+    val status: String = GameStatus.WAITING.firestoreValue,
     val winners: List<Winner> = emptyList()
 ) {
     /** Computed: CLLocationCoordinate2D equivalent */
@@ -36,6 +37,10 @@ data class Game(
     /** Parsed game mod enum */
     val gameModEnum: GameMod
         get() = GameMod.fromFirestore(gameMod)
+
+    /** Parsed game status enum */
+    val gameStatusEnum: GameStatus
+        get() = GameStatus.fromFirestore(status)
 
     /**
      * Walk forward from startDate in steps of radiusIntervalUpdate
@@ -90,5 +95,16 @@ enum class GameMod(val firestoreValue: String, val title: String) {
     companion object {
         fun fromFirestore(value: String): GameMod =
             entries.firstOrNull { it.firestoreValue == value } ?: FOLLOW_THE_CHICKEN
+    }
+}
+
+enum class GameStatus(val firestoreValue: String) {
+    WAITING("waiting"),
+    IN_PROGRESS("inProgress"),
+    DONE("done");
+
+    companion object {
+        fun fromFirestore(value: String): GameStatus =
+            entries.firstOrNull { it.firestoreValue == value } ?: WAITING
     }
 }

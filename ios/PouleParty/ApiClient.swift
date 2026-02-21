@@ -15,6 +15,7 @@ struct ApiClient {
     var getConfig: (String) async throws -> Game?
     var findGameByCode: (String) async throws -> Game?
     var registerHunter: (String, String) async throws -> Void
+    var updateGameStatus: (String, Game.GameStatus) async throws -> Void
     var chickenLocationStream: (String) -> AsyncStream<CLLocationCoordinate2D?>
     var gameConfigStream: (String) -> AsyncStream<Game?>
     var hunterLocationsStream: (String) -> AsyncStream<[HunterLocation]>
@@ -37,12 +38,6 @@ extension ApiClient: DependencyKey {
                 ])
             ])
         },
-        registerHunter: { gameId, hunterId in
-            let ref = Firestore.firestore().collection("games").document(gameId)
-            try await ref.updateData([
-                "hunterIds": FieldValue.arrayUnion([hunterId])
-            ])
-        },
         deleteConfig: { gameId in
             try await Firestore.firestore().collection("games").document(gameId).delete()
         },
@@ -59,6 +54,17 @@ extension ApiClient: DependencyKey {
             }.first { game in
                 game.gameCode == code.uppercased()
             }
+        },
+        registerHunter: { gameId, hunterId in
+            let ref = Firestore.firestore().collection("games").document(gameId)
+            try await ref.updateData([
+                "hunterIds": FieldValue.arrayUnion([hunterId])
+            ])
+        },
+        updateGameStatus: { gameId, status in
+            try await Firestore.firestore().collection("games").document(gameId).updateData([
+                "status": status.rawValue
+            ])
         },
         chickenLocationStream: { gameId in
             AsyncStream { continuation in

@@ -18,6 +18,10 @@ android/app/google-services.json
 *.apk
 *.aab
 
+# === Cloud Functions ===
+functions/lib/
+functions/node_modules/
+
 # === IDE ===
 .idea/
 android/.idea/

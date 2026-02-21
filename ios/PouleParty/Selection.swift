@@ -27,9 +27,11 @@ struct SelectionFeature {
         case binding(BindingAction<State>)
         case destination(PresentationAction<Destination.Action>)
         case dismissChickenConfig
+        case gameInProgress
         case gameNotFound
         case goToChickenConfigTriggered
         case goToChickenMapTriggered(Game)
+        case goToVictoryAsSpectator(Game)
         case initialLocationResolved(CLLocationCoordinate2D?)
         case goToHunterMapTriggered(Game, String)
         case onTask
@@ -94,6 +96,19 @@ struct SelectionFeature {
             case .dismissChickenConfig:
                 state.destination = nil
                 return .none
+            case .gameInProgress:
+                state.destination = .alert(
+                    AlertState {
+                        TextState("Game in progress")
+                    } actions: {
+                        ButtonState(role: .cancel) {
+                            TextState("OK")
+                        }
+                    } message: {
+                        TextState("This game is already in progress. You cannot join anymore.")
+                    }
+                )
+                return .none
             case .gameNotFound:
                 state.destination = .alert(
                     AlertState {
@@ -130,6 +145,8 @@ struct SelectionFeature {
                 return .none
             case .goToChickenMapTriggered:
                 return .none
+            case .goToVictoryAsSpectator:
+                return .none
             case .goToHunterMapTriggered:
                 return .none
             case .onTask:
@@ -145,11 +162,17 @@ struct SelectionFeature {
                 let finalName = hunterName.isEmpty ? "Hunter" : hunterName
                 state.isJoiningGame = false
                 return .run { send in
-                    if let game = try? await apiClient.findGameByCode(code),
-                       game.endDate > .now {
-                        await send(.goToHunterMapTriggered(game, finalName))
-                    } else {
+                    guard let game = try? await apiClient.findGameByCode(code) else {
                         await send(.gameNotFound)
+                        return
+                    }
+                    switch game.status {
+                    case .waiting:
+                        await send(.goToHunterMapTriggered(game, finalName))
+                    case .inProgress:
+                        await send(.gameInProgress)
+                    case .done:
+                        await send(.goToVictoryAsSpectator(game))
                     }
                 }
             }

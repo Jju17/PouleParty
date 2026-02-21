@@ -227,6 +227,24 @@ struct HunterMapFeature {
 
                 return .merge(effects)
             case let .setGameTriggered(game):
+                // React to game cancelled/ended by chicken or Cloud Function
+                if game.status == .done, state.destination == nil {
+                    locationClient.stopTracking()
+                    state.game = game
+                    state.destination = .alert(
+                        AlertState {
+                            TextState("Game Over")
+                        } actions: {
+                            ButtonState(action: .gameOver) {
+                                TextState("OK")
+                            }
+                        } message: {
+                            TextState("The game has ended!")
+                        }
+                    )
+                    return .none
+                }
+
                 let (lastUpdate, lastRadius) = game.findLastUpdate()
 
                 state.game = game

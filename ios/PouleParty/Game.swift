@@ -29,7 +29,14 @@ struct Game: Codable, Equatable {
     var gameMod: GameMod = .followTheChicken
     var foundCode: String = ""
     var hunterIds: [String] = []
+    var status: GameStatus = .waiting
     var winners: [Winner] = []
+
+    enum GameStatus: String, CaseIterable, Equatable, Codable {
+        case waiting
+        case inProgress
+        case done
+    }
 
     enum GameMod: String, CaseIterable, Equatable, Codable {
         case followTheChicken

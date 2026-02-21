@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.rahier.pouleparty.data.FirestoreRepository
+import dev.rahier.pouleparty.model.GameStatus
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,6 +18,7 @@ data class SelectionUiState(
     val isShowingJoinDialog: Boolean = false,
     val isShowingGameRules: Boolean = false,
     val isShowingGameNotFound: Boolean = false,
+    val isShowingGameInProgress: Boolean = false,
     val password: String = "",
     val gameCode: String = "",
     val hunterName: String = ""
@@ -70,6 +72,10 @@ class SelectionViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(isShowingGameNotFound = false)
     }
 
+    fun onGameInProgressDismissed() {
+        _uiState.value = _uiState.value.copy(isShowingGameInProgress = false)
+    }
+
     /**
      * Validate chicken password — empty string is the correct password (matches iOS).
      * Returns a new gameId if password is correct, null otherwise.
@@ -81,9 +87,12 @@ class SelectionViewModel @Inject constructor(
     }
 
     /**
-     * Join a game by code. Returns the gameId if found, or shows error.
+     * Join a game by code. Routes based on game status:
+     * - waiting → onGameFound (join as hunter)
+     * - inProgress → show "game in progress" alert
+     * - done → onGameDone (spectator victory)
      */
-    fun joinGame(onGameFound: (String, String) -> Unit) {
+    fun joinGame(onGameFound: (String, String) -> Unit, onGameDone: (String) -> Unit) {
         val code = _uiState.value.gameCode.trim()
         if (code.isEmpty()) return
 
@@ -92,10 +101,14 @@ class SelectionViewModel @Inject constructor(
 
         viewModelScope.launch {
             val game = firestoreRepository.findGameByCode(code)
-            if (game != null && game.endDate.after(Date())) {
-                onGameFound(game.id, hunterName)
-            } else {
+            if (game == null) {
                 _uiState.value = _uiState.value.copy(isShowingGameNotFound = true)
+                return@launch
+            }
+            when (game.gameStatusEnum) {
+                GameStatus.WAITING -> onGameFound(game.id, hunterName)
+                GameStatus.IN_PROGRESS -> _uiState.value = _uiState.value.copy(isShowingGameInProgress = true)
+                GameStatus.DONE -> onGameDone(game.id)
             }
         }
     }
