@@ -31,15 +31,24 @@ workflows:
         inputs:
         - content: defaults write com.apple.dt.Xcode
             IDESkipPackagePluginFingerprintValidatation -bool YES
+    - script@1:
+        title: Configure code signing for CI
+        inputs:
+        - content: |
+            #!/bin/bash
+            set -e
+            PBXPROJ="$BITRISE_SOURCE_DIR/ios/PouleParty.xcodeproj/project.pbxproj"
+
+            # Switch from Automatic to Manual signing (only affects main project, not SPM packages)
+            sed -i '' 's/CODE_SIGN_STYLE = Automatic/CODE_SIGN_STYLE = Manual/g' "$PBXPROJ"
+
+            echo "Switched to manual code signing for CI"
     - xcode-archive@5:
         inputs:
         - project_path: "$BITRISE_PROJECT_PATH"
         - scheme: "$BITRISE_SCHEME"
         - xcodebuild_options: "-skipPackagePluginValidation -skipMacroValidation"
-        - xcconfig_content: |
-            COMPILER_INDEX_STORE_ENABLE = NO
-            CODE_SIGN_STYLE = Manual
-            CODE_SIGN_IDENTITY = Apple Distribution
+        - xcconfig_content: COMPILER_INDEX_STORE_ENABLE = NO
         - distribution_method: app-store
         - automatic_code_signing: api-key
     - save-spm-cache@1: {}
