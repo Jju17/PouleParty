@@ -41,6 +41,7 @@ class ChickenConfigViewModel @Inject constructor(
                 radiusIntervalUpdate = 5.0,
                 initialRadius = 1500.0,
                 radiusDeclinePerUpdate = 100.0,
+                chickenHeadStartMinutes = 5.0,
                 gameMod = GameMod.FOLLOW_THE_CHICKEN.firestoreValue,
                 foundCode = Game.generateFoundCode()
             )
@@ -90,6 +91,12 @@ class ChickenConfigViewModel @Inject constructor(
     fun updateRadiusDecline(value: Double) {
         _uiState.value = _uiState.value.copy(
             game = _uiState.value.game.copy(radiusDeclinePerUpdate = value)
+        )
+    }
+
+    fun updateChickenHeadStart(value: Double) {
+        _uiState.value = _uiState.value.copy(
+            game = _uiState.value.game.copy(chickenHeadStartMinutes = value)
         )
     }
 

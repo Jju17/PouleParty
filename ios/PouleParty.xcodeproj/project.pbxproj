@@ -58,6 +58,8 @@
 		BB0000072F47000100000001 /* Dependencies in Frameworks */ = {isa = PBXBuildFile; productRef = BB0000082F47000100000001 /* Dependencies */; };
 		BB0000092F47000100000001 /* SwiftNavigation in Frameworks */ = {isa = PBXBuildFile; productRef = BB00000A2F47000100000001 /* SwiftNavigation */; };
 		CC0000012F47100100000001 /* SwiftNavigation in Frameworks */ = {isa = PBXBuildFile; productRef = CC0000022F47100100000001 /* SwiftNavigation */; };
+		D964CC4CA5BD0906B58941B7 /* Victory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26AC030B90FF548206441E43 /* Victory.swift */; };
+		F2E1D0C9B8A7F6E5D4C3B2A1 /* GameStartCountdownOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B8C9D0E1F2 /* GameStartCountdownOverlay.swift */; };
 		F986A3752F48AAC00086DF16 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = F986A3742F48AAC00086DF16 /* GoogleService-Info.plist */; };
 /* End PBXBuildFile section */
 
@@ -72,6 +74,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		26AC030B90FF548206441E43 /* Victory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Victory.swift; sourceTree = "<group>"; };
 		6400630E2BBDC7B100C6C08C /* SelectionButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectionButton.swift; sourceTree = "<group>"; };
 		6405C2912BFC871B00A35A50 /* Bxl.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = Bxl.gpx; sourceTree = "<group>"; };
 		642E2D1A2BCC1C6400290B58 /* LocationClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationClient.swift; sourceTree = "<group>"; };
@@ -114,6 +117,7 @@
 		64E1A0022DE3C00100AABB01 /* GameRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameRules.swift; sourceTree = "<group>"; };
 		64F10C292BA9E04D001D83D8 /* EndGameCode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EndGameCode.swift; sourceTree = "<group>"; };
 		64FDBE382BC32AD60073DC85 /* La Rochelle.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = "La Rochelle.gpx"; sourceTree = "<group>"; };
+		A1B2C3D4E5F6A7B8C9D0E1F2 /* GameStartCountdownOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameStartCountdownOverlay.swift; sourceTree = "<group>"; };
 		AA0000052F46900100000001 /* MapOverlays.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapOverlays.swift; sourceTree = "<group>"; };
 		F986A3742F48AAC00086DF16 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -166,6 +170,7 @@
 				647D9FC62BA3ABF2005B6566 /* HunterMap.swift */,
 				64D917A52DA0F83200A1B3C5 /* Onboarding.swift */,
 				6464E5082BA4A6AA0039C387 /* Selection.swift */,
+				26AC030B90FF548206441E43 /* Victory.swift */,
 			);
 			name = Screens;
 			sourceTree = "<group>";
@@ -174,6 +179,7 @@
 			isa = PBXGroup;
 			children = (
 				6464E5112BA4BAAC0039C387 /* CountdownView.swift */,
+				A1B2C3D4E5F6A7B8C9D0E1F2 /* GameStartCountdownOverlay.swift */,
 				6400630E2BBDC7B100C6C08C /* SelectionButton.swift */,
 			);
 			name = Views;
@@ -357,7 +363,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 2620;
-				LastUpgradeCheck = 1600;
+				LastUpgradeCheck = 2620;
 				TargetAttributes = {
 					646D8E382F467E520068ABBF = {
 						CreatedOnToolsVersion = 26.2;
@@ -472,6 +478,7 @@
 				6464E5172BA4BBA40039C387 /* Date+Utils.swift in Sources */,
 				6464E5322BA5DBAA0039C387 /* Game.swift in Sources */,
 				64E1A0032DE3C00100AABB01 /* GameRules.swift in Sources */,
+				F2E1D0C9B8A7F6E5D4C3B2A1 /* GameStartCountdownOverlay.swift in Sources */,
 				64F10C2A2BA9E04D001D83D8 /* EndGameCode.swift in Sources */,
 				6464E5342BA5DE190039C387 /* GeoPoint+Utils.swift in Sources */,
 				649F06802BA8A11F00DDE737 /* UUID+Utils.swift in Sources */,
@@ -484,6 +491,7 @@
 				64B216FD2BBF162C005E0DC7 /* ChickenMapConfig.swift in Sources */,
 				64AF0B022BA7A0110081EA97 /* Color+Utils.swift in Sources */,
 				AA0000062F46900100000001 /* MapOverlays.swift in Sources */,
+				D964CC4CA5BD0906B58941B7 /* Victory.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -505,7 +513,6 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = YXXNH92P5F;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 1.0;
@@ -528,7 +535,6 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = YXXNH92P5F;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 1.0;
@@ -551,6 +557,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -582,6 +589,7 @@
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = YXXNH92P5F;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -604,6 +612,7 @@
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -615,6 +624,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -646,6 +656,7 @@
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = YXXNH92P5F;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -661,6 +672,7 @@
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 			};
@@ -677,11 +689,12 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"PouleParty/Preview Content\"";
-				DEVELOPMENT_TEAM = YXXNH92P5F;
+				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_TESTING_SEARCH_PATHS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PouleParty/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Poule Party";
@@ -732,11 +745,12 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"PouleParty/Preview Content\"";
-				DEVELOPMENT_TEAM = YXXNH92P5F;
+				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_TESTING_SEARCH_PATHS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PouleParty/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Poule Party";

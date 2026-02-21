@@ -57,6 +57,12 @@ class FirestoreRepository @Inject constructor(
             .await()
     }
 
+    suspend fun registerHunter(gameId: String, hunterId: String) {
+        firestore.collection("games").document(gameId)
+            .update("hunterIds", FieldValue.arrayUnion(hunterId))
+            .await()
+    }
+
     // ── Chicken location ──────────────────────────────────
 
     fun setChickenLocation(gameId: String, latLng: LatLng) {

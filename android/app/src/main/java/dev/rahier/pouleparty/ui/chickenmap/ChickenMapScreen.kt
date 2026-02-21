@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.google.maps.android.compose.*
 import dev.rahier.pouleparty.ui.components.CountdownView
+import dev.rahier.pouleparty.ui.components.GameStartCountdownOverlay
 import dev.rahier.pouleparty.ui.endgamecode.EndGameCodeContent
 import dev.rahier.pouleparty.ui.theme.GameBoyFont
 import java.text.SimpleDateFormat
@@ -76,8 +77,8 @@ fun ChickenMapScreen(
                 )
             }
 
-            // Hunter annotations (mutualTracking mode)
-            state.hunterAnnotations.forEach { hunter ->
+            // Hunter annotations (mutualTracking mode) — only after hunt starts
+            if (state.hasHuntStarted) state.hunterAnnotations.forEach { hunter ->
                 Marker(
                     state = MarkerState(position = hunter.coordinate),
                     title = hunter.displayName,
@@ -129,34 +130,30 @@ fun ChickenMapScreen(
                 Text("Radius : ${state.radius}m")
                 CountdownView(
                     nowDate = state.nowDate,
-                    nextUpdateDate = state.nextRadiusUpdate
+                    nextUpdateDate = state.nextRadiusUpdate,
+                    chickenStartDate = state.game.startDate,
+                    hunterStartDate = state.game.hunterStartDate,
+                    isChicken = true
                 )
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                // FOUND button
-                Button(
-                    onClick = { viewModel.onFoundButtonTapped() },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
-                    shape = RoundedCornerShape(5.dp),
-                    modifier = Modifier.size(width = 50.dp, height = 40.dp),
-                    contentPadding = PaddingValues(0.dp)
-                ) {
-                    Text("FOUND", fontSize = 11.sp, color = Color.White)
-                }
-
-                // Stop button
-                Button(
-                    onClick = { viewModel.onCancelGameTapped() },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
-                    shape = RoundedCornerShape(5.dp),
-                    modifier = Modifier.size(width = 50.dp, height = 40.dp),
-                    contentPadding = PaddingValues(0.dp)
-                ) {
-                    Text("⏹", fontSize = 20.sp, color = Color.White)
-                }
+            // FOUND button
+            Button(
+                onClick = { viewModel.onFoundButtonTapped() },
+                colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+                shape = RoundedCornerShape(5.dp),
+                modifier = Modifier.size(width = 50.dp, height = 40.dp),
+                contentPadding = PaddingValues(0.dp)
+            ) {
+                Text("FOUND", fontSize = 11.sp, color = Color.White)
             }
         }
+
+        // Game start countdown overlay
+        GameStartCountdownOverlay(
+            countdownNumber = state.countdownNumber,
+            countdownText = state.countdownText
+        )
     }
     }
 
@@ -271,6 +268,19 @@ fun ChickenMapScreen(
                     ) {
                         Text("End")
                         Text(dateFormat.format(state.game.endDate), color = Color.Gray)
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+
+                    // Cancel game button
+                    TextButton(
+                        onClick = {
+                            viewModel.dismissGameInfo()
+                            viewModel.onCancelGameTapped()
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Cancel game", color = Color.Red)
                     }
                 }
             },

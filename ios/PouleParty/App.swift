@@ -17,6 +17,7 @@ struct AppFeature {
         case chickenMap(ChickenMapFeature.State)
         case hunterMap(HunterMapFeature.State)
         case selection(SelectionFeature.State)
+        case victory(VictoryFeature.State)
     }
 
     enum Action {
@@ -24,6 +25,7 @@ struct AppFeature {
         case chickenMap(ChickenMapFeature.Action)
         case hunterMap(HunterMapFeature.Action)
         case selection(SelectionFeature.Action)
+        case victory(VictoryFeature.Action)
     }
 
     @Dependency(\.apiClient) var apiClient
@@ -57,7 +59,19 @@ struct AppFeature {
             case .hunterMap(.goToMenu):
                 state = AppFeature.State.selection(SelectionFeature.State())
                 return .none
-            case .chickenMap, .hunterMap, .selection:
+            case .hunterMap(.goToVictory):
+                if case let .hunterMap(hunterState) = state {
+                    state = .victory(VictoryFeature.State(
+                        game: hunterState.game,
+                        hunterId: hunterState.hunterId,
+                        hunterName: hunterState.hunterName
+                    ))
+                }
+                return .none
+            case .victory(.goToMenu):
+                state = AppFeature.State.selection(SelectionFeature.State())
+                return .none
+            case .chickenMap, .hunterMap, .selection, .victory:
                 return .none
             }
         }
@@ -72,6 +86,9 @@ struct AppFeature {
         }
         .ifCaseLet(\.selection, action: \.selection) {
             SelectionFeature()
+        }
+        .ifCaseLet(\.victory, action: \.victory) {
+            VictoryFeature()
         }
     }
 }
@@ -96,6 +113,10 @@ struct AppView: View {
         case .selection:
             if let store = store.scope(state: \.selection, action: \.selection) {
                 SelectionView(store: store)
+            }
+        case .victory:
+            if let store = store.scope(state: \.victory, action: \.victory) {
+                VictoryView(store: store)
             }
         }
     }

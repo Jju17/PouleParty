@@ -187,6 +187,14 @@ struct ChickenConfigView: View {
                 }
                 Slider(value: self.$store.game.radiusDeclinePerUpdate, in: 50...1000, step: 10)
             }
+            VStack(alignment: .leading) {
+                HStack {
+                    Text("Chicken head start")
+                    Spacer()
+                    Text("\(Int(self.store.game.chickenHeadStartMinutes)) minutes")
+                }
+                Slider(value: self.$store.game.chickenHeadStartMinutes, in: 0...45, step: 1)
+            }
         }
     }
 }

@@ -30,6 +30,11 @@ struct ChickenMapFeature {
         var mapCircle: CircleOverlay?
         var showGameInfo: Bool = false
         var winnerNotification: String? = nil
+        var countdownNumber: Int? = nil
+        var countdownText: String? = nil
+
+        var hasGameStarted: Bool { .now >= game.startDate }
+        var hasHuntStarted: Bool { .now >= game.hunterStartDate }
     }
 
     enum Action: BindableAction {
@@ -47,6 +52,7 @@ struct ChickenMapFeature {
         case dismissGameInfo
         case newLocationFetched(CLLocationCoordinate2D)
         case onTask
+        case dismissCountdown
         case setGameTriggered
         case timerTicked
     }
@@ -100,6 +106,10 @@ struct ChickenMapFeature {
                     await send(.goToMenu)
                 }
             case .destination:
+                return .none
+            case .dismissCountdown:
+                state.countdownNumber = nil
+                state.countdownText = nil
                 return .none
             case .dismissEndGameCode:
                 state.destination = nil
@@ -173,6 +183,7 @@ struct ChickenMapFeature {
             case .onTask:
                 let gameId = state.game.id
                 let gameMod = state.game.gameMod
+                let startDate = state.game.startDate
 
                 var effects: [Effect<Action>] = [
                     .run { send in
@@ -191,10 +202,20 @@ struct ChickenMapFeature {
 
                 // followTheChicken & mutualTracking: chicken sends position to hunters
                 // stayInTheZone: no position sharing, zone is fixed
+                // Gated behind startDate to avoid leaking position early
                 if gameMod != .stayInTheZone {
                     effects.append(
                         .run { send in
-                            var lastWrite = Date.distantPast
+                            let delay = startDate.timeIntervalSinceNow
+                            if delay > 0 {
+                                try await clock.sleep(for: .seconds(delay))
+                            }
+                            // Send current location immediately on connect
+                            if let currentLocation = locationClient.lastLocation() {
+                                await send(.newLocationFetched(currentLocation))
+                                try apiClient.setChickenLocation(gameId, currentLocation)
+                            }
+                            var lastWrite = Date.now
                             for await coordinate in locationClient.startTracking() {
                                 await send(.newLocationFetched(coordinate))
                                 if Date.now.timeIntervalSince(lastWrite) >= 5 {
@@ -207,9 +228,15 @@ struct ChickenMapFeature {
                 }
 
                 // mutualTracking: chicken can see all hunters
+                // Gated behind hunterStartDate (hunters aren't active until then)
                 if gameMod == .mutualTracking {
+                    let hunterStartDate = state.game.hunterStartDate
                     effects.append(
                         .run { send in
+                            let delay = hunterStartDate.timeIntervalSinceNow
+                            if delay > 0 {
+                                try await clock.sleep(for: .seconds(delay))
+                            }
                             for await hunters in apiClient.hunterLocationsStream(gameId) {
                                 await send(.hunterLocationsUpdated(hunters))
                             }
@@ -231,7 +258,39 @@ struct ChickenMapFeature {
             case .timerTicked:
                 state.nowDate = .now
 
+                // Pre-game countdown: 3, 2, 1, RUN!
+                let timeToStart = state.game.startDate.timeIntervalSinceNow
+                if timeToStart > 0 && timeToStart <= 3 {
+                    let number = Int(ceil(timeToStart))
+                    if state.countdownNumber != number {
+                        state.countdownNumber = number
+                        state.countdownText = nil
+                    }
+                } else if timeToStart <= 0 && timeToStart > -1 && state.countdownText == nil {
+                    state.countdownNumber = nil
+                    state.countdownText = "RUN! 🐔"
+                    return .run { send in
+                        try await clock.sleep(for: .seconds(1.5))
+                        await send(.dismissCountdown)
+                    }
+                }
+
+                // Notification when hunters start (only if head start > 0)
+                if state.game.chickenHeadStartMinutes > 0 {
+                    let timeToHuntStart = state.game.hunterStartDate.timeIntervalSinceNow
+                    if timeToHuntStart <= 0 && timeToHuntStart > -1 && state.countdownText == nil && state.countdownNumber == nil {
+                        state.countdownText = "🔍 Hunters incoming!"
+                        return .run { send in
+                            try await clock.sleep(for: .seconds(1.5))
+                            await send(.dismissCountdown)
+                        }
+                    }
+                }
+
                 guard state.destination == nil else { return .none }
+
+                // Don't process game-over or radius updates before hunt starts
+                guard state.hasHuntStarted else { return .none }
 
                 if .now >= state.game.endDate {
                     locationClient.stopTracking()
@@ -317,8 +376,10 @@ struct ChickenMapView: View {
                     .mapOverlayLevel(level: .aboveRoads)
             }
             UserAnnotation()
-            ForEach(self.store.hunterAnnotations) { hunter in
-                hunterAnnotationView(for: hunter)
+            if store.hasHuntStarted {
+                ForEach(self.store.hunterAnnotations) { hunter in
+                    hunterAnnotationView(for: hunter)
+                }
             }
         }
         .mapControls {
@@ -351,7 +412,7 @@ struct ChickenMapView: View {
             HStack {
                 VStack(alignment: .leading) {
                     Text("Radius : \(self.store.radius)m")
-                    CountdownView(nowDate: self.$store.nowDate, nextUpdateDate: self.$store.nextRadiusUpdate)
+                    CountdownView(nowDate: self.$store.nowDate, nextUpdateDate: self.$store.nextRadiusUpdate, chickenStartDate: store.game.startDate, hunterStartDate: store.game.hunterStartDate, isChicken: true)
                 }
                 Spacer()
                 Button {
@@ -364,20 +425,6 @@ struct ChickenMapView: View {
                             .font(Font.system(size: 11))
                             .fontWeight(.bold)
                             .foregroundStyle(.white)
-                    }
-                }
-                .frame(width: 50, height: 40)
-                Button {
-                    self.store.send(.cancelGameButtonTapped)
-                } label: {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 5)
-                            .fill(.red)
-                        Image(systemName: "stop.circle.fill")
-                            .resizable()
-                            .scaledToFit()
-                            .foregroundStyle(.white)
-                            .frame(width: 25, height: 25)
                     }
                 }
                 .frame(width: 50, height: 40)
@@ -420,7 +467,9 @@ struct ChickenMapView: View {
             get: { self.store.showGameInfo },
             set: { _ in self.store.send(.dismissGameInfo) }
         )) {
-            GameInfoSheet(game: self.store.game)
+            GameInfoSheet(game: self.store.game) {
+                self.store.send(.cancelGameButtonTapped)
+            }
         }
         .overlay(alignment: .top) {
             if let notification = store.winnerNotification {
@@ -435,6 +484,12 @@ struct ChickenMapView: View {
                     .transition(.move(edge: .top).combined(with: .opacity))
                     .animation(.easeInOut, value: store.winnerNotification)
             }
+        }
+        .overlay {
+            GameStartCountdownOverlay(
+                countdownNumber: store.countdownNumber,
+                countdownText: store.countdownText
+            )
         }
     }
 
@@ -451,6 +506,7 @@ struct ChickenMapView: View {
 
 private struct GameInfoSheet: View {
     let game: Game
+    var onCancelGame: () -> Void
     @State private var codeCopied = false
     @Environment(\.dismiss) private var dismiss
 
@@ -498,6 +554,19 @@ private struct GameInfoSheet: View {
                         Spacer()
                         Text(game.endDate, style: .time)
                             .foregroundStyle(.secondary)
+                    }
+                }
+
+                Section {
+                    Button(role: .destructive) {
+                        dismiss()
+                        onCancelGame()
+                    } label: {
+                        HStack {
+                            Spacer()
+                            Text("Cancel game")
+                            Spacer()
+                        }
                     }
                 }
             }

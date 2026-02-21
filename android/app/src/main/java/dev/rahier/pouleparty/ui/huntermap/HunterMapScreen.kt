@@ -15,14 +15,23 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.google.maps.android.compose.*
 import dev.rahier.pouleparty.ui.components.CountdownView
+import dev.rahier.pouleparty.ui.components.GameStartCountdownOverlay
 
 @Composable
 fun HunterMapScreen(
     onGoToMenu: () -> Unit,
+    onVictory: (gameId: String, hunterName: String, hunterId: String) -> Unit = { _, _, _ -> },
     viewModel: HunterMapViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // Navigate to victory screen when code is correct
+    LaunchedEffect(state.shouldNavigateToVictory) {
+        if (state.shouldNavigateToVictory) {
+            onVictory(viewModel.gameId, viewModel.hunterName, viewModel.hunterId)
+        }
+    }
 
     // Show winner notification as snackbar
     LaunchedEffect(state.winnerNotification) {
@@ -59,15 +68,17 @@ fun HunterMapScreen(
                     zoomControlsEnabled = false
                 )
             ) {
-                // Zone circle
-                state.circleCenter?.let { center ->
-                    Circle(
-                        center = center,
-                        radius = state.radius.toDouble(),
-                        fillColor = Color.Green.copy(alpha = 0.3f),
-                        strokeColor = Color.Green.copy(alpha = 0.7f),
-                        strokeWidth = 2f
-                    )
+                // Zone circle (only visible after game starts)
+                if (state.hasGameStarted) {
+                    state.circleCenter?.let { center ->
+                        Circle(
+                            center = center,
+                            radius = state.radius.toDouble(),
+                            fillColor = Color.Green.copy(alpha = 0.3f),
+                            strokeColor = Color.Green.copy(alpha = 0.7f),
+                            strokeWidth = 2f
+                        )
+                    }
                 }
             }
 
@@ -102,20 +113,25 @@ fun HunterMapScreen(
                     Text("Radius : ${state.radius}m")
                     CountdownView(
                         nowDate = state.nowDate,
-                        nextUpdateDate = state.nextRadiusUpdate
+                        nextUpdateDate = state.nextRadiusUpdate,
+                        chickenStartDate = state.game.startDate,
+                        hunterStartDate = state.game.hunterStartDate,
+                        isChicken = false
                     )
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    // FOUND button
-                    Button(
-                        onClick = { viewModel.onFoundButtonTapped() },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
-                        shape = RoundedCornerShape(5.dp),
-                        modifier = Modifier.size(width = 50.dp, height = 40.dp),
-                        contentPadding = PaddingValues(0.dp)
-                    ) {
-                        Text("FOUND", fontSize = 11.sp, color = Color.White)
+                    // FOUND button (only visible after game starts)
+                    if (state.hasGameStarted) {
+                        Button(
+                            onClick = { viewModel.onFoundButtonTapped() },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+                            shape = RoundedCornerShape(5.dp),
+                            modifier = Modifier.size(width = 50.dp, height = 40.dp),
+                            contentPadding = PaddingValues(0.dp)
+                        ) {
+                            Text("FOUND", fontSize = 11.sp, color = Color.White)
+                        }
                     }
 
                     // Quit button
@@ -124,6 +140,12 @@ fun HunterMapScreen(
                     }
                 }
             }
+
+            // Countdown overlay
+            GameStartCountdownOverlay(
+                countdownNumber = state.countdownNumber,
+                countdownText = state.countdownText
+            )
         }
     }
 

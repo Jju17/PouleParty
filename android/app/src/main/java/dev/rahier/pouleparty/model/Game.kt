@@ -15,8 +15,10 @@ data class Game(
     val initialCoordinates: GeoPoint = GeoPoint(50.8466, 4.3528),
     val initialRadius: Double = 1500.0,
     val radiusDeclinePerUpdate: Double = 100.0,
+    val chickenHeadStartMinutes: Double = 0.0, // In minutes, 0 = no head start
     val gameMod: String = GameMod.FOLLOW_THE_CHICKEN.firestoreValue,
     val foundCode: String = "",
+    val hunterIds: List<String> = emptyList(),
     val winners: List<Winner> = emptyList()
 ) {
     /** Computed: CLLocationCoordinate2D equivalent */
@@ -25,6 +27,7 @@ data class Game(
 
     val startDate: Date get() = startTimestamp.toDate()
     val endDate: Date get() = endTimestamp.toDate()
+    val hunterStartDate: Date get() = Date(startDate.time + (chickenHeadStartMinutes * 60 * 1000).toLong())
 
     /** Game code = first 6 chars of ID uppercased (matches iOS) */
     val gameCode: String
@@ -39,7 +42,7 @@ data class Game(
      * until we pass "now". Returns the next update date and current radius.
      */
     fun findLastUpdate(): Pair<Date, Int> {
-        var lastUpdate = startDate
+        var lastUpdate = hunterStartDate
         var lastRadius = initialRadius.toInt()
         val now = Date()
         val intervalMs = (radiusIntervalUpdate * 60 * 1000).toLong()
@@ -58,6 +61,7 @@ data class Game(
     fun withInitialLocation(latLng: LatLng): Game = copy(
         initialCoordinates = GeoPoint(latLng.latitude, latLng.longitude)
     )
+    fun withChickenHeadStart(minutes: Double): Game = copy(chickenHeadStartMinutes = minutes)
 
     companion object {
         fun generateFoundCode(): String = "%04d".format((0..9999).random())

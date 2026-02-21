@@ -33,7 +33,11 @@ data class HunterMapUiState(
     val enteredCode: String = "",
     val showWrongCodeAlert: Boolean = false,
     val previousWinnersCount: Int = 0,
-    val winnerNotification: String? = null
+    val winnerNotification: String? = null,
+    val shouldNavigateToVictory: Boolean = false,
+    val hasGameStarted: Boolean = false,
+    val countdownNumber: Int? = null,
+    val countdownText: String? = null
 )
 
 @HiltViewModel
@@ -43,9 +47,9 @@ class HunterMapViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    private val gameId: String = savedStateHandle["gameId"] ?: ""
-    private val hunterName: String = savedStateHandle["hunterName"] ?: "Hunter"
-    private val hunterId: String = UUID.randomUUID().toString()
+    val gameId: String = savedStateHandle["gameId"] ?: ""
+    val hunterName: String = savedStateHandle["hunterName"] ?: "Hunter"
+    val hunterId: String = UUID.randomUUID().toString()
 
     private val _uiState = MutableStateFlow(HunterMapUiState())
     val uiState: StateFlow<HunterMapUiState> = _uiState.asStateFlow()
@@ -62,10 +66,10 @@ class HunterMapViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(
                 game = game,
                 radius = lastRadius,
-                nextRadiusUpdate = lastUpdate,
-                circleCenter = game.initialLocation
+                nextRadiusUpdate = lastUpdate
             )
 
+            firestoreRepository.registerHunter(gameId, hunterId)
             startTimer()
             startGameConfigStream(game)
             startChickenLocationStream(game)
@@ -78,9 +82,44 @@ class HunterMapViewModel @Inject constructor(
             while (true) {
                 delay(1000)
                 val state = _uiState.value
-                _uiState.value = state.copy(nowDate = Date())
+                val now = Date()
+                val gameStarted = now.after(state.game.hunterStartDate) || now == state.game.hunterStartDate
+                _uiState.value = state.copy(nowDate = now, hasGameStarted = gameStarted)
+
+                // Phase 1: Chicken departure countdown (only if head start > 0)
+                if (state.game.chickenHeadStartMinutes > 0) {
+                    val timeToChickenMs = state.game.startDate.time - now.time
+                    val timeToChickenSec = timeToChickenMs / 1000.0
+                    if (timeToChickenSec in 0.0..3.0) {
+                        val number = kotlin.math.ceil(timeToChickenSec).toInt()
+                        if (number > 0 && _uiState.value.countdownNumber != number) {
+                            _uiState.value = _uiState.value.copy(countdownNumber = number, countdownText = null)
+                        }
+                    } else if (timeToChickenSec <= 0 && timeToChickenSec > -1 && _uiState.value.countdownText == null) {
+                        _uiState.value = _uiState.value.copy(countdownNumber = null, countdownText = "\uD83D\uDC14 is hiding!")
+                        delay(1500)
+                        _uiState.value = _uiState.value.copy(countdownText = null)
+                    }
+                }
+
+                // Phase 2: Hunt start countdown: 3, 2, 1, LET'S HUNT!
+                val timeToHuntMs = state.game.hunterStartDate.time - now.time
+                val timeToHuntSec = timeToHuntMs / 1000.0
+                if (timeToHuntSec in 0.0..3.0) {
+                    val number = kotlin.math.ceil(timeToHuntSec).toInt()
+                    if (number > 0 && _uiState.value.countdownNumber != number) {
+                        _uiState.value = _uiState.value.copy(countdownNumber = number, countdownText = null)
+                    }
+                } else if (timeToHuntSec <= 0 && timeToHuntSec > -1 && _uiState.value.countdownText == null) {
+                    _uiState.value = _uiState.value.copy(countdownNumber = null, countdownText = "LET'S HUNT! \uD83D\uDD0D")
+                    delay(1500)
+                    _uiState.value = _uiState.value.copy(countdownText = null)
+                }
 
                 if (state.showGameOverAlert) continue
+
+                // Don't process game-over or radius updates before hunt starts
+                if (!gameStarted) continue
 
                 if (Date().after(state.game.endDate)) {
                     _uiState.value = _uiState.value.copy(
@@ -165,6 +204,8 @@ class HunterMapViewModel @Inject constructor(
         if (game.gameModEnum == GameMod.STAY_IN_THE_ZONE) return
 
         viewModelScope.launch {
+            val delayMs = game.hunterStartDate.time - System.currentTimeMillis()
+            if (delayMs > 0) delay(delayMs)
             firestoreRepository.chickenLocationFlow(gameId).collect { location ->
                 if (location != null) {
                     _uiState.value = _uiState.value.copy(circleCenter = location)
@@ -181,7 +222,15 @@ class HunterMapViewModel @Inject constructor(
         if (game.gameModEnum != GameMod.MUTUAL_TRACKING) return
 
         viewModelScope.launch {
-            var lastWrite = Date(0)
+            val delayMs = game.hunterStartDate.time - System.currentTimeMillis()
+            if (delayMs > 0) delay(delayMs)
+
+            // Send current location immediately on connect
+            locationRepository.getLastLocation()?.let { latLng ->
+                firestoreRepository.setHunterLocation(gameId, hunterId, latLng)
+            }
+
+            var lastWrite = Date()
             locationRepository.locationFlow().collect { latLng ->
                 if (Date().time - lastWrite.time >= 5000) {
                     firestoreRepository.setHunterLocation(gameId, hunterId, latLng)
@@ -219,6 +268,7 @@ class HunterMapViewModel @Inject constructor(
                 timestamp = Timestamp.now()
             )
             firestoreRepository.addWinner(gameId, winner)
+            _uiState.value = _uiState.value.copy(shouldNavigateToVictory = true)
         }
     }
 

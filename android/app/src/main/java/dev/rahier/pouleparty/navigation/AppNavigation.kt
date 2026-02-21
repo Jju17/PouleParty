@@ -16,6 +16,7 @@ import dev.rahier.pouleparty.ui.chickenmap.ChickenMapScreen
 import dev.rahier.pouleparty.ui.huntermap.HunterMapScreen
 import dev.rahier.pouleparty.ui.onboarding.OnboardingScreen
 import dev.rahier.pouleparty.ui.selection.SelectionScreen
+import dev.rahier.pouleparty.ui.victory.VictoryScreen
 
 object Routes {
     const val ONBOARDING = "onboarding"
@@ -23,10 +24,13 @@ object Routes {
     const val CHICKEN_CONFIG = "chicken_config/{gameId}"
     const val CHICKEN_MAP = "chicken_map/{gameId}"
     const val HUNTER_MAP = "hunter_map/{gameId}/{hunterName}"
+    const val VICTORY = "victory/{gameId}/{hunterName}/{hunterId}"
 
     fun chickenConfig(gameId: String) = "chicken_config/$gameId"
     fun chickenMap(gameId: String) = "chicken_map/$gameId"
     fun hunterMap(gameId: String, hunterName: String) = "hunter_map/$gameId/${Uri.encode(hunterName)}"
+    fun victory(gameId: String, hunterName: String, hunterId: String) =
+        "victory/$gameId/${Uri.encode(hunterName)}/${Uri.encode(hunterId)}"
 }
 
 @Composable
@@ -106,6 +110,28 @@ fun AppNavigation() {
             )
         ) {
             HunterMapScreen(
+                onGoToMenu = {
+                    navController.navigate(Routes.SELECTION) {
+                        popUpTo(Routes.SELECTION) { inclusive = true }
+                    }
+                },
+                onVictory = { gameId, hunterName, hunterId ->
+                    navController.navigate(Routes.victory(gameId, hunterName, hunterId)) {
+                        popUpTo(Routes.SELECTION) { inclusive = false }
+                    }
+                }
+            )
+        }
+
+        composable(
+            route = Routes.VICTORY,
+            arguments = listOf(
+                navArgument("gameId") { type = NavType.StringType },
+                navArgument("hunterName") { type = NavType.StringType },
+                navArgument("hunterId") { type = NavType.StringType }
+            )
+        ) {
+            VictoryScreen(
                 onGoToMenu = {
                     navController.navigate(Routes.SELECTION) {
                         popUpTo(Routes.SELECTION) { inclusive = true }

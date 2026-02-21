@@ -25,8 +25,10 @@ struct Game: Codable, Equatable {
     private(set) var initialCoordinates: GeoPoint = .init(latitude: 50.8466, longitude: 4.3528)
     var initialRadius: Double = 1500
     var radiusDeclinePerUpdate: Double = 100
+    var chickenHeadStartMinutes: Double = 0 // In minutes, 0 = no head start
     var gameMod: GameMod = .followTheChicken
     var foundCode: String = ""
+    var hunterIds: [String] = []
     var winners: [Winner] = []
 
     enum GameMod: String, CaseIterable, Equatable, Codable {
@@ -76,6 +78,10 @@ extension Game {
         }
     }
 
+    var hunterStartDate: Date {
+        startDate.addingTimeInterval(chickenHeadStartMinutes * 60)
+    }
+
     var gameCode: String {
         String(id.prefix(6)).uppercased()
     }
@@ -85,7 +91,7 @@ extension Game {
     }
 
     func findLastUpdate() -> (Date, Int) {
-        var lastUpdate: Date = self.startDate
+        var lastUpdate: Date = self.hunterStartDate
         var lastRadius: Int = Int(self.initialRadius)
 
         while lastUpdate.addingTimeInterval(TimeInterval(self.radiusIntervalUpdate * 60)) < .now {
@@ -110,6 +116,7 @@ extension Game {
             initialCoordinates: GeoPoint(latitude: 50.8466, longitude: 4.3528),
             initialRadius: 1500,
             radiusDeclinePerUpdate: 100,
+            chickenHeadStartMinutes: 0,
             gameMod: .followTheChicken,
             foundCode: "1234"
         )

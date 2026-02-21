@@ -120,6 +120,7 @@ struct SelectionFeature {
             case let .initialLocationResolved(location):
                 var game = Game(id: UUID().uuidString)
                 game.foundCode = Game.generateFoundCode()
+                game.chickenHeadStartMinutes = 5
                 if let location {
                     game.initialLocation = location
                 }

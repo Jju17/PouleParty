@@ -10,6 +10,7 @@ import CoreLocation
 
 struct LocationClient {
     var authorizationStatus: () -> CLAuthorizationStatus
+    var lastLocation: () -> CLLocationCoordinate2D?
     var requestWhenInUse: () async -> Void
     var requestAlways: () async -> Void
     var startTracking: () -> AsyncStream<CLLocationCoordinate2D>
@@ -22,6 +23,9 @@ extension LocationClient: DependencyKey {
         return LocationClient(
             authorizationStatus: {
                 manager.currentAuthorizationStatus
+            },
+            lastLocation: {
+                manager.lastLocation
             },
             requestWhenInUse: {
                 await manager.requestWhenInUse()
@@ -53,6 +57,10 @@ private final class LiveLocationManager: NSObject, CLLocationManagerDelegate {
 
     var currentAuthorizationStatus: CLAuthorizationStatus {
         locationManager.authorizationStatus
+    }
+
+    var lastLocation: CLLocationCoordinate2D? {
+        locationManager.location?.coordinate
     }
 
     override init() {

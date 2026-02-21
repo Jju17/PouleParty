@@ -38,7 +38,11 @@ data class ChickenMapUiState(
     val codeCopied: Boolean = false,
     val showFoundCode: Boolean = false,
     val previousWinnersCount: Int = 0,
-    val winnerNotification: String? = null
+    val winnerNotification: String? = null,
+    val hasGameStarted: Boolean = false,
+    val hasHuntStarted: Boolean = false,
+    val countdownNumber: Int? = null,
+    val countdownText: String? = null
 )
 
 @HiltViewModel
@@ -81,9 +85,42 @@ class ChickenMapViewModel @Inject constructor(
             while (true) {
                 delay(1000)
                 val state = _uiState.value
-                _uiState.value = state.copy(nowDate = Date())
+                val now = Date()
+                val gameStarted = now.after(state.game.startDate) || now == state.game.startDate
+                val huntStarted = now.after(state.game.hunterStartDate) || now == state.game.hunterStartDate
+                _uiState.value = state.copy(nowDate = now, hasGameStarted = gameStarted, hasHuntStarted = huntStarted)
+
+                // Pre-game countdown: 3, 2, 1, RUN!
+                val timeToStartMs = state.game.startDate.time - now.time
+                val timeToStartSec = timeToStartMs / 1000.0
+                if (timeToStartSec in 0.0..3.0) {
+                    val number = kotlin.math.ceil(timeToStartSec).toInt()
+                    if (number > 0 && _uiState.value.countdownNumber != number) {
+                        _uiState.value = _uiState.value.copy(countdownNumber = number, countdownText = null)
+                    }
+                } else if (timeToStartSec <= 0 && timeToStartSec > -1 && _uiState.value.countdownText == null) {
+                    _uiState.value = _uiState.value.copy(countdownNumber = null, countdownText = "RUN! \uD83D\uDC14")
+                    delay(1500)
+                    _uiState.value = _uiState.value.copy(countdownText = null)
+                }
+
+                // Notification when hunters start (only if head start > 0)
+                if (state.game.chickenHeadStartMinutes > 0) {
+                    val timeToHuntMs = state.game.hunterStartDate.time - now.time
+                    val timeToHuntSec = timeToHuntMs / 1000.0
+                    if (timeToHuntSec <= 0 && timeToHuntSec > -1
+                        && _uiState.value.countdownText == null
+                        && _uiState.value.countdownNumber == null) {
+                        _uiState.value = _uiState.value.copy(countdownText = "\uD83D\uDD0D Hunters incoming!")
+                        delay(1500)
+                        _uiState.value = _uiState.value.copy(countdownText = null)
+                    }
+                }
 
                 if (state.showGameOverAlert) continue
+
+                // Don't process game-over or radius updates before hunt starts
+                if (!huntStarted) continue
 
                 if (Date().after(state.game.endDate)) {
                     _uiState.value = _uiState.value.copy(
@@ -130,7 +167,16 @@ class ChickenMapViewModel @Inject constructor(
         if (game.gameModEnum == GameMod.STAY_IN_THE_ZONE) return
 
         viewModelScope.launch {
-            var lastWrite = Date(0)
+            val delayMs = game.startDate.time - System.currentTimeMillis()
+            if (delayMs > 0) delay(delayMs)
+
+            // Send current location immediately on connect
+            locationRepository.getLastLocation()?.let { latLng ->
+                _uiState.value = _uiState.value.copy(circleCenter = latLng)
+                firestoreRepository.setChickenLocation(gameId, latLng)
+            }
+
+            var lastWrite = Date()
             locationRepository.locationFlow().collect { latLng ->
                 _uiState.value = _uiState.value.copy(circleCenter = latLng)
 
@@ -145,11 +191,14 @@ class ChickenMapViewModel @Inject constructor(
 
     /**
      * In mutualTracking mode, chicken can see all hunter positions.
+     * Gated behind hunterStartDate (hunters aren't active until then).
      */
     private fun startHunterTracking(game: Game) {
         if (game.gameModEnum != GameMod.MUTUAL_TRACKING) return
 
         viewModelScope.launch {
+            val delayMs = game.hunterStartDate.time - System.currentTimeMillis()
+            if (delayMs > 0) delay(delayMs)
             firestoreRepository.hunterLocationsFlow(gameId).collect { hunters ->
                 val sorted = hunters.sortedBy { it.hunterId }
                 val annotations = sorted.mapIndexed { index, hunter ->

@@ -15,6 +15,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -35,6 +36,19 @@ class LocationRepository @Inject constructor(
             context,
             Manifest.permission.ACCESS_BACKGROUND_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
+
+    /**
+     * Get the last known location, or null if unavailable.
+     */
+    @Suppress("MissingPermission")
+    suspend fun getLastLocation(): LatLng? {
+        return try {
+            val location = fusedLocationClient.lastLocation.await()
+            if (location != null) LatLng(location.latitude, location.longitude) else null
+        } catch (_: Exception) {
+            null
+        }
+    }
 
     /**
      * Emit user location as Flow<LatLng>.

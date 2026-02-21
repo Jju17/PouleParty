@@ -167,6 +167,25 @@ fun ChickenConfigScreen(
                 }
             }
 
+            // Chicken head start slider
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Chicken head start")
+                        Text("${state.game.chickenHeadStartMinutes.toInt()} minutes")
+                    }
+                    Slider(
+                        value = state.game.chickenHeadStartMinutes.toFloat(),
+                        onValueChange = { viewModel.updateChickenHeadStart(it.toDouble()) },
+                        valueRange = 0f..45f,
+                        steps = 44
+                    )
+                }
+            }
+
             Spacer(Modifier.weight(1f))
 
             // Start game button

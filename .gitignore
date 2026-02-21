@@ -6,6 +6,7 @@
 GoogleService-Info.plist
 *.xcbkptlist
 *.resolved
+xcuserdata/
 
 # === Android ===
 android/.gradle/
@@ -19,6 +20,7 @@ android/app/google-services.json
 
 # === IDE ===
 .idea/
+android/.idea/
 *.iml
 
 # === macOS ===
