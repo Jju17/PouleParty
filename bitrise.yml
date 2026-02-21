@@ -18,7 +18,6 @@ workflows:
     steps:
     - git-clone@8: {}
     - restore-spm-cache@2: {}
-    - save-spm-cache@1: {}
     - set-xcode-build-number@2: {}
     - script@1:
         title: Restore GoogleService-Info.plist
@@ -26,30 +25,12 @@ workflows:
         - content: |
             #!/bin/bash
             set -e
-            echo "$GOOGLE_SERVICE_INFO_PLIST_BASE64" | base64 --decode > "$BITRISE_SOURCE_DIR/ios/PouleParty/GoogleService-Info.plist"
+            echo "$GOOGLE_SERVICE_INFO_PLIST_BASE64" | base64 --decode > "$BITRISE_SOURCE_DIR/ios/GoogleService-Info.plist"
             echo "GoogleService-Info.plist restored successfully"
     - script@1:
         inputs:
         - content: defaults write com.apple.dt.Xcode
             IDESkipPackagePluginFingerprintValidatation -bool YES
-    - script@1:
-        title: Configure code signing for CI
-        inputs:
-        - content: |
-            #!/bin/bash
-            set -e
-            PBXPROJ="$BITRISE_SOURCE_DIR/ios/PouleParty.xcodeproj/project.pbxproj"
-
-            # Switch from Automatic to Manual signing
-            sed -i '' 's/CODE_SIGN_STYLE = Automatic/CODE_SIGN_STYLE = Manual/g' "$PBXPROJ"
-
-            # Switch from Development to Distribution identity
-            sed -i '' 's/CODE_SIGN_IDENTITY = "Apple Development"/CODE_SIGN_IDENTITY = "Apple Distribution"/g' "$PBXPROJ"
-
-            # Set provisioning profile
-            sed -i '' 's/PROVISIONING_PROFILE_SPECIFIER = ""/PROVISIONING_PROFILE_SPECIFIER = "PouleParty"/g' "$PBXPROJ"
-
-            echo "Code signing configured for CI distribution"
     - xcode-archive@5:
         inputs:
         - project_path: "$BITRISE_PROJECT_PATH"
@@ -57,8 +38,9 @@ workflows:
         - xcodebuild_options: "-skipPackagePluginValidation -skipMacroValidation"
         - distribution_method: app-store
         - automatic_code_signing: api-key
+    - save-spm-cache@1: {}
     - deploy-to-bitrise-io@2: {}
-    - deploy-to-itunesconnect-application-loader@1:
+    - deploy-to-itunesconnect-application-loader@2:
         inputs:
         - itunescon_user: "$apple_id_email"
         - password: "$apple_id_password"
