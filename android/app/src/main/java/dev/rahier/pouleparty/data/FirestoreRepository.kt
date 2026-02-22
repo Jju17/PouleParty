@@ -44,7 +44,9 @@ class FirestoreRepository @Inject constructor(
     }
 
     fun setConfig(game: Game) {
-        firestore.collection("games").document(game.id).set(game)
+        val ref = firestore.collection("games").document(game.id)
+        ref.set(game)
+        ref.update("gameCode", game.gameCode)
     }
 
     suspend fun addWinner(gameId: String, winner: Winner) {

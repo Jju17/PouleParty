@@ -1,15 +1,16 @@
 package dev.rahier.pouleparty.ui.selection
 
+import android.content.SharedPreferences
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.rahier.pouleparty.data.FirestoreRepository
+import dev.rahier.pouleparty.data.LocationRepository
 import dev.rahier.pouleparty.model.GameStatus
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.util.Date
 import java.util.UUID
 import javax.inject.Inject
 
@@ -19,6 +20,7 @@ data class SelectionUiState(
     val isShowingGameRules: Boolean = false,
     val isShowingGameNotFound: Boolean = false,
     val isShowingGameInProgress: Boolean = false,
+    val isShowingLocationRequired: Boolean = false,
     val password: String = "",
     val gameCode: String = "",
     val hunterName: String = ""
@@ -26,13 +28,19 @@ data class SelectionUiState(
 
 @HiltViewModel
 class SelectionViewModel @Inject constructor(
-    private val firestoreRepository: FirestoreRepository
+    private val firestoreRepository: FirestoreRepository,
+    private val locationRepository: LocationRepository,
+    private val prefs: SharedPreferences
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SelectionUiState())
     val uiState: StateFlow<SelectionUiState> = _uiState.asStateFlow()
 
     fun onStartButtonTapped() {
+        if (!locationRepository.hasFineLocationPermission()) {
+            _uiState.value = _uiState.value.copy(isShowingLocationRequired = true)
+            return
+        }
         _uiState.value = _uiState.value.copy(isShowingJoinDialog = true)
     }
 
@@ -56,10 +64,6 @@ class SelectionViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(password = password)
     }
 
-    fun onIAmLaPouleTapped() {
-        _uiState.value = _uiState.value.copy(isShowingPasswordDialog = true)
-    }
-
     fun onRulesTapped() {
         _uiState.value = _uiState.value.copy(isShowingGameRules = true)
     }
@@ -74,6 +78,18 @@ class SelectionViewModel @Inject constructor(
 
     fun onGameInProgressDismissed() {
         _uiState.value = _uiState.value.copy(isShowingGameInProgress = false)
+    }
+
+    fun onLocationRequiredDismissed() {
+        _uiState.value = _uiState.value.copy(isShowingLocationRequired = false)
+    }
+
+    fun onIAmLaPouleTapped() {
+        if (!locationRepository.hasFineLocationPermission()) {
+            _uiState.value = _uiState.value.copy(isShowingLocationRequired = true)
+            return
+        }
+        _uiState.value = _uiState.value.copy(isShowingPasswordDialog = true)
     }
 
     /**
@@ -96,8 +112,9 @@ class SelectionViewModel @Inject constructor(
         val code = _uiState.value.gameCode.trim()
         if (code.isEmpty()) return
 
-        val hunterName = _uiState.value.hunterName.trim().ifEmpty { "Hunter" }
-        _uiState.value = _uiState.value.copy(isShowingJoinDialog = false, gameCode = "", hunterName = "")
+        val savedNickname = (prefs.getString("userNickname", "") ?: "").trim()
+        val hunterName = savedNickname.ifEmpty { "Hunter" }
+        _uiState.value = _uiState.value.copy(isShowingJoinDialog = false, gameCode = "")
 
         viewModelScope.launch {
             val game = firestoreRepository.findGameByCode(code)

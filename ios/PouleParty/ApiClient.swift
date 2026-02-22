@@ -33,7 +33,7 @@ extension ApiClient: DependencyKey {
                     [
                         "hunterId": winner.hunterId,
                         "hunterName": winner.hunterName,
-                        "timestamp": winner.timestamp
+                        "timestamp": Timestamp(date: winner.timestamp)
                     ] as [String: Any]
                 ])
             ])
@@ -142,7 +142,9 @@ extension ApiClient: DependencyKey {
             try ref.setData(from: chickenLocation)
         },
         setConfig: { newGame in
-            try Firestore.firestore().collection("games").document(newGame.id).setData(from: newGame)
+            let ref = Firestore.firestore().collection("games").document(newGame.id)
+            try ref.setData(from: newGame)
+            ref.updateData(["gameCode": newGame.gameCode])
         },
         setHunterLocation: { gameId, hunterId, coordinate in
             let hunterLocation = HunterLocation(

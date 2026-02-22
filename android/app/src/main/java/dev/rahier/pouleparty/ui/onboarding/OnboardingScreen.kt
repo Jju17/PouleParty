@@ -11,10 +11,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,7 +27,7 @@ import dev.rahier.pouleparty.ui.theme.*
 
 @Composable
 fun OnboardingScreen(
-    onOnboardingCompleted: () -> Unit,
+    onOnboardingCompleted: (String) -> Unit,
     viewModel: OnboardingViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -43,7 +40,17 @@ fun OnboardingScreen(
         }
     }
     LaunchedEffect(pagerState.currentPage) {
-        viewModel.setPage(pagerState.currentPage)
+        val page = pagerState.currentPage
+        val s = viewModel.uiState.value
+
+        val isBlocked = (page > 3 && !s.hasFineLocation) ||
+                (page > 4 && s.nickname.trim().isEmpty())
+
+        if (isBlocked) {
+            pagerState.scrollToPage(s.currentPage)
+        } else {
+            viewModel.setPage(page)
+        }
     }
 
     // Permission launchers
@@ -84,7 +91,12 @@ fun OnboardingScreen(
                         }
                     }
                 )
-                4 -> SlideReady()
+                4 -> SlideNickname(
+                    nickname = state.nickname,
+                    maxLength = OnboardingViewModel.NICKNAME_MAX_LENGTH,
+                    onNicknameChanged = { viewModel.onNicknameChanged(it) }
+                )
+                5 -> SlideReady()
             }
         }
 
@@ -131,15 +143,25 @@ fun OnboardingScreen(
                     Spacer(Modifier.width(1.dp))
                 }
 
+                val isLocationPageBlocked = state.currentPage == 3 && !state.hasFineLocation
+                val isNicknamePageEmpty = state.currentPage == 4 && state.nickname.trim().isEmpty()
+                val isNextDisabled = isLocationPageBlocked || isNicknamePageEmpty
                 Button(
                     onClick = {
                         if (viewModel.isLastPage) {
-                            onOnboardingCompleted()
+                            if (viewModel.canCompleteOnboarding()) {
+                                onOnboardingCompleted(state.nickname.trim())
+                            }
                         } else {
                             viewModel.nextPage()
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = CROrange),
+                    enabled = !isNextDisabled,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = CROrange,
+                        disabledContainerColor = CROrange.copy(alpha = 0.4f),
+                        disabledContentColor = Color.White.copy(alpha = 0.6f)
+                    ),
                     shape = RoundedCornerShape(50)
                 ) {
                     Text(
@@ -152,10 +174,30 @@ fun OnboardingScreen(
             }
         }
     }
+
+    // Location required alert
+    if (state.showLocationAlert) {
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissLocationAlert() },
+            title = { Text("Location Required") },
+            text = { Text("Location is the core of PouleParty! Your position is anonymous and only used during the game. Please enable location access to continue.") },
+            confirmButton = {
+                TextButton(onClick = { viewModel.dismissLocationAlert() }) { Text("OK") }
+            }
+        )
+    }
 }
 
+// MARK: - Generic Slide Layout
+
 @Composable
-private fun SlideWelcome() {
+private fun OnboardingSlideLayout(
+    title: String,
+    subtitle: String? = null,
+    titleSize: Int = 32,
+    icon: @Composable () -> Unit,
+    extraContent: @Composable ColumnScope.() -> Unit = {}
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -163,80 +205,61 @@ private fun SlideWelcome() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Image(
-            painter = painterResource(R.drawable.logo),
-            contentDescription = "Logo",
-            modifier = Modifier.size(160.dp)
-        )
+        icon()
         Spacer(Modifier.height(24.dp))
         Text(
-            "Welcome to\nPouleParty!",
-            style = bangerStyle(36),
+            title,
+            style = bangerStyle(titleSize),
             textAlign = TextAlign.Center,
             color = Color.Black
         )
-        Spacer(Modifier.height(16.dp))
-        Text(
-            "The ultimate hide-and-seek\npub crawl game",
-            style = bangerStyle(18),
-            textAlign = TextAlign.Center,
-            color = Color.Black.copy(alpha = 0.6f)
-        )
+        if (subtitle != null) {
+            Spacer(Modifier.height(16.dp))
+            Text(
+                subtitle,
+                style = bangerStyle(18),
+                textAlign = TextAlign.Center,
+                color = Color.Black.copy(alpha = 0.6f)
+            )
+        }
+        extraContent()
     }
+}
+
+// MARK: - Slides
+
+@Composable
+private fun SlideWelcome() {
+    OnboardingSlideLayout(
+        title = "Welcome to\nPouleParty!",
+        subtitle = "The ultimate hide-and-seek\npub crawl game",
+        titleSize = 36,
+        icon = {
+            Image(
+                painter = painterResource(R.drawable.logo),
+                contentDescription = "Logo",
+                modifier = Modifier.size(160.dp)
+            )
+        }
+    )
 }
 
 @Composable
 private fun SlideNominateChicken() {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 40.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text("\uD83D\uDC14", fontSize = 80.sp)
-        Spacer(Modifier.height(24.dp))
-        Text(
-            "Nominate a Chicken",
-            style = bangerStyle(32),
-            textAlign = TextAlign.Center,
-            color = Color.Black
-        )
-        Spacer(Modifier.height(16.dp))
-        Text(
-            "Pick the Stag, the Birthday Girl, or whoever just really wants to be a Chicken.\n\nTheir job is to hide.",
-            style = bangerStyle(18),
-            textAlign = TextAlign.Center,
-            color = Color.Black.copy(alpha = 0.6f)
-        )
-    }
+    OnboardingSlideLayout(
+        title = "Nominate a Chicken",
+        subtitle = "Pick the Stag, the Birthday Girl, or whoever just really wants to be a Chicken.\n\nTheir job is to hide.",
+        icon = { Text("\uD83D\uDC14", fontSize = 80.sp) }
+    )
 }
 
 @Composable
 private fun SlideHuntThemDown() {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 40.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text("\uD83D\uDDFA\uFE0F", fontSize = 80.sp)
-        Spacer(Modifier.height(24.dp))
-        Text(
-            "Hunt Them Down",
-            style = bangerStyle(32),
-            textAlign = TextAlign.Center,
-            color = Color.Black
-        )
-        Spacer(Modifier.height(16.dp))
-        Text(
-            "Split into squads. Use the map to track them.\n\nThe Chicken could be hiding in any pub or bar.",
-            style = bangerStyle(18),
-            textAlign = TextAlign.Center,
-            color = Color.Black.copy(alpha = 0.6f)
-        )
-    }
+    OnboardingSlideLayout(
+        title = "Hunt Them Down",
+        subtitle = "Split into squads. Use the map to track them.\n\nThe Chicken could be hiding in any pub or bar.",
+        icon = { Text("\uD83D\uDDFA\uFE0F", fontSize = 80.sp) }
+    )
 }
 
 @Composable
@@ -246,28 +269,16 @@ private fun SlideLocation(
     onRequestFineLocation: () -> Unit,
     onRequestBackgroundLocation: () -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 40.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+    val emoji = when {
+        hasBackgroundLocation -> "\uD83D\uDCCD"
+        hasFineLocation -> "\uD83D\uDC40"
+        else -> "\uD83D\uDE22"
+    }
+    OnboardingSlideLayout(
+        title = "We Need Your Location",
+        icon = { Text(emoji, fontSize = 80.sp) }
     ) {
-        val emoji = when {
-            hasBackgroundLocation -> "\uD83D\uDCCD"
-            hasFineLocation -> "\uD83D\uDC40"
-            else -> "\uD83D\uDE22"
-        }
-        Text(emoji, fontSize = 80.sp)
-        Spacer(Modifier.height(24.dp))
-        Text(
-            "We Need Your Location",
-            style = bangerStyle(32),
-            textAlign = TextAlign.Center,
-            color = Color.Black
-        )
         Spacer(Modifier.height(16.dp))
-
         when {
             hasBackgroundLocation -> {
                 Text(
@@ -277,7 +288,7 @@ private fun SlideLocation(
                     color = Color.Black.copy(alpha = 0.6f)
                 )
                 Spacer(Modifier.height(16.dp))
-                Text("✅ Always allowed!", style = bangerStyle(20), color = Color(0xFF4CAF50))
+                Text("\u2705 Always allowed!", style = bangerStyle(20), color = Color(0xFF4CAF50))
             }
             hasFineLocation -> {
                 Text(
@@ -316,28 +327,39 @@ private fun SlideLocation(
 }
 
 @Composable
-private fun SlideReady() {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 40.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+private fun SlideNickname(
+    nickname: String,
+    maxLength: Int,
+    onNicknameChanged: (String) -> Unit
+) {
+    OnboardingSlideLayout(
+        title = "Choose Your Nickname",
+        subtitle = "This is how other players\nwill see you in the game.",
+        icon = { Text("\uD83C\uDFF7\uFE0F", fontSize = 80.sp) }
     ) {
-        Text("\uD83C\uDF89", fontSize = 80.sp)
         Spacer(Modifier.height(24.dp))
-        Text(
-            "The Endgame",
-            style = bangerStyle(32),
-            textAlign = TextAlign.Center,
-            color = Color.Black
+        OutlinedTextField(
+            value = nickname,
+            onValueChange = onNicknameChanged,
+            label = { Text("Your nickname") },
+            singleLine = true,
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
         )
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(8.dp))
         Text(
-            "Close in on the Chicken. Complete challenges for points. Unleash weapons.\n\nIt's Mario Kart rules — anything goes.",
-            style = bangerStyle(18),
-            textAlign = TextAlign.Center,
-            color = Color.Black.copy(alpha = 0.6f)
+            "${nickname.length}/$maxLength",
+            style = bangerStyle(14),
+            color = Color.Black.copy(alpha = 0.4f)
         )
     }
+}
+
+@Composable
+private fun SlideReady() {
+    OnboardingSlideLayout(
+        title = "The Endgame",
+        subtitle = "Close in on the Chicken. Complete challenges for points. Unleash weapons.\n\nIt's Mario Kart rules \u2014 anything goes.",
+        icon = { Text("\uD83C\uDF89", fontSize = 80.sp) }
+    )
 }

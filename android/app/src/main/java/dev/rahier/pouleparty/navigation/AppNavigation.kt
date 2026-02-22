@@ -46,8 +46,11 @@ fun AppNavigation() {
 
         composable(Routes.ONBOARDING) {
             OnboardingScreen(
-                onOnboardingCompleted = {
-                    prefs.edit().putBoolean("hasCompletedOnboarding", true).apply()
+                onOnboardingCompleted = { nickname ->
+                    prefs.edit()
+                        .putBoolean("hasCompletedOnboarding", true)
+                        .putString("userNickname", nickname)
+                        .apply()
                     navController.navigate(Routes.SELECTION) {
                         popUpTo(Routes.ONBOARDING) { inclusive = true }
                     }

@@ -16,20 +16,26 @@ struct OnboardingFeature {
     struct State: Equatable {
         var currentPage: Int = 0
         var locationAuthorizationStatus: CLAuthorizationStatus = .notDetermined
+        var nickname: String = ""
+        var showLocationAlert: Bool = false
     }
 
     enum Action {
         case nextButtonTapped
         case backButtonTapped
         case pageChanged(Int)
+        case nicknameChanged(String)
         case requestWhenInUsePermission
         case requestAlwaysPermission
         case locationAuthorizationUpdated(CLAuthorizationStatus)
+        case dismissLocationAlert
         case onboardingCompleted
         case onTask
+        case snapBackToPage(Int)
     }
 
-    static let totalPages = 5
+    static let totalPages = 6
+    static let nicknameMaxLength = 20
 
     @Dependency(\.locationClient) var locationClient
 
@@ -40,9 +46,26 @@ struct OnboardingFeature {
                 state.locationAuthorizationStatus = locationClient.authorizationStatus()
                 return .none
             case .nextButtonTapped:
+                // Block on location slide if not at least "when in use"
+                if state.currentPage == 3 {
+                    let status = state.locationAuthorizationStatus
+                    guard status == .authorizedAlways || status == .authorizedWhenInUse else { return .none }
+                }
+                // Block on nickname slide if nickname is empty
+                if state.currentPage == 4 {
+                    let trimmed = state.nickname.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard !trimmed.isEmpty else { return .none }
+                }
+
                 if state.currentPage < Self.totalPages - 1 {
                     state.currentPage += 1
                 } else {
+                    // Last page: check location before completing
+                    let status = state.locationAuthorizationStatus
+                    guard status == .authorizedAlways || status == .authorizedWhenInUse else {
+                        state.showLocationAlert = true
+                        return .none
+                    }
                     return .run { send in
                         await send(.onboardingCompleted)
                     }
@@ -53,8 +76,37 @@ struct OnboardingFeature {
                     state.currentPage -= 1
                 }
                 return .none
+            case let .nicknameChanged(name):
+                state.nickname = String(name.prefix(Self.nicknameMaxLength))
+                return .none
             case let .pageChanged(page):
+                let locAuthorized = state.locationAuthorizationStatus == .authorizedAlways ||
+                    state.locationAuthorizationStatus == .authorizedWhenInUse
+                let nicknameValid = !state.nickname.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+
+                // Block forward swipe past location page if not authorized
+                if page > 3 && !locAuthorized {
+                    state.currentPage = page
+                    return .run { send in
+                        try? await Task.sleep(for: .milliseconds(50))
+                        await send(.snapBackToPage(3))
+                    }
+                }
+                // Block forward swipe past nickname page if empty
+                if page > 4 && !nicknameValid {
+                    state.currentPage = page
+                    return .run { send in
+                        try? await Task.sleep(for: .milliseconds(50))
+                        await send(.snapBackToPage(4))
+                    }
+                }
                 state.currentPage = page
+                return .none
+            case let .snapBackToPage(page):
+                state.currentPage = page
+                return .none
+            case .dismissLocationAlert:
+                state.showLocationAlert = false
                 return .none
             case .requestWhenInUsePermission:
                 return .run { send in
@@ -91,13 +143,13 @@ struct OnboardingView: View {
                 get: { store.currentPage },
                 set: { store.send(.pageChanged($0)) }
             )) {
-                OnboardingSlide1()
+                OnboardingWelcomeSlide()
                     .tag(0)
 
-                OnboardingSlide2()
+                OnboardingChickenSlide()
                     .tag(1)
 
-                OnboardingSlide3()
+                OnboardingHuntSlide()
                     .tag(2)
 
                 OnboardingLocationSlide(
@@ -111,13 +163,23 @@ struct OnboardingView: View {
                 )
                 .tag(3)
 
+                OnboardingNicknameSlide(
+                    nickname: Binding(
+                        get: { store.nickname },
+                        set: { store.send(.nicknameChanged($0)) }
+                    ),
+                    maxLength: OnboardingFeature.nicknameMaxLength
+                )
+                .tag(4)
+
                 OnboardingReadySlide()
-                    .tag(4)
+                    .tag(5)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .animation(.easeInOut(duration: 0.3), value: store.currentPage)
+            .ignoresSafeArea(.keyboard)
 
-            // Navigation overlay
+            // Navigation overlay — pinned to bottom, ignores keyboard
             VStack {
                 Spacer()
 
@@ -141,259 +203,51 @@ struct OnboardingView: View {
                                 Text("Back")
                                     .font(.banger(size: 18))
                                     .foregroundStyle(.black.opacity(0.5))
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 12)
+                                    .contentShape(Rectangle())
                             }
                         }
 
                         Spacer()
 
+                        let isLocationPageBlocked = store.currentPage == 3 && store.locationAuthorizationStatus != .authorizedAlways && store.locationAuthorizationStatus != .authorizedWhenInUse
+                        let isNicknamePageEmpty = store.currentPage == 4 && store.nickname.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        let isNextDisabled = isLocationPageBlocked || isNicknamePageEmpty
                         Button {
                             store.send(.nextButtonTapped)
                         } label: {
                             Text(store.currentPage == OnboardingFeature.totalPages - 1 ? "Let's go!" : "Next")
                                 .font(.banger(size: 22))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(.white.opacity(isNextDisabled ? 0.6 : 1.0))
                                 .padding(.horizontal, 32)
                                 .padding(.vertical, 12)
                                 .background(
                                     Capsule()
-                                        .fill(Color.CROrange)
+                                        .fill(Color.CROrange.opacity(isNextDisabled ? 0.4 : 1.0))
                                 )
                         }
+                        .disabled(isNextDisabled)
                     }
                     .padding(.horizontal, 30)
                 }
                 .padding(.bottom, 40)
             }
+            .ignoresSafeArea(.keyboard)
         }
         .task {
             store.send(.onTask)
         }
-    }
-}
-
-// MARK: - Slide 1: Welcome
-
-private struct OnboardingSlide1: View {
-    var body: some View {
-        VStack(spacing: 24) {
-            Spacer()
-
-            Image("logo")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 160, height: 160)
-
-            Text("Welcome to\nPouleParty!")
-                .font(.banger(size: 36))
-                .multilineTextAlignment(.center)
-                .foregroundStyle(.black)
-
-            Text("The ultimate hide-and-seek\npub crawl game")
-                .font(.banger(size: 18))
-                .multilineTextAlignment(.center)
-                .foregroundStyle(.black.opacity(0.6))
-
-            Spacer()
-            Spacer()
-        }
-        .padding(.horizontal, 40)
-    }
-}
-
-// MARK: - Slide 2: Nominate a Chicken
-
-private struct OnboardingSlide2: View {
-    var body: some View {
-        VStack(spacing: 24) {
-            Spacer()
-
-            Text("🐔")
-                .font(.system(size: 80))
-
-            Text("Nominate a Chicken")
-                .font(.banger(size: 32))
-                .multilineTextAlignment(.center)
-                .foregroundStyle(.black)
-
-            Text("Pick the Stag, the Birthday Girl, or whoever just really wants to be a Chicken.\n\nTheir job is to hide.")
-                .font(.banger(size: 18))
-                .multilineTextAlignment(.center)
-                .foregroundStyle(.black.opacity(0.6))
-                .padding(.horizontal, 10)
-
-            Spacer()
-            Spacer()
-        }
-        .padding(.horizontal, 40)
-    }
-}
-
-// MARK: - Slide 3: Hunt Them Down
-
-private struct OnboardingSlide3: View {
-    var body: some View {
-        VStack(spacing: 24) {
-            Spacer()
-
-            Text("🗺️")
-                .font(.system(size: 80))
-
-            Text("Hunt Them Down")
-                .font(.banger(size: 32))
-                .multilineTextAlignment(.center)
-                .foregroundStyle(.black)
-
-            Text("Split into squads. Use the map to track them.\n\nThe Chicken could be hiding in any pub or bar.")
-                .font(.banger(size: 18))
-                .multilineTextAlignment(.center)
-                .foregroundStyle(.black.opacity(0.6))
-                .padding(.horizontal, 10)
-
-            Spacer()
-            Spacer()
-        }
-        .padding(.horizontal, 40)
-    }
-}
-
-// MARK: - Slide 4: Location Permission
-
-private struct OnboardingLocationSlide: View {
-    let status: CLAuthorizationStatus
-    let onRequestWhenInUse: () -> Void
-    let onRequestAlways: () -> Void
-
-    var body: some View {
-        VStack(spacing: 24) {
-            Spacer()
-
-            Text(status == .authorizedAlways ? "📍" : (status == .authorizedWhenInUse ? "👀" : "😢"))
-                .font(.system(size: 80))
-
-            Text("We Need Your Location")
-                .font(.banger(size: 32))
-                .multilineTextAlignment(.center)
-                .foregroundStyle(.black)
-
-            switch status {
-            case .authorizedAlways:
-                Text("You're all set! The game will track location even in the background.\n\nMaximum fun guaranteed!")
-                    .font(.banger(size: 18))
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(.black.opacity(0.6))
-                    .padding(.horizontal, 10)
-
-                HStack(spacing: 8) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
-                        .font(.system(size: 24))
-                    Text("Always allowed!")
-                        .font(.banger(size: 20))
-                        .foregroundStyle(.green)
-                }
-                .padding(.top, 8)
-
-            case .authorizedWhenInUse:
-                Text("Almost there! The game needs to track the Chicken even when the app is in the background.\n\nPlease select \"Always Allow\" so the Hunters can find you!")
-                    .font(.banger(size: 18))
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(.black.opacity(0.6))
-                    .padding(.horizontal, 10)
-
-                Button {
-                    onRequestAlways()
-                } label: {
-                    Text("Allow Always")
-                        .font(.banger(size: 20))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 28)
-                        .padding(.vertical, 14)
-                        .background(
-                            Capsule()
-                                .fill(Color.CROrange)
-                        )
-                }
-                .padding(.top, 8)
-
-            case .denied, .restricted:
-                Text("Location access was denied.\nPlease enable it in Settings to play.")
-                    .font(.banger(size: 18))
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(.black.opacity(0.6))
-                    .padding(.horizontal, 10)
-
-                Button {
-                    if let url = URL(string: UIApplication.openSettingsURLString) {
-                        UIApplication.shared.open(url)
-                    }
-                } label: {
-                    Text("Open Settings")
-                        .font(.banger(size: 18))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 24)
-                        .padding(.vertical, 10)
-                        .background(
-                            Capsule()
-                                .fill(Color.CROrange)
-                        )
-                }
-                .padding(.top, 8)
-
-            default:
-                Text("Without it, the game can't work.\nNo location = no map = no fun.\n\nWe promise we only use it during the game!")
-                    .font(.banger(size: 18))
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(.black.opacity(0.6))
-                    .padding(.horizontal, 10)
-
-                Button {
-                    onRequestWhenInUse()
-                } label: {
-                    Text("Allow Location Access")
-                        .font(.banger(size: 20))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 28)
-                        .padding(.vertical, 14)
-                        .background(
-                            Capsule()
-                                .fill(Color.CROrange)
-                        )
-                }
-                .padding(.top, 8)
+        .alert("Location Required", isPresented: Binding(
+            get: { store.showLocationAlert },
+            set: { _ in store.send(.dismissLocationAlert) }
+        )) {
+            Button("OK") {
+                store.send(.dismissLocationAlert)
             }
-
-            Spacer()
-            Spacer()
+        } message: {
+            Text("Location is the core of PouleParty! Your position is anonymous and only used during the game. Please enable location access to continue.")
         }
-        .padding(.horizontal, 40)
-    }
-}
-
-// MARK: - Slide 5: Ready (placeholder for future step)
-
-private struct OnboardingReadySlide: View {
-    var body: some View {
-        VStack(spacing: 24) {
-            Spacer()
-
-            Text("🎉")
-                .font(.system(size: 80))
-
-            Text("The Endgame")
-                .font(.banger(size: 32))
-                .multilineTextAlignment(.center)
-                .foregroundStyle(.black)
-
-            Text("Close in on the Chicken. Complete challenges for points. Unleash weapons.\n\nIt's Mario Kart rules — anything goes.")
-                .font(.banger(size: 18))
-                .multilineTextAlignment(.center)
-                .foregroundStyle(.black.opacity(0.6))
-                .padding(.horizontal, 10)
-
-            Spacer()
-            Spacer()
-        }
-        .padding(.horizontal, 40)
     }
 }
 

@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.rahier.pouleparty.model.GameMod
@@ -99,7 +100,7 @@ private fun RuleRow(text: String) {
         verticalAlignment = Alignment.Top
     ) {
         Text("●", color = CROrange, fontSize = 10.sp)
-        Text(text, style = gameboyStyle(10), color = Color.Black)
+        Text(text, fontSize = 14.sp, color = Color.Black)
     }
 }
 
@@ -113,12 +114,12 @@ private fun GameModeCard(title: String, description: String, details: List<Strin
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Text(title, style = bangerStyle(22), color = Color.Black)
-        Text(description, style = gameboyStyle(8), color = Color.Black.copy(alpha = 0.7f))
+        Text(description, fontSize = 14.sp, color = Color.Black.copy(alpha = 0.7f))
 
         details.forEach { detail ->
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.Top) {
-                Text(">", style = gameboyStyle(8), color = CROrange)
-                Text(detail, style = gameboyStyle(8), color = Color.Black)
+                Text(">", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = CROrange)
+                Text(detail, fontSize = 14.sp, color = Color.Black)
             }
         }
     }
@@ -128,6 +129,6 @@ private fun GameModeCard(title: String, description: String, details: List<Strin
 private fun SettingRow(name: String, explanation: String) {
     Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
         Text(name, style = gameboyStyle(10), color = CROrange)
-        Text(explanation, style = gameboyStyle(8), color = Color.Black.copy(alpha = 0.7f))
+        Text(explanation, fontSize = 14.sp, color = Color.Black.copy(alpha = 0.7f))
     }
 }

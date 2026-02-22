@@ -34,6 +34,7 @@ struct SelectionFeature {
         case goToVictoryAsSpectator(Game)
         case initialLocationResolved(CLLocationCoordinate2D?)
         case goToHunterMapTriggered(Game, String)
+        case locationRequired
         case onTask
         case startButtonTapped
         case joinGameButtonTapped
@@ -75,6 +76,16 @@ struct SelectionFeature {
             case .binding:
                 return .none
             case .validatePasswordButtonTapped:
+                // Block if location not authorized
+                let chickenLocStatus = locationClient.authorizationStatus()
+                guard chickenLocStatus == .authorizedAlways || chickenLocStatus == .authorizedWhenInUse else {
+                    state.isAuthenticating = false
+                    state.password = ""
+                    return .run { send in
+                        await send(.locationRequired)
+                    }
+                }
+
                 guard state.password == ""
                 else {
                     state.password = ""
@@ -149,17 +160,37 @@ struct SelectionFeature {
                 return .none
             case .goToHunterMapTriggered:
                 return .none
+            case .locationRequired:
+                state.destination = .alert(
+                    AlertState {
+                        TextState("Location Required")
+                    } actions: {
+                        ButtonState(role: .cancel) {
+                            TextState("OK")
+                        }
+                    } message: {
+                        TextState("Location is the core of PouleParty! Your position is anonymous and only used during the game. Please enable location access to continue.")
+                    }
+                )
+                return .none
             case .onTask:
                 return .none
             case .startButtonTapped:
+                // Block if location not authorized
+                let startLocStatus = locationClient.authorizationStatus()
+                guard startLocStatus == .authorizedAlways || startLocStatus == .authorizedWhenInUse else {
+                    return .run { send in
+                        await send(.locationRequired)
+                    }
+                }
                 state.isJoiningGame = true
                 return .none
             case .joinGameButtonTapped:
                 let code = state.gameCode.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !code.isEmpty else { return .none }
 
-                let hunterName = state.hunterName.trimmingCharacters(in: .whitespacesAndNewlines)
-                let finalName = hunterName.isEmpty ? "Hunter" : hunterName
+                let savedNickname = (UserDefaults.standard.string(forKey: "userNickname") ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                let finalName = savedNickname.isEmpty ? "Hunter" : savedNickname
                 state.isJoiningGame = false
                 return .run { send in
                     guard let game = try? await apiClient.findGameByCode(code) else {
@@ -273,13 +304,12 @@ struct SelectionView: View {
             }
             .alert("Join Game", isPresented: $store.isJoiningGame) {
                 TextField("Game code", text: $store.gameCode)
-                TextField("Your nickname", text: $store.hunterName)
                 Button("Join") {
                     self.store.send(.joinGameButtonTapped)
                 }
                 Button("Cancel", role: .cancel) { }
             } message: {
-                Text("Enter the game code and your nickname.")
+                Text("Enter the game code to join.")
             }
         }
         .onDisappear {
@@ -348,12 +378,13 @@ struct SelectionView: View {
     }
 
     private func playSound() {
-        guard let path = Bundle.main.path(forResource: "background-music", ofType: "mp3"),
-              false
+        guard let path = Bundle.main.path(forResource: "background-music", ofType: "mp3")
         else { return }
         let url = URL(fileURLWithPath: path)
 
         do {
+            try AVAudioSession.sharedInstance().setCategory(.ambient)
+            try AVAudioSession.sharedInstance().setActive(true)
             self.audioPlayer = try AVAudioPlayer(contentsOf: url)
             self.audioPlayer?.numberOfLoops = -1
             self.audioPlayer?.volume = 0.1

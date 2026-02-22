@@ -69,6 +69,7 @@ fun VictoryScreen(
             Text(
                 text = if (isSpectator) "Game Results" else "You found\nthe chicken!",
                 style = gameboyStyle(16),
+                color = Color.Black,
                 textAlign = TextAlign.Center
             )
 
@@ -169,12 +170,14 @@ private fun LeaderboardRow(
         Text(
             text = medal,
             fontSize = if (rank <= 3) 24.sp else 16.sp,
+            color = Color.Black,
             modifier = Modifier.width(40.dp)
         )
 
         Text(
             text = winner.hunterName,
             style = bangerStyle(20),
+            color = Color.Black,
             maxLines = 1,
             modifier = Modifier.weight(1f)
         )

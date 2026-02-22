@@ -473,9 +473,9 @@ struct ChickenMapView: View {
             get: { self.store.showGameInfo },
             set: { _ in self.store.send(.dismissGameInfo) }
         )) {
-            GameInfoSheet(game: self.store.game) {
+            GameInfoSheet(game: self.store.game, onCancelGame: {
                 self.store.send(.cancelGameButtonTapped)
-            }
+            })
         }
         .overlay(alignment: .top) {
             if let notification = store.winnerNotification {
@@ -510,9 +510,9 @@ struct ChickenMapView: View {
     }
 }
 
-private struct GameInfoSheet: View {
+struct GameInfoSheet: View {
     let game: Game
-    var onCancelGame: () -> Void
+    var onCancelGame: (() -> Void)? = nil
     @State private var codeCopied = false
     @Environment(\.dismiss) private var dismiss
 
@@ -563,15 +563,17 @@ private struct GameInfoSheet: View {
                     }
                 }
 
-                Section {
-                    Button(role: .destructive) {
-                        dismiss()
-                        onCancelGame()
-                    } label: {
-                        HStack {
-                            Spacer()
-                            Text("Cancel game")
-                            Spacer()
+                if let onCancelGame {
+                    Section {
+                        Button(role: .destructive) {
+                            dismiss()
+                            onCancelGame()
+                        } label: {
+                            HStack {
+                                Spacer()
+                                Text("Cancel game")
+                                Spacer()
+                            }
                         }
                     }
                 }

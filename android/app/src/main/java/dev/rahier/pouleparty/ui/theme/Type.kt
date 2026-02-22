@@ -18,7 +18,8 @@ val GameBoyFont = FontFamily(
 fun bangerStyle(size: Int): TextStyle = TextStyle(
     fontFamily = BangersFont,
     fontWeight = FontWeight.Normal,
-    fontSize = size.sp
+    fontSize = size.sp,
+    letterSpacing = 0.5.sp
 )
 
 fun gameboyStyle(size: Int): TextStyle = TextStyle(

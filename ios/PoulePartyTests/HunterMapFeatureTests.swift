@@ -189,7 +189,7 @@ struct HunterMapFeatureTests {
         // Simulate the reducer's winner detection logic from setGameTriggered
         var updatedGame = game
         updatedGame.winners = [
-            Winner(hunterId: "other-hunter", hunterName: "Julien", timestamp: .init(date: .now))
+            Winner(hunterId: "other-hunter", hunterName: "Julien", timestamp: .now)
         ]
 
         let previousCount = state.previousWinnersCount
@@ -217,7 +217,7 @@ struct HunterMapFeatureTests {
 
         var updatedGame = game
         updatedGame.winners = [
-            Winner(hunterId: "my-hunter-id", hunterName: "Me", timestamp: .init(date: .now))
+            Winner(hunterId: "my-hunter-id", hunterName: "Me", timestamp: .now)
         ]
 
         await store.send(.setGameTriggered(to: updatedGame)) {

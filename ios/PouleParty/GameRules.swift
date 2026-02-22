@@ -121,7 +121,7 @@ struct GameRulesView: View {
                 .foregroundStyle(Color.CROrange)
                 .frame(width: 20)
             Text(text)
-                .font(.gameboy(size: 10))
+                .font(.system(size: 14))
                 .foregroundStyle(.black)
         }
     }
@@ -133,16 +133,16 @@ struct GameRulesView: View {
                 .foregroundStyle(.black)
 
             Text(description)
-                .font(.gameboy(size: 8))
+                .font(.system(size: 14))
                 .foregroundStyle(.black.opacity(0.7))
 
             ForEach(details, id: \.self) { detail in
                 HStack(alignment: .top, spacing: 6) {
                     Text(">")
-                        .font(.gameboy(size: 8))
+                        .font(.system(size: 14, weight: .bold))
                         .foregroundStyle(Color.CROrange)
                     Text(detail)
-                        .font(.gameboy(size: 8))
+                        .font(.system(size: 14))
                         .foregroundStyle(.black)
                 }
             }
@@ -165,7 +165,7 @@ struct GameRulesView: View {
                 .font(.gameboy(size: 10))
                 .foregroundStyle(Color.CROrange)
             Text(explanation)
-                .font(.gameboy(size: 8))
+                .font(.system(size: 14))
                 .foregroundStyle(.black.opacity(0.7))
         }
     }

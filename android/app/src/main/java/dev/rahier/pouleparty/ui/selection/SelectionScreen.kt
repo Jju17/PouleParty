@@ -160,19 +160,12 @@ fun SelectionScreen(
             title = { Text("Join Game") },
             text = {
                 Column {
-                    Text("Enter the game code and your nickname.")
+                    Text("Enter the game code to join.")
                     Spacer(Modifier.height(8.dp))
                     OutlinedTextField(
                         value = state.gameCode,
                         onValueChange = { viewModel.onGameCodeChanged(it) },
                         label = { Text("Game code") },
-                        singleLine = true
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = state.hunterName,
-                        onValueChange = { viewModel.onHunterNameChanged(it) },
-                        label = { Text("Your nickname") },
                         singleLine = true
                     )
                 }
@@ -203,6 +196,18 @@ fun SelectionScreen(
             text = { Text("No active game found with this code. Check the code and try again.") },
             confirmButton = {
                 TextButton(onClick = { viewModel.onGameNotFoundDismissed() }) { Text("OK") }
+            }
+        )
+    }
+
+    // Location required alert
+    if (state.isShowingLocationRequired) {
+        AlertDialog(
+            onDismissRequest = { viewModel.onLocationRequiredDismissed() },
+            title = { Text("Location Required") },
+            text = { Text("Location is the core of PouleParty! Your position is anonymous and only used during the game. Please enable location access to continue.") },
+            confirmButton = {
+                TextButton(onClick = { viewModel.onLocationRequiredDismissed() }) { Text("OK") }
             }
         )
     }

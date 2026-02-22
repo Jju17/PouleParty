@@ -25,6 +25,7 @@ struct HunterMapFeature {
         var previousWinnersCount: Int = 0
         var radius: Int = 1500
         var mapCircle: CircleOverlay?
+        var showGameInfo: Bool = false
         var winnerNotification: String? = nil
         var countdownNumber: Int? = nil
         var countdownText: String? = nil
@@ -37,10 +38,12 @@ struct HunterMapFeature {
         case cancelGameButtonTapped
         case destination(PresentationAction<Destination.Action>)
         case dismissCountdown
+        case dismissGameInfo
         case dismissWinnerNotification
         case foundButtonTapped
         case goToMenu
         case goToVictory
+        case infoButtonTapped
         case newLocationFetched(CLLocationCoordinate2D)
         case onTask
         case setGameTriggered(to: Game)
@@ -108,6 +111,9 @@ struct HunterMapFeature {
                 state.countdownNumber = nil
                 state.countdownText = nil
                 return .none
+            case .dismissGameInfo:
+                state.showGameInfo = false
+                return .none
             case .dismissWinnerNotification:
                 state.winnerNotification = nil
                 return .none
@@ -137,7 +143,7 @@ struct HunterMapFeature {
                 let winner = Winner(
                     hunterId: state.hunterId,
                     hunterName: state.hunterName,
-                    timestamp: .init(date: .now)
+                    timestamp: .now
                 )
                 let gameId = state.game.id
                 return .run { send in
@@ -148,6 +154,9 @@ struct HunterMapFeature {
             case .goToMenu:
                 return .none
             case .goToVictory:
+                return .none
+            case .infoButtonTapped:
+                state.showGameInfo = true
                 return .none
             case let .newLocationFetched(location):
                 state.mapCircle = CircleOverlay(
@@ -422,6 +431,14 @@ struct HunterMapView: View {
                         .font(.system(size: 12))
                 }
                 Spacer()
+                Button {
+                    self.store.send(.infoButtonTapped)
+                } label: {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 20))
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.trailing, 4)
             }
             .padding()
             .background(.thinMaterial)
@@ -481,6 +498,12 @@ struct HunterMapView: View {
             Button("Cancel", role: .cancel) { }
         } message: {
             Text("Enter the 4-digit code shown by the chicken.")
+        }
+        .sheet(isPresented: Binding(
+            get: { self.store.showGameInfo },
+            set: { _ in self.store.send(.dismissGameInfo) }
+        )) {
+            GameInfoSheet(game: self.store.game)
         }
         .overlay(alignment: .top) {
             if let notification = store.winnerNotification {

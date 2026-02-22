@@ -12,7 +12,7 @@ import FirebaseFirestore
 struct Winner: Codable, Equatable {
     let hunterId: String
     let hunterName: String
-    let timestamp: Timestamp
+    let timestamp: Date
 }
 
 struct Game: Codable, Equatable {

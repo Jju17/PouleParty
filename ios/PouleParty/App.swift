@@ -34,6 +34,10 @@ struct AppFeature {
         Reduce { state, action in
             switch action {
             case .onboarding(.onboardingCompleted):
+                if case let .onboarding(onboardingState) = state {
+                    let nickname = onboardingState.nickname.trimmingCharacters(in: .whitespacesAndNewlines)
+                    UserDefaults.standard.set(nickname, forKey: "userNickname")
+                }
                 UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
                 state = .selection(SelectionFeature.State())
                 return .none

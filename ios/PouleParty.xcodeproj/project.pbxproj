@@ -47,6 +47,7 @@
 		64C9CAE42CEBEDE00087BE13 /* background-music.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 64C9CAE32CEBEDE00087BE13 /* background-music.mp3 */; };
 		64CE0F842CEE8E8200762232 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 64CE0F832CEE8E8200762232 /* Localizable.xcstrings */; };
 		64D917A62DA0F83200A1B3C5 /* Onboarding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64D917A52DA0F83200A1B3C5 /* Onboarding.swift */; };
+		64D917A82DA0F83200A1B3C5 /* OnboardingSlides.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64D917A72DA0F83200A1B3C5 /* OnboardingSlides.swift */; };
 		64E1A0012DE3B00100AABB01 /* HunterLocation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64E1A0002DE3B00100AABB01 /* HunterLocation.swift */; };
 		64E1A0032DE3C00100AABB01 /* GameRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64E1A0022DE3C00100AABB01 /* GameRules.swift */; };
 		64F10C2A2BA9E04D001D83D8 /* EndGameCode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64F10C292BA9E04D001D83D8 /* EndGameCode.swift */; };
@@ -113,6 +114,7 @@
 		64C9CAE32CEBEDE00087BE13 /* background-music.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = "background-music.mp3"; sourceTree = "<group>"; };
 		64CE0F832CEE8E8200762232 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		64D917A52DA0F83200A1B3C5 /* Onboarding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Onboarding.swift; sourceTree = "<group>"; };
+		64D917A72DA0F83200A1B3C5 /* OnboardingSlides.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingSlides.swift; sourceTree = "<group>"; };
 		64E1A0002DE3B00100AABB01 /* HunterLocation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HunterLocation.swift; sourceTree = "<group>"; };
 		64E1A0022DE3C00100AABB01 /* GameRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameRules.swift; sourceTree = "<group>"; };
 		64F10C292BA9E04D001D83D8 /* EndGameCode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EndGameCode.swift; sourceTree = "<group>"; };
@@ -169,6 +171,7 @@
 				64F10C292BA9E04D001D83D8 /* EndGameCode.swift */,
 				647D9FC62BA3ABF2005B6566 /* HunterMap.swift */,
 				64D917A52DA0F83200A1B3C5 /* Onboarding.swift */,
+				64D917A72DA0F83200A1B3C5 /* OnboardingSlides.swift */,
 				6464E5082BA4A6AA0039C387 /* Selection.swift */,
 				26AC030B90FF548206441E43 /* Victory.swift */,
 			);
@@ -487,6 +490,7 @@
 				649BE2092BAF43CC00520CE3 /* Image+Utils.swift in Sources */,
 				6464E50F2BA4AA010039C387 /* App.swift in Sources */,
 				64D917A62DA0F83200A1B3C5 /* Onboarding.swift in Sources */,
+				64D917A82DA0F83200A1B3C5 /* OnboardingSlides.swift in Sources */,
 				6400630F2BBDC7B100C6C08C /* SelectionButton.swift in Sources */,
 				64B216FD2BBF162C005E0DC7 /* ChickenMapConfig.swift in Sources */,
 				64AF0B022BA7A0110081EA97 /* Color+Utils.swift in Sources */,

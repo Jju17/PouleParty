@@ -75,6 +75,7 @@ struct VictoryView: View {
                 Text(isSpectator ? "Game Results" : "You found\nthe chicken!")
                     .font(.gameboy(size: 16))
                     .multilineTextAlignment(.center)
+                    .foregroundStyle(.black)
 
                 leaderboardSection
 
@@ -95,7 +96,7 @@ struct VictoryView: View {
 
     private var leaderboardSection: some View {
         let sortedWinners = store.game.winners.sorted {
-            $0.timestamp.dateValue() < $1.timestamp.dateValue()
+            $0.timestamp < $1.timestamp
         }
         let remaining = max(0, store.game.hunterIds.count - store.game.winners.count)
 
@@ -111,7 +112,7 @@ struct VictoryView: View {
 
                 Text("\(remaining) still in the party 🔍")
                     .font(.banger(size: 18))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.black.opacity(0.5))
                     .padding(.vertical, 4)
             }
         }
@@ -125,7 +126,7 @@ struct VictoryView: View {
         default: "#\(rank)"
         }
 
-        let timeDelta = winner.timestamp.dateValue().timeIntervalSince(store.game.hunterStartDate)
+        let timeDelta = winner.timestamp.timeIntervalSince(store.game.hunterStartDate)
         let minutes = Int(timeDelta) / 60
         let seconds = Int(timeDelta) % 60
         let timeString = "+\(minutes)m \(String(format: "%02d", seconds))s"
@@ -137,13 +138,14 @@ struct VictoryView: View {
 
             Text(winner.hunterName)
                 .font(.banger(size: 20))
+                .foregroundStyle(.black)
                 .lineLimit(1)
 
             Spacer()
 
             Text(timeString)
                 .font(.gameboy(size: 10))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.black.opacity(0.5))
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 10)
@@ -270,8 +272,8 @@ private struct ConfettiView: View {
         game: {
             var game = Game.mock
             game.winners = [
-                Winner(hunterId: "h1", hunterName: "Alice", timestamp: .init(date: game.startDate.addingTimeInterval(120))),
-                Winner(hunterId: "h2", hunterName: "Bob", timestamp: .init(date: game.startDate.addingTimeInterval(300))),
+                Winner(hunterId: "h1", hunterName: "Alice", timestamp: game.startDate.addingTimeInterval(120)),
+                Winner(hunterId: "h2", hunterName: "Bob", timestamp: game.startDate.addingTimeInterval(300)),
             ]
             return game
         }(),

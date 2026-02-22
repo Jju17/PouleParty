@@ -9,9 +9,9 @@ import SwiftUI
 
 extension Font {
     static func banger(size: CGFloat) -> Font {
-        return Font.custom("Bangers-Regular", size: size)
+        return Font.custom("Bangers-Regular", fixedSize: size)
     }
     static func gameboy(size: CGFloat) -> Font {
-        return Font.custom("Early GameBoy", size: size)
+        return Font.custom("Early GameBoy", fixedSize: size)
     }
 }

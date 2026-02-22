@@ -38,7 +38,9 @@ data class HunterMapUiState(
     val shouldNavigateToVictory: Boolean = false,
     val hasGameStarted: Boolean = false,
     val countdownNumber: Int? = null,
-    val countdownText: String? = null
+    val countdownText: String? = null,
+    val showGameInfo: Boolean = false,
+    val codeCopied: Boolean = false
 )
 
 @HiltViewModel
@@ -311,4 +313,20 @@ class HunterMapViewModel @Inject constructor(
             GameMod.STAY_IN_THE_ZONE -> "Stay in the zone \uD83D\uDCCD"
             GameMod.MUTUAL_TRACKING -> "Catch the \uD83D\uDC14 (she sees you! \uD83D\uDC40)"
         }
+
+    fun onInfoTapped() {
+        _uiState.value = _uiState.value.copy(showGameInfo = true)
+    }
+
+    fun dismissGameInfo() {
+        _uiState.value = _uiState.value.copy(showGameInfo = false)
+    }
+
+    fun onCodeCopied() {
+        _uiState.value = _uiState.value.copy(codeCopied = true)
+        viewModelScope.launch {
+            delay(1000)
+            _uiState.value = _uiState.value.copy(codeCopied = false)
+        }
+    }
 }

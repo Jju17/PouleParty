@@ -37,7 +37,16 @@ class VictoryViewModel @Inject constructor(
     val uiState: StateFlow<VictoryUiState> = _uiState.asStateFlow()
 
     init {
+        loadInitialGame()
         startGameStream()
+    }
+
+    /** Fetch the game once immediately so winners are available right away */
+    private fun loadInitialGame() {
+        viewModelScope.launch {
+            val game = firestoreRepository.getConfig(gameId) ?: return@launch
+            _uiState.value = _uiState.value.copy(game = game)
+        }
     }
 
     private fun startGameStream() {
