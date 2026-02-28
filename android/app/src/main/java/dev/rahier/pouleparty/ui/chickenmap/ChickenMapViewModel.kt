@@ -11,11 +11,22 @@ import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameMod
 import dev.rahier.pouleparty.model.GameStatus
 import dev.rahier.pouleparty.model.HunterLocation
+import dev.rahier.pouleparty.AppConstants
+import dev.rahier.pouleparty.ui.CountdownPhase
+import dev.rahier.pouleparty.ui.CountdownResult
+import dev.rahier.pouleparty.ui.checkGameOverByTime
+import dev.rahier.pouleparty.ui.detectNewWinners
+import dev.rahier.pouleparty.ui.evaluateCountdown
+import dev.rahier.pouleparty.ui.processRadiusUpdate
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import android.util.Log
 import java.util.Date
 import javax.inject.Inject
 
@@ -54,6 +65,8 @@ class ChickenMapViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val gameId: String = savedStateHandle["gameId"] ?: ""
+    /** Tracked separately from viewModelScope to allow early cancellation on game over. */
+    private val streamJobs = mutableListOf<Job>()
 
     private val _uiState = MutableStateFlow(ChickenMapUiState())
     val uiState: StateFlow<ChickenMapUiState> = _uiState.asStateFlow()
@@ -67,127 +80,143 @@ class ChickenMapViewModel @Inject constructor(
             val game = firestoreRepository.getConfig(gameId) ?: return@launch
             val (lastUpdate, lastRadius) = game.findLastUpdate()
 
-            _uiState.value = _uiState.value.copy(
-                game = game,
-                radius = lastRadius,
-                nextRadiusUpdate = lastUpdate,
-                circleCenter = game.initialLocation
-            )
+            _uiState.update {
+                it.copy(
+                    game = game,
+                    radius = lastRadius,
+                    nextRadiusUpdate = lastUpdate,
+                    circleCenter = game.initialLocation
+                )
+            }
 
             startTimer()
-            startLocationTracking(game)
-            startHunterTracking(game)
-            startGameConfigStream()
+            streamJobs += viewModelScope.launch { trackLocation(game) }
+            streamJobs += viewModelScope.launch { trackHunters(game) }
+            streamJobs += viewModelScope.launch { streamGameConfig() }
         }
     }
 
     private fun startTimer() {
         viewModelScope.launch {
-            while (true) {
+            while (isActive) {
                 delay(1000)
                 val state = _uiState.value
                 val now = Date()
                 val gameStarted = now.after(state.game.startDate) || now == state.game.startDate
                 val huntStarted = now.after(state.game.hunterStartDate) || now == state.game.hunterStartDate
-                _uiState.value = state.copy(nowDate = now, hasGameStarted = gameStarted, hasHuntStarted = huntStarted)
+                _uiState.update { it.copy(nowDate = now, hasGameStarted = gameStarted, hasHuntStarted = huntStarted) }
 
-                // Pre-game countdown: 3, 2, 1, RUN!
-                val timeToStartMs = state.game.startDate.time - now.time
-                val timeToStartSec = timeToStartMs / 1000.0
-                if (timeToStartSec in 0.0..3.0) {
-                    val number = kotlin.math.ceil(timeToStartSec).toInt()
-                    if (number > 0 && _uiState.value.countdownNumber != number) {
-                        _uiState.value = _uiState.value.copy(countdownNumber = number, countdownText = null)
+                // Countdown phases (chicken perspective)
+                val countdownResult = evaluateCountdown(
+                    phases = listOf(
+                        CountdownPhase(
+                            targetDate = state.game.startDate,
+                            completionText = "RUN! \uD83D\uDC14",
+                            showNumericCountdown = true,
+                            isEnabled = true
+                        ),
+                        CountdownPhase(
+                            targetDate = state.game.hunterStartDate,
+                            completionText = "\uD83D\uDD0D Hunters incoming!",
+                            showNumericCountdown = false,
+                            isEnabled = state.game.chickenHeadStartMinutes > 0
+                        )
+                    ),
+                    now = now,
+                    currentCountdownNumber = _uiState.value.countdownNumber,
+                    currentCountdownText = _uiState.value.countdownText
+                )
+                when (countdownResult) {
+                    is CountdownResult.NoChange -> {}
+                    is CountdownResult.UpdateNumber -> {
+                        _uiState.update { it.copy(countdownNumber = countdownResult.number, countdownText = null) }
                     }
-                } else if (timeToStartSec <= 0 && timeToStartSec > -1 && _uiState.value.countdownText == null) {
-                    _uiState.value = _uiState.value.copy(countdownNumber = null, countdownText = "RUN! \uD83D\uDC14")
-                    delay(1500)
-                    _uiState.value = _uiState.value.copy(countdownText = null)
-                }
-
-                // Notification when hunters start (only if head start > 0)
-                if (state.game.chickenHeadStartMinutes > 0) {
-                    val timeToHuntMs = state.game.hunterStartDate.time - now.time
-                    val timeToHuntSec = timeToHuntMs / 1000.0
-                    if (timeToHuntSec <= 0 && timeToHuntSec > -1
-                        && _uiState.value.countdownText == null
-                        && _uiState.value.countdownNumber == null) {
-                        _uiState.value = _uiState.value.copy(countdownText = "\uD83D\uDD0D Hunters incoming!")
-                        delay(1500)
-                        _uiState.value = _uiState.value.copy(countdownText = null)
+                    is CountdownResult.ShowText -> {
+                        _uiState.update { it.copy(countdownNumber = null, countdownText = countdownResult.text) }
+                        delay(AppConstants.COUNTDOWN_DISPLAY_MS)
+                        _uiState.update { it.copy(countdownText = null) }
                     }
                 }
 
                 if (state.showGameOverAlert) continue
-
-                // Don't process game-over or radius updates before hunt starts
                 if (!huntStarted) continue
 
-                if (Date().after(state.game.endDate)) {
-                    _uiState.value = _uiState.value.copy(
-                        showGameOverAlert = true,
-                        gameOverMessage = "Time's up! The Chicken survived!"
-                    )
-                    try { firestoreRepository.updateGameStatus(gameId, GameStatus.DONE) } catch (_: Exception) {}
+                // Game over by time
+                if (checkGameOverByTime(state.game.endDate)) {
+                    cancelStreams()
+                    _uiState.update {
+                        it.copy(
+                            showGameOverAlert = true,
+                            gameOverMessage = "Time's up! The Chicken survived!"
+                        )
+                    }
+                    try { firestoreRepository.updateGameStatus(gameId, GameStatus.DONE) } catch (e: Exception) { Log.e("ChickenMapVM", "Failed to update game status", e) }
                     continue
                 }
 
-                val nextUpdate = state.nextRadiusUpdate ?: continue
-                if (Date().after(nextUpdate)) {
-                    val game = state.game
-                    val newRadius = state.radius - game.radiusDeclinePerUpdate.toInt()
-                    if (newRadius > 0) {
-                        val intervalMs = (game.radiusIntervalUpdate * 60 * 1000).toLong()
-                        val newNextUpdate = Date(nextUpdate.time + intervalMs)
-                        _uiState.value = _uiState.value.copy(
-                            radius = newRadius,
-                            nextRadiusUpdate = newNextUpdate
-                        )
-
-                        // In stayInTheZone, circle is fixed — update with new radius
-                        if (game.gameModEnum == GameMod.STAY_IN_THE_ZONE) {
-                            _uiState.value = _uiState.value.copy(
-                                circleCenter = game.initialLocation
+                // Radius update
+                val radiusResult = processRadiusUpdate(
+                    nextRadiusUpdate = state.nextRadiusUpdate,
+                    currentRadius = state.radius,
+                    radiusDeclinePerUpdate = state.game.radiusDeclinePerUpdate,
+                    radiusIntervalUpdate = state.game.radiusIntervalUpdate,
+                    gameMod = state.game.gameModEnum,
+                    initialLocation = state.game.initialLocation,
+                    currentCircleCenter = state.circleCenter
+                )
+                if (radiusResult != null) {
+                    if (radiusResult.isGameOver) {
+                        cancelStreams()
+                        _uiState.update {
+                            it.copy(
+                                showGameOverAlert = true,
+                                gameOverMessage = radiusResult.gameOverMessage ?: "Game over"
                             )
                         }
+                        try { firestoreRepository.updateGameStatus(gameId, GameStatus.DONE) } catch (e: Exception) { Log.e("ChickenMapVM", "Failed to update game status", e) }
                     } else {
-                        _uiState.value = _uiState.value.copy(
-                            showGameOverAlert = true,
-                            gameOverMessage = "The zone has collapsed!"
-                        )
-                        try { firestoreRepository.updateGameStatus(gameId, GameStatus.DONE) } catch (_: Exception) {}
+                        _uiState.update {
+                            it.copy(
+                                radius = radiusResult.newRadius,
+                                nextRadiusUpdate = radiusResult.newNextUpdate,
+                                circleCenter = radiusResult.newCircleCenter ?: it.circleCenter
+                            )
+                        }
                     }
                 }
             }
         }
+    }
+
+    private fun cancelStreams() {
+        streamJobs.forEach { it.cancel() }
+        streamJobs.clear()
     }
 
     /**
      * Chicken sends its position to hunters (except in stayInTheZone mode).
      * Circle follows chicken position in followTheChicken and mutualTracking.
      */
-    private fun startLocationTracking(game: Game) {
+    private suspend fun trackLocation(game: Game) {
         if (game.gameModEnum == GameMod.STAY_IN_THE_ZONE) return
 
-        viewModelScope.launch {
-            val delayMs = game.startDate.time - System.currentTimeMillis()
-            if (delayMs > 0) delay(delayMs)
+        val delayMs = game.startDate.time - System.currentTimeMillis()
+        if (delayMs > 0) delay(delayMs)
 
-            // Send current location immediately on connect
-            locationRepository.getLastLocation()?.let { latLng ->
-                _uiState.value = _uiState.value.copy(circleCenter = latLng)
+        // Send current location immediately on connect
+        locationRepository.getLastLocation()?.let { latLng ->
+            _uiState.update { it.copy(circleCenter = latLng) }
+            firestoreRepository.setChickenLocation(gameId, latLng)
+        }
+
+        var lastWrite = Date()
+        locationRepository.locationFlow().collect { latLng ->
+            _uiState.update { it.copy(circleCenter = latLng) }
+
+            // Throttle Firestore writes
+            if (Date().time - lastWrite.time >= AppConstants.LOCATION_THROTTLE_MS) {
                 firestoreRepository.setChickenLocation(gameId, latLng)
-            }
-
-            var lastWrite = Date()
-            locationRepository.locationFlow().collect { latLng ->
-                _uiState.value = _uiState.value.copy(circleCenter = latLng)
-
-                // Throttle Firestore writes to every 5 seconds
-                if (Date().time - lastWrite.time >= 5000) {
-                    firestoreRepository.setChickenLocation(gameId, latLng)
-                    lastWrite = Date()
-                }
+                lastWrite = Date()
             }
         }
     }
@@ -196,93 +225,91 @@ class ChickenMapViewModel @Inject constructor(
      * In mutualTracking mode, chicken can see all hunter positions.
      * Gated behind hunterStartDate (hunters aren't active until then).
      */
-    private fun startHunterTracking(game: Game) {
+    private suspend fun trackHunters(game: Game) {
         if (game.gameModEnum != GameMod.MUTUAL_TRACKING) return
 
-        viewModelScope.launch {
-            val delayMs = game.hunterStartDate.time - System.currentTimeMillis()
-            if (delayMs > 0) delay(delayMs)
-            firestoreRepository.hunterLocationsFlow(gameId).collect { hunters ->
-                val sorted = hunters.sortedBy { it.hunterId }
-                val annotations = sorted.mapIndexed { index, hunter ->
-                    HunterAnnotation(
-                        id = hunter.hunterId,
-                        coordinate = LatLng(hunter.location.latitude, hunter.location.longitude),
-                        displayName = "Hunter ${index + 1}"
-                    )
-                }
-                _uiState.value = _uiState.value.copy(hunterAnnotations = annotations)
+        val delayMs = game.hunterStartDate.time - System.currentTimeMillis()
+        if (delayMs > 0) delay(delayMs)
+        firestoreRepository.hunterLocationsFlow(gameId).collect { hunters ->
+            val sorted = hunters.sortedBy { it.hunterId }
+            val annotations = sorted.mapIndexed { index, hunter ->
+                HunterAnnotation(
+                    id = hunter.hunterId,
+                    coordinate = LatLng(hunter.location.latitude, hunter.location.longitude),
+                    displayName = "Hunter ${index + 1}"
+                )
             }
+            _uiState.update { it.copy(hunterAnnotations = annotations) }
         }
     }
 
     /** Stream game config to detect winners in real time */
-    private fun startGameConfigStream() {
-        viewModelScope.launch {
-            firestoreRepository.gameConfigFlow(gameId).collect { updatedGame ->
-                if (updatedGame != null) {
-                    val previousCount = _uiState.value.previousWinnersCount
-                    _uiState.value = _uiState.value.copy(
+    private suspend fun streamGameConfig() {
+        firestoreRepository.gameConfigFlow(gameId).collect { updatedGame ->
+            if (updatedGame != null) {
+                val previousCount = _uiState.value.previousWinnersCount
+                _uiState.update {
+                    it.copy(
                         game = updatedGame,
                         previousWinnersCount = updatedGame.winners.size
                     )
+                }
 
-                    // Detect new winners
-                    if (updatedGame.winners.size > previousCount) {
-                        val latest = updatedGame.winners.last()
-                        _uiState.value = _uiState.value.copy(
-                            winnerNotification = "${latest.hunterName} a trouvé la poule !"
-                        )
-                        delay(4000)
-                        _uiState.value = _uiState.value.copy(winnerNotification = null)
-                    }
+                val notification = detectNewWinners(
+                    winners = updatedGame.winners,
+                    previousCount = previousCount
+                )
+                if (notification != null) {
+                    _uiState.update { it.copy(winnerNotification = notification) }
+                    delay(AppConstants.WINNER_NOTIFICATION_MS)
+                    _uiState.update { it.copy(winnerNotification = null) }
                 }
             }
         }
     }
 
     fun onCancelGameTapped() {
-        _uiState.value = _uiState.value.copy(showCancelAlert = true)
+        _uiState.update { it.copy(showCancelAlert = true) }
     }
 
     fun dismissCancelAlert() {
-        _uiState.value = _uiState.value.copy(showCancelAlert = false)
+        _uiState.update { it.copy(showCancelAlert = false) }
     }
 
     fun confirmCancelGame(onGoToMenu: () -> Unit) {
-        _uiState.value = _uiState.value.copy(showCancelAlert = false)
+        _uiState.update { it.copy(showCancelAlert = false) }
         viewModelScope.launch {
-            try { firestoreRepository.updateGameStatus(gameId, GameStatus.DONE) } catch (_: Exception) {}
+            try { firestoreRepository.updateGameStatus(gameId, GameStatus.DONE) } catch (e: Exception) { Log.e("ChickenMapVM", "Failed to update game status", e) }
             onGoToMenu()
         }
     }
 
     fun confirmGameOver(onGoToMenu: () -> Unit) {
-        _uiState.value = _uiState.value.copy(showGameOverAlert = false)
+        _uiState.update { it.copy(showGameOverAlert = false) }
         onGoToMenu()
     }
 
     fun onInfoTapped() {
-        _uiState.value = _uiState.value.copy(showGameInfo = true)
+        _uiState.update { it.copy(showGameInfo = true) }
     }
 
     fun dismissGameInfo() {
-        _uiState.value = _uiState.value.copy(showGameInfo = false)
+        _uiState.update { it.copy(showGameInfo = false) }
     }
 
     fun onFoundButtonTapped() {
-        _uiState.value = _uiState.value.copy(showFoundCode = true)
+        _uiState.update { it.copy(showFoundCode = true) }
     }
 
     fun dismissFoundCode() {
-        _uiState.value = _uiState.value.copy(showFoundCode = false)
+        _uiState.update { it.copy(showFoundCode = false) }
     }
 
     fun onCodeCopied() {
-        _uiState.value = _uiState.value.copy(codeCopied = true)
+        _uiState.update { it.copy(codeCopied = true) }
         viewModelScope.launch {
-            delay(1000)
-            _uiState.value = _uiState.value.copy(codeCopied = false)
+            delay(AppConstants.CODE_COPY_FEEDBACK_MS)
+            _uiState.update { it.copy(codeCopied = false) }
         }
     }
 

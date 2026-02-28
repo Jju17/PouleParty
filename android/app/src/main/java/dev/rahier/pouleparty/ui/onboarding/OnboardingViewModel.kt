@@ -6,6 +6,7 @@ import dev.rahier.pouleparty.data.LocationRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import javax.inject.Inject
 
 data class OnboardingUiState(
@@ -25,10 +26,12 @@ class OnboardingViewModel @Inject constructor(
     val uiState: StateFlow<OnboardingUiState> = _uiState.asStateFlow()
 
     fun refreshPermissions() {
-        _uiState.value = _uiState.value.copy(
-            hasFineLocation = locationRepository.hasFineLocationPermission(),
-            hasBackgroundLocation = locationRepository.hasBackgroundLocationPermission()
-        )
+        _uiState.update {
+            it.copy(
+                hasFineLocation = locationRepository.hasFineLocationPermission(),
+                hasBackgroundLocation = locationRepository.hasBackgroundLocationPermission()
+            )
+        }
     }
 
     fun nextPage() {
@@ -38,27 +41,27 @@ class OnboardingViewModel @Inject constructor(
         // Block on nickname slide (page 4) if nickname is empty
         if (current == 4 && _uiState.value.nickname.trim().isEmpty()) return
         if (current < TOTAL_PAGES - 1) {
-            _uiState.value = _uiState.value.copy(currentPage = current + 1)
+            _uiState.update { it.copy(currentPage = current + 1) }
         }
     }
 
     fun previousPage() {
         val current = _uiState.value.currentPage
         if (current > 0) {
-            _uiState.value = _uiState.value.copy(currentPage = current - 1)
+            _uiState.update { it.copy(currentPage = current - 1) }
         }
     }
 
     fun setPage(page: Int) {
-        _uiState.value = _uiState.value.copy(currentPage = page)
+        _uiState.update { it.copy(currentPage = page) }
     }
 
     fun onNicknameChanged(name: String) {
-        _uiState.value = _uiState.value.copy(nickname = name.take(NICKNAME_MAX_LENGTH))
+        _uiState.update { it.copy(nickname = name.take(NICKNAME_MAX_LENGTH)) }
     }
 
     fun dismissLocationAlert() {
-        _uiState.value = _uiState.value.copy(showLocationAlert = false)
+        _uiState.update { it.copy(showLocationAlert = false) }
     }
 
     /**
@@ -69,7 +72,7 @@ class OnboardingViewModel @Inject constructor(
         return if (_uiState.value.hasFineLocation) {
             true
         } else {
-            _uiState.value = _uiState.value.copy(showLocationAlert = true)
+            _uiState.update { it.copy(showLocationAlert = true) }
             false
         }
     }

@@ -2,6 +2,8 @@ package dev.rahier.pouleparty.ui.components
 
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import dev.rahier.pouleparty.R
 import java.util.Date
 
 @Composable
@@ -22,9 +24,9 @@ fun CountdownView(
     }
 
     val label = when {
-        isPreChickenStart -> if (isChicken) "You start in:" else "\uD83D\uDC14 starts in:"
-        isHeadStart -> if (isChicken) "\uD83D\uDD0D Hunt starts in:" else "Hunt starts in:"
-        else -> "Map update in:"
+        isPreChickenStart -> if (isChicken) stringResource(R.string.you_start_in) else stringResource(R.string.chicken_starts_in)
+        isHeadStart -> if (isChicken) stringResource(R.string.hunt_starts_in_chicken) else stringResource(R.string.hunt_starts_in_hunter)
+        else -> stringResource(R.string.map_update_in)
     }
 
     val diffMs = target.time - nowDate.time

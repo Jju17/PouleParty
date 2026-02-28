@@ -1,32 +1,28 @@
 package dev.rahier.pouleparty.ui.huntermap
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.google.maps.android.compose.*
+import dev.rahier.pouleparty.AppConstants
+import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.ui.components.CountdownView
+import dev.rahier.pouleparty.ui.components.GameInfoDialog
+import dev.rahier.pouleparty.ui.components.GameOverAlertDialog
 import dev.rahier.pouleparty.ui.components.GameStartCountdownOverlay
-import dev.rahier.pouleparty.ui.theme.GameBoyFont
-import java.text.SimpleDateFormat
-import java.util.Locale
 
 @Composable
 fun HunterMapScreen(
@@ -65,7 +61,7 @@ fun HunterMapScreen(
             LaunchedEffect(state.circleCenter) {
                 state.circleCenter?.let { center ->
                     cameraPositionState.position =
-                        com.google.android.gms.maps.model.CameraPosition.fromLatLngZoom(center, 14f)
+                        com.google.android.gms.maps.model.CameraPosition.fromLatLngZoom(center, AppConstants.MAP_CAMERA_ZOOM)
                 }
             }
 
@@ -109,13 +105,13 @@ fun HunterMapScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("You are the Hunter", fontSize = 16.sp)
+                    Text(stringResource(R.string.you_are_hunter), fontSize = 16.sp)
                     Text(viewModel.hunterSubtitle, fontSize = 12.sp)
                 }
                 IconButton(onClick = { viewModel.onInfoTapped() }) {
                     Icon(
                         imageVector = Icons.Default.Info,
-                        contentDescription = "Game Info",
+                        contentDescription = stringResource(R.string.game_info),
                         tint = Color.Gray
                     )
                 }
@@ -133,7 +129,7 @@ fun HunterMapScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("Radius : ${state.radius}m")
+                    Text(stringResource(R.string.radius_format, state.radius))
                     CountdownView(
                         nowDate = state.nowDate,
                         nextUpdateDate = state.nextRadiusUpdate,
@@ -153,13 +149,13 @@ fun HunterMapScreen(
                             modifier = Modifier.size(width = 50.dp, height = 40.dp),
                             contentPadding = PaddingValues(0.dp)
                         ) {
-                            Text("FOUND", fontSize = 11.sp, color = Color.White)
+                            Text(stringResource(R.string.found), fontSize = 11.sp, color = Color.White)
                         }
                     }
 
                     // Quit button
                     TextButton(onClick = { viewModel.onLeaveGameTapped() }) {
-                        Text("Quit", fontSize = 14.sp, color = Color.Gray)
+                        Text(stringResource(R.string.quit), fontSize = 14.sp, color = Color.Gray)
                     }
                 }
             }
@@ -176,25 +172,25 @@ fun HunterMapScreen(
     if (state.isEnteringFoundCode) {
         AlertDialog(
             onDismissRequest = { viewModel.dismissFoundCodeEntry() },
-            title = { Text("Enter Found Code") },
+            title = { Text(stringResource(R.string.enter_found_code)) },
             text = {
                 Column {
-                    Text("Enter the 4-digit code shown by the chicken.")
+                    Text(stringResource(R.string.enter_code_message))
                     Spacer(Modifier.height(8.dp))
                     OutlinedTextField(
                         value = state.enteredCode,
                         onValueChange = { viewModel.onEnteredCodeChanged(it) },
-                        label = { Text("4-digit code") },
+                        label = { Text(stringResource(R.string.four_digit_code)) },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                     )
                 }
             },
             confirmButton = {
-                TextButton(onClick = { viewModel.submitFoundCode() }) { Text("Submit") }
+                TextButton(onClick = { viewModel.submitFoundCode() }) { Text(stringResource(R.string.submit)) }
             },
             dismissButton = {
-                TextButton(onClick = { viewModel.dismissFoundCodeEntry() }) { Text("Cancel") }
+                TextButton(onClick = { viewModel.dismissFoundCodeEntry() }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
@@ -203,10 +199,10 @@ fun HunterMapScreen(
     if (state.showWrongCodeAlert) {
         AlertDialog(
             onDismissRequest = { viewModel.dismissWrongCodeAlert() },
-            title = { Text("Wrong code") },
-            text = { Text("That code is incorrect. Try again!") },
+            title = { Text(stringResource(R.string.wrong_code)) },
+            text = { Text(stringResource(R.string.wrong_code_message)) },
             confirmButton = {
-                TextButton(onClick = { viewModel.dismissWrongCodeAlert() }) { Text("OK") }
+                TextButton(onClick = { viewModel.dismissWrongCodeAlert() }) { Text(stringResource(R.string.ok)) }
             }
         )
     }
@@ -215,16 +211,16 @@ fun HunterMapScreen(
     if (state.showLeaveAlert) {
         AlertDialog(
             onDismissRequest = { viewModel.dismissLeaveAlert() },
-            title = { Text("Quit game") },
-            text = { Text("Are you sure you want to quit the game?") },
+            title = { Text(stringResource(R.string.quit_game)) },
+            text = { Text(stringResource(R.string.quit_game_message)) },
             confirmButton = {
                 TextButton(onClick = { viewModel.confirmLeaveGame(onGoToMenu) }) {
-                    Text("Quit")
+                    Text(stringResource(R.string.quit))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.dismissLeaveAlert() }) {
-                    Text("Never mind")
+                    Text(stringResource(R.string.never_mind))
                 }
             }
         )
@@ -232,90 +228,19 @@ fun HunterMapScreen(
 
     // Game over alert
     if (state.showGameOverAlert) {
-        AlertDialog(
-            onDismissRequest = { },
-            title = { Text("Game Over") },
-            text = { Text(state.gameOverMessage) },
-            confirmButton = {
-                TextButton(onClick = { viewModel.confirmGameOver(onGoToMenu) }) {
-                    Text("OK")
-                }
-            }
+        GameOverAlertDialog(
+            message = state.gameOverMessage,
+            onConfirm = { viewModel.confirmGameOver(onGoToMenu) }
         )
     }
 
-    // Game info dialog
+    // Game info dialog (no cancel button for hunters)
     if (state.showGameInfo) {
-        val context = LocalContext.current
-        val dateFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
-
-        AlertDialog(
-            onDismissRequest = { viewModel.dismissGameInfo() },
-            title = { Text("Game Info") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    // Game code (copiable)
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                state.game.gameCode,
-                                fontFamily = GameBoyFont,
-                                fontSize = 24.sp,
-                                modifier = Modifier.weight(1f)
-                            )
-                            IconButton(onClick = {
-                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                clipboard.setPrimaryClip(ClipData.newPlainText("Game Code", state.game.gameCode))
-                                viewModel.onCodeCopied()
-                            }) {
-                                Icon(
-                                    imageVector = if (state.codeCopied) Icons.Default.Check else Icons.Default.Close,
-                                    contentDescription = "Copy",
-                                    tint = if (state.codeCopied) Color(0xFF4CAF50) else Color.Gray
-                                )
-                            }
-                        }
-                    }
-
-                    // Game mode
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text("Mode")
-                        Text(state.game.gameModEnum.title, color = Color.Gray)
-                    }
-
-                    // Start time
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text("Start")
-                        Text(dateFormat.format(state.game.startDate), color = Color.Gray)
-                    }
-
-                    // End time
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text("End")
-                        Text(dateFormat.format(state.game.endDate), color = Color.Gray)
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { viewModel.dismissGameInfo() }) {
-                    Text("OK")
-                }
-            }
+        GameInfoDialog(
+            game = state.game,
+            codeCopied = state.codeCopied,
+            onCodeCopied = { viewModel.onCodeCopied() },
+            onDismiss = { viewModel.dismissGameInfo() }
         )
     }
 }

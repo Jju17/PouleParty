@@ -71,7 +71,7 @@ struct GameTests {
 
     @Test func gameModTitlesAreCorrect() {
         #expect(Game.GameMod.followTheChicken.title == "Follow the chicken 🐔")
-        #expect(Game.GameMod.stayInTheZone.title == "Stay in tha zone 📍")
+        #expect(Game.GameMod.stayInTheZone.title == "Stay in the zone 📍")
         #expect(Game.GameMod.mutualTracking.title == "Mutual tracking 👀")
     }
 

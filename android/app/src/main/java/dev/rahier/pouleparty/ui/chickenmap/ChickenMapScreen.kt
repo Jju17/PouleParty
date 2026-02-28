@@ -1,31 +1,27 @@
 package dev.rahier.pouleparty.ui.chickenmap
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.google.maps.android.compose.*
+import dev.rahier.pouleparty.AppConstants
+import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.ui.components.CountdownView
+import dev.rahier.pouleparty.ui.components.GameInfoDialog
+import dev.rahier.pouleparty.ui.components.GameOverAlertDialog
 import dev.rahier.pouleparty.ui.components.GameStartCountdownOverlay
 import dev.rahier.pouleparty.ui.endgamecode.EndGameCodeContent
-import dev.rahier.pouleparty.ui.theme.GameBoyFont
-import java.text.SimpleDateFormat
-import java.util.Locale
 
 @Composable
 fun ChickenMapScreen(
@@ -52,7 +48,7 @@ fun ChickenMapScreen(
         // Center camera on circle when it updates
         LaunchedEffect(state.circleCenter) {
             state.circleCenter?.let { center ->
-                cameraPositionState.position = com.google.android.gms.maps.model.CameraPosition.fromLatLngZoom(center, 14f)
+                cameraPositionState.position = com.google.android.gms.maps.model.CameraPosition.fromLatLngZoom(center, AppConstants.MAP_CAMERA_ZOOM)
             }
         }
 
@@ -103,13 +99,13 @@ fun ChickenMapScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.weight(1f)
             ) {
-                Text("You are the \uD83D\uDC14", fontSize = 16.sp)
+                Text(stringResource(R.string.you_are_chicken), fontSize = 16.sp)
                 Text(viewModel.chickenSubtitle, fontSize = 14.sp)
             }
             IconButton(onClick = { viewModel.onInfoTapped() }) {
                 Icon(
                     imageVector = Icons.Default.Info,
-                    contentDescription = "Game Info",
+                    contentDescription = stringResource(R.string.game_info),
                     tint = Color.Gray
                 )
             }
@@ -127,7 +123,7 @@ fun ChickenMapScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text("Radius : ${state.radius}m")
+                Text(stringResource(R.string.radius_format, state.radius))
                 CountdownView(
                     nowDate = state.nowDate,
                     nextUpdateDate = state.nextRadiusUpdate,
@@ -145,7 +141,7 @@ fun ChickenMapScreen(
                 modifier = Modifier.size(width = 50.dp, height = 40.dp),
                 contentPadding = PaddingValues(0.dp)
             ) {
-                Text("FOUND", fontSize = 11.sp, color = Color.White)
+                Text(stringResource(R.string.found), fontSize = 11.sp, color = Color.White)
             }
         }
 
@@ -161,16 +157,16 @@ fun ChickenMapScreen(
     if (state.showCancelAlert) {
         AlertDialog(
             onDismissRequest = { viewModel.dismissCancelAlert() },
-            title = { Text("Cancel game") },
-            text = { Text("Are you sure you want to cancel and finish the game now?") },
+            title = { Text(stringResource(R.string.cancel_game)) },
+            text = { Text(stringResource(R.string.cancel_game_message)) },
             confirmButton = {
                 TextButton(onClick = { viewModel.confirmCancelGame(onGoToMenu) }) {
-                    Text("Cancel game", color = Color.Red)
+                    Text(stringResource(R.string.cancel_game), color = Color.Red)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.dismissCancelAlert() }) {
-                    Text("Never mind")
+                    Text(stringResource(R.string.never_mind))
                 }
             }
         )
@@ -178,15 +174,9 @@ fun ChickenMapScreen(
 
     // Game over alert
     if (state.showGameOverAlert) {
-        AlertDialog(
-            onDismissRequest = { },
-            title = { Text("Game Over") },
-            text = { Text(state.gameOverMessage) },
-            confirmButton = {
-                TextButton(onClick = { viewModel.confirmGameOver(onGoToMenu) }) {
-                    Text("OK")
-                }
-            }
+        GameOverAlertDialog(
+            message = state.gameOverMessage,
+            onConfirm = { viewModel.confirmGameOver(onGoToMenu) }
         )
     }
 
@@ -198,7 +188,7 @@ fun ChickenMapScreen(
             text = { EndGameCodeContent(foundCode = state.game.foundCode) },
             confirmButton = {
                 TextButton(onClick = { viewModel.dismissFoundCode() }) {
-                    Text("Close")
+                    Text(stringResource(R.string.close))
                 }
             }
         )
@@ -206,89 +196,12 @@ fun ChickenMapScreen(
 
     // Game info dialog
     if (state.showGameInfo) {
-        val context = LocalContext.current
-        val dateFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
-
-        AlertDialog(
-            onDismissRequest = { viewModel.dismissGameInfo() },
-            title = { Text("Game Info") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    // Game code (copiable)
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                state.game.gameCode,
-                                fontFamily = GameBoyFont,
-                                fontSize = 24.sp,
-                                modifier = Modifier.weight(1f)
-                            )
-                            IconButton(onClick = {
-                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                clipboard.setPrimaryClip(ClipData.newPlainText("Game Code", state.game.gameCode))
-                                viewModel.onCodeCopied()
-                            }) {
-                                Icon(
-                                    imageVector = if (state.codeCopied) Icons.Default.Check else Icons.Default.Close,
-                                    contentDescription = "Copy",
-                                    tint = if (state.codeCopied) Color(0xFF4CAF50) else Color.Gray
-                                )
-                            }
-                        }
-                    }
-
-                    // Game mode
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text("Mode")
-                        Text(state.game.gameModEnum.title, color = Color.Gray)
-                    }
-
-                    // Start time
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text("Start")
-                        Text(dateFormat.format(state.game.startDate), color = Color.Gray)
-                    }
-
-                    // End time
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text("End")
-                        Text(dateFormat.format(state.game.endDate), color = Color.Gray)
-                    }
-
-                    Spacer(Modifier.height(8.dp))
-
-                    // Cancel game button
-                    TextButton(
-                        onClick = {
-                            viewModel.dismissGameInfo()
-                            viewModel.onCancelGameTapped()
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Cancel game", color = Color.Red)
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { viewModel.dismissGameInfo() }) {
-                    Text("OK")
-                }
-            }
+        GameInfoDialog(
+            game = state.game,
+            codeCopied = state.codeCopied,
+            onCodeCopied = { viewModel.onCodeCopied() },
+            onDismiss = { viewModel.dismissGameInfo() },
+            onCancelGame = { viewModel.onCancelGameTapped() }
         )
     }
 }

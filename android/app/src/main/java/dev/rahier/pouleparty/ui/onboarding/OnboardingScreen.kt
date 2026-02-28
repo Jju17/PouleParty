@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -134,7 +135,7 @@ fun OnboardingScreen(
                 if (state.currentPage > 0) {
                     TextButton(onClick = { viewModel.previousPage() }) {
                         Text(
-                            "Back",
+                            stringResource(R.string.back),
                             style = bangerStyle(18),
                             color = Color.Black.copy(alpha = 0.5f)
                         )
@@ -165,7 +166,7 @@ fun OnboardingScreen(
                     shape = RoundedCornerShape(50)
                 ) {
                     Text(
-                        text = if (viewModel.isLastPage) "Let's go!" else "Next",
+                        text = if (viewModel.isLastPage) stringResource(R.string.lets_go) else stringResource(R.string.next),
                         style = bangerStyle(22),
                         color = Color.White,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
@@ -179,10 +180,10 @@ fun OnboardingScreen(
     if (state.showLocationAlert) {
         AlertDialog(
             onDismissRequest = { viewModel.dismissLocationAlert() },
-            title = { Text("Location Required") },
-            text = { Text("Location is the core of PouleParty! Your position is anonymous and only used during the game. Please enable location access to continue.") },
+            title = { Text(stringResource(R.string.location_required)) },
+            text = { Text(stringResource(R.string.location_required_message)) },
             confirmButton = {
-                TextButton(onClick = { viewModel.dismissLocationAlert() }) { Text("OK") }
+                TextButton(onClick = { viewModel.dismissLocationAlert() }) { Text(stringResource(R.string.ok)) }
             }
         )
     }
@@ -231,13 +232,13 @@ private fun OnboardingSlideLayout(
 @Composable
 private fun SlideWelcome() {
     OnboardingSlideLayout(
-        title = "Welcome to\nPouleParty!",
-        subtitle = "The ultimate hide-and-seek\npub crawl game",
+        title = stringResource(R.string.welcome_title),
+        subtitle = stringResource(R.string.welcome_subtitle),
         titleSize = 36,
         icon = {
             Image(
                 painter = painterResource(R.drawable.logo),
-                contentDescription = "Logo",
+                contentDescription = stringResource(R.string.app_name),
                 modifier = Modifier.size(160.dp)
             )
         }
@@ -247,8 +248,8 @@ private fun SlideWelcome() {
 @Composable
 private fun SlideNominateChicken() {
     OnboardingSlideLayout(
-        title = "Nominate a Chicken",
-        subtitle = "Pick the Stag, the Birthday Girl, or whoever just really wants to be a Chicken.\n\nTheir job is to hide.",
+        title = stringResource(R.string.nominate_chicken),
+        subtitle = stringResource(R.string.nominate_subtitle),
         icon = { Text("\uD83D\uDC14", fontSize = 80.sp) }
     )
 }
@@ -256,8 +257,8 @@ private fun SlideNominateChicken() {
 @Composable
 private fun SlideHuntThemDown() {
     OnboardingSlideLayout(
-        title = "Hunt Them Down",
-        subtitle = "Split into squads. Use the map to track them.\n\nThe Chicken could be hiding in any pub or bar.",
+        title = stringResource(R.string.hunt_them_down),
+        subtitle = stringResource(R.string.hunt_subtitle),
         icon = { Text("\uD83D\uDDFA\uFE0F", fontSize = 80.sp) }
     )
 }
@@ -275,24 +276,24 @@ private fun SlideLocation(
         else -> "\uD83D\uDE22"
     }
     OnboardingSlideLayout(
-        title = "We Need Your Location",
+        title = stringResource(R.string.need_location),
         icon = { Text(emoji, fontSize = 80.sp) }
     ) {
         Spacer(Modifier.height(16.dp))
         when {
             hasBackgroundLocation -> {
                 Text(
-                    "You're all set! The game will track location even in the background.\n\nMaximum fun guaranteed!",
+                    stringResource(R.string.location_granted),
                     style = bangerStyle(18),
                     textAlign = TextAlign.Center,
                     color = Color.Black.copy(alpha = 0.6f)
                 )
                 Spacer(Modifier.height(16.dp))
-                Text("\u2705 Always allowed!", style = bangerStyle(20), color = Color(0xFF4CAF50))
+                Text("\u2705 " + stringResource(R.string.always_allowed), style = bangerStyle(20), color = Color(0xFF4CAF50))
             }
             hasFineLocation -> {
                 Text(
-                    "Almost there! The game needs to track the Chicken even when the app is in the background.\n\nPlease allow background location.",
+                    stringResource(R.string.location_partial),
                     style = bangerStyle(18),
                     textAlign = TextAlign.Center,
                     color = Color.Black.copy(alpha = 0.6f)
@@ -303,12 +304,12 @@ private fun SlideLocation(
                     colors = ButtonDefaults.buttonColors(containerColor = CROrange),
                     shape = RoundedCornerShape(50)
                 ) {
-                    Text("Allow Always", style = bangerStyle(20), color = Color.White)
+                    Text(stringResource(R.string.allow_always), style = bangerStyle(20), color = Color.White)
                 }
             }
             else -> {
                 Text(
-                    "Without it, the game can't work.\nNo location = no map = no fun.\n\nWe promise we only use it during the game!",
+                    stringResource(R.string.location_denied),
                     style = bangerStyle(18),
                     textAlign = TextAlign.Center,
                     color = Color.Black.copy(alpha = 0.6f)
@@ -319,7 +320,7 @@ private fun SlideLocation(
                     colors = ButtonDefaults.buttonColors(containerColor = CROrange),
                     shape = RoundedCornerShape(50)
                 ) {
-                    Text("Allow Location Access", style = bangerStyle(20), color = Color.White)
+                    Text(stringResource(R.string.allow_location_access), style = bangerStyle(20), color = Color.White)
                 }
             }
         }
@@ -333,15 +334,15 @@ private fun SlideNickname(
     onNicknameChanged: (String) -> Unit
 ) {
     OnboardingSlideLayout(
-        title = "Choose Your Nickname",
-        subtitle = "This is how other players\nwill see you in the game.",
+        title = stringResource(R.string.choose_nickname),
+        subtitle = stringResource(R.string.nickname_subtitle),
         icon = { Text("\uD83C\uDFF7\uFE0F", fontSize = 80.sp) }
     ) {
         Spacer(Modifier.height(24.dp))
         OutlinedTextField(
             value = nickname,
             onValueChange = onNicknameChanged,
-            label = { Text("Your nickname") },
+            label = { Text(stringResource(R.string.your_nickname)) },
             singleLine = true,
             shape = RoundedCornerShape(12.dp),
             modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
@@ -358,8 +359,8 @@ private fun SlideNickname(
 @Composable
 private fun SlideReady() {
     OnboardingSlideLayout(
-        title = "The Endgame",
-        subtitle = "Close in on the Chicken. Complete challenges for points. Unleash weapons.\n\nIt's Mario Kart rules \u2014 anything goes.",
+        title = stringResource(R.string.the_endgame),
+        subtitle = stringResource(R.string.endgame_subtitle),
         icon = { Text("\uD83C\uDF89", fontSize = 80.sp) }
     )
 }

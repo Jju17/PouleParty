@@ -13,6 +13,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -46,7 +48,7 @@ fun SelectionScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(CRBeige)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         // Center content
         Column(
@@ -56,7 +58,7 @@ fun SelectionScreen(
         ) {
             Image(
                 painter = painterResource(R.drawable.logo),
-                contentDescription = "Logo",
+                contentDescription = stringResource(R.string.app_name),
                 modifier = Modifier.size(200.dp)
             )
 
@@ -66,18 +68,18 @@ fun SelectionScreen(
                     .width(200.dp)
                     .height(50.dp)
                     .alpha(alpha)
-                    .border(4.dp, Color.Black, RoundedCornerShape(10.dp))
+                    .border(4.dp, MaterialTheme.colorScheme.onBackground, RoundedCornerShape(10.dp))
             ) {
                 Text(
-                    "START",
+                    stringResource(R.string.start),
                     fontFamily = GameBoyFont,
                     fontSize = 22.sp,
-                    color = Color.Black
+                    color = MaterialTheme.colorScheme.onBackground
                 )
             }
 
             Text(
-                "Press start to play",
+                stringResource(R.string.press_start),
                 fontFamily = GameBoyFont,
                 fontSize = 12.sp,
                 color = Color.Black
@@ -91,10 +93,10 @@ fun SelectionScreen(
                 .align(Alignment.TopEnd)
                 .padding(16.dp)
                 .padding(top = 32.dp)
-                .border(1.5.dp, Color.Black, RoundedCornerShape(8.dp))
+                .border(1.5.dp, MaterialTheme.colorScheme.onBackground, RoundedCornerShape(8.dp))
         ) {
             Text(
-                "Rules",
+                stringResource(R.string.rules),
                 fontFamily = GameBoyFont,
                 fontSize = 8.sp,
                 color = Color.Black
@@ -108,10 +110,10 @@ fun SelectionScreen(
                 .align(Alignment.BottomEnd)
                 .padding(16.dp)
                 .padding(bottom = 16.dp)
-                .border(1.5.dp, Color.Black, RoundedCornerShape(8.dp))
+                .border(1.5.dp, MaterialTheme.colorScheme.onBackground, RoundedCornerShape(8.dp))
         ) {
             Text(
-                "I am la poule",
+                stringResource(R.string.i_am_la_poule),
                 fontFamily = GameBoyFont,
                 fontSize = 8.sp,
                 color = Color.Black
@@ -125,15 +127,15 @@ fun SelectionScreen(
     if (state.isShowingPasswordDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.onPasswordDialogDismissed() },
-            title = { Text("Password") },
+            title = { Text(stringResource(R.string.password)) },
             text = {
                 Column {
-                    Text("Please enter admin password.")
+                    Text(stringResource(R.string.enter_admin_password))
                     Spacer(Modifier.height(8.dp))
                     OutlinedTextField(
                         value = state.password,
                         onValueChange = { viewModel.onPasswordChanged(it) },
-                        label = { Text("Password") },
+                        label = { Text(stringResource(R.string.password)) },
                         visualTransformation = PasswordVisualTransformation(),
                         singleLine = true
                     )
@@ -145,10 +147,10 @@ fun SelectionScreen(
                     if (gameId != null) {
                         onNavigateToChickenConfig(gameId)
                     }
-                }) { Text("Ok") }
+                }) { Text(stringResource(R.string.ok)) }
             },
             dismissButton = {
-                TextButton(onClick = { viewModel.onPasswordDialogDismissed() }) { Text("Cancel") }
+                TextButton(onClick = { viewModel.onPasswordDialogDismissed() }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
@@ -157,15 +159,15 @@ fun SelectionScreen(
     if (state.isShowingJoinDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.onJoinDialogDismissed() },
-            title = { Text("Join Game") },
+            title = { Text(stringResource(R.string.join_game)) },
             text = {
                 Column {
-                    Text("Enter the game code to join.")
+                    Text(stringResource(R.string.join_game_message))
                     Spacer(Modifier.height(8.dp))
                     OutlinedTextField(
                         value = state.gameCode,
                         onValueChange = { viewModel.onGameCodeChanged(it) },
-                        label = { Text("Game code") },
+                        label = { Text(stringResource(R.string.game_code)) },
                         singleLine = true
                     )
                 }
@@ -180,10 +182,10 @@ fun SelectionScreen(
                             onNavigateToVictory(gameId)
                         }
                     )
-                }) { Text("Join") }
+                }) { Text(stringResource(R.string.join)) }
             },
             dismissButton = {
-                TextButton(onClick = { viewModel.onJoinDialogDismissed() }) { Text("Cancel") }
+                TextButton(onClick = { viewModel.onJoinDialogDismissed() }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
@@ -192,10 +194,10 @@ fun SelectionScreen(
     if (state.isShowingGameNotFound) {
         AlertDialog(
             onDismissRequest = { viewModel.onGameNotFoundDismissed() },
-            title = { Text("Game not found") },
-            text = { Text("No active game found with this code. Check the code and try again.") },
+            title = { Text(stringResource(R.string.game_not_found)) },
+            text = { Text(stringResource(R.string.game_not_found_message)) },
             confirmButton = {
-                TextButton(onClick = { viewModel.onGameNotFoundDismissed() }) { Text("OK") }
+                TextButton(onClick = { viewModel.onGameNotFoundDismissed() }) { Text(stringResource(R.string.ok)) }
             }
         )
     }
@@ -204,10 +206,10 @@ fun SelectionScreen(
     if (state.isShowingLocationRequired) {
         AlertDialog(
             onDismissRequest = { viewModel.onLocationRequiredDismissed() },
-            title = { Text("Location Required") },
-            text = { Text("Location is the core of PouleParty! Your position is anonymous and only used during the game. Please enable location access to continue.") },
+            title = { Text(stringResource(R.string.location_required)) },
+            text = { Text(stringResource(R.string.location_required_message)) },
             confirmButton = {
-                TextButton(onClick = { viewModel.onLocationRequiredDismissed() }) { Text("OK") }
+                TextButton(onClick = { viewModel.onLocationRequiredDismissed() }) { Text(stringResource(R.string.ok)) }
             }
         )
     }
@@ -216,10 +218,10 @@ fun SelectionScreen(
     if (state.isShowingGameInProgress) {
         AlertDialog(
             onDismissRequest = { viewModel.onGameInProgressDismissed() },
-            title = { Text("Game in progress") },
-            text = { Text("This game is already in progress. You cannot join anymore.") },
+            title = { Text(stringResource(R.string.game_in_progress)) },
+            text = { Text(stringResource(R.string.game_in_progress_message)) },
             confirmButton = {
-                TextButton(onClick = { viewModel.onGameInProgressDismissed() }) { Text("OK") }
+                TextButton(onClick = { viewModel.onGameInProgressDismissed() }) { Text(stringResource(R.string.ok)) }
             }
         )
     }
@@ -243,18 +245,18 @@ private fun GameRulesDialog(onDismiss: () -> Unit) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Rules", style = bangerStyle(28), color = Color.Black)
+                Text(stringResource(R.string.rules), style = bangerStyle(28), color = MaterialTheme.colorScheme.onSurface)
                 IconButton(onClick = onDismiss) {
                     Icon(
                         painter = painterResource(android.R.drawable.ic_menu_close_clear_cancel),
-                        contentDescription = "Close",
-                        tint = Color.Black
+                        contentDescription = stringResource(R.string.close),
+                        tint = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
         },
         text = { GameRulesScreen() },
         confirmButton = {},
-        containerColor = CRBeige
+        containerColor = MaterialTheme.colorScheme.background
     )
 }

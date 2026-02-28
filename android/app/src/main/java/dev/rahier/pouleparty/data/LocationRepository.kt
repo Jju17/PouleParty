@@ -12,6 +12,7 @@ import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.Priority
 import com.google.android.gms.maps.model.LatLng
 import dagger.hilt.android.qualifiers.ApplicationContext
+import dev.rahier.pouleparty.AppConstants
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -58,9 +59,9 @@ class LocationRepository @Inject constructor(
     fun locationFlow(): Flow<LatLng> = callbackFlow {
         val locationRequest = LocationRequest.Builder(
             Priority.PRIORITY_HIGH_ACCURACY,
-            5_000L // 5 seconds interval
+            AppConstants.LOCATION_UPDATE_INTERVAL_MS
         )
-            .setMinUpdateDistanceMeters(10f) // ≡ distanceFilter = 10 on iOS
+            .setMinUpdateDistanceMeters(AppConstants.LOCATION_MIN_DISTANCE_METERS)
             .build()
 
         val callback = object : LocationCallback() {

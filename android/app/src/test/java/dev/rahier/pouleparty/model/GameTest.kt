@@ -115,7 +115,7 @@ class GameTest {
     @Test
     fun `all game mods have correct titles`() {
         assertEquals("Follow the chicken \uD83D\uDC14", GameMod.FOLLOW_THE_CHICKEN.title)
-        assertEquals("Stay in tha zone \uD83D\uDCCD", GameMod.STAY_IN_THE_ZONE.title)
+        assertEquals("Stay in the zone \uD83D\uDCCD", GameMod.STAY_IN_THE_ZONE.title)
         assertEquals("Mutual tracking \uD83D\uDC40", GameMod.MUTUAL_TRACKING.title)
     }
 

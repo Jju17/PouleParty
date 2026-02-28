@@ -7,7 +7,10 @@
 
 import ComposableArchitecture
 import MapKit
+import os
 import SwiftUI
+
+private let logger = Logger(subsystem: "dev.rahier.pouleparty", category: "HunterMap")
 
 @Reducer
 struct HunterMapFeature {
@@ -16,7 +19,7 @@ struct HunterMapFeature {
     struct State: Equatable {
         @Presents var destination: Destination.State?
         var game: Game
-        var hunterId: String = UUID().uuidString
+        var hunterId: String = ""
         var hunterName: String = "Hunter"
         var enteredCode: String = ""
         var isEnteringFoundCode: Bool = false
@@ -29,8 +32,11 @@ struct HunterMapFeature {
         var winnerNotification: String? = nil
         var countdownNumber: Int? = nil
         var countdownText: String? = nil
+        var wrongCodeAttempts: Int = 0
+        var codeCooldownUntil: Date? = nil
 
-        var hasGameStarted: Bool { .now >= game.hunterStartDate }
+        var hasGameStarted: Bool { nowDate >= game.hunterStartDate }
+        var isCodeOnCooldown: Bool { codeCooldownUntil.map { nowDate < $0 } ?? false }
     }
 
     enum Action: BindableAction {
@@ -70,6 +76,7 @@ struct HunterMapFeature {
     }
 
     @Dependency(\.apiClient) var apiClient
+    @Dependency(\.authClient) var authClient
     @Dependency(\.continuousClock) var clock
     @Dependency(\.locationClient) var locationClient
 
@@ -78,6 +85,9 @@ struct HunterMapFeature {
 
         Reduce { state, action in
             switch action {
+            case .binding(\.enteredCode):
+                state.enteredCode = String(state.enteredCode.prefix(AppConstants.foundCodeDigits))
+                return .none
             case .binding:
                 return .none
             case .cancelGameButtonTapped:
@@ -98,13 +108,9 @@ struct HunterMapFeature {
                 return .none
             case .destination(.presented(.alert(.leaveGame))):
                 locationClient.stopTracking()
-                return .run { send in
-                    await send(.goToMenu)
-                }
+                return .send(.goToMenu)
             case .destination(.presented(.alert(.gameOver))):
-                return .run { send in
-                    await send(.goToMenu)
-                }
+                return .send(.goToMenu)
             case .destination:
                 return .none
             case .dismissCountdown:
@@ -121,11 +127,19 @@ struct HunterMapFeature {
                 state.isEnteringFoundCode = true
                 return .none
             case .submitFoundCode:
+                guard !state.isCodeOnCooldown else {
+                    return .none
+                }
                 let code = state.enteredCode.trimmingCharacters(in: .whitespacesAndNewlines)
                 state.enteredCode = ""
                 state.isEnteringFoundCode = false
 
                 guard code == state.game.foundCode else {
+                    state.wrongCodeAttempts += 1
+                    if state.wrongCodeAttempts >= AppConstants.codeMaxWrongAttempts {
+                        state.codeCooldownUntil = .now.addingTimeInterval(AppConstants.codeCooldownSeconds)
+                        state.wrongCodeAttempts = 0
+                    }
                     state.destination = .alert(
                         AlertState {
                             TextState("Wrong code")
@@ -165,6 +179,9 @@ struct HunterMapFeature {
                 )
                 return .none
             case .onTask:
+                if let uid = authClient.currentUserId() {
+                    state.hunterId = uid
+                }
                 let gameId = state.game.id
                 let gameMod = state.game.gameMod
                 let hunterId = state.hunterId
@@ -221,12 +238,20 @@ struct HunterMapFeature {
                             }
                             // Send current location immediately on connect
                             if let currentLocation = locationClient.lastLocation() {
-                                try apiClient.setHunterLocation(gameId, hunterId, currentLocation)
+                                do {
+                                    try apiClient.setHunterLocation(gameId, hunterId, currentLocation)
+                                } catch {
+                                    logger.error("Failed to send initial hunter location: \(error)")
+                                }
                             }
                             var lastWrite = Date.now
                             for await coordinate in locationClient.startTracking() {
-                                if Date.now.timeIntervalSince(lastWrite) >= 5 {
-                                    try apiClient.setHunterLocation(gameId, hunterId, coordinate)
+                                if Date.now.timeIntervalSince(lastWrite) >= AppConstants.locationThrottleSeconds {
+                                    do {
+                                        try apiClient.setHunterLocation(gameId, hunterId, coordinate)
+                                    } catch {
+                                        logger.error("Failed to send hunter location: \(error)")
+                                    }
                                     lastWrite = .now
                                 }
                             }
@@ -273,66 +298,62 @@ struct HunterMapFeature {
                 }
 
                 // Detect new winners
-                let previousCount = state.previousWinnersCount
-                if game.winners.count > previousCount {
-                    let newWinners = Array(game.winners.suffix(from: previousCount))
-                    if let latest = newWinners.last, latest.hunterId != state.hunterId {
-                        state.winnerNotification = "\(latest.hunterName) a trouvé la poule !"
-                    }
+                if let notification = detectNewWinners(
+                    winners: game.winners,
+                    previousCount: state.previousWinnersCount,
+                    ownHunterId: state.hunterId
+                ) {
+                    state.winnerNotification = notification
                     state.previousWinnersCount = game.winners.count
-                    if state.winnerNotification != nil {
-                        return .run { send in
-                            try await clock.sleep(for: .seconds(4))
-                            await send(.dismissWinnerNotification)
-                        }
+                    return .run { send in
+                        try await clock.sleep(for: .seconds(AppConstants.winnerNotificationSeconds))
+                        await send(.dismissWinnerNotification)
                     }
                 }
+                state.previousWinnersCount = game.winners.count
                 return .none
             case .timerTicked:
                 state.nowDate = .now
 
-                // Phase 1: Chicken departure countdown (only if head start > 0)
-                if state.game.chickenHeadStartMinutes > 0 {
-                    let timeToChickenStart = state.game.startDate.timeIntervalSinceNow
-                    if timeToChickenStart > 0 && timeToChickenStart <= 3 {
-                        let number = Int(ceil(timeToChickenStart))
-                        if state.countdownNumber != number {
-                            state.countdownNumber = number
-                            state.countdownText = nil
-                        }
-                    } else if timeToChickenStart <= 0 && timeToChickenStart > -1 && state.countdownText == nil {
-                        state.countdownNumber = nil
-                        state.countdownText = "🐔 is hiding!"
-                        return .run { send in
-                            try await clock.sleep(for: .seconds(1.5))
-                            await send(.dismissCountdown)
-                        }
-                    }
-                }
-
-                // Phase 2: Hunt start countdown: 3, 2, 1, LET'S HUNT!
-                let timeToHuntStart = state.game.hunterStartDate.timeIntervalSinceNow
-                if timeToHuntStart > 0 && timeToHuntStart <= 3 {
-                    let number = Int(ceil(timeToHuntStart))
-                    if state.countdownNumber != number {
-                        state.countdownNumber = number
-                        state.countdownText = nil
-                    }
-                } else if timeToHuntStart <= 0 && timeToHuntStart > -1 && state.countdownText == nil {
+                // Countdown phases (hunter perspective)
+                let countdownResult = evaluateCountdown(
+                    phases: [
+                        CountdownPhase(
+                            targetDate: state.game.startDate,
+                            completionText: "🐔 is hiding!",
+                            showNumericCountdown: true,
+                            isEnabled: state.game.chickenHeadStartMinutes > 0
+                        ),
+                        CountdownPhase(
+                            targetDate: state.game.hunterStartDate,
+                            completionText: "LET'S HUNT! 🔍",
+                            showNumericCountdown: true,
+                            isEnabled: true
+                        )
+                    ],
+                    currentCountdownNumber: state.countdownNumber,
+                    currentCountdownText: state.countdownText
+                )
+                switch countdownResult {
+                case .noChange:
+                    break
+                case .updateNumber(let n):
+                    state.countdownNumber = n
+                    state.countdownText = nil
+                case .showText(let text):
                     state.countdownNumber = nil
-                    state.countdownText = "LET'S HUNT! 🔍"
+                    state.countdownText = text
                     return .run { send in
-                        try await clock.sleep(for: .seconds(1.5))
+                        try await clock.sleep(for: .seconds(AppConstants.countdownDisplaySeconds))
                         await send(.dismissCountdown)
                     }
                 }
 
                 guard state.destination == nil else { return .none }
-
-                // Don't process game-over or radius updates before game starts
                 guard state.hasGameStarted else { return .none }
 
-                if .now >= state.game.endDate {
+                // Game over by time
+                if checkGameOverByTime(endDate: state.game.endDate) {
                     locationClient.stopTracking()
                     state.destination = .alert(
                         AlertState {
@@ -348,42 +369,34 @@ struct HunterMapFeature {
                     return .none
                 }
 
-                guard let nextRadiusUpdate = state.nextRadiusUpdate,
-                      .now >= nextRadiusUpdate
-                else { return .none }
-
-                let game = state.game
-                let newRadius = Int(state.radius) - Int(game.radiusDeclinePerUpdate)
-
-                guard newRadius > 0 else {
-                    locationClient.stopTracking()
-                    state.destination = .alert(
-                        AlertState {
-                            TextState("Game Over")
-                        } actions: {
-                            ButtonState(action: .gameOver) {
-                                TextState("OK")
+                // Radius update
+                if let result = processRadiusUpdate(
+                    nextRadiusUpdate: state.nextRadiusUpdate,
+                    currentRadius: state.radius,
+                    radiusDeclinePerUpdate: state.game.radiusDeclinePerUpdate,
+                    radiusIntervalUpdate: state.game.radiusIntervalUpdate,
+                    gameMod: state.game.gameMod,
+                    initialCoordinates: state.game.initialCoordinates.toCLCoordinates,
+                    currentCircle: state.mapCircle
+                ) {
+                    if result.isGameOver {
+                        locationClient.stopTracking()
+                        state.destination = .alert(
+                            AlertState {
+                                TextState("Game Over")
+                            } actions: {
+                                ButtonState(action: .gameOver) {
+                                    TextState("OK")
+                                }
+                            } message: {
+                                TextState(result.gameOverMessage ?? "Game over")
                             }
-                        } message: {
-                            TextState("The zone has collapsed!")
-                        }
-                    )
-                    return .none
-                }
-
-                state.nextRadiusUpdate?.addTimeInterval(TimeInterval(game.radiusIntervalUpdate * 60))
-                state.radius = newRadius
-
-                if game.gameMod == .stayInTheZone {
-                    state.mapCircle = CircleOverlay(
-                        center: game.initialCoordinates.toCLCoordinates,
-                        radius: CLLocationDistance(state.radius)
-                    )
-                } else if let currentCircle = state.mapCircle {
-                    state.mapCircle = CircleOverlay(
-                        center: currentCircle.center,
-                        radius: CLLocationDistance(state.radius)
-                    )
+                        )
+                        return .none
+                    }
+                    state.radius = result.newRadius
+                    state.nextRadiusUpdate = result.newNextUpdate
+                    state.mapCircle = result.newCircle
                 }
                 return .none
             }
@@ -438,6 +451,7 @@ struct HunterMapView: View {
                         .font(.system(size: 20))
                         .foregroundStyle(.secondary)
                 }
+                .accessibilityLabel("Game info")
                 .padding(.trailing, 4)
             }
             .padding()
@@ -447,6 +461,7 @@ struct HunterMapView: View {
             HStack {
                 VStack(alignment: .leading) {
                     Text("Radius : \(self.store.radius)m")
+                        .accessibilityLabel("Radius \(self.store.radius) meters")
                     CountdownView(nowDate: self.$store.nowDate, nextUpdateDate: self.$store.nextRadiusUpdate, chickenStartDate: store.game.startDate, hunterStartDate: store.game.hunterStartDate, isChicken: false)
                 }
                 Spacer()
@@ -463,6 +478,7 @@ struct HunterMapView: View {
                                 .foregroundStyle(.white)
                         }
                     }
+                    .accessibilityLabel("I found the chicken")
                     .frame(width: 50, height: 40)
                 }
                 Button {
@@ -476,6 +492,7 @@ struct HunterMapView: View {
                         .background(.ultraThinMaterial)
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
+                .accessibilityLabel("Quit game")
             }
             .padding()
             .background(.thinMaterial)
@@ -506,18 +523,7 @@ struct HunterMapView: View {
             GameInfoSheet(game: self.store.game)
         }
         .overlay(alignment: .top) {
-            if let notification = store.winnerNotification {
-                Text(notification)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .background(.green.opacity(0.9))
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                    .padding(.top, 100)
-                    .transition(.move(edge: .top).combined(with: .opacity))
-                    .animation(.easeInOut, value: store.winnerNotification)
-            }
+            WinnerNotificationOverlay(notification: store.winnerNotification)
         }
         .overlay {
             GameStartCountdownOverlay(

@@ -1,0 +1,80 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Games collection
+    match /games/{gameId} {
+      // Any authenticated user can read a game (needed to join via game code)
+      allow read: if request.auth != null;
+
+      // Any authenticated user can create a game (must include creatorId matching their uid)
+      allow create: if request.auth != null
+                    && request.resource.data.keys().hasAll(['id', 'name', 'status', 'creatorId'])
+                    && request.resource.data.status == 'waiting'
+                    && request.resource.data.creatorId == request.auth.uid
+                    && request.resource.data.id is string
+                    && request.resource.data.name is string
+                    && request.resource.data.creatorId is string
+                    && request.resource.data.creatorId.size() < 128;
+
+      // Any player can update hunterIds and winners (join game, submit winner)
+      // Array size limited to numberOfPlayers
+      allow update: if request.auth != null
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['hunterIds', 'winners'])
+                    && request.resource.data.hunterIds.size() <= resource.data.numberOfPlayers
+                    && request.resource.data.winners.size() <= resource.data.numberOfPlayers;
+
+      // Only the creator can update status or gameCode
+      allow update: if request.auth != null
+                    && resource.data.creatorId == request.auth.uid
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['status', 'gameCode']);
+
+      // Only the creator can delete, and only while still waiting
+      allow delete: if request.auth != null
+                    && resource.data.creatorId == request.auth.uid
+                    && resource.data.status == 'waiting';
+
+      // Chicken locations subcollection (only the creator can write)
+      match /chickenLocations/{docId} {
+        allow read: if request.auth != null;
+        allow create: if request.auth != null
+                      && get(/databases/$(database)/documents/games/$(gameId)).data.creatorId == request.auth.uid
+                      && request.resource.data.keys().hasAll(['location', 'timestamp'])
+                      && request.resource.data.location is latlng
+                      && request.resource.data.timestamp is timestamp;
+        allow update, delete: if false;
+      }
+
+      // Hunter locations subcollection
+      match /hunterLocations/{visitorId} {
+        allow read: if request.auth != null;
+        // Document ID and hunterId field must both match the authenticated user
+        // Rate-limited: must wait 3s between writes
+        allow create: if request.auth != null
+                      && visitorId == request.auth.uid
+                      && request.resource.data.hunterId == request.auth.uid
+                      && request.resource.data.keys().hasAll(['hunterId', 'location', 'timestamp'])
+                      && request.resource.data.hunterId is string
+                      && request.resource.data.hunterId.size() < 128
+                      && request.resource.data.location is latlng
+                      && request.resource.data.timestamp is timestamp;
+        allow update: if request.auth != null
+                      && visitorId == request.auth.uid
+                      && request.resource.data.hunterId == request.auth.uid
+                      && request.resource.data.keys().hasAll(['hunterId', 'location', 'timestamp'])
+                      && request.resource.data.hunterId is string
+                      && request.resource.data.location is latlng
+                      && request.resource.data.timestamp is timestamp
+                      && request.time > resource.data.timestamp + duration.value(3, 's');
+        allow delete: if false;
+      }
+    }
+
+    // Deny access to everything else
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -2,14 +2,18 @@ package dev.rahier.pouleparty.navigation
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
+import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.tasks.await
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.google.firebase.firestore.FirebaseFirestore
+import dev.rahier.pouleparty.AppConstants
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.ui.chickenconfig.ChickenConfigScreen
 import dev.rahier.pouleparty.ui.chickenmap.ChickenMapScreen
@@ -37,8 +41,19 @@ object Routes {
 fun AppNavigation() {
     val navController = rememberNavController()
     val context = LocalContext.current
-    val prefs = context.getSharedPreferences("pouleparty", Context.MODE_PRIVATE)
-    val hasCompletedOnboarding = prefs.getBoolean("hasCompletedOnboarding", false)
+    val prefs = context.getSharedPreferences(AppConstants.PREFS_NAME, Context.MODE_PRIVATE)
+    val hasCompletedOnboarding = prefs.getBoolean(AppConstants.PREF_ONBOARDING_COMPLETED, false)
+
+    LaunchedEffect(Unit) {
+        val auth = FirebaseAuth.getInstance()
+        if (auth.currentUser == null) {
+            try {
+                auth.signInAnonymously().await()
+            } catch (e: Exception) {
+                Log.e("AppNavigation", "Anonymous sign-in failed", e)
+            }
+        }
+    }
 
     val startDestination = if (hasCompletedOnboarding) Routes.SELECTION else Routes.ONBOARDING
 
@@ -48,8 +63,8 @@ fun AppNavigation() {
             OnboardingScreen(
                 onOnboardingCompleted = { nickname ->
                     prefs.edit()
-                        .putBoolean("hasCompletedOnboarding", true)
-                        .putString("userNickname", nickname)
+                        .putBoolean(AppConstants.PREF_ONBOARDING_COMPLETED, true)
+                        .putString(AppConstants.PREF_USER_NICKNAME, nickname)
                         .apply()
                     navController.navigate(Routes.SELECTION) {
                         popUpTo(Routes.ONBOARDING) { inclusive = true }

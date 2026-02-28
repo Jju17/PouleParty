@@ -1,18 +1,140 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">PouleParty</string>
+
+    <!-- Selection -->
     <string name="start">START</string>
     <string name="press_start">Press start to play</string>
     <string name="rules">Rules</string>
     <string name="i_am_la_poule">I am la poule</string>
-    <string name="game_settings">Game Settings</string>
+    <string name="password">Password</string>
+    <string name="enter_admin_password">Please enter admin password.</string>
+    <string name="join_game">Join Game</string>
+    <string name="join_game_message">Enter the game code to join.</string>
     <string name="game_code">Game Code</string>
+    <string name="join">Join</string>
+    <string name="cancel">Cancel</string>
+    <string name="ok">OK</string>
+    <string name="close">Close</string>
+    <string name="game_not_found">Game not found</string>
+    <string name="game_not_found_message">No active game found with this code. Check the code and try again.</string>
+    <string name="game_in_progress">Game in progress</string>
+    <string name="game_in_progress_message">This game is already in progress. You cannot join anymore.</string>
+    <string name="location_required">Location Required</string>
+    <string name="location_required_message">Location is the core of PouleParty! Your position is anonymous and only used during the game. Please enable location access to continue.</string>
+
+    <!-- Chicken Config -->
+    <string name="game_settings">Game Settings</string>
     <string name="start_at">Start at</string>
     <string name="end_at">End at</string>
     <string name="game_mode">Game Mode</string>
     <string name="map_setup">Map setup</string>
     <string name="start_game">Start game</string>
+    <string name="radius_interval_update">Radius interval update</string>
+    <string name="radius_decline">Radius decline</string>
+    <string name="chicken_head_start">Chicken head start</string>
+    <string name="minutes_format">%d minutes</string>
+    <string name="meters_format">%d meters</string>
+    <string name="error">Error</string>
+
+    <!-- Chicken Map -->
+    <string name="you_are_chicken">You are the 🐔</string>
+    <string name="radius_format">Radius : %dm</string>
+    <string name="found">FOUND</string>
     <string name="cancel_game">Cancel game</string>
-    <string name="join_game">Join Game</string>
-    <string name="password">Password</string>
+    <string name="cancel_game_message">Are you sure you want to cancel and finish the game now?</string>
+    <string name="never_mind">Never mind</string>
+    <string name="game_info">Game Info</string>
+
+    <!-- Hunter Map -->
+    <string name="you_are_hunter">You are the Hunter</string>
+    <string name="quit">Quit</string>
+    <string name="quit_game">Quit game</string>
+    <string name="quit_game_message">Are you sure you want to quit the game?</string>
+    <string name="enter_found_code">Enter Found Code</string>
+    <string name="enter_code_message">Enter the 4-digit code shown by the chicken.</string>
+    <string name="four_digit_code">4-digit code</string>
+    <string name="submit">Submit</string>
+    <string name="wrong_code">Wrong code</string>
+    <string name="wrong_code_message">That code is incorrect. Try again!</string>
+
+    <!-- Game Info Dialog -->
+    <string name="mode">Mode</string>
+    <string name="start_label">Start</string>
+    <string name="end_label">End</string>
+    <string name="game_over">Game Over</string>
+    <string name="copy_game_code">Copy game code to clipboard</string>
+
+    <!-- Victory -->
+    <string name="game_results">Game Results</string>
+    <string name="you_found_chicken">You found\nthe chicken!</string>
+    <string name="back_to_menu">BACK TO MENU</string>
+    <string name="still_in_party">%d still in the party 🔍</string>
+
+    <!-- End Game Code -->
+    <string name="show_code_instruction">Show this code\nto the hunter</string>
+    <string name="show_code_description">The hunter must enter this code to prove they found you!</string>
+
+    <!-- Countdown -->
+    <string name="you_start_in">You start in:</string>
+    <string name="chicken_starts_in">🐔 starts in:</string>
+    <string name="hunt_starts_in_chicken">🐔 Hunt starts in:</string>
+    <string name="hunt_starts_in_hunter">Hunt starts in:</string>
+    <string name="map_update_in">Map update in:</string>
+
+    <!-- Onboarding -->
+    <string name="welcome_title">Welcome to\nPouleParty!</string>
+    <string name="welcome_subtitle">The ultimate hide-and-seek\npub crawl game</string>
+    <string name="nominate_chicken">Nominate a Chicken</string>
+    <string name="nominate_subtitle">Pick the Stag, the Birthday Girl, or whoever just really wants to be a Chicken.\n\nTheir job is to hide.</string>
+    <string name="hunt_them_down">Hunt Them Down</string>
+    <string name="hunt_subtitle">Split into squads. Use the map to track them.\n\nThe Chicken could be hiding in any pub or bar.</string>
+    <string name="need_location">We Need Your Location</string>
+    <string name="location_granted">You\'re all set! The game will track location even in the background.\n\nMaximum fun guaranteed!</string>
+    <string name="location_partial">Almost there! The game needs to track the Chicken even when the app is in the background.\n\nPlease allow background location.</string>
+    <string name="location_denied">Without it, the game can\'t work.\nNo location = no map = no fun.\n\nWe promise we only use it during the game!</string>
+    <string name="always_allowed">Always allowed!</string>
+    <string name="allow_always">Allow Always</string>
+    <string name="allow_location_access">Allow Location Access</string>
+    <string name="choose_nickname">Choose Your Nickname</string>
+    <string name="nickname_subtitle">This is how other players\nwill see you in the game.</string>
+    <string name="your_nickname">Your nickname</string>
+    <string name="the_endgame">The Endgame</string>
+    <string name="endgame_subtitle">Close in on the Chicken. Complete challenges for points. Unleash weapons.\n\nIt\'s Mario Kart rules — anything goes.</string>
+    <string name="back">Back</string>
+    <string name="next">Next</string>
+    <string name="lets_go">Let\'s go!</string>
+
+    <!-- Game Rules -->
+    <string name="how_to_play">How to play</string>
+    <string name="game_modes">Game Modes</string>
+    <string name="rule_one_chicken">One player is the Chicken, the others are Hunters.</string>
+    <string name="rule_circular_zone">The game takes place in a circular zone on the map.</string>
+    <string name="rule_zone_shrinks">The zone shrinks over time based on game settings.</string>
+    <string name="rule_win_condition">Hunters win by finding the Chicken. The Chicken wins by surviving until the end!</string>
+    <string name="mode_follow_desc">The Hunters see a circle that follows the Chicken\'s position in real time. The Chicken must run and hide!</string>
+    <string name="mode_follow_detail1">Chicken sends its position to all Hunters</string>
+    <string name="mode_follow_detail2">Hunters see the zone move with the Chicken</string>
+    <string name="mode_follow_detail3">Chicken does NOT see the Hunters</string>
+    <string name="mode_stay_desc">The zone stays fixed on the map and shrinks over time. Everyone must stay inside!</string>
+    <string name="mode_stay_detail1">No position sharing between players</string>
+    <string name="mode_stay_detail2">The zone is centered on the starting location</string>
+    <string name="mode_stay_detail3">Strategy: stay hidden inside the shrinking zone</string>
+    <string name="mode_mutual_desc">Like Follow the Chicken, but the Chicken can also see all Hunters on her map!</string>
+    <string name="mode_mutual_detail1">Chicken sends its position to Hunters</string>
+    <string name="mode_mutual_detail2">Hunters send their position to the Chicken</string>
+    <string name="mode_mutual_detail3">Both sides can track each other in real time</string>
+    <string name="setting_start_end_name">Start / End time</string>
+    <string name="setting_start_end_desc">When the game starts and ends. The Chicken wins if the time runs out!</string>
+    <string name="setting_radius_interval_desc">How often the zone shrinks (in minutes).</string>
+    <string name="setting_radius_decline_desc">How many meters the zone shrinks each update.</string>
+    <string name="setting_map_desc">Choose the starting location and initial radius of the zone.</string>
+
+    <!-- Game Modes (subtitles) -->
+    <string name="chicken_dont_be_seen">Don\'t be seen !</string>
+    <string name="chicken_stay_in_zone">Stay in the zone 📍</string>
+    <string name="chicken_you_see_them">You can see them 👀</string>
+    <string name="hunter_catch_chicken">Catch the 🐔 !</string>
+    <string name="hunter_stay_in_zone">Stay in the zone 📍</string>
+    <string name="hunter_mutual_tracking">Catch the 🐔 (she sees you! 👀)</string>
 </resources>

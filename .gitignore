@@ -31,3 +31,5 @@ android/.idea/
 .DS_Store
 
 .claude/settings.local.json
+
+*.xcuserstate

@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Selection -->
+    <string name="start">START</string>
+    <string name="press_start">Appuie sur start pour jouer</string>
+    <string name="rules">Règles</string>
+    <string name="i_am_la_poule">Je suis la poule</string>
+    <string name="password">Mot de passe</string>
+    <string name="join_game">Rejoindre</string>
+    <string name="join_game_message">Entre le code de la partie pour rejoindre.</string>
+    <string name="game_code">Code de la partie</string>
+    <string name="join">Rejoindre</string>
+    <string name="cancel">Annuler</string>
+    <string name="ok">OK</string>
+    <string name="close">Fermer</string>
+    <string name="game_not_found">Partie introuvable</string>
+    <string name="game_not_found_message">Aucune partie trouvée avec ce code. Vérifie le code et réessaie.</string>
+    <string name="game_in_progress">Partie en cours</string>
+    <string name="game_in_progress_message">Cette partie est déjà en cours. Tu ne peux plus la rejoindre.</string>
+    <string name="location_required">Localisation requise</string>
+    <string name="location_required_message">La localisation est au cœur de PouleParty ! Ta position est anonyme et utilisée uniquement pendant la partie. Active la localisation pour continuer.</string>
+
+    <!-- Chicken Config -->
+    <string name="game_settings">Réglages du jeu</string>
+    <string name="start_at">Départ à</string>
+    <string name="end_at">Fin à</string>
+    <string name="game_mode">Mode de jeu</string>
+    <string name="map_setup">Réglages de la carte</string>
+    <string name="start_game">Lancer la partie</string>
+    <string name="radius_interval_update">Update du rayon toutes les</string>
+    <string name="radius_decline">Rétrécissement du rayon de</string>
+    <string name="chicken_head_start">Avance de la poule</string>
+    <string name="minutes_format">%d minutes</string>
+    <string name="meters_format">%d mètres</string>
+    <string name="error">Erreur</string>
+
+    <!-- Chicken Map -->
+    <string name="you_are_chicken">Tu es le 🐔</string>
+    <string name="radius_format">Rayon : %dm</string>
+    <string name="found">TROUVÉ</string>
+    <string name="cancel_game">Annuler la partie</string>
+    <string name="cancel_game_message">Es-tu sûr de vouloir annuler et finir la partie maintenant ?</string>
+    <string name="never_mind">Autant pour moi</string>
+    <string name="game_info">Infos de la partie</string>
+
+    <!-- Hunter Map -->
+    <string name="you_are_hunter">Tu es le Chasseur</string>
+    <string name="quit">Quitter</string>
+    <string name="quit_game">Quitter la partie</string>
+    <string name="quit_game_message">Es-tu sûr de vouloir quitter la partie ?</string>
+    <string name="enter_found_code">Code de trouvaille</string>
+    <string name="enter_code_message">Entre le code à 4 chiffres montré par la poule.</string>
+    <string name="four_digit_code">Code à 4 chiffres</string>
+    <string name="submit">Valider</string>
+    <string name="wrong_code">Mauvais code</string>
+    <string name="wrong_code_message">Ce code est incorrect. Réessaie !</string>
+
+    <!-- Game Info Dialog -->
+    <string name="mode">Mode</string>
+    <string name="start_label">Début</string>
+    <string name="end_label">Fin</string>
+    <string name="game_over">Fin de partie</string>
+    <string name="copy_game_code">Copier le code de la partie</string>
+
+    <!-- Victory -->
+    <string name="game_results">Résultats</string>
+    <string name="you_found_chicken">Tu as trouvé\nla poule !</string>
+    <string name="back_to_menu">RETOUR AU MENU</string>
+    <string name="still_in_party">%d encore dans la partie 🔍</string>
+
+    <!-- End Game Code -->
+    <string name="show_code_instruction">Montre ce code\nau chasseur</string>
+    <string name="show_code_description">Le chasseur doit entrer ce code pour prouver qu\'il t\'a trouvé !</string>
+
+    <!-- Countdown -->
+    <string name="you_start_in">Tu commences dans :</string>
+    <string name="chicken_starts_in">🐔 se cache dans :</string>
+    <string name="hunt_starts_in_chicken">🐔 La chasse commence dans :</string>
+    <string name="hunt_starts_in_hunter">La chasse commence dans :</string>
+    <string name="map_update_in">Màj de la carte dans :</string>
+
+    <!-- Onboarding -->
+    <string name="welcome_title">Bienvenue sur\nPouleParty !</string>
+    <string name="welcome_subtitle">Le jeu de cache-cache\nultime entre potes</string>
+    <string name="nominate_chicken">Choisis une Poule</string>
+    <string name="nominate_subtitle">L\'enterrement de vie de garçon, la fêtée du jour, ou celui qui veut vraiment être une Poule.\n\nSon job : se cacher.</string>
+    <string name="hunt_them_down">Chassez-la</string>
+    <string name="hunt_subtitle">Formez des équipes. Utilisez la carte pour la traquer.\n\nLa Poule peut se cacher dans n\'importe quel bar.</string>
+    <string name="need_location">On a besoin de ta position</string>
+    <string name="location_granted">C\'est tout bon ! Le jeu suivra ta position même en arrière-plan.\n\nFun maximum garanti !</string>
+    <string name="location_partial">Presque ! Le jeu doit suivre la Poule même quand l\'appli est en arrière-plan.\n\nAutorise la localisation en permanence.</string>
+    <string name="location_denied">Sans ça, le jeu ne peut pas fonctionner.\nPas de localisation = pas de carte = pas de fun.\n\nPromis, on ne l\'utilise que pendant la partie !</string>
+    <string name="always_allowed">Toujours autorisée !</string>
+    <string name="allow_always">Autoriser en permanence</string>
+    <string name="allow_location_access">Autoriser la localisation</string>
+    <string name="choose_nickname">Choisis ton pseudo</string>
+    <string name="nickname_subtitle">C\'est comme ça que les autres joueurs\nte verront dans la partie.</string>
+    <string name="your_nickname">Ton pseudo</string>
+    <string name="the_endgame">L\'endgame</string>
+    <string name="endgame_subtitle">Rapproche-toi de la Poule. Complète des défis pour des points. Déchaîne les armes.\n\nC\'est les règles de Mario Kart — tout est permis.</string>
+    <string name="back">Retour</string>
+    <string name="next">Suivant</string>
+    <string name="lets_go">C\'est parti !</string>
+
+    <!-- Game Rules -->
+    <string name="how_to_play">Comment jouer</string>
+    <string name="game_modes">Modes de jeu</string>
+    <string name="rule_one_chicken">Un joueur est la Poule, les autres sont des Chasseurs.</string>
+    <string name="rule_circular_zone">Le jeu se déroule dans une zone circulaire sur la carte.</string>
+    <string name="rule_zone_shrinks">La zone rétrécit avec le temps selon les paramètres.</string>
+    <string name="rule_win_condition">Les Chasseurs gagnent en trouvant la Poule. La Poule gagne en survivant jusqu\'à la fin !</string>
+    <string name="mode_follow_desc">Les Chasseurs voient un cercle qui suit la position de la Poule en temps réel. La Poule doit courir et se cacher !</string>
+    <string name="mode_follow_detail1">La Poule envoie sa position à tous les Chasseurs</string>
+    <string name="mode_follow_detail2">Les Chasseurs voient la zone bouger avec la Poule</string>
+    <string name="mode_follow_detail3">La Poule ne voit PAS les Chasseurs</string>
+    <string name="mode_stay_desc">La zone reste fixe sur la carte et rétrécit. Tout le monde doit rester à l\'intérieur !</string>
+    <string name="mode_stay_detail1">Pas de partage de position entre joueurs</string>
+    <string name="mode_stay_detail2">La zone est centrée sur le lieu de départ</string>
+    <string name="mode_stay_detail3">Stratégie : restez caché dans la zone qui rétrécit</string>
+    <string name="mode_mutual_desc">Comme Suivre la Poule, mais la Poule peut aussi voir tous les Chasseurs sur sa carte !</string>
+    <string name="mode_mutual_detail1">La Poule envoie sa position aux Chasseurs</string>
+    <string name="mode_mutual_detail2">Les Chasseurs envoient leur position à la Poule</string>
+    <string name="mode_mutual_detail3">Les deux côtés se traquent en temps réel</string>
+    <string name="setting_start_end_name">Début / Fin</string>
+    <string name="setting_start_end_desc">Quand la partie commence et se termine. La Poule gagne si le temps est écoulé !</string>
+    <string name="setting_radius_interval_desc">La fréquence de rétrécissement de la zone (en minutes).</string>
+    <string name="setting_radius_decline_desc">De combien de mètres la zone rétrécit à chaque mise à jour.</string>
+    <string name="setting_map_desc">Choisissez le lieu de départ et le rayon initial de la zone.</string>
+
+    <!-- Selection (missing) -->
+    <string name="enter_admin_password">Veuillez entrer le mot de passe admin.</string>
+
+    <!-- Game Modes (subtitles) -->
+    <string name="chicken_dont_be_seen">Ne te fais pas voir !</string>
+    <string name="chicken_stay_in_zone">Reste dans la zone 📍</string>
+    <string name="chicken_you_see_them">Tu peux les voir 👀</string>
+    <string name="hunter_catch_chicken">Attrape le 🐔 !</string>
+    <string name="hunter_stay_in_zone">Reste dans la zone 📍</string>
+    <string name="hunter_mutual_tracking">Attrape le 🐔 (elle te voit ! 👀)</string>
+</resources>

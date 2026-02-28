@@ -7,11 +7,13 @@
 
 import ComposableArchitecture
 import Firebase
+import Sharing
 import SwiftUI
 import Foundation
 
 @main
 struct PoulePartyApp: App {
+    @Shared(.appStorage(AppConstants.prefOnboardingCompleted)) var hasCompletedOnboarding = false
 
     init() {
         FirebaseApp.configure()
@@ -21,7 +23,7 @@ struct PoulePartyApp: App {
         WindowGroup {
             AppView(
                 store: Store(
-                    initialState: UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
+                    initialState: hasCompletedOnboarding
                         ? AppFeature.State.selection(SelectionFeature.State())
                         : AppFeature.State.onboarding(OnboardingFeature.State())
                 ) {

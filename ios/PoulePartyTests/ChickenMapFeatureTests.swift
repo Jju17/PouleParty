@@ -202,6 +202,8 @@ struct ChickenMapFeatureTests {
     @Test func timerTickedUpdatesCircleInStayInTheZone() async {
         var game = Game.mock
         game.gameMod = .stayInTheZone
+        game.startDate = .now.addingTimeInterval(-600)   // started 10 min ago
+        game.endDate = .now.addingTimeInterval(3000)      // ends in 50 min
         var state = ChickenMapFeature.State(game: game)
         state.radius = 500
         state.nextRadiusUpdate = .now.addingTimeInterval(-1)

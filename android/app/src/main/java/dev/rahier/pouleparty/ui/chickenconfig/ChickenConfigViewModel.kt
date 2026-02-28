@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import com.google.firebase.auth.FirebaseAuth
 import dev.rahier.pouleparty.data.FirestoreRepository
 import dev.rahier.pouleparty.data.LocationRepository
 import dev.rahier.pouleparty.model.Game
@@ -12,6 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.Date
 import javax.inject.Inject
@@ -27,6 +29,7 @@ data class ChickenConfigUiState(
 class ChickenConfigViewModel @Inject constructor(
     private val firestoreRepository: FirestoreRepository,
     private val locationRepository: LocationRepository,
+    private val auth: FirebaseAuth,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -43,7 +46,8 @@ class ChickenConfigViewModel @Inject constructor(
                 radiusDeclinePerUpdate = 100.0,
                 chickenHeadStartMinutes = 5.0,
                 gameMod = GameMod.FOLLOW_THE_CHICKEN.firestoreValue,
-                foundCode = Game.generateFoundCode()
+                foundCode = Game.generateFoundCode(),
+                creatorId = auth.currentUser?.uid ?: ""
             )
         )
     )
@@ -58,9 +62,7 @@ class ChickenConfigViewModel @Inject constructor(
             viewModelScope.launch {
                 try {
                     val location = locationRepository.locationFlow().first()
-                    _uiState.value = _uiState.value.copy(
-                        game = _uiState.value.game.withInitialLocation(location)
-                    )
+                    _uiState.update { it.copy(game = it.game.withInitialLocation(location)) }
                 } catch (_: Exception) {
                     // Fallback: keep Brussels default
                 }
@@ -69,57 +71,47 @@ class ChickenConfigViewModel @Inject constructor(
     }
 
     fun updateStartDate(date: Date) {
-        _uiState.value = _uiState.value.copy(game = _uiState.value.game.withStartDate(date))
+        _uiState.update { it.copy(game = it.game.withStartDate(date)) }
     }
 
     fun updateEndDate(date: Date) {
-        _uiState.value = _uiState.value.copy(game = _uiState.value.game.withEndDate(date))
+        _uiState.update { it.copy(game = it.game.withEndDate(date)) }
     }
 
     fun updateGameMod(mod: GameMod) {
-        _uiState.value = _uiState.value.copy(
-            game = _uiState.value.game.copy(gameMod = mod.firestoreValue)
-        )
+        _uiState.update { it.copy(game = it.game.copy(gameMod = mod.firestoreValue)) }
     }
 
     fun updateRadiusIntervalUpdate(value: Double) {
-        _uiState.value = _uiState.value.copy(
-            game = _uiState.value.game.copy(radiusIntervalUpdate = value)
-        )
+        _uiState.update { it.copy(game = it.game.copy(radiusIntervalUpdate = value)) }
     }
 
     fun updateRadiusDecline(value: Double) {
-        _uiState.value = _uiState.value.copy(
-            game = _uiState.value.game.copy(radiusDeclinePerUpdate = value)
-        )
+        _uiState.update { it.copy(game = it.game.copy(radiusDeclinePerUpdate = value)) }
     }
 
     fun updateChickenHeadStart(value: Double) {
-        _uiState.value = _uiState.value.copy(
-            game = _uiState.value.game.copy(chickenHeadStartMinutes = value)
-        )
+        _uiState.update { it.copy(game = it.game.copy(chickenHeadStartMinutes = value)) }
     }
 
     fun updateInitialRadius(value: Double) {
-        _uiState.value = _uiState.value.copy(
-            game = _uiState.value.game.copy(initialRadius = value)
-        )
+        _uiState.update { it.copy(game = it.game.copy(initialRadius = value)) }
     }
 
     fun updateGame(game: Game) {
-        _uiState.value = _uiState.value.copy(game = game)
+        _uiState.update { it.copy(game = game) }
     }
 
     fun onCodeCopied() {
-        _uiState.value = _uiState.value.copy(codeCopied = true)
+        _uiState.update { it.copy(codeCopied = true) }
         viewModelScope.launch {
             kotlinx.coroutines.delay(1000)
-            _uiState.value = _uiState.value.copy(codeCopied = false)
+            _uiState.update { it.copy(codeCopied = false) }
         }
     }
 
     fun dismissAlert() {
-        _uiState.value = _uiState.value.copy(showAlert = false)
+        _uiState.update { it.copy(showAlert = false) }
     }
 
     fun startGame(onSuccess: (String) -> Unit) {
@@ -128,10 +120,12 @@ class ChickenConfigViewModel @Inject constructor(
                 firestoreRepository.setConfig(_uiState.value.game)
                 onSuccess(_uiState.value.game.id)
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    showAlert = true,
-                    alertMessage = "Could not create the game. Please check your connection and try again."
-                )
+                _uiState.update {
+                    it.copy(
+                        showAlert = true,
+                        alertMessage = "Could not create the game. Please check your connection and try again."
+                    )
+                }
             }
         }
     }

@@ -4,17 +4,24 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import dev.rahier.pouleparty.AppConstants
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
+
+    @Provides
+    @Singleton
+    fun provideFirebaseAuth(): FirebaseAuth =
+        FirebaseAuth.getInstance()
 
     @Provides
     @Singleton
@@ -33,5 +40,5 @@ object AppModule {
     fun provideSharedPreferences(
         @ApplicationContext context: Context
     ): SharedPreferences =
-        context.getSharedPreferences("pouleparty", Context.MODE_PRIVATE)
+        context.getSharedPreferences(AppConstants.PREFS_NAME, Context.MODE_PRIVATE)
 }

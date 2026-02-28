@@ -4,12 +4,14 @@ import android.content.SharedPreferences
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dev.rahier.pouleparty.AppConstants
 import dev.rahier.pouleparty.data.FirestoreRepository
 import dev.rahier.pouleparty.data.LocationRepository
 import dev.rahier.pouleparty.model.GameStatus
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
@@ -38,58 +40,58 @@ class SelectionViewModel @Inject constructor(
 
     fun onStartButtonTapped() {
         if (!locationRepository.hasFineLocationPermission()) {
-            _uiState.value = _uiState.value.copy(isShowingLocationRequired = true)
+            _uiState.update { it.copy(isShowingLocationRequired = true) }
             return
         }
-        _uiState.value = _uiState.value.copy(isShowingJoinDialog = true)
+        _uiState.update { it.copy(isShowingJoinDialog = true) }
     }
 
     fun onPasswordDialogDismissed() {
-        _uiState.value = _uiState.value.copy(isShowingPasswordDialog = false, password = "")
+        _uiState.update { it.copy(isShowingPasswordDialog = false, password = "") }
     }
 
     fun onJoinDialogDismissed() {
-        _uiState.value = _uiState.value.copy(isShowingJoinDialog = false, gameCode = "", hunterName = "")
+        _uiState.update { it.copy(isShowingJoinDialog = false, gameCode = "", hunterName = "") }
     }
 
     fun onGameCodeChanged(code: String) {
-        _uiState.value = _uiState.value.copy(gameCode = code)
+        _uiState.update { it.copy(gameCode = code) }
     }
 
     fun onHunterNameChanged(name: String) {
-        _uiState.value = _uiState.value.copy(hunterName = name)
+        _uiState.update { it.copy(hunterName = name) }
     }
 
     fun onPasswordChanged(password: String) {
-        _uiState.value = _uiState.value.copy(password = password)
+        _uiState.update { it.copy(password = password) }
     }
 
     fun onRulesTapped() {
-        _uiState.value = _uiState.value.copy(isShowingGameRules = true)
+        _uiState.update { it.copy(isShowingGameRules = true) }
     }
 
     fun onRulesDismissed() {
-        _uiState.value = _uiState.value.copy(isShowingGameRules = false)
+        _uiState.update { it.copy(isShowingGameRules = false) }
     }
 
     fun onGameNotFoundDismissed() {
-        _uiState.value = _uiState.value.copy(isShowingGameNotFound = false)
+        _uiState.update { it.copy(isShowingGameNotFound = false) }
     }
 
     fun onGameInProgressDismissed() {
-        _uiState.value = _uiState.value.copy(isShowingGameInProgress = false)
+        _uiState.update { it.copy(isShowingGameInProgress = false) }
     }
 
     fun onLocationRequiredDismissed() {
-        _uiState.value = _uiState.value.copy(isShowingLocationRequired = false)
+        _uiState.update { it.copy(isShowingLocationRequired = false) }
     }
 
     fun onIAmLaPouleTapped() {
         if (!locationRepository.hasFineLocationPermission()) {
-            _uiState.value = _uiState.value.copy(isShowingLocationRequired = true)
+            _uiState.update { it.copy(isShowingLocationRequired = true) }
             return
         }
-        _uiState.value = _uiState.value.copy(isShowingPasswordDialog = true)
+        _uiState.update { it.copy(isShowingPasswordDialog = true) }
     }
 
     /**
@@ -98,7 +100,7 @@ class SelectionViewModel @Inject constructor(
      */
     fun validatePassword(): String? {
         val password = _uiState.value.password
-        _uiState.value = _uiState.value.copy(isShowingPasswordDialog = false, password = "")
+        _uiState.update { it.copy(isShowingPasswordDialog = false, password = "") }
         return if (password.isEmpty()) UUID.randomUUID().toString() else null
     }
 
@@ -112,19 +114,19 @@ class SelectionViewModel @Inject constructor(
         val code = _uiState.value.gameCode.trim()
         if (code.isEmpty()) return
 
-        val savedNickname = (prefs.getString("userNickname", "") ?: "").trim()
+        val savedNickname = (prefs.getString(AppConstants.PREF_USER_NICKNAME, "") ?: "").trim()
         val hunterName = savedNickname.ifEmpty { "Hunter" }
-        _uiState.value = _uiState.value.copy(isShowingJoinDialog = false, gameCode = "")
+        _uiState.update { it.copy(isShowingJoinDialog = false, gameCode = "") }
 
         viewModelScope.launch {
             val game = firestoreRepository.findGameByCode(code)
             if (game == null) {
-                _uiState.value = _uiState.value.copy(isShowingGameNotFound = true)
+                _uiState.update { it.copy(isShowingGameNotFound = true) }
                 return@launch
             }
             when (game.gameStatusEnum) {
                 GameStatus.WAITING -> onGameFound(game.id, hunterName)
-                GameStatus.IN_PROGRESS -> _uiState.value = _uiState.value.copy(isShowingGameInProgress = true)
+                GameStatus.IN_PROGRESS -> _uiState.update { it.copy(isShowingGameInProgress = true) }
                 GameStatus.DONE -> onGameDone(game.id)
             }
         }

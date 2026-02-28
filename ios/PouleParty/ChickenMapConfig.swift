@@ -20,7 +20,7 @@ struct ChickenMapConfigFeature {
         var marker: MarkerOverlay?
         var mapCircle: CircleOverlay?
     }
-    private static let defaultCoordinate = CLLocationCoordinate2D(latitude: 50.8503, longitude: 4.3517)
+    private static let defaultCoordinate = CLLocationCoordinate2D(latitude: AppConstants.defaultLatitude, longitude: AppConstants.defaultLongitude)
 
     enum Action: BindableAction {
         case binding(BindingAction<State>)

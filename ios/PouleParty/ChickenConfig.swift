@@ -75,7 +75,7 @@ struct ChickenConfigFeature {
             case .startGameButtonTapped:
                 return .run { [state = state] send in
                     do {
-                        try apiClient.setConfig(state.game)
+                        try await apiClient.setConfig(state.game)
                         await send(.startGameTriggered(state.game))
                     } catch {
                         await send(.configSaveFailed)

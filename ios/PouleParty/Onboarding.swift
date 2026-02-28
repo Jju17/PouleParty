@@ -7,6 +7,7 @@
 
 import ComposableArchitecture
 import CoreLocation
+import Sharing
 import SwiftUI
 
 @Reducer
@@ -14,6 +15,8 @@ struct OnboardingFeature {
 
     @ObservableState
     struct State: Equatable {
+        @Shared(.appStorage(AppConstants.prefOnboardingCompleted)) var hasCompletedOnboarding = false
+        @Shared(.appStorage(AppConstants.prefUserNickname)) var savedNickname = ""
         var currentPage: Int = 0
         var locationAuthorizationStatus: CLAuthorizationStatus = .notDetermined
         var nickname: String = ""
@@ -66,9 +69,7 @@ struct OnboardingFeature {
                         state.showLocationAlert = true
                         return .none
                     }
-                    return .run { send in
-                        await send(.onboardingCompleted)
-                    }
+                    return .send(.onboardingCompleted)
                 }
                 return .none
             case .backButtonTapped:
@@ -124,6 +125,9 @@ struct OnboardingFeature {
                 state.locationAuthorizationStatus = status
                 return .none
             case .onboardingCompleted:
+                let trimmedNickname = state.nickname.trimmingCharacters(in: .whitespacesAndNewlines)
+                state.$savedNickname.withLock { $0 = trimmedNickname }
+                state.$hasCompletedOnboarding.withLock { $0 = true }
                 return .none
             }
         }

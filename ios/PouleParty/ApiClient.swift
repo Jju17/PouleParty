@@ -8,6 +8,7 @@
 import ComposableArchitecture
 import CoreLocation
 import FirebaseFirestore
+import os
 
 struct ApiClient {
     var addWinner: (String, Winner) async throws -> Void
@@ -20,62 +21,125 @@ struct ApiClient {
     var gameConfigStream: (String) -> AsyncStream<Game?>
     var hunterLocationsStream: (String) -> AsyncStream<[HunterLocation]>
     var setChickenLocation: (String, CLLocationCoordinate2D) throws -> Void
-    var setConfig: (Game) throws -> Void
+    var setConfig: (Game) async throws -> Void
     var setHunterLocation: (String, String, CLLocationCoordinate2D) throws -> Void
+}
+
+private let logger = Logger(subsystem: "dev.rahier.pouleparty", category: "ApiClient")
+private let gamesCollection = "games"
+private let chickenLocationsSubcollection = "chickenLocations"
+private let hunterLocationsSubcollection = "hunterLocations"
+private let maxRetries = 3
+private let initialDelayNs: UInt64 = 500_000_000
+
+private func withRetry(_ operation: String, block: () async throws -> Void) async throws {
+    var lastError: Error?
+    for attempt in 0..<maxRetries {
+        do {
+            try await block()
+            return
+        } catch {
+            lastError = error
+            logger.warning("\(operation) failed (attempt \(attempt + 1)/\(maxRetries)): \(error)")
+            if attempt < maxRetries - 1 {
+                try? await Task.sleep(nanoseconds: initialDelayNs * UInt64(1 << attempt))
+            }
+        }
+    }
+    throw lastError ?? NSError(domain: "ApiClient", code: -1, userInfo: [NSLocalizedDescriptionKey: "\(operation) failed after \(maxRetries) retries"])
+}
+
+extension ApiClient: TestDependencyKey {
+    static let testValue = ApiClient(
+        addWinner: { _, _ in },
+        deleteConfig: { _ in },
+        getConfig: { _ in nil },
+        findGameByCode: { _ in nil },
+        registerHunter: { _, _ in },
+        updateGameStatus: { _, _ in },
+        chickenLocationStream: { _ in AsyncStream { _ in } },
+        gameConfigStream: { _ in AsyncStream { _ in } },
+        hunterLocationsStream: { _ in AsyncStream { _ in } },
+        setChickenLocation: { _, _ in },
+        setConfig: { _ in },
+        setHunterLocation: { _, _, _ in }
+    )
 }
 
 extension ApiClient: DependencyKey {
     static var liveValue = ApiClient(
         addWinner: { gameId, winner in
-            let ref = Firestore.firestore().collection("games").document(gameId)
-            try await ref.updateData([
-                "winners": FieldValue.arrayUnion([
-                    [
-                        "hunterId": winner.hunterId,
-                        "hunterName": winner.hunterName,
-                        "timestamp": Timestamp(date: winner.timestamp)
-                    ] as [String: Any]
+            try await withRetry("addWinner(\(gameId))") {
+                let ref = Firestore.firestore().collection(gamesCollection).document(gameId)
+                try await ref.updateData([
+                    "winners": FieldValue.arrayUnion([
+                        [
+                            "hunterId": winner.hunterId,
+                            "hunterName": winner.hunterName,
+                            "timestamp": Timestamp(date: winner.timestamp)
+                        ] as [String: Any]
+                    ])
                 ])
-            ])
+            }
         },
         deleteConfig: { gameId in
-            try await Firestore.firestore().collection("games").document(gameId).delete()
+            try await Firestore.firestore().collection(gamesCollection).document(gameId).delete()
         },
         getConfig: { gameId in
-            try await Firestore.firestore().collection("games").document(gameId).getDocument(as: Game.self)
+            do {
+                return try await Firestore.firestore().collection(gamesCollection).document(gameId).getDocument(as: Game.self)
+            } catch {
+                logger.error("Failed to get game config \(gameId): \(error.localizedDescription)")
+                return nil
+            }
         },
         findGameByCode: { code in
             let snapshot = try await Firestore.firestore()
-                .collection("games")
+                .collection(gamesCollection)
+                .whereField("gameCode", isEqualTo: code.uppercased())
+                .limit(to: 1)
                 .getDocuments()
 
-            return snapshot.documents.compactMap { doc in
-                try? doc.data(as: Game.self)
-            }.first { game in
-                game.gameCode == code.uppercased()
+            guard let doc = snapshot.documents.first else { return nil }
+
+            do {
+                return try doc.data(as: Game.self)
+            } catch {
+                logger.error("Failed to decode game from code query: \(error.localizedDescription)")
+                return nil
             }
         },
         registerHunter: { gameId, hunterId in
-            let ref = Firestore.firestore().collection("games").document(gameId)
-            try await ref.updateData([
-                "hunterIds": FieldValue.arrayUnion([hunterId])
-            ])
+            try await withRetry("registerHunter(\(gameId), \(hunterId))") {
+                let ref = Firestore.firestore().collection(gamesCollection).document(gameId)
+                try await ref.updateData([
+                    "hunterIds": FieldValue.arrayUnion([hunterId])
+                ])
+            }
         },
         updateGameStatus: { gameId, status in
-            try await Firestore.firestore().collection("games").document(gameId).updateData([
+            try await Firestore.firestore().collection(gamesCollection).document(gameId).updateData([
                 "status": status.rawValue
             ])
         },
         chickenLocationStream: { gameId in
             AsyncStream { continuation in
                 let listener = Firestore.firestore()
-                    .collection("games").document(gameId).collection("chickenLocations")
+                    .collection(gamesCollection).document(gameId).collection(chickenLocationsSubcollection)
                     .order(by: "timestamp", descending: true)
                     .limit(to: 1)
                     .addSnapshotListener { snapshot, error in
-                        guard let document = snapshot?.documents.first,
-                              let chickenLocation = try? document.data(as: ChickenLocation.self)
-                        else {
+                        if let error {
+                            logger.warning("Chicken location listener error for game \(gameId): \(error.localizedDescription)")
+                        }
+                        guard let document = snapshot?.documents.first else {
+                            continuation.yield(nil)
+                            return
+                        }
+                        guard let chickenLocation: ChickenLocation = {
+                            do { return try document.data(as: ChickenLocation.self) }
+                            catch { logger.error("Failed to decode ChickenLocation: \(error.localizedDescription)"); return nil }
+                        }() else {
                             continuation.yield(nil)
                             return
                         }
@@ -94,12 +158,20 @@ extension ApiClient: DependencyKey {
         gameConfigStream: { gameId in
             AsyncStream { continuation in
                 let listener = Firestore.firestore()
-                    .collection("games")
+                    .collection(gamesCollection)
                     .document(gameId)
                     .addSnapshotListener { snapshot, error in
-                        guard let snapshot = snapshot,
-                              let game = try? snapshot.data(as: Game.self)
-                        else {
+                        if let error {
+                            logger.warning("Game config listener error for game \(gameId): \(error.localizedDescription)")
+                        }
+                        guard let snapshot = snapshot else {
+                            continuation.yield(nil)
+                            return
+                        }
+                        guard let game: Game = {
+                            do { return try snapshot.data(as: Game.self) }
+                            catch { logger.error("Failed to decode Game config: \(error.localizedDescription)"); return nil }
+                        }() else {
                             continuation.yield(nil)
                             return
                         }
@@ -114,14 +186,18 @@ extension ApiClient: DependencyKey {
         hunterLocationsStream: { gameId in
             AsyncStream { continuation in
                 let listener = Firestore.firestore()
-                    .collection("games").document(gameId).collection("hunterLocations")
+                    .collection(gamesCollection).document(gameId).collection(hunterLocationsSubcollection)
                     .addSnapshotListener { snapshot, error in
+                        if let error {
+                            logger.warning("Hunter locations listener error for game \(gameId): \(error.localizedDescription)")
+                        }
                         guard let documents = snapshot?.documents else {
                             continuation.yield([])
                             return
                         }
-                        let hunters = documents.compactMap { doc in
-                            try? doc.data(as: HunterLocation.self)
+                        let hunters = documents.compactMap { doc -> HunterLocation? in
+                            do { return try doc.data(as: HunterLocation.self) }
+                            catch { logger.error("Failed to decode HunterLocation \(doc.documentID): \(error.localizedDescription)"); return nil }
                         }
                         continuation.yield(hunters)
                     }
@@ -138,13 +214,16 @@ extension ApiClient: DependencyKey {
             )
 
             let ref = Firestore.firestore()
-                .collection("games").document(gameId).collection("chickenLocations").document()
+                .collection(gamesCollection).document(gameId).collection(chickenLocationsSubcollection).document()
             try ref.setData(from: chickenLocation)
         },
         setConfig: { newGame in
-            let ref = Firestore.firestore().collection("games").document(newGame.id)
-            try ref.setData(from: newGame)
-            ref.updateData(["gameCode": newGame.gameCode])
+            try await withRetry("setConfig(\(newGame.id))") {
+                let ref = Firestore.firestore().collection(gamesCollection).document(newGame.id)
+                var data = try Firestore.Encoder().encode(newGame)
+                data["gameCode"] = newGame.gameCode
+                try await ref.setData(data)
+            }
         },
         setHunterLocation: { gameId, hunterId, coordinate in
             let hunterLocation = HunterLocation(
@@ -154,7 +233,7 @@ extension ApiClient: DependencyKey {
             )
 
             let ref = Firestore.firestore()
-                .collection("games").document(gameId).collection("hunterLocations").document(hunterId)
+                .collection(gamesCollection).document(gameId).collection(hunterLocationsSubcollection).document(hunterId)
             try ref.setData(from: hunterLocation, merge: true)
         }
     )

@@ -16,8 +16,8 @@ class OnboardingViewModelTest {
     }
 
     @Test
-    fun `total pages is 5`() {
-        assertEquals(5, OnboardingViewModel.TOTAL_PAGES)
+    fun `total pages is 6`() {
+        assertEquals(6, OnboardingViewModel.TOTAL_PAGES)
     }
 
     @Test
@@ -48,7 +48,7 @@ class OnboardingViewModelTest {
     fun `page does not exceed total pages`() {
         val state = OnboardingUiState(currentPage = OnboardingViewModel.TOTAL_PAGES - 1)
         val page = minOf(OnboardingViewModel.TOTAL_PAGES - 1, state.currentPage + 1)
-        assertEquals(4, page)
+        assertEquals(5, page)
     }
 
     @Test

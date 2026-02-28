@@ -9,6 +9,14 @@ import FirebaseFirestore
 import Testing
 @testable import PouleParty
 
+/// A mock game that has already started (start dates in the past).
+private var startedGameMock: Game {
+    var game = Game.mock
+    game.startDate = .now.addingTimeInterval(-600)   // started 10 min ago
+    game.endDate = .now.addingTimeInterval(3000)      // ends in 50 min
+    return game
+}
+
 @MainActor
 struct HunterMapFeatureTests {
 
@@ -53,14 +61,14 @@ struct HunterMapFeatureTests {
     }
 
     @Test func timerTickedDoesNotShrinkBelowZero() async {
-        var state = HunterMapFeature.State(game: .mock)
+        var game = startedGameMock
+        game.radiusDeclinePerUpdate = 100
+        var state = HunterMapFeature.State(game: game)
         state.radius = 50
         state.nextRadiusUpdate = .now.addingTimeInterval(-1)
 
         let store = TestStore(initialState: state) {
             HunterMapFeature()
-        } withDependencies: {
-            $0.locationClient.stopTracking = { }
         }
         store.exhaustivity = .off
 
@@ -82,7 +90,7 @@ struct HunterMapFeatureTests {
     // MARK: - stayInTheZone mode
 
     @Test func timerTickedUpdatesCircleInStayInTheZone() async {
-        var game = Game.mock
+        var game = startedGameMock
         game.gameMod = .stayInTheZone
         var state = HunterMapFeature.State(game: game)
         state.radius = 500
@@ -103,7 +111,7 @@ struct HunterMapFeatureTests {
     }
 
     @Test func timerTickedDoesNotUpdateCircleInFollowTheChicken() async {
-        var game = Game.mock
+        var game = startedGameMock
         game.gameMod = .followTheChicken
         var state = HunterMapFeature.State(game: game)
         state.radius = 500
@@ -121,9 +129,9 @@ struct HunterMapFeatureTests {
 
     // MARK: - hunterId
 
-    @Test func hunterIdIsGenerated() {
+    @Test func hunterIdDefaultsToEmptyBeforeAuth() {
         let state = HunterMapFeature.State(game: .mock)
-        #expect(!state.hunterId.isEmpty)
+        #expect(state.hunterId.isEmpty)
     }
 
     // MARK: - Found code
@@ -152,6 +160,7 @@ struct HunterMapFeatureTests {
             $0.enteredCode = ""
             $0.isEnteringFoundCode = false
         }
+        await store.receive(\.goToVictory)
     }
 
     @Test func submitFoundCodeWithWrongCodeShowsAlert() async {
@@ -165,6 +174,7 @@ struct HunterMapFeatureTests {
         await store.send(.submitFoundCode) {
             $0.enteredCode = ""
             $0.isEnteringFoundCode = false
+            $0.wrongCodeAttempts = 1
             $0.destination = .alert(
                 AlertState {
                     TextState("Wrong code")

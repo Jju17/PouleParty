@@ -20,8 +20,11 @@ import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import dev.rahier.pouleparty.AppConstants
+import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.model.Winner
 import dev.rahier.pouleparty.ui.components.SelectionButton
 import dev.rahier.pouleparty.ui.theme.*
@@ -67,7 +70,7 @@ fun VictoryScreen(
             Spacer(Modifier.height(16.dp))
 
             Text(
-                text = if (isSpectator) "Game Results" else "You found\nthe chicken!",
+                text = if (isSpectator) stringResource(R.string.game_results) else stringResource(R.string.you_found_chicken),
                 style = gameboyStyle(16),
                 color = Color.Black,
                 textAlign = TextAlign.Center
@@ -86,7 +89,7 @@ fun VictoryScreen(
 
             // Back to menu button
             SelectionButton(
-                text = "BACK TO MENU",
+                text = stringResource(R.string.back_to_menu),
                 color = Color.Black,
                 onClick = onGoToMenu
             )
@@ -126,7 +129,7 @@ private fun LeaderboardSection(
                     modifier = Modifier.padding(vertical = 12.dp, horizontal = 24.dp)
                 )
                 Text(
-                    text = "$remaining still in the party \uD83D\uDD0D",
+                    text = stringResource(R.string.still_in_party, remaining),
                     style = bangerStyle(18),
                     color = Color.Gray,
                     modifier = Modifier.padding(vertical = 4.dp)
@@ -207,12 +210,10 @@ private data class ConfettiParticle(
 
 private val confettiColors = listOf(CROrange, CRPink, Color.Yellow, Color.Green, Color.Blue, Color.Red)
 
-private const val CONFETTI_DURATION_MS = 10_000L
-
 @Composable
 private fun ConfettiOverlay(modifier: Modifier = Modifier) {
     val particles = remember {
-        (0 until 80).map {
+        (0 until AppConstants.CONFETTI_PARTICLE_COUNT).map {
             ConfettiParticle(
                 x = Random.nextFloat(),
                 y = Random.nextFloat() * -1f,
@@ -239,7 +240,7 @@ private fun ConfettiOverlay(modifier: Modifier = Modifier) {
                 if (lastFrameTime > 0L) {
                     val dt = (frameTimeMs - lastFrameTime) / 1000f
 
-                    if (isActive && (frameTimeMs - startTime) >= CONFETTI_DURATION_MS) {
+                    if (isActive && (frameTimeMs - startTime) >= AppConstants.CONFETTI_DURATION_MS) {
                         isActive = false
                     }
 

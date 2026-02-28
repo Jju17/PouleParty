@@ -7,7 +7,10 @@
 
 import ComposableArchitecture
 import MapKit
+import os
 import SwiftUI
+
+private let logger = Logger(subsystem: "dev.rahier.pouleparty", category: "ChickenMap")
 
 struct HunterAnnotation: Equatable, Identifiable {
     let id: String
@@ -33,8 +36,8 @@ struct ChickenMapFeature {
         var countdownNumber: Int? = nil
         var countdownText: String? = nil
 
-        var hasGameStarted: Bool { .now >= game.startDate }
-        var hasHuntStarted: Bool { .now >= game.hunterStartDate }
+        var hasGameStarted: Bool { nowDate >= game.startDate }
+        var hasHuntStarted: Bool { nowDate >= game.hunterStartDate }
     }
 
     enum Action: BindableAction {
@@ -98,13 +101,9 @@ struct ChickenMapFeature {
                 return .none
             case .destination(.presented(.alert(.cancelGame))):
                 locationClient.stopTracking()
-                return .run { send in
-                    await send(.goToMenu)
-                }
+                return .send(.goToMenu)
             case .destination(.presented(.alert(.gameOver))):
-                return .run { send in
-                    await send(.goToMenu)
-                }
+                return .send(.goToMenu)
             case .destination:
                 return .none
             case .dismissCountdown:
@@ -119,20 +118,18 @@ struct ChickenMapFeature {
                 return .none
             case let .gameUpdated(game):
                 state.game = game
-                let previousCount = state.previousWinnersCount
-                if game.winners.count > previousCount {
-                    let newWinners = Array(game.winners.suffix(from: previousCount))
-                    if let latest = newWinners.last {
-                        state.winnerNotification = "\(latest.hunterName) a trouvé la poule !"
-                    }
+                if let notification = detectNewWinners(
+                    winners: game.winners,
+                    previousCount: state.previousWinnersCount
+                ) {
+                    state.winnerNotification = notification
                     state.previousWinnersCount = game.winners.count
-                    if state.winnerNotification != nil {
-                        return .run { send in
-                            try await clock.sleep(for: .seconds(4))
-                            await send(.dismissWinnerNotification)
-                        }
+                    return .run { send in
+                        try await clock.sleep(for: .seconds(AppConstants.winnerNotificationSeconds))
+                        await send(.dismissWinnerNotification)
                     }
                 }
+                state.previousWinnersCount = game.winners.count
                 return .none
             case .cancelGameButtonTapped:
                 state.destination = .alert(
@@ -213,13 +210,21 @@ struct ChickenMapFeature {
                             // Send current location immediately on connect
                             if let currentLocation = locationClient.lastLocation() {
                                 await send(.newLocationFetched(currentLocation))
-                                try apiClient.setChickenLocation(gameId, currentLocation)
+                                do {
+                                    try apiClient.setChickenLocation(gameId, currentLocation)
+                                } catch {
+                                    logger.error("Failed to send initial chicken location: \(error)")
+                                }
                             }
                             var lastWrite = Date.now
                             for await coordinate in locationClient.startTracking() {
                                 await send(.newLocationFetched(coordinate))
-                                if Date.now.timeIntervalSince(lastWrite) >= 5 {
-                                    try apiClient.setChickenLocation(gameId, coordinate)
+                                if Date.now.timeIntervalSince(lastWrite) >= AppConstants.locationThrottleSeconds {
+                                    do {
+                                        try apiClient.setChickenLocation(gameId, coordinate)
+                                    } catch {
+                                        logger.error("Failed to send chicken location: \(error)")
+                                    }
                                     lastWrite = .now
                                 }
                             }
@@ -258,41 +263,45 @@ struct ChickenMapFeature {
             case .timerTicked:
                 state.nowDate = .now
 
-                // Pre-game countdown: 3, 2, 1, RUN!
-                let timeToStart = state.game.startDate.timeIntervalSinceNow
-                if timeToStart > 0 && timeToStart <= 3 {
-                    let number = Int(ceil(timeToStart))
-                    if state.countdownNumber != number {
-                        state.countdownNumber = number
-                        state.countdownText = nil
-                    }
-                } else if timeToStart <= 0 && timeToStart > -1 && state.countdownText == nil {
+                // Countdown phases (chicken perspective)
+                let countdownResult = evaluateCountdown(
+                    phases: [
+                        CountdownPhase(
+                            targetDate: state.game.startDate,
+                            completionText: "RUN! 🐔",
+                            showNumericCountdown: true,
+                            isEnabled: true
+                        ),
+                        CountdownPhase(
+                            targetDate: state.game.hunterStartDate,
+                            completionText: "🔍 Hunters incoming!",
+                            showNumericCountdown: false,
+                            isEnabled: state.game.chickenHeadStartMinutes > 0
+                        )
+                    ],
+                    currentCountdownNumber: state.countdownNumber,
+                    currentCountdownText: state.countdownText
+                )
+                switch countdownResult {
+                case .noChange:
+                    break
+                case .updateNumber(let n):
+                    state.countdownNumber = n
+                    state.countdownText = nil
+                case .showText(let text):
                     state.countdownNumber = nil
-                    state.countdownText = "RUN! 🐔"
+                    state.countdownText = text
                     return .run { send in
-                        try await clock.sleep(for: .seconds(1.5))
+                        try await clock.sleep(for: .seconds(AppConstants.countdownDisplaySeconds))
                         await send(.dismissCountdown)
                     }
                 }
 
-                // Notification when hunters start (only if head start > 0)
-                if state.game.chickenHeadStartMinutes > 0 {
-                    let timeToHuntStart = state.game.hunterStartDate.timeIntervalSinceNow
-                    if timeToHuntStart <= 0 && timeToHuntStart > -1 && state.countdownText == nil && state.countdownNumber == nil {
-                        state.countdownText = "🔍 Hunters incoming!"
-                        return .run { send in
-                            try await clock.sleep(for: .seconds(1.5))
-                            await send(.dismissCountdown)
-                        }
-                    }
-                }
-
                 guard state.destination == nil else { return .none }
-
-                // Don't process game-over or radius updates before hunt starts
                 guard state.hasHuntStarted else { return .none }
 
-                if .now >= state.game.endDate {
+                // Game over by time
+                if checkGameOverByTime(endDate: state.game.endDate) {
                     locationClient.stopTracking()
                     let gameId = state.game.id
                     state.destination = .alert(
@@ -307,49 +316,49 @@ struct ChickenMapFeature {
                         }
                     )
                     return .run { _ in
-                        try? await apiClient.updateGameStatus(gameId, .done)
-                    }
-                }
-
-                guard let nextRadiusUpdate = state.nextRadiusUpdate,
-                      .now >= nextRadiusUpdate
-                else { return .none }
-
-                let game = state.game
-                let newRadius = Int(state.radius) - Int(game.radiusDeclinePerUpdate)
-
-                guard newRadius > 0 else {
-                    locationClient.stopTracking()
-                    let gameId = state.game.id
-                    state.destination = .alert(
-                        AlertState {
-                            TextState("Game Over")
-                        } actions: {
-                            ButtonState(action: .gameOver) {
-                                TextState("OK")
-                            }
-                        } message: {
-                            TextState("The zone has collapsed!")
+                        do {
+                            try await apiClient.updateGameStatus(gameId, .done)
+                        } catch {
+                            logger.error("Failed to update game status: \(error)")
                         }
-                    )
-                    return .run { _ in
-                        try? await apiClient.updateGameStatus(gameId, .done)
                     }
                 }
 
-                state.nextRadiusUpdate?.addTimeInterval(TimeInterval(game.radiusIntervalUpdate * 60))
-                state.radius = newRadius
-
-                if game.gameMod == .stayInTheZone {
-                    state.mapCircle = CircleOverlay(
-                        center: game.initialCoordinates.toCLCoordinates,
-                        radius: CLLocationDistance(state.radius)
-                    )
-                } else if let currentCircle = state.mapCircle {
-                    state.mapCircle = CircleOverlay(
-                        center: currentCircle.center,
-                        radius: CLLocationDistance(state.radius)
-                    )
+                // Radius update
+                if let result = processRadiusUpdate(
+                    nextRadiusUpdate: state.nextRadiusUpdate,
+                    currentRadius: state.radius,
+                    radiusDeclinePerUpdate: state.game.radiusDeclinePerUpdate,
+                    radiusIntervalUpdate: state.game.radiusIntervalUpdate,
+                    gameMod: state.game.gameMod,
+                    initialCoordinates: state.game.initialCoordinates.toCLCoordinates,
+                    currentCircle: state.mapCircle
+                ) {
+                    if result.isGameOver {
+                        locationClient.stopTracking()
+                        let gameId = state.game.id
+                        state.destination = .alert(
+                            AlertState {
+                                TextState("Game Over")
+                            } actions: {
+                                ButtonState(action: .gameOver) {
+                                    TextState("OK")
+                                }
+                            } message: {
+                                TextState(result.gameOverMessage ?? "Game over")
+                            }
+                        )
+                        return .run { _ in
+                            do {
+                                try await apiClient.updateGameStatus(gameId, .done)
+                            } catch {
+                                logger.error("Failed to update game status to done: \(error.localizedDescription)")
+                            }
+                        }
+                    }
+                    state.radius = result.newRadius
+                    state.nextRadiusUpdate = result.newNextUpdate
+                    state.mapCircle = result.newCircle
                 }
                 return .none
             }
@@ -409,6 +418,7 @@ struct ChickenMapView: View {
                         .font(.system(size: 20))
                         .foregroundStyle(.secondary)
                 }
+                .accessibilityLabel("Game info")
                 .padding(.trailing, 4)
             }
             .padding()
@@ -418,6 +428,7 @@ struct ChickenMapView: View {
             HStack {
                 VStack(alignment: .leading) {
                     Text("Radius : \(self.store.radius)m")
+                        .accessibilityLabel("Radius \(self.store.radius) meters")
                     CountdownView(nowDate: self.$store.nowDate, nextUpdateDate: self.$store.nextRadiusUpdate, chickenStartDate: store.game.startDate, hunterStartDate: store.game.hunterStartDate, isChicken: true)
                 }
                 Spacer()
@@ -433,6 +444,7 @@ struct ChickenMapView: View {
                             .foregroundStyle(.white)
                     }
                 }
+                .accessibilityLabel("I have been found")
                 .frame(width: 50, height: 40)
             }
             .padding()
@@ -478,18 +490,7 @@ struct ChickenMapView: View {
             })
         }
         .overlay(alignment: .top) {
-            if let notification = store.winnerNotification {
-                Text(notification)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .background(.green.opacity(0.9))
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                    .padding(.top, 100)
-                    .transition(.move(edge: .top).combined(with: .opacity))
-                    .animation(.easeInOut, value: store.winnerNotification)
-            }
+            WinnerNotificationOverlay(notification: store.winnerNotification)
         }
         .overlay {
             GameStartCountdownOverlay(

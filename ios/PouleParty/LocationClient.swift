@@ -17,6 +17,17 @@ struct LocationClient {
     var stopTracking: () -> Void
 }
 
+extension LocationClient: TestDependencyKey {
+    static let testValue = LocationClient(
+        authorizationStatus: { .authorizedWhenInUse },
+        lastLocation: { nil },
+        requestWhenInUse: { },
+        requestAlways: { },
+        startTracking: { AsyncStream { _ in } },
+        stopTracking: { }
+    )
+}
+
 extension LocationClient: DependencyKey {
     static var liveValue: LocationClient = {
         let manager = LiveLocationManager()
@@ -67,13 +78,14 @@ private final class LiveLocationManager: NSObject, CLLocationManagerDelegate {
         super.init()
         locationManager.delegate = self
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
-        locationManager.distanceFilter = 10 // Only fire when moved ≥ 10 meters
+        locationManager.distanceFilter = AppConstants.locationMinDistanceMeters
     }
 
     func requestWhenInUse() async {
         let status = locationManager.authorizationStatus
         if status != .notDetermined { return }
         await withCheckedContinuation { continuation in
+            self.authorizationContinuation?.resume()
             self.authorizationContinuation = continuation
             locationManager.requestWhenInUseAuthorization()
         }
@@ -82,8 +94,18 @@ private final class LiveLocationManager: NSObject, CLLocationManagerDelegate {
     func requestAlways() async {
         let status = locationManager.authorizationStatus
         if status == .authorizedAlways { return }
-        if status == .authorizedWhenInUse {
+        if status == .notDetermined {
+            // Must request "when in use" first before "always"
             await withCheckedContinuation { continuation in
+                self.authorizationContinuation?.resume()
+                self.authorizationContinuation = continuation
+                locationManager.requestWhenInUseAuthorization()
+            }
+        }
+        // Now request always if we have at least "when in use"
+        if locationManager.authorizationStatus == .authorizedWhenInUse {
+            await withCheckedContinuation { continuation in
+                self.authorizationContinuation?.resume()
                 self.authorizationContinuation = continuation
                 locationManager.requestAlwaysAuthorization()
             }

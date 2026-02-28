@@ -12,9 +12,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.model.GameMod
 import dev.rahier.pouleparty.ui.theme.*
 
@@ -35,47 +37,47 @@ fun GameRulesScreen() {
 @Composable
 private fun HowToPlaySection() {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("How to play", style = bangerStyle(32), color = Color.Black)
+        Text(stringResource(R.string.how_to_play), style = bangerStyle(32), color = Color.Black)
 
-        RuleRow("One player is the Chicken, the others are Hunters.")
-        RuleRow("The game takes place in a circular zone on the map.")
-        RuleRow("The zone shrinks over time based on game settings.")
-        RuleRow("Hunters win by finding the Chicken. The Chicken wins by surviving until the end!")
+        RuleRow(stringResource(R.string.rule_one_chicken))
+        RuleRow(stringResource(R.string.rule_circular_zone))
+        RuleRow(stringResource(R.string.rule_zone_shrinks))
+        RuleRow(stringResource(R.string.rule_win_condition))
     }
 }
 
 @Composable
 private fun GameModesSection() {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Text("Game Modes", style = bangerStyle(32), color = Color.Black)
+        Text(stringResource(R.string.game_modes), style = bangerStyle(32), color = Color.Black)
 
         GameModeCard(
             title = GameMod.FOLLOW_THE_CHICKEN.title,
-            description = "The Hunters see a circle that follows the Chicken's position in real time. The Chicken must run and hide!",
+            description = stringResource(R.string.mode_follow_desc),
             details = listOf(
-                "Chicken sends its position to all Hunters",
-                "Hunters see the zone move with the Chicken",
-                "Chicken does NOT see the Hunters"
+                stringResource(R.string.mode_follow_detail1),
+                stringResource(R.string.mode_follow_detail2),
+                stringResource(R.string.mode_follow_detail3)
             )
         )
 
         GameModeCard(
             title = GameMod.STAY_IN_THE_ZONE.title,
-            description = "The zone stays fixed on the map and shrinks over time. Everyone must stay inside!",
+            description = stringResource(R.string.mode_stay_desc),
             details = listOf(
-                "No position sharing between players",
-                "The zone is centered on the starting location",
-                "Strategy: stay hidden inside the shrinking zone"
+                stringResource(R.string.mode_stay_detail1),
+                stringResource(R.string.mode_stay_detail2),
+                stringResource(R.string.mode_stay_detail3)
             )
         )
 
         GameModeCard(
             title = GameMod.MUTUAL_TRACKING.title,
-            description = "Like Follow the Chicken, but the Chicken can also see all Hunters on her map!",
+            description = stringResource(R.string.mode_mutual_desc),
             details = listOf(
-                "Chicken sends its position to Hunters",
-                "Hunters send their position to the Chicken",
-                "Both sides can track each other in real time"
+                stringResource(R.string.mode_mutual_detail1),
+                stringResource(R.string.mode_mutual_detail2),
+                stringResource(R.string.mode_mutual_detail3)
             )
         )
     }
@@ -84,12 +86,12 @@ private fun GameModesSection() {
 @Composable
 private fun SettingsSection() {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Game Settings", style = bangerStyle(32), color = Color.Black)
+        Text(stringResource(R.string.game_settings), style = bangerStyle(32), color = Color.Black)
 
-        SettingRow("Start / End time", "When the game starts and ends. The Chicken wins if the time runs out!")
-        SettingRow("Radius interval update", "How often the zone shrinks (in minutes).")
-        SettingRow("Radius decline", "How many meters the zone shrinks each update.")
-        SettingRow("Map setup", "Choose the starting location and initial radius of the zone.")
+        SettingRow(stringResource(R.string.setting_start_end_name), stringResource(R.string.setting_start_end_desc))
+        SettingRow(stringResource(R.string.radius_interval_update), stringResource(R.string.setting_radius_interval_desc))
+        SettingRow(stringResource(R.string.radius_decline), stringResource(R.string.setting_radius_decline_desc))
+        SettingRow(stringResource(R.string.map_setup), stringResource(R.string.setting_map_desc))
     }
 }
 

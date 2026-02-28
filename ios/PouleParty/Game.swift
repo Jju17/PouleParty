@@ -22,7 +22,7 @@ struct Game: Codable, Equatable {
     var radiusIntervalUpdate: Double = 5 // In minutes
     private(set) var startTimestamp: Timestamp = .init(date: Date.now.addingTimeInterval(300))
     private(set) var endTimestamp: Timestamp = .init(date: Date.now.addingTimeInterval(3900))
-    private(set) var initialCoordinates: GeoPoint = .init(latitude: 50.8466, longitude: 4.3528)
+    private(set) var initialCoordinates: GeoPoint = .init(latitude: AppConstants.defaultLatitude, longitude: AppConstants.defaultLongitude)
     var initialRadius: Double = 1500
     var radiusDeclinePerUpdate: Double = 100
     var chickenHeadStartMinutes: Double = 0 // In minutes, 0 = no head start
@@ -31,6 +31,7 @@ struct Game: Codable, Equatable {
     var hunterIds: [String] = []
     var status: GameStatus = .waiting
     var winners: [Winner] = []
+    var creatorId: String = ""
 
     enum GameStatus: String, CaseIterable, Equatable, Codable {
         case waiting
@@ -48,7 +49,7 @@ struct Game: Codable, Equatable {
             case .followTheChicken:
                 return "Follow the chicken 🐔"
             case .stayInTheZone:
-                return "Stay in tha zone 📍"
+                return "Stay in the zone 📍"
             case .mutualTracking:
                 return "Mutual tracking 👀"
             }
@@ -101,11 +102,16 @@ extension Game {
         var lastUpdate: Date = self.hunterStartDate
         var lastRadius: Int = Int(self.initialRadius)
 
+        guard radiusIntervalUpdate > 0 else {
+            return (lastUpdate, lastRadius)
+        }
+
         while lastUpdate.addingTimeInterval(TimeInterval(self.radiusIntervalUpdate * 60)) < .now {
             lastUpdate.addTimeInterval(TimeInterval(self.radiusIntervalUpdate * 60))
             lastRadius -= Int(self.radiusDeclinePerUpdate)
         }
 
+        lastRadius = max(0, lastRadius)
         let nextUpdate = lastUpdate.addingTimeInterval(TimeInterval(self.radiusIntervalUpdate * 60))
         return (nextUpdate, lastRadius)
     }
@@ -114,13 +120,13 @@ extension Game {
 extension Game {
     static var mock: Game {
         Game(
-            id: UUID().uuidString,
+            id: "mock-game-id",
             name: "Mock",
             numberOfPlayers: 10,
             radiusIntervalUpdate: 5,
             startTimestamp: Timestamp(date: .now.addingTimeInterval(300)),
             endTimestamp: Timestamp(date: .now.addingTimeInterval(3900)),
-            initialCoordinates: GeoPoint(latitude: 50.8466, longitude: 4.3528),
+            initialCoordinates: GeoPoint(latitude: AppConstants.defaultLatitude, longitude: AppConstants.defaultLongitude),
             initialRadius: 1500,
             radiusDeclinePerUpdate: 100,
             chickenHeadStartMinutes: 0,

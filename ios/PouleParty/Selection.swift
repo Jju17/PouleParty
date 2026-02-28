@@ -8,6 +8,8 @@
 import AVFAudio
 import ComposableArchitecture
 import CoreLocation
+import os
+import Sharing
 import SwiftUI
 
 @Reducer
@@ -16,6 +18,7 @@ struct SelectionFeature {
     @ObservableState
     struct State: Equatable {
         @Presents var destination: Destination.State?
+        @Shared(.appStorage(AppConstants.prefUserNickname)) var savedNickname = ""
         var password: String = ""
         var gameCode: String = ""
         var hunterName: String = ""
@@ -35,6 +38,7 @@ struct SelectionFeature {
         case initialLocationResolved(CLLocationCoordinate2D?)
         case goToHunterMapTriggered(Game, String)
         case locationRequired
+        case networkError
         case onTask
         case startButtonTapped
         case joinGameButtonTapped
@@ -66,7 +70,9 @@ struct SelectionFeature {
     }
 
     @Dependency(\.apiClient) var apiClient
+    @Dependency(\.authClient) var authClient
     @Dependency(\.locationClient) var locationClient
+    @Dependency(\.uuid) var uuid
 
     var body: some ReducerOf<Self> {
         BindingReducer()
@@ -76,14 +82,11 @@ struct SelectionFeature {
             case .binding:
                 return .none
             case .validatePasswordButtonTapped:
-                // Block if location not authorized
                 let chickenLocStatus = locationClient.authorizationStatus()
                 guard chickenLocStatus == .authorizedAlways || chickenLocStatus == .authorizedWhenInUse else {
                     state.isAuthenticating = false
                     state.password = ""
-                    return .run { send in
-                        await send(.locationRequired)
-                    }
+                    return .send(.locationRequired)
                 }
 
                 guard state.password == ""
@@ -94,14 +97,10 @@ struct SelectionFeature {
 
                 state.isAuthenticating = false
 
-                return .run { send in
-                    await send(.goToChickenConfigTriggered)
-                }
+                return .send(.goToChickenConfigTriggered)
             case let .destination(.presented(.chickenConfig(.startGameTriggered(game)))):
                 state.destination = nil
-                return .run { send in
-                    await send(.goToChickenMapTriggered(game))
-                }
+                return .send(.goToChickenMapTriggered(game))
             case .destination:
                 return .none
             case .dismissChickenConfig:
@@ -144,9 +143,10 @@ struct SelectionFeature {
                     await send(.initialLocationResolved(location))
                 }
             case let .initialLocationResolved(location):
-                var game = Game(id: UUID().uuidString)
+                var game = Game(id: uuid().uuidString)
                 game.foundCode = Game.generateFoundCode()
                 game.chickenHeadStartMinutes = 5
+                game.creatorId = authClient.currentUserId() ?? ""
                 if let location {
                     game.initialLocation = location
                 }
@@ -173,27 +173,47 @@ struct SelectionFeature {
                     }
                 )
                 return .none
+            case .networkError:
+                state.destination = .alert(
+                    AlertState {
+                        TextState("Network Error")
+                    } actions: {
+                        ButtonState(role: .cancel) {
+                            TextState("OK")
+                        }
+                    } message: {
+                        TextState("Could not reach the server. Check your connection and try again.")
+                    }
+                )
+                return .none
             case .onTask:
                 return .none
             case .startButtonTapped:
                 // Block if location not authorized
                 let startLocStatus = locationClient.authorizationStatus()
                 guard startLocStatus == .authorizedAlways || startLocStatus == .authorizedWhenInUse else {
-                    return .run { send in
-                        await send(.locationRequired)
-                    }
+                    return .send(.locationRequired)
                 }
                 state.isJoiningGame = true
                 return .none
             case .joinGameButtonTapped:
-                let code = state.gameCode.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !code.isEmpty else { return .none }
+                let code = state.gameCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+                guard code.count == AppConstants.gameCodeLength,
+                      code.allSatisfy({ $0.isLetter || $0.isNumber })
+                else { return .none }
 
-                let savedNickname = (UserDefaults.standard.string(forKey: "userNickname") ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                let savedNickname = state.savedNickname.trimmingCharacters(in: .whitespacesAndNewlines)
                 let finalName = savedNickname.isEmpty ? "Hunter" : savedNickname
                 state.isJoiningGame = false
                 return .run { send in
-                    guard let game = try? await apiClient.findGameByCode(code) else {
+                    let game: Game?
+                    do {
+                        game = try await apiClient.findGameByCode(code)
+                    } catch {
+                        await send(.networkError)
+                        return
+                    }
+                    guard let game else {
                         await send(.gameNotFound)
                         return
                     }
@@ -229,6 +249,7 @@ struct SelectionView: View {
                         .resizable()
                         .scaledToFit()
                         .frame(width: 200, height: 200)
+                        .accessibilityLabel("PouleParty logo")
 
                     Button {
                         self.store.send(.startButtonTapped)
@@ -247,6 +268,7 @@ struct SelectionView: View {
                                 self.isVisible.toggle()
                             }
                     }
+                    .accessibilityLabel("Start game")
                     .frame(width: 200, height: 50)
 
                     Text("Press start to play")
@@ -273,6 +295,7 @@ struct SelectionView: View {
                                     .stroke(.black, lineWidth: 1.5)
                             )
                     }
+                    .accessibilityLabel("Game rules")
                     .padding()
                 }
                 Spacer()
@@ -290,6 +313,7 @@ struct SelectionView: View {
                                     .stroke(.black, lineWidth: 1.5)
                             )
                     }
+                    .accessibilityLabel("I am the chicken")
                     .padding()
                 }
             }
@@ -366,7 +390,7 @@ struct SelectionView: View {
 
     private func animateBlinking() {
         Task {
-            while true {
+            while !Task.isCancelled {
                 await MainActor.run {
                     withAnimation(Animation.easeInOut(duration: 0.5)) {
                         self.isVisible.toggle()
@@ -390,7 +414,7 @@ struct SelectionView: View {
             self.audioPlayer?.volume = 0.1
             self.audioPlayer?.play()
         } catch {
-            print("Failed to play sound: \(error.localizedDescription)")
+            Logger(subsystem: "dev.rahier.pouleparty", category: "Selection").error("Failed to play sound: \(error.localizedDescription)")
         }
     }
 }

@@ -1,8 +1,5 @@
 package dev.rahier.pouleparty.ui.chickenconfig
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -14,10 +11,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.model.GameMod
+import dev.rahier.pouleparty.ui.components.copyToClipboard
 import dev.rahier.pouleparty.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
@@ -36,10 +36,10 @@ fun ChickenConfigScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Game Settings") },
+                title = { Text(stringResource(R.string.game_settings)) },
                 navigationIcon = {
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Close")
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
                     }
                 }
             )
@@ -68,13 +68,12 @@ fun ChickenConfigScreen(
                         modifier = Modifier.weight(1f)
                     )
                     IconButton(onClick = {
-                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                        clipboard.setPrimaryClip(ClipData.newPlainText("Game Code", state.game.gameCode))
+                        copyToClipboard(context, "Game Code", state.game.gameCode)
                         viewModel.onCodeCopied()
                     }) {
                         Icon(
                             imageVector = if (state.codeCopied) Icons.Default.Check else Icons.Default.Close,
-                            contentDescription = "Copy",
+                            contentDescription = stringResource(R.string.copy_game_code),
                             tint = if (state.codeCopied) Color(0xFF4CAF50) else Color.Gray
                         )
                     }
@@ -90,7 +89,7 @@ fun ChickenConfigScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Start at")
+                    Text(stringResource(R.string.start_at))
                     Text(dateFormat.format(state.game.startDate))
                 }
             }
@@ -104,7 +103,7 @@ fun ChickenConfigScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("End at")
+                    Text(stringResource(R.string.end_at))
                     Text(dateFormat.format(state.game.endDate))
                 }
             }
@@ -112,7 +111,7 @@ fun ChickenConfigScreen(
             // Game Mode picker
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Game Mode", style = MaterialTheme.typography.labelLarge)
+                    Text(stringResource(R.string.game_mode), style = MaterialTheme.typography.labelLarge)
                     Spacer(Modifier.height(8.dp))
                     GameMod.entries.forEach { mod ->
                         Row(
@@ -136,8 +135,8 @@ fun ChickenConfigScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("Radius interval update")
-                        Text("${state.game.radiusIntervalUpdate.toInt()} minutes")
+                        Text(stringResource(R.string.radius_interval_update))
+                        Text(stringResource(R.string.minutes_format, state.game.radiusIntervalUpdate.toInt()))
                     }
                     Slider(
                         value = state.game.radiusIntervalUpdate.toFloat(),
@@ -155,8 +154,8 @@ fun ChickenConfigScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("Radius decline")
-                        Text("${state.game.radiusDeclinePerUpdate.toInt()} meters")
+                        Text(stringResource(R.string.radius_decline))
+                        Text(stringResource(R.string.meters_format, state.game.radiusDeclinePerUpdate.toInt()))
                     }
                     Slider(
                         value = state.game.radiusDeclinePerUpdate.toFloat(),
@@ -174,8 +173,8 @@ fun ChickenConfigScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("Chicken head start")
-                        Text("${state.game.chickenHeadStartMinutes.toInt()} minutes")
+                        Text(stringResource(R.string.chicken_head_start))
+                        Text(stringResource(R.string.minutes_format, state.game.chickenHeadStartMinutes.toInt()))
                     }
                     Slider(
                         value = state.game.chickenHeadStartMinutes.toFloat(),
@@ -194,7 +193,7 @@ fun ChickenConfigScreen(
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = CROrange)
             ) {
-                Text("Start game", color = Color.White, style = bangerStyle(20))
+                Text(stringResource(R.string.start_game), color = Color.White, style = bangerStyle(20))
             }
         }
     }
@@ -203,10 +202,10 @@ fun ChickenConfigScreen(
     if (state.showAlert) {
         AlertDialog(
             onDismissRequest = { viewModel.dismissAlert() },
-            title = { Text("Error") },
+            title = { Text(stringResource(R.string.error)) },
             text = { Text(state.alertMessage) },
             confirmButton = {
-                TextButton(onClick = { viewModel.dismissAlert() }) { Text("OK") }
+                TextButton(onClick = { viewModel.dismissAlert() }) { Text(stringResource(R.string.ok)) }
             }
         )
     }

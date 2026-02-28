@@ -147,6 +147,8 @@ struct VictoryView: View {
                 .font(.gameboy(size: 10))
                 .foregroundStyle(.black.opacity(0.5))
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(medal) \(winner.hunterName), \(timeString)")
         .padding(.horizontal, 24)
         .padding(.vertical, 10)
         .background(
@@ -181,7 +183,7 @@ private struct ConfettiView: View {
     @State private var isActive: Bool = true
 
     private static let colors: [Color] = [.CROrange, .CRPink, .yellow, .green, .blue, .red]
-    private static let duration: TimeInterval = 10
+    private static let duration: TimeInterval = AppConstants.confettiDurationSeconds
 
     var body: some View {
         TimelineView(.animation) { timeline in
@@ -233,14 +235,14 @@ private struct ConfettiView: View {
             }
         }
         .onAppear {
-            particles = (0..<80).map { _ in
+            particles = (0..<AppConstants.confettiParticleCount).map { _ in
                 ConfettiParticle(
                     x: CGFloat.random(in: 0...1),
                     y: CGFloat.random(in: -1...0),
                     speed: CGFloat.random(in: 0.1...0.4),
                     wobblePhase: CGFloat.random(in: 0...(.pi * 2)),
                     wobbleSpeed: CGFloat.random(in: 1...3),
-                    color: Self.colors.randomElement()!,
+                    color: Self.colors.randomElement() ?? .red,
                     size: CGFloat.random(in: 4...10),
                     rotation: Double.random(in: 0...360),
                     rotationSpeed: Double.random(in: 20...100),

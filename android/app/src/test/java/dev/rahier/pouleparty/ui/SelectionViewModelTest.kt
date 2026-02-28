@@ -25,13 +25,6 @@ class SelectionViewModelTest {
     }
 
     @Test
-    fun `i am la poule shows password dialog`() {
-        val state = SelectionUiState()
-        val updated = state.copy(isShowingPasswordDialog = true)
-        assertTrue(updated.isShowingPasswordDialog)
-    }
-
-    @Test
     fun `rules button shows game rules`() {
         val state = SelectionUiState()
         val updated = state.copy(isShowingGameRules = true)

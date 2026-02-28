@@ -6,9 +6,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.ui.theme.GameBoyFont
 
 /**
@@ -24,7 +26,7 @@ fun EndGameCodeContent(foundCode: String) {
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
         Text(
-            text = "Show this code\nto the hunter",
+            text = stringResource(R.string.show_code_instruction),
             fontFamily = GameBoyFont,
             fontSize = 14.sp,
             textAlign = TextAlign.Center
@@ -38,7 +40,7 @@ fun EndGameCodeContent(foundCode: String) {
         )
 
         Text(
-            text = "The hunter must enter this code to prove they found you!",
+            text = stringResource(R.string.show_code_description),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center

@@ -6,6 +6,7 @@
 //
 
 import ComposableArchitecture
+import os
 import SwiftUI
 
 @Reducer
@@ -21,6 +22,7 @@ struct AppFeature {
     }
 
     enum Action {
+        case appStarted
         case onboarding(OnboardingFeature.Action)
         case chickenMap(ChickenMapFeature.Action)
         case hunterMap(HunterMapFeature.Action)
@@ -29,16 +31,21 @@ struct AppFeature {
     }
 
     @Dependency(\.apiClient) var apiClient
+    @Dependency(\.authClient) var authClient
 
     var body: some ReducerOf<Self> {
         Reduce { state, action in
             switch action {
-            case .onboarding(.onboardingCompleted):
-                if case let .onboarding(onboardingState) = state {
-                    let nickname = onboardingState.nickname.trimmingCharacters(in: .whitespacesAndNewlines)
-                    UserDefaults.standard.set(nickname, forKey: "userNickname")
+            case .appStarted:
+                return .run { _ in
+                    do {
+                        _ = try await authClient.signInAnonymously()
+                    } catch {
+                        Logger(subsystem: "dev.rahier.pouleparty", category: "AppFeature")
+                            .error("Anonymous sign-in failed: \(error.localizedDescription)")
+                    }
                 }
-                UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+            case .onboarding(.onboardingCompleted):
                 state = .selection(SelectionFeature.State())
                 return .none
             case .onboarding:
@@ -52,7 +59,12 @@ struct AppFeature {
                 }
                 state = AppFeature.State.selection(SelectionFeature.State())
                 return .run { _ in
-                    try? await apiClient.updateGameStatus(gameId, .done)
+                    do {
+                        try await apiClient.updateGameStatus(gameId, .done)
+                    } catch {
+                        Logger(subsystem: "dev.rahier.pouleparty", category: "AppFeature")
+                            .error("Failed to update game status to done: \(error.localizedDescription)")
+                    }
                 }
             case let .selection(.goToVictoryAsSpectator(game)):
                 state = .victory(VictoryFeature.State(
@@ -108,27 +120,32 @@ struct AppView: View {
     let store: StoreOf<AppFeature>
 
     var body: some View {
-        switch store.state {
-        case .onboarding:
-            if let store = store.scope(state: \.onboarding, action: \.onboarding) {
-                OnboardingView(store: store)
+        Group {
+            switch store.state {
+            case .onboarding:
+                if let store = store.scope(state: \.onboarding, action: \.onboarding) {
+                    OnboardingView(store: store)
+                }
+            case .chickenMap:
+                if let store = store.scope(state: \.chickenMap, action: \.chickenMap) {
+                    ChickenMapView(store: store)
+                }
+            case .hunterMap:
+                if let store = store.scope(state: \.hunterMap, action: \.hunterMap) {
+                    HunterMapView(store: store)
+                }
+            case .selection:
+                if let store = store.scope(state: \.selection, action: \.selection) {
+                    SelectionView(store: store)
+                }
+            case .victory:
+                if let store = store.scope(state: \.victory, action: \.victory) {
+                    VictoryView(store: store)
+                }
             }
-        case .chickenMap:
-            if let store = store.scope(state: \.chickenMap, action: \.chickenMap) {
-                ChickenMapView(store: store)
-            }
-        case .hunterMap:
-            if let store = store.scope(state: \.hunterMap, action: \.hunterMap) {
-                HunterMapView(store: store)
-            }
-        case .selection:
-            if let store = store.scope(state: \.selection, action: \.selection) {
-                SelectionView(store: store)
-            }
-        case .victory:
-            if let store = store.scope(state: \.victory, action: \.victory) {
-                VictoryView(store: store)
-            }
+        }
+        .task {
+            store.send(.appStarted)
         }
     }
 }

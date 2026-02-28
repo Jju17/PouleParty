@@ -9,6 +9,7 @@ import dev.rahier.pouleparty.model.Game
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -45,7 +46,7 @@ class VictoryViewModel @Inject constructor(
     private fun loadInitialGame() {
         viewModelScope.launch {
             val game = firestoreRepository.getConfig(gameId) ?: return@launch
-            _uiState.value = _uiState.value.copy(game = game)
+            _uiState.update { it.copy(game = game) }
         }
     }
 
@@ -53,7 +54,7 @@ class VictoryViewModel @Inject constructor(
         viewModelScope.launch {
             firestoreRepository.gameConfigFlow(gameId).collect { game ->
                 if (game != null) {
-                    _uiState.value = _uiState.value.copy(game = game)
+                    _uiState.update { it.copy(game = game) }
                 }
             }
         }
