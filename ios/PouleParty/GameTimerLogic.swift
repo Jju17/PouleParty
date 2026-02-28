@@ -48,8 +48,7 @@ func evaluateCountdown(
 
         if timeToTarget <= 0,
            timeToTarget > -1,
-           currentCountdownText == nil,
-           currentCountdownNumber == nil {
+           currentCountdownText == nil {
             return .showText(phase.completionText)
         }
     }

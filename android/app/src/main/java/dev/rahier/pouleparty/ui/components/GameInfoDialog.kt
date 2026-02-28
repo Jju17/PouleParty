@@ -1,22 +1,15 @@
 package dev.rahier.pouleparty.ui.components
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.model.Game
-import dev.rahier.pouleparty.ui.theme.GameBoyFont
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -32,7 +25,6 @@ fun GameInfoDialog(
     onDismiss: () -> Unit,
     onCancelGame: (() -> Unit)? = null
 ) {
-    val context = LocalContext.current
     val dateFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
 
     AlertDialog(
@@ -41,32 +33,11 @@ fun GameInfoDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 // Game code (copiable)
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            game.gameCode,
-                            fontFamily = GameBoyFont,
-                            fontSize = 24.sp,
-                            modifier = Modifier.weight(1f)
-                        )
-                        IconButton(onClick = {
-                            copyToClipboard(context, "Game Code", game.gameCode)
-                            onCodeCopied()
-                        }) {
-                            Icon(
-                                imageVector = if (codeCopied) Icons.Default.Check else Icons.Default.Close,
-                                contentDescription = stringResource(R.string.copy_game_code),
-                                tint = if (codeCopied) Color(0xFF4CAF50) else Color.Gray
-                            )
-                        }
-                    }
-                }
+                GameCodeCard(
+                    gameCode = game.gameCode,
+                    codeCopied = codeCopied,
+                    onCodeCopied = onCodeCopied
+                )
 
                 // Game mode
                 Row(

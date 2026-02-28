@@ -1,7 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.PouleParty" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/cr_beige</item>
         <item name="android:statusBarColor">@color/cr_beige</item>
         <item name="android:navigationBarColor">@color/cr_beige</item>
+    </style>
+
+    <style name="Theme.PouleParty.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/cr_beige</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/logo_splash</item>
+        <item name="postSplashScreenTheme">@style/Theme.PouleParty</item>
     </style>
 </resources>

@@ -1,23 +1,21 @@
 package dev.rahier.pouleparty.ui.chickenconfig
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.model.GameMod
-import dev.rahier.pouleparty.ui.components.copyToClipboard
+import dev.rahier.pouleparty.ui.components.GameCodeCard
 import dev.rahier.pouleparty.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
@@ -30,7 +28,6 @@ fun ChickenConfigScreen(
     viewModel: ChickenConfigViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
-    val context = LocalContext.current
     val dateFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
 
     Scaffold(
@@ -49,36 +46,16 @@ fun ChickenConfigScreen(
             modifier = Modifier
                 .padding(padding)
                 .padding(16.dp)
-                .fillMaxSize(),
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Game Code section
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        state.game.gameCode,
-                        fontFamily = GameBoyFont,
-                        fontSize = 24.sp,
-                        modifier = Modifier.weight(1f)
-                    )
-                    IconButton(onClick = {
-                        copyToClipboard(context, "Game Code", state.game.gameCode)
-                        viewModel.onCodeCopied()
-                    }) {
-                        Icon(
-                            imageVector = if (state.codeCopied) Icons.Default.Check else Icons.Default.Close,
-                            contentDescription = stringResource(R.string.copy_game_code),
-                            tint = if (state.codeCopied) Color(0xFF4CAF50) else Color.Gray
-                        )
-                    }
-                }
-            }
+            GameCodeCard(
+                gameCode = state.game.gameCode,
+                codeCopied = state.codeCopied,
+                onCodeCopied = { viewModel.onCodeCopied() }
+            )
 
             // Start time
             Card(modifier = Modifier.fillMaxWidth()) {
@@ -184,8 +161,6 @@ fun ChickenConfigScreen(
                     )
                 }
             }
-
-            Spacer(Modifier.weight(1f))
 
             // Start game button
             Button(

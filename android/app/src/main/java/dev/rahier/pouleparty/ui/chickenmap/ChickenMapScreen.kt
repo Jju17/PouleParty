@@ -40,8 +40,8 @@ fun ChickenMapScreen(
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { paddingValues ->
-    Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+    ) { _ ->
+    Box(modifier = Modifier.fillMaxSize()) {
         // Google Map
         val cameraPositionState = rememberCameraPositionState()
 

@@ -53,8 +53,7 @@ fun evaluateCountdown(
         }
 
         if (timeToTargetSec <= 0 && timeToTargetSec > -1 &&
-            currentCountdownText == null &&
-            currentCountdownNumber == null
+            currentCountdownText == null
         ) {
             return CountdownResult.ShowText(phase.completionText)
         }

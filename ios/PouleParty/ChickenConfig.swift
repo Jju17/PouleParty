@@ -97,8 +97,6 @@ struct ChickenConfigFeature {
 
 struct ChickenConfigView: View {
     @Bindable var store: StoreOf<ChickenConfigFeature>
-    @State private var codeCopied = false
-
     var body: some View {
         NavigationStack(path: $store.scope(state: \.path, action: \.path)) {
             Form {
@@ -123,28 +121,7 @@ struct ChickenConfigView: View {
 
     private var gameCodeSection: some View {
         Section("Game Code") {
-            HStack {
-                Spacer()
-                Text(store.game.gameCode)
-                    .font(.gameboy(size: 24))
-                Spacer()
-                Button {
-                    UIPasteboard.general.string = store.game.gameCode
-                    withAnimation {
-                        codeCopied = true
-                    }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-                        withAnimation {
-                            codeCopied = false
-                        }
-                    }
-                } label: {
-                    Image(systemName: codeCopied ? "checkmark" : "doc.on.doc")
-                        .foregroundStyle(codeCopied ? .green : .gray)
-                        .contentTransition(.symbolEffect(.replace))
-                }
-                .buttonStyle(.plain)
-            }
+            GameCodeRow(gameCode: store.game.gameCode)
         }
     }
 

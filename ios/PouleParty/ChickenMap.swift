@@ -514,35 +514,13 @@ struct ChickenMapView: View {
 struct GameInfoSheet: View {
     let game: Game
     var onCancelGame: (() -> Void)? = nil
-    @State private var codeCopied = false
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
             List {
                 Section("Game Code") {
-                    HStack {
-                        Spacer()
-                        Text(game.gameCode)
-                            .font(.gameboy(size: 24))
-                        Spacer()
-                        Button {
-                            UIPasteboard.general.string = game.gameCode
-                            withAnimation {
-                                codeCopied = true
-                            }
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-                                withAnimation {
-                                    codeCopied = false
-                                }
-                            }
-                        } label: {
-                            Image(systemName: codeCopied ? "checkmark" : "doc.on.doc")
-                                .foregroundStyle(codeCopied ? .green : .gray)
-                                .contentTransition(.symbolEffect(.replace))
-                        }
-                        .buttonStyle(.plain)
-                    }
+                    GameCodeRow(gameCode: game.gameCode)
                 }
 
                 Section("Game Mode") {
