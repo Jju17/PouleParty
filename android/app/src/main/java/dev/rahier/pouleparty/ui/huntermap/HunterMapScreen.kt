@@ -16,14 +16,26 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.google.maps.android.compose.*
+import androidx.compose.ui.text.font.FontWeight
+import com.mapbox.maps.CameraOptions
+import com.mapbox.maps.MapboxExperimental
+import com.mapbox.maps.extension.compose.MapboxMap
+import com.mapbox.maps.extension.compose.MapEffect
+import com.mapbox.maps.extension.compose.animation.viewport.rememberMapViewportState
+import com.mapbox.maps.extension.compose.annotation.generated.PolygonAnnotation
+import com.mapbox.maps.extension.compose.annotation.generated.PolylineAnnotation
+import com.mapbox.maps.plugin.locationcomponent.location
 import dev.rahier.pouleparty.AppConstants
 import dev.rahier.pouleparty.R
+import dev.rahier.pouleparty.ui.components.circlePolygonPoints
+import dev.rahier.pouleparty.ui.components.outerBoundsPoints
+import dev.rahier.pouleparty.ui.components.zoomForRadius
 import dev.rahier.pouleparty.ui.components.CountdownView
 import dev.rahier.pouleparty.ui.components.GameInfoDialog
 import dev.rahier.pouleparty.ui.components.GameOverAlertDialog
 import dev.rahier.pouleparty.ui.components.GameStartCountdownOverlay
 
+@OptIn(MapboxExperimental::class)
 @Composable
 fun HunterMapScreen(
     onGoToMenu: () -> Unit,
@@ -54,36 +66,55 @@ fun HunterMapScreen(
             modifier = Modifier
                 .fillMaxSize()
         ) {
-            val cameraPositionState = rememberCameraPositionState()
+            val mapViewportState = rememberMapViewportState()
 
-            // Center camera on circle when it updates
-            LaunchedEffect(state.circleCenter) {
+            // Center camera on circle and zoom to fit radius
+            LaunchedEffect(state.circleCenter, state.radius) {
                 state.circleCenter?.let { center ->
-                    cameraPositionState.position =
-                        com.google.android.gms.maps.model.CameraPosition.fromLatLngZoom(center, AppConstants.MAP_CAMERA_ZOOM)
+                    mapViewportState.flyTo(
+                        cameraOptions = CameraOptions.Builder()
+                            .center(center)
+                            .zoom(zoomForRadius(state.radius.toDouble(), center.latitude()))
+                            .build()
+                    )
                 }
             }
 
-            GoogleMap(
+            MapboxMap(
                 modifier = Modifier.fillMaxSize(),
-                cameraPositionState = cameraPositionState,
-                properties = MapProperties(isMyLocationEnabled = true),
-                uiSettings = MapUiSettings(
-                    myLocationButtonEnabled = true,
-                    compassEnabled = true,
-                    zoomControlsEnabled = false
-                )
+                mapViewportState = mapViewportState
             ) {
-                // Zone circle (only visible after game starts)
+                // Enable location puck
+                MapEffect(Unit) { mapView ->
+                    mapView.location.updateSettings {
+                        enabled = true
+                        pulsingEnabled = true
+                    }
+                }
+
+                // Inverted zone overlay (only visible after game starts)
                 if (state.hasGameStarted) {
                     state.circleCenter?.let { center ->
-                        Circle(
-                            center = center,
-                            radius = state.radius.toDouble(),
-                            fillColor = Color.Green.copy(alpha = 0.3f),
-                            strokeColor = Color.Green.copy(alpha = 0.7f),
-                            strokeWidth = 2f
-                        )
+                        val overlayColor = if (state.isOutsideZone) {
+                            Color(1f, 0f, 0f, 0.4f) // Red with ~0.4 alpha
+                        } else {
+                            Color(0f, 0f, 0f, 0.3f) // Black with ~0.3 alpha
+                        }
+                        val circlePoints = circlePolygonPoints(center, state.radius.toDouble())
+                        PolygonAnnotation(
+                            points = listOf(outerBoundsPoints(center), circlePoints)
+                        ) {
+                            fillColor = overlayColor
+                            fillOpacity = 1.0
+                        }
+
+                        // Zone border circle
+                        PolylineAnnotation(
+                            points = circlePoints + listOf(circlePoints.first())
+                        ) {
+                            lineColor = Color(0f, 1f, 0f, 0.7f)
+                            lineWidth = 2.0
+                        }
                     }
                 }
             }
@@ -164,6 +195,31 @@ fun HunterMapScreen(
                 countdownNumber = state.countdownNumber,
                 countdownText = state.countdownText
             )
+
+            // Zone warning banner
+            if (state.isOutsideZone) {
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 140.dp)
+                        .background(Color.Red.copy(alpha = 0.9f), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 24.dp, vertical = 12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = stringResource(R.string.return_to_zone),
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "${state.outsideZoneSeconds}s",
+                        color = Color.White,
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                }
+            }
         }
     }
 

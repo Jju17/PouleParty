@@ -3,7 +3,7 @@ package dev.rahier.pouleparty.ui.chickenmap
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.android.gms.maps.model.LatLng
+import com.mapbox.geojson.Point
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.rahier.pouleparty.data.FirestoreRepository
 import dev.rahier.pouleparty.data.LocationRepository
@@ -14,10 +14,13 @@ import dev.rahier.pouleparty.model.HunterLocation
 import dev.rahier.pouleparty.AppConstants
 import dev.rahier.pouleparty.ui.CountdownPhase
 import dev.rahier.pouleparty.ui.CountdownResult
+import dev.rahier.pouleparty.ui.PlayerRole
 import dev.rahier.pouleparty.ui.checkGameOverByTime
+import dev.rahier.pouleparty.ui.checkZoneStatus
 import dev.rahier.pouleparty.ui.detectNewWinners
 import dev.rahier.pouleparty.ui.evaluateCountdown
 import dev.rahier.pouleparty.ui.processRadiusUpdate
+import dev.rahier.pouleparty.ui.shouldCheckZone
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -32,7 +35,7 @@ import javax.inject.Inject
 
 data class HunterAnnotation(
     val id: String,
-    val coordinate: LatLng,
+    val coordinate: Point,
     val displayName: String
 )
 
@@ -42,7 +45,7 @@ data class ChickenMapUiState(
     val nextRadiusUpdate: Date? = null,
     val nowDate: Date = Date(),
     val radius: Int = 1500,
-    val circleCenter: LatLng? = null,
+    val circleCenter: Point? = null,
     val showCancelAlert: Boolean = false,
     val showGameOverAlert: Boolean = false,
     val gameOverMessage: String = "",
@@ -54,7 +57,11 @@ data class ChickenMapUiState(
     val hasGameStarted: Boolean = false,
     val hasHuntStarted: Boolean = false,
     val countdownNumber: Int? = null,
-    val countdownText: String? = null
+    val countdownText: String? = null,
+    val userLocation: Point? = null,
+    val isOutsideZone: Boolean = false,
+    val outsideZoneSince: Long = 0,
+    val outsideZoneSeconds: Int = 0
 )
 
 @HiltViewModel
@@ -184,6 +191,24 @@ class ChickenMapViewModel @Inject constructor(
                         }
                     }
                 }
+
+                // Zone check
+                val currentState = _uiState.value
+                if (shouldCheckZone(PlayerRole.CHICKEN, currentState.game.gameModEnum)) {
+                    val userLoc = currentState.userLocation
+                    val center = currentState.circleCenter
+                    if (userLoc != null && center != null) {
+                        val zoneResult = checkZoneStatus(userLoc, center, currentState.radius.toDouble())
+                        if (zoneResult.isOutsideZone) {
+                            val since = if (currentState.outsideZoneSince == 0L) System.currentTimeMillis() else currentState.outsideZoneSince
+                            val elapsed = ((System.currentTimeMillis() - since) / 1000).toInt()
+                            val remaining = maxOf(0, AppConstants.OUTSIDE_ZONE_GRACE_PERIOD_SECONDS - elapsed)
+                            _uiState.update { it.copy(isOutsideZone = true, outsideZoneSince = since, outsideZoneSeconds = remaining) }
+                        } else {
+                            _uiState.update { it.copy(isOutsideZone = false, outsideZoneSince = 0, outsideZoneSeconds = 0) }
+                        }
+                    }
+                }
             }
         }
     }
@@ -196,22 +221,32 @@ class ChickenMapViewModel @Inject constructor(
     /**
      * Chicken sends its position to hunters (except in stayInTheZone mode).
      * Circle follows chicken position in followTheChicken and mutualTracking.
+     * In stayInTheZone, tracks location for zone check only (no Firestore writes).
      */
     private suspend fun trackLocation(game: Game) {
-        if (game.gameModEnum == GameMod.STAY_IN_THE_ZONE) return
-
         val delayMs = game.startDate.time - System.currentTimeMillis()
         if (delayMs > 0) delay(delayMs)
 
+        if (game.gameModEnum == GameMod.STAY_IN_THE_ZONE) {
+            // stayInTheZone: track location for zone check only
+            locationRepository.getLastLocation()?.let { latLng ->
+                _uiState.update { it.copy(userLocation = latLng) }
+            }
+            locationRepository.locationFlow().collect { latLng ->
+                _uiState.update { it.copy(userLocation = latLng) }
+            }
+            return
+        }
+
         // Send current location immediately on connect
         locationRepository.getLastLocation()?.let { latLng ->
-            _uiState.update { it.copy(circleCenter = latLng) }
+            _uiState.update { it.copy(circleCenter = latLng, userLocation = latLng) }
             firestoreRepository.setChickenLocation(gameId, latLng)
         }
 
         var lastWrite = Date()
         locationRepository.locationFlow().collect { latLng ->
-            _uiState.update { it.copy(circleCenter = latLng) }
+            _uiState.update { it.copy(circleCenter = latLng, userLocation = latLng) }
 
             // Throttle Firestore writes
             if (Date().time - lastWrite.time >= AppConstants.LOCATION_THROTTLE_MS) {
@@ -235,7 +270,7 @@ class ChickenMapViewModel @Inject constructor(
             val annotations = sorted.mapIndexed { index, hunter ->
                 HunterAnnotation(
                     id = hunter.hunterId,
-                    coordinate = LatLng(hunter.location.latitude, hunter.location.longitude),
+                    coordinate = Point.fromLngLat(hunter.location.longitude, hunter.location.latitude),
                     displayName = "Hunter ${index + 1}"
                 )
             }

@@ -46,6 +46,9 @@ enum AppConstants {
     // MARK: - Nickname
     static let nicknameMaxLength = 20
 
+    // MARK: - Zone
+    static let outsideZoneGracePeriodSeconds = 30
+
     // MARK: - Confetti
     static let confettiParticleCount = 80
 }

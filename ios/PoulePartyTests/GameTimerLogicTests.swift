@@ -249,4 +249,55 @@ struct GameTimerLogicTests {
         let result = detectNewWinners(winners: winners, previousCount: 0)
         #expect(result == "Alice a trouvé la poule !")
     }
+
+    // MARK: - shouldCheckZone
+
+    @Test func shouldCheckZoneChickenStayInTheZone() {
+        #expect(shouldCheckZone(role: .chicken, gameMod: .stayInTheZone) == true)
+    }
+
+    @Test func shouldCheckZoneHunterStayInTheZone() {
+        #expect(shouldCheckZone(role: .hunter, gameMod: .stayInTheZone) == true)
+    }
+
+    @Test func shouldCheckZoneChickenFollowTheChicken() {
+        #expect(shouldCheckZone(role: .chicken, gameMod: .followTheChicken) == false)
+    }
+
+    @Test func shouldCheckZoneHunterFollowTheChicken() {
+        #expect(shouldCheckZone(role: .hunter, gameMod: .followTheChicken) == true)
+    }
+
+    @Test func shouldCheckZoneChickenMutualTracking() {
+        #expect(shouldCheckZone(role: .chicken, gameMod: .mutualTracking) == false)
+    }
+
+    @Test func shouldCheckZoneHunterMutualTracking() {
+        #expect(shouldCheckZone(role: .hunter, gameMod: .mutualTracking) == true)
+    }
+
+    // MARK: - checkZoneStatus
+
+    @Test func checkZoneStatusInsideZone() {
+        // Brussels center, ~100m away, 1500m radius → inside
+        let center = CLLocationCoordinate2D(latitude: 50.8466, longitude: 4.3528)
+        let nearby = CLLocationCoordinate2D(latitude: 50.8470, longitude: 4.3530)
+        let result = checkZoneStatus(userLocation: nearby, zoneCenter: center, zoneRadius: 1500)
+        #expect(result.isOutsideZone == false)
+    }
+
+    @Test func checkZoneStatusOutsideZone() {
+        // Brussels center vs Namur (~60km away), 1500m radius → outside
+        let center = CLLocationCoordinate2D(latitude: 50.8466, longitude: 4.3528)
+        let farAway = CLLocationCoordinate2D(latitude: 50.4674, longitude: 4.8720)
+        let result = checkZoneStatus(userLocation: farAway, zoneCenter: center, zoneRadius: 1500)
+        #expect(result.isOutsideZone == true)
+    }
+
+    @Test func checkZoneStatusAtCenter() {
+        let center = CLLocationCoordinate2D(latitude: 50.8466, longitude: 4.3528)
+        let result = checkZoneStatus(userLocation: center, zoneCenter: center, zoneRadius: 1500)
+        #expect(result.isOutsideZone == false)
+        #expect(result.distanceToCenter < 1)
+    }
 }

@@ -6,7 +6,7 @@
 //
 
 import ComposableArchitecture
-import MapKit
+import MapboxMaps
 import os
 import SwiftUI
 
@@ -35,6 +35,10 @@ struct ChickenMapFeature {
         var winnerNotification: String? = nil
         var countdownNumber: Int? = nil
         var countdownText: String? = nil
+        var userLocation: CLLocationCoordinate2D?
+        var isOutsideZone: Bool = false
+        var outsideZoneSince: Date?
+        var outsideZoneSeconds: Int = 0
 
         var hasGameStarted: Bool { nowDate >= game.startDate }
         var hasHuntStarted: Bool { nowDate >= game.hunterStartDate }
@@ -172,10 +176,14 @@ struct ChickenMapFeature {
                 }
                 return .none
             case let .newLocationFetched(location):
-                state.mapCircle = CircleOverlay(
-                    center: location,
-                    radius: CLLocationDistance(state.radius)
-                )
+                state.userLocation = location
+                // Only move the circle center when the chicken defines the zone
+                if state.game.gameMod != .stayInTheZone {
+                    state.mapCircle = CircleOverlay(
+                        center: location,
+                        radius: CLLocationDistance(state.radius)
+                    )
+                }
                 return .none
             case .onTask:
                 let gameId = state.game.id
@@ -198,7 +206,7 @@ struct ChickenMapFeature {
                 ]
 
                 // followTheChicken & mutualTracking: chicken sends position to hunters
-                // stayInTheZone: no position sharing, zone is fixed
+                // stayInTheZone: track location for zone check only (no Firestore writes)
                 // Gated behind startDate to avoid leaking position early
                 if gameMod != .stayInTheZone {
                     effects.append(
@@ -227,6 +235,22 @@ struct ChickenMapFeature {
                                     }
                                     lastWrite = .now
                                 }
+                            }
+                        }
+                    )
+                } else {
+                    // stayInTheZone: chicken needs GPS for zone check (no Firestore writes)
+                    effects.append(
+                        .run { send in
+                            let delay = startDate.timeIntervalSinceNow
+                            if delay > 0 {
+                                try await clock.sleep(for: .seconds(delay))
+                            }
+                            if let currentLocation = locationClient.lastLocation() {
+                                await send(.newLocationFetched(currentLocation))
+                            }
+                            for await coordinate in locationClient.startTracking() {
+                                await send(.newLocationFetched(coordinate))
                             }
                         }
                     )
@@ -360,6 +384,29 @@ struct ChickenMapFeature {
                     state.nextRadiusUpdate = result.newNextUpdate
                     state.mapCircle = result.newCircle
                 }
+
+                // Zone check
+                if shouldCheckZone(role: .chicken, gameMod: state.game.gameMod),
+                   let userLoc = state.userLocation,
+                   let circle = state.mapCircle {
+                    let zoneResult = checkZoneStatus(
+                        userLocation: userLoc,
+                        zoneCenter: circle.center,
+                        zoneRadius: circle.radius
+                    )
+                    if zoneResult.isOutsideZone {
+                        if state.outsideZoneSince == nil {
+                            state.outsideZoneSince = .now
+                        }
+                        let elapsed = Int(Date.now.timeIntervalSince(state.outsideZoneSince!))
+                        state.outsideZoneSeconds = max(0, AppConstants.outsideZoneGracePeriodSeconds - elapsed)
+                        state.isOutsideZone = true
+                    } else {
+                        state.isOutsideZone = false
+                        state.outsideZoneSince = nil
+                        state.outsideZoneSeconds = 0
+                    }
+                }
                 return .none
             }
         }
@@ -371,6 +418,10 @@ struct ChickenMapFeature {
 
 struct ChickenMapView: View {
     @Bindable var store: StoreOf<ChickenMapFeature>
+    @State private var viewport: Viewport = .camera(
+        center: CLLocationCoordinate2D(latitude: AppConstants.defaultLatitude, longitude: AppConstants.defaultLongitude),
+        zoom: 14
+    )
 
     private var chickenSubtitle: String {
         switch store.game.gameMod {
@@ -383,24 +434,56 @@ struct ChickenMapView: View {
         }
     }
 
+    private var overlayColor: UIColor {
+        store.isOutsideZone ? UIColor.red.withAlphaComponent(0.4) : UIColor.black.withAlphaComponent(0.3)
+    }
+
     var body: some View {
-        Map {
+        Map(viewport: $viewport) {
+            Puck2D(bearing: .heading)
+
             if let circle = self.store.mapCircle {
-                MapCircle(center: circle.center, radius: circle.radius)
-                    .foregroundStyle(.green.opacity(0.5))
-                    .mapOverlayLevel(level: .aboveRoads)
+                // Inverted zone overlay: grey outside, transparent inside
+                let circlePolygon = Polygon(center: circle.center, radius: circle.radius, vertices: 72)
+                let outerCoords = outerBoundsCoordinates(center: circle.center)
+                let invertedPolygon = Polygon(
+                    outerRing: Ring(coordinates: outerCoords + [outerCoords[0]]),
+                    innerRings: [circlePolygon.outerRing]
+                )
+                PolygonAnnotation(polygon: invertedPolygon)
+                    .fillColor(StyleColor(overlayColor))
+                    .fillOpacity(1.0)
+
+                // Zone border circle
+                PolylineAnnotation(lineCoordinates: circlePolygon.outerRing.coordinates)
+                    .lineColor(StyleColor(UIColor.green.withAlphaComponent(0.7)))
+                    .lineWidth(2)
             }
-            UserAnnotation()
+
+            // Hunter annotations (mutualTracking mode) -- only after hunt starts
             if store.hasHuntStarted {
-                ForEach(self.store.hunterAnnotations) { hunter in
-                    hunterAnnotationView(for: hunter)
+                ForEvery(self.store.hunterAnnotations) { hunter in
+                    MapViewAnnotation(coordinate: hunter.coordinate) {
+                        VStack(spacing: 2) {
+                            Text(hunter.displayName)
+                                .font(.caption2)
+                                .fontWeight(.semibold)
+                            Image(systemName: "figure.walk")
+                                .foregroundStyle(.white)
+                                .padding(6)
+                                .background(.orange)
+                                .clipShape(Circle())
+                        }
+                    }
                 }
             }
         }
-        .mapControls {
-            MapUserLocationButton()
-            MapCompass()
-            MapScaleView()
+        .ignoresSafeArea()
+        .onChange(of: store.mapCircle) { _, newCircle in
+            guard let center = newCircle?.center, let radius = newCircle?.radius else { return }
+            withViewportAnimation(.default(maxDuration: 1)) {
+                viewport = .camera(center: center, zoom: zoomForRadius(radius, latitude: center.latitude))
+            }
         }
         .safeAreaInset(edge: .top) {
             HStack {
@@ -492,6 +575,11 @@ struct ChickenMapView: View {
         .overlay(alignment: .top) {
             WinnerNotificationOverlay(notification: store.winnerNotification)
         }
+        .overlay(alignment: .top) {
+            if store.isOutsideZone {
+                ZoneWarningOverlay(secondsRemaining: store.outsideZoneSeconds)
+            }
+        }
         .overlay {
             GameStartCountdownOverlay(
                 countdownNumber: store.countdownNumber,
@@ -499,16 +587,20 @@ struct ChickenMapView: View {
             )
         }
     }
+}
 
-    private func hunterAnnotationView(for hunter: HunterAnnotation) -> some MapContent {
-        Annotation(hunter.displayName, coordinate: hunter.coordinate) {
-            Image(systemName: "figure.walk")
-                .foregroundStyle(.white)
-                .padding(6)
-                .background(.orange)
-                .clipShape(Circle())
-        }
-    }
+/// Large rectangle centered on the given coordinate, used as the outer boundary for inverted zone overlay.
+private func outerBoundsCoordinates(center: CLLocationCoordinate2D, padding: Double = 20.0) -> [CLLocationCoordinate2D] {
+    let north = min(85.0, center.latitude + padding)
+    let south = max(-85.0, center.latitude - padding)
+    let west = center.longitude - padding
+    let east = center.longitude + padding
+    return [
+        CLLocationCoordinate2D(latitude: north, longitude: west),
+        CLLocationCoordinate2D(latitude: north, longitude: east),
+        CLLocationCoordinate2D(latitude: south, longitude: east),
+        CLLocationCoordinate2D(latitude: south, longitude: west)
+    ]
 }
 
 struct GameInfoSheet: View {

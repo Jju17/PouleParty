@@ -7,7 +7,7 @@
 
 import ComposableArchitecture
 import CoreLocation
-import MapKit
+import MapboxMaps
 import SwiftUI
 
 @Reducer
@@ -82,29 +82,40 @@ struct ChickenMapConfigFeature {
 
 struct ChickenMapConfigView: View {
     @Bindable var store: StoreOf<ChickenMapConfigFeature>
+    @State private var viewport: Viewport = .camera(
+        center: CLLocationCoordinate2D(latitude: AppConstants.defaultLatitude, longitude: AppConstants.defaultLongitude),
+        zoom: 14
+    )
 
     var body: some View {
         GeometryReader { proxy in
-            Map(position: Binding(
-                get: { store.cameraRegion.toMapCameraPosition },
-                set: { _ in }
-            )) {
-                if let marker = self.store.marker {
-                    Marker(marker.title, coordinate: marker.coordinate)
-                }
+            Map(viewport: $viewport) {
+                Puck2D(bearing: .heading)
+
                 if let circle = self.store.mapCircle {
-                    MapCircle(center: circle.center, radius: circle.radius)
-                        .foregroundStyle(.green.opacity(0.5))
-                        .mapOverlayLevel(level: .aboveRoads)
+                    // Circle border
+                    let circlePolygon = Polygon(center: circle.center, radius: circle.radius, vertices: 72)
+                    PolylineAnnotation(lineCoordinates: circlePolygon.outerRing.coordinates)
+                        .lineColor(StyleColor(UIColor.green.withAlphaComponent(0.7)))
+                        .lineWidth(2)
+                }
+
+                if let marker = self.store.marker {
+                    MapViewAnnotation(coordinate: marker.coordinate) {
+                        Image(systemName: "mappin.circle.fill")
+                            .font(.title)
+                            .foregroundStyle(.red)
+                    }
                 }
             }
-            .onMapCameraChange(frequency: .continuous) { mapCameraUpdateContext in
-                store.send(.onMapCameraChange(mapCameraUpdateContext.camera.centerCoordinate))
+            .onCameraChanged { context in
+                store.send(.onMapCameraChange(context.cameraState.center))
             }
-            .mapControls {
-                MapUserLocationButton()
-                MapCompass()
-                MapScaleView()
+            .ignoresSafeArea()
+            .onChange(of: store.cameraRegion) { _, newRegion in
+                withViewportAnimation(.default(maxDuration: 1)) {
+                    viewport = .camera(center: newRegion.center, zoom: 14)
+                }
             }
             .task {
                 store.send(.onTask)
@@ -119,6 +130,20 @@ struct ChickenMapConfigView: View {
                 }
                 .padding()
                 .background(.thinMaterial)
+            }
+            .overlay(alignment: .topTrailing) {
+                Button {
+                    withViewportAnimation(.default(maxDuration: 1)) {
+                        viewport = .followPuck(zoom: 14, bearing: .constant(0))
+                    }
+                } label: {
+                    Image(systemName: "location.fill")
+                        .padding(10)
+                        .background(.thinMaterial)
+                        .clipShape(Circle())
+                }
+                .padding(.trailing, 8)
+                .padding(.top, 8)
             }
         }
     }

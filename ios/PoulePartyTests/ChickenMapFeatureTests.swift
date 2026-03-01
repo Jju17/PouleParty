@@ -82,6 +82,7 @@ struct ChickenMapFeatureTests {
 
         let location = CLLocationCoordinate2D(latitude: 50.0, longitude: 4.0)
         await store.send(.newLocationFetched(location)) {
+            $0.userLocation = location
             $0.mapCircle = CircleOverlay(
                 center: location,
                 radius: CLLocationDistance($0.radius)
@@ -197,6 +198,68 @@ struct ChickenMapFeatureTests {
         }
     }
 
+    // MARK: - stayInTheZone: location does not move circle
+
+    @Test func newLocationFetchedDoesNotMoveCircleInStayInTheZone() async {
+        var game = Game.mock
+        game.gameMod = .stayInTheZone
+        var state = ChickenMapFeature.State(game: game)
+        let initialCenter = CLLocationCoordinate2D(latitude: 50.8466, longitude: 4.3528)
+        state.mapCircle = CircleOverlay(center: initialCenter, radius: 1500)
+
+        let store = TestStore(initialState: state) {
+            ChickenMapFeature()
+        }
+
+        let newLocation = CLLocationCoordinate2D(latitude: 51.0, longitude: 5.0)
+        await store.send(.newLocationFetched(newLocation)) {
+            $0.userLocation = newLocation
+            // mapCircle should NOT change in stayInTheZone
+        }
+    }
+
+    // MARK: - Game info
+
+    @Test func infoButtonTappedShowsGameInfo() async {
+        let store = TestStore(initialState: ChickenMapFeature.State(game: .mock)) {
+            ChickenMapFeature()
+        }
+
+        await store.send(.infoButtonTapped) {
+            $0.showGameInfo = true
+        }
+    }
+
+    @Test func dismissGameInfoHidesGameInfo() async {
+        var state = ChickenMapFeature.State(game: .mock)
+        state.showGameInfo = true
+
+        let store = TestStore(initialState: state) {
+            ChickenMapFeature()
+        }
+
+        await store.send(.dismissGameInfo) {
+            $0.showGameInfo = false
+        }
+    }
+
+    // MARK: - Dismiss countdown
+
+    @Test func dismissCountdownClearsState() async {
+        var state = ChickenMapFeature.State(game: .mock)
+        state.countdownNumber = 3
+        state.countdownText = "GO!"
+
+        let store = TestStore(initialState: state) {
+            ChickenMapFeature()
+        }
+
+        await store.send(.dismissCountdown) {
+            $0.countdownNumber = nil
+            $0.countdownText = nil
+        }
+    }
+
     // MARK: - Timer + stayInTheZone
 
     @Test func timerTickedUpdatesCircleInStayInTheZone() async {
@@ -219,6 +282,120 @@ struct ChickenMapFeatureTests {
                 center: game.initialCoordinates.toCLCoordinates,
                 radius: CLLocationDistance(500 - Int(game.radiusDeclinePerUpdate))
             )
+        }
+    }
+
+    // MARK: - Timer game over by time
+
+    @Test func timerTickedGameOverByTime() async {
+        var game = Game.mock
+        game.startDate = .now.addingTimeInterval(-3600)
+        game.endDate = .now.addingTimeInterval(-1)
+        var state = ChickenMapFeature.State(game: game)
+        state.radius = 500
+
+        let store = TestStore(initialState: state) {
+            ChickenMapFeature()
+        } withDependencies: {
+            $0.locationClient.stopTracking = { }
+            $0.apiClient.updateGameStatus = { _, _ in }
+        }
+        store.exhaustivity = .off
+
+        await store.send(.timerTicked) {
+            $0.destination = .alert(
+                AlertState {
+                    TextState("Game Over")
+                } actions: {
+                    ButtonState(action: .gameOver) {
+                        TextState("OK")
+                    }
+                } message: {
+                    TextState("Time's up! The Chicken survived!")
+                }
+            )
+        }
+    }
+
+    // MARK: - Alert confirmation flows
+
+    @Test func cancelGameAlertSendsGoToMenu() async {
+        var state = ChickenMapFeature.State(game: .mock)
+        state.destination = .alert(
+            AlertState {
+                TextState("Cancel game")
+            } actions: {
+                ButtonState(role: .cancel) {
+                    TextState("Never mind")
+                }
+                ButtonState(role: .destructive, action: .cancelGame) {
+                    TextState("Cancel game")
+                }
+            } message: {
+                TextState("Are you sure you want to cancel and finish the game now ?")
+            }
+        )
+
+        let store = TestStore(initialState: state) {
+            ChickenMapFeature()
+        } withDependencies: {
+            $0.locationClient.stopTracking = { }
+        }
+
+        await store.send(.destination(.presented(.alert(.cancelGame)))) {
+            $0.destination = nil
+        }
+        await store.receive(\.goToMenu)
+    }
+
+    @Test func gameOverAlertSendsGoToMenu() async {
+        var state = ChickenMapFeature.State(game: .mock)
+        state.destination = .alert(
+            AlertState {
+                TextState("Game Over")
+            } actions: {
+                ButtonState(action: .gameOver) {
+                    TextState("OK")
+                }
+            } message: {
+                TextState("Time's up! The Chicken survived!")
+            }
+        )
+
+        let store = TestStore(initialState: state) {
+            ChickenMapFeature()
+        }
+
+        await store.send(.destination(.presented(.alert(.gameOver)))) {
+            $0.destination = nil
+        }
+        await store.receive(\.goToMenu)
+    }
+
+    // MARK: - Winner auto-dismiss effect
+
+    @Test func gameUpdatedWithNewWinnerSchedulesAutoDismiss() async {
+        let clock = TestClock()
+        let store = TestStore(initialState: ChickenMapFeature.State(game: .mock)) {
+            ChickenMapFeature()
+        } withDependencies: {
+            $0.continuousClock = clock
+        }
+
+        var updatedGame = Game.mock
+        updatedGame.winners = [
+            Winner(hunterId: "h1", hunterName: "Julien", timestamp: .now)
+        ]
+
+        await store.send(.gameUpdated(updatedGame)) {
+            $0.game = updatedGame
+            $0.winnerNotification = "Julien a trouvé la poule !"
+            $0.previousWinnersCount = 1
+        }
+
+        await clock.advance(by: .seconds(AppConstants.winnerNotificationSeconds))
+        await store.receive(\.dismissWinnerNotification) {
+            $0.winnerNotification = nil
         }
     }
 }

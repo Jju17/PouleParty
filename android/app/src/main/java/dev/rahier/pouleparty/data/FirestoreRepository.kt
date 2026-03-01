@@ -1,7 +1,7 @@
 package dev.rahier.pouleparty.data
 
 import android.util.Log
-import com.google.android.gms.maps.model.LatLng
+import com.mapbox.geojson.Point
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.GeoPoint
@@ -128,9 +128,9 @@ class FirestoreRepository @Inject constructor(
 
     // ── Chicken location ──────────────────────────────────
 
-    fun setChickenLocation(gameId: String, latLng: LatLng) {
+    fun setChickenLocation(gameId: String, point: Point) {
         val data = ChickenLocation(
-            location = GeoPoint(latLng.latitude, latLng.longitude),
+            location = GeoPoint(point.latitude(), point.longitude()),
             timestamp = Timestamp.now()
         )
         firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
@@ -140,7 +140,7 @@ class FirestoreRepository @Inject constructor(
             .addOnFailureListener { e -> Log.e(TAG, "Failed to set chicken location for game $gameId", e) }
     }
 
-    fun chickenLocationFlow(gameId: String): Flow<LatLng?> = callbackFlow {
+    fun chickenLocationFlow(gameId: String): Flow<Point?> = callbackFlow {
         val listener = firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
             .collection(AppConstants.SUBCOLLECTION_CHICKEN_LOCATIONS)
             .orderBy("timestamp", Query.Direction.DESCENDING)
@@ -159,9 +159,9 @@ class FirestoreRepository @Inject constructor(
                 val chickenLocation = doc?.toObject(ChickenLocation::class.java)
                 if (chickenLocation != null) {
                     trySend(
-                        LatLng(
-                            chickenLocation.location.latitude,
-                            chickenLocation.location.longitude
+                        Point.fromLngLat(
+                            chickenLocation.location.longitude,
+                            chickenLocation.location.latitude
                         )
                     )
                 } else {
@@ -195,10 +195,10 @@ class FirestoreRepository @Inject constructor(
 
     // ── Hunter locations ──────────────────────────────────
 
-    fun setHunterLocation(gameId: String, hunterId: String, latLng: LatLng) {
+    fun setHunterLocation(gameId: String, hunterId: String, point: Point) {
         val data = HunterLocation(
             hunterId = hunterId,
-            location = GeoPoint(latLng.latitude, latLng.longitude),
+            location = GeoPoint(point.latitude(), point.longitude()),
             timestamp = Timestamp.now()
         )
         firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)

@@ -3,7 +3,7 @@ package dev.rahier.pouleparty.ui.huntermap
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.android.gms.maps.model.LatLng
+import com.mapbox.geojson.Point
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.rahier.pouleparty.data.FirestoreRepository
 import dev.rahier.pouleparty.data.LocationRepository
@@ -15,10 +15,13 @@ import dev.rahier.pouleparty.AppConstants
 import dev.rahier.pouleparty.model.Winner
 import dev.rahier.pouleparty.ui.CountdownPhase
 import dev.rahier.pouleparty.ui.CountdownResult
+import dev.rahier.pouleparty.ui.PlayerRole
 import dev.rahier.pouleparty.ui.checkGameOverByTime
+import dev.rahier.pouleparty.ui.checkZoneStatus
 import dev.rahier.pouleparty.ui.detectNewWinners
 import dev.rahier.pouleparty.ui.evaluateCountdown
 import dev.rahier.pouleparty.ui.processRadiusUpdate
+import dev.rahier.pouleparty.ui.shouldCheckZone
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -36,7 +39,7 @@ data class HunterMapUiState(
     val nextRadiusUpdate: Date? = null,
     val nowDate: Date = Date(),
     val radius: Int = 1500,
-    val circleCenter: LatLng? = null,
+    val circleCenter: Point? = null,
     val showLeaveAlert: Boolean = false,
     val showGameOverAlert: Boolean = false,
     val gameOverMessage: String = "",
@@ -52,7 +55,11 @@ data class HunterMapUiState(
     val showGameInfo: Boolean = false,
     val codeCopied: Boolean = false,
     val wrongCodeAttempts: Int = 0,
-    val codeCooldownUntil: Long = 0
+    val codeCooldownUntil: Long = 0,
+    val userLocation: Point? = null,
+    val isOutsideZone: Boolean = false,
+    val outsideZoneSince: Long = 0,
+    val outsideZoneSeconds: Int = 0
 )
 
 @HiltViewModel
@@ -93,7 +100,7 @@ class HunterMapViewModel @Inject constructor(
             startTimer()
             streamJobs += viewModelScope.launch { streamGameConfig(game) }
             streamJobs += viewModelScope.launch { streamChickenLocation(game) }
-            streamJobs += viewModelScope.launch { sendHunterLocation(game) }
+            streamJobs += viewModelScope.launch { trackHunterSelfLocation(game) }
         }
     }
 
@@ -182,6 +189,24 @@ class HunterMapViewModel @Inject constructor(
                         }
                     }
                 }
+
+                // Zone check
+                val currentState = _uiState.value
+                if (shouldCheckZone(PlayerRole.HUNTER, currentState.game.gameModEnum)) {
+                    val userLoc = currentState.userLocation
+                    val center = currentState.circleCenter
+                    if (userLoc != null && center != null) {
+                        val zoneResult = checkZoneStatus(userLoc, center, currentState.radius.toDouble())
+                        if (zoneResult.isOutsideZone) {
+                            val since = if (currentState.outsideZoneSince == 0L) System.currentTimeMillis() else currentState.outsideZoneSince
+                            val elapsed = ((System.currentTimeMillis() - since) / 1000).toInt()
+                            val remaining = maxOf(0, AppConstants.OUTSIDE_ZONE_GRACE_PERIOD_SECONDS - elapsed)
+                            _uiState.update { it.copy(isOutsideZone = true, outsideZoneSince = since, outsideZoneSeconds = remaining) }
+                        } else {
+                            _uiState.update { it.copy(isOutsideZone = false, outsideZoneSince = 0, outsideZoneSeconds = 0) }
+                        }
+                    }
+                }
             }
         }
     }
@@ -257,24 +282,28 @@ class HunterMapViewModel @Inject constructor(
     }
 
     /**
-     * In mutualTracking mode, hunter sends its own position.
-     * Throttled to every 5 seconds (matches iOS).
+     * Hunter always tracks own location (for zone check).
+     * In mutualTracking mode, also writes to Firestore.
      */
-    private suspend fun sendHunterLocation(game: Game) {
-        if (game.gameModEnum != GameMod.MUTUAL_TRACKING) return
+    private suspend fun trackHunterSelfLocation(game: Game) {
+        val shouldWrite = game.gameModEnum == GameMod.MUTUAL_TRACKING
 
         val delayMs = game.hunterStartDate.time - System.currentTimeMillis()
         if (delayMs > 0) delay(delayMs)
 
-        // Send current location immediately on connect
-        locationRepository.getLastLocation()?.let { latLng ->
-            firestoreRepository.setHunterLocation(gameId, hunterId, latLng)
+        // Send current location immediately
+        locationRepository.getLastLocation()?.let { point ->
+            _uiState.update { it.copy(userLocation = point) }
+            if (shouldWrite) {
+                firestoreRepository.setHunterLocation(gameId, hunterId, point)
+            }
         }
 
         var lastWrite = Date()
-        locationRepository.locationFlow().collect { latLng ->
-            if (Date().time - lastWrite.time >= AppConstants.LOCATION_THROTTLE_MS) {
-                firestoreRepository.setHunterLocation(gameId, hunterId, latLng)
+        locationRepository.locationFlow().collect { point ->
+            _uiState.update { it.copy(userLocation = point) }
+            if (shouldWrite && Date().time - lastWrite.time >= AppConstants.LOCATION_THROTTLE_MS) {
+                firestoreRepository.setHunterLocation(gameId, hunterId, point)
                 lastWrite = Date()
             }
         }

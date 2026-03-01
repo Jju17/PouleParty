@@ -137,4 +137,7 @@
     <string name="hunter_catch_chicken">Attrape le 🐔 !</string>
     <string name="hunter_stay_in_zone">Reste dans la zone 📍</string>
     <string name="hunter_mutual_tracking">Attrape le 🐔 (elle te voit ! 👀)</string>
+
+    <!-- Zone Warning -->
+    <string name="return_to_zone">Retournez dans la zone !</string>
 </resources>

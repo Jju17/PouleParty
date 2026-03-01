@@ -3,16 +3,51 @@
 //  PouleParty
 //
 //  Equatable overlay types for TCA state.
-//  Converted to MapKit views (MapCircle, Marker) in the SwiftUI layer.
+//  Zone overlay (inverted polygon) is handled natively by Mapbox PolygonAnnotation.
 //
 
 import CoreLocation
-import MapKit
+import Foundation
 import SwiftUI
+
+// MARK: - Zone Warning Overlay
+
+/// Red banner shown when the player is outside the zone.
+struct ZoneWarningOverlay: View {
+    let secondsRemaining: Int
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Text("Return to the zone!")
+                .font(.system(size: 16, weight: .bold))
+            Text("\(secondsRemaining)s")
+                .font(.system(size: 28, weight: .heavy))
+        }
+        .foregroundStyle(.white)
+        .padding(.horizontal, 24)
+        .padding(.vertical, 12)
+        .background(.red.opacity(0.9))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .padding(.top, 140)
+    }
+}
+
+// MARK: - Circle Overlay
 
 struct CircleOverlay: Equatable {
     var center: CLLocationCoordinate2D
     var radius: CLLocationDistance
+}
+
+// MARK: - Zoom Calculation
+
+/// Calculates the Mapbox zoom level needed to show a circle of given radius on screen.
+/// Provides ~25% padding around the circle on a typical mobile viewport.
+func zoomForRadius(_ radiusMeters: CLLocationDistance, latitude: CLLocationDegrees) -> CGFloat {
+    let earthCircumference = 40_075_016.686
+    let latRad = latitude * .pi / 180.0
+    let zoom = log2(earthCircumference * cos(latRad) / (2.0 * radiusMeters)) - 1.0
+    return CGFloat(min(max(zoom, 8.0), 18.0))
 }
 
 // MARK: - Winner Notification Overlay
@@ -46,13 +81,6 @@ struct CameraRegion: Equatable {
     var center: CLLocationCoordinate2D
     var latitudeDelta: Double
     var longitudeDelta: Double
-
-    var toMapCameraPosition: MapCameraPosition {
-        MapCameraPosition.region(MKCoordinateRegion(
-            center: center,
-            span: MKCoordinateSpan(latitudeDelta: latitudeDelta, longitudeDelta: longitudeDelta)
-        ))
-    }
 
     static let brussels = CameraRegion(
         center: CLLocationCoordinate2D(latitude: AppConstants.defaultLatitude, longitude: AppConstants.defaultLongitude),

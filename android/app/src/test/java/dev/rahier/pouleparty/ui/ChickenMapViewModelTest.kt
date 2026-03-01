@@ -1,6 +1,6 @@
 package dev.rahier.pouleparty.ui
 
-import com.google.android.gms.maps.model.LatLng
+import com.mapbox.geojson.Point
 import com.google.firebase.Timestamp
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameMod
@@ -38,12 +38,12 @@ class ChickenMapViewModelTest {
         val annotations = listOf(
             HunterAnnotation(
                 id = "hunter-a",
-                coordinate = LatLng(50.0, 4.0),
+                coordinate = Point.fromLngLat(4.0, 50.0),
                 displayName = "Hunter 1"
             ),
             HunterAnnotation(
                 id = "hunter-b",
-                coordinate = LatLng(51.0, 5.0),
+                coordinate = Point.fromLngLat(5.0, 51.0),
                 displayName = "Hunter 2"
             )
         )
@@ -56,11 +56,11 @@ class ChickenMapViewModelTest {
 
     @Test
     fun `circle center is updated with location`() {
-        val latLng = LatLng(50.8466, 4.3528)
-        val state = ChickenMapUiState(circleCenter = latLng)
+        val point = Point.fromLngLat(4.3528, 50.8466)
+        val state = ChickenMapUiState(circleCenter = point)
 
         assertNotNull(state.circleCenter)
-        assertEquals(50.8466, state.circleCenter!!.latitude, 0.0001)
+        assertEquals(50.8466, state.circleCenter!!.latitude(), 0.0001)
     }
 
     @Test

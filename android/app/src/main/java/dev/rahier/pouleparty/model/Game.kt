@@ -1,7 +1,8 @@
 package dev.rahier.pouleparty.model
 
-import com.google.android.gms.maps.model.LatLng
+import com.mapbox.geojson.Point
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.Exclude
 import com.google.firebase.firestore.GeoPoint
 import dev.rahier.pouleparty.AppConstants
 import java.util.Date
@@ -25,8 +26,9 @@ data class Game(
     val creatorId: String = ""
 ) {
     /** Computed: CLLocationCoordinate2D equivalent */
-    val initialLocation: LatLng
-        get() = LatLng(initialCoordinates.latitude, initialCoordinates.longitude)
+    @get:Exclude
+    val initialLocation: Point
+        get() = Point.fromLngLat(initialCoordinates.longitude, initialCoordinates.latitude)
 
     val startDate: Date get() = startTimestamp.toDate()
     val endDate: Date get() = endTimestamp.toDate()
@@ -37,10 +39,12 @@ data class Game(
         get() = id.take(6).uppercase()
 
     /** Parsed game mod enum */
+    @get:Exclude
     val gameModEnum: GameMod
         get() = GameMod.fromFirestore(gameMod)
 
     /** Parsed game status enum */
+    @get:Exclude
     val gameStatusEnum: GameStatus
         get() = GameStatus.fromFirestore(status)
 
@@ -71,8 +75,8 @@ data class Game(
 
     fun withStartDate(date: Date): Game = copy(startTimestamp = Timestamp(date))
     fun withEndDate(date: Date): Game = copy(endTimestamp = Timestamp(date))
-    fun withInitialLocation(latLng: LatLng): Game = copy(
-        initialCoordinates = GeoPoint(latLng.latitude, latLng.longitude)
+    fun withInitialLocation(point: Point): Game = copy(
+        initialCoordinates = GeoPoint(point.latitude(), point.longitude())
     )
     fun withChickenHeadStart(minutes: Double): Game = copy(chickenHeadStartMinutes = minutes)
 

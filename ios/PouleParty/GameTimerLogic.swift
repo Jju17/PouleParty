@@ -9,6 +9,39 @@
 import CoreLocation
 import Foundation
 
+// MARK: - Zone Check
+
+enum PlayerRole {
+    case chicken
+    case hunter
+}
+
+struct ZoneCheckResult: Equatable {
+    let isOutsideZone: Bool
+    let distanceToCenter: CLLocationDistance
+}
+
+/// Whether this role should be zone-checked under the given game mode.
+func shouldCheckZone(role: PlayerRole, gameMod: Game.GameMod) -> Bool {
+    switch gameMod {
+    case .stayInTheZone:
+        return true // both chicken and hunters are checked
+    case .followTheChicken, .mutualTracking:
+        return role == .hunter // chicken defines the zone center
+    }
+}
+
+/// Pure check: is the user outside the zone?
+func checkZoneStatus(
+    userLocation: CLLocationCoordinate2D,
+    zoneCenter: CLLocationCoordinate2D,
+    zoneRadius: CLLocationDistance
+) -> ZoneCheckResult {
+    let distance = CLLocation(latitude: userLocation.latitude, longitude: userLocation.longitude)
+        .distance(from: CLLocation(latitude: zoneCenter.latitude, longitude: zoneCenter.longitude))
+    return ZoneCheckResult(isOutsideZone: distance > zoneRadius, distanceToCenter: distance)
+}
+
 // MARK: - Countdown
 
 /// Describes one phase of the countdown sequence (e.g., "3, 2, 1, RUN!").

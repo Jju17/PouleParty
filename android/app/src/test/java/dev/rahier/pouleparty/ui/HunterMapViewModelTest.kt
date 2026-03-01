@@ -1,6 +1,6 @@
 package dev.rahier.pouleparty.ui
 
-import com.google.android.gms.maps.model.LatLng
+import com.mapbox.geojson.Point
 import com.google.firebase.Timestamp
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameMod
@@ -21,10 +21,10 @@ class HunterMapViewModelTest {
     @Test
     fun `circle center follows chicken location in followTheChicken`() {
         val game = Game(id = "test", gameMod = GameMod.FOLLOW_THE_CHICKEN.firestoreValue)
-        val chickenPos = LatLng(50.0, 4.0)
+        val chickenPos = Point.fromLngLat(4.0, 50.0)
         val state = HunterMapUiState(game = game, circleCenter = chickenPos)
 
-        assertEquals(50.0, state.circleCenter!!.latitude, 0.0001)
+        assertEquals(50.0, state.circleCenter!!.latitude(), 0.0001)
     }
 
     @Test
@@ -32,8 +32,8 @@ class HunterMapViewModelTest {
         val game = Game(id = "test", gameMod = GameMod.STAY_IN_THE_ZONE.firestoreValue)
         val state = HunterMapUiState(game = game, circleCenter = game.initialLocation)
 
-        assertEquals(game.initialLocation.latitude, state.circleCenter!!.latitude, 0.0001)
-        assertEquals(game.initialLocation.longitude, state.circleCenter!!.longitude, 0.0001)
+        assertEquals(game.initialLocation.latitude(), state.circleCenter!!.latitude(), 0.0001)
+        assertEquals(game.initialLocation.longitude(), state.circleCenter!!.longitude(), 0.0001)
     }
 
     @Test

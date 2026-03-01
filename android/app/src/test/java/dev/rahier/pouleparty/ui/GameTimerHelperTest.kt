@@ -1,6 +1,6 @@
 package dev.rahier.pouleparty.ui
 
-import com.google.android.gms.maps.model.LatLng
+import com.mapbox.geojson.Point
 import dev.rahier.pouleparty.model.GameMod
 import dev.rahier.pouleparty.model.Winner
 import com.google.firebase.Timestamp
@@ -159,7 +159,7 @@ class GameTimerHelperTest {
             radiusDeclinePerUpdate = 100.0,
             radiusIntervalUpdate = 5.0,
             gameMod = GameMod.FOLLOW_THE_CHICKEN,
-            initialLocation = LatLng(50.0, 4.0),
+            initialLocation = Point.fromLngLat(4.0, 50.0),
             currentCircleCenter = null
         )
         assertNull(result)
@@ -173,8 +173,8 @@ class GameTimerHelperTest {
             radiusDeclinePerUpdate = 100.0,
             radiusIntervalUpdate = 5.0,
             gameMod = GameMod.FOLLOW_THE_CHICKEN,
-            initialLocation = LatLng(50.0, 4.0),
-            currentCircleCenter = LatLng(50.0, 4.0)
+            initialLocation = Point.fromLngLat(4.0, 50.0),
+            currentCircleCenter = Point.fromLngLat(4.0, 50.0)
         )
         assertNull(result)
     }
@@ -187,8 +187,8 @@ class GameTimerHelperTest {
             radiusDeclinePerUpdate = 100.0,
             radiusIntervalUpdate = 5.0,
             gameMod = GameMod.FOLLOW_THE_CHICKEN,
-            initialLocation = LatLng(50.0, 4.0),
-            currentCircleCenter = LatLng(50.0, 4.0)
+            initialLocation = Point.fromLngLat(4.0, 50.0),
+            currentCircleCenter = Point.fromLngLat(4.0, 50.0)
         )
         assertNotNull(result)
         assertEquals(1400, result!!.newRadius)
@@ -203,7 +203,7 @@ class GameTimerHelperTest {
             radiusDeclinePerUpdate = 100.0,
             radiusIntervalUpdate = 5.0,
             gameMod = GameMod.FOLLOW_THE_CHICKEN,
-            initialLocation = LatLng(50.0, 4.0),
+            initialLocation = Point.fromLngLat(4.0, 50.0),
             currentCircleCenter = null
         )
         assertNotNull(result)
@@ -213,8 +213,8 @@ class GameTimerHelperTest {
 
     @Test
     fun `radius update uses initial location for stayInTheZone`() {
-        val initialLocation = LatLng(50.0, 4.0)
-        val currentCenter = LatLng(51.0, 5.0)
+        val initialLocation = Point.fromLngLat(4.0, 50.0)
+        val currentCenter = Point.fromLngLat(5.0, 51.0)
         val result = processRadiusUpdate(
             nextRadiusUpdate = Date(System.currentTimeMillis() - 1000),
             currentRadius = 1500,
@@ -267,5 +267,37 @@ class GameTimerHelperTest {
             Winner("h1", "Alice", Timestamp.now())
         )
         assertEquals("Alice a trouvé la poule !", detectNewWinners(winners, previousCount = 0))
+    }
+
+    // ── shouldCheckZone ────────────────────────────────
+
+    @Test
+    fun `shouldCheckZone chicken stayInTheZone returns true`() {
+        assertTrue(shouldCheckZone(PlayerRole.CHICKEN, GameMod.STAY_IN_THE_ZONE))
+    }
+
+    @Test
+    fun `shouldCheckZone hunter stayInTheZone returns true`() {
+        assertTrue(shouldCheckZone(PlayerRole.HUNTER, GameMod.STAY_IN_THE_ZONE))
+    }
+
+    @Test
+    fun `shouldCheckZone chicken followTheChicken returns false`() {
+        assertFalse(shouldCheckZone(PlayerRole.CHICKEN, GameMod.FOLLOW_THE_CHICKEN))
+    }
+
+    @Test
+    fun `shouldCheckZone hunter followTheChicken returns true`() {
+        assertTrue(shouldCheckZone(PlayerRole.HUNTER, GameMod.FOLLOW_THE_CHICKEN))
+    }
+
+    @Test
+    fun `shouldCheckZone chicken mutualTracking returns false`() {
+        assertFalse(shouldCheckZone(PlayerRole.CHICKEN, GameMod.MUTUAL_TRACKING))
+    }
+
+    @Test
+    fun `shouldCheckZone hunter mutualTracking returns true`() {
+        assertTrue(shouldCheckZone(PlayerRole.HUNTER, GameMod.MUTUAL_TRACKING))
     }
 }

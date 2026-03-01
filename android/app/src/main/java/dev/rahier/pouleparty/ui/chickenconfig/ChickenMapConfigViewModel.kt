@@ -2,8 +2,7 @@ package dev.rahier.pouleparty.ui.chickenconfig
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.android.gms.maps.model.CameraPosition
-import com.google.android.gms.maps.model.LatLng
+import com.mapbox.geojson.Point
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.rahier.pouleparty.AppConstants
 import dev.rahier.pouleparty.data.LocationRepository
@@ -16,10 +15,9 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class MapConfigUiState(
-    val cameraPosition: CameraPosition = CameraPosition.fromLatLngZoom(
-        LatLng(AppConstants.DEFAULT_LATITUDE, AppConstants.DEFAULT_LONGITUDE), AppConstants.MAP_CAMERA_ZOOM
-    ),
-    val markerPosition: LatLng = LatLng(AppConstants.DEFAULT_LATITUDE, AppConstants.DEFAULT_LONGITUDE),
+    val cameraCenter: Point = Point.fromLngLat(AppConstants.DEFAULT_LONGITUDE, AppConstants.DEFAULT_LATITUDE),
+    val cameraZoom: Float = AppConstants.MAP_CAMERA_ZOOM,
+    val markerPosition: Point = Point.fromLngLat(AppConstants.DEFAULT_LONGITUDE, AppConstants.DEFAULT_LATITUDE),
     val radius: Double = AppConstants.DEFAULT_INITIAL_RADIUS
 )
 
@@ -40,7 +38,8 @@ class ChickenMapConfigViewModel @Inject constructor(
                     val location = locationRepository.locationFlow().first()
                     _uiState.update {
                         it.copy(
-                            cameraPosition = CameraPosition.fromLatLngZoom(location, 14f),
+                            cameraCenter = location,
+                            cameraZoom = 14f,
                             markerPosition = location
                         )
                     }
@@ -51,7 +50,7 @@ class ChickenMapConfigViewModel @Inject constructor(
         }
     }
 
-    fun onCameraMove(center: LatLng) {
+    fun onCameraMove(center: Point) {
         _uiState.update { it.copy(markerPosition = center) }
     }
 

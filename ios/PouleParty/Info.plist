@@ -7,6 +7,8 @@
 		<string>Early GameBoy.ttf</string>
 		<string>Bangers-Regular.ttf</string>
 	</array>
+	<key>MBXAccessToken</key>
+	<string>pk.eyJ1Ijoiamp1MTciLCJhIjoiY20yaGpwaG53MGI2YzJsc2NxOTNzMWJ2bCJ9.D6NMFnmGF7pA2LN64vmqcA</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>fetch</string>

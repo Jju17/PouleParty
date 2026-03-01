@@ -9,13 +9,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.google.android.gms.maps.model.CameraPosition
-import com.google.maps.android.compose.*
+import com.mapbox.geojson.Point
+import com.mapbox.maps.CameraOptions
+import com.mapbox.maps.MapboxExperimental
+import com.mapbox.maps.extension.compose.MapboxMap
+import com.mapbox.maps.extension.compose.MapEffect
+import com.mapbox.maps.extension.compose.animation.viewport.rememberMapViewportState
+import com.mapbox.maps.extension.compose.annotation.IconImage
+import com.mapbox.maps.extension.compose.annotation.generated.PointAnnotation
+import com.mapbox.maps.extension.compose.annotation.generated.PolylineAnnotation
+import com.mapbox.maps.plugin.locationcomponent.location
+import dev.rahier.pouleparty.ui.components.circlePolygonPoints
 
+@OptIn(MapboxExperimental::class)
 @Composable
 fun ChickenMapConfigScreen(
     initialRadius: Double,
-    onLocationSelected: (com.google.android.gms.maps.model.LatLng, Double) -> Unit,
+    onLocationSelected: (Point, Double) -> Unit,
     viewModel: ChickenMapConfigViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -24,41 +34,66 @@ fun ChickenMapConfigScreen(
         viewModel.initialize(initialRadius)
     }
 
-    val cameraPositionState = rememberCameraPositionState {
-        position = state.cameraPosition
-    }
-
-    // Update marker when camera moves
-    LaunchedEffect(cameraPositionState.isMoving) {
-        if (!cameraPositionState.isMoving) {
-            val center = cameraPositionState.position.target
-            viewModel.onCameraMove(center)
-            onLocationSelected(center, state.radius)
+    val mapViewportState = rememberMapViewportState {
+        setCameraOptions {
+            center(state.cameraCenter)
+            zoom(state.cameraZoom.toDouble())
         }
     }
 
+    // Fly camera when cameraCenter changes (e.g. after getting user location)
+    LaunchedEffect(state.cameraCenter) {
+        mapViewportState.flyTo(
+            cameraOptions = CameraOptions.Builder()
+                .center(state.cameraCenter)
+                .zoom(state.cameraZoom.toDouble())
+                .build()
+        )
+    }
+
+    // Track camera idle to update marker position
+    var lastCameraCenter by remember { mutableStateOf(state.cameraCenter) }
+    LaunchedEffect(Unit) {
+        snapshotFlow { mapViewportState.cameraState }
+            .collect { cameraState ->
+                val center = cameraState?.center ?: return@collect
+                if (center.longitude() != lastCameraCenter.longitude() || center.latitude() != lastCameraCenter.latitude()) {
+                    lastCameraCenter = center
+                    viewModel.onCameraMove(center)
+                    onLocationSelected(center, state.radius)
+                }
+            }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
-        GoogleMap(
+        MapboxMap(
             modifier = Modifier.fillMaxSize(),
-            cameraPositionState = cameraPositionState,
-            properties = MapProperties(isMyLocationEnabled = true),
-            uiSettings = MapUiSettings(
-                myLocationButtonEnabled = true,
-                compassEnabled = true,
-                zoomControlsEnabled = false
-            )
+            mapViewportState = mapViewportState
         ) {
-            Marker(
-                state = MarkerState(position = state.markerPosition),
-                title = "Start"
-            )
-            Circle(
-                center = state.markerPosition,
-                radius = state.radius,
-                fillColor = Color.Green.copy(alpha = 0.3f),
-                strokeColor = Color.Green.copy(alpha = 0.7f),
-                strokeWidth = 2f
-            )
+            // Enable location puck
+            MapEffect(Unit) { mapView ->
+                mapView.location.updateSettings {
+                    enabled = true
+                    pulsingEnabled = true
+                }
+            }
+
+            // Circle showing radius
+            val circlePoints = circlePolygonPoints(state.markerPosition, state.radius)
+            PolylineAnnotation(
+                points = circlePoints + listOf(circlePoints.first())
+            ) {
+                lineColor = Color(0f, 1f, 0f, 0.7f)
+                lineWidth = 2.0
+            }
+
+            // Center marker
+            PointAnnotation(
+                point = state.markerPosition
+            ) {
+                iconImage = IconImage("marker-15")
+                textField = "Start"
+            }
         }
 
         // Bottom slider

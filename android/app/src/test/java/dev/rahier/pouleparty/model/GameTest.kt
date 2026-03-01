@@ -66,13 +66,13 @@ class GameTest {
     }
 
     @Test
-    fun `initialLocation returns correct LatLng`() {
+    fun `initialLocation returns correct Point`() {
         val game = Game(
             id = "test",
             initialCoordinates = GeoPoint(48.8566, 2.3522)
         )
-        assertEquals(48.8566, game.initialLocation.latitude, 0.0001)
-        assertEquals(2.3522, game.initialLocation.longitude, 0.0001)
+        assertEquals(48.8566, game.initialLocation.latitude(), 0.0001)
+        assertEquals(2.3522, game.initialLocation.longitude(), 0.0001)
     }
 
     @Test
@@ -97,11 +97,11 @@ class GameTest {
     @Test
     fun `withInitialLocation creates new game with updated coordinates`() {
         val game = Game(id = "test")
-        val latLng = com.google.android.gms.maps.model.LatLng(48.8566, 2.3522)
-        val updated = game.withInitialLocation(latLng)
+        val point = com.mapbox.geojson.Point.fromLngLat(2.3522, 48.8566)
+        val updated = game.withInitialLocation(point)
 
-        assertEquals(48.8566, updated.initialLocation.latitude, 0.0001)
-        assertEquals(2.3522, updated.initialLocation.longitude, 0.0001)
+        assertEquals(48.8566, updated.initialLocation.latitude(), 0.0001)
+        assertEquals(2.3522, updated.initialLocation.longitude(), 0.0001)
     }
 
     // MARK: - GameMod tests
@@ -207,5 +207,59 @@ class GameTest {
     fun `mock game has foundCode`() {
         val mock = Game.mock
         assertEquals("1234", mock.foundCode)
+    }
+
+    // MARK: - hunterStartDate & head start
+
+    @Test
+    fun `hunterStartDate equals startDate when no head start`() {
+        val now = Date()
+        val game = Game(
+            id = "test",
+            startTimestamp = Timestamp(now),
+            chickenHeadStartMinutes = 0.0
+        )
+        assertEquals(now.time.toDouble(), game.hunterStartDate.time.toDouble(), 1000.0)
+    }
+
+    @Test
+    fun `hunterStartDate offset by chickenHeadStartMinutes`() {
+        val now = Date()
+        val game = Game(
+            id = "test",
+            startTimestamp = Timestamp(now),
+            chickenHeadStartMinutes = 5.0
+        )
+        val expectedOffset = 5 * 60 * 1000L
+        assertEquals((now.time + expectedOffset).toDouble(), game.hunterStartDate.time.toDouble(), 1000.0)
+    }
+
+    @Test
+    fun `withChickenHeadStart creates copy with correct value`() {
+        val game = Game(id = "test", chickenHeadStartMinutes = 0.0)
+        val updated = game.withChickenHeadStart(10.0)
+        assertEquals(10.0, updated.chickenHeadStartMinutes, 0.01)
+        assertEquals(game.id, updated.id)
+    }
+
+    // MARK: - GameStatus
+
+    @Test
+    fun `GameStatus fromFirestore returns correct enum`() {
+        assertEquals(GameStatus.WAITING, GameStatus.fromFirestore("waiting"))
+        assertEquals(GameStatus.IN_PROGRESS, GameStatus.fromFirestore("inProgress"))
+        assertEquals(GameStatus.DONE, GameStatus.fromFirestore("done"))
+    }
+
+    @Test
+    fun `GameStatus fromFirestore with unknown value defaults to WAITING`() {
+        assertEquals(GameStatus.WAITING, GameStatus.fromFirestore("unknownStatus"))
+    }
+
+    @Test
+    fun `GameStatus firestoreValue roundtrip`() {
+        GameStatus.entries.forEach { status ->
+            assertEquals(status, GameStatus.fromFirestore(status.firestoreValue))
+        }
     }
 }

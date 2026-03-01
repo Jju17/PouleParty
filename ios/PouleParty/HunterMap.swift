@@ -6,7 +6,7 @@
 //
 
 import ComposableArchitecture
-import MapKit
+import MapboxMaps
 import os
 import SwiftUI
 
@@ -34,6 +34,10 @@ struct HunterMapFeature {
         var countdownText: String? = nil
         var wrongCodeAttempts: Int = 0
         var codeCooldownUntil: Date? = nil
+        var userLocation: CLLocationCoordinate2D?
+        var isOutsideZone: Bool = false
+        var outsideZoneSince: Date?
+        var outsideZoneSeconds: Int = 0
 
         var hasGameStarted: Bool { nowDate >= game.hunterStartDate }
         var isCodeOnCooldown: Bool { codeCooldownUntil.map { nowDate < $0 } ?? false }
@@ -55,6 +59,7 @@ struct HunterMapFeature {
         case setGameTriggered(to: Game)
         case submitFoundCode
         case timerTicked
+        case userLocationUpdated(CLLocationCoordinate2D)
     }
 
     @Reducer
@@ -227,37 +232,42 @@ struct HunterMapFeature {
                     )
                 }
 
-                // mutualTracking: hunter sends its own position
-                // Gated behind hunterStartDate
-                if gameMod == .mutualTracking {
-                    effects.append(
-                        .run { _ in
-                            let delay = hunterStartDate.timeIntervalSinceNow
-                            if delay > 0 {
-                                try await clock.sleep(for: .seconds(delay))
-                            }
-                            // Send current location immediately on connect
-                            if let currentLocation = locationClient.lastLocation() {
+                // Hunter always tracks own location (for zone check).
+                // In mutualTracking mode, also writes to Firestore.
+                // Gated behind hunterStartDate.
+                let shouldWriteLocation = gameMod == .mutualTracking
+                effects.append(
+                    .run { send in
+                        let delay = hunterStartDate.timeIntervalSinceNow
+                        if delay > 0 {
+                            try await clock.sleep(for: .seconds(delay))
+                        }
+                        // Send current location immediately
+                        if let currentLocation = locationClient.lastLocation() {
+                            await send(.userLocationUpdated(currentLocation))
+                            if shouldWriteLocation {
                                 do {
                                     try apiClient.setHunterLocation(gameId, hunterId, currentLocation)
                                 } catch {
                                     logger.error("Failed to send initial hunter location: \(error)")
                                 }
                             }
-                            var lastWrite = Date.now
-                            for await coordinate in locationClient.startTracking() {
-                                if Date.now.timeIntervalSince(lastWrite) >= AppConstants.locationThrottleSeconds {
-                                    do {
-                                        try apiClient.setHunterLocation(gameId, hunterId, coordinate)
-                                    } catch {
-                                        logger.error("Failed to send hunter location: \(error)")
-                                    }
-                                    lastWrite = .now
+                        }
+                        var lastWrite = Date.now
+                        for await coordinate in locationClient.startTracking() {
+                            await send(.userLocationUpdated(coordinate))
+                            if shouldWriteLocation,
+                               Date.now.timeIntervalSince(lastWrite) >= AppConstants.locationThrottleSeconds {
+                                do {
+                                    try apiClient.setHunterLocation(gameId, hunterId, coordinate)
+                                } catch {
+                                    logger.error("Failed to send hunter location: \(error)")
                                 }
+                                lastWrite = .now
                             }
                         }
-                    )
-                }
+                    }
+                )
 
                 return .merge(effects)
             case let .setGameTriggered(game):
@@ -398,6 +408,32 @@ struct HunterMapFeature {
                     state.nextRadiusUpdate = result.newNextUpdate
                     state.mapCircle = result.newCircle
                 }
+
+                // Zone check
+                if shouldCheckZone(role: .hunter, gameMod: state.game.gameMod),
+                   let userLoc = state.userLocation,
+                   let circle = state.mapCircle {
+                    let zoneResult = checkZoneStatus(
+                        userLocation: userLoc,
+                        zoneCenter: circle.center,
+                        zoneRadius: circle.radius
+                    )
+                    if zoneResult.isOutsideZone {
+                        if state.outsideZoneSince == nil {
+                            state.outsideZoneSince = .now
+                        }
+                        let elapsed = Int(Date.now.timeIntervalSince(state.outsideZoneSince!))
+                        state.outsideZoneSeconds = max(0, AppConstants.outsideZoneGracePeriodSeconds - elapsed)
+                        state.isOutsideZone = true
+                    } else {
+                        state.isOutsideZone = false
+                        state.outsideZoneSince = nil
+                        state.outsideZoneSeconds = 0
+                    }
+                }
+                return .none
+            case let .userLocationUpdated(location):
+                state.userLocation = location
                 return .none
             }
         }
@@ -409,6 +445,10 @@ struct HunterMapFeature {
 
 struct HunterMapView: View {
     @Bindable var store: StoreOf<HunterMapFeature>
+    @State private var viewport: Viewport = .camera(
+        center: CLLocationCoordinate2D(latitude: AppConstants.defaultLatitude, longitude: AppConstants.defaultLongitude),
+        zoom: 14
+    )
 
     private var hunterSubtitle: String {
         switch store.game.gameMod {
@@ -421,19 +461,38 @@ struct HunterMapView: View {
         }
     }
 
+    private var overlayColor: UIColor {
+        store.isOutsideZone ? UIColor.red.withAlphaComponent(0.4) : UIColor.black.withAlphaComponent(0.3)
+    }
+
     var body: some View {
-        Map {
+        Map(viewport: $viewport) {
+            Puck2D(bearing: .heading)
+
+            // Inverted zone overlay (only visible after game starts)
             if store.hasGameStarted, let circle = self.store.mapCircle {
-                MapCircle(center: circle.center, radius: circle.radius)
-                    .foregroundStyle(.green.opacity(0.5))
-                    .mapOverlayLevel(level: .aboveRoads)
+                let circlePolygon = Polygon(center: circle.center, radius: circle.radius, vertices: 72)
+                let outerCoords = outerBoundsCoordinates(center: circle.center)
+                let invertedPolygon = Polygon(
+                    outerRing: Ring(coordinates: outerCoords + [outerCoords[0]]),
+                    innerRings: [circlePolygon.outerRing]
+                )
+                PolygonAnnotation(polygon: invertedPolygon)
+                    .fillColor(StyleColor(overlayColor))
+                    .fillOpacity(1.0)
+
+                // Zone border circle
+                PolylineAnnotation(lineCoordinates: circlePolygon.outerRing.coordinates)
+                    .lineColor(StyleColor(UIColor.green.withAlphaComponent(0.7)))
+                    .lineWidth(2)
             }
-            UserAnnotation()
         }
-        .mapControls {
-            MapUserLocationButton()
-            MapCompass()
-            MapScaleView()
+        .ignoresSafeArea()
+        .onChange(of: store.mapCircle) { _, newCircle in
+            guard let center = newCircle?.center, let radius = newCircle?.radius else { return }
+            withViewportAnimation(.default(maxDuration: 1)) {
+                viewport = .camera(center: center, zoom: zoomForRadius(radius, latitude: center.latitude))
+            }
         }
         .safeAreaInset(edge: .top) {
             HStack {
@@ -525,6 +584,11 @@ struct HunterMapView: View {
         .overlay(alignment: .top) {
             WinnerNotificationOverlay(notification: store.winnerNotification)
         }
+        .overlay(alignment: .top) {
+            if store.isOutsideZone {
+                ZoneWarningOverlay(secondsRemaining: store.outsideZoneSeconds)
+            }
+        }
         .overlay {
             GameStartCountdownOverlay(
                 countdownNumber: store.countdownNumber,
@@ -532,6 +596,20 @@ struct HunterMapView: View {
             )
         }
     }
+}
+
+/// Large rectangle centered on the given coordinate, used as the outer boundary for inverted zone overlay.
+private func outerBoundsCoordinates(center: CLLocationCoordinate2D, padding: Double = 20.0) -> [CLLocationCoordinate2D] {
+    let north = min(85.0, center.latitude + padding)
+    let south = max(-85.0, center.latitude - padding)
+    let west = center.longitude - padding
+    let east = center.longitude + padding
+    return [
+        CLLocationCoordinate2D(latitude: north, longitude: west),
+        CLLocationCoordinate2D(latitude: north, longitude: east),
+        CLLocationCoordinate2D(latitude: south, longitude: east),
+        CLLocationCoordinate2D(latitude: south, longitude: west)
+    ]
 }
 
 #Preview {

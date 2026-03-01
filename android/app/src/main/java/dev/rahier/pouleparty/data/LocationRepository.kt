@@ -10,7 +10,7 @@ import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.Priority
-import com.google.android.gms.maps.model.LatLng
+import com.mapbox.geojson.Point
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.rahier.pouleparty.AppConstants
 import kotlinx.coroutines.channels.awaitClose
@@ -42,21 +42,21 @@ class LocationRepository @Inject constructor(
      * Get the last known location, or null if unavailable.
      */
     @Suppress("MissingPermission")
-    suspend fun getLastLocation(): LatLng? {
+    suspend fun getLastLocation(): Point? {
         return try {
             val location = fusedLocationClient.lastLocation.await()
-            if (location != null) LatLng(location.latitude, location.longitude) else null
+            if (location != null) Point.fromLngLat(location.longitude, location.latitude) else null
         } catch (_: Exception) {
             null
         }
     }
 
     /**
-     * Emit user location as Flow<LatLng>.
+     * Emit user location as Flow<Point>.
      * Uses distanceFilter ≈ 10m via smallestDisplacement to match iOS behaviour.
      */
     @Suppress("MissingPermission")
-    fun locationFlow(): Flow<LatLng> = callbackFlow {
+    fun locationFlow(): Flow<Point> = callbackFlow {
         val locationRequest = LocationRequest.Builder(
             Priority.PRIORITY_HIGH_ACCURACY,
             AppConstants.LOCATION_UPDATE_INTERVAL_MS
@@ -67,7 +67,7 @@ class LocationRepository @Inject constructor(
         val callback = object : LocationCallback() {
             override fun onLocationResult(result: LocationResult) {
                 result.lastLocation?.let { location ->
-                    trySend(LatLng(location.latitude, location.longitude))
+                    trySend(Point.fromLngLat(location.longitude, location.latitude))
                 }
             }
         }

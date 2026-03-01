@@ -1,6 +1,7 @@
 package dev.rahier.pouleparty.ui
 
-import com.google.android.gms.maps.model.LatLng
+import android.location.Location
+import com.mapbox.geojson.Point
 import dev.rahier.pouleparty.AppConstants
 import dev.rahier.pouleparty.model.GameMod
 import dev.rahier.pouleparty.model.Winner
@@ -10,6 +11,37 @@ import java.util.Date
  * Pure helper functions shared between ChickenMapViewModel and HunterMapViewModel.
  * Extracts duplicated countdown / radius / game-over / winner-detection logic.
  */
+
+// ── Zone Check ───────────────────────────────────────
+
+enum class PlayerRole { CHICKEN, HUNTER }
+
+data class ZoneCheckResult(
+    val isOutsideZone: Boolean,
+    val distanceToCenter: Float
+)
+
+/** Whether this role should be zone-checked under the given game mode. */
+fun shouldCheckZone(role: PlayerRole, gameMod: GameMod): Boolean = when (gameMod) {
+    GameMod.STAY_IN_THE_ZONE -> true
+    GameMod.FOLLOW_THE_CHICKEN, GameMod.MUTUAL_TRACKING -> role == PlayerRole.HUNTER
+}
+
+/** Pure check: is the user outside the zone? */
+fun checkZoneStatus(
+    userLocation: Point,
+    zoneCenter: Point,
+    zoneRadius: Double
+): ZoneCheckResult {
+    val results = FloatArray(1)
+    Location.distanceBetween(
+        userLocation.latitude(), userLocation.longitude(),
+        zoneCenter.latitude(), zoneCenter.longitude(),
+        results
+    )
+    val distance = results[0]
+    return ZoneCheckResult(isOutsideZone = distance > zoneRadius, distanceToCenter = distance)
+}
 
 // ── Countdown ────────────────────────────────────────
 
@@ -70,7 +102,7 @@ fun checkGameOverByTime(endDate: Date): Boolean = Date().after(endDate)
 data class RadiusUpdateResult(
     val newRadius: Int,
     val newNextUpdate: Date,
-    val newCircleCenter: LatLng?,
+    val newCircleCenter: Point?,
     val isGameOver: Boolean,
     val gameOverMessage: String?
 )
@@ -85,8 +117,8 @@ fun processRadiusUpdate(
     radiusDeclinePerUpdate: Double,
     radiusIntervalUpdate: Double,
     gameMod: GameMod,
-    initialLocation: LatLng,
-    currentCircleCenter: LatLng?
+    initialLocation: Point,
+    currentCircleCenter: Point?
 ): RadiusUpdateResult? {
     val nextUpdate = nextRadiusUpdate ?: return null
     if (!Date().after(nextUpdate)) return null
