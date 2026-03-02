@@ -422,6 +422,7 @@ struct ChickenMapView: View {
         center: CLLocationCoordinate2D(latitude: AppConstants.defaultLatitude, longitude: AppConstants.defaultLongitude),
         zoom: 14
     )
+    @State private var mapBearing: Double = 0
 
     private var chickenSubtitle: String {
         switch store.game.gameMod {
@@ -436,6 +437,78 @@ struct ChickenMapView: View {
 
     private var overlayColor: UIColor {
         store.isOutsideZone ? UIColor.red.withAlphaComponent(0.4) : UIColor.black.withAlphaComponent(0.3)
+    }
+
+    private var compassButton: some View {
+        Button {
+            withViewportAnimation(.default(maxDuration: 0.5)) {
+                if let circle = store.mapCircle {
+                    viewport = .camera(
+                        center: circle.center,
+                        zoom: zoomForRadius(circle.radius, latitude: circle.center.latitude),
+                        bearing: 0
+                    )
+                }
+            }
+        } label: {
+            Image(systemName: "location.north.fill")
+                .rotationEffect(.degrees(-mapBearing))
+                .frame(width: 40, height: 40)
+                .background(.thinMaterial)
+                .clipShape(Circle())
+        }
+        .padding(.trailing, 8)
+        .padding(.top, 8)
+    }
+
+    private var topBar: some View {
+        HStack {
+            Spacer()
+            VStack {
+                Text("You are the 🐔")
+                Text(chickenSubtitle)
+                    .font(.system(size: 14))
+            }
+            Spacer()
+            Button {
+                self.store.send(.infoButtonTapped)
+            } label: {
+                Image(systemName: "info.circle")
+                    .font(.system(size: 20))
+                    .foregroundStyle(.secondary)
+            }
+            .accessibilityLabel("Game info")
+            .padding(.trailing, 4)
+        }
+        .padding()
+        .background(.thinMaterial)
+    }
+
+    private var bottomBar: some View {
+        HStack {
+            VStack(alignment: .leading) {
+                Text("Radius : \(self.store.radius)m")
+                    .accessibilityLabel("Radius \(self.store.radius) meters")
+                CountdownView(nowDate: self.$store.nowDate, nextUpdateDate: self.$store.nextRadiusUpdate, chickenStartDate: store.game.startDate, hunterStartDate: store.game.hunterStartDate, isChicken: true)
+            }
+            Spacer()
+            Button {
+                self.store.send(.beenFoundButtonTapped)
+            } label: {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 5)
+                        .fill(.red)
+                    Text("FOUND")
+                        .font(Font.system(size: 11))
+                        .fontWeight(.bold)
+                        .foregroundStyle(.white)
+                }
+            }
+            .accessibilityLabel("I have been found")
+            .frame(width: 50, height: 40)
+        }
+        .padding()
+        .background(.thinMaterial)
     }
 
     var body: some View {
@@ -478,6 +551,9 @@ struct ChickenMapView: View {
                 }
             }
         }
+        .onCameraChanged { context in
+            mapBearing = context.cameraState.bearing
+        }
         .ignoresSafeArea()
         .onChange(of: store.mapCircle) { _, newCircle in
             guard let center = newCircle?.center, let radius = newCircle?.radius else { return }
@@ -485,54 +561,11 @@ struct ChickenMapView: View {
                 viewport = .camera(center: center, zoom: zoomForRadius(radius, latitude: center.latitude))
             }
         }
-        .safeAreaInset(edge: .top) {
-            HStack {
-                Spacer()
-                VStack {
-                    Text("You are the 🐔")
-                    Text(chickenSubtitle)
-                        .font(.system(size: 14))
-                }
-                Spacer()
-                Button {
-                    self.store.send(.infoButtonTapped)
-                } label: {
-                    Image(systemName: "info.circle")
-                        .font(.system(size: 20))
-                        .foregroundStyle(.secondary)
-                }
-                .accessibilityLabel("Game info")
-                .padding(.trailing, 4)
-            }
-            .padding()
-            .background(.thinMaterial)
+        .overlay(alignment: .topTrailing) {
+            compassButton
         }
-        .safeAreaInset(edge: .bottom) {
-            HStack {
-                VStack(alignment: .leading) {
-                    Text("Radius : \(self.store.radius)m")
-                        .accessibilityLabel("Radius \(self.store.radius) meters")
-                    CountdownView(nowDate: self.$store.nowDate, nextUpdateDate: self.$store.nextRadiusUpdate, chickenStartDate: store.game.startDate, hunterStartDate: store.game.hunterStartDate, isChicken: true)
-                }
-                Spacer()
-                Button {
-                    self.store.send(.beenFoundButtonTapped)
-                } label: {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 5)
-                            .fill(.red)
-                        Text("FOUND")
-                            .font(Font.system(size: 11))
-                            .fontWeight(.bold)
-                            .foregroundStyle(.white)
-                    }
-                }
-                .accessibilityLabel("I have been found")
-                .frame(width: 50, height: 40)
-            }
-            .padding()
-            .background(.thinMaterial)
-        }
+        .safeAreaInset(edge: .top) { topBar }
+        .safeAreaInset(edge: .bottom) { bottomBar }
         .task {
             self.store.send(.setGameTriggered)
             self.store.send(.onTask)
@@ -585,6 +618,18 @@ struct ChickenMapView: View {
                 countdownNumber: store.countdownNumber,
                 countdownText: store.countdownText
             )
+        }
+        .overlay {
+            if !store.hasGameStarted {
+                PreGameOverlay(
+                    role: .chicken,
+                    gameModTitle: store.game.gameMod.title,
+                    gameCode: store.game.gameCode,
+                    targetDate: store.game.startDate,
+                    nowDate: store.nowDate,
+                    onCancelGame: { store.send(.cancelGameButtonTapped) }
+                )
+            }
         }
     }
 }

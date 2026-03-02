@@ -73,6 +73,12 @@ struct ChickenConfigFeature {
             case .path:
                 return .none
             case .startGameButtonTapped:
+                // Auto-calculate endDate from radius parameters
+                state.$game.withLock { game in
+                    let shrinks = ceil(game.initialRadius / game.radiusDeclinePerUpdate)
+                    let duration = shrinks * game.radiusIntervalUpdate * 60
+                    game.endDate = game.hunterStartDate.addingTimeInterval(duration)
+                }
                 return .run { [state = state] send in
                     do {
                         try await apiClient.setConfig(state.game)
@@ -103,9 +109,22 @@ struct ChickenConfigView: View {
                 gameCodeSection
                 dateSection
                 gameSettingsSection
-                Button("Start game") {
+            }
+            .safeAreaInset(edge: .bottom) {
+                Button {
                     store.send(.startGameButtonTapped)
+                } label: {
+                    Text("Start game")
+                        .font(.banger(size: 24))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.CROrange)
+                        .cornerRadius(12)
                 }
+                .padding(.horizontal)
+                .padding(.bottom, 8)
+                .background(.thinMaterial)
             }
             .navigationTitle("Game Settings")
         } destination: { store in
@@ -126,16 +145,10 @@ struct ChickenConfigView: View {
     }
 
     private var dateSection: some View {
-        Group {
-            DatePicker(selection: $store.game.startDate, in: .now.addingTimeInterval(60)...) {
-                Text("Start at")
-            }
-            .datePickerStyle(.compact)
-            DatePicker(selection: $store.game.endDate, in: store.game.startDate.addingTimeInterval(300)..., displayedComponents: .hourAndMinute) {
-                Text("End at")
-            }
-            .datePickerStyle(.compact)
+        DatePicker(selection: $store.game.startDate, in: .now.addingTimeInterval(120)...) {
+            Text("Start at")
         }
+        .datePickerStyle(.compact)
     }
 
     private var gameSettingsSection: some View {

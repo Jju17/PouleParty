@@ -9,6 +9,7 @@ import dev.rahier.pouleparty.data.FirestoreRepository
 import dev.rahier.pouleparty.data.LocationRepository
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameMod
+import kotlin.math.ceil
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,7 +23,9 @@ data class ChickenConfigUiState(
     val game: Game = Game.mock,
     val codeCopied: Boolean = false,
     val showAlert: Boolean = false,
-    val alertMessage: String = ""
+    val alertMessage: String = "",
+    val showMapConfig: Boolean = false,
+    val showTimePicker: Boolean = false
 )
 
 @HiltViewModel
@@ -70,12 +73,26 @@ class ChickenConfigViewModel @Inject constructor(
         }
     }
 
-    fun updateStartDate(date: Date) {
-        _uiState.update { it.copy(game = it.game.withStartDate(date)) }
+    fun onStartTimeTapped() {
+        _uiState.update { it.copy(showTimePicker = true) }
     }
 
-    fun updateEndDate(date: Date) {
-        _uiState.update { it.copy(game = it.game.withEndDate(date)) }
+    fun dismissTimePicker() {
+        _uiState.update { it.copy(showTimePicker = false) }
+    }
+
+    fun updateStartDate(hour: Int, minute: Int) {
+        val cal = java.util.Calendar.getInstance().apply {
+            set(java.util.Calendar.HOUR_OF_DAY, hour)
+            set(java.util.Calendar.MINUTE, minute)
+            set(java.util.Calendar.SECOND, 0)
+        }
+        // Ensure at least 2 min from now
+        val minDate = Date(System.currentTimeMillis() + 120_000)
+        if (cal.time.before(minDate)) {
+            cal.time = minDate
+        }
+        _uiState.update { it.copy(game = it.game.withStartDate(cal.time), showTimePicker = false) }
     }
 
     fun updateGameMod(mod: GameMod) {
@@ -114,11 +131,31 @@ class ChickenConfigViewModel @Inject constructor(
         _uiState.update { it.copy(showAlert = false) }
     }
 
+    fun onMapSetupTapped() {
+        _uiState.update { it.copy(showMapConfig = true) }
+    }
+
+    fun dismissMapConfig() {
+        _uiState.update { it.copy(showMapConfig = false) }
+    }
+
+    fun onLocationSelected(point: com.mapbox.geojson.Point, radius: Double) {
+        _uiState.update {
+            it.copy(game = it.game.withInitialLocation(point).copy(initialRadius = radius))
+        }
+    }
+
     fun startGame(onSuccess: (String) -> Unit) {
         viewModelScope.launch {
             try {
-                firestoreRepository.setConfig(_uiState.value.game)
-                onSuccess(_uiState.value.game.id)
+                // Auto-calculate endDate from radius parameters
+                val game = _uiState.value.game
+                val shrinks = ceil(game.initialRadius / game.radiusDeclinePerUpdate)
+                val durationMs = (shrinks * game.radiusIntervalUpdate * 60 * 1000).toLong()
+                val endDate = Date(game.hunterStartDate.time + durationMs)
+                val finalGame = game.withEndDate(endDate)
+                firestoreRepository.setConfig(finalGame)
+                onSuccess(finalGame.id)
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(

@@ -52,21 +52,13 @@ class ChickenConfigViewModelBehaviorTest {
     @Test
     fun `updateStartDate updates game start`() {
         val vm = createViewModel()
-        val newDate = Date(System.currentTimeMillis() + 600_000)
-        vm.updateStartDate(newDate)
-        assertTrue(
-            Math.abs(vm.uiState.value.game.startDate.time - newDate.time) < 1000
-        )
-    }
-
-    @Test
-    fun `updateEndDate updates game end`() {
-        val vm = createViewModel()
-        val newDate = Date(System.currentTimeMillis() + 3_600_000)
-        vm.updateEndDate(newDate)
-        assertTrue(
-            Math.abs(vm.uiState.value.game.endDate.time - newDate.time) < 1000
-        )
+        val cal = java.util.Calendar.getInstance().apply {
+            add(java.util.Calendar.HOUR_OF_DAY, 1)
+        }
+        vm.updateStartDate(cal.get(java.util.Calendar.HOUR_OF_DAY), cal.get(java.util.Calendar.MINUTE))
+        val updatedCal = java.util.Calendar.getInstance().apply { time = vm.uiState.value.game.startDate }
+        assertEquals(cal.get(java.util.Calendar.HOUR_OF_DAY), updatedCal.get(java.util.Calendar.HOUR_OF_DAY))
+        assertEquals(cal.get(java.util.Calendar.MINUTE), updatedCal.get(java.util.Calendar.MINUTE))
     }
 
     @Test

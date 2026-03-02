@@ -141,6 +141,15 @@
     <!-- Zone Warning -->
     <string name="return_to_zone">Return to the zone!</string>
 
+    <!-- Map Config -->
+    <string name="search_address">Search address</string>
+
+    <!-- Pre-Game Overlay -->
+    <string name="game_starting_in">Game starts in</string>
+    <string name="share_code">Share this code:</string>
+    <string name="tap_to_copy">Tap to copy:</string>
+    <string name="copied">Copied!</string>
+
     <!-- Mapbox -->
     <string name="mapbox_access_token" translatable="false">pk.eyJ1Ijoiamp1MTciLCJhIjoiY20yaGpwaG53MGI2YzJsc2NxOTNzMWJ2bCJ9.D6NMFnmGF7pA2LN64vmqcA</string>
 </resources>

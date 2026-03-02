@@ -2,13 +2,16 @@ package dev.rahier.pouleparty.ui.chickenmap
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -33,7 +36,9 @@ import dev.rahier.pouleparty.ui.components.zoomForRadius
 import dev.rahier.pouleparty.ui.components.CountdownView
 import dev.rahier.pouleparty.ui.components.GameInfoDialog
 import dev.rahier.pouleparty.ui.components.GameOverAlertDialog
+import dev.rahier.pouleparty.model.GameMod
 import dev.rahier.pouleparty.ui.components.GameStartCountdownOverlay
+import dev.rahier.pouleparty.ui.components.PreGameOverlay
 import dev.rahier.pouleparty.ui.endgamecode.EndGameCodeContent
 
 @OptIn(MapboxExperimental::class)
@@ -58,6 +63,13 @@ fun ChickenMapScreen(
     Box(modifier = Modifier.fillMaxSize()) {
         // Mapbox Map
         val mapViewportState = rememberMapViewportState()
+        var currentBearing by remember { mutableFloatStateOf(0f) }
+        LaunchedEffect(Unit) {
+            snapshotFlow { mapViewportState.cameraState }
+                .collect { cameraState ->
+                    cameraState?.bearing?.let { currentBearing = it.toFloat() }
+                }
+        }
 
         // Center camera on circle and zoom to fit radius
         LaunchedEffect(state.circleCenter, state.radius) {
@@ -116,6 +128,33 @@ fun ChickenMapScreen(
                     textField = hunter.displayName
                 }
             }
+        }
+
+        // Compass button — reset to north
+        IconButton(
+            onClick = {
+                state.circleCenter?.let { center ->
+                    mapViewportState.flyTo(
+                        cameraOptions = CameraOptions.Builder()
+                            .center(center)
+                            .zoom(zoomForRadius(state.radius.toDouble(), center.latitude()))
+                            .bearing(0.0)
+                            .build()
+                    )
+                }
+            },
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .statusBarsPadding()
+                .padding(end = 8.dp, top = 96.dp)
+                .background(Color.White.copy(alpha = 0.8f), CircleShape)
+                .size(40.dp)
+        ) {
+            Icon(
+                Icons.Default.Navigation,
+                contentDescription = "North",
+                modifier = Modifier.rotate(-currentBearing)
+            )
         }
 
         // Top bar
@@ -185,6 +224,18 @@ fun ChickenMapScreen(
             countdownNumber = state.countdownNumber,
             countdownText = state.countdownText
         )
+
+        // Pre-game overlay
+        if (!state.hasGameStarted) {
+            PreGameOverlay(
+                isChicken = true,
+                gameModTitle = state.game.gameModEnum.title,
+                gameCode = state.game.gameCode,
+                targetDate = state.game.startDate,
+                nowDate = state.nowDate,
+                onCancelGame = { viewModel.onCancelGameTapped() }
+            )
+        }
 
         // Zone warning banner
         if (state.isOutsideZone) {

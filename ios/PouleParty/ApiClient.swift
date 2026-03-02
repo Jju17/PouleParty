@@ -110,6 +110,10 @@ extension ApiClient: DependencyKey {
             }
         },
         registerHunter: { gameId, hunterId in
+            guard !gameId.isEmpty, !hunterId.isEmpty else {
+                logger.warning("registerHunter skipped — gameId: '\(gameId)', hunterId: '\(hunterId)'")
+                return
+            }
             try await withRetry("registerHunter(\(gameId), \(hunterId))") {
                 let ref = Firestore.firestore().collection(gamesCollection).document(gameId)
                 try await ref.updateData([
@@ -226,6 +230,11 @@ extension ApiClient: DependencyKey {
             }
         },
         setHunterLocation: { gameId, hunterId, coordinate in
+            guard !gameId.isEmpty, !hunterId.isEmpty else {
+                logger.warning("setHunterLocation skipped — gameId: '\(gameId)', hunterId: '\(hunterId)'")
+                return
+            }
+
             let hunterLocation = HunterLocation(
                 hunterId: hunterId,
                 location: GeoPoint(latitude: coordinate.latitude, longitude: coordinate.longitude),

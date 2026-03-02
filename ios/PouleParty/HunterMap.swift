@@ -184,12 +184,19 @@ struct HunterMapFeature {
                 )
                 return .none
             case .onTask:
-                if let uid = authClient.currentUserId() {
+                let rawUid = authClient.currentUserId()
+                logger.info("HunterMap.onTask — currentUserId: \(rawUid ?? "nil"), gameId: \(state.game.id), gameMod: \(String(describing: state.game.gameMod))")
+                if let uid = rawUid, !uid.isEmpty {
                     state.hunterId = uid
                 }
                 let gameId = state.game.id
                 let gameMod = state.game.gameMod
                 let hunterId = state.hunterId
+                guard !hunterId.isEmpty else {
+                    logger.error("hunterId is empty — cannot register hunter or write location. rawUid was: \(rawUid ?? "nil")")
+                    return .none
+                }
+                logger.info("HunterMap.onTask — hunterId set to: \(hunterId), shouldWriteLocation: \(gameMod == .mutualTracking)")
                 let hunterStartDate = state.game.hunterStartDate
                 let (lastUpdate, lastRadius) = state.game.findLastUpdate()
                 state.radius = lastRadius
@@ -449,6 +456,7 @@ struct HunterMapView: View {
         center: CLLocationCoordinate2D(latitude: AppConstants.defaultLatitude, longitude: AppConstants.defaultLongitude),
         zoom: 14
     )
+    @State private var mapBearing: Double = 0
 
     private var hunterSubtitle: String {
         switch store.game.gameMod {
@@ -465,7 +473,93 @@ struct HunterMapView: View {
         store.isOutsideZone ? UIColor.red.withAlphaComponent(0.4) : UIColor.black.withAlphaComponent(0.3)
     }
 
-    var body: some View {
+    private var compassButton: some View {
+        Button {
+            withViewportAnimation(.default(maxDuration: 0.5)) {
+                if let circle = store.mapCircle {
+                    viewport = .camera(
+                        center: circle.center,
+                        zoom: zoomForRadius(circle.radius, latitude: circle.center.latitude),
+                        bearing: 0
+                    )
+                }
+            }
+        } label: {
+            Image(systemName: "location.north.fill")
+                .rotationEffect(.degrees(-mapBearing))
+                .frame(width: 40, height: 40)
+                .background(.thinMaterial)
+                .clipShape(Circle())
+        }
+        .padding(.trailing, 8)
+        .padding(.top, 8)
+    }
+
+    private var topBar: some View {
+        HStack {
+            Spacer()
+            VStack {
+                Text("You are the Hunter")
+                Text(hunterSubtitle)
+                    .font(.system(size: 12))
+            }
+            Spacer()
+            Button {
+                self.store.send(.infoButtonTapped)
+            } label: {
+                Image(systemName: "info.circle")
+                    .font(.system(size: 20))
+                    .foregroundStyle(.secondary)
+            }
+            .accessibilityLabel("Game info")
+            .padding(.trailing, 4)
+        }
+        .padding()
+        .background(.thinMaterial)
+    }
+
+    private var bottomBar: some View {
+        HStack {
+            VStack(alignment: .leading) {
+                Text("Radius : \(self.store.radius)m")
+                    .accessibilityLabel("Radius \(self.store.radius) meters")
+                CountdownView(nowDate: self.$store.nowDate, nextUpdateDate: self.$store.nextRadiusUpdate, chickenStartDate: store.game.startDate, hunterStartDate: store.game.hunterStartDate, isChicken: false)
+            }
+            Spacer()
+            if store.hasGameStarted {
+                Button {
+                    self.store.send(.foundButtonTapped)
+                } label: {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 5)
+                            .fill(.red)
+                        Text("FOUND")
+                            .font(Font.system(size: 11))
+                            .fontWeight(.bold)
+                            .foregroundStyle(.white)
+                    }
+                }
+                .accessibilityLabel("I found the chicken")
+                .frame(width: 50, height: 40)
+            }
+            Button {
+                self.store.send(.cancelGameButtonTapped)
+            } label: {
+                Text("Quit")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(.ultraThinMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+            .accessibilityLabel("Quit game")
+        }
+        .padding()
+        .background(.thinMaterial)
+    }
+
+    private var mapView: some View {
         Map(viewport: $viewport) {
             Puck2D(bearing: .heading)
 
@@ -487,6 +581,9 @@ struct HunterMapView: View {
                     .lineWidth(2)
             }
         }
+        .onCameraChanged { context in
+            mapBearing = context.cameraState.bearing
+        }
         .ignoresSafeArea()
         .onChange(of: store.mapCircle) { _, newCircle in
             guard let center = newCircle?.center, let radius = newCircle?.radius else { return }
@@ -494,107 +591,65 @@ struct HunterMapView: View {
                 viewport = .camera(center: center, zoom: zoomForRadius(radius, latitude: center.latitude))
             }
         }
-        .safeAreaInset(edge: .top) {
-            HStack {
-                Spacer()
-                VStack {
-                    Text("You are the Hunter")
-                    Text(hunterSubtitle)
-                        .font(.system(size: 12))
-                }
-                Spacer()
-                Button {
-                    self.store.send(.infoButtonTapped)
-                } label: {
-                    Image(systemName: "info.circle")
-                        .font(.system(size: 20))
-                        .foregroundStyle(.secondary)
-                }
-                .accessibilityLabel("Game info")
-                .padding(.trailing, 4)
+        .overlay(alignment: .topTrailing) {
+            compassButton
+        }
+        .safeAreaInset(edge: .top) { topBar }
+        .safeAreaInset(edge: .bottom) { bottomBar }
+    }
+
+    var body: some View {
+        mapView
+            .task {
+                self.store.send(.onTask)
             }
-            .padding()
-            .background(.thinMaterial)
-        }
-        .safeAreaInset(edge: .bottom) {
-            HStack {
-                VStack(alignment: .leading) {
-                    Text("Radius : \(self.store.radius)m")
-                        .accessibilityLabel("Radius \(self.store.radius) meters")
-                    CountdownView(nowDate: self.$store.nowDate, nextUpdateDate: self.$store.nextRadiusUpdate, chickenStartDate: store.game.startDate, hunterStartDate: store.game.hunterStartDate, isChicken: false)
-                }
-                Spacer()
-                if store.hasGameStarted {
-                    Button {
-                        self.store.send(.foundButtonTapped)
-                    } label: {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 5)
-                                .fill(.red)
-                            Text("FOUND")
-                                .font(Font.system(size: 11))
-                                .fontWeight(.bold)
-                                .foregroundStyle(.white)
-                        }
-                    }
-                    .accessibilityLabel("I found the chicken")
-                    .frame(width: 50, height: 40)
-                }
-                Button {
-                    self.store.send(.cancelGameButtonTapped)
-                } label: {
-                    Text("Quit")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(.ultraThinMaterial)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                }
-                .accessibilityLabel("Quit game")
-            }
-            .padding()
-            .background(.thinMaterial)
-        }
-        .task {
-            self.store.send(.onTask)
-        }
-        .alert(
-            $store.scope(
-                state: \.destination?.alert,
-                action: \.destination.alert
+            .alert(
+                $store.scope(
+                    state: \.destination?.alert,
+                    action: \.destination.alert
+                )
             )
-        )
-        .alert("Enter Found Code", isPresented: $store.isEnteringFoundCode) {
-            TextField("4-digit code", text: $store.enteredCode)
-                .keyboardType(.numberPad)
-            Button("Submit") {
-                self.store.send(.submitFoundCode)
+            .alert("Enter Found Code", isPresented: $store.isEnteringFoundCode) {
+                TextField("4-digit code", text: $store.enteredCode)
+                    .keyboardType(.numberPad)
+                Button("Submit") {
+                    self.store.send(.submitFoundCode)
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("Enter the 4-digit code shown by the chicken.")
             }
-            Button("Cancel", role: .cancel) { }
-        } message: {
-            Text("Enter the 4-digit code shown by the chicken.")
-        }
-        .sheet(isPresented: Binding(
-            get: { self.store.showGameInfo },
-            set: { _ in self.store.send(.dismissGameInfo) }
-        )) {
-            GameInfoSheet(game: self.store.game)
-        }
-        .overlay(alignment: .top) {
-            WinnerNotificationOverlay(notification: store.winnerNotification)
-        }
-        .overlay(alignment: .top) {
-            if store.isOutsideZone {
-                ZoneWarningOverlay(secondsRemaining: store.outsideZoneSeconds)
+            .sheet(isPresented: Binding(
+                get: { self.store.showGameInfo },
+                set: { _ in self.store.send(.dismissGameInfo) }
+            )) {
+                GameInfoSheet(game: self.store.game)
             }
-        }
-        .overlay {
-            GameStartCountdownOverlay(
-                countdownNumber: store.countdownNumber,
-                countdownText: store.countdownText
-            )
-        }
+            .overlay(alignment: .top) {
+                WinnerNotificationOverlay(notification: store.winnerNotification)
+            }
+            .overlay(alignment: .top) {
+                if store.isOutsideZone {
+                    ZoneWarningOverlay(secondsRemaining: store.outsideZoneSeconds)
+                }
+            }
+            .overlay {
+                GameStartCountdownOverlay(
+                    countdownNumber: store.countdownNumber,
+                    countdownText: store.countdownText
+                )
+            }
+            .overlay {
+                if !store.hasGameStarted {
+                    PreGameOverlay(
+                        role: .hunter,
+                        gameModTitle: store.game.gameMod.title,
+                        gameCode: nil,
+                        targetDate: store.game.hunterStartDate,
+                        nowDate: store.nowDate
+                    )
+                }
+            }
     }
 }
 
