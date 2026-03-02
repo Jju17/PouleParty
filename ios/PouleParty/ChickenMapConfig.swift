@@ -172,16 +172,18 @@ struct ChickenMapConfigView: View {
                         .foregroundStyle(.red)
                 }
             }
-        }
-        .onMapTapGesture { context in
-            let coordinate = context.coordinate
-            store.send(.onLocationSelected(coordinate))
-            withViewportAnimation(.default(maxDuration: 0.5)) {
-                viewport = .camera(center: coordinate, zoom: 14)
+
+            TapInteraction { context in
+                let coordinate = context.coordinate
+                store.send(.onLocationSelected(coordinate))
+                withViewportAnimation(.default(maxDuration: 0.5)) {
+                    viewport = .camera(center: coordinate, zoom: 14)
+                }
+                searchText = ""
+                searchHelper.results = []
+                isSearchFieldFocused = false
+                return true
             }
-            searchText = ""
-            searchHelper.results = []
-            isSearchFieldFocused = false
         }
         .ignoresSafeArea()
         .onChange(of: store.cameraRegion) { _, newRegion in

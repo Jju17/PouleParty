@@ -17,6 +17,8 @@
     <string name="game_not_found_message">Aucune partie trouvée avec ce code. Vérifie le code et réessaie.</string>
     <string name="game_in_progress">Partie en cours</string>
     <string name="game_in_progress_message">Cette partie est déjà en cours. Tu ne peux plus la rejoindre.</string>
+    <string name="rejoin_game_in_progress">Partie en cours</string>
+    <string name="rejoin">Reprendre</string>
     <string name="location_required">Localisation requise</string>
     <string name="location_required_message">La localisation est au cœur de PouleParty ! Ta position est anonyme et utilisée uniquement pendant la partie. Active la localisation pour continuer.</string>
 

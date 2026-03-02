@@ -11,7 +11,7 @@ import Foundation
 
 // MARK: - Zone Check
 
-enum PlayerRole {
+enum PlayerRole: Equatable {
     case chicken
     case hunter
 }

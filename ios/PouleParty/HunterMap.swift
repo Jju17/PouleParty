@@ -185,12 +185,12 @@ struct HunterMapFeature {
                 return .none
             case .onTask:
                 let rawUid = authClient.currentUserId()
-                logger.info("HunterMap.onTask — currentUserId: \(rawUid ?? "nil"), gameId: \(state.game.id), gameMod: \(String(describing: state.game.gameMod))")
+                let gameId = state.game.id
+                let gameMod = state.game.gameMod
+                logger.info("HunterMap.onTask — currentUserId: \(rawUid ?? "nil"), gameId: \(gameId), gameMod: \(String(describing: gameMod))")
                 if let uid = rawUid, !uid.isEmpty {
                     state.hunterId = uid
                 }
-                let gameId = state.game.id
-                let gameMod = state.game.gameMod
                 let hunterId = state.hunterId
                 guard !hunterId.isEmpty else {
                     logger.error("hunterId is empty — cannot register hunter or write location. rawUid was: \(rawUid ?? "nil")")

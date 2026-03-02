@@ -24,9 +24,12 @@ struct SelectionFeature {
         var hunterName: String = ""
         var isAuthenticating = false
         var isJoiningGame = false
+        var activeGame: Game? = nil
+        var activeGameRole: PlayerRole? = nil
     }
 
     enum Action: BindableAction {
+        case activeGameFound(Game, PlayerRole)
         case binding(BindingAction<State>)
         case destination(PresentationAction<Destination.Action>)
         case dismissChickenConfig
@@ -39,7 +42,10 @@ struct SelectionFeature {
         case goToHunterMapTriggered(Game, String)
         case locationRequired
         case networkError
+        case dismissActiveGame
+        case noActiveGameFound
         case onTask
+        case rejoinGameTapped
         case startButtonTapped
         case joinGameButtonTapped
         case validatePasswordButtonTapped
@@ -102,6 +108,10 @@ struct SelectionFeature {
                 state.destination = nil
                 return .send(.goToChickenMapTriggered(game))
             case .destination:
+                return .none
+            case .dismissActiveGame:
+                state.activeGame = nil
+                state.activeGameRole = nil
                 return .none
             case .dismissChickenConfig:
                 state.destination = nil
@@ -186,8 +196,40 @@ struct SelectionFeature {
                     }
                 )
                 return .none
-            case .onTask:
+            case let .activeGameFound(game, role):
+                state.activeGame = game
+                state.activeGameRole = role
                 return .none
+            case .noActiveGameFound:
+                state.activeGame = nil
+                state.activeGameRole = nil
+                return .none
+            case .onTask:
+                let userId = authClient.currentUserId()
+                guard let userId, !userId.isEmpty else {
+                    return .none
+                }
+                return .run { [apiClient] send in
+                    if let (game, role) = try await apiClient.findActiveGame(userId) {
+                        await send(.activeGameFound(game, role))
+                    } else {
+                        await send(.noActiveGameFound)
+                    }
+                }
+            case .rejoinGameTapped:
+                guard let game = state.activeGame, let role = state.activeGameRole else {
+                    return .none
+                }
+                state.activeGame = nil
+                state.activeGameRole = nil
+                switch role {
+                case .chicken:
+                    return .send(.goToChickenMapTriggered(game))
+                case .hunter:
+                    let savedNickname = state.savedNickname.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let finalName = savedNickname.isEmpty ? "Hunter" : savedNickname
+                    return .send(.goToHunterMapTriggered(game, finalName))
+                }
             case .startButtonTapped:
                 // Block if location not authorized
                 let startLocStatus = locationClient.authorizationStatus()
@@ -299,6 +341,11 @@ struct SelectionView: View {
                     .padding()
                 }
                 Spacer()
+
+                if store.activeGame != nil {
+                    rejoinBanner
+                }
+
                 HStack {
                     Spacer()
                     Button {
@@ -386,6 +433,56 @@ struct SelectionView: View {
                     }
             }
         }
+    }
+
+    private var rejoinBanner: some View {
+        ZStack(alignment: .topTrailing) {
+            VStack(spacing: 12) {
+                Text("Game in progress")
+                    .font(.gameboy(size: 14))
+                    .foregroundStyle(.white)
+
+                if let code = store.activeGame?.gameCode {
+                    Text(code)
+                        .font(.gameboy(size: 20))
+                        .foregroundStyle(.white)
+                }
+
+                Button {
+                    store.send(.rejoinGameTapped)
+                } label: {
+                    Text("Rejoin")
+                        .font(.gameboy(size: 16))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(.white, lineWidth: 3)
+                        )
+                }
+                .accessibilityLabel("Rejoin game")
+            }
+            .padding(20)
+            .frame(maxWidth: .infinity)
+
+            Button {
+                withAnimation { _ = store.send(.dismissActiveGame) }
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(.white)
+                    .padding(8)
+            }
+            .accessibilityLabel("Dismiss")
+            .padding(8)
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.CROrange)
+        )
+        .padding(.horizontal, 24)
+        .transition(.move(edge: .bottom).combined(with: .opacity))
     }
 
     private func animateBlinking() {

@@ -11,6 +11,7 @@ import FirebaseFirestore
 import os
 
 struct ApiClient {
+    var findActiveGame: (String) async throws -> (Game, PlayerRole)?
     var addWinner: (String, Winner) async throws -> Void
     var deleteConfig: (String) async throws -> Void
     var getConfig: (String) async throws -> Game?
@@ -51,6 +52,7 @@ private func withRetry(_ operation: String, block: () async throws -> Void) asyn
 
 extension ApiClient: TestDependencyKey {
     static let testValue = ApiClient(
+        findActiveGame: { _ in nil },
         addWinner: { _, _ in },
         deleteConfig: { _ in },
         getConfig: { _ in nil },
@@ -68,6 +70,44 @@ extension ApiClient: TestDependencyKey {
 
 extension ApiClient: DependencyKey {
     static var liveValue = ApiClient(
+        findActiveGame: { userId in
+            let db = Firestore.firestore()
+            let activeStatuses = [Game.GameStatus.waiting.rawValue, Game.GameStatus.inProgress.rawValue]
+
+            // Query 1: Is the user a hunter in an active game?
+            do {
+                let hunterSnapshot = try await db.collection(gamesCollection)
+                    .whereField("hunterIds", arrayContains: userId)
+                    .whereField("status", in: activeStatuses)
+                    .limit(to: 1)
+                    .getDocuments()
+
+                if let doc = hunterSnapshot.documents.first,
+                   let game = try? doc.data(as: Game.self) {
+                    return (game, .hunter)
+                }
+            } catch {
+                logger.error("findActiveGame hunter query failed: \(error.localizedDescription)")
+            }
+
+            // Query 2: Is the user the chicken/creator?
+            do {
+                let creatorSnapshot = try await db.collection(gamesCollection)
+                    .whereField("creatorId", isEqualTo: userId)
+                    .whereField("status", in: activeStatuses)
+                    .limit(to: 1)
+                    .getDocuments()
+
+                if let doc = creatorSnapshot.documents.first,
+                   let game = try? doc.data(as: Game.self) {
+                    return (game, .chicken)
+                }
+            } catch {
+                logger.error("findActiveGame creator query failed: \(error.localizedDescription)")
+            }
+
+            return nil
+        },
         addWinner: { gameId, winner in
             try await withRetry("addWinner(\(gameId))") {
                 let ref = Firestore.firestore().collection(gamesCollection).document(gameId)

@@ -13,6 +13,7 @@ import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameStatus
 import dev.rahier.pouleparty.model.HunterLocation
 import dev.rahier.pouleparty.model.Winner
+import dev.rahier.pouleparty.ui.PlayerRole
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -69,6 +70,41 @@ class FirestoreRepository @Inject constructor(
         }
     }
 
+    suspend fun findActiveGame(userId: String): Pair<Game, PlayerRole>? {
+        if (userId.isEmpty()) return null
+        val activeStatuses = listOf(
+            GameStatus.WAITING.firestoreValue,
+            GameStatus.IN_PROGRESS.firestoreValue
+        )
+        try {
+            // Check if user is a hunter in an active game
+            val hunterSnapshot = firestore.collection(AppConstants.COLLECTION_GAMES)
+                .whereArrayContains("hunterIds", userId)
+                .whereIn("status", activeStatuses)
+                .limit(1)
+                .get()
+                .await()
+            hunterSnapshot.documents.firstOrNull()?.let { doc ->
+                val game = doc.toObject(Game::class.java)?.copy(id = doc.id)
+                if (game != null) return Pair(game, PlayerRole.HUNTER)
+            }
+            // Check if user is the chicken (creator) of an active game
+            val chickenSnapshot = firestore.collection(AppConstants.COLLECTION_GAMES)
+                .whereEqualTo("creatorId", userId)
+                .whereIn("status", activeStatuses)
+                .limit(1)
+                .get()
+                .await()
+            chickenSnapshot.documents.firstOrNull()?.let { doc ->
+                val game = doc.toObject(Game::class.java)?.copy(id = doc.id)
+                if (game != null) return Pair(game, PlayerRole.CHICKEN)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to find active game for user $userId", e)
+        }
+        return null
+    }
+
     suspend fun findGameByCode(code: String): Game? {
         return try {
             val snapshot = firestore.collection(AppConstants.COLLECTION_GAMES)
@@ -109,6 +145,10 @@ class FirestoreRepository @Inject constructor(
     }
 
     suspend fun registerHunter(gameId: String, hunterId: String) {
+        if (gameId.isEmpty() || hunterId.isEmpty()) {
+            Log.w(TAG, "registerHunter skipped — gameId: '$gameId', hunterId: '$hunterId'")
+            return
+        }
         withRetry("registerHunter($gameId, $hunterId)") {
             firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
                 .update("hunterIds", FieldValue.arrayUnion(hunterId))
@@ -196,6 +236,10 @@ class FirestoreRepository @Inject constructor(
     // ── Hunter locations ──────────────────────────────────
 
     fun setHunterLocation(gameId: String, hunterId: String, point: Point) {
+        if (gameId.isEmpty() || hunterId.isEmpty()) {
+            Log.w(TAG, "setHunterLocation skipped — gameId: '$gameId', hunterId: '$hunterId'")
+            return
+        }
         val data = HunterLocation(
             hunterId = hunterId,
             location = GeoPoint(point.latitude(), point.longitude()),

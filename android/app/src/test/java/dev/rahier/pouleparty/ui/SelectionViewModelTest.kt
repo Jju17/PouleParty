@@ -50,4 +50,16 @@ class SelectionViewModelTest {
         val updated = state.copy(hunterName = "Julien")
         assertEquals("Julien", updated.hunterName)
     }
+
+    @Test
+    fun `initial state has null activeGame`() {
+        val state = SelectionUiState()
+        assertNull(state.activeGame)
+    }
+
+    @Test
+    fun `initial state has null activeGameRole`() {
+        val state = SelectionUiState()
+        assertNull(state.activeGameRole)
+    }
 }

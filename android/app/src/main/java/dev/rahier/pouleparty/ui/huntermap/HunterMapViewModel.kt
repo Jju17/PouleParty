@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.huntermap
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -70,6 +71,10 @@ class HunterMapViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
+    companion object {
+        private const val TAG = "HunterMapViewModel"
+    }
+
     val gameId: String = savedStateHandle["gameId"] ?: ""
     val hunterName: String = savedStateHandle["hunterName"] ?: "Hunter"
     val hunterId: String = auth.currentUser?.uid ?: ""
@@ -85,7 +90,13 @@ class HunterMapViewModel @Inject constructor(
 
     private fun loadGame() {
         viewModelScope.launch {
+            Log.d(TAG, "loadGame — gameId: $gameId, hunterId: '$hunterId', gameMod: checking...")
+            if (hunterId.isEmpty()) {
+                Log.e(TAG, "hunterId is empty — cannot register hunter or write location. auth.currentUser: ${auth.currentUser}")
+                return@launch
+            }
             val game = firestoreRepository.getConfig(gameId) ?: return@launch
+            Log.d(TAG, "loadGame — gameMod: ${game.gameModEnum}, shouldWriteLocation: ${game.gameModEnum == GameMod.MUTUAL_TRACKING}")
             val (lastUpdate, lastRadius) = game.findLastUpdate()
 
             _uiState.update {

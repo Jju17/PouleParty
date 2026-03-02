@@ -103,21 +103,91 @@ fun SelectionScreen(
             )
         }
 
-        // Bottom-right: I am la poule button
-        TextButton(
-            onClick = { viewModel.onIAmLaPouleTapped() },
+        // Bottom section: rejoin banner + I am la poule
+        Column(
             modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(16.dp)
-                .padding(bottom = 16.dp)
-                .border(1.5.dp, MaterialTheme.colorScheme.onBackground, RoundedCornerShape(8.dp))
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                stringResource(R.string.i_am_la_poule),
-                fontFamily = GameBoyFont,
-                fontSize = 8.sp,
-                color = Color.Black
-            )
+            // Rejoin banner
+            if (state.activeGame != null) {
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 24.dp)
+                        .background(CROrange, RoundedCornerShape(16.dp))
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            stringResource(R.string.rejoin_game_in_progress),
+                            fontFamily = GameBoyFont,
+                            fontSize = 14.sp,
+                            color = Color.White
+                        )
+                        Text(
+                            state.activeGame!!.gameCode,
+                            fontFamily = GameBoyFont,
+                            fontSize = 20.sp,
+                            color = Color.White
+                        )
+                        TextButton(
+                            onClick = {
+                                viewModel.rejoinGame(
+                                    onRejoinAsChicken = { gameId -> onNavigateToChickenMap(gameId) },
+                                    onRejoinAsHunter = { gameId, hunterName -> onNavigateToHunterMap(gameId, hunterName) }
+                                )
+                            },
+                            modifier = Modifier
+                                .border(3.dp, Color.White, RoundedCornerShape(10.dp))
+                        ) {
+                            Text(
+                                stringResource(R.string.rejoin),
+                                fontFamily = GameBoyFont,
+                                fontSize = 16.sp,
+                                color = Color.White
+                            )
+                        }
+                    }
+
+                    // Close button
+                    IconButton(
+                        onClick = { viewModel.dismissActiveGame() },
+                        modifier = Modifier.align(Alignment.TopEnd)
+                    ) {
+                        Text(
+                            "✕",
+                            color = Color.White,
+                            fontSize = 14.sp
+                        )
+                    }
+                }
+            }
+
+            // I am la poule button
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                TextButton(
+                    onClick = { viewModel.onIAmLaPouleTapped() },
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .border(1.5.dp, MaterialTheme.colorScheme.onBackground, RoundedCornerShape(8.dp))
+                ) {
+                    Text(
+                        stringResource(R.string.i_am_la_poule),
+                        fontFamily = GameBoyFont,
+                        fontSize = 8.sp,
+                        color = Color.Black
+                    )
+                }
+            }
         }
     }
 

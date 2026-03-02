@@ -3,11 +3,14 @@ package dev.rahier.pouleparty.ui.selection
 import android.content.SharedPreferences
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.rahier.pouleparty.AppConstants
 import dev.rahier.pouleparty.data.FirestoreRepository
 import dev.rahier.pouleparty.data.LocationRepository
+import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameStatus
+import dev.rahier.pouleparty.ui.PlayerRole
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,18 +28,56 @@ data class SelectionUiState(
     val isShowingLocationRequired: Boolean = false,
     val password: String = "",
     val gameCode: String = "",
-    val hunterName: String = ""
+    val hunterName: String = "",
+    val activeGame: Game? = null,
+    val activeGameRole: PlayerRole? = null
 )
 
 @HiltViewModel
 class SelectionViewModel @Inject constructor(
     private val firestoreRepository: FirestoreRepository,
     private val locationRepository: LocationRepository,
-    private val prefs: SharedPreferences
+    private val prefs: SharedPreferences,
+    private val auth: FirebaseAuth
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SelectionUiState())
     val uiState: StateFlow<SelectionUiState> = _uiState.asStateFlow()
+
+    init {
+        checkForActiveGame()
+    }
+
+    private fun checkForActiveGame() {
+        val userId = auth.currentUser?.uid ?: return
+        viewModelScope.launch {
+            val result = firestoreRepository.findActiveGame(userId)
+            if (result != null) {
+                _uiState.update { it.copy(activeGame = result.first, activeGameRole = result.second) }
+            } else {
+                _uiState.update { it.copy(activeGame = null, activeGameRole = null) }
+            }
+        }
+    }
+
+    fun dismissActiveGame() {
+        _uiState.update { it.copy(activeGame = null, activeGameRole = null) }
+    }
+
+    fun rejoinGame(
+        onRejoinAsChicken: (String) -> Unit,
+        onRejoinAsHunter: (String, String) -> Unit
+    ) {
+        val game = _uiState.value.activeGame ?: return
+        val role = _uiState.value.activeGameRole ?: return
+        _uiState.update { it.copy(activeGame = null, activeGameRole = null) }
+        val savedNickname = (prefs.getString(AppConstants.PREF_USER_NICKNAME, "") ?: "").trim()
+        val hunterName = savedNickname.ifEmpty { "Hunter" }
+        when (role) {
+            PlayerRole.CHICKEN -> onRejoinAsChicken(game.id)
+            PlayerRole.HUNTER -> onRejoinAsHunter(game.id, hunterName)
+        }
+    }
 
     fun onStartButtonTapped() {
         if (!locationRepository.hasFineLocationPermission()) {

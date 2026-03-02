@@ -20,6 +20,8 @@
     <string name="game_not_found_message">No active game found with this code. Check the code and try again.</string>
     <string name="game_in_progress">Game in progress</string>
     <string name="game_in_progress_message">This game is already in progress. You cannot join anymore.</string>
+    <string name="rejoin_game_in_progress">Game in progress</string>
+    <string name="rejoin">Rejoin</string>
     <string name="location_required">Location Required</string>
     <string name="location_required_message">Location is the core of PouleParty! Your position is anonymous and only used during the game. Please enable location access to continue.</string>
 
