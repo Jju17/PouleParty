@@ -115,10 +115,10 @@
     <string name="mode_follow_detail1">La Poule envoie sa position à tous les Chasseurs</string>
     <string name="mode_follow_detail2">Les Chasseurs voient la zone bouger avec la Poule</string>
     <string name="mode_follow_detail3">La Poule ne voit PAS les Chasseurs</string>
-    <string name="mode_stay_desc">La zone reste fixe sur la carte et rétrécit. Tout le monde doit rester à l\'intérieur !</string>
+    <string name="mode_stay_desc">La zone rétrécit et se déplace aléatoirement autour du point de départ. Les Chasseurs doivent trouver la Poule sans aucun indice de position !</string>
     <string name="mode_stay_detail1">Pas de partage de position entre joueurs</string>
-    <string name="mode_stay_detail2">La zone est centrée sur le lieu de départ</string>
-    <string name="mode_stay_detail3">Stratégie : restez caché dans la zone qui rétrécit</string>
+    <string name="mode_stay_detail2">La zone se déplace aléatoirement mais contient toujours le lieu de départ</string>
+    <string name="mode_stay_detail3">Stratégie : fouillez la zone mouvante pour trouver la Poule !</string>
     <string name="mode_mutual_desc">Comme Suivre la Poule, mais la Poule peut aussi voir tous les Chasseurs sur sa carte !</string>
     <string name="mode_mutual_detail1">La Poule envoie sa position aux Chasseurs</string>
     <string name="mode_mutual_detail2">Les Chasseurs envoient leur position à la Poule</string>

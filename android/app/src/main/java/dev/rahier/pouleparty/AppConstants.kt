@@ -45,8 +45,8 @@ object AppConstants {
     const val CODE_MAX_WRONG_ATTEMPTS = 3
     const val CODE_COOLDOWN_MS = 10_000L
 
-    // Zone
-    const val OUTSIDE_ZONE_GRACE_PERIOD_SECONDS = 30
+    // Zone — grace period disabled, kept for future game mode
+    // const val OUTSIDE_ZONE_GRACE_PERIOD_SECONDS = 30
 
     // Map
     const val MAP_CAMERA_ZOOM = 14f

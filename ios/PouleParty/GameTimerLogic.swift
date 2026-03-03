@@ -95,6 +95,51 @@ func checkGameOverByTime(endDate: Date) -> Bool {
     .now >= endDate
 }
 
+// MARK: - Deterministic Drift
+
+/// Computes a deterministic drifted center for stayInTheZone mode.
+/// The result is offset from `basePoint`, always within both:
+///  - `newRadius * 0.5` of basePoint (so basePoint stays well inside)
+///  - `(oldRadius - newRadius)` of any previous center that was also computed this way
+///
+/// The seed is derived from `gameId` + `newRadius` so every client
+/// produces the exact same circle at each shrink step.
+func deterministicDriftCenter(
+    basePoint: CLLocationCoordinate2D,
+    oldRadius: Double,
+    newRadius: Double,
+    gameId: String
+) -> CLLocationCoordinate2D {
+    let maxFromBase = newRadius * 0.5
+    let maxFromPrev = max(0, oldRadius - newRadius) * 0.5
+    let safeDrift = min(maxFromBase, maxFromPrev)
+
+    guard safeDrift > 0 else { return basePoint }
+
+    // Deterministic seed from gameId + newRadius (two independent seeds)
+    var gameIdSum = 0
+    for byte in gameId.utf8 {
+        gameIdSum += Int(byte)
+    }
+    let angleSeed = abs(gameIdSum &* 31 ^ Int(newRadius))
+    let distSeed = abs(gameIdSum &* 127 ^ (Int(newRadius) &* 37))
+
+    let angle = Double(angleSeed % 36000) / 36000.0 * 2.0 * .pi
+    let distFraction = Double(distSeed % 10000) / 10000.0
+    let distance = safeDrift * distFraction.squareRoot()
+
+    let metersPerDegreeLat = 111_320.0
+    let metersPerDegreeLng = 111_320.0 * cos(basePoint.latitude * .pi / 180.0)
+
+    let dLat = (distance * cos(angle)) / metersPerDegreeLat
+    let dLng = (distance * sin(angle)) / metersPerDegreeLng
+
+    return CLLocationCoordinate2D(
+        latitude: basePoint.latitude + dLat,
+        longitude: basePoint.longitude + dLng
+    )
+}
+
 // MARK: - Radius Update
 
 struct RadiusUpdateResult: Equatable {
@@ -113,7 +158,8 @@ func processRadiusUpdate(
     radiusIntervalUpdate: Double,
     gameMod: Game.GameMod,
     initialCoordinates: CLLocationCoordinate2D,
-    currentCircle: CircleOverlay?
+    currentCircle: CircleOverlay?,
+    gameId: String = ""
 ) -> RadiusUpdateResult? {
     guard let nextUpdate = nextRadiusUpdate, .now >= nextUpdate else { return nil }
 
@@ -133,7 +179,13 @@ func processRadiusUpdate(
 
     let newCircle: CircleOverlay?
     if gameMod == .stayInTheZone {
-        newCircle = CircleOverlay(center: initialCoordinates, radius: CLLocationDistance(newRadius))
+        let driftedCenter = deterministicDriftCenter(
+            basePoint: initialCoordinates,
+            oldRadius: Double(currentRadius),
+            newRadius: Double(newRadius),
+            gameId: gameId
+        )
+        newCircle = CircleOverlay(center: driftedCenter, radius: CLLocationDistance(newRadius))
     } else if let currentCircle {
         newCircle = CircleOverlay(center: currentCircle.center, radius: CLLocationDistance(newRadius))
     } else {

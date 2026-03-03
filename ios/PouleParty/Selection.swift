@@ -21,7 +21,6 @@ struct SelectionFeature {
         @Shared(.appStorage(AppConstants.prefUserNickname)) var savedNickname = ""
         var password: String = ""
         var gameCode: String = ""
-        var hunterName: String = ""
         var isAuthenticating = false
         var isJoiningGame = false
         var activeGame: Game? = nil
@@ -260,10 +259,8 @@ struct SelectionFeature {
                         return
                     }
                     switch game.status {
-                    case .waiting:
+                    case .waiting, .inProgress:
                         await send(.goToHunterMapTriggered(game, finalName))
-                    case .inProgress:
-                        await send(.gameInProgress)
                     case .done:
                         await send(.goToVictoryAsSpectator(game))
                     }
@@ -390,7 +387,7 @@ struct SelectionView: View {
         .task {
             self.store.send(.onTask)
             self.playSound()
-            self.animateBlinking()
+            await self.animateBlinking()
         }
         .sheet(
             item: $store.scope(
@@ -485,16 +482,12 @@ struct SelectionView: View {
         .transition(.move(edge: .bottom).combined(with: .opacity))
     }
 
-    private func animateBlinking() {
-        Task {
-            while !Task.isCancelled {
-                await MainActor.run {
-                    withAnimation(Animation.easeInOut(duration: 0.5)) {
-                        self.isVisible.toggle()
-                    }
-                }
-                try? await Task.sleep(nanoseconds: UInt64(0.5 * 1_000_000_000))
+    private func animateBlinking() async {
+        while !Task.isCancelled {
+            withAnimation(Animation.easeInOut(duration: 0.5)) {
+                self.isVisible.toggle()
             }
+            try? await Task.sleep(nanoseconds: UInt64(0.5 * 1_000_000_000))
         }
     }
 

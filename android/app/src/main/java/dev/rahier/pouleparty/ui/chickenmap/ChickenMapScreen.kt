@@ -237,29 +237,19 @@ fun ChickenMapScreen(
             )
         }
 
-        // Zone warning banner
+        // Zone warning banner (visual warning only — no elimination)
         if (state.isOutsideZone) {
-            Column(
+            Text(
+                text = stringResource(R.string.return_to_zone),
+                color = Color.White,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .padding(top = 140.dp)
                     .background(Color.Red.copy(alpha = 0.9f), RoundedCornerShape(12.dp))
-                    .padding(horizontal = 24.dp, vertical = 12.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = stringResource(R.string.return_to_zone),
-                    color = Color.White,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "${state.outsideZoneSeconds}s",
-                    color = Color.White,
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.ExtraBold
-                )
-            }
+                    .padding(horizontal = 24.dp, vertical = 12.dp)
+            )
         }
     }
     }

@@ -147,8 +147,7 @@ class SelectionViewModel @Inject constructor(
 
     /**
      * Join a game by code. Routes based on game status:
-     * - waiting → onGameFound (join as hunter)
-     * - inProgress → show "game in progress" alert
+     * - waiting / inProgress → onGameFound (join as hunter)
      * - done → onGameDone (spectator victory)
      */
     fun joinGame(onGameFound: (String, String) -> Unit, onGameDone: (String) -> Unit) {
@@ -166,8 +165,7 @@ class SelectionViewModel @Inject constructor(
                 return@launch
             }
             when (game.gameStatusEnum) {
-                GameStatus.WAITING -> onGameFound(game.id, hunterName)
-                GameStatus.IN_PROGRESS -> _uiState.update { it.copy(isShowingGameInProgress = true) }
+                GameStatus.WAITING, GameStatus.IN_PROGRESS -> onGameFound(game.id, hunterName)
                 GameStatus.DONE -> onGameDone(game.id)
             }
         }

@@ -64,11 +64,11 @@ struct GameRulesView: View {
 
             gameModeCard(
                 title: Game.GameMod.stayInTheZone.title,
-                description: "The zone stays fixed on the map and shrinks over time. Everyone must stay inside!",
+                description: "The zone shrinks and drifts randomly around the starting point. Hunters must find the Chicken with no position clues!",
                 details: [
                     "No position sharing between players",
-                    "The zone is centered on the starting location",
-                    "Strategy: stay hidden inside the shrinking zone"
+                    "The zone drifts randomly but always contains the starting location",
+                    "Strategy: search the moving zone to find the Chicken!"
                 ]
             )
 

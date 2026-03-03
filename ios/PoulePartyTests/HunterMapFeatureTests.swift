@@ -101,11 +101,18 @@ struct HunterMapFeatureTests {
         }
         store.exhaustivity = .off
 
+        let newRadius = 500 - Int(game.radiusDeclinePerUpdate)
+        let expectedCenter = deterministicDriftCenter(
+            basePoint: game.initialCoordinates.toCLCoordinates,
+            oldRadius: 500,
+            newRadius: Double(newRadius),
+            gameId: game.id
+        )
         await store.send(.timerTicked) {
-            $0.radius = 500 - Int(game.radiusDeclinePerUpdate)
+            $0.radius = newRadius
             $0.mapCircle = CircleOverlay(
-                center: game.initialCoordinates.toCLCoordinates,
-                radius: CLLocationDistance(500 - Int(game.radiusDeclinePerUpdate))
+                center: expectedCenter,
+                radius: CLLocationDistance(newRadius)
             )
         }
     }

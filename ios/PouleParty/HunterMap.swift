@@ -36,8 +36,6 @@ struct HunterMapFeature {
         var codeCooldownUntil: Date? = nil
         var userLocation: CLLocationCoordinate2D?
         var isOutsideZone: Bool = false
-        var outsideZoneSince: Date?
-        var outsideZoneSeconds: Int = 0
 
         var hasGameStarted: Bool { nowDate >= game.hunterStartDate }
         var isCodeOnCooldown: Bool { codeCooldownUntil.map { nowDate < $0 } ?? false }
@@ -166,9 +164,15 @@ struct HunterMapFeature {
                 )
                 let gameId = state.game.id
                 return .run { send in
-                    try await apiClient.addWinner(gameId, winner)
-                    locationClient.stopTracking()
-                    await send(.goToVictory)
+                    do {
+                        try await apiClient.addWinner(gameId, winner)
+                        locationClient.stopTracking()
+                        await send(.goToVictory)
+                    } catch {
+                        locationClient.stopTracking()
+                        logger.error("Failed to add winner: \(error.localizedDescription)")
+                        await send(.goToVictory)
+                    }
                 }
             case .goToMenu:
                 return .none
@@ -394,7 +398,8 @@ struct HunterMapFeature {
                     radiusIntervalUpdate: state.game.radiusIntervalUpdate,
                     gameMod: state.game.gameMod,
                     initialCoordinates: state.game.initialCoordinates.toCLCoordinates,
-                    currentCircle: state.mapCircle
+                    currentCircle: state.mapCircle,
+                    gameId: state.game.id
                 ) {
                     if result.isGameOver {
                         locationClient.stopTracking()
@@ -416,7 +421,7 @@ struct HunterMapFeature {
                     state.mapCircle = result.newCircle
                 }
 
-                // Zone check
+                // Zone check (visual warning only — no elimination)
                 if shouldCheckZone(role: .hunter, gameMod: state.game.gameMod),
                    let userLoc = state.userLocation,
                    let circle = state.mapCircle {
@@ -425,18 +430,7 @@ struct HunterMapFeature {
                         zoneCenter: circle.center,
                         zoneRadius: circle.radius
                     )
-                    if zoneResult.isOutsideZone {
-                        if state.outsideZoneSince == nil {
-                            state.outsideZoneSince = .now
-                        }
-                        let elapsed = Int(Date.now.timeIntervalSince(state.outsideZoneSince!))
-                        state.outsideZoneSeconds = max(0, AppConstants.outsideZoneGracePeriodSeconds - elapsed)
-                        state.isOutsideZone = true
-                    } else {
-                        state.isOutsideZone = false
-                        state.outsideZoneSince = nil
-                        state.outsideZoneSeconds = 0
-                    }
+                    state.isOutsideZone = zoneResult.isOutsideZone
                 }
                 return .none
             case let .userLocationUpdated(location):
@@ -630,7 +624,7 @@ struct HunterMapView: View {
             }
             .overlay(alignment: .top) {
                 if store.isOutsideZone {
-                    ZoneWarningOverlay(secondsRemaining: store.outsideZoneSeconds)
+                    ZoneWarningOverlay()
                 }
             }
             .overlay {
@@ -651,20 +645,6 @@ struct HunterMapView: View {
                 }
             }
     }
-}
-
-/// Large rectangle centered on the given coordinate, used as the outer boundary for inverted zone overlay.
-private func outerBoundsCoordinates(center: CLLocationCoordinate2D, padding: Double = 20.0) -> [CLLocationCoordinate2D] {
-    let north = min(85.0, center.latitude + padding)
-    let south = max(-85.0, center.latitude - padding)
-    let west = center.longitude - padding
-    let east = center.longitude + padding
-    return [
-        CLLocationCoordinate2D(latitude: north, longitude: west),
-        CLLocationCoordinate2D(latitude: north, longitude: east),
-        CLLocationCoordinate2D(latitude: south, longitude: east),
-        CLLocationCoordinate2D(latitude: south, longitude: west)
-    ]
 }
 
 #Preview {

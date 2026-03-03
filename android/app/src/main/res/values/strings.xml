@@ -118,10 +118,10 @@
     <string name="mode_follow_detail1">Chicken sends its position to all Hunters</string>
     <string name="mode_follow_detail2">Hunters see the zone move with the Chicken</string>
     <string name="mode_follow_detail3">Chicken does NOT see the Hunters</string>
-    <string name="mode_stay_desc">The zone stays fixed on the map and shrinks over time. Everyone must stay inside!</string>
+    <string name="mode_stay_desc">The zone shrinks and drifts randomly around the starting point. Hunters must find the Chicken with no position clues!</string>
     <string name="mode_stay_detail1">No position sharing between players</string>
-    <string name="mode_stay_detail2">The zone is centered on the starting location</string>
-    <string name="mode_stay_detail3">Strategy: stay hidden inside the shrinking zone</string>
+    <string name="mode_stay_detail2">The zone drifts randomly but always contains the starting location</string>
+    <string name="mode_stay_detail3">Strategy: search the moving zone to find the Chicken!</string>
     <string name="mode_mutual_desc">Like Follow the Chicken, but the Chicken can also see all Hunters on her map!</string>
     <string name="mode_mutual_detail1">Chicken sends its position to Hunters</string>
     <string name="mode_mutual_detail2">Hunters send their position to the Chicken</string>

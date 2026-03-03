@@ -157,12 +157,10 @@ class FirestoreRepository @Inject constructor(
     }
 
     suspend fun updateGameStatus(gameId: String, status: GameStatus) {
-        try {
+        withRetry("updateGameStatus($gameId, $status)") {
             firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
                 .update("status", status.firestoreValue)
                 .await()
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to update game status $gameId → $status", e)
         }
     }
 
@@ -175,7 +173,7 @@ class FirestoreRepository @Inject constructor(
         )
         firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
             .collection(AppConstants.SUBCOLLECTION_CHICKEN_LOCATIONS)
-            .document()
+            .document("latest")
             .set(data)
             .addOnFailureListener { e -> Log.e(TAG, "Failed to set chicken location for game $gameId", e) }
     }

@@ -59,9 +59,7 @@ data class ChickenMapUiState(
     val countdownNumber: Int? = null,
     val countdownText: String? = null,
     val userLocation: Point? = null,
-    val isOutsideZone: Boolean = false,
-    val outsideZoneSince: Long = 0,
-    val outsideZoneSeconds: Int = 0
+    val isOutsideZone: Boolean = false
 )
 
 @HiltViewModel
@@ -94,6 +92,10 @@ class ChickenMapViewModel @Inject constructor(
                     nextRadiusUpdate = lastUpdate,
                     circleCenter = game.initialLocation
                 )
+            }
+
+            if (game.gameStatusEnum == GameStatus.WAITING) {
+                try { firestoreRepository.updateGameStatus(gameId, GameStatus.IN_PROGRESS) } catch (_: Exception) {}
             }
 
             startTimer()
@@ -169,7 +171,8 @@ class ChickenMapViewModel @Inject constructor(
                     radiusIntervalUpdate = state.game.radiusIntervalUpdate,
                     gameMod = state.game.gameModEnum,
                     initialLocation = state.game.initialLocation,
-                    currentCircleCenter = state.circleCenter
+                    currentCircleCenter = state.circleCenter,
+                    gameId = gameId
                 )
                 if (radiusResult != null) {
                     if (radiusResult.isGameOver) {
@@ -192,21 +195,14 @@ class ChickenMapViewModel @Inject constructor(
                     }
                 }
 
-                // Zone check
+                // Zone check (visual warning only — no elimination)
                 val currentState = _uiState.value
                 if (shouldCheckZone(PlayerRole.CHICKEN, currentState.game.gameModEnum)) {
                     val userLoc = currentState.userLocation
                     val center = currentState.circleCenter
                     if (userLoc != null && center != null) {
                         val zoneResult = checkZoneStatus(userLoc, center, currentState.radius.toDouble())
-                        if (zoneResult.isOutsideZone) {
-                            val since = if (currentState.outsideZoneSince == 0L) System.currentTimeMillis() else currentState.outsideZoneSince
-                            val elapsed = ((System.currentTimeMillis() - since) / 1000).toInt()
-                            val remaining = maxOf(0, AppConstants.OUTSIDE_ZONE_GRACE_PERIOD_SECONDS - elapsed)
-                            _uiState.update { it.copy(isOutsideZone = true, outsideZoneSince = since, outsideZoneSeconds = remaining) }
-                        } else {
-                            _uiState.update { it.copy(isOutsideZone = false, outsideZoneSince = 0, outsideZoneSeconds = 0) }
-                        }
+                        _uiState.update { it.copy(isOutsideZone = zoneResult.isOutsideZone) }
                     }
                 }
             }

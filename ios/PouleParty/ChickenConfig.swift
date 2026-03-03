@@ -120,7 +120,7 @@ struct ChickenConfigView: View {
                         .frame(maxWidth: .infinity)
                         .padding()
                         .background(Color.CROrange)
-                        .cornerRadius(12)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .padding(.horizontal)
                 .padding(.bottom, 8)

@@ -162,9 +162,11 @@ extension ApiClient: DependencyKey {
             }
         },
         updateGameStatus: { gameId, status in
-            try await Firestore.firestore().collection(gamesCollection).document(gameId).updateData([
-                "status": status.rawValue
-            ])
+            try await withRetry("updateGameStatus(\(gameId), \(status))") {
+                try await Firestore.firestore().collection(gamesCollection).document(gameId).updateData([
+                    "status": status.rawValue
+                ])
+            }
         },
         chickenLocationStream: { gameId in
             AsyncStream { continuation in
@@ -258,7 +260,7 @@ extension ApiClient: DependencyKey {
             )
 
             let ref = Firestore.firestore()
-                .collection(gamesCollection).document(gameId).collection(chickenLocationsSubcollection).document()
+                .collection(gamesCollection).document(gameId).collection(chickenLocationsSubcollection).document("latest")
             try ref.setData(from: chickenLocation)
         },
         setConfig: { newGame in

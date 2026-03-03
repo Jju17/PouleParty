@@ -58,9 +58,7 @@ data class HunterMapUiState(
     val wrongCodeAttempts: Int = 0,
     val codeCooldownUntil: Long = 0,
     val userLocation: Point? = null,
-    val isOutsideZone: Boolean = false,
-    val outsideZoneSince: Long = 0,
-    val outsideZoneSeconds: Int = 0
+    val isOutsideZone: Boolean = false
 )
 
 @HiltViewModel
@@ -179,7 +177,8 @@ class HunterMapViewModel @Inject constructor(
                     radiusIntervalUpdate = state.game.radiusIntervalUpdate,
                     gameMod = state.game.gameModEnum,
                     initialLocation = state.game.initialLocation,
-                    currentCircleCenter = state.circleCenter
+                    currentCircleCenter = state.circleCenter,
+                    gameId = gameId
                 )
                 if (radiusResult != null) {
                     if (radiusResult.isGameOver) {
@@ -201,21 +200,14 @@ class HunterMapViewModel @Inject constructor(
                     }
                 }
 
-                // Zone check
+                // Zone check (visual warning only — no elimination)
                 val currentState = _uiState.value
                 if (shouldCheckZone(PlayerRole.HUNTER, currentState.game.gameModEnum)) {
                     val userLoc = currentState.userLocation
                     val center = currentState.circleCenter
                     if (userLoc != null && center != null) {
                         val zoneResult = checkZoneStatus(userLoc, center, currentState.radius.toDouble())
-                        if (zoneResult.isOutsideZone) {
-                            val since = if (currentState.outsideZoneSince == 0L) System.currentTimeMillis() else currentState.outsideZoneSince
-                            val elapsed = ((System.currentTimeMillis() - since) / 1000).toInt()
-                            val remaining = maxOf(0, AppConstants.OUTSIDE_ZONE_GRACE_PERIOD_SECONDS - elapsed)
-                            _uiState.update { it.copy(isOutsideZone = true, outsideZoneSince = since, outsideZoneSeconds = remaining) }
-                        } else {
-                            _uiState.update { it.copy(isOutsideZone = false, outsideZoneSince = 0, outsideZoneSeconds = 0) }
-                        }
+                        _uiState.update { it.copy(isOutsideZone = zoneResult.isOutsideZone) }
                     }
                 }
             }
@@ -256,8 +248,9 @@ class HunterMapViewModel @Inject constructor(
                     )
                 }
 
-                // Only reset circle center for stayInTheZone (fixed zone)
-                if (updatedGame.gameModEnum == GameMod.STAY_IN_THE_ZONE) {
+                // For stayInTheZone, only set initial circle if none exists yet
+                // (drift center is computed by processRadiusUpdate, don't overwrite it)
+                if (updatedGame.gameModEnum == GameMod.STAY_IN_THE_ZONE && _uiState.value.circleCenter == null) {
                     _uiState.update { it.copy(circleCenter = updatedGame.initialLocation) }
                 }
 

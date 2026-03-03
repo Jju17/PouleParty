@@ -5,6 +5,10 @@ import android.net.Uri
 import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.tasks.await
@@ -44,16 +48,20 @@ fun AppNavigation() {
     val prefs = context.getSharedPreferences(AppConstants.PREFS_NAME, Context.MODE_PRIVATE)
     val hasCompletedOnboarding = prefs.getBoolean(AppConstants.PREF_ONBOARDING_COMPLETED, false)
 
+    var isAuthReady by remember { mutableStateOf(FirebaseAuth.getInstance().currentUser != null) }
+
     LaunchedEffect(Unit) {
-        val auth = FirebaseAuth.getInstance()
-        if (auth.currentUser == null) {
+        if (!isAuthReady) {
             try {
-                auth.signInAnonymously().await()
+                FirebaseAuth.getInstance().signInAnonymously().await()
             } catch (e: Exception) {
                 Log.e("AppNavigation", "Anonymous sign-in failed", e)
             }
+            isAuthReady = true
         }
     }
+
+    if (!isAuthReady) return
 
     val startDestination = if (hasCompletedOnboarding) Routes.SELECTION else Routes.ONBOARDING
 

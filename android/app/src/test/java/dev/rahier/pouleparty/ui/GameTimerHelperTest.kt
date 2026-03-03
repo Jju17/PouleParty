@@ -222,10 +222,56 @@ class GameTimerHelperTest {
             radiusIntervalUpdate = 5.0,
             gameMod = GameMod.STAY_IN_THE_ZONE,
             initialLocation = initialLocation,
-            currentCircleCenter = currentCenter
+            currentCircleCenter = currentCenter,
+            gameId = "test-game-id"
         )
         assertNotNull(result)
-        assertEquals(initialLocation, result!!.newCircleCenter)
+        // With drift, center is close to initialLocation but not exactly equal
+        val center = result!!.newCircleCenter!!
+        val dLat = Math.abs(center.latitude() - initialLocation.latitude()) * 111_320
+        val dLng = Math.abs(center.longitude() - initialLocation.longitude()) * 111_320 * Math.cos(Math.toRadians(initialLocation.latitude()))
+        val distance = Math.sqrt(dLat * dLat + dLng * dLng)
+        // Max drift = min(1400*0.5, 100*0.5) = 50m
+        assertTrue("Drifted center should be within 60m of base point, was ${distance}m", distance < 60)
+    }
+
+    // ── deterministicDriftCenter ────────────────────
+
+    @Test
+    fun `drift center is deterministic`() {
+        val base = Point.fromLngLat(4.0, 50.0)
+        val r1 = deterministicDriftCenter(base, oldRadius = 1500.0, newRadius = 1400.0, gameId = "abc")
+        val r2 = deterministicDriftCenter(base, oldRadius = 1500.0, newRadius = 1400.0, gameId = "abc")
+        assertEquals(r1.latitude(), r2.latitude(), 0.0)
+        assertEquals(r1.longitude(), r2.longitude(), 0.0)
+    }
+
+    @Test
+    fun `drift center differs for different radius`() {
+        val base = Point.fromLngLat(4.0, 50.0)
+        val r1 = deterministicDriftCenter(base, oldRadius = 1500.0, newRadius = 1400.0, gameId = "abc")
+        val r2 = deterministicDriftCenter(base, oldRadius = 1400.0, newRadius = 1300.0, gameId = "abc")
+        val areDifferent = r1.latitude() != r2.latitude() || r1.longitude() != r2.longitude()
+        assertTrue("Different radius values should produce different drift centers", areDifferent)
+    }
+
+    @Test
+    fun `drift center stays close to base`() {
+        val base = Point.fromLngLat(4.0, 50.0)
+        val result = deterministicDriftCenter(base, oldRadius = 1500.0, newRadius = 1400.0, gameId = "test-game-42")
+        val dLat = Math.abs(result.latitude() - base.latitude()) * 111_320
+        val dLng = Math.abs(result.longitude() - base.longitude()) * 111_320 * Math.cos(Math.toRadians(base.latitude()))
+        val distance = Math.sqrt(dLat * dLat + dLng * dLng)
+        // safeDrift = min(1400*0.5, 100*0.5) = 50m
+        assertTrue("Drifted center must be within safeDrift of base, was ${distance}m", distance <= 50.01)
+    }
+
+    @Test
+    fun `drift center returns base when no room`() {
+        val base = Point.fromLngLat(4.0, 50.0)
+        val result = deterministicDriftCenter(base, oldRadius = 1000.0, newRadius = 1000.0, gameId = "abc")
+        assertEquals(base.latitude(), result.latitude(), 0.0)
+        assertEquals(base.longitude(), result.longitude(), 0.0)
     }
 
     // ── detectNewWinners ─────────────────────────────

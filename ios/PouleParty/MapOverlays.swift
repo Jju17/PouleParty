@@ -14,21 +14,15 @@ import SwiftUI
 
 /// Red banner shown when the player is outside the zone.
 struct ZoneWarningOverlay: View {
-    let secondsRemaining: Int
-
     var body: some View {
-        VStack(spacing: 4) {
-            Text("Return to the zone!")
-                .font(.system(size: 16, weight: .bold))
-            Text("\(secondsRemaining)s")
-                .font(.system(size: 28, weight: .heavy))
-        }
-        .foregroundStyle(.white)
-        .padding(.horizontal, 24)
-        .padding(.vertical, 12)
-        .background(.red.opacity(0.9))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .padding(.top, 140)
+        Text("Return to the zone!")
+            .font(.system(size: 16, weight: .bold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 24)
+            .padding(.vertical, 12)
+            .background(.red.opacity(0.9))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .padding(.top, 140)
     }
 }
 
@@ -87,4 +81,20 @@ struct CameraRegion: Equatable {
         latitudeDelta: 0.01,
         longitudeDelta: 0.01
     )
+}
+
+// MARK: - Outer Bounds (inverted zone overlay)
+
+/// Large rectangle centered on the given coordinate, used as the outer boundary for inverted zone overlay.
+func outerBoundsCoordinates(center: CLLocationCoordinate2D, padding: Double = 20.0) -> [CLLocationCoordinate2D] {
+    let north = min(85.0, center.latitude + padding)
+    let south = max(-85.0, center.latitude - padding)
+    let west = center.longitude - padding
+    let east = center.longitude + padding
+    return [
+        CLLocationCoordinate2D(latitude: north, longitude: west),
+        CLLocationCoordinate2D(latitude: north, longitude: east),
+        CLLocationCoordinate2D(latitude: south, longitude: east),
+        CLLocationCoordinate2D(latitude: south, longitude: west)
+    ]
 }

@@ -203,10 +203,50 @@ struct GameTimerLogicTests {
             radiusIntervalUpdate: 5,
             gameMod: .stayInTheZone,
             initialCoordinates: initialCoords,
-            currentCircle: CircleOverlay(center: currentCenter, radius: 1500)
+            currentCircle: CircleOverlay(center: currentCenter, radius: 1500),
+            gameId: "test-game-id"
         )
         #expect(result != nil)
-        #expect(result!.newCircle!.center.latitude == initialCoords.latitude)
+        // With drift, center is close to initialCoords but not exactly equal
+        let distance = CLLocation(latitude: result!.newCircle!.center.latitude, longitude: result!.newCircle!.center.longitude)
+            .distance(from: CLLocation(latitude: initialCoords.latitude, longitude: initialCoords.longitude))
+        // Max drift = min(1400*0.5, 100*0.5) = 50m
+        #expect(distance < 60, "Drifted center should be within 60m of base point")
+    }
+
+    // MARK: - deterministicDriftCenter
+
+    @Test func driftCenterIsDeterministic() {
+        let base = CLLocationCoordinate2D(latitude: 50.0, longitude: 4.0)
+        let result1 = deterministicDriftCenter(basePoint: base, oldRadius: 1500, newRadius: 1400, gameId: "abc")
+        let result2 = deterministicDriftCenter(basePoint: base, oldRadius: 1500, newRadius: 1400, gameId: "abc")
+        #expect(result1.latitude == result2.latitude)
+        #expect(result1.longitude == result2.longitude)
+    }
+
+    @Test func driftCenterDiffersForDifferentRadius() {
+        let base = CLLocationCoordinate2D(latitude: 50.0, longitude: 4.0)
+        let result1 = deterministicDriftCenter(basePoint: base, oldRadius: 1500, newRadius: 1400, gameId: "abc")
+        let result2 = deterministicDriftCenter(basePoint: base, oldRadius: 1400, newRadius: 1300, gameId: "abc")
+        let areDifferent = result1.latitude != result2.latitude || result1.longitude != result2.longitude
+        #expect(areDifferent, "Different radius values should produce different drift centers")
+    }
+
+    @Test func driftCenterStaysCloseToBase() {
+        let base = CLLocationCoordinate2D(latitude: 50.0, longitude: 4.0)
+        let result = deterministicDriftCenter(basePoint: base, oldRadius: 1500, newRadius: 1400, gameId: "test-game-42")
+        let distance = CLLocation(latitude: result.latitude, longitude: result.longitude)
+            .distance(from: CLLocation(latitude: base.latitude, longitude: base.longitude))
+        // safeDrift = min(1400*0.5, 100*0.5) = 50m
+        #expect(distance <= 50, "Drifted center must be within safeDrift of base")
+    }
+
+    @Test func driftCenterReturnsBaseWhenNoRoom() {
+        let base = CLLocationCoordinate2D(latitude: 50.0, longitude: 4.0)
+        // oldRadius == newRadius → no room to drift
+        let result = deterministicDriftCenter(basePoint: base, oldRadius: 1000, newRadius: 1000, gameId: "abc")
+        #expect(result.latitude == base.latitude)
+        #expect(result.longitude == base.longitude)
     }
 
     // MARK: - detectNewWinners

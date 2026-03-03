@@ -58,11 +58,6 @@ struct SelectionFeatureTests {
         #expect(state.destination == nil)
     }
 
-    @Test func initialStateHasEmptyHunterName() {
-        let state = SelectionFeature.State()
-        #expect(state.hunterName == "")
-    }
-
     // MARK: - Rejoin Game
 
     @Test func initialStateHasNilActiveGame() {

@@ -97,6 +97,53 @@ fun evaluateCountdown(
 
 fun checkGameOverByTime(endDate: Date): Boolean = Date().after(endDate)
 
+// ── Deterministic Drift ──────────────────────────────
+
+/**
+ * Computes a deterministic drifted center for stayInTheZone mode.
+ * The result is offset from [basePoint], always within both:
+ *  - `newRadius * 0.5` of basePoint (so basePoint stays well inside)
+ *  - `(oldRadius - newRadius)` of any previous center computed the same way
+ *
+ * The seed is derived from [gameId] + [newRadius] so every client
+ * produces the exact same circle at each shrink step.
+ */
+fun deterministicDriftCenter(
+    basePoint: Point,
+    oldRadius: Double,
+    newRadius: Double,
+    gameId: String
+): Point {
+    val maxFromBase = newRadius * 0.5
+    val maxFromPrev = maxOf(0.0, oldRadius - newRadius) * 0.5
+    val safeDrift = minOf(maxFromBase, maxFromPrev)
+
+    if (safeDrift <= 0) return basePoint
+
+    // Deterministic seed from gameId + newRadius (two independent seeds)
+    var gameIdSum = 0
+    for (byte in gameId.toByteArray(Charsets.UTF_8)) {
+        gameIdSum += byte.toInt() and 0xFF
+    }
+    val angleSeed = kotlin.math.abs(gameIdSum * 31 xor newRadius.toInt())
+    val distSeed = kotlin.math.abs(gameIdSum * 127 xor (newRadius.toInt() * 37))
+
+    val angle = (angleSeed % 36000) / 36000.0 * 2.0 * kotlin.math.PI
+    val distFraction = (distSeed % 10000) / 10000.0
+    val distance = safeDrift * kotlin.math.sqrt(distFraction)
+
+    val metersPerDegreeLat = 111_320.0
+    val metersPerDegreeLng = 111_320.0 * kotlin.math.cos(basePoint.latitude() * kotlin.math.PI / 180.0)
+
+    val dLat = (distance * kotlin.math.cos(angle)) / metersPerDegreeLat
+    val dLng = (distance * kotlin.math.sin(angle)) / metersPerDegreeLng
+
+    return Point.fromLngLat(
+        basePoint.longitude() + dLng,
+        basePoint.latitude() + dLat
+    )
+}
+
 // ── Radius update ────────────────────────────────────
 
 data class RadiusUpdateResult(
@@ -118,7 +165,8 @@ fun processRadiusUpdate(
     radiusIntervalUpdate: Double,
     gameMod: GameMod,
     initialLocation: Point,
-    currentCircleCenter: Point?
+    currentCircleCenter: Point?,
+    gameId: String = ""
 ): RadiusUpdateResult? {
     val nextUpdate = nextRadiusUpdate ?: return null
     if (!Date().after(nextUpdate)) return null
@@ -137,7 +185,16 @@ fun processRadiusUpdate(
     val intervalMs = (radiusIntervalUpdate * 60 * 1000).toLong()
     val newNextUpdate = Date(nextUpdate.time + intervalMs)
 
-    val newCenter = if (gameMod == GameMod.STAY_IN_THE_ZONE) initialLocation else currentCircleCenter
+    val newCenter = if (gameMod == GameMod.STAY_IN_THE_ZONE) {
+        deterministicDriftCenter(
+            basePoint = initialLocation,
+            oldRadius = currentRadius.toDouble(),
+            newRadius = newRadius.toDouble(),
+            gameId = gameId
+        )
+    } else {
+        currentCircleCenter
+    }
 
     return RadiusUpdateResult(
         newRadius = newRadius,

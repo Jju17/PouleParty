@@ -168,7 +168,7 @@ fun ChickenMapConfigScreen(
                 .background(Color.White.copy(alpha = 0.9f))
                 .padding(16.dp)
         ) {
-            Text("Radius: ${state.radius.toInt()}")
+            Text(stringResource(R.string.radius_format, state.radius.toInt()))
             Slider(
                 value = state.radius.toFloat(),
                 onValueChange = {

@@ -47,7 +47,8 @@ enum AppConstants {
     static let nicknameMaxLength = 20
 
     // MARK: - Zone
-    static let outsideZoneGracePeriodSeconds = 30
+    // Grace period disabled — kept for future game mode
+    // static let outsideZoneGracePeriodSeconds = 30
 
     // MARK: - Confetti
     static let confettiParticleCount = 80

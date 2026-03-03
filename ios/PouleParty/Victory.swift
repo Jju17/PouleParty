@@ -188,21 +188,6 @@ private struct ConfettiView: View {
     var body: some View {
         TimelineView(.animation) { timeline in
             Canvas { context, size in
-                let now = timeline.date
-                let dt = now.timeIntervalSince(lastTime)
-
-                DispatchQueue.main.async {
-                    lastTime = now
-                    if isActive {
-                        if now.timeIntervalSince(startTime) >= Self.duration {
-                            isActive = false
-                        }
-                        advanceParticles(dt: dt, canvasSize: size, respawn: true)
-                    } else {
-                        advanceParticles(dt: dt, canvasSize: size, respawn: false)
-                    }
-                }
-
                 for particle in particles {
                     let x = particle.x * size.width
                     let y = particle.y * size.height
@@ -233,6 +218,15 @@ private struct ConfettiView: View {
                     context.translateBy(x: -x, y: -y)
                 }
             }
+            .onChange(of: timeline.date) { _, newDate in
+                let dt = newDate.timeIntervalSince(lastTime)
+                lastTime = newDate
+                let respawn = isActive
+                if isActive && newDate.timeIntervalSince(startTime) >= Self.duration {
+                    isActive = false
+                }
+                advanceParticles(dt: dt, respawn: respawn)
+            }
         }
         .onAppear {
             particles = (0..<AppConstants.confettiParticleCount).map { _ in
@@ -252,7 +246,7 @@ private struct ConfettiView: View {
         }
     }
 
-    private func advanceParticles(dt: TimeInterval, canvasSize: CGSize, respawn: Bool) {
+    private func advanceParticles(dt: TimeInterval, respawn: Bool) {
         particles.removeAll { $0.y > 1.1 && !respawn }
 
         for i in particles.indices {
