@@ -172,7 +172,7 @@ class ChickenMapViewModel @Inject constructor(
                     gameMod = state.game.gameModEnum,
                     initialLocation = state.game.initialLocation,
                     currentCircleCenter = state.circleCenter,
-                    gameId = gameId
+                    driftSeed = state.game.driftSeed
                 )
                 if (radiusResult != null) {
                     if (radiusResult.isGameOver) {

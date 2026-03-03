@@ -18,12 +18,13 @@ data class Game(
     val initialRadius: Double = 1500.0,
     val radiusDeclinePerUpdate: Double = 100.0,
     val chickenHeadStartMinutes: Double = 0.0, // In minutes, 0 = no head start
-    val gameMod: String = GameMod.FOLLOW_THE_CHICKEN.firestoreValue,
+    val gameMod: String = GameMod.STAY_IN_THE_ZONE.firestoreValue,
     val foundCode: String = "",
     val hunterIds: List<String> = emptyList(),
     val status: String = GameStatus.WAITING.firestoreValue,
     val winners: List<Winner> = emptyList(),
-    val creatorId: String = ""
+    val creatorId: String = "",
+    val driftSeed: Int = 0
 ) {
     /** Computed: CLLocationCoordinate2D equivalent */
     @get:Exclude
@@ -94,7 +95,8 @@ data class Game(
             initialRadius = 1500.0,
             radiusDeclinePerUpdate = 100.0,
             gameMod = GameMod.FOLLOW_THE_CHICKEN.firestoreValue,
-            foundCode = "1234"
+            foundCode = "1234",
+            driftSeed = 42
         )
     }
 }

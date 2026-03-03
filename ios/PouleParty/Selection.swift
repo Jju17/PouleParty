@@ -156,6 +156,7 @@ struct SelectionFeature {
                 game.foundCode = Game.generateFoundCode()
                 game.chickenHeadStartMinutes = 5
                 game.creatorId = authClient.currentUserId() ?? ""
+                game.driftSeed = Int.random(in: 1...999_999)
                 if let location {
                     game.initialLocation = location
                 }

@@ -105,14 +105,15 @@ fun checkGameOverByTime(endDate: Date): Boolean = Date().after(endDate)
  *  - `newRadius * 0.5` of basePoint (so basePoint stays well inside)
  *  - `(oldRadius - newRadius)` of any previous center computed the same way
  *
- * The seed is derived from [gameId] + [newRadius] so every client
- * produces the exact same circle at each shrink step.
+ * [driftSeed] is a random integer stored in the Game document so every
+ * client produces the exact same circle at each shrink step while each
+ * game session has a unique drift pattern.
  */
 fun deterministicDriftCenter(
     basePoint: Point,
     oldRadius: Double,
     newRadius: Double,
-    gameId: String
+    driftSeed: Int
 ): Point {
     val maxFromBase = newRadius * 0.5
     val maxFromPrev = maxOf(0.0, oldRadius - newRadius) * 0.5
@@ -120,13 +121,8 @@ fun deterministicDriftCenter(
 
     if (safeDrift <= 0) return basePoint
 
-    // Deterministic seed from gameId + newRadius (two independent seeds)
-    var gameIdSum = 0
-    for (byte in gameId.toByteArray(Charsets.UTF_8)) {
-        gameIdSum += byte.toInt() and 0xFF
-    }
-    val angleSeed = kotlin.math.abs(gameIdSum * 31 xor newRadius.toInt())
-    val distSeed = kotlin.math.abs(gameIdSum * 127 xor (newRadius.toInt() * 37))
+    val angleSeed = kotlin.math.abs(driftSeed * 31 xor newRadius.toInt())
+    val distSeed = kotlin.math.abs(driftSeed * 127 xor (newRadius.toInt() * 37))
 
     val angle = (angleSeed % 36000) / 36000.0 * 2.0 * kotlin.math.PI
     val distFraction = (distSeed % 10000) / 10000.0
@@ -166,7 +162,7 @@ fun processRadiusUpdate(
     gameMod: GameMod,
     initialLocation: Point,
     currentCircleCenter: Point?,
-    gameId: String = ""
+    driftSeed: Int = 0
 ): RadiusUpdateResult? {
     val nextUpdate = nextRadiusUpdate ?: return null
     if (!Date().after(nextUpdate)) return null
@@ -190,7 +186,7 @@ fun processRadiusUpdate(
             basePoint = initialLocation,
             oldRadius = currentRadius.toDouble(),
             newRadius = newRadius.toDouble(),
-            gameId = gameId
+            driftSeed = driftSeed
         )
     } else {
         currentCircleCenter

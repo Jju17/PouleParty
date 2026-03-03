@@ -64,9 +64,9 @@ struct GameTests {
 
     // MARK: - GameMod tests
 
-    @Test func gameModDefaultIsFollowTheChicken() {
+    @Test func gameModDefaultIsStayInTheZone() {
         let game = Game(id: "test")
-        #expect(game.gameMod == .followTheChicken)
+        #expect(game.gameMod == .stayInTheZone)
     }
 
     @Test func gameModTitlesAreCorrect() {

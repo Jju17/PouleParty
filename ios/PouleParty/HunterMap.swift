@@ -399,7 +399,7 @@ struct HunterMapFeature {
                     gameMod: state.game.gameMod,
                     initialCoordinates: state.game.initialCoordinates.toCLCoordinates,
                     currentCircle: state.mapCircle,
-                    gameId: state.game.id
+                    driftSeed: state.game.driftSeed
                 ) {
                     if result.isGameOver {
                         locationClient.stopTracking()

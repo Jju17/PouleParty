@@ -223,7 +223,7 @@ class GameTimerHelperTest {
             gameMod = GameMod.STAY_IN_THE_ZONE,
             initialLocation = initialLocation,
             currentCircleCenter = currentCenter,
-            gameId = "test-game-id"
+            driftSeed = 12345
         )
         assertNotNull(result)
         // With drift, center is close to initialLocation but not exactly equal
@@ -240,8 +240,8 @@ class GameTimerHelperTest {
     @Test
     fun `drift center is deterministic`() {
         val base = Point.fromLngLat(4.0, 50.0)
-        val r1 = deterministicDriftCenter(base, oldRadius = 1500.0, newRadius = 1400.0, gameId = "abc")
-        val r2 = deterministicDriftCenter(base, oldRadius = 1500.0, newRadius = 1400.0, gameId = "abc")
+        val r1 = deterministicDriftCenter(base, oldRadius = 1500.0, newRadius = 1400.0, driftSeed = 12345)
+        val r2 = deterministicDriftCenter(base, oldRadius = 1500.0, newRadius = 1400.0, driftSeed = 12345)
         assertEquals(r1.latitude(), r2.latitude(), 0.0)
         assertEquals(r1.longitude(), r2.longitude(), 0.0)
     }
@@ -249,16 +249,25 @@ class GameTimerHelperTest {
     @Test
     fun `drift center differs for different radius`() {
         val base = Point.fromLngLat(4.0, 50.0)
-        val r1 = deterministicDriftCenter(base, oldRadius = 1500.0, newRadius = 1400.0, gameId = "abc")
-        val r2 = deterministicDriftCenter(base, oldRadius = 1400.0, newRadius = 1300.0, gameId = "abc")
+        val r1 = deterministicDriftCenter(base, oldRadius = 1500.0, newRadius = 1400.0, driftSeed = 12345)
+        val r2 = deterministicDriftCenter(base, oldRadius = 1400.0, newRadius = 1300.0, driftSeed = 12345)
         val areDifferent = r1.latitude() != r2.latitude() || r1.longitude() != r2.longitude()
         assertTrue("Different radius values should produce different drift centers", areDifferent)
     }
 
     @Test
+    fun `drift center differs for different seeds`() {
+        val base = Point.fromLngLat(4.0, 50.0)
+        val r1 = deterministicDriftCenter(base, oldRadius = 1500.0, newRadius = 1400.0, driftSeed = 11111)
+        val r2 = deterministicDriftCenter(base, oldRadius = 1500.0, newRadius = 1400.0, driftSeed = 99999)
+        val areDifferent = r1.latitude() != r2.latitude() || r1.longitude() != r2.longitude()
+        assertTrue("Different seeds should produce different drift centers", areDifferent)
+    }
+
+    @Test
     fun `drift center stays close to base`() {
         val base = Point.fromLngLat(4.0, 50.0)
-        val result = deterministicDriftCenter(base, oldRadius = 1500.0, newRadius = 1400.0, gameId = "test-game-42")
+        val result = deterministicDriftCenter(base, oldRadius = 1500.0, newRadius = 1400.0, driftSeed = 54321)
         val dLat = Math.abs(result.latitude() - base.latitude()) * 111_320
         val dLng = Math.abs(result.longitude() - base.longitude()) * 111_320 * Math.cos(Math.toRadians(base.latitude()))
         val distance = Math.sqrt(dLat * dLat + dLng * dLng)
@@ -269,7 +278,7 @@ class GameTimerHelperTest {
     @Test
     fun `drift center returns base when no room`() {
         val base = Point.fromLngLat(4.0, 50.0)
-        val result = deterministicDriftCenter(base, oldRadius = 1000.0, newRadius = 1000.0, gameId = "abc")
+        val result = deterministicDriftCenter(base, oldRadius = 1000.0, newRadius = 1000.0, driftSeed = 12345)
         assertEquals(base.latitude(), result.latitude(), 0.0)
         assertEquals(base.longitude(), result.longitude(), 0.0)
     }

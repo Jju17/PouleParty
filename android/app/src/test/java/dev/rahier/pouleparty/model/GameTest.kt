@@ -107,9 +107,9 @@ class GameTest {
     // MARK: - GameMod tests
 
     @Test
-    fun `default game mod is followTheChicken`() {
+    fun `default game mod is stayInTheZone`() {
         val game = Game(id = "test")
-        assertEquals(GameMod.FOLLOW_THE_CHICKEN, game.gameModEnum)
+        assertEquals(GameMod.STAY_IN_THE_ZONE, game.gameModEnum)
     }
 
     @Test

@@ -26,12 +26,13 @@ struct Game: Codable, Equatable {
     var initialRadius: Double = 1500
     var radiusDeclinePerUpdate: Double = 100
     var chickenHeadStartMinutes: Double = 0 // In minutes, 0 = no head start
-    var gameMod: GameMod = .followTheChicken
+    var gameMod: GameMod = .stayInTheZone
     var foundCode: String = ""
     var hunterIds: [String] = []
     var status: GameStatus = .waiting
     var winners: [Winner] = []
     var creatorId: String = ""
+    var driftSeed: Int = 0
 
     enum GameStatus: String, CaseIterable, Equatable, Codable {
         case waiting
@@ -131,7 +132,8 @@ extension Game {
             radiusDeclinePerUpdate: 100,
             chickenHeadStartMinutes: 0,
             gameMod: .followTheChicken,
-            foundCode: "1234"
+            foundCode: "1234",
+            driftSeed: 42
         )
     }
 }

@@ -48,9 +48,10 @@ class ChickenConfigViewModel @Inject constructor(
                 initialRadius = 1500.0,
                 radiusDeclinePerUpdate = 100.0,
                 chickenHeadStartMinutes = 5.0,
-                gameMod = GameMod.FOLLOW_THE_CHICKEN.firestoreValue,
+                gameMod = GameMod.STAY_IN_THE_ZONE.firestoreValue,
                 foundCode = Game.generateFoundCode(),
-                creatorId = auth.currentUser?.uid ?: ""
+                creatorId = auth.currentUser?.uid ?: "",
+                driftSeed = (1..999_999).random()
             )
         )
     )

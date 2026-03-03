@@ -106,7 +106,7 @@ struct HunterMapFeatureTests {
             basePoint: game.initialCoordinates.toCLCoordinates,
             oldRadius: 500,
             newRadius: Double(newRadius),
-            gameId: game.id
+            driftSeed: game.driftSeed
         )
         await store.send(.timerTicked) {
             $0.radius = newRadius

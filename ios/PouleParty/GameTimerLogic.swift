@@ -102,13 +102,14 @@ func checkGameOverByTime(endDate: Date) -> Bool {
 ///  - `newRadius * 0.5` of basePoint (so basePoint stays well inside)
 ///  - `(oldRadius - newRadius)` of any previous center that was also computed this way
 ///
-/// The seed is derived from `gameId` + `newRadius` so every client
-/// produces the exact same circle at each shrink step.
+/// `driftSeed` is a random integer stored in the Game document so every
+/// client produces the exact same circle at each shrink step while each
+/// game session has a unique drift pattern.
 func deterministicDriftCenter(
     basePoint: CLLocationCoordinate2D,
     oldRadius: Double,
     newRadius: Double,
-    gameId: String
+    driftSeed: Int
 ) -> CLLocationCoordinate2D {
     let maxFromBase = newRadius * 0.5
     let maxFromPrev = max(0, oldRadius - newRadius) * 0.5
@@ -116,13 +117,8 @@ func deterministicDriftCenter(
 
     guard safeDrift > 0 else { return basePoint }
 
-    // Deterministic seed from gameId + newRadius (two independent seeds)
-    var gameIdSum = 0
-    for byte in gameId.utf8 {
-        gameIdSum += Int(byte)
-    }
-    let angleSeed = abs(gameIdSum &* 31 ^ Int(newRadius))
-    let distSeed = abs(gameIdSum &* 127 ^ (Int(newRadius) &* 37))
+    let angleSeed = abs(driftSeed &* 31 ^ Int(newRadius))
+    let distSeed = abs(driftSeed &* 127 ^ (Int(newRadius) &* 37))
 
     let angle = Double(angleSeed % 36000) / 36000.0 * 2.0 * .pi
     let distFraction = Double(distSeed % 10000) / 10000.0
@@ -159,7 +155,7 @@ func processRadiusUpdate(
     gameMod: Game.GameMod,
     initialCoordinates: CLLocationCoordinate2D,
     currentCircle: CircleOverlay?,
-    gameId: String = ""
+    driftSeed: Int = 0
 ) -> RadiusUpdateResult? {
     guard let nextUpdate = nextRadiusUpdate, .now >= nextUpdate else { return nil }
 
@@ -183,7 +179,7 @@ func processRadiusUpdate(
             basePoint: initialCoordinates,
             oldRadius: Double(currentRadius),
             newRadius: Double(newRadius),
-            gameId: gameId
+            driftSeed: driftSeed
         )
         newCircle = CircleOverlay(center: driftedCenter, radius: CLLocationDistance(newRadius))
     } else if let currentCircle {
