@@ -241,14 +241,23 @@ struct ChickenConfigView: View {
 
     private var zoneSection: some View {
         Section("Zone") {
-            Button {
-                store.send(.mapPreviewTapped)
-            } label: {
-                MapPreviewView(game: store.game)
-                    .frame(height: 180)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-            }
-            .buttonStyle(.plain)
+            MapPreviewView(game: store.game)
+                .frame(height: 180)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .overlay(alignment: .bottomTrailing) {
+                    Label("Change location", systemImage: "pencil")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(.thinMaterial)
+                        .clipShape(Capsule())
+                        .padding(8)
+                }
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    store.send(.mapPreviewTapped)
+                }
 
             VStack(alignment: .leading) {
                 HStack {
@@ -321,8 +330,12 @@ struct ChickenConfigView: View {
 struct MapPreviewView: View {
     let game: Game
 
+    private var zoom: CGFloat {
+        zoomForRadius(CLLocationDistance(game.initialRadius), latitude: game.initialLocation.latitude)
+    }
+
     var body: some View {
-        Map(viewport: .constant(.camera(center: game.initialLocation, zoom: 13))) {
+        Map(viewport: .constant(.camera(center: game.initialLocation, zoom: zoom))) {
             let circlePolygon = Polygon(center: game.initialLocation, radius: CLLocationDistance(game.initialRadius), vertices: 72)
             PolylineAnnotation(lineCoordinates: circlePolygon.outerRing.coordinates)
                 .lineColor(StyleColor(UIColor(Color.CROrange).withAlphaComponent(0.8)))
