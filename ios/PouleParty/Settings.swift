@@ -5,13 +5,8 @@
 
 import ComposableArchitecture
 import os
-import SafariServices
 import Sharing
 import SwiftUI
-
-extension URL: @retroactive Identifiable {
-    public var id: String { absoluteString }
-}
 
 @Reducer
 struct SettingsFeature {
@@ -20,22 +15,18 @@ struct SettingsFeature {
     struct State: Equatable {
         @Shared(.appStorage(AppConstants.prefUserNickname)) var savedNickname = ""
         @Shared(.appStorage(AppConstants.prefOnboardingCompleted)) var hasCompletedOnboarding = false
-        var nickname: String = ""
         var showingDeleteConfirmation = false
         var showingDeleteSuccess = false
         var showingDeleteError = false
         var showingProfanityAlert = false
-        var safariURL: URL?
+        var showingEmptyNicknameAlert = false
     }
 
     enum Action: BindableAction {
         case binding(BindingAction<State>)
-        case onAppear
-        case nicknameChanged(String)
-        case saveNickname
+        case saveNickname(String)
         case dismissProfanityAlert
-        case openURL(URL)
-        case dismissSafari
+        case dismissEmptyNicknameAlert
         case deleteDataTapped
         case confirmDeleteData
         case deleteCompleted(success: Bool)
@@ -52,15 +43,12 @@ struct SettingsFeature {
             switch action {
             case .binding:
                 return .none
-            case .onAppear:
-                state.nickname = state.savedNickname
-                return .none
-            case let .nicknameChanged(name):
-                state.nickname = String(name.prefix(AppConstants.nicknameMaxLength))
-                return .none
-            case .saveNickname:
-                let trimmed = state.nickname.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !trimmed.isEmpty else { return .none }
+            case let .saveNickname(text):
+                let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmed.isEmpty else {
+                    state.showingEmptyNicknameAlert = true
+                    return .none
+                }
                 if ProfanityFilter.containsProfanity(trimmed) {
                     state.showingProfanityAlert = true
                     return .none
@@ -70,11 +58,8 @@ struct SettingsFeature {
             case .dismissProfanityAlert:
                 state.showingProfanityAlert = false
                 return .none
-            case let .openURL(url):
-                state.safariURL = url
-                return .none
-            case .dismissSafari:
-                state.safariURL = nil
+            case .dismissEmptyNicknameAlert:
+                state.showingEmptyNicknameAlert = false
                 return .none
             case .deleteDataTapped:
                 state.showingDeleteConfirmation = true
@@ -96,7 +81,6 @@ struct SettingsFeature {
                     state.showingDeleteSuccess = true
                     state.$savedNickname.withLock { $0 = "" }
                     state.$hasCompletedOnboarding.withLock { $0 = false }
-                    state.nickname = ""
                 } else {
                     state.showingDeleteError = true
                 }
@@ -112,102 +96,37 @@ struct SettingsFeature {
     }
 }
 
-struct SafariView: UIViewControllerRepresentable {
-    let url: URL
-
-    func makeUIViewController(context: Context) -> SFSafariViewController {
-        SFSafariViewController(url: url)
-    }
-
-    func updateUIViewController(_ uiViewController: SFSafariViewController, context: Context) {}
-}
-
 struct SettingsView: View {
     @Bindable var store: StoreOf<SettingsFeature>
     var onAccountDeleted: (() -> Void)? = nil
     @FocusState private var isNicknameFocused: Bool
+    @State private var nicknameText = ""
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
-        List {
-            Section {
-                HStack {
-                    Label("Nickname", systemImage: "person")
-                    Spacer()
-                    TextField("Your nickname", text: Binding(
-                        get: { store.nickname },
-                        set: { store.send(.nicknameChanged($0)) }
-                    ))
-                    .multilineTextAlignment(.trailing)
-                    .focused($isNicknameFocused)
-                    .submitLabel(.done)
-                    .onSubmit {
-                        store.send(.saveNickname)
-                    }
-                }
-            } footer: {
-                Text("\(store.nickname.count)/\(AppConstants.nicknameMaxLength)")
+        ScrollView {
+            VStack(spacing: 24) {
+                nicknameSection
+                linksSection
+                dangerSection
+                versionSection
             }
-
-            Section {
-                Button {
-                    if let url = URL(string: "https://pouleparty.be/privacy") {
-                        store.send(.openURL(url))
-                    }
-                } label: {
-                    Label("Privacy Policy", systemImage: "hand.raised")
-                }
-                Button {
-                    if let url = URL(string: "https://pouleparty.be/terms") {
-                        store.send(.openURL(url))
-                    }
-                } label: {
-                    Label("Terms of Use", systemImage: "doc.text")
-                }
-            }
-
-            Section {
-                if let mailURL = URL(string: "mailto:julien@rahier.dev") {
-                    Link(destination: mailURL) {
-                        Label("Contact Support", systemImage: "envelope")
-                    }
-                }
-            }
-
-            Section {
-                Button {
-                    store.send(.deleteDataTapped)
-                } label: {
-                    Label("Delete My Data", systemImage: "trash")
-                        .foregroundStyle(.red)
-                }
-            } footer: {
-                Text("This will delete your anonymous account and all associated data. You can continue using the app — a new anonymous account will be created automatically.")
-            }
-
-            Section {
-                HStack {
-                    Text("Version")
-                    Spacer()
-                    Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—")
-                        .foregroundStyle(.secondary)
-                }
-            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
         }
+        .background(Color.CRBeige)
         .navigationTitle("Settings")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(Color.CRBeige, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarColorScheme(.light, for: .navigationBar)
         .onAppear {
-            store.send(.onAppear)
+            nicknameText = store.savedNickname
         }
         .onChange(of: isNicknameFocused) { _, focused in
             if !focused {
-                store.send(.saveNickname)
+                store.send(.saveNickname(nicknameText))
             }
-        }
-        .sheet(item: Binding(
-            get: { store.safariURL },
-            set: { _ in store.send(.dismissSafari) }
-        )) { url in
-            SafariView(url: url)
-                .ignoresSafeArea()
         }
         .alert("Delete My Data", isPresented: $store.showingDeleteConfirmation) {
             Button("Delete", role: .destructive) {
@@ -235,10 +154,164 @@ struct SettingsView: View {
         .alert("Inappropriate Nickname", isPresented: $store.showingProfanityAlert) {
             Button("OK") {
                 store.send(.dismissProfanityAlert)
+                nicknameText = store.savedNickname
             }
         } message: {
             Text("Please choose a different nickname. This one contains inappropriate language.")
         }
+        .alert("Empty Nickname", isPresented: $store.showingEmptyNicknameAlert) {
+            Button("OK") {
+                store.send(.dismissEmptyNicknameAlert)
+                nicknameText = store.savedNickname
+            }
+        } message: {
+            Text("Your nickname cannot be empty.")
+        }
+    }
+
+    // MARK: - Nickname
+
+    private var nicknameSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Nickname", systemImage: "person")
+                .font(.banger(size: 18))
+                .foregroundStyle(.black)
+
+            TextField("Your nickname", text: $nicknameText)
+                .font(.banger(size: 22))
+                .foregroundStyle(.black)
+                .multilineTextAlignment(.center)
+                .padding()
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.white)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.black.opacity(0.2), lineWidth: 1)
+                )
+                .focused($isNicknameFocused)
+                .submitLabel(.done)
+                .onChange(of: nicknameText) { _, newValue in
+                    if newValue.count > AppConstants.nicknameMaxLength {
+                        nicknameText = String(newValue.prefix(AppConstants.nicknameMaxLength))
+                    }
+                }
+                .onSubmit {
+                    store.send(.saveNickname(nicknameText))
+                }
+
+            BangerText("\(nicknameText.count)/\(AppConstants.nicknameMaxLength)", size: 14)
+                .foregroundStyle(.black.opacity(0.4))
+                .frame(maxWidth: .infinity, alignment: .trailing)
+        }
+        .settingsCard()
+    }
+
+    // MARK: - Links
+
+    private var linksSection: some View {
+        VStack(spacing: 0) {
+            settingsRow(icon: "hand.raised", title: "Privacy Policy") {
+                openURL(URL(string: "https://pouleparty.be/privacy")!)
+            }
+
+            Divider().padding(.horizontal, 14)
+
+            settingsRow(icon: "doc.text", title: "Terms of Use") {
+                openURL(URL(string: "https://pouleparty.be/terms")!)
+            }
+
+            Divider().padding(.horizontal, 14)
+
+            settingsRow(icon: "envelope", title: "Contact Support") {
+                if let url = URL(string: "mailto:julien@rahier.dev") {
+                    openURL(url)
+                }
+            }
+        }
+        .settingsCard(padding: 0)
+    }
+
+    // MARK: - Danger zone
+
+    private var dangerSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Button {
+                store.send(.deleteDataTapped)
+            } label: {
+                HStack {
+                    Image(systemName: "trash")
+                        .font(.banger(size: 18))
+                    BangerText("Delete My Data", size: 18)
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.red.opacity(0.85))
+                )
+            }
+
+            BangerText("This will delete your anonymous account and all associated data. A new anonymous account will be created automatically.", size: 13)
+                .foregroundStyle(.black.opacity(0.4))
+        }
+        .settingsCard()
+    }
+
+    // MARK: - Version
+
+    private var versionSection: some View {
+        HStack {
+            BangerText("Version", size: 16)
+                .foregroundStyle(.black)
+            Spacer()
+            BangerText(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—", size: 16)
+                .foregroundStyle(.black.opacity(0.4))
+        }
+        .settingsCard()
+    }
+
+    // MARK: - Helpers
+
+    private func settingsRow(icon: String, title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack {
+                Image(systemName: icon)
+                    .font(.banger(size: 18))
+                    .frame(width: 24)
+                BangerText(title, size: 18)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.black.opacity(0.3))
+            }
+            .foregroundStyle(.black)
+            .padding(14)
+        }
+    }
+}
+
+// MARK: - Card modifier
+
+private struct SettingsCardModifier: ViewModifier {
+    var padding: CGFloat
+
+    func body(content: Content) -> some View {
+        content
+            .padding(padding)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.white)
+            )
+    }
+}
+
+private extension View {
+    func settingsCard(padding: CGFloat = 16) -> some View {
+        modifier(SettingsCardModifier(padding: padding))
     }
 }
 

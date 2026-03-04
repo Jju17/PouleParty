@@ -114,8 +114,7 @@ struct ChickenConfigView: View {
                 Button {
                     store.send(.startGameButtonTapped)
                 } label: {
-                    Text("Start game")
-                        .font(.banger(size: 24))
+                    BangerText("Start game", size: 24)
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .padding()

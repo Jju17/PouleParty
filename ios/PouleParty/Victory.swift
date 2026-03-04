@@ -110,8 +110,7 @@ struct VictoryView: View {
                     .padding(.vertical, 12)
                     .padding(.horizontal, 24)
 
-                Text("\(remaining) still in the party 🔍")
-                    .font(.banger(size: 18))
+                BangerText("\(remaining) still in the party 🔍", size: 18)
                     .foregroundStyle(.black.opacity(0.5))
                     .padding(.vertical, 4)
             }
@@ -136,8 +135,7 @@ struct VictoryView: View {
                 .font(.system(size: rank <= 3 ? 24 : 16))
                 .frame(width: 40)
 
-            Text(winner.hunterName)
-                .font(.banger(size: 20))
+            BangerText(winner.hunterName, size: 20)
                 .foregroundStyle(.black)
                 .lineLimit(1)
 

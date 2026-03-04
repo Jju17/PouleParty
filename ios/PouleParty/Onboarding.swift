@@ -41,6 +41,7 @@ struct OnboardingFeature {
 
     static let totalPages = 6
     static let nicknameMaxLength = 20
+    enum CancelID { case snapBack }
 
     @Dependency(\.locationClient) var locationClient
 
@@ -98,6 +99,7 @@ struct OnboardingFeature {
                         try? await Task.sleep(for: .milliseconds(50))
                         await send(.snapBackToPage(3))
                     }
+                    .cancellable(id: CancelID.snapBack, cancelInFlight: true)
                 }
                 // Block forward swipe past nickname page if empty
                 if page > 4 && !nicknameValid {
@@ -106,6 +108,7 @@ struct OnboardingFeature {
                         try? await Task.sleep(for: .milliseconds(50))
                         await send(.snapBackToPage(4))
                     }
+                    .cancellable(id: CancelID.snapBack, cancelInFlight: true)
                 }
                 state.currentPage = page
                 return .none
@@ -137,7 +140,7 @@ struct OnboardingFeature {
                 let trimmedNickname = state.nickname.trimmingCharacters(in: .whitespacesAndNewlines)
                 state.$savedNickname.withLock { $0 = trimmedNickname }
                 state.$hasCompletedOnboarding.withLock { $0 = true }
-                return .none
+                return .cancel(id: CancelID.snapBack)
             }
         }
     }
@@ -213,8 +216,7 @@ struct OnboardingView: View {
                             Button {
                                 store.send(.backButtonTapped)
                             } label: {
-                                Text("Back")
-                                    .font(.banger(size: 18))
+                                BangerText("Back", size: 18)
                                     .foregroundStyle(.black.opacity(0.5))
                                     .padding(.horizontal, 16)
                                     .padding(.vertical, 12)
@@ -230,8 +232,7 @@ struct OnboardingView: View {
                         Button {
                             store.send(.nextButtonTapped)
                         } label: {
-                            Text(store.currentPage == OnboardingFeature.totalPages - 1 ? "Let's go!" : "Next")
-                                .font(.banger(size: 22))
+                            BangerText(store.currentPage == OnboardingFeature.totalPages - 1 ? "Let's go!" : "Next", size: 22)
                                 .foregroundStyle(.white.opacity(isNextDisabled ? 0.6 : 1.0))
                                 .padding(.horizontal, 32)
                                 .padding(.vertical, 12)

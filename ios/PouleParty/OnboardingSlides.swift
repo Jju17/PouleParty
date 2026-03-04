@@ -38,14 +38,12 @@ struct OnboardingSlideLayout<Icon: View, Extra: View>: View {
 
             icon()
 
-            Text(title)
-                .font(.banger(size: titleSize))
+            BangerText(title, size: titleSize)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.black)
 
             if let subtitle {
-                Text(subtitle)
-                    .font(.banger(size: 18))
+                BangerText(subtitle, size: 18)
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.black.opacity(0.6))
                     .padding(.horizontal, 10)
@@ -128,8 +126,7 @@ struct OnboardingLocationSlide: View {
             switch status {
             case .authorizedAlways:
                 Group {
-                    Text("You're all set! The game will track location even in the background.\n\nMaximum fun guaranteed!")
-                        .font(.banger(size: 18))
+                    BangerText("You're all set! The game will track location even in the background.\n\nMaximum fun guaranteed!", size: 18)
                         .multilineTextAlignment(.center)
                         .foregroundStyle(.black.opacity(0.6))
                         .padding(.horizontal, 10)
@@ -138,8 +135,7 @@ struct OnboardingLocationSlide: View {
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundStyle(.green)
                             .font(.system(size: 24))
-                        Text("Always allowed!")
-                            .font(.banger(size: 20))
+                        BangerText("Always allowed!", size: 20)
                             .foregroundStyle(.green)
                     }
                     .padding(.top, 8)
@@ -147,8 +143,7 @@ struct OnboardingLocationSlide: View {
 
             case .authorizedWhenInUse:
                 Group {
-                    Text("Almost there! The game needs to track the Chicken even when the app is in the background.\n\nPlease select \"Always Allow\" so the Hunters can find you!")
-                        .font(.banger(size: 18))
+                    BangerText("Almost there! The game needs to track the Chicken even when the app is in the background.\n\nPlease select \"Always Allow\" so the Hunters can find you!", size: 18)
                         .multilineTextAlignment(.center)
                         .foregroundStyle(.black.opacity(0.6))
                         .padding(.horizontal, 10)
@@ -156,8 +151,7 @@ struct OnboardingLocationSlide: View {
                     Button {
                         onRequestAlways()
                     } label: {
-                        Text("Allow Always")
-                            .font(.banger(size: 20))
+                        BangerText("Allow Always", size: 20)
                             .foregroundStyle(.white)
                             .padding(.horizontal, 28)
                             .padding(.vertical, 14)
@@ -168,8 +162,7 @@ struct OnboardingLocationSlide: View {
 
             case .denied, .restricted:
                 Group {
-                    Text("Location access was denied.\nPlease enable it in Settings to play.")
-                        .font(.banger(size: 18))
+                    BangerText("Location access was denied.\nPlease enable it in Settings to play.", size: 18)
                         .multilineTextAlignment(.center)
                         .foregroundStyle(.black.opacity(0.6))
                         .padding(.horizontal, 10)
@@ -179,8 +172,7 @@ struct OnboardingLocationSlide: View {
                             UIApplication.shared.open(url)
                         }
                     } label: {
-                        Text("Open Settings")
-                            .font(.banger(size: 18))
+                        BangerText("Open Settings", size: 18)
                             .foregroundStyle(.white)
                             .padding(.horizontal, 24)
                             .padding(.vertical, 10)
@@ -191,8 +183,7 @@ struct OnboardingLocationSlide: View {
 
             default:
                 Group {
-                    Text("Without it, the game can't work.\nNo location = no map = no fun.\n\nWe promise we only use it during the game!")
-                        .font(.banger(size: 18))
+                    BangerText("Without it, the game can't work.\nNo location = no map = no fun.\n\nWe promise we only use it during the game!", size: 18)
                         .multilineTextAlignment(.center)
                         .foregroundStyle(.black.opacity(0.6))
                         .padding(.horizontal, 10)
@@ -200,8 +191,7 @@ struct OnboardingLocationSlide: View {
                     Button {
                         onRequestWhenInUse()
                     } label: {
-                        Text("Allow Location Access")
-                            .font(.banger(size: 20))
+                        BangerText("Allow Location Access", size: 20)
                             .foregroundStyle(.white)
                             .padding(.horizontal, 28)
                             .padding(.vertical, 14)
@@ -244,8 +234,7 @@ struct OnboardingNicknameSlide: View {
                     )
                     .padding(.horizontal, 20)
 
-                Text("\(nickname.count)/\(maxLength)")
-                    .font(.banger(size: 14))
+                BangerText("\(nickname.count)/\(maxLength)", size: 14)
                     .foregroundStyle(.black.opacity(0.4))
             }
         }

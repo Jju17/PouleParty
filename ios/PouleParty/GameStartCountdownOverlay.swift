@@ -25,8 +25,7 @@ struct GameStartCountdownOverlay: View {
                 Color.black.opacity(0.4)
                     .ignoresSafeArea()
 
-                Text(text)
-                    .font(.banger(size: 48))
+                BangerText(text, size: 48)
                     .foregroundStyle(Color.CROrange)
                     .transition(.scale.combined(with: .opacity))
             }
@@ -70,8 +69,7 @@ struct PreGameOverlay: View {
                     .ignoresSafeArea()
 
                 VStack(spacing: 24) {
-                    Text(role == .chicken ? "You are the 🐔" : "You are the Hunter")
-                        .font(.banger(size: 32))
+                    BangerText(role == .chicken ? "You are the 🐔" : "You are the Hunter", size: 32)
                         .foregroundStyle(.white)
 
                     Text(gameModTitle)

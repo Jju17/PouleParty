@@ -31,8 +31,7 @@ struct GameRulesView: View {
 
     private var howToPlaySection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("How to play")
-                .font(.banger(size: 32))
+            BangerText("How to play", size: 32)
                 .foregroundStyle(.black)
 
             VStack(alignment: .leading, spacing: 10) {
@@ -48,8 +47,7 @@ struct GameRulesView: View {
 
     private var gameModesSection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Game Modes")
-                .font(.banger(size: 32))
+            BangerText("Game Modes", size: 32)
                 .foregroundStyle(.black)
 
             gameModeCard(
@@ -88,8 +86,7 @@ struct GameRulesView: View {
 
     private var settingsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Game Settings")
-                .font(.banger(size: 32))
+            BangerText("Game Settings", size: 32)
                 .foregroundStyle(.black)
 
             VStack(alignment: .leading, spacing: 10) {
@@ -128,8 +125,7 @@ struct GameRulesView: View {
 
     private func gameModeCard(title: String, description: String, details: [String]) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.banger(size: 22))
+            BangerText(title, size: 22)
                 .foregroundStyle(.black)
 
             Text(description)

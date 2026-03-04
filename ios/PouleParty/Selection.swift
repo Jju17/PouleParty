@@ -277,6 +277,7 @@ struct SelectionView: View {
     @State private var showingSettings = false
 
     var body: some View {
+        NavigationStack {
         ZStack {
             VStack(alignment: .center, spacing: 0) {
                 Spacer()
@@ -438,28 +439,17 @@ struct SelectionView: View {
                     }
             }
         }
-        .sheet(isPresented: $showingSettings) {
-            NavigationStack {
-                SettingsView(
-                    store: Store(initialState: SettingsFeature.State()) {
-                        SettingsFeature()
-                    },
-                    onAccountDeleted: {
-                        showingSettings = false
-                        store.send(.goToOnboarding)
-                    }
-                )
-                .toolbar {
-                    ToolbarItem {
-                        Button {
-                            showingSettings = false
-                        } label: {
-                            Image(systemName: "xmark")
-                                .foregroundStyle(.black)
-                        }
-                    }
+        .navigationDestination(isPresented: $showingSettings) {
+            SettingsView(
+                store: Store(initialState: SettingsFeature.State()) {
+                    SettingsFeature()
+                },
+                onAccountDeleted: {
+                    store.send(.goToOnboarding)
                 }
-            }
+            )
+        }
+        .navigationBarHidden(true)
         }
     }
 
