@@ -2,20 +2,35 @@ package dev.rahier.pouleparty.ui.settings
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.PrivacyTip
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import dev.rahier.pouleparty.R
+import dev.rahier.pouleparty.ui.theme.CRBeige
+import dev.rahier.pouleparty.ui.theme.bangerStyle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,113 +52,192 @@ fun SettingsScreen(
                             contentDescription = stringResource(R.string.back)
                         )
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = CRBeige
+                )
             )
-        }
+        },
+        containerColor = CRBeige
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // Nickname
-            ListItem(
-                headlineContent = { Text(stringResource(R.string.nickname)) },
-                supportingContent = {
+            // Nickname section
+            SettingsCard {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(top = 8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        OutlinedTextField(
-                            value = state.nickname,
-                            onValueChange = { viewModel.onNicknameChanged(it) },
-                            singleLine = true,
-                            shape = RoundedCornerShape(12.dp),
-                            supportingText = {
-                                Text("${state.nickname.length}/${SettingsViewModel.NICKNAME_MAX_LENGTH}")
-                            },
-                            modifier = Modifier.weight(1f)
+                        Icon(
+                            Icons.Filled.Person,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = Color.Black
                         )
-                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            stringResource(R.string.nickname),
+                            style = bangerStyle(18),
+                            color = Color.Black
+                        )
+                    }
+
+                    OutlinedTextField(
+                        value = state.nickname,
+                        onValueChange = { viewModel.onNicknameChanged(it) },
+                        singleLine = true,
+                        textStyle = bangerStyle(22).copy(textAlign = TextAlign.Center),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            unfocusedContainerColor = Color.White,
+                            focusedContainerColor = Color.White,
+                            unfocusedBorderColor = Color.Black.copy(alpha = 0.2f),
+                            focusedBorderColor = Color.Black.copy(alpha = 0.4f)
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "${state.nickname.length}/${SettingsViewModel.NICKNAME_MAX_LENGTH}",
+                            style = bangerStyle(14),
+                            color = Color.Black.copy(alpha = 0.4f)
+                        )
+
                         Button(
                             onClick = { viewModel.saveNickname() },
-                            enabled = state.nickname.trim().isNotEmpty()
+                            enabled = state.nickname.trim().isNotEmpty(),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color.Black,
+                                contentColor = Color.White
+                            ),
+                            shape = RoundedCornerShape(10.dp)
                         ) {
-                            Text(stringResource(R.string.save))
+                            Text(
+                                stringResource(R.string.save),
+                                style = bangerStyle(16)
+                            )
                         }
                     }
                 }
-            )
-            HorizontalDivider()
+            }
 
-            Spacer(Modifier.height(16.dp))
-
-            // Privacy & Terms
-            ListItem(
-                headlineContent = { Text(stringResource(R.string.privacy_policy)) },
-                modifier = Modifier.clickable {
-                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://pouleparty.be/privacy")))
-                }
-            )
-            HorizontalDivider()
-            ListItem(
-                headlineContent = { Text(stringResource(R.string.terms_of_use)) },
-                modifier = Modifier.clickable {
-                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://pouleparty.be/terms")))
-                }
-            )
-            HorizontalDivider()
-
-            Spacer(Modifier.height(16.dp))
-
-            // Contact
-            ListItem(
-                headlineContent = { Text(stringResource(R.string.contact_support)) },
-                modifier = Modifier.clickable {
-                    context.startActivity(Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:julien@rahier.dev")))
-                }
-            )
-            HorizontalDivider()
-
-            Spacer(Modifier.height(16.dp))
-
-            // Delete data
-            ListItem(
-                headlineContent = {
-                    Text(
-                        stringResource(R.string.delete_my_data),
-                        color = MaterialTheme.colorScheme.error
+            // Links section
+            SettingsCard {
+                Column {
+                    SettingsRow(
+                        icon = Icons.Outlined.PrivacyTip,
+                        title = stringResource(R.string.privacy_policy),
+                        onClick = {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://pouleparty.be/privacy")))
+                        }
                     )
-                },
-                modifier = Modifier.clickable { viewModel.onDeleteDataTapped() }
-            )
-            Text(
-                stringResource(R.string.delete_data_footer),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp)
-            )
-            HorizontalDivider(Modifier.padding(top = 8.dp))
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 14.dp),
+                        color = Color.Black.copy(alpha = 0.1f)
+                    )
+                    SettingsRow(
+                        icon = Icons.Outlined.Description,
+                        title = stringResource(R.string.terms_of_use),
+                        onClick = {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://pouleparty.be/terms")))
+                        }
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 14.dp),
+                        color = Color.Black.copy(alpha = 0.1f)
+                    )
+                    SettingsRow(
+                        icon = Icons.Filled.Email,
+                        title = stringResource(R.string.contact_support),
+                        onClick = {
+                            context.startActivity(Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:julien@rahier.dev")))
+                        }
+                    )
+                }
+            }
 
-            Spacer(Modifier.height(16.dp))
+            // Danger section
+            SettingsCard {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Button(
+                        onClick = { viewModel.onDeleteDataTapped() },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.Red.copy(alpha = 0.85f),
+                            contentColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.padding(vertical = 6.dp)
+                        ) {
+                            Icon(
+                                Icons.Filled.Delete,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                stringResource(R.string.delete_my_data),
+                                style = bangerStyle(18)
+                            )
+                        }
+                    }
 
-            // Version
-            val versionName = try {
-                context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "—"
-            } catch (_: Exception) { "—" }
-            ListItem(
-                headlineContent = { Text(stringResource(R.string.version)) },
-                trailingContent = {
+                    Text(
+                        stringResource(R.string.delete_data_footer),
+                        style = bangerStyle(13),
+                        color = Color.Black.copy(alpha = 0.4f)
+                    )
+                }
+            }
+
+            // Version section
+            SettingsCard {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    val versionName = try {
+                        context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "—"
+                    } catch (_: Exception) { "—" }
+
+                    Text(
+                        stringResource(R.string.version),
+                        style = bangerStyle(16),
+                        color = Color.Black
+                    )
                     Text(
                         versionName,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        style = bangerStyle(16),
+                        color = Color.Black.copy(alpha = 0.4f)
                     )
                 }
-            )
+            }
         }
     }
 
-    // Nickname saved snackbar-style dialog
+    // Dialogs
     if (state.isShowingNicknameSaved) {
         AlertDialog(
             onDismissRequest = { viewModel.dismissNicknameSaved() },
@@ -154,7 +248,6 @@ fun SettingsScreen(
         )
     }
 
-    // Profanity alert
     if (state.isShowingProfanityAlert) {
         AlertDialog(
             onDismissRequest = { viewModel.dismissProfanityAlert() },
@@ -166,7 +259,6 @@ fun SettingsScreen(
         )
     }
 
-    // Delete confirmation dialog
     if (state.isShowingDeleteConfirmation) {
         AlertDialog(
             onDismissRequest = { viewModel.onDeleteDismissed() },
@@ -184,7 +276,6 @@ fun SettingsScreen(
         )
     }
 
-    // Delete success dialog
     if (state.isShowingDeleteSuccess) {
         AlertDialog(
             onDismissRequest = { viewModel.onDeleteSuccessDismissed() },
@@ -196,7 +287,6 @@ fun SettingsScreen(
         )
     }
 
-    // Delete error dialog
     if (state.isShowingDeleteError) {
         AlertDialog(
             onDismissRequest = { viewModel.onDeleteErrorDismissed() },
@@ -205,6 +295,57 @@ fun SettingsScreen(
             confirmButton = {
                 TextButton(onClick = { viewModel.onDeleteErrorDismissed() }) { Text(stringResource(R.string.ok)) }
             }
+        )
+    }
+}
+
+// MARK: - Components
+
+@Composable
+private fun SettingsCard(
+    content: @Composable () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color.White)
+    ) {
+        content()
+    }
+}
+
+@Composable
+private fun SettingsRow(
+    icon: ImageVector,
+    title: String,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            icon,
+            contentDescription = null,
+            modifier = Modifier.size(20.dp),
+            tint = Color.Black
+        )
+        Spacer(Modifier.width(10.dp))
+        Text(
+            title,
+            style = bangerStyle(18),
+            color = Color.Black
+        )
+        Spacer(Modifier.weight(1f))
+        Icon(
+            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            modifier = Modifier.size(16.dp),
+            tint = Color.Black.copy(alpha = 0.3f)
         )
     }
 }
