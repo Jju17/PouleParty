@@ -1,6 +1,7 @@
 export default {
   nav: {
     privacy: "Privacy",
+    terms: "Terms",
     support: "Support",
   },
   home: {
@@ -70,6 +71,38 @@ export default {
       "For bug reports, feature requests, or any other questions, reach out to us at",
     contactFooter:
       "Please include your device model, OS version, and a description of the issue so we can help you faster.",
+  },
+  terms: {
+    title: "Terms of Use",
+    lastUpdated: "Last updated: March 4, 2026",
+    acceptance: "Acceptance of Terms",
+    acceptanceText:
+      "By downloading, installing or using Poule Party, you agree to these Terms of Use. If you do not agree, please do not use the app.",
+    description: "Description of the Service",
+    descriptionText:
+      "Poule Party is a free location-based mobile game where one player (the Chicken) hides while other players (Hunters) try to find them using a real-time map with a shrinking zone.",
+    userConduct: "User Conduct",
+    conduct1: "Use the app only for its intended purpose (playing the game).",
+    conduct2: "Do not attempt to cheat, hack, or reverse-engineer the app.",
+    conduct3: "Respect other players and play in safe, public locations.",
+    conduct4: "You are responsible for your own safety while playing.",
+    location: "Location Data",
+    locationText:
+      "The app requires location access to function. Your location is shared with other players in your game session only during active gameplay. See our Privacy Policy for details.",
+    disclaimer: "Disclaimer",
+    disclaimerText:
+      'The app is provided "as is" without warranties of any kind. We do not guarantee uninterrupted or error-free service.',
+    liability: "Limitation of Liability",
+    liabilityText:
+      "Julien Rahier shall not be liable for any damages arising from the use of the app, including but not limited to physical injury, property damage, or data loss.",
+    termination: "Termination",
+    terminationText:
+      "We reserve the right to suspend or terminate access to the app at any time, without notice, for conduct that violates these terms.",
+    changes: "Changes to These Terms",
+    changesText:
+      "We may update these terms from time to time. Continued use of the app after changes constitutes acceptance of the new terms.",
+    contact: "Contact",
+    contactText: "If you have questions about these terms, please contact us at",
   },
   footer: {
     rights: "All rights reserved.",

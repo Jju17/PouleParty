@@ -24,6 +24,7 @@ import dev.rahier.pouleparty.ui.chickenmap.ChickenMapScreen
 import dev.rahier.pouleparty.ui.huntermap.HunterMapScreen
 import dev.rahier.pouleparty.ui.onboarding.OnboardingScreen
 import dev.rahier.pouleparty.ui.selection.SelectionScreen
+import dev.rahier.pouleparty.ui.settings.SettingsScreen
 import dev.rahier.pouleparty.ui.victory.VictoryScreen
 
 object Routes {
@@ -33,6 +34,7 @@ object Routes {
     const val CHICKEN_MAP = "chicken_map/{gameId}"
     const val HUNTER_MAP = "hunter_map/{gameId}/{hunterName}"
     const val VICTORY = "victory/{gameId}/{hunterName}/{hunterId}"
+    const val SETTINGS = "settings"
 
     fun chickenConfig(gameId: String) = "chicken_config/$gameId"
     fun chickenMap(gameId: String) = "chicken_map/$gameId"
@@ -100,7 +102,16 @@ fun AppNavigation() {
                     navController.navigate(Routes.victory(gameId, "", "")) {
                         popUpTo(Routes.SELECTION) { inclusive = false }
                     }
+                },
+                onNavigateToSettings = {
+                    navController.navigate(Routes.SETTINGS)
                 }
+            )
+        }
+
+        composable(Routes.SETTINGS) {
+            SettingsScreen(
+                onBack = { navController.popBackStack() }
             )
         }
 

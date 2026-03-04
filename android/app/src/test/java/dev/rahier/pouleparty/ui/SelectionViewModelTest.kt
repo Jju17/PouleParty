@@ -9,11 +9,10 @@ class SelectionViewModelTest {
     @Test
     fun `initial state has all dialogs hidden`() {
         val state = SelectionUiState()
-        assertFalse(state.isShowingPasswordDialog)
+        assertFalse(state.isShowingChickenConfirm)
         assertFalse(state.isShowingJoinDialog)
         assertFalse(state.isShowingGameRules)
         assertFalse(state.isShowingGameNotFound)
-        assertEquals("", state.password)
         assertEquals("", state.gameCode)
     }
 

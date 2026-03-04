@@ -15,6 +15,9 @@ export default function Layout({ children }: { children: ReactNode }) {
           <Link to="/privacy" className="hover:text-[#FE6A00] transition-colors">
             {t.nav.privacy}
           </Link>
+          <Link to="/terms" className="hover:text-[#FE6A00] transition-colors">
+            {t.nav.terms}
+          </Link>
           <Link to="/support" className="hover:text-[#FE6A00] transition-colors">
             {t.nav.support}
           </Link>

@@ -5,7 +5,9 @@
     <string name="press_start">Appuie sur start pour jouer</string>
     <string name="rules">Règles</string>
     <string name="i_am_la_poule">Je suis la poule</string>
-    <string name="password">Mot de passe</string>
+    <string name="create_game_title">Créer une partie</string>
+    <string name="create_game_message">Tu vas créer une nouvelle partie en tant que Poule. Prêt ?</string>
+    <string name="continue_label">Continuer</string>
     <string name="join_game">Rejoindre</string>
     <string name="join_game_message">Entre le code de la partie pour rejoindre.</string>
     <string name="game_code">Code de la partie</string>
@@ -129,8 +131,19 @@
     <string name="setting_radius_decline_desc">De combien de mètres la zone rétrécit à chaque mise à jour.</string>
     <string name="setting_map_desc">Choisissez le lieu de départ et le rayon initial de la zone.</string>
 
-    <!-- Selection (missing) -->
-    <string name="enter_admin_password">Veuillez entrer le mot de passe admin.</string>
+    <!-- Settings -->
+    <string name="settings">Paramètres</string>
+    <string name="privacy_policy">Politique de confidentialité</string>
+    <string name="terms_of_use">Conditions d\'utilisation</string>
+    <string name="contact_support">Contacter le support</string>
+    <string name="delete_my_data">Supprimer mes données</string>
+    <string name="delete_data_footer">Cela supprimera ton compte anonyme et toutes les données associées. Tu pourras continuer à utiliser l\'appli — un nouveau compte anonyme sera créé automatiquement.</string>
+    <string name="delete_data_title">Supprimer mes données</string>
+    <string name="delete_data_message">Cela supprimera définitivement ton compte anonyme. Les parties en cours seront abandonnées. Es-tu sûr ?</string>
+    <string name="delete">Supprimer</string>
+    <string name="data_deleted">Données supprimées</string>
+    <string name="data_deleted_message">Ton compte et tes données ont été supprimés.</string>
+    <string name="version">Version</string>
 
     <!-- Game Modes (subtitles) -->
     <string name="chicken_dont_be_seen">Ne te fais pas voir !</string>

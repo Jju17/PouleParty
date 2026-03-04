@@ -15,7 +15,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -29,6 +28,7 @@ fun SelectionScreen(
     onNavigateToChickenMap: (String) -> Unit,
     onNavigateToHunterMap: (String, String) -> Unit,
     onNavigateToVictory: (String) -> Unit,
+    onNavigateToSettings: () -> Unit = {},
     viewModel: SelectionViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -86,20 +86,18 @@ fun SelectionScreen(
             )
         }
 
-        // Top-right: Rules button
-        TextButton(
-            onClick = { viewModel.onRulesTapped() },
+        // Top-right: Settings button
+        IconButton(
+            onClick = onNavigateToSettings,
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(16.dp)
                 .padding(top = 32.dp)
-                .border(1.5.dp, MaterialTheme.colorScheme.onBackground, RoundedCornerShape(8.dp))
         ) {
-            Text(
-                stringResource(R.string.rules),
-                fontFamily = GameBoyFont,
-                fontSize = 8.sp,
-                color = Color.Black
+            Icon(
+                painter = painterResource(android.R.drawable.ic_menu_preferences),
+                contentDescription = stringResource(R.string.settings),
+                tint = Color.Black
             )
         }
 
@@ -169,11 +167,24 @@ fun SelectionScreen(
                 }
             }
 
-            // I am la poule button
+            // Bottom row: Rules (left) + I am la poule (right)
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
+                TextButton(
+                    onClick = { viewModel.onRulesTapped() },
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .border(1.5.dp, MaterialTheme.colorScheme.onBackground, RoundedCornerShape(8.dp))
+                ) {
+                    Text(
+                        stringResource(R.string.rules),
+                        fontFamily = GameBoyFont,
+                        fontSize = 8.sp,
+                        color = Color.Black
+                    )
+                }
                 TextButton(
                     onClick = { viewModel.onIAmLaPouleTapped() },
                     modifier = Modifier
@@ -193,34 +204,20 @@ fun SelectionScreen(
 
     // ── Dialogs ──
 
-    // Password dialog (chicken admin)
-    if (state.isShowingPasswordDialog) {
+    // Chicken confirmation dialog
+    if (state.isShowingChickenConfirm) {
         AlertDialog(
-            onDismissRequest = { viewModel.onPasswordDialogDismissed() },
-            title = { Text(stringResource(R.string.password)) },
-            text = {
-                Column {
-                    Text(stringResource(R.string.enter_admin_password))
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = state.password,
-                        onValueChange = { viewModel.onPasswordChanged(it) },
-                        label = { Text(stringResource(R.string.password)) },
-                        visualTransformation = PasswordVisualTransformation(),
-                        singleLine = true
-                    )
-                }
-            },
+            onDismissRequest = { viewModel.onChickenConfirmDismissed() },
+            title = { Text(stringResource(R.string.create_game_title)) },
+            text = { Text(stringResource(R.string.create_game_message)) },
             confirmButton = {
                 TextButton(onClick = {
-                    val gameId = viewModel.validatePassword()
-                    if (gameId != null) {
-                        onNavigateToChickenConfig(gameId)
-                    }
-                }) { Text(stringResource(R.string.ok)) }
+                    val gameId = viewModel.confirmChicken()
+                    onNavigateToChickenConfig(gameId)
+                }) { Text(stringResource(R.string.continue_label)) }
             },
             dismissButton = {
-                TextButton(onClick = { viewModel.onPasswordDialogDismissed() }) { Text(stringResource(R.string.cancel)) }
+                TextButton(onClick = { viewModel.onChickenConfirmDismissed() }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }

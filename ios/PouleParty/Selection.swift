@@ -19,9 +19,8 @@ struct SelectionFeature {
     struct State: Equatable {
         @Presents var destination: Destination.State?
         @Shared(.appStorage(AppConstants.prefUserNickname)) var savedNickname = ""
-        var password: String = ""
         var gameCode: String = ""
-        var isAuthenticating = false
+        var isConfirmingChicken = false
         var isJoiningGame = false
         var activeGame: Game? = nil
         var activeGameRole: PlayerRole? = nil
@@ -34,6 +33,7 @@ struct SelectionFeature {
         case dismissChickenConfig
         case gameInProgress
         case gameNotFound
+        case confirmChickenTapped
         case goToChickenConfigTriggered
         case goToChickenMapTriggered(Game)
         case goToVictoryAsSpectator(Game)
@@ -47,7 +47,6 @@ struct SelectionFeature {
         case rejoinGameTapped
         case startButtonTapped
         case joinGameButtonTapped
-        case validatePasswordButtonTapped
     }
 
     @Reducer
@@ -86,21 +85,14 @@ struct SelectionFeature {
             switch action {
             case .binding:
                 return .none
-            case .validatePasswordButtonTapped:
+            case .confirmChickenTapped:
                 let chickenLocStatus = locationClient.authorizationStatus()
                 guard chickenLocStatus == .authorizedAlways || chickenLocStatus == .authorizedWhenInUse else {
-                    state.isAuthenticating = false
-                    state.password = ""
+                    state.isConfirmingChicken = false
                     return .send(.locationRequired)
                 }
 
-                guard state.password == ""
-                else {
-                    state.password = ""
-                    return .none
-                }
-
-                state.isAuthenticating = false
+                state.isConfirmingChicken = false
 
                 return .send(.goToChickenConfigTriggered)
             case let .destination(.presented(.chickenConfig(.startGameTriggered(game)))):
@@ -279,6 +271,7 @@ struct SelectionView: View {
     @State private var isVisible = true
     @State private var audioPlayer: AVAudioPlayer?
     @State private var showingGameRules = false
+    @State private var showingSettings = false
 
     var body: some View {
         ZStack {
@@ -324,6 +317,24 @@ struct SelectionView: View {
                 HStack {
                     Spacer()
                     Button {
+                        showingSettings = true
+                    } label: {
+                        Image(systemName: "gearshape")
+                            .font(.system(size: 20))
+                            .foregroundColor(.black)
+                            .padding()
+                    }
+                    .accessibilityLabel("Settings")
+                    .padding(.trailing, 4)
+                }
+                Spacer()
+
+                if store.activeGame != nil {
+                    rejoinBanner
+                }
+
+                HStack {
+                    Button {
                         showingGameRules = true
                     } label: {
                         Text("Rules")
@@ -337,17 +348,11 @@ struct SelectionView: View {
                     }
                     .accessibilityLabel("Game rules")
                     .padding()
-                }
-                Spacer()
 
-                if store.activeGame != nil {
-                    rejoinBanner
-                }
-
-                HStack {
                     Spacer()
+
                     Button {
-                        store.isAuthenticating.toggle()
+                        store.isConfirmingChicken = true
                     } label: {
                         Text("I am la poule")
                             .padding()
@@ -362,14 +367,13 @@ struct SelectionView: View {
                     .padding()
                 }
             }
-            .alert("Password", isPresented: $store.isAuthenticating) {
-                SecureField("Password", text: $store.password)
-                Button("Ok") {
-                    self.store.send(.validatePasswordButtonTapped)
+            .alert("Create a game", isPresented: $store.isConfirmingChicken) {
+                Button("Continue") {
+                    self.store.send(.confirmChickenTapped)
                 }
                 Button("Cancel", role: .cancel) { }
             } message: {
-                Text("Please enter admin password.")
+                Text("You will create a new game as the Chicken. Are you ready?")
             }
             .alert("Join Game", isPresented: $store.isJoiningGame) {
                 TextField("Game code", text: $store.gameCode)
@@ -429,6 +433,25 @@ struct SelectionView: View {
                             }
                         }
                     }
+            }
+        }
+        .sheet(isPresented: $showingSettings) {
+            NavigationStack {
+                SettingsView(
+                    store: Store(initialState: SettingsFeature.State()) {
+                        SettingsFeature()
+                    }
+                )
+                .toolbar {
+                    ToolbarItem {
+                        Button {
+                            showingSettings = false
+                        } label: {
+                            Image(systemName: "xmark")
+                                .foregroundStyle(.black)
+                        }
+                    }
+                }
             }
         }
     }

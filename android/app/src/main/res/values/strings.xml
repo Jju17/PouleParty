@@ -7,8 +7,9 @@
     <string name="press_start">Press start to play</string>
     <string name="rules">Rules</string>
     <string name="i_am_la_poule">I am la poule</string>
-    <string name="password">Password</string>
-    <string name="enter_admin_password">Please enter admin password.</string>
+    <string name="create_game_title">Create a game</string>
+    <string name="create_game_message">You will create a new game as the Chicken. Are you ready?</string>
+    <string name="continue_label">Continue</string>
     <string name="join_game">Join Game</string>
     <string name="join_game_message">Enter the game code to join.</string>
     <string name="game_code">Game Code</string>
@@ -151,6 +152,20 @@
     <string name="share_code">Share this code:</string>
     <string name="tap_to_copy">Tap to copy:</string>
     <string name="copied">Copied!</string>
+
+    <!-- Settings -->
+    <string name="settings">Settings</string>
+    <string name="privacy_policy">Privacy Policy</string>
+    <string name="terms_of_use">Terms of Use</string>
+    <string name="contact_support">Contact Support</string>
+    <string name="delete_my_data">Delete My Data</string>
+    <string name="delete_data_footer">This will delete your anonymous account and all associated data. You can continue using the app — a new anonymous account will be created automatically.</string>
+    <string name="delete_data_title">Delete My Data</string>
+    <string name="delete_data_message">This will permanently delete your anonymous account. Any active games will be abandoned. Are you sure?</string>
+    <string name="delete">Delete</string>
+    <string name="data_deleted">Data Deleted</string>
+    <string name="data_deleted_message">Your account and data have been deleted.</string>
+    <string name="version">Version</string>
 
     <!-- Mapbox -->
     <string name="mapbox_access_token" translatable="false">pk.eyJ1Ijoiamp1MTciLCJhIjoiY20yaGpwaG53MGI2YzJsc2NxOTNzMWJ2bCJ9.D6NMFnmGF7pA2LN64vmqcA</string>

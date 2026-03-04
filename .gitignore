@@ -29,6 +29,13 @@ functions/node_modules/
 android/.idea/
 *.iml
 
+# === Firebase ===
+.firebase/
+
+# === Web ===
+web/node_modules/
+web/dist/
+
 # === macOS ===
 .DS_Store
 

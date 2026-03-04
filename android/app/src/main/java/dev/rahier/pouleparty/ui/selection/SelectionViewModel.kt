@@ -20,13 +20,12 @@ import java.util.UUID
 import javax.inject.Inject
 
 data class SelectionUiState(
-    val isShowingPasswordDialog: Boolean = false,
+    val isShowingChickenConfirm: Boolean = false,
     val isShowingJoinDialog: Boolean = false,
     val isShowingGameRules: Boolean = false,
     val isShowingGameNotFound: Boolean = false,
     val isShowingGameInProgress: Boolean = false,
     val isShowingLocationRequired: Boolean = false,
-    val password: String = "",
     val gameCode: String = "",
     val hunterName: String = "",
     val activeGame: Game? = null,
@@ -87,8 +86,8 @@ class SelectionViewModel @Inject constructor(
         _uiState.update { it.copy(isShowingJoinDialog = true) }
     }
 
-    fun onPasswordDialogDismissed() {
-        _uiState.update { it.copy(isShowingPasswordDialog = false, password = "") }
+    fun onChickenConfirmDismissed() {
+        _uiState.update { it.copy(isShowingChickenConfirm = false) }
     }
 
     fun onJoinDialogDismissed() {
@@ -101,10 +100,6 @@ class SelectionViewModel @Inject constructor(
 
     fun onHunterNameChanged(name: String) {
         _uiState.update { it.copy(hunterName = name) }
-    }
-
-    fun onPasswordChanged(password: String) {
-        _uiState.update { it.copy(password = password) }
     }
 
     fun onRulesTapped() {
@@ -132,17 +127,12 @@ class SelectionViewModel @Inject constructor(
             _uiState.update { it.copy(isShowingLocationRequired = true) }
             return
         }
-        _uiState.update { it.copy(isShowingPasswordDialog = true) }
+        _uiState.update { it.copy(isShowingChickenConfirm = true) }
     }
 
-    /**
-     * Validate chicken password — empty string is the correct password (matches iOS).
-     * Returns a new gameId if password is correct, null otherwise.
-     */
-    fun validatePassword(): String? {
-        val password = _uiState.value.password
-        _uiState.update { it.copy(isShowingPasswordDialog = false, password = "") }
-        return if (password.isEmpty()) UUID.randomUUID().toString() else null
+    fun confirmChicken(): String {
+        _uiState.update { it.copy(isShowingChickenConfirm = false) }
+        return UUID.randomUUID().toString()
     }
 
     /**

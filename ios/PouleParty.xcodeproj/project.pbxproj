@@ -58,6 +58,7 @@
 		D964CC4CA5BD0906B58941B7 /* Victory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26AC030B90FF548206441E43 /* Victory.swift */; };
 		DD0000022F50000100000001 /* GameTimerLogic.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0000012F50000100000001 /* GameTimerLogic.swift */; };
 		EE0000022F60000100000001 /* AddressSearchClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0000012F60000100000001 /* AddressSearchClient.swift */; };
+		EE0000052F70000100000001 /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0000042F70000100000001 /* Settings.swift */; };
 		F2E1D0C9B8A7F6E5D4C3B2A1 /* GameStartCountdownOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B8C9D0E1F2 /* GameStartCountdownOverlay.swift */; };
 		F3A1B2C3D4E5F6A7B8C9D001 /* GameCodeRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3A1B2C3D4E5F6A7B8C9D002 /* GameCodeRow.swift */; };
 		F986A3752F48AAC00086DF16 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = F986A3742F48AAC00086DF16 /* GoogleService-Info.plist */; };
@@ -121,6 +122,7 @@
 		CC0000012F4E900100000001 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
 		DD0000012F50000100000001 /* GameTimerLogic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameTimerLogic.swift; sourceTree = "<group>"; };
 		EE0000012F60000100000001 /* AddressSearchClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddressSearchClient.swift; sourceTree = "<group>"; };
+		EE0000042F70000100000001 /* Settings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Settings.swift; sourceTree = "<group>"; };
 		F3A1B2C3D4E5F6A7B8C9D002 /* GameCodeRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameCodeRow.swift; sourceTree = "<group>"; };
 		F986A3742F48AAC00086DF16 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -266,6 +268,7 @@
 				CC0000012F4E900100000001 /* Constants.swift */,
 				DD0000012F50000100000001 /* GameTimerLogic.swift */,
 				647D9FC42BA3ABF2005B6566 /* PoulePartyApp.swift */,
+				EE0000042F70000100000001 /* Settings.swift */,
 				647D9FC82BA3ABF3005B6566 /* Assets.xcassets */,
 				EE0000032F60000100000001 /* Client */,
 				6464E53B2BA744CD0039C387 /* Dependencies */,
@@ -512,6 +515,7 @@
 				64AF0B022BA7A0110081EA97 /* Color+Utils.swift in Sources */,
 				AA0000062F46900100000001 /* MapOverlays.swift in Sources */,
 				D964CC4CA5BD0906B58941B7 /* Victory.swift in Sources */,
+				EE0000052F70000100000001 /* Settings.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -719,10 +723,10 @@
 				INFOPLIST_FILE = PouleParty/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Poule Party";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.games";
-				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "This app need your location to provide best feature based on location";
-				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "Need location";
-				INFOPLIST_KEY_NSLocationUsageDescription = "Need location";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "This app need your location to provide best feature based on location";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Poule Party uses your location to show your position on the game map in real time. For example, when you play as the Chicken, your location is shared with Hunters so they can find you within the shrinking zone.";
+				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "Poule Party needs continuous access to your location so that other players can see your position on the map during the game, even when the app is in the background. For example, if you are the Chicken, Hunters track your live position to find you.";
+				INFOPLIST_KEY_NSLocationUsageDescription = "Poule Party uses your location to display your position on the game map and share it with other players during a game session.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Poule Party uses your location to show your position on the game map in real time. For example, when you play as the Chicken, your location is shared with Hunters so they can find you within the shrinking zone.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
@@ -775,10 +779,10 @@
 				INFOPLIST_FILE = PouleParty/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Poule Party";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.games";
-				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "This app need your location to provide best feature based on location";
-				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "Need location";
-				INFOPLIST_KEY_NSLocationUsageDescription = "Need location";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "This app need your location to provide best feature based on location";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Poule Party uses your location to show your position on the game map in real time. For example, when you play as the Chicken, your location is shared with Hunters so they can find you within the shrinking zone.";
+				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "Poule Party needs continuous access to your location so that other players can see your position on the map during the game, even when the app is in the background. For example, if you are the Chicken, Hunters track your live position to find you.";
+				INFOPLIST_KEY_NSLocationUsageDescription = "Poule Party uses your location to display your position on the game map and share it with other players during a game session.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Poule Party uses your location to show your position on the game map in real time. For example, when you play as the Chicken, your location is shared with Hunters so they can find you within the shrinking zone.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;

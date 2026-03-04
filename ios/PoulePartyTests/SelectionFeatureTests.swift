@@ -22,9 +22,9 @@ struct SelectionFeatureTests {
         }
     }
 
-    @Test func validatePasswordWithoutLocationShowsAlert() async {
+    @Test func confirmChickenWithoutLocationShowsAlert() async {
         var state = SelectionFeature.State()
-        state.isAuthenticating = true
+        state.isConfirmingChicken = true
 
         let store = TestStore(initialState: state) {
             SelectionFeature()
@@ -32,9 +32,8 @@ struct SelectionFeatureTests {
             $0.locationClient.authorizationStatus = { .denied }
         }
 
-        await store.send(.validatePasswordButtonTapped) {
-            $0.isAuthenticating = false
-            $0.password = ""
+        await store.send(.confirmChickenTapped) {
+            $0.isConfirmingChicken = false
         }
         await store.receive(\.locationRequired) {
             $0.destination = .alert(

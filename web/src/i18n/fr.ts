@@ -1,6 +1,7 @@
 export default {
   nav: {
     privacy: "Confidentialité",
+    terms: "CGU",
     support: "Support",
   },
   home: {
@@ -70,6 +71,38 @@ export default {
       "Pour signaler des bugs, demander des fonctionnalités ou toute autre question, contactez-nous à",
     contactFooter:
       "Merci d'inclure le modèle de votre appareil, la version de l'OS et une description du problème pour que nous puissions vous aider plus rapidement.",
+  },
+  terms: {
+    title: "Conditions d'utilisation",
+    lastUpdated: "Dernière mise à jour : 4 mars 2026",
+    acceptance: "Acceptation des conditions",
+    acceptanceText:
+      "En téléchargeant, installant ou utilisant Poule Party, vous acceptez ces conditions d'utilisation. Si vous n'êtes pas d'accord, veuillez ne pas utiliser l'application.",
+    description: "Description du service",
+    descriptionText:
+      "Poule Party est un jeu mobile gratuit basé sur la géolocalisation dans lequel un joueur (la Poule) se cache tandis que les autres joueurs (les Chasseurs) tentent de la trouver à l'aide d'une carte en temps réel avec une zone qui rétrécit.",
+    userConduct: "Comportement des utilisateurs",
+    conduct1: "Utilisez l'application uniquement dans le cadre prévu (jouer au jeu).",
+    conduct2: "Ne tentez pas de tricher, pirater ou rétro-ingéniérer l'application.",
+    conduct3: "Respectez les autres joueurs et jouez dans des lieux publics et sûrs.",
+    conduct4: "Vous êtes responsable de votre propre sécurité pendant le jeu.",
+    location: "Données de localisation",
+    locationText:
+      "L'application nécessite l'accès à la localisation pour fonctionner. Votre position est partagée avec les autres joueurs de votre session uniquement pendant le jeu. Consultez notre politique de confidentialité pour plus de détails.",
+    disclaimer: "Avertissement",
+    disclaimerText:
+      "L'application est fournie \"en l'état\" sans garantie d'aucune sorte. Nous ne garantissons pas un service ininterrompu ou sans erreur.",
+    liability: "Limitation de responsabilité",
+    liabilityText:
+      "Julien Rahier ne pourra être tenu responsable de tout dommage résultant de l'utilisation de l'application, y compris mais sans s'y limiter, les blessures corporelles, les dommages matériels ou la perte de données.",
+    termination: "Résiliation",
+    terminationText:
+      "Nous nous réservons le droit de suspendre ou de résilier l'accès à l'application à tout moment, sans préavis, pour tout comportement violant ces conditions.",
+    changes: "Modifications des conditions",
+    changesText:
+      "Nous pouvons mettre à jour ces conditions de temps à autre. L'utilisation continue de l'application après les modifications constitue une acceptation des nouvelles conditions.",
+    contact: "Contact",
+    contactText: "Si vous avez des questions concernant ces conditions, contactez-nous à",
   },
   footer: {
     rights: "Tous droits réservés.",
