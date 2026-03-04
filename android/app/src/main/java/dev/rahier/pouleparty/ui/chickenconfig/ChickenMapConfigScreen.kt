@@ -37,7 +37,7 @@ import dev.rahier.pouleparty.ui.theme.CROrange
 @Composable
 fun ChickenMapConfigScreen(
     initialRadius: Double,
-    onLocationSelected: (Point, Double) -> Unit,
+    onLocationSelected: (Point) -> Unit,
     viewModel: ChickenMapConfigViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -76,7 +76,7 @@ fun ChickenMapConfigScreen(
                 }
                 mapView.gestures.addOnMapClickListener { point ->
                     viewModel.onMapTapped(point)
-                    onLocationSelected(point, state.radius)
+                    onLocationSelected(point)
                     true
                 }
             }
@@ -142,8 +142,7 @@ fun ChickenMapConfigScreen(
                                     .clickable {
                                         viewModel.onSearchResultSelected(result)
                                         onLocationSelected(
-                                            Point.fromLngLat(result.longitude, result.latitude),
-                                            state.radius
+                                            Point.fromLngLat(result.longitude, result.latitude)
                                         )
                                     }
                                     .padding(horizontal = 16.dp, vertical = 10.dp)
@@ -160,24 +159,5 @@ fun ChickenMapConfigScreen(
             }
         }
 
-        // Bottom slider
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.BottomCenter)
-                .background(Color.White.copy(alpha = 0.9f))
-                .padding(16.dp)
-        ) {
-            Text(stringResource(R.string.radius_format, state.radius.toInt()))
-            Slider(
-                value = state.radius.toFloat(),
-                onValueChange = {
-                    viewModel.onRadiusChanged(it.toDouble())
-                    onLocationSelected(state.markerPosition, it.toDouble())
-                },
-                valueRange = 500f..2000f,
-                steps = 14
-            )
-        }
     }
 }

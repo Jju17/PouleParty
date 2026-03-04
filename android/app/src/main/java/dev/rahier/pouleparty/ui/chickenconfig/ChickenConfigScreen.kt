@@ -17,9 +17,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.mapbox.geojson.Point
+import com.mapbox.maps.MapboxExperimental
+import com.mapbox.maps.extension.compose.MapboxMap
+import com.mapbox.maps.extension.compose.animation.viewport.rememberMapViewportState
+import com.mapbox.maps.extension.compose.annotation.generated.PolylineAnnotation
 import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.model.GameMod
 import dev.rahier.pouleparty.ui.components.GameCodeCard
+import dev.rahier.pouleparty.ui.components.circlePolygonPoints
 import dev.rahier.pouleparty.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
@@ -52,8 +58,8 @@ fun ChickenConfigScreen(
             Box(modifier = Modifier.padding(padding)) {
                 ChickenMapConfigScreen(
                     initialRadius = state.game.initialRadius,
-                    onLocationSelected = { point, radius ->
-                        viewModel.onLocationSelected(point, radius)
+                    onLocationSelected = { point ->
+                        viewModel.onLocationSelected(point)
                     }
                 )
             }
@@ -110,6 +116,37 @@ fun ChickenConfigScreen(
                     }
                 }
 
+                // Duration picker (normal mode only)
+                if (!state.isExpertMode) {
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(stringResource(R.string.duration), style = MaterialTheme.typography.labelLarge)
+                            Spacer(Modifier.height(8.dp))
+                            val durationOptions = listOf(60.0 to "1h", 90.0 to "1h30", 120.0 to "2h", 150.0 to "2h30", 180.0 to "3h")
+                            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                                durationOptions.forEachIndexed { index, (minutes, label) ->
+                                    SegmentedButton(
+                                        selected = state.gameDurationMinutes == minutes,
+                                        onClick = { viewModel.updateGameDuration(minutes) },
+                                        shape = SegmentedButtonDefaults.itemShape(index, durationOptions.size)
+                                    ) {
+                                        Text(label)
+                                    }
+                                }
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            val endTime = Date(state.game.startDate.time + (state.gameDurationMinutes * 60 * 1000).toLong())
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(stringResource(R.string.ends_at))
+                                Text(dateFormat.format(endTime), color = Color.Gray)
+                            }
+                        }
+                    }
+                }
+
                 // Game Mode picker
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(16.dp)) {
@@ -130,61 +167,79 @@ fun ChickenConfigScreen(
                     }
                 }
 
-                // Map setup
-                Card(
-                    modifier = Modifier.fillMaxWidth().clickable { viewModel.onMapSetupTapped() }
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(stringResource(R.string.map_setup))
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = null,
-                            tint = Color.Gray
-                        )
-                    }
-                }
-
-                // Radius interval update slider
+                // Zone card — inline map preview + radius slider
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(16.dp)) {
+                        Text(stringResource(R.string.zone), style = MaterialTheme.typography.labelLarge)
+                        Spacer(Modifier.height(8.dp))
+                        // Inline map preview (tap to open full map config)
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(180.dp)
+                                .clickable { viewModel.onMapSetupTapped() },
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            MapPreviewContent(
+                                center = state.game.initialLocation,
+                                radius = state.game.initialRadius
+                            )
+                        }
+                        Spacer(Modifier.height(12.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(stringResource(R.string.radius_interval_update))
-                            Text(stringResource(R.string.minutes_format, state.game.radiusIntervalUpdate.toInt()))
+                            Text(stringResource(R.string.zone_radius))
+                            Text(stringResource(R.string.meters_format, state.game.initialRadius.toInt()))
                         }
                         Slider(
-                            value = state.game.radiusIntervalUpdate.toFloat(),
-                            onValueChange = { viewModel.updateRadiusIntervalUpdate(it.toDouble()) },
-                            valueRange = 1f..60f,
-                            steps = 58
+                            value = state.game.initialRadius.toFloat(),
+                            onValueChange = { viewModel.updateInitialRadius(it.toDouble()) },
+                            valueRange = 500f..2000f,
+                            steps = 14
                         )
                     }
                 }
 
-                // Radius decline slider
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(stringResource(R.string.radius_decline))
-                            Text(stringResource(R.string.meters_format, state.game.radiusDeclinePerUpdate.toInt()))
+                // Advanced settings (expert mode only)
+                if (state.isExpertMode) {
+                    // Radius interval update slider
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(stringResource(R.string.radius_interval_update))
+                                Text(stringResource(R.string.minutes_format, state.game.radiusIntervalUpdate.toInt()))
+                            }
+                            Slider(
+                                value = state.game.radiusIntervalUpdate.toFloat(),
+                                onValueChange = { viewModel.updateRadiusIntervalUpdate(it.toDouble()) },
+                                valueRange = 1f..60f,
+                                steps = 58
+                            )
                         }
-                        Slider(
-                            value = state.game.radiusDeclinePerUpdate.toFloat(),
-                            onValueChange = { viewModel.updateRadiusDecline(it.toDouble()) },
-                            valueRange = 50f..1000f,
-                            steps = 94
-                        )
+                    }
+
+                    // Radius decline slider
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(stringResource(R.string.radius_decline))
+                                Text(stringResource(R.string.meters_format, state.game.radiusDeclinePerUpdate.toInt()))
+                            }
+                            Slider(
+                                value = state.game.radiusDeclinePerUpdate.toFloat(),
+                                onValueChange = { viewModel.updateRadiusDecline(it.toDouble()) },
+                                valueRange = 50f..1000f,
+                                steps = 94
+                            )
+                        }
                     }
                 }
 
@@ -204,6 +259,30 @@ fun ChickenConfigScreen(
                             valueRange = 0f..45f,
                             steps = 44
                         )
+                    }
+                }
+
+                // Settings mode toggle (Normal / Expert)
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(stringResource(R.string.settings_mode), style = MaterialTheme.typography.labelLarge)
+                        Spacer(Modifier.height(8.dp))
+                        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                            SegmentedButton(
+                                selected = !state.isExpertMode,
+                                onClick = { viewModel.toggleExpertMode(false) },
+                                shape = SegmentedButtonDefaults.itemShape(0, 2)
+                            ) {
+                                Text(stringResource(R.string.normal))
+                            }
+                            SegmentedButton(
+                                selected = state.isExpertMode,
+                                onClick = { viewModel.toggleExpertMode(true) },
+                                shape = SegmentedButtonDefaults.itemShape(1, 2)
+                            ) {
+                                Text(stringResource(R.string.expert))
+                            }
+                        }
                     }
                 }
 
@@ -256,6 +335,37 @@ fun ChickenConfigScreen(
             confirmButton = {
                 TextButton(onClick = { viewModel.dismissAlert() }) { Text(stringResource(R.string.ok)) }
             }
+        )
+    }
+}
+
+@OptIn(MapboxExperimental::class)
+@Composable
+private fun MapPreviewContent(center: Point, radius: Double) {
+    val mapViewportState = rememberMapViewportState {
+        setCameraOptions {
+            center(center)
+            zoom(13.0)
+        }
+    }
+    Box(modifier = Modifier.fillMaxSize()) {
+        MapboxMap(
+            modifier = Modifier.fillMaxSize(),
+            mapViewportState = mapViewportState
+        ) {
+            val circlePoints = circlePolygonPoints(center, radius)
+            PolylineAnnotation(
+                points = circlePoints + listOf(circlePoints.first())
+            ) {
+                lineColor = CROrange.copy(alpha = 0.8f)
+                lineWidth = 2.0
+            }
+        }
+        // Overlay to absorb all touch events — makes the map preview non-interactive
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable(enabled = false, onClick = {})
         )
     }
 }

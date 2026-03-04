@@ -1,7 +1,13 @@
 package dev.rahier.pouleparty.ui.onboarding
 
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.rahier.pouleparty.data.LocationRepository
 import dev.rahier.pouleparty.util.ProfanityFilter
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,6 +20,7 @@ data class OnboardingUiState(
     val currentPage: Int = 0,
     val hasFineLocation: Boolean = false,
     val hasBackgroundLocation: Boolean = false,
+    val hasNotificationPermission: Boolean = false,
     val nickname: String = "",
     val showLocationAlert: Boolean = false,
     val showProfanityAlert: Boolean = false
@@ -21,7 +28,8 @@ data class OnboardingUiState(
 
 @HiltViewModel
 class OnboardingViewModel @Inject constructor(
-    private val locationRepository: LocationRepository
+    private val locationRepository: LocationRepository,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(OnboardingUiState())
@@ -31,8 +39,26 @@ class OnboardingViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 hasFineLocation = locationRepository.hasFineLocationPermission(),
-                hasBackgroundLocation = locationRepository.hasBackgroundLocationPermission()
+                hasBackgroundLocation = locationRepository.hasBackgroundLocationPermission(),
+                hasNotificationPermission = hasNotificationPermission()
             )
+        }
+    }
+
+    fun refreshNotificationPermission() {
+        _uiState.update {
+            it.copy(hasNotificationPermission = hasNotificationPermission())
+        }
+    }
+
+    private fun hasNotificationPermission(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+        } else {
+            true // Below Android 13, notifications are enabled by default
         }
     }
 
@@ -40,8 +66,9 @@ class OnboardingViewModel @Inject constructor(
         val current = _uiState.value.currentPage
         // Block on location slide (page 3) if fine location not granted
         if (current == 3 && !_uiState.value.hasFineLocation) return
-        // Block on nickname slide (page 4) if nickname is empty or inappropriate
-        if (current == 4) {
+        // Page 4 = notifications — non-blocking, always allow next
+        // Block on nickname slide (page 5) if nickname is empty or inappropriate
+        if (current == 5) {
             val trimmed = _uiState.value.nickname.trim()
             if (trimmed.isEmpty()) return
             if (ProfanityFilter.containsProfanity(trimmed)) {
@@ -98,7 +125,7 @@ class OnboardingViewModel @Inject constructor(
         get() = _uiState.value.currentPage == TOTAL_PAGES - 1
 
     companion object {
-        const val TOTAL_PAGES = 6
+        const val TOTAL_PAGES = 7
         const val NICKNAME_MAX_LENGTH = 20
     }
 }

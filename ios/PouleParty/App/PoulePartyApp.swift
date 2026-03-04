@@ -13,6 +13,7 @@ import Foundation
 
 @main
 struct PoulePartyApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
     @Shared(.appStorage(AppConstants.prefOnboardingCompleted)) var hasCompletedOnboarding = false
 
     init() {

@@ -6,6 +6,7 @@
 //
 
 import ComposableArchitecture
+import FirebaseMessaging
 import os
 import SwiftUI
 
@@ -39,7 +40,10 @@ struct AppFeature {
             case .appStarted:
                 return .run { _ in
                     do {
-                        _ = try await userClient.signInAnonymously()
+                        _ = try await authClient.signInAnonymously()
+                        if let token = Messaging.messaging().fcmToken {
+                            await FCMTokenManager.shared.saveToken(token)
+                        }
                     } catch {
                         Logger(subsystem: "dev.rahier.pouleparty", category: "AppFeature")
                             .error("Anonymous sign-in failed: \(error.localizedDescription)")

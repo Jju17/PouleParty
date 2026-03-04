@@ -10,7 +10,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.tasks.await
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -60,6 +63,25 @@ fun AppNavigation() {
                 Log.e("AppNavigation", "Anonymous sign-in failed", e)
             }
             isAuthReady = true
+        }
+        // Save FCM token after auth
+        val userId = auth.currentUser?.uid
+        if (userId != null) {
+            try {
+                val token = FirebaseMessaging.getInstance().token.await()
+                FirebaseFirestore.getInstance()
+                    .collection("fcmTokens")
+                    .document(userId)
+                    .set(
+                        mapOf(
+                            "token" to token,
+                            "platform" to "android",
+                            "updatedAt" to Timestamp.now()
+                        )
+                    )
+            } catch (e: Exception) {
+                Log.e("AppNavigation", "Failed to save FCM token", e)
+            }
         }
     }
 

@@ -2,6 +2,9 @@ package dev.rahier.pouleparty.ui
 
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameMod
+import dev.rahier.pouleparty.model.NORMAL_MODE_FIXED_INTERVAL
+import dev.rahier.pouleparty.model.NORMAL_MODE_MINIMUM_RADIUS
+import dev.rahier.pouleparty.model.calculateNormalModeSettings
 import dev.rahier.pouleparty.ui.chickenconfig.ChickenConfigUiState
 import org.junit.Assert.*
 import org.junit.Test
@@ -65,5 +68,283 @@ class ChickenConfigViewModelTest {
 
         state = state.copy(showAlert = false)
         assertFalse(state.showAlert)
+    }
+
+    // MARK: Normal mode calculation — basic
+
+    @Test
+    fun `calculateNormalModeSettings always returns fixed interval of 5`() {
+        val durations = listOf(5.0, 30.0, 60.0, 90.0, 120.0, 150.0, 180.0)
+        for (duration in durations) {
+            val (interval, _) = calculateNormalModeSettings(1500.0, duration)
+            assertEquals("interval should be 5 for duration $duration", NORMAL_MODE_FIXED_INTERVAL, interval, 0.01)
+        }
+    }
+
+    @Test
+    fun `calculateNormalModeSettings correct decline for 2h`() {
+        val (_, decline) = calculateNormalModeSettings(1500.0, 120.0)
+        val expected = (1500.0 - 100.0) / 24.0
+        assertEquals(expected, decline, 0.01)
+    }
+
+    @Test
+    fun `calculateNormalModeSettings correct decline for 1h`() {
+        val (_, decline) = calculateNormalModeSettings(1500.0, 60.0)
+        val expected = (1500.0 - 100.0) / 12.0
+        assertEquals(expected, decline, 0.01)
+    }
+
+    // MARK: All picker durations reach 100m
+
+    @Test
+    fun `all picker durations reach 100m`() {
+        val durations = listOf(60.0, 90.0, 120.0, 150.0, 180.0)
+        for (duration in durations) {
+            val radius = 1500.0
+            val (interval, decline) = calculateNormalModeSettings(radius, duration)
+            val finalRadius = radius - (decline * (duration / interval))
+            assertEquals("duration $duration should reach 100m", NORMAL_MODE_MINIMUM_RADIUS, finalRadius, 0.01)
+        }
+    }
+
+    // MARK: All radius slider values reach 100m
+
+    @Test
+    fun `all radius slider values reach 100m`() {
+        // Slider: 500 to 2000 step 100
+        var radius = 500.0
+        while (radius <= 2000.0) {
+            val (interval, decline) = calculateNormalModeSettings(radius, 120.0)
+            val finalRadius = radius - (decline * (120.0 / interval))
+            assertEquals("radius $radius should reach 100m", NORMAL_MODE_MINIMUM_RADIUS, finalRadius, 0.01)
+            radius += 100.0
+        }
+    }
+
+    // MARK: All combinations of radius x duration
+
+    @Test
+    fun `all radius and duration combinations reach 100m`() {
+        val durations = listOf(60.0, 90.0, 120.0, 150.0, 180.0)
+        var radius = 500.0
+        while (radius <= 2000.0) {
+            for (duration in durations) {
+                val (interval, decline) = calculateNormalModeSettings(radius, duration)
+                val finalRadius = radius - (decline * (duration / interval))
+                assertEquals(
+                    "radius=$radius, duration=$duration should reach 100m",
+                    NORMAL_MODE_MINIMUM_RADIUS, finalRadius, 0.01
+                )
+            }
+            radius += 100.0
+        }
+    }
+
+    // MARK: Decline never produces negative final radius
+
+    @Test
+    fun `decline never produces negative final radius`() {
+        val durations = listOf(5.0, 30.0, 60.0, 90.0, 120.0, 150.0, 180.0)
+        var radius = 100.0
+        while (radius <= 2000.0) {
+            for (duration in durations) {
+                val (interval, decline) = calculateNormalModeSettings(radius, duration)
+                val finalRadius = radius - (decline * (duration / interval))
+                assertTrue(
+                    "radius=$radius, duration=$duration gave negative final radius $finalRadius",
+                    finalRadius >= -0.01
+                )
+            }
+            radius += 100.0
+        }
+    }
+
+    // MARK: Edge cases — zero and negative duration
+
+    @Test
+    fun `zero duration returns zero decline`() {
+        val (interval, decline) = calculateNormalModeSettings(1500.0, 0.0)
+        assertEquals(NORMAL_MODE_FIXED_INTERVAL, interval, 0.01)
+        assertEquals(0.0, decline, 0.01)
+    }
+
+    @Test
+    fun `negative duration returns zero decline`() {
+        val (interval, decline) = calculateNormalModeSettings(1500.0, -10.0)
+        assertEquals(NORMAL_MODE_FIXED_INTERVAL, interval, 0.01)
+        assertEquals(0.0, decline, 0.01)
+    }
+
+    // MARK: Edge cases — minimal duration (single shrink)
+
+    @Test
+    fun `five minute duration produces single shrink to 100m`() {
+        val (interval, decline) = calculateNormalModeSettings(1500.0, 5.0)
+        assertEquals(5.0, interval, 0.01)
+        // 1 shrink: 1500 - decline = 100
+        val finalRadius = 1500.0 - decline
+        assertEquals(NORMAL_MODE_MINIMUM_RADIUS, finalRadius, 0.01)
+    }
+
+    // MARK: Edge cases — radius at or below minimum
+
+    @Test
+    fun `radius exactly at minimum gives zero decline`() {
+        val (_, decline) = calculateNormalModeSettings(NORMAL_MODE_MINIMUM_RADIUS, 120.0)
+        assertEquals(0.0, decline, 0.01)
+    }
+
+    @Test
+    fun `radius below minimum gives zero decline`() {
+        val (_, decline) = calculateNormalModeSettings(50.0, 120.0)
+        assertEquals(0.0, decline, 0.01)
+    }
+
+    @Test
+    fun `radius just above minimum`() {
+        val (interval, decline) = calculateNormalModeSettings(101.0, 120.0)
+        assertEquals(5.0, interval, 0.01)
+        val finalRadius = 101.0 - (decline * (120.0 / interval))
+        assertEquals(NORMAL_MODE_MINIMUM_RADIUS, finalRadius, 0.01)
+    }
+
+    // MARK: Edge cases — large values
+
+    @Test
+    fun `very large radius reaches 100m`() {
+        val radius = 10000.0
+        val (interval, decline) = calculateNormalModeSettings(radius, 120.0)
+        val finalRadius = radius - (decline * (120.0 / interval))
+        assertEquals(NORMAL_MODE_MINIMUM_RADIUS, finalRadius, 0.01)
+        assertTrue(decline > 0)
+    }
+
+    @Test
+    fun `very long duration produces small decline`() {
+        val (interval, decline) = calculateNormalModeSettings(1500.0, 600.0)
+        // 600/5 = 120 shrinks, (1500-100)/120 = 11.67
+        assertTrue("decline should be small for long duration", decline < 12)
+        assertTrue("decline should be positive", decline > 11)
+        val finalRadius = 1500.0 - (decline * (600.0 / interval))
+        assertEquals(NORMAL_MODE_MINIMUM_RADIUS, finalRadius, 0.01)
+    }
+
+    // MARK: Decline is always non-negative for any input
+
+    @Test
+    fun `decline is non-negative for all inputs`() {
+        val testRadii = listOf(0.0, 50.0, 100.0, 500.0, 1000.0, 1500.0, 2000.0)
+        val testDurations = listOf(0.0, 5.0, 30.0, 60.0, 120.0, 180.0, 600.0)
+        for (radius in testRadii) {
+            for (duration in testDurations) {
+                val (_, decline) = calculateNormalModeSettings(radius, duration)
+                assertTrue(
+                    "decline should be >= 0 for radius=$radius, duration=$duration",
+                    decline >= 0.0
+                )
+            }
+        }
+    }
+
+    // MARK: Integration — findLastUpdate with normal mode settings
+
+    @Test
+    fun `findLastUpdate with normal mode settings shrinks correctly`() {
+        val radius = 1500.0
+        val duration = 120.0
+        val (interval, decline) = calculateNormalModeSettings(radius, duration)
+
+        // Game started 30.5 minutes ago (extra buffer to avoid boundary issues)
+        val now = System.currentTimeMillis()
+        val game = Game(
+            id = "test",
+            radiusIntervalUpdate = interval,
+            startTimestamp = com.google.firebase.Timestamp(Date(now - 1_830_000)),
+            endTimestamp = com.google.firebase.Timestamp(Date(now + ((duration - 30) * 60_000).toLong())),
+            initialRadius = radius,
+            radiusDeclinePerUpdate = decline
+        )
+        val (_, currentRadius) = game.findLastUpdate()
+        // findLastUpdate truncates decline to Int on each step:
+        // 6 shrinks * decline.toInt() subtracted from initialRadius.toInt()
+        val expectedRadius = radius.toInt() - (decline.toInt() * 6)
+        assertEquals(expectedRadius, currentRadius)
+    }
+
+    @Test
+    fun `findLastUpdate with normal mode never goes below zero`() {
+        val radius = 500.0
+        val duration = 60.0
+        val (interval, decline) = calculateNormalModeSettings(radius, duration)
+
+        // Game started way longer ago than duration
+        val now = System.currentTimeMillis()
+        val game = Game(
+            id = "test",
+            radiusIntervalUpdate = interval,
+            startTimestamp = com.google.firebase.Timestamp(Date(now - 7_200_000)),
+            endTimestamp = com.google.firebase.Timestamp(Date(now - 3_600_000)),
+            initialRadius = radius,
+            radiusDeclinePerUpdate = decline
+        )
+        val (_, currentRadius) = game.findLastUpdate()
+        assertTrue("currentRadius should be >= 0, got $currentRadius", currentRadius >= 0)
+    }
+
+    // MARK: State — expert/normal mode toggle behavior
+
+    @Test
+    fun `initial state has expert mode disabled with 120 min default`() {
+        val state = ChickenConfigUiState()
+        assertFalse(state.isExpertMode)
+        assertEquals(120.0, state.gameDurationMinutes, 0.01)
+    }
+
+    @Test
+    fun `toggling to expert mode preserves current game values`() {
+        val game = Game(id = "test", radiusIntervalUpdate = 7.0, radiusDeclinePerUpdate = 150.0)
+        val state = ChickenConfigUiState(game = game, isExpertMode = false)
+        val expertState = state.copy(isExpertMode = true)
+
+        // Values should be preserved, not recalculated
+        assertEquals(7.0, expertState.game.radiusIntervalUpdate, 0.01)
+        assertEquals(150.0, expertState.game.radiusDeclinePerUpdate, 0.01)
+    }
+
+    @Test
+    fun `switching from expert to normal would need recalculation`() {
+        // When switching back to normal, the ViewModel recalculates
+        // Here we verify the calculation produces different values than expert
+        val game = Game(id = "test", initialRadius = 1500.0, radiusIntervalUpdate = 10.0, radiusDeclinePerUpdate = 200.0)
+        val state = ChickenConfigUiState(game = game, isExpertMode = true, gameDurationMinutes = 120.0)
+
+        // Simulate what recalculation would produce
+        val (interval, decline) = calculateNormalModeSettings(state.game.initialRadius, state.gameDurationMinutes)
+        // Expert had interval=10, decline=200; normal should have interval=5, different decline
+        assertEquals(5.0, interval, 0.01)
+        assertNotEquals(200.0, decline, 0.01)
+    }
+
+    @Test
+    fun `changing duration in expert mode does not affect game parameters`() {
+        val game = Game(id = "test", radiusIntervalUpdate = 10.0, radiusDeclinePerUpdate = 200.0)
+        val state = ChickenConfigUiState(game = game, isExpertMode = true, gameDurationMinutes = 120.0)
+        val newState = state.copy(gameDurationMinutes = 60.0)
+
+        // Game parameters unchanged
+        assertEquals(10.0, newState.game.radiusIntervalUpdate, 0.01)
+        assertEquals(200.0, newState.game.radiusDeclinePerUpdate, 0.01)
+    }
+
+    @Test
+    fun `changing radius in expert mode does not recalculate interval or decline`() {
+        val game = Game(id = "test", initialRadius = 1500.0, radiusIntervalUpdate = 10.0, radiusDeclinePerUpdate = 200.0)
+        val state = ChickenConfigUiState(game = game, isExpertMode = true)
+        val newState = state.copy(game = state.game.copy(initialRadius = 800.0))
+
+        // interval and decline unchanged
+        assertEquals(10.0, newState.game.radiusIntervalUpdate, 0.01)
+        assertEquals(200.0, newState.game.radiusDeclinePerUpdate, 0.01)
     }
 }
