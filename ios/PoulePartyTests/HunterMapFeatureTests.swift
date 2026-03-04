@@ -57,6 +57,7 @@ struct HunterMapFeatureTests {
                 center: newGame.initialCoordinates.toCLCoordinates,
                 radius: CLLocationDistance(newGame.initialRadius)
             )
+            $0.lastLiveActivityState = $0.liveActivityState
         }
     }
 
@@ -246,6 +247,7 @@ struct HunterMapFeatureTests {
                 center: updatedGame.initialCoordinates.toCLCoordinates,
                 radius: CLLocationDistance(lastRadius)
             )
+            $0.lastLiveActivityState = $0.liveActivityState
             $0.previousWinnersCount = 1
         }
     }
@@ -521,6 +523,7 @@ struct HunterMapFeatureTests {
                 center: updatedGame.initialCoordinates.toCLCoordinates,
                 radius: CLLocationDistance(lastRadius)
             )
+            $0.lastLiveActivityState = $0.liveActivityState
             $0.winnerNotification = "Alice found the chicken! 🐔"
             $0.previousWinnersCount = 1
         }

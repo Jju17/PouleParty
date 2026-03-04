@@ -31,6 +31,7 @@ struct AppFeature {
     }
 
     @Dependency(\.apiClient) var apiClient
+    @Dependency(\.liveActivityClient) var liveActivityClient
     @Dependency(\.userClient) var userClient
 
     var body: some ReducerOf<Self> {
@@ -60,6 +61,7 @@ struct AppFeature {
                 } else {
                     return .none
                 }
+                liveActivityClient.end(nil)
                 state = AppFeature.State.selection(SelectionFeature.State())
                 return .run { _ in
                     do {
@@ -83,9 +85,11 @@ struct AppFeature {
                 state = AppFeature.State.chickenMap(ChickenMapFeature.State(game: game))
                 return .none
             case .hunterMap(.returnedToMenu):
+                liveActivityClient.end(nil)
                 state = AppFeature.State.selection(SelectionFeature.State())
                 return .none
             case .hunterMap(.winnerRegistered):
+                liveActivityClient.end(nil)
                 if case let .hunterMap(hunterState) = state {
                     state = .victory(VictoryFeature.State(
                         game: hunterState.game,

@@ -26,6 +26,9 @@
 		BB0000092F47000100000001 /* SwiftNavigation in Frameworks */ = {isa = PBXBuildFile; productRef = BB00000A2F47000100000001 /* SwiftNavigation */; };
 		F90899CC2F58B24D0006C8DF /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = F90899CB2F58B24D0006C8DF /* FirebaseMessaging */; };
 		F986A3752F48AAC00086DF16 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = F986A3742F48AAC00086DF16 /* GoogleService-Info.plist */; };
+		F9B1BE232F58DCD200E066D6 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F9B1BE222F58DCD200E066D6 /* WidgetKit.framework */; };
+		F9B1BE252F58DCD200E066D6 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F9B1BE242F58DCD200E066D6 /* SwiftUI.framework */; };
+		F9B1BE322F58DCD300E066D6 /* PoulePartyWidgetsExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F9B1BE202F58DCD200E066D6 /* PoulePartyWidgetsExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		F9B5A2222F53A73B004EBFD7 /* MapboxMaps in Frameworks */ = {isa = PBXBuildFile; productRef = F9B5A2212F53A73B004EBFD7 /* MapboxMaps */; };
 /* End PBXBuildFile section */
 
@@ -37,7 +40,28 @@
 			remoteGlobalIDString = 647D9FC02BA3ABF2005B6566;
 			remoteInfo = PouleParty;
 		};
+		F9B1BE302F58DCD300E066D6 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 647D9FB92BA3ABF2005B6566 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F9B1BE1F2F58DCD200E066D6;
+			remoteInfo = PoulePartyWidgetsExtension;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		F9B1BE372F58DCD300E066D6 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				F9B1BE322F58DCD300E066D6 /* PoulePartyWidgetsExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		6405C2912BFC871B00A35A50 /* Bxl.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = Bxl.gpx; sourceTree = "<group>"; };
@@ -52,7 +76,35 @@
 		64CE0F832CEE8E8200762232 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		64FDBE382BC32AD60073DC85 /* La Rochelle.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = "La Rochelle.gpx"; sourceTree = "<group>"; };
 		F986A3742F48AAC00086DF16 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		F9B1BE202F58DCD200E066D6 /* PoulePartyWidgetsExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PoulePartyWidgetsExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		F9B1BE222F58DCD200E066D6 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		F9B1BE242F58DCD200E066D6 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		F9B1BE332F58DCD300E066D6 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = F9B1BE1F2F58DCD200E066D6 /* PoulePartyWidgetsExtension */;
+		};
+		F9B1BE3B2F58DD5700E066D6 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				LiveActivityModels.swift,
+			);
+			target = F9B1BE1F2F58DCD200E066D6 /* PoulePartyWidgetsExtension */;
+		};
+		F9B1BE3E2F58DD8500E066D6 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"Bangers/Bangers-Regular.ttf",
+				"Early GameBoy.ttf",
+			);
+			target = F9B1BE1F2F58DCD200E066D6 /* PoulePartyWidgetsExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		646D8E462F467EB70068ABBF /* PoulePartyTests */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = PoulePartyTests; sourceTree = "<group>"; };
@@ -61,8 +113,9 @@
 		F9961E052F58B872006C46AC /* Components */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Components; sourceTree = "<group>"; };
 		F9961E0D2F58B872006C46AC /* Extensions */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Extensions; sourceTree = "<group>"; };
 		F9961E1A2F58B872006C46AC /* Features */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Features; sourceTree = "<group>"; };
-		F9961E3E2F58B87B006C46AC /* Models */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Models; sourceTree = "<group>"; };
-		F9961E482F58B87B006C46AC /* Resources */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Resources; sourceTree = "<group>"; };
+		F9961E3E2F58B87B006C46AC /* Models */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (F9B1BE3B2F58DD5700E066D6 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = Models; sourceTree = "<group>"; };
+		F9961E482F58B87B006C46AC /* Resources */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (F9B1BE3E2F58DD8500E066D6 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = Resources; sourceTree = "<group>"; };
+		F9B1BE262F58DCD200E066D6 /* PoulePartyWidgets */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (F9B1BE332F58DCD300E066D6 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = PoulePartyWidgets; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -96,6 +149,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F9B1BE1D2F58DCD200E066D6 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F9B1BE252F58DCD200E066D6 /* SwiftUI.framework in Frameworks */,
+				F9B1BE232F58DCD200E066D6 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -112,6 +174,8 @@
 				643A59952BC9C38B002B53B6 /* Namur.gpx */,
 				646D8E462F467EB70068ABBF /* PoulePartyTests */,
 				647D9FC32BA3ABF2005B6566 /* PouleParty */,
+				F9B1BE262F58DCD200E066D6 /* PoulePartyWidgets */,
+				F9B1BE212F58DCD200E066D6 /* Frameworks */,
 				647D9FC22BA3ABF2005B6566 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -121,6 +185,7 @@
 			children = (
 				647D9FC12BA3ABF2005B6566 /* PouleParty.app */,
 				646D8E392F467E520068ABBF /* PoulePartyTests.xctest */,
+				F9B1BE202F58DCD200E066D6 /* PoulePartyWidgetsExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -139,6 +204,15 @@
 				F9961E482F58B87B006C46AC /* Resources */,
 			);
 			path = PouleParty;
+			sourceTree = "<group>";
+		};
+		F9B1BE212F58DCD200E066D6 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				F9B1BE222F58DCD200E066D6 /* WidgetKit.framework */,
+				F9B1BE242F58DCD200E066D6 /* SwiftUI.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -173,10 +247,12 @@
 				647D9FBE2BA3ABF2005B6566 /* Frameworks */,
 				647D9FBF2BA3ABF2005B6566 /* Resources */,
 				6464E52F2BA5C54D0039C387 /* Crashlytics */,
+				F9B1BE372F58DCD300E066D6 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				F9B1BE312F58DCD300E066D6 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				F9961DF92F58B872006C46AC /* App */,
@@ -210,6 +286,28 @@
 			productReference = 647D9FC12BA3ABF2005B6566 /* PouleParty.app */;
 			productType = "com.apple.product-type.application";
 		};
+		F9B1BE1F2F58DCD200E066D6 /* PoulePartyWidgetsExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F9B1BE342F58DCD300E066D6 /* Build configuration list for PBXNativeTarget "PoulePartyWidgetsExtension" */;
+			buildPhases = (
+				F9B1BE1C2F58DCD200E066D6 /* Sources */,
+				F9B1BE1D2F58DCD200E066D6 /* Frameworks */,
+				F9B1BE1E2F58DCD200E066D6 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				F9B1BE262F58DCD200E066D6 /* PoulePartyWidgets */,
+			);
+			name = PoulePartyWidgetsExtension;
+			packageProductDependencies = (
+			);
+			productName = PoulePartyWidgetsExtension;
+			productReference = F9B1BE202F58DCD200E066D6 /* PoulePartyWidgetsExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -217,7 +315,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2620;
+				LastSwiftUpdateCheck = 2630;
 				LastUpgradeCheck = 2620;
 				TargetAttributes = {
 					646D8E382F467E520068ABBF = {
@@ -226,6 +324,9 @@
 					};
 					647D9FC02BA3ABF2005B6566 = {
 						CreatedOnToolsVersion = 15.3;
+					};
+					F9B1BE1F2F58DCD200E066D6 = {
+						CreatedOnToolsVersion = 26.3;
 					};
 				};
 			};
@@ -250,6 +351,7 @@
 			targets = (
 				647D9FC02BA3ABF2005B6566 /* PouleParty */,
 				646D8E382F467E520068ABBF /* PoulePartyTests */,
+				F9B1BE1F2F58DCD200E066D6 /* PoulePartyWidgetsExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -270,6 +372,13 @@
 				645DF82B2D306E5D005D8731 /* Stockholm.gpx in Resources */,
 				F986A3752F48AAC00086DF16 /* GoogleService-Info.plist in Resources */,
 				64CE0F842CEE8E8200762232 /* Localizable.xcstrings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F9B1BE1E2F58DCD200E066D6 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -317,6 +426,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F9B1BE1C2F58DCD200E066D6 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -324,6 +440,11 @@
 			isa = PBXTargetDependency;
 			target = 647D9FC02BA3ABF2005B6566 /* PouleParty */;
 			targetProxy = 646D8E3D2F467E520068ABBF /* PBXContainerItemProxy */;
+		};
+		F9B1BE312F58DCD300E066D6 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F9B1BE1F2F58DCD200E066D6 /* PoulePartyWidgetsExtension */;
+			targetProxy = F9B1BE302F58DCD300E066D6 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -612,6 +733,70 @@
 			};
 			name = Release;
 		};
+		F9B1BE352F58DCD300E066D6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PoulePartyWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = PoulePartyWidgets;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.rahier.pouleparty.PoulePartyWidgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		F9B1BE362F58DCD300E066D6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PoulePartyWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = PoulePartyWidgets;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.rahier.pouleparty.PoulePartyWidgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -638,6 +823,15 @@
 			buildConfigurations = (
 				647D9FD12BA3ABF3005B6566 /* Debug */,
 				647D9FD22BA3ABF3005B6566 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F9B1BE342F58DCD300E066D6 /* Build configuration list for PBXNativeTarget "PoulePartyWidgetsExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F9B1BE352F58DCD300E066D6 /* Debug */,
+				F9B1BE362F58DCD300E066D6 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

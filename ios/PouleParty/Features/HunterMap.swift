@@ -36,9 +36,26 @@ struct HunterMapFeature {
         var codeCooldownUntil: Date? = nil
         var userLocation: CLLocationCoordinate2D?
         var isOutsideZone: Bool = false
+        var lastLiveActivityState: PoulePartyAttributes.ContentState?
 
         var hasGameStarted: Bool { nowDate >= game.hunterStartDate }
         var isCodeOnCooldown: Bool { codeCooldownUntil.map { nowDate < $0 } ?? false }
+
+        var currentGamePhase: PoulePartyAttributes.ContentState.GamePhase {
+            if !hasGameStarted { return .waitingToStart }
+            return .hunting
+        }
+
+        var liveActivityState: PoulePartyAttributes.ContentState {
+            .init(
+                radiusMeters: radius,
+                nextShrinkDate: nextRadiusUpdate,
+                activeHunters: max(0, game.hunterIds.count - game.winners.count),
+                winnersCount: game.winners.count,
+                isOutsideZone: isOutsideZone,
+                gamePhase: currentGamePhase
+            )
+        }
     }
 
     enum Action: BindableAction {
@@ -81,6 +98,7 @@ struct HunterMapFeature {
     @Dependency(\.apiClient) var apiClient
     @Dependency(\.userClient) var userClient
     @Dependency(\.continuousClock) var clock
+    @Dependency(\.liveActivityClient) var liveActivityClient
     @Dependency(\.locationClient) var locationClient
 
     var body: some ReducerOf<Self> {
@@ -111,8 +129,10 @@ struct HunterMapFeature {
                 return .none
             case .destination(.presented(.alert(.leaveGame))):
                 locationClient.stopTracking()
+                liveActivityClient.end(nil)
                 return .send(.returnedToMenu)
             case .destination(.presented(.alert(.gameOver))):
+                liveActivityClient.end(nil)
                 return .send(.returnedToMenu)
             case .destination:
                 return .none
@@ -177,6 +197,14 @@ struct HunterMapFeature {
             case .returnedToMenu:
                 return .none
             case .winnerRegistered:
+                liveActivityClient.end(PoulePartyAttributes.ContentState(
+                    radiusMeters: state.radius,
+                    nextShrinkDate: nil,
+                    activeHunters: max(0, state.game.hunterIds.count - state.game.winners.count),
+                    winnersCount: state.game.winners.count,
+                    isOutsideZone: false,
+                    gamePhase: .gameOver
+                ))
                 return .none
             case .infoButtonTapped:
                 state.showGameInfo = true
@@ -205,6 +233,19 @@ struct HunterMapFeature {
                 let (lastUpdate, lastRadius) = state.game.findLastUpdate()
                 state.radius = lastRadius
                 state.nextRadiusUpdate = lastUpdate
+
+                // Start Live Activity
+                let attributes = PoulePartyAttributes(
+                    gameName: state.game.name,
+                    gameCode: state.game.gameCode,
+                    playerRole: .hunter,
+                    gameModeName: state.game.gameMod.title,
+                    gameEndDate: state.game.endDate,
+                    totalHunters: max(0, state.game.numberOfPlayers - 1)
+                )
+                let initialLAState = state.liveActivityState
+                state.lastLiveActivityState = initialLAState
+                liveActivityClient.start(attributes, initialLAState)
 
                 var effects: [Effect<Action>] = [
                     .run { _ in
@@ -286,6 +327,14 @@ struct HunterMapFeature {
                 if game.status == .done, state.destination == nil {
                     locationClient.stopTracking()
                     state.game = game
+                    liveActivityClient.end(PoulePartyAttributes.ContentState(
+                        radiusMeters: state.radius,
+                        nextShrinkDate: nil,
+                        activeHunters: max(0, game.hunterIds.count - game.winners.count),
+                        winnersCount: game.winners.count,
+                        isOutsideZone: false,
+                        gamePhase: .gameOver
+                    ))
                     state.destination = .alert(
                         AlertState {
                             TextState("Game Over")
@@ -316,6 +365,13 @@ struct HunterMapFeature {
                         center: game.initialCoordinates.toCLCoordinates,
                         radius: CLLocationDistance(state.radius)
                     )
+                }
+
+                // Update Live Activity with new game state
+                let currentLAState = state.liveActivityState
+                if currentLAState != state.lastLiveActivityState {
+                    state.lastLiveActivityState = currentLAState
+                    liveActivityClient.update(currentLAState)
                 }
 
                 // Detect new winners
@@ -376,6 +432,14 @@ struct HunterMapFeature {
                 // Game over by time
                 if checkGameOverByTime(endDate: state.game.endDate) {
                     locationClient.stopTracking()
+                    liveActivityClient.end(PoulePartyAttributes.ContentState(
+                        radiusMeters: state.radius,
+                        nextShrinkDate: nil,
+                        activeHunters: max(0, state.game.hunterIds.count - state.game.winners.count),
+                        winnersCount: state.game.winners.count,
+                        isOutsideZone: false,
+                        gamePhase: .gameOver
+                    ))
                     state.destination = .alert(
                         AlertState {
                             TextState("Game Over")
@@ -403,6 +467,14 @@ struct HunterMapFeature {
                 ) {
                     if result.isGameOver {
                         locationClient.stopTracking()
+                        liveActivityClient.end(PoulePartyAttributes.ContentState(
+                            radiusMeters: 0,
+                            nextShrinkDate: nil,
+                            activeHunters: max(0, state.game.hunterIds.count - state.game.winners.count),
+                            winnersCount: state.game.winners.count,
+                            isOutsideZone: false,
+                            gamePhase: .gameOver
+                        ))
                         state.destination = .alert(
                             AlertState {
                                 TextState("Game Over")
@@ -431,6 +503,13 @@ struct HunterMapFeature {
                         zoneRadius: circle.radius
                     )
                     state.isOutsideZone = zoneResult.isOutsideZone
+                }
+
+                // Update Live Activity only when state meaningfully changes
+                let currentLAState = state.liveActivityState
+                if currentLAState != state.lastLiveActivityState {
+                    state.lastLiveActivityState = currentLAState
+                    liveActivityClient.update(currentLAState)
                 }
                 return .none
             case let .userLocationUpdated(location):

@@ -26,6 +26,7 @@ struct ChickenMapFeatureTests {
                 center: game.initialCoordinates.toCLCoordinates,
                 radius: CLLocationDistance(game.initialRadius)
             )
+            $0.lastLiveActivityState = $0.liveActivityState
         }
     }
 
@@ -181,8 +182,10 @@ struct ChickenMapFeatureTests {
             ChickenMapFeature()
         }
 
-        // Same game, same number of winners → no state change expected
-        await store.send(.gameUpdated(game))
+        // Same game, same number of winners → no notification, but lastLiveActivityState may update
+        await store.send(.gameUpdated(game)) {
+            $0.lastLiveActivityState = $0.liveActivityState
+        }
     }
 
     @Test func winnerNotificationDismissedClearsNotification() async {
@@ -396,6 +399,7 @@ struct ChickenMapFeatureTests {
 
         await store.send(.gameUpdated(updatedGame)) {
             $0.game = updatedGame
+            $0.lastLiveActivityState = $0.liveActivityState
             $0.winnerNotification = "Julien found the chicken! 🐔"
             $0.previousWinnersCount = 1
         }
