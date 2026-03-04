@@ -65,7 +65,7 @@ fun AppNavigation() {
             isAuthReady = true
         }
         // Save FCM token after auth
-        val userId = auth.currentUser?.uid
+        val userId = FirebaseAuth.getInstance().currentUser?.uid
         if (userId != null) {
             try {
                 val token = FirebaseMessaging.getInstance().token.await()
