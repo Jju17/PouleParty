@@ -8,6 +8,7 @@ object AppConstants {
     const val PREFS_NAME = "pouleparty"
     const val PREF_ONBOARDING_COMPLETED = "hasCompletedOnboarding"
     const val PREF_USER_NICKNAME = "userNickname"
+    const val PREF_IS_MUSIC_MUTED = "isMusicMuted"
 
     // Firestore Collections
     const val COLLECTION_GAMES = "games"

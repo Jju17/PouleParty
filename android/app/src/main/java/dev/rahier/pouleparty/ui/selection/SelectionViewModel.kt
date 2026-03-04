@@ -26,6 +26,7 @@ data class SelectionUiState(
     val isShowingGameNotFound: Boolean = false,
     val isShowingGameInProgress: Boolean = false,
     val isShowingLocationRequired: Boolean = false,
+    val isMusicMuted: Boolean = false,
     val gameCode: String = "",
     val hunterName: String = "",
     val activeGame: Game? = null,
@@ -44,6 +45,9 @@ class SelectionViewModel @Inject constructor(
     val uiState: StateFlow<SelectionUiState> = _uiState.asStateFlow()
 
     init {
+        _uiState.update {
+            it.copy(isMusicMuted = prefs.getBoolean(AppConstants.PREF_IS_MUSIC_MUTED, false))
+        }
         checkForActiveGame()
     }
 
@@ -57,6 +61,12 @@ class SelectionViewModel @Inject constructor(
                 _uiState.update { it.copy(activeGame = null, activeGameRole = null) }
             }
         }
+    }
+
+    fun toggleMusicMuted() {
+        val newValue = !_uiState.value.isMusicMuted
+        _uiState.update { it.copy(isMusicMuted = newValue) }
+        prefs.edit().putBoolean(AppConstants.PREF_IS_MUSIC_MUTED, newValue).apply()
     }
 
     fun dismissActiveGame() {

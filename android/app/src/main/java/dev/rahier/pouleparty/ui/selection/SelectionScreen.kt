@@ -1,17 +1,23 @@
 package dev.rahier.pouleparty.ui.selection
 
+import android.media.MediaPlayer
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.material3.MaterialTheme
@@ -32,6 +38,43 @@ fun SelectionScreen(
     viewModel: SelectionViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+
+    // Music playback
+    val mediaPlayer = remember {
+        MediaPlayer.create(context, R.raw.background_music).apply {
+            isLooping = true
+            setVolume(0.1f, 0.1f)
+        }
+    }
+
+    DisposableEffect(Unit) {
+        if (!state.isMusicMuted) mediaPlayer.start()
+        onDispose { mediaPlayer.release() }
+    }
+
+    LaunchedEffect(state.isMusicMuted) {
+        if (state.isMusicMuted) {
+            if (mediaPlayer.isPlaying) mediaPlayer.pause()
+        } else {
+            if (!mediaPlayer.isPlaying) mediaPlayer.start()
+        }
+    }
+
+    // Mute button bounce animation
+    var musicButtonScale by remember { mutableFloatStateOf(1f) }
+    val animatedScale by animateFloatAsState(
+        targetValue = musicButtonScale,
+        animationSpec = spring(dampingRatio = 0.5f, stiffness = Spring.StiffnessMedium),
+        label = "musicScale"
+    )
+
+    LaunchedEffect(musicButtonScale) {
+        if (musicButtonScale > 1f) {
+            kotlinx.coroutines.delay(150)
+            musicButtonScale = 1f
+        }
+    }
 
     // Blinking animation for START text
     val infiniteTransition = rememberInfiniteTransition(label = "blink")
@@ -86,19 +129,36 @@ fun SelectionScreen(
             )
         }
 
-        // Top-right: Settings button
-        IconButton(
-            onClick = onNavigateToSettings,
+        // Top bar: Mute (left) + Settings (right)
+        Row(
             modifier = Modifier
-                .align(Alignment.TopEnd)
+                .align(Alignment.TopCenter)
+                .fillMaxWidth()
                 .padding(16.dp)
-                .padding(top = 32.dp)
+                .padding(top = 32.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Icon(
-                painter = painterResource(android.R.drawable.ic_menu_preferences),
-                contentDescription = stringResource(R.string.settings),
-                tint = Color.Black
-            )
+            IconButton(
+                onClick = {
+                    viewModel.toggleMusicMuted()
+                    musicButtonScale = 1.3f
+                },
+                modifier = Modifier.scale(animatedScale)
+            ) {
+                Icon(
+                    imageVector = if (state.isMusicMuted) Icons.AutoMirrored.Filled.VolumeOff
+                    else Icons.AutoMirrored.Filled.VolumeUp,
+                    contentDescription = if (state.isMusicMuted) "Unmute music" else "Mute music",
+                    tint = Color.Black
+                )
+            }
+            IconButton(onClick = onNavigateToSettings) {
+                Icon(
+                    painter = painterResource(android.R.drawable.ic_menu_preferences),
+                    contentDescription = stringResource(R.string.settings),
+                    tint = Color.Black
+                )
+            }
         }
 
         // Bottom section: rejoin banner + I am la poule

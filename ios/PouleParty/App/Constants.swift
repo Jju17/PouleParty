@@ -12,6 +12,7 @@ enum AppConstants {
     // MARK: - Preferences Keys
     static let prefOnboardingCompleted = "hasCompletedOnboarding"
     static let prefUserNickname = "userNickname"
+    static let prefIsMusicMuted = "isMusicMuted"
 
     // MARK: - Time Intervals
     static let locationThrottleSeconds: TimeInterval = 5

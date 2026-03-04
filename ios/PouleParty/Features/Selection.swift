@@ -18,6 +18,7 @@ struct SelectionFeature {
     @ObservableState
     struct State: Equatable {
         @Presents var destination: Destination.State?
+        @Shared(.appStorage(AppConstants.prefIsMusicMuted)) var isMusicMuted = false
         @Shared(.appStorage(AppConstants.prefUserNickname)) var savedNickname = ""
         var gameCode: String = ""
         var isConfirmingChicken = false
@@ -43,6 +44,7 @@ struct SelectionFeature {
         case initialLocationResolved(CLLocationCoordinate2D?)
         case joinGameButtonTapped
         case locationPermissionDenied
+        case musicToggleTapped
         case networkRequestFailed
         case noActiveGameFound
         case onTask
@@ -209,6 +211,9 @@ struct SelectionFeature {
                         await send(.completedGameFound(game))
                     }
                 }
+            case .musicToggleTapped:
+                state.$isMusicMuted.withLock { $0.toggle() }
+                return .none
             case .locationPermissionDenied:
                 state.destination = .alert(
                     AlertState {
@@ -290,6 +295,7 @@ struct SelectionView: View {
     @Bindable var store: StoreOf<SelectionFeature>
     @State private var isVisible = true
     @State private var audioPlayer: AVAudioPlayer?
+    @State private var musicButtonScale: CGFloat = 1.0
 
     var body: some View {
         NavigationStack {
@@ -334,6 +340,27 @@ struct SelectionView: View {
 
             VStack {
                 HStack {
+                    Button {
+                        store.send(.musicToggleTapped)
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) {
+                            musicButtonScale = 1.3
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) {
+                                musicButtonScale = 1.0
+                            }
+                        }
+                    } label: {
+                        Image(systemName: store.isMusicMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
+                            .font(.system(size: 20))
+                            .foregroundColor(.black)
+                            .padding()
+                            .contentTransition(.symbolEffect(.replace))
+                    }
+                    .scaleEffect(musicButtonScale)
+                    .accessibilityLabel(store.isMusicMuted ? "Unmute music" : "Mute music")
+                    .padding(.leading, 4)
+
                     Spacer()
                     Button {
                         store.send(.settingsButtonTapped)
@@ -407,6 +434,13 @@ struct SelectionView: View {
         .onDisappear {
             self.audioPlayer?.stop()
             self.audioPlayer = nil
+        }
+        .onChange(of: store.isMusicMuted) { _, isMuted in
+            if isMuted {
+                self.audioPlayer?.pause()
+            } else {
+                self.audioPlayer?.play()
+            }
         }
         .task {
             self.store.send(.onTask)
@@ -546,7 +580,9 @@ struct SelectionView: View {
             self.audioPlayer = try AVAudioPlayer(contentsOf: url)
             self.audioPlayer?.numberOfLoops = -1
             self.audioPlayer?.volume = 0.1
-            self.audioPlayer?.play()
+            if !store.isMusicMuted {
+                self.audioPlayer?.play()
+            }
         } catch {
             Logger(subsystem: "dev.rahier.pouleparty", category: "Selection").error("Failed to play sound: \(error.localizedDescription)")
         }
