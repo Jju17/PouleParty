@@ -4,10 +4,12 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -44,6 +46,38 @@ fun SettingsScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
+            // Nickname
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.nickname)) },
+                supportingContent = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(top = 8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = state.nickname,
+                            onValueChange = { viewModel.onNicknameChanged(it) },
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp),
+                            supportingText = {
+                                Text("${state.nickname.length}/${SettingsViewModel.NICKNAME_MAX_LENGTH}")
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Button(
+                            onClick = { viewModel.saveNickname() },
+                            enabled = state.nickname.trim().isNotEmpty()
+                        ) {
+                            Text(stringResource(R.string.save))
+                        }
+                    }
+                }
+            )
+            HorizontalDivider()
+
+            Spacer(Modifier.height(16.dp))
+
             // Privacy & Terms
             ListItem(
                 headlineContent = { Text(stringResource(R.string.privacy_policy)) },
@@ -109,6 +143,29 @@ fun SettingsScreen(
         }
     }
 
+    // Nickname saved snackbar-style dialog
+    if (state.isShowingNicknameSaved) {
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissNicknameSaved() },
+            title = { Text(stringResource(R.string.nickname_saved)) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.dismissNicknameSaved() }) { Text(stringResource(R.string.ok)) }
+            }
+        )
+    }
+
+    // Profanity alert
+    if (state.isShowingProfanityAlert) {
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissProfanityAlert() },
+            title = { Text(stringResource(R.string.inappropriate_nickname)) },
+            text = { Text(stringResource(R.string.inappropriate_nickname_message)) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.dismissProfanityAlert() }) { Text(stringResource(R.string.ok)) }
+            }
+        )
+    }
+
     // Delete confirmation dialog
     if (state.isShowingDeleteConfirmation) {
         AlertDialog(
@@ -135,6 +192,18 @@ fun SettingsScreen(
             text = { Text(stringResource(R.string.data_deleted_message)) },
             confirmButton = {
                 TextButton(onClick = { viewModel.onDeleteSuccessDismissed() }) { Text(stringResource(R.string.ok)) }
+            }
+        )
+    }
+
+    // Delete error dialog
+    if (state.isShowingDeleteError) {
+        AlertDialog(
+            onDismissRequest = { viewModel.onDeleteErrorDismissed() },
+            title = { Text(stringResource(R.string.error)) },
+            text = { Text(stringResource(R.string.delete_error_message)) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.onDeleteErrorDismissed() }) { Text(stringResource(R.string.ok)) }
             }
         )
     }

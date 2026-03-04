@@ -69,7 +69,7 @@ struct SelectionFeatureTests {
         let store = TestStore(initialState: SelectionFeature.State()) {
             SelectionFeature()
         } withDependencies: {
-            $0.authClient.currentUserId = { nil }
+            $0.userClient.currentUserId = { nil }
         }
 
         await store.send(.onTask)
@@ -80,7 +80,7 @@ struct SelectionFeatureTests {
         let store = TestStore(initialState: SelectionFeature.State()) {
             SelectionFeature()
         } withDependencies: {
-            $0.authClient.currentUserId = { "user-123" }
+            $0.userClient.currentUserId = { "user-123" }
             $0.apiClient.findActiveGame = { _ in (game, .hunter) }
         }
 
@@ -96,7 +96,7 @@ struct SelectionFeatureTests {
         let store = TestStore(initialState: SelectionFeature.State()) {
             SelectionFeature()
         } withDependencies: {
-            $0.authClient.currentUserId = { "user-123" }
+            $0.userClient.currentUserId = { "user-123" }
             $0.apiClient.findActiveGame = { _ in (game, .chicken) }
         }
 
@@ -111,7 +111,7 @@ struct SelectionFeatureTests {
         let store = TestStore(initialState: SelectionFeature.State()) {
             SelectionFeature()
         } withDependencies: {
-            $0.authClient.currentUserId = { "user-123" }
+            $0.userClient.currentUserId = { "user-123" }
             $0.apiClient.findActiveGame = { _ in nil }
         }
 

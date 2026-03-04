@@ -56,7 +56,7 @@ struct ChickenMapFeatureTests {
                         TextState("Cancel game")
                     }
                 } message: {
-                    TextState("Are you sure you want to cancel and finish the game now ?")
+                    TextState("Are you sure you want to cancel and finish the game now?")
                 }
             )
         }
@@ -163,9 +163,9 @@ struct ChickenMapFeatureTests {
         state.game = updatedGame
         state.previousWinnersCount = updatedGame.winners.count
         let latest = updatedGame.winners.last!
-        state.winnerNotification = "\(latest.hunterName) a trouvé la poule !"
+        state.winnerNotification = "\(latest.hunterName) found the chicken! 🐔"
 
-        #expect(state.winnerNotification == "Julien a trouvé la poule !")
+        #expect(state.winnerNotification == "Julien found the chicken! 🐔")
         #expect(state.previousWinnersCount == 1)
     }
 
@@ -339,7 +339,7 @@ struct ChickenMapFeatureTests {
                     TextState("Cancel game")
                 }
             } message: {
-                TextState("Are you sure you want to cancel and finish the game now ?")
+                TextState("Are you sure you want to cancel and finish the game now?")
             }
         )
 
@@ -396,7 +396,7 @@ struct ChickenMapFeatureTests {
 
         await store.send(.gameUpdated(updatedGame)) {
             $0.game = updatedGame
-            $0.winnerNotification = "Julien a trouvé la poule !"
+            $0.winnerNotification = "Julien found the chicken! 🐔"
             $0.previousWinnersCount = 1
         }
 

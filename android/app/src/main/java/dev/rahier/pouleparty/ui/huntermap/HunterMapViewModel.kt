@@ -88,13 +88,11 @@ class HunterMapViewModel @Inject constructor(
 
     private fun loadGame() {
         viewModelScope.launch {
-            Log.d(TAG, "loadGame — gameId: $gameId, hunterId: '$hunterId', gameMod: checking...")
             if (hunterId.isEmpty()) {
-                Log.e(TAG, "hunterId is empty — cannot register hunter or write location. auth.currentUser: ${auth.currentUser}")
+                Log.e(TAG, "hunterId is empty — cannot register hunter or write location")
                 return@launch
             }
             val game = firestoreRepository.getConfig(gameId) ?: return@launch
-            Log.d(TAG, "loadGame — gameMod: ${game.gameModEnum}, shouldWriteLocation: ${game.gameModEnum == GameMod.MUTUAL_TRACKING}")
             val (lastUpdate, lastRadius) = game.findLastUpdate()
 
             _uiState.update {

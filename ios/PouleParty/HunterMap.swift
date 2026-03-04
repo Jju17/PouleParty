@@ -79,7 +79,7 @@ struct HunterMapFeature {
     }
 
     @Dependency(\.apiClient) var apiClient
-    @Dependency(\.authClient) var authClient
+    @Dependency(\.userClient) var userClient
     @Dependency(\.continuousClock) var clock
     @Dependency(\.locationClient) var locationClient
 
@@ -188,7 +188,7 @@ struct HunterMapFeature {
                 )
                 return .none
             case .onTask:
-                let rawUid = authClient.currentUserId()
+                let rawUid = userClient.currentUserId()
                 let gameId = state.game.id
                 let gameMod = state.game.gameMod
                 logger.info("HunterMap.onTask — currentUserId: \(rawUid ?? "nil"), gameId: \(gameId), gameMod: \(String(describing: gameMod))")

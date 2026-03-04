@@ -31,7 +31,7 @@ struct AppFeature {
     }
 
     @Dependency(\.apiClient) var apiClient
-    @Dependency(\.authClient) var authClient
+    @Dependency(\.userClient) var userClient
 
     var body: some ReducerOf<Self> {
         Reduce { state, action in
@@ -39,7 +39,7 @@ struct AppFeature {
             case .appStarted:
                 return .run { _ in
                     do {
-                        _ = try await authClient.signInAnonymously()
+                        _ = try await userClient.signInAnonymously()
                     } catch {
                         Logger(subsystem: "dev.rahier.pouleparty", category: "AppFeature")
                             .error("Anonymous sign-in failed: \(error.localizedDescription)")
@@ -93,6 +93,9 @@ struct AppFeature {
                 return .none
             case .victory(.goToMenu):
                 state = AppFeature.State.selection(SelectionFeature.State())
+                return .none
+            case .selection(.goToOnboarding):
+                state = .onboarding(OnboardingFeature.State())
                 return .none
             case .chickenMap, .hunterMap, .selection, .victory:
                 return .none

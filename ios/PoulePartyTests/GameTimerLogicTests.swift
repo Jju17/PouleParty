@@ -273,7 +273,7 @@ struct GameTimerLogicTests {
             Winner(hunterId: "h2", hunterName: "Bob", timestamp: .now)
         ]
         let result = detectNewWinners(winners: winners, previousCount: 1)
-        #expect(result == "Bob a trouvé la poule !")
+        #expect(result == "Bob found the chicken! 🐔")
     }
 
     @Test func detectNewWinnersFiltersOwnHunter() {
@@ -295,7 +295,7 @@ struct GameTimerLogicTests {
             Winner(hunterId: "h1", hunterName: "Alice", timestamp: .now)
         ]
         let result = detectNewWinners(winners: winners, previousCount: 0)
-        #expect(result == "Alice a trouvé la poule !")
+        #expect(result == "Alice found the chicken! 🐔")
     }
 
     // MARK: - shouldCheckZone

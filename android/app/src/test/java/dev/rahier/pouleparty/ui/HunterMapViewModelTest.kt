@@ -130,8 +130,8 @@ class HunterMapViewModelTest {
     @Test
     fun `winner notification can be set and cleared`() {
         var state = HunterMapUiState()
-        state = state.copy(winnerNotification = "Julien a trouvé la poule !")
-        assertEquals("Julien a trouvé la poule !", state.winnerNotification)
+        state = state.copy(winnerNotification = "Julien found the chicken! 🐔")
+        assertEquals("Julien found the chicken! 🐔", state.winnerNotification)
 
         state = state.copy(winnerNotification = null)
         assertNull(state.winnerNotification)

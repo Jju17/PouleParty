@@ -21,6 +21,7 @@ struct OnboardingFeature {
         var locationAuthorizationStatus: CLAuthorizationStatus = .notDetermined
         var nickname: String = ""
         var showLocationAlert: Bool = false
+        var showProfanityAlert: Bool = false
     }
 
     enum Action {
@@ -32,6 +33,7 @@ struct OnboardingFeature {
         case requestAlwaysPermission
         case locationAuthorizationUpdated(CLAuthorizationStatus)
         case dismissLocationAlert
+        case dismissProfanityAlert
         case onboardingCompleted
         case onTask
         case snapBackToPage(Int)
@@ -54,10 +56,14 @@ struct OnboardingFeature {
                     let status = state.locationAuthorizationStatus
                     guard status == .authorizedAlways || status == .authorizedWhenInUse else { return .none }
                 }
-                // Block on nickname slide if nickname is empty
+                // Block on nickname slide if nickname is empty or inappropriate
                 if state.currentPage == 4 {
                     let trimmed = state.nickname.trimmingCharacters(in: .whitespacesAndNewlines)
                     guard !trimmed.isEmpty else { return .none }
+                    if ProfanityFilter.containsProfanity(trimmed) {
+                        state.showProfanityAlert = true
+                        return .none
+                    }
                 }
 
                 if state.currentPage < Self.totalPages - 1 {
@@ -108,6 +114,9 @@ struct OnboardingFeature {
                 return .none
             case .dismissLocationAlert:
                 state.showLocationAlert = false
+                return .none
+            case .dismissProfanityAlert:
+                state.showProfanityAlert = false
                 return .none
             case .requestWhenInUsePermission:
                 return .run { send in
@@ -251,6 +260,16 @@ struct OnboardingView: View {
             }
         } message: {
             Text("Location is the core of PouleParty! Your position is anonymous and only used during the game. Please enable location access to continue.")
+        }
+        .alert("Inappropriate Nickname", isPresented: Binding(
+            get: { store.showProfanityAlert },
+            set: { _ in store.send(.dismissProfanityAlert) }
+        )) {
+            Button("OK") {
+                store.send(.dismissProfanityAlert)
+            }
+        } message: {
+            Text("Please choose a different nickname. This one contains inappropriate language.")
         }
     }
 }

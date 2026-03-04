@@ -210,5 +210,5 @@ func detectNewWinners(
     let newWinners = Array(winners.suffix(from: previousCount))
     guard let latest = newWinners.last else { return nil }
     if let ownId = ownHunterId, latest.hunterId == ownId { return nil }
-    return "\(latest.hunterName) a trouvé la poule !"
+    return "\(latest.hunterName) found the chicken! 🐔"
 }

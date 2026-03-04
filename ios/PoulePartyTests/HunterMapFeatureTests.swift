@@ -216,10 +216,10 @@ struct HunterMapFeatureTests {
         let latest = updatedGame.winners.last!
         #expect(latest.hunterId != state.hunterId)
 
-        state.winnerNotification = "\(latest.hunterName) a trouvé la poule !"
+        state.winnerNotification = "\(latest.hunterName) found the chicken! 🐔"
         state.previousWinnersCount = updatedGame.winners.count
 
-        #expect(state.winnerNotification == "Julien a trouvé la poule !")
+        #expect(state.winnerNotification == "Julien found the chicken! 🐔")
         #expect(state.previousWinnersCount == 1)
     }
 
@@ -521,7 +521,7 @@ struct HunterMapFeatureTests {
                 center: updatedGame.initialCoordinates.toCLCoordinates,
                 radius: CLLocationDistance(lastRadius)
             )
-            $0.winnerNotification = "Alice a trouvé la poule !"
+            $0.winnerNotification = "Alice found the chicken! 🐔"
             $0.previousWinnersCount = 1
         }
 

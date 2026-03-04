@@ -215,5 +215,5 @@ fun detectNewWinners(
     if (winners.size <= previousCount) return null
     val latest = winners.last()
     if (ownHunterId != null && latest.hunterId == ownHunterId) return null
-    return "${latest.hunterName} a trouvé la poule !"
+    return "${latest.hunterName} found the chicken! 🐔"
 }

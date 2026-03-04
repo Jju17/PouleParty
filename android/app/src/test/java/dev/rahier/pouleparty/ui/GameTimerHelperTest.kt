@@ -299,7 +299,7 @@ class GameTimerHelperTest {
             Winner("h1", "Alice", Timestamp.now()),
             Winner("h2", "Bob", Timestamp.now())
         )
-        assertEquals("Bob a trouvé la poule !", detectNewWinners(winners, previousCount = 1))
+        assertEquals("Bob found the chicken! 🐔", detectNewWinners(winners, previousCount = 1))
     }
 
     @Test
@@ -321,7 +321,7 @@ class GameTimerHelperTest {
         val winners = listOf(
             Winner("h1", "Alice", Timestamp.now())
         )
-        assertEquals("Alice a trouvé la poule !", detectNewWinners(winners, previousCount = 0))
+        assertEquals("Alice found the chicken! 🐔", detectNewWinners(winners, previousCount = 0))
     }
 
     // ── shouldCheckZone ────────────────────────────────

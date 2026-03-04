@@ -3,6 +3,7 @@ package dev.rahier.pouleparty.ui.onboarding
 import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.rahier.pouleparty.data.LocationRepository
+import dev.rahier.pouleparty.util.ProfanityFilter
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -14,7 +15,8 @@ data class OnboardingUiState(
     val hasFineLocation: Boolean = false,
     val hasBackgroundLocation: Boolean = false,
     val nickname: String = "",
-    val showLocationAlert: Boolean = false
+    val showLocationAlert: Boolean = false,
+    val showProfanityAlert: Boolean = false
 )
 
 @HiltViewModel
@@ -38,8 +40,15 @@ class OnboardingViewModel @Inject constructor(
         val current = _uiState.value.currentPage
         // Block on location slide (page 3) if fine location not granted
         if (current == 3 && !_uiState.value.hasFineLocation) return
-        // Block on nickname slide (page 4) if nickname is empty
-        if (current == 4 && _uiState.value.nickname.trim().isEmpty()) return
+        // Block on nickname slide (page 4) if nickname is empty or inappropriate
+        if (current == 4) {
+            val trimmed = _uiState.value.nickname.trim()
+            if (trimmed.isEmpty()) return
+            if (ProfanityFilter.containsProfanity(trimmed)) {
+                _uiState.update { it.copy(showProfanityAlert = true) }
+                return
+            }
+        }
         if (current < TOTAL_PAGES - 1) {
             _uiState.update { it.copy(currentPage = current + 1) }
         }
@@ -64,17 +73,25 @@ class OnboardingViewModel @Inject constructor(
         _uiState.update { it.copy(showLocationAlert = false) }
     }
 
+    fun dismissProfanityAlert() {
+        _uiState.update { it.copy(showProfanityAlert = false) }
+    }
+
     /**
      * Check location before completing onboarding.
      * Returns true if location is granted and onboarding can complete.
      */
     fun canCompleteOnboarding(): Boolean {
-        return if (_uiState.value.hasFineLocation) {
-            true
-        } else {
+        if (!_uiState.value.hasFineLocation) {
             _uiState.update { it.copy(showLocationAlert = true) }
-            false
+            return false
         }
+        val trimmed = _uiState.value.nickname.trim()
+        if (ProfanityFilter.containsProfanity(trimmed)) {
+            _uiState.update { it.copy(showProfanityAlert = true) }
+            return false
+        }
+        return true
     }
 
     val isLastPage: Boolean

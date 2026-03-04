@@ -89,7 +89,7 @@
     <string name="nominate_chicken">Choisis une Poule</string>
     <string name="nominate_subtitle">L\'enterrement de vie de garçon, la fêtée du jour, ou celui qui veut vraiment être une Poule.\n\nSon job : se cacher.</string>
     <string name="hunt_them_down">Chassez-la</string>
-    <string name="hunt_subtitle">Formez des équipes. Utilisez la carte pour la traquer.\n\nLa Poule peut se cacher dans n\'importe quel bar.</string>
+    <string name="hunt_subtitle">Formez des équipes. Utilisez la carte pour la traquer.\n\nLa Poule peut se cacher n\'importe où !</string>
     <string name="need_location">On a besoin de ta position</string>
     <string name="location_granted">C\'est tout bon ! Le jeu suivra ta position même en arrière-plan.\n\nFun maximum garanti !</string>
     <string name="location_partial">Presque ! Le jeu doit suivre la Poule même quand l\'appli est en arrière-plan.\n\nAutorise la localisation en permanence.</string>
@@ -100,8 +100,8 @@
     <string name="choose_nickname">Choisis ton pseudo</string>
     <string name="nickname_subtitle">C\'est comme ça que les autres joueurs\nte verront dans la partie.</string>
     <string name="your_nickname">Ton pseudo</string>
-    <string name="the_endgame">L\'endgame</string>
-    <string name="endgame_subtitle">Rapproche-toi de la Poule. Complète des défis pour des points. Déchaîne les armes.\n\nC\'est les règles de Mario Kart — tout est permis.</string>
+    <string name="the_endgame">Prêt à jouer ?</string>
+    <string name="endgame_subtitle">Rapproche-toi de la Poule. La zone rétrécit, la chasse s\'intensifie.\n\nTrouve la Poule avant la fin du temps !</string>
     <string name="back">Retour</string>
     <string name="next">Suivant</string>
     <string name="lets_go">C\'est parti !</string>
@@ -131,8 +131,15 @@
     <string name="setting_radius_decline_desc">De combien de mètres la zone rétrécit à chaque mise à jour.</string>
     <string name="setting_map_desc">Choisissez le lieu de départ et le rayon initial de la zone.</string>
 
+    <!-- Profanity -->
+    <string name="inappropriate_nickname">Pseudo inapproprié</string>
+    <string name="inappropriate_nickname_message">Choisis un autre pseudo. Celui-ci contient un langage inapproprié.</string>
+
     <!-- Settings -->
     <string name="settings">Paramètres</string>
+    <string name="nickname">Pseudo</string>
+    <string name="save">Enregistrer</string>
+    <string name="nickname_saved">Pseudo enregistré !</string>
     <string name="privacy_policy">Politique de confidentialité</string>
     <string name="terms_of_use">Conditions d\'utilisation</string>
     <string name="contact_support">Contacter le support</string>
@@ -143,6 +150,7 @@
     <string name="delete">Supprimer</string>
     <string name="data_deleted">Données supprimées</string>
     <string name="data_deleted_message">Ton compte et tes données ont été supprimés.</string>
+    <string name="delete_error_message">Impossible de supprimer ton compte. Réessaie plus tard.</string>
     <string name="version">Version</string>
 
     <!-- Game Modes (subtitles) -->

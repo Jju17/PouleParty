@@ -6,20 +6,22 @@
 import ComposableArchitecture
 import FirebaseAuth
 
-struct AuthClient {
+struct UserClient {
     var currentUserId: () -> String?
     var signInAnonymously: () async throws -> String
+    var deleteAccount: () async throws -> Void
 }
 
-extension AuthClient: TestDependencyKey {
-    static let testValue = AuthClient(
+extension UserClient: TestDependencyKey {
+    static let testValue = UserClient(
         currentUserId: { "test-auth-uid" },
-        signInAnonymously: { "test-auth-uid" }
+        signInAnonymously: { "test-auth-uid" },
+        deleteAccount: { }
     )
 }
 
-extension AuthClient: DependencyKey {
-    static var liveValue = AuthClient(
+extension UserClient: DependencyKey {
+    static var liveValue = UserClient(
         currentUserId: {
             Auth.auth().currentUser?.uid
         },
@@ -29,13 +31,17 @@ extension AuthClient: DependencyKey {
             }
             let result = try await Auth.auth().signInAnonymously()
             return result.user.uid
+        },
+        deleteAccount: {
+            try await Auth.auth().currentUser?.delete()
+            _ = try await Auth.auth().signInAnonymously()
         }
     )
 }
 
 extension DependencyValues {
-    var authClient: AuthClient {
-        get { self[AuthClient.self] }
-        set { self[AuthClient.self] = newValue }
+    var userClient: UserClient {
+        get { self[UserClient.self] }
+        set { self[UserClient.self] = newValue }
     }
 }

@@ -187,6 +187,18 @@ fun OnboardingScreen(
             }
         )
     }
+
+    // Profanity alert
+    if (state.showProfanityAlert) {
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissProfanityAlert() },
+            title = { Text(stringResource(R.string.inappropriate_nickname)) },
+            text = { Text(stringResource(R.string.inappropriate_nickname_message)) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.dismissProfanityAlert() }) { Text(stringResource(R.string.ok)) }
+            }
+        )
+    }
 }
 
 // MARK: - Generic Slide Layout

@@ -66,7 +66,7 @@ struct OnboardingWelcomeSlide: View {
     var body: some View {
         OnboardingSlideLayout(
             title: "Welcome to\nPouleParty!",
-            subtitle: "The ultimate hide-and-seek\npub crawl game",
+            subtitle: "The ultimate real-world\nhide-and-seek game",
             titleSize: 36
         ) {
             Image("logo")
@@ -97,7 +97,7 @@ struct OnboardingHuntSlide: View {
     var body: some View {
         OnboardingSlideLayout(
             title: "Hunt Them Down",
-            subtitle: "Split into squads. Use the map to track them.\n\nThe Chicken could be hiding in any pub or bar."
+            subtitle: "Split into squads. Use the map to track them.\n\nThe Chicken could be hiding anywhere!"
         ) {
             Text("🗺️")
                 .font(.system(size: 80))
@@ -257,8 +257,8 @@ struct OnboardingNicknameSlide: View {
 struct OnboardingReadySlide: View {
     var body: some View {
         OnboardingSlideLayout(
-            title: "The Endgame",
-            subtitle: "Close in on the Chicken. Complete challenges for points. Unleash weapons.\n\nIt's Mario Kart rules — anything goes."
+            title: "Ready to Play?",
+            subtitle: "Close in on the Chicken. The zone shrinks, the hunt intensifies.\n\nFind the Chicken before time runs out!"
         ) {
             Text("🎉")
                 .font(.system(size: 80))

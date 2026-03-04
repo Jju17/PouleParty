@@ -47,6 +47,7 @@ struct SelectionFeature {
         case rejoinGameTapped
         case startButtonTapped
         case joinGameButtonTapped
+        case goToOnboarding
     }
 
     @Reducer
@@ -74,7 +75,7 @@ struct SelectionFeature {
     }
 
     @Dependency(\.apiClient) var apiClient
-    @Dependency(\.authClient) var authClient
+    @Dependency(\.userClient) var userClient
     @Dependency(\.locationClient) var locationClient
     @Dependency(\.uuid) var uuid
 
@@ -84,6 +85,8 @@ struct SelectionFeature {
         Reduce { state, action in
             switch action {
             case .binding:
+                return .none
+            case .goToOnboarding:
                 return .none
             case .confirmChickenTapped:
                 let chickenLocStatus = locationClient.authorizationStatus()
@@ -147,7 +150,7 @@ struct SelectionFeature {
                 var game = Game(id: uuid().uuidString)
                 game.foundCode = Game.generateFoundCode()
                 game.chickenHeadStartMinutes = 5
-                game.creatorId = authClient.currentUserId() ?? ""
+                game.creatorId = userClient.currentUserId() ?? ""
                 game.driftSeed = Int.random(in: 1...999_999)
                 if let location {
                     game.initialLocation = location
@@ -197,7 +200,7 @@ struct SelectionFeature {
                 state.activeGameRole = nil
                 return .none
             case .onTask:
-                let userId = authClient.currentUserId()
+                let userId = userClient.currentUserId()
                 guard let userId, !userId.isEmpty else {
                     return .none
                 }
@@ -440,6 +443,10 @@ struct SelectionView: View {
                 SettingsView(
                     store: Store(initialState: SettingsFeature.State()) {
                         SettingsFeature()
+                    },
+                    onAccountDeleted: {
+                        showingSettings = false
+                        store.send(.goToOnboarding)
                     }
                 )
                 .toolbar {

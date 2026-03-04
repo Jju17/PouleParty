@@ -8,7 +8,6 @@
 import ComposableArchitecture
 import CoreLocation
 import MapboxMaps
-import MapKit
 import SwiftUI
 
 // MARK: - Feature

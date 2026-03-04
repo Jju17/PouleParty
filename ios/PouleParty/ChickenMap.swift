@@ -43,7 +43,6 @@ struct ChickenMapFeature {
     }
 
     enum Action: BindableAction {
-        case barButtonTapped
         case binding(BindingAction<State>)
         case destination(PresentationAction<Destination.Action>)
         case dismissEndGameCode
@@ -97,8 +96,6 @@ struct ChickenMapFeature {
 
         Reduce { state, action in
             switch action {
-            case .barButtonTapped:
-                return .none
             case .binding:
                 return .none
             case .destination(.presented(.alert(.cancelGame))):
@@ -145,7 +142,7 @@ struct ChickenMapFeature {
                             TextState("Cancel game")
                         }
                     } message: {
-                        TextState("Are you sure you want to cancel and finish the game now ?")
+                        TextState("Are you sure you want to cancel and finish the game now?")
                     }
                 )
                 return .none

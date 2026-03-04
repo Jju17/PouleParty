@@ -20,10 +20,6 @@
 		6464E5202BA5C3ED0039C387 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 6464E51F2BA5C3ED0039C387 /* FirebaseAuth */; };
 		6464E5222BA5C3ED0039C387 /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = 6464E5212BA5C3ED0039C387 /* FirebaseCrashlytics */; };
 		6464E5242BA5C3ED0039C387 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 6464E5232BA5C3ED0039C387 /* FirebaseFirestore */; };
-		6464E5262BA5C3ED0039C387 /* FirebaseFirestoreCombine-Community in Frameworks */ = {isa = PBXBuildFile; productRef = 6464E5252BA5C3ED0039C387 /* FirebaseFirestoreCombine-Community */; };
-		6464E52A2BA5C3ED0039C387 /* FirebaseFunctions in Frameworks */ = {isa = PBXBuildFile; productRef = 6464E5292BA5C3ED0039C387 /* FirebaseFunctions */; };
-		6464E52C2BA5C3ED0039C387 /* FirebaseFunctionsCombine-Community in Frameworks */ = {isa = PBXBuildFile; productRef = 6464E52B2BA5C3ED0039C387 /* FirebaseFunctionsCombine-Community */; };
-		6464E52E2BA5C3ED0039C387 /* FirebaseInAppMessaging-Beta in Frameworks */ = {isa = PBXBuildFile; productRef = 6464E52D2BA5C3ED0039C387 /* FirebaseInAppMessaging-Beta */; };
 		6464E5322BA5DBAA0039C387 /* Game.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6464E5312BA5DBAA0039C387 /* Game.swift */; };
 		6464E5342BA5DE190039C387 /* GeoPoint+Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6464E5332BA5DE190039C387 /* GeoPoint+Utils.swift */; };
 		6464E5362BA603F00039C387 /* ChickenLocation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6464E5352BA603F00039C387 /* ChickenLocation.swift */; };
@@ -59,10 +55,12 @@
 		DD0000022F50000100000001 /* GameTimerLogic.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0000012F50000100000001 /* GameTimerLogic.swift */; };
 		EE0000022F60000100000001 /* AddressSearchClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0000012F60000100000001 /* AddressSearchClient.swift */; };
 		EE0000052F70000100000001 /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0000042F70000100000001 /* Settings.swift */; };
+		FF0000022F80000100000001 /* ProfanityFilter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF0000012F80000100000001 /* ProfanityFilter.swift */; };
 		F2E1D0C9B8A7F6E5D4C3B2A1 /* GameStartCountdownOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B8C9D0E1F2 /* GameStartCountdownOverlay.swift */; };
 		F3A1B2C3D4E5F6A7B8C9D001 /* GameCodeRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3A1B2C3D4E5F6A7B8C9D002 /* GameCodeRow.swift */; };
 		F986A3752F48AAC00086DF16 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = F986A3742F48AAC00086DF16 /* GoogleService-Info.plist */; };
 		F9B5A2222F53A73B004EBFD7 /* MapboxMaps in Frameworks */ = {isa = PBXBuildFile; productRef = F9B5A2212F53A73B004EBFD7 /* MapboxMaps */; };
+		GG0000012F90000100000001 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = GG0000022F90000100000001 /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -123,8 +121,10 @@
 		DD0000012F50000100000001 /* GameTimerLogic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameTimerLogic.swift; sourceTree = "<group>"; };
 		EE0000012F60000100000001 /* AddressSearchClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddressSearchClient.swift; sourceTree = "<group>"; };
 		EE0000042F70000100000001 /* Settings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Settings.swift; sourceTree = "<group>"; };
+		FF0000012F80000100000001 /* ProfanityFilter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfanityFilter.swift; sourceTree = "<group>"; };
 		F3A1B2C3D4E5F6A7B8C9D002 /* GameCodeRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameCodeRow.swift; sourceTree = "<group>"; };
 		F986A3742F48AAC00086DF16 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		GG0000022F90000100000001 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -151,13 +151,9 @@
 				BB0000072F47000100000001 /* Dependencies in Frameworks */,
 				BB0000092F47000100000001 /* SwiftNavigation in Frameworks */,
 				6464E5222BA5C3ED0039C387 /* FirebaseCrashlytics in Frameworks */,
-				6464E52C2BA5C3ED0039C387 /* FirebaseFunctionsCombine-Community in Frameworks */,
 				F9B5A2222F53A73B004EBFD7 /* MapboxMaps in Frameworks */,
-				6464E52A2BA5C3ED0039C387 /* FirebaseFunctions in Frameworks */,
-				6464E52E2BA5C3ED0039C387 /* FirebaseInAppMessaging-Beta in Frameworks */,
 				6464E5202BA5C3ED0039C387 /* FirebaseAuth in Frameworks */,
 				6464E5242BA5C3ED0039C387 /* FirebaseFirestore in Frameworks */,
-				6464E5262BA5C3ED0039C387 /* FirebaseFirestoreCombine-Community in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -263,12 +259,14 @@
 			children = (
 				647D9FCA2BA3ABF3005B6566 /* PouleParty.entitlements */,
 				64620C802BA3C81C006B329C /* Info.plist */,
+				GG0000022F90000100000001 /* PrivacyInfo.xcprivacy */,
 				64C9CAE32CEBEDE00087BE13 /* background-music.mp3 */,
 				6464E50E2BA4AA010039C387 /* App.swift */,
 				CC0000012F4E900100000001 /* Constants.swift */,
 				DD0000012F50000100000001 /* GameTimerLogic.swift */,
 				647D9FC42BA3ABF2005B6566 /* PoulePartyApp.swift */,
 				EE0000042F70000100000001 /* Settings.swift */,
+				FF0000012F80000100000001 /* ProfanityFilter.swift */,
 				647D9FC82BA3ABF3005B6566 /* Assets.xcassets */,
 				EE0000032F60000100000001 /* Client */,
 				6464E53B2BA744CD0039C387 /* Dependencies */,
@@ -359,10 +357,6 @@
 				6464E51F2BA5C3ED0039C387 /* FirebaseAuth */,
 				6464E5212BA5C3ED0039C387 /* FirebaseCrashlytics */,
 				6464E5232BA5C3ED0039C387 /* FirebaseFirestore */,
-				6464E5252BA5C3ED0039C387 /* FirebaseFirestoreCombine-Community */,
-				6464E5292BA5C3ED0039C387 /* FirebaseFunctions */,
-				6464E52B2BA5C3ED0039C387 /* FirebaseFunctionsCombine-Community */,
-				6464E52D2BA5C3ED0039C387 /* FirebaseInAppMessaging-Beta */,
 				648F563F2CF3DC4900B1BC28 /* ComposableArchitecture */,
 				BB0000022F47000100000001 /* Sharing */,
 				BB0000042F47000100000001 /* Clocks */,
@@ -442,6 +436,7 @@
 				F986A3752F48AAC00086DF16 /* GoogleService-Info.plist in Resources */,
 				647D9FC92BA3ABF3005B6566 /* Assets.xcassets in Resources */,
 				64CE0F842CEE8E8200762232 /* Localizable.xcstrings in Resources */,
+				GG0000012F90000100000001 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -516,6 +511,7 @@
 				AA0000062F46900100000001 /* MapOverlays.swift in Sources */,
 				D964CC4CA5BD0906B58941B7 /* Victory.swift in Sources */,
 				EE0000052F70000100000001 /* Settings.swift in Sources */,
+				FF0000022F80000100000001 /* ProfanityFilter.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -724,7 +720,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = "Poule Party";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.games";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Poule Party uses your location to show your position on the game map in real time. For example, when you play as the Chicken, your location is shared with Hunters so they can find you within the shrinking zone.";
-				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "Poule Party needs continuous access to your location so that other players can see your position on the map during the game, even when the app is in the background. For example, if you are the Chicken, Hunters track your live position to find you.";
+				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "Poule Party needs continuous access to your location so that other players can see your position on the map during the game, even when the app is in the background. As the Chicken, Hunters track your live position. As a Hunter in mutual tracking mode, your position is shared with other players.";
 				INFOPLIST_KEY_NSLocationUsageDescription = "Poule Party uses your location to display your position on the game map and share it with other players during a game session.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Poule Party uses your location to show your position on the game map in real time. For example, when you play as the Chicken, your location is shared with Hunters so they can find you within the shrinking zone.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -780,7 +776,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = "Poule Party";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.games";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Poule Party uses your location to show your position on the game map in real time. For example, when you play as the Chicken, your location is shared with Hunters so they can find you within the shrinking zone.";
-				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "Poule Party needs continuous access to your location so that other players can see your position on the map during the game, even when the app is in the background. For example, if you are the Chicken, Hunters track your live position to find you.";
+				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "Poule Party needs continuous access to your location so that other players can see your position on the map during the game, even when the app is in the background. As the Chicken, Hunters track your live position. As a Hunter in mutual tracking mode, your position is shared with other players.";
 				INFOPLIST_KEY_NSLocationUsageDescription = "Poule Party uses your location to display your position on the game map and share it with other players during a game session.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Poule Party uses your location to show your position on the game map in real time. For example, when you play as the Chicken, your location is shared with Hunters so they can find you within the shrinking zone.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -893,26 +889,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 6464E51A2BA5C3ED0039C387 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseFirestore;
-		};
-		6464E5252BA5C3ED0039C387 /* FirebaseFirestoreCombine-Community */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 6464E51A2BA5C3ED0039C387 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = "FirebaseFirestoreCombine-Community";
-		};
-		6464E5292BA5C3ED0039C387 /* FirebaseFunctions */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 6464E51A2BA5C3ED0039C387 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = FirebaseFunctions;
-		};
-		6464E52B2BA5C3ED0039C387 /* FirebaseFunctionsCombine-Community */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 6464E51A2BA5C3ED0039C387 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = "FirebaseFunctionsCombine-Community";
-		};
-		6464E52D2BA5C3ED0039C387 /* FirebaseInAppMessaging-Beta */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 6464E51A2BA5C3ED0039C387 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = "FirebaseInAppMessaging-Beta";
 		};
 		648F563F2CF3DC4900B1BC28 /* ComposableArchitecture */ = {
 			isa = XCSwiftPackageProductDependency;
