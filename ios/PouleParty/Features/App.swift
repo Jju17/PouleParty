@@ -6,7 +6,6 @@
 //
 
 import ComposableArchitecture
-import FirebaseMessaging
 import os
 import SwiftUI
 
@@ -24,9 +23,9 @@ struct AppFeature {
 
     enum Action {
         case appStarted
-        case onboarding(OnboardingFeature.Action)
         case chickenMap(ChickenMapFeature.Action)
         case hunterMap(HunterMapFeature.Action)
+        case onboarding(OnboardingFeature.Action)
         case selection(SelectionFeature.Action)
         case victory(VictoryFeature.Action)
     }
@@ -40,8 +39,8 @@ struct AppFeature {
             case .appStarted:
                 return .run { _ in
                     do {
-                        _ = try await authClient.signInAnonymously()
-                        if let token = Messaging.messaging().fcmToken {
+                        _ = try await userClient.signInAnonymously()
+                        if let token = userClient.fcmToken() {
                             await FCMTokenManager.shared.saveToken(token)
                         }
                     } catch {
@@ -54,7 +53,7 @@ struct AppFeature {
                 return .none
             case .onboarding:
                 return .none
-            case .chickenMap(.goToMenu):
+            case .chickenMap(.returnedToMenu):
                 let gameId: String
                 if case let .chickenMap(chickenState) = state {
                     gameId = chickenState.game.id
@@ -70,23 +69,23 @@ struct AppFeature {
                             .error("Failed to update game status to done: \(error.localizedDescription)")
                     }
                 }
-            case let .selection(.goToVictoryAsSpectator(game)):
+            case let .selection(.completedGameFound(game)):
                 state = .victory(VictoryFeature.State(
                     game: game,
                     hunterId: "",
                     hunterName: ""
                 ))
                 return .none
-            case let .selection(.goToHunterMapTriggered(game, hunterName)):
+            case let .selection(.hunterGameJoined(game, hunterName)):
                 state = AppFeature.State.hunterMap(HunterMapFeature.State(game: game, hunterName: hunterName))
                 return .none
-            case let .selection(.goToChickenMapTriggered(game)):
+            case let .selection(.chickenGameStarted(game)):
                 state = AppFeature.State.chickenMap(ChickenMapFeature.State(game: game))
                 return .none
-            case .hunterMap(.goToMenu):
+            case .hunterMap(.returnedToMenu):
                 state = AppFeature.State.selection(SelectionFeature.State())
                 return .none
-            case .hunterMap(.goToVictory):
+            case .hunterMap(.winnerRegistered):
                 if case let .hunterMap(hunterState) = state {
                     state = .victory(VictoryFeature.State(
                         game: hunterState.game,
@@ -95,10 +94,10 @@ struct AppFeature {
                     ))
                 }
                 return .none
-            case .victory(.goToMenu):
+            case .victory(.menuButtonTapped):
                 state = AppFeature.State.selection(SelectionFeature.State())
                 return .none
-            case .selection(.goToOnboarding):
+            case .selection(.accountDeletionCompleted):
                 state = .onboarding(OnboardingFeature.State())
                 return .none
             case .chickenMap, .hunterMap, .selection, .victory:

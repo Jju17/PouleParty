@@ -27,20 +27,20 @@ struct OnboardingFeature {
     }
 
     enum Action {
-        case nextButtonTapped
+        case alwaysPermissionButtonTapped
         case backButtonTapped
-        case pageChanged(Int)
-        case nicknameChanged(String)
-        case requestWhenInUsePermission
-        case requestAlwaysPermission
-        case requestNotificationPermission
+        case locationAlertDismissed
         case locationAuthorizationUpdated(CLAuthorizationStatus)
+        case nextButtonTapped
+        case nicknameChanged(String)
         case notificationAuthorizationUpdated(UNAuthorizationStatus)
-        case dismissLocationAlert
-        case dismissProfanityAlert
+        case notificationPermissionButtonTapped
         case onboardingCompleted
         case onTask
-        case snapBackToPage(Int)
+        case pageChanged(Int)
+        case pageSnappedBack(Int)
+        case profanityAlertDismissed
+        case whenInUsePermissionButtonTapped
     }
 
     static let totalPages = 7
@@ -106,7 +106,7 @@ struct OnboardingFeature {
                     state.currentPage = page
                     return .run { send in
                         try? await Task.sleep(for: .milliseconds(50))
-                        await send(.snapBackToPage(3))
+                        await send(.pageSnappedBack(3))
                     }
                     .cancellable(id: CancelID.snapBack, cancelInFlight: true)
                 }
@@ -116,34 +116,34 @@ struct OnboardingFeature {
                     state.currentPage = page
                     return .run { send in
                         try? await Task.sleep(for: .milliseconds(50))
-                        await send(.snapBackToPage(5))
+                        await send(.pageSnappedBack(5))
                     }
                     .cancellable(id: CancelID.snapBack, cancelInFlight: true)
                 }
                 state.currentPage = page
                 return .none
-            case let .snapBackToPage(page):
+            case let .pageSnappedBack(page):
                 state.currentPage = page
                 return .none
-            case .dismissLocationAlert:
+            case .locationAlertDismissed:
                 state.showLocationAlert = false
                 return .none
-            case .dismissProfanityAlert:
+            case .profanityAlertDismissed:
                 state.showProfanityAlert = false
                 return .none
-            case .requestWhenInUsePermission:
+            case .whenInUsePermissionButtonTapped:
                 return .run { send in
                     await locationClient.requestWhenInUse()
                     let status = locationClient.authorizationStatus()
                     await send(.locationAuthorizationUpdated(status))
                 }
-            case .requestAlwaysPermission:
+            case .alwaysPermissionButtonTapped:
                 return .run { send in
                     await locationClient.requestAlways()
                     let status = locationClient.authorizationStatus()
                     await send(.locationAuthorizationUpdated(status))
                 }
-            case .requestNotificationPermission:
+            case .notificationPermissionButtonTapped:
                 return .run { send in
                     let status = await notificationClient.requestAuthorization()
                     await send(.notificationAuthorizationUpdated(status))
@@ -189,10 +189,10 @@ struct OnboardingView: View {
                 OnboardingLocationSlide(
                     status: store.locationAuthorizationStatus,
                     onRequestWhenInUse: {
-                        store.send(.requestWhenInUsePermission)
+                        store.send(.whenInUsePermissionButtonTapped)
                     },
                     onRequestAlways: {
-                        store.send(.requestAlwaysPermission)
+                        store.send(.alwaysPermissionButtonTapped)
                     }
                 )
                 .tag(3)
@@ -200,7 +200,7 @@ struct OnboardingView: View {
                 OnboardingNotificationSlide(
                     status: store.notificationAuthorizationStatus,
                     onRequestPermission: {
-                        store.send(.requestNotificationPermission)
+                        store.send(.notificationPermissionButtonTapped)
                     }
                 )
                 .tag(4)
@@ -280,20 +280,20 @@ struct OnboardingView: View {
         }
         .alert("Location Required", isPresented: Binding(
             get: { store.showLocationAlert },
-            set: { _ in store.send(.dismissLocationAlert) }
+            set: { _ in store.send(.locationAlertDismissed) }
         )) {
             Button("OK") {
-                store.send(.dismissLocationAlert)
+                store.send(.locationAlertDismissed)
             }
         } message: {
             Text("Location is the core of PouleParty! Your position is anonymous and only used during the game. Please enable location access to continue.")
         }
         .alert("Inappropriate Nickname", isPresented: Binding(
             get: { store.showProfanityAlert },
-            set: { _ in store.send(.dismissProfanityAlert) }
+            set: { _ in store.send(.profanityAlertDismissed) }
         )) {
             Button("OK") {
-                store.send(.dismissProfanityAlert)
+                store.send(.profanityAlertDismissed)
             }
         } message: {
             Text("Please choose a different nickname. This one contains inappropriate language.")

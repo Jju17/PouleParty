@@ -24,14 +24,14 @@ struct SettingsFeature {
 
     enum Action: BindableAction {
         case binding(BindingAction<State>)
-        case saveNickname(String)
-        case dismissProfanityAlert
-        case dismissEmptyNicknameAlert
-        case deleteDataTapped
-        case confirmDeleteData
         case deleteCompleted(success: Bool)
-        case dismissDeleteSuccess
-        case dismissDeleteError
+        case deleteConfirmationTapped
+        case deleteDataTapped
+        case deleteErrorAlertDismissed
+        case deleteSuccessAlertDismissed
+        case emptyNicknameAlertDismissed
+        case nicknameSubmitted(String)
+        case profanityAlertDismissed
     }
 
     @Dependency(\.userClient) var userClient
@@ -43,7 +43,7 @@ struct SettingsFeature {
             switch action {
             case .binding:
                 return .none
-            case let .saveNickname(text):
+            case let .nicknameSubmitted(text):
                 let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !trimmed.isEmpty else {
                     state.showingEmptyNicknameAlert = true
@@ -55,16 +55,16 @@ struct SettingsFeature {
                 }
                 state.$savedNickname.withLock { $0 = trimmed }
                 return .none
-            case .dismissProfanityAlert:
+            case .profanityAlertDismissed:
                 state.showingProfanityAlert = false
                 return .none
-            case .dismissEmptyNicknameAlert:
+            case .emptyNicknameAlertDismissed:
                 state.showingEmptyNicknameAlert = false
                 return .none
             case .deleteDataTapped:
                 state.showingDeleteConfirmation = true
                 return .none
-            case .confirmDeleteData:
+            case .deleteConfirmationTapped:
                 state.showingDeleteConfirmation = false
                 return .run { send in
                     do {
@@ -85,10 +85,10 @@ struct SettingsFeature {
                     state.showingDeleteError = true
                 }
                 return .none
-            case .dismissDeleteSuccess:
+            case .deleteSuccessAlertDismissed:
                 state.showingDeleteSuccess = false
                 return .none
-            case .dismissDeleteError:
+            case .deleteErrorAlertDismissed:
                 state.showingDeleteError = false
                 return .none
             }
@@ -125,12 +125,12 @@ struct SettingsView: View {
         }
         .onChange(of: isNicknameFocused) { _, focused in
             if !focused {
-                store.send(.saveNickname(nicknameText))
+                store.send(.nicknameSubmitted(nicknameText))
             }
         }
         .alert("Delete My Data", isPresented: $store.showingDeleteConfirmation) {
             Button("Delete", role: .destructive) {
-                store.send(.confirmDeleteData)
+                store.send(.deleteConfirmationTapped)
             }
             Button("Cancel", role: .cancel) { }
         } message: {
@@ -138,7 +138,7 @@ struct SettingsView: View {
         }
         .alert("Data Deleted", isPresented: $store.showingDeleteSuccess) {
             Button("OK") {
-                store.send(.dismissDeleteSuccess)
+                store.send(.deleteSuccessAlertDismissed)
                 onAccountDeleted?()
             }
         } message: {
@@ -146,14 +146,14 @@ struct SettingsView: View {
         }
         .alert("Error", isPresented: $store.showingDeleteError) {
             Button("OK") {
-                store.send(.dismissDeleteError)
+                store.send(.deleteErrorAlertDismissed)
             }
         } message: {
             Text("Failed to delete your account. Please try again later.")
         }
         .alert("Inappropriate Nickname", isPresented: $store.showingProfanityAlert) {
             Button("OK") {
-                store.send(.dismissProfanityAlert)
+                store.send(.profanityAlertDismissed)
                 nicknameText = store.savedNickname
             }
         } message: {
@@ -161,7 +161,7 @@ struct SettingsView: View {
         }
         .alert("Empty Nickname", isPresented: $store.showingEmptyNicknameAlert) {
             Button("OK") {
-                store.send(.dismissEmptyNicknameAlert)
+                store.send(.emptyNicknameAlertDismissed)
                 nicknameText = store.savedNickname
             }
         } message: {
@@ -198,7 +198,7 @@ struct SettingsView: View {
                     }
                 }
                 .onSubmit {
-                    store.send(.saveNickname(nicknameText))
+                    store.send(.nicknameSubmitted(nicknameText))
                 }
 
             BangerText("\(nicknameText.count)/\(AppConstants.nicknameMaxLength)", size: 14)

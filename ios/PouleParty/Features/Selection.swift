@@ -27,40 +27,45 @@ struct SelectionFeature {
     }
 
     enum Action: BindableAction {
+        case accountDeletionCompleted
+        case activeGameBannerDismissed
         case activeGameFound(Game, PlayerRole)
         case binding(BindingAction<State>)
-        case destination(PresentationAction<Destination.Action>)
-        case dismissChickenConfig
-        case gameInProgress
-        case gameNotFound
+        case chickenConfigLocationRequested
+        case chickenGameStarted(Game)
+        case completedGameFound(Game)
         case confirmChickenTapped
-        case goToChickenConfigTriggered
-        case goToChickenMapTriggered(Game)
-        case goToVictoryAsSpectator(Game)
+        case destination(PresentationAction<Destination.Action>)
+        case destinationDismissed
+        case gameFoundInProgress
+        case gameNotFound
+        case hunterGameJoined(Game, String)
         case initialLocationResolved(CLLocationCoordinate2D?)
-        case goToHunterMapTriggered(Game, String)
-        case locationRequired
-        case networkError
-        case dismissActiveGame
+        case joinGameButtonTapped
+        case locationPermissionDenied
+        case networkRequestFailed
         case noActiveGameFound
         case onTask
         case rejoinGameTapped
+        case rulesButtonTapped
+        case settingsButtonTapped
         case startButtonTapped
-        case joinGameButtonTapped
-        case goToOnboarding
     }
 
     @Reducer
     struct Destination {
         @ObservableState
         enum State: Equatable {
-            case chickenConfig(ChickenConfigFeature.State)
             case alert(AlertState<Action.Alert>)
+            case chickenConfig(ChickenConfigFeature.State)
+            case gameRules
+            case settings(SettingsFeature.State)
         }
 
         enum Action {
-            case chickenConfig(ChickenConfigFeature.Action)
             case alert(Alert)
+            case chickenConfig(ChickenConfigFeature.Action)
+            case settings(SettingsFeature.Action)
 
             enum Alert: Equatable {
                 case ok
@@ -71,46 +76,53 @@ struct SelectionFeature {
             Scope(state: \.chickenConfig, action: \.chickenConfig) {
                 ChickenConfigFeature()
             }
+            Scope(state: \.settings, action: \.settings) {
+                SettingsFeature()
+            }
         }
     }
 
     @Dependency(\.apiClient) var apiClient
-    @Dependency(\.userClient) var userClient
     @Dependency(\.locationClient) var locationClient
+    @Dependency(\.userClient) var userClient
     @Dependency(\.uuid) var uuid
+    @Dependency(\.withRandomNumberGenerator) var withRandomNumberGenerator
 
     var body: some ReducerOf<Self> {
         BindingReducer()
 
         Reduce { state, action in
             switch action {
-            case .binding:
+            case let .activeGameFound(game, role):
+                state.activeGame = game
+                state.activeGameRole = role
                 return .none
-            case .goToOnboarding:
+            case .binding:
                 return .none
             case .confirmChickenTapped:
                 let chickenLocStatus = locationClient.authorizationStatus()
                 guard chickenLocStatus == .authorizedAlways || chickenLocStatus == .authorizedWhenInUse else {
                     state.isConfirmingChicken = false
-                    return .send(.locationRequired)
+                    return .send(.locationPermissionDenied)
                 }
-
                 state.isConfirmingChicken = false
-
-                return .send(.goToChickenConfigTriggered)
-            case let .destination(.presented(.chickenConfig(.startGameTriggered(game)))):
+                return .send(.chickenConfigLocationRequested)
+            case let .destination(.presented(.chickenConfig(.gameCreated(game)))):
                 state.destination = nil
-                return .send(.goToChickenMapTriggered(game))
+                return .send(.chickenGameStarted(game))
+            case .destination(.presented(.settings(.deleteSuccessAlertDismissed))):
+                state.destination = nil
+                return .send(.accountDeletionCompleted)
             case .destination:
                 return .none
-            case .dismissActiveGame:
+            case .activeGameBannerDismissed:
                 state.activeGame = nil
                 state.activeGameRole = nil
                 return .none
-            case .dismissChickenConfig:
+            case .destinationDismissed:
                 state.destination = nil
                 return .none
-            case .gameInProgress:
+            case .gameFoundInProgress:
                 state.destination = .alert(
                     AlertState {
                         TextState("Game in progress")
@@ -136,7 +148,7 @@ struct SelectionFeature {
                     }
                 )
                 return .none
-            case .goToChickenConfigTriggered:
+            case .chickenConfigLocationRequested:
                 return .run { [locationClient] send in
                     var location: CLLocationCoordinate2D? = nil
                     for await coordinate in locationClient.startTracking() {
@@ -146,12 +158,22 @@ struct SelectionFeature {
                     locationClient.stopTracking()
                     await send(.initialLocationResolved(location))
                 }
+            case .chickenGameStarted:
+                return .none
+            case .hunterGameJoined:
+                return .none
+            case .accountDeletionCompleted:
+                return .none
+            case .completedGameFound:
+                return .none
             case let .initialLocationResolved(location):
                 var game = Game(id: uuid().uuidString)
                 game.foundCode = Game.generateFoundCode()
                 game.chickenHeadStartMinutes = 5
                 game.creatorId = userClient.currentUserId() ?? ""
-                game.driftSeed = Int.random(in: 1...999_999)
+                game.driftSeed = withRandomNumberGenerator { generator in
+                    Int.random(in: 1...999_999, using: &generator)
+                }
                 if let location {
                     game.initialLocation = location
                 }
@@ -159,13 +181,35 @@ struct SelectionFeature {
                     ChickenConfigFeature.State(game: Shared(value: game))
                 )
                 return .none
-            case .goToChickenMapTriggered:
-                return .none
-            case .goToVictoryAsSpectator:
-                return .none
-            case .goToHunterMapTriggered:
-                return .none
-            case .locationRequired:
+            case .joinGameButtonTapped:
+                let code = state.gameCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+                guard code.count == AppConstants.gameCodeLength,
+                      code.allSatisfy({ $0.isLetter || $0.isNumber })
+                else { return .none }
+
+                let savedNickname = state.savedNickname.trimmingCharacters(in: .whitespacesAndNewlines)
+                let finalName = savedNickname.isEmpty ? "Hunter" : savedNickname
+                state.isJoiningGame = false
+                return .run { send in
+                    let game: Game?
+                    do {
+                        game = try await apiClient.findGameByCode(code)
+                    } catch {
+                        await send(.networkRequestFailed)
+                        return
+                    }
+                    guard let game else {
+                        await send(.gameNotFound)
+                        return
+                    }
+                    switch game.status {
+                    case .waiting, .inProgress:
+                        await send(.hunterGameJoined(game, finalName))
+                    case .done:
+                        await send(.completedGameFound(game))
+                    }
+                }
+            case .locationPermissionDenied:
                 state.destination = .alert(
                     AlertState {
                         TextState("Location Required")
@@ -178,7 +222,7 @@ struct SelectionFeature {
                     }
                 )
                 return .none
-            case .networkError:
+            case .networkRequestFailed:
                 state.destination = .alert(
                     AlertState {
                         TextState("Network Error")
@@ -190,10 +234,6 @@ struct SelectionFeature {
                         TextState("Could not reach the server. Check your connection and try again.")
                     }
                 )
-                return .none
-            case let .activeGameFound(game, role):
-                state.activeGame = game
-                state.activeGameRole = role
                 return .none
             case .noActiveGameFound:
                 state.activeGame = nil
@@ -219,48 +259,25 @@ struct SelectionFeature {
                 state.activeGameRole = nil
                 switch role {
                 case .chicken:
-                    return .send(.goToChickenMapTriggered(game))
+                    return .send(.chickenGameStarted(game))
                 case .hunter:
                     let savedNickname = state.savedNickname.trimmingCharacters(in: .whitespacesAndNewlines)
                     let finalName = savedNickname.isEmpty ? "Hunter" : savedNickname
-                    return .send(.goToHunterMapTriggered(game, finalName))
+                    return .send(.hunterGameJoined(game, finalName))
                 }
+            case .rulesButtonTapped:
+                state.destination = .gameRules
+                return .none
+            case .settingsButtonTapped:
+                state.destination = .settings(SettingsFeature.State())
+                return .none
             case .startButtonTapped:
-                // Block if location not authorized
                 let startLocStatus = locationClient.authorizationStatus()
                 guard startLocStatus == .authorizedAlways || startLocStatus == .authorizedWhenInUse else {
-                    return .send(.locationRequired)
+                    return .send(.locationPermissionDenied)
                 }
                 state.isJoiningGame = true
                 return .none
-            case .joinGameButtonTapped:
-                let code = state.gameCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-                guard code.count == AppConstants.gameCodeLength,
-                      code.allSatisfy({ $0.isLetter || $0.isNumber })
-                else { return .none }
-
-                let savedNickname = state.savedNickname.trimmingCharacters(in: .whitespacesAndNewlines)
-                let finalName = savedNickname.isEmpty ? "Hunter" : savedNickname
-                state.isJoiningGame = false
-                return .run { send in
-                    let game: Game?
-                    do {
-                        game = try await apiClient.findGameByCode(code)
-                    } catch {
-                        await send(.networkError)
-                        return
-                    }
-                    guard let game else {
-                        await send(.gameNotFound)
-                        return
-                    }
-                    switch game.status {
-                    case .waiting, .inProgress:
-                        await send(.goToHunterMapTriggered(game, finalName))
-                    case .done:
-                        await send(.goToVictoryAsSpectator(game))
-                    }
-                }
             }
         }
         .ifLet(\.$destination, action: \.destination) {
@@ -273,8 +290,6 @@ struct SelectionView: View {
     @Bindable var store: StoreOf<SelectionFeature>
     @State private var isVisible = true
     @State private var audioPlayer: AVAudioPlayer?
-    @State private var showingGameRules = false
-    @State private var showingSettings = false
 
     var body: some View {
         NavigationStack {
@@ -321,7 +336,7 @@ struct SelectionView: View {
                 HStack {
                     Spacer()
                     Button {
-                        showingSettings = true
+                        store.send(.settingsButtonTapped)
                     } label: {
                         Image(systemName: "gearshape")
                             .font(.system(size: 20))
@@ -339,7 +354,7 @@ struct SelectionView: View {
 
                 HStack {
                     Button {
-                        showingGameRules = true
+                        store.send(.rulesButtonTapped)
                     } label: {
                         Text("Rules")
                             .padding()
@@ -409,7 +424,7 @@ struct SelectionView: View {
                     .toolbar {
                         ToolbarItem {
                             Button {
-                                self.store.send(.dismissChickenConfig)
+                                self.store.send(.destinationDismissed)
                             } label: {
                                 Image(systemName: "xmark")
                             }
@@ -424,13 +439,18 @@ struct SelectionView: View {
                 action: \.destination.alert
             )
         )
-        .sheet(isPresented: $showingGameRules) {
+        .sheet(
+            isPresented: Binding(
+                get: { if case .gameRules = store.destination { true } else { false } },
+                set: { if !$0 { store.send(.destinationDismissed) } }
+            )
+        ) {
             NavigationStack {
                 GameRulesView()
                     .toolbar {
                         ToolbarItem {
                             Button {
-                                showingGameRules = false
+                                store.send(.destinationDismissed)
                             } label: {
                                 Image(systemName: "xmark")
                                     .foregroundStyle(.black)
@@ -439,15 +459,18 @@ struct SelectionView: View {
                     }
             }
         }
-        .navigationDestination(isPresented: $showingSettings) {
-            SettingsView(
-                store: Store(initialState: SettingsFeature.State()) {
-                    SettingsFeature()
-                },
-                onAccountDeleted: {
-                    store.send(.goToOnboarding)
-                }
+        .navigationDestination(
+            isPresented: Binding(
+                get: { if case .settings = store.destination { true } else { false } },
+                set: { if !$0 { store.send(.destinationDismissed) } }
             )
+        ) {
+            if let settingsStore = store.scope(
+                state: \.destination?.settings,
+                action: \.destination.settings
+            ) {
+                SettingsView(store: settingsStore)
+            }
         }
         .navigationBarHidden(true)
         }
@@ -485,7 +508,7 @@ struct SelectionView: View {
             .frame(maxWidth: .infinity)
 
             Button {
-                withAnimation { _ = store.send(.dismissActiveGame) }
+                withAnimation { _ = store.send(.activeGameBannerDismissed) }
             } label: {
                 Image(systemName: "xmark")
                     .font(.system(size: 12, weight: .bold))

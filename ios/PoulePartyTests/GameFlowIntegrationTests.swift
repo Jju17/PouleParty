@@ -46,7 +46,7 @@ struct GameFlowIntegrationTests {
         var wrongState = store.state
         wrongState.enteredCode = "0000"
 
-        await store.send(.submitFoundCode) {
+        await store.send(.submitCodeButtonTapped) {
             $0.enteredCode = ""
             $0.isEnteringFoundCode = false
             $0.wrongCodeAttempts = 1
@@ -77,11 +77,11 @@ struct GameFlowIntegrationTests {
         await store.send(.binding(.set(\.enteredCode, "4321")))
         store.exhaustivity = .on
 
-        await store.send(.submitFoundCode) {
+        await store.send(.submitCodeButtonTapped) {
             $0.enteredCode = ""
             $0.isEnteringFoundCode = false
         }
-        await store.receive(\.goToVictory)
+        await store.receive(\.winnerRegistered)
     }
 
     // MARK: - Game ends by time
@@ -130,7 +130,7 @@ struct GameFlowIntegrationTests {
         var endedGame = game
         endedGame.status = .done
 
-        await store.send(.setGameTriggered(to: endedGame)) {
+        await store.send(.gameConfigUpdated( endedGame)) {
             $0.game = endedGame
             $0.destination = .alert(
                 AlertState {

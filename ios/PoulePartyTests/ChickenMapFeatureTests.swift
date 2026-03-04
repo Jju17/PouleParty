@@ -12,13 +12,13 @@ import Testing
 @MainActor
 struct ChickenMapFeatureTests {
 
-    @Test func setGameTriggeredCalculatesRadius() async {
+    @Test func gameInitializedCalculatesRadius() async {
         let game = Game.mock
         let store = TestStore(initialState: ChickenMapFeature.State(game: game)) {
             ChickenMapFeature()
         }
 
-        await store.send(.setGameTriggered) {
+        await store.send(.gameInitialized) {
             let (lastUpdate, lastRadius) = game.findLastUpdate()
             $0.radius = lastRadius
             $0.nextRadiusUpdate = lastUpdate
@@ -35,7 +35,7 @@ struct ChickenMapFeatureTests {
         }
 
         await store.send(.beenFoundButtonTapped) {
-            $0.destination = .endGameCode(EndGameCodeFeature.State(foundCode: "1234"))
+            $0.destination = .endGameCode("1234")
         }
     }
 
@@ -62,15 +62,15 @@ struct ChickenMapFeatureTests {
         }
     }
 
-    @Test func dismissEndGameCodeClearsDestination() async {
+    @Test func endGameCodeDismissedClearsDestination() async {
         var state = ChickenMapFeature.State(game: .mock)
-        state.destination = .endGameCode(EndGameCodeFeature.State(foundCode: "1234"))
+        state.destination = .endGameCode("1234")
 
         let store = TestStore(initialState: state) {
             ChickenMapFeature()
         }
 
-        await store.send(.dismissEndGameCode) {
+        await store.send(.endGameCodeDismissed) {
             $0.destination = nil
         }
     }
@@ -185,7 +185,7 @@ struct ChickenMapFeatureTests {
         await store.send(.gameUpdated(game))
     }
 
-    @Test func dismissWinnerNotificationClearsNotification() async {
+    @Test func winnerNotificationDismissedClearsNotification() async {
         var state = ChickenMapFeature.State(game: .mock)
         state.winnerNotification = "Test notification"
 
@@ -193,7 +193,7 @@ struct ChickenMapFeatureTests {
             ChickenMapFeature()
         }
 
-        await store.send(.dismissWinnerNotification) {
+        await store.send(.winnerNotificationDismissed) {
             $0.winnerNotification = nil
         }
     }
@@ -230,7 +230,7 @@ struct ChickenMapFeatureTests {
         }
     }
 
-    @Test func dismissGameInfoHidesGameInfo() async {
+    @Test func gameInfoDismissedHidesGameInfo() async {
         var state = ChickenMapFeature.State(game: .mock)
         state.showGameInfo = true
 
@@ -238,14 +238,14 @@ struct ChickenMapFeatureTests {
             ChickenMapFeature()
         }
 
-        await store.send(.dismissGameInfo) {
+        await store.send(.gameInfoDismissed) {
             $0.showGameInfo = false
         }
     }
 
     // MARK: - Dismiss countdown
 
-    @Test func dismissCountdownClearsState() async {
+    @Test func countdownDismissedClearsState() async {
         var state = ChickenMapFeature.State(game: .mock)
         state.countdownNumber = 3
         state.countdownText = "GO!"
@@ -254,7 +254,7 @@ struct ChickenMapFeatureTests {
             ChickenMapFeature()
         }
 
-        await store.send(.dismissCountdown) {
+        await store.send(.countdownDismissed) {
             $0.countdownNumber = nil
             $0.countdownText = nil
         }
@@ -352,7 +352,7 @@ struct ChickenMapFeatureTests {
         await store.send(.destination(.presented(.alert(.cancelGame)))) {
             $0.destination = nil
         }
-        await store.receive(\.goToMenu)
+        await store.receive(\.returnedToMenu)
     }
 
     @Test func gameOverAlertSendsGoToMenu() async {
@@ -376,7 +376,7 @@ struct ChickenMapFeatureTests {
         await store.send(.destination(.presented(.alert(.gameOver)))) {
             $0.destination = nil
         }
-        await store.receive(\.goToMenu)
+        await store.receive(\.returnedToMenu)
     }
 
     // MARK: - Winner auto-dismiss effect
@@ -401,7 +401,7 @@ struct ChickenMapFeatureTests {
         }
 
         await clock.advance(by: .seconds(AppConstants.winnerNotificationSeconds))
-        await store.receive(\.dismissWinnerNotification) {
+        await store.receive(\.winnerNotificationDismissed) {
             $0.winnerNotification = nil
         }
     }

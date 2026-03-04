@@ -85,7 +85,7 @@ struct OnboardingFeatureTests {
         }
     }
 
-    @Test func snapBackToPageSetsPage() async {
+    @Test func pageSnappedBackSetsPage() async {
         var state = OnboardingFeature.State()
         state.currentPage = 4
 
@@ -93,7 +93,7 @@ struct OnboardingFeatureTests {
             OnboardingFeature()
         }
 
-        await store.send(.snapBackToPage(3)) {
+        await store.send(.pageSnappedBack(3)) {
             $0.currentPage = 3
         }
     }
@@ -255,7 +255,7 @@ struct OnboardingFeatureTests {
 
     // MARK: - Location Alert
 
-    @Test func dismissLocationAlertHidesAlert() async {
+    @Test func locationAlertDismissedHidesAlert() async {
         var state = OnboardingFeature.State()
         state.showLocationAlert = true
 
@@ -263,7 +263,7 @@ struct OnboardingFeatureTests {
             OnboardingFeature()
         }
 
-        await store.send(.dismissLocationAlert) {
+        await store.send(.locationAlertDismissed) {
             $0.showLocationAlert = false
         }
     }
@@ -315,7 +315,7 @@ struct OnboardingFeatureTests {
         await store.send(.pageChanged(4)) {
             $0.currentPage = 4
         }
-        await store.receive(\.snapBackToPage) {
+        await store.receive(\.pageSnappedBack) {
             $0.currentPage = 3
         }
     }
@@ -335,7 +335,7 @@ struct OnboardingFeatureTests {
         await store.send(.pageChanged(6)) {
             $0.currentPage = 6
         }
-        await store.receive(\.snapBackToPage) {
+        await store.receive(\.pageSnappedBack) {
             $0.currentPage = 5
         }
     }

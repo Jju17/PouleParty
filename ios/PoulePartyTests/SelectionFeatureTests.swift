@@ -35,7 +35,7 @@ struct SelectionFeatureTests {
         await store.send(.confirmChickenTapped) {
             $0.isConfirmingChicken = false
         }
-        await store.receive(\.locationRequired) {
+        await store.receive(\.locationPermissionDenied) {
             $0.destination = .alert(
                 AlertState {
                     TextState("Location Required")
@@ -132,7 +132,7 @@ struct SelectionFeatureTests {
             $0.activeGame = nil
             $0.activeGameRole = nil
         }
-        await store.receive(\.goToHunterMapTriggered)
+        await store.receive(\.hunterGameJoined)
     }
 
     @Test func rejoinGameTappedAsChickenNavigatesToChickenMap() async {
@@ -148,7 +148,7 @@ struct SelectionFeatureTests {
             $0.activeGame = nil
             $0.activeGameRole = nil
         }
-        await store.receive(\.goToChickenMapTriggered)
+        await store.receive(\.chickenGameStarted)
     }
 
     @Test func rejoinGameTappedWithNoActiveGameDoesNothing() async {

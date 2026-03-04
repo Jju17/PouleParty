@@ -34,7 +34,7 @@ struct HunterMapFeatureTests {
         }
     }
 
-    @Test func setGameTriggeredUpdatesState() async {
+    @Test func gameConfigUpdatedUpdatesState() async {
         let store = TestStore(initialState: HunterMapFeature.State(game: .mock)) {
             HunterMapFeature()
         }
@@ -48,7 +48,7 @@ struct HunterMapFeatureTests {
             radiusDeclinePerUpdate: 200
         )
 
-        await store.send(.setGameTriggered(to: newGame)) {
+        await store.send(.gameConfigUpdated( newGame)) {
             let (lastUpdate, lastRadius) = newGame.findLastUpdate()
             $0.game = newGame
             $0.radius = lastRadius
@@ -153,7 +153,7 @@ struct HunterMapFeatureTests {
         }
     }
 
-    @Test func submitFoundCodeWithCorrectCodeAddsWinner() async {
+    @Test func submitCodeButtonTappedWithCorrectCodeAddsWinner() async {
         var state = HunterMapFeature.State(game: .mock)
         state.enteredCode = "1234" // matches mock.foundCode
 
@@ -163,14 +163,14 @@ struct HunterMapFeatureTests {
             $0.apiClient.addWinner = { _, _ in }
         }
 
-        await store.send(.submitFoundCode) {
+        await store.send(.submitCodeButtonTapped) {
             $0.enteredCode = ""
             $0.isEnteringFoundCode = false
         }
-        await store.receive(\.goToVictory)
+        await store.receive(\.winnerRegistered)
     }
 
-    @Test func submitFoundCodeWithWrongCodeShowsAlert() async {
+    @Test func submitCodeButtonTappedWithWrongCodeShowsAlert() async {
         var state = HunterMapFeature.State(game: .mock)
         state.enteredCode = "9999" // wrong code
 
@@ -178,7 +178,7 @@ struct HunterMapFeatureTests {
             HunterMapFeature()
         }
 
-        await store.send(.submitFoundCode) {
+        await store.send(.submitCodeButtonTapped) {
             $0.enteredCode = ""
             $0.isEnteringFoundCode = false
             $0.wrongCodeAttempts = 1
@@ -223,7 +223,7 @@ struct HunterMapFeatureTests {
         #expect(state.previousWinnersCount == 1)
     }
 
-    @Test func setGameTriggeredOwnWinDoesNotShowNotification() async {
+    @Test func gameConfigUpdatedOwnWinDoesNotShowNotification() async {
         let game = Game.mock
         var state = HunterMapFeature.State(game: game)
         state.hunterId = "my-hunter-id"
@@ -237,7 +237,7 @@ struct HunterMapFeatureTests {
             Winner(hunterId: "my-hunter-id", hunterName: "Me", timestamp: .now)
         ]
 
-        await store.send(.setGameTriggered(to: updatedGame)) {
+        await store.send(.gameConfigUpdated( updatedGame)) {
             let (lastUpdate, lastRadius) = updatedGame.findLastUpdate()
             $0.game = updatedGame
             $0.radius = lastRadius
@@ -257,7 +257,7 @@ struct HunterMapFeatureTests {
 
     // MARK: - setGameTriggered with status == .done
 
-    @Test func setGameTriggeredWithDoneStatusShowsGameOver() async {
+    @Test func gameConfigUpdatedWithDoneStatusShowsGameOver() async {
         var game = Game.mock
         game.status = .done
 
@@ -267,7 +267,7 @@ struct HunterMapFeatureTests {
             $0.locationClient.stopTracking = { }
         }
 
-        await store.send(.setGameTriggered(to: game)) {
+        await store.send(.gameConfigUpdated( game)) {
             $0.game = game
             $0.destination = .alert(
                 AlertState {
@@ -334,7 +334,7 @@ struct HunterMapFeatureTests {
         await store.send(.destination(.presented(.alert(.leaveGame)))) {
             $0.destination = nil
         }
-        await store.receive(\.goToMenu)
+        await store.receive(\.returnedToMenu)
     }
 
     @Test func gameOverAlertSendsGoToMenu() async {
@@ -358,7 +358,7 @@ struct HunterMapFeatureTests {
         await store.send(.destination(.presented(.alert(.gameOver)))) {
             $0.destination = nil
         }
-        await store.receive(\.goToMenu)
+        await store.receive(\.returnedToMenu)
     }
 
     // MARK: - Game info
@@ -373,7 +373,7 @@ struct HunterMapFeatureTests {
         }
     }
 
-    @Test func dismissGameInfoHidesGameInfo() async {
+    @Test func gameInfoDismissedHidesGameInfo() async {
         var state = HunterMapFeature.State(game: .mock)
         state.showGameInfo = true
 
@@ -381,14 +381,14 @@ struct HunterMapFeatureTests {
             HunterMapFeature()
         }
 
-        await store.send(.dismissGameInfo) {
+        await store.send(.gameInfoDismissed) {
             $0.showGameInfo = false
         }
     }
 
     // MARK: - Dismiss countdown
 
-    @Test func dismissCountdownClearsState() async {
+    @Test func countdownDismissedClearsState() async {
         var state = HunterMapFeature.State(game: .mock)
         state.countdownNumber = 3
         state.countdownText = "GO!"
@@ -397,7 +397,7 @@ struct HunterMapFeatureTests {
             HunterMapFeature()
         }
 
-        await store.send(.dismissCountdown) {
+        await store.send(.countdownDismissed) {
             $0.countdownNumber = nil
             $0.countdownText = nil
         }
@@ -405,7 +405,7 @@ struct HunterMapFeatureTests {
 
     // MARK: - Dismiss winner notification
 
-    @Test func dismissWinnerNotificationClearsNotification() async {
+    @Test func winnerNotificationDismissedClearsNotification() async {
         var state = HunterMapFeature.State(game: .mock)
         state.winnerNotification = "Test notification"
 
@@ -413,7 +413,7 @@ struct HunterMapFeatureTests {
             HunterMapFeature()
         }
 
-        await store.send(.dismissWinnerNotification) {
+        await store.send(.winnerNotificationDismissed) {
             $0.winnerNotification = nil
         }
     }
@@ -433,7 +433,7 @@ struct HunterMapFeatureTests {
 
     // MARK: - Submit found code cooldown
 
-    @Test func submitFoundCodeOnCooldownDoesNothing() async {
+    @Test func submitCodeButtonTappedOnCooldownDoesNothing() async {
         var state = HunterMapFeature.State(game: .mock)
         state.enteredCode = "9999"
         state.codeCooldownUntil = .now.addingTimeInterval(60)
@@ -442,10 +442,10 @@ struct HunterMapFeatureTests {
             HunterMapFeature()
         }
 
-        await store.send(.submitFoundCode)
+        await store.send(.submitCodeButtonTapped)
     }
 
-    @Test func submitFoundCodeTriggersCooldownAfterMaxAttempts() async {
+    @Test func submitCodeButtonTappedTriggersCooldownAfterMaxAttempts() async {
         var state = HunterMapFeature.State(game: .mock)
         state.enteredCode = "9999"
         state.wrongCodeAttempts = AppConstants.codeMaxWrongAttempts - 1
@@ -455,7 +455,7 @@ struct HunterMapFeatureTests {
         }
         store.exhaustivity = .off
 
-        await store.send(.submitFoundCode) {
+        await store.send(.submitCodeButtonTapped) {
             $0.enteredCode = ""
             $0.isEnteringFoundCode = false
             $0.wrongCodeAttempts = 0
@@ -496,7 +496,7 @@ struct HunterMapFeatureTests {
 
     // MARK: - Winner auto-dismiss effect
 
-    @Test func setGameTriggeredWithNewWinnerSchedulesAutoDismiss() async {
+    @Test func gameConfigUpdatedWithNewWinnerSchedulesAutoDismiss() async {
         let clock = TestClock()
         var state = HunterMapFeature.State(game: .mock)
         state.hunterId = "my-hunter-id"
@@ -512,7 +512,7 @@ struct HunterMapFeatureTests {
             Winner(hunterId: "other-hunter", hunterName: "Alice", timestamp: .now)
         ]
 
-        await store.send(.setGameTriggered(to: updatedGame)) {
+        await store.send(.gameConfigUpdated( updatedGame)) {
             let (lastUpdate, lastRadius) = updatedGame.findLastUpdate()
             $0.game = updatedGame
             $0.radius = lastRadius
@@ -526,7 +526,7 @@ struct HunterMapFeatureTests {
         }
 
         await clock.advance(by: .seconds(AppConstants.winnerNotificationSeconds))
-        await store.receive(\.dismissWinnerNotification) {
+        await store.receive(\.winnerNotificationDismissed) {
             $0.winnerNotification = nil
         }
     }

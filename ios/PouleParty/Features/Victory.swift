@@ -19,9 +19,9 @@ struct VictoryFeature {
     }
 
     enum Action {
-        case goToMenu
-        case onTask
         case gameUpdated(Game)
+        case menuButtonTapped
+        case onTask
     }
 
     @Dependency(\.apiClient) var apiClient
@@ -29,7 +29,7 @@ struct VictoryFeature {
     var body: some ReducerOf<Self> {
         Reduce { state, action in
             switch action {
-            case .goToMenu:
+            case .menuButtonTapped:
                 return .none
             case .onTask:
                 let gameId = state.game.id
@@ -82,7 +82,7 @@ struct VictoryView: View {
                 Spacer()
 
                 SelectionButton("BACK TO MENU", color: .black) {
-                    store.send(.goToMenu)
+                    store.send(.menuButtonTapped)
                 }
                 .frame(height: 60)
                 .padding(.horizontal, 40)

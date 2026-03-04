@@ -43,22 +43,22 @@ struct ChickenMapFeature {
     }
 
     enum Action: BindableAction {
-        case binding(BindingAction<State>)
-        case destination(PresentationAction<Destination.Action>)
-        case dismissEndGameCode
-        case dismissWinnerNotification
-        case cancelGameButtonTapped
         case beenFoundButtonTapped
+        case binding(BindingAction<State>)
+        case cancelGameButtonTapped
+        case countdownDismissed
+        case destination(PresentationAction<Destination.Action>)
+        case endGameCodeDismissed
+        case gameInfoDismissed
+        case gameInitialized
         case gameUpdated(Game)
-        case goToMenu
         case hunterLocationsUpdated([HunterLocation])
         case infoButtonTapped
-        case dismissGameInfo
         case newLocationFetched(CLLocationCoordinate2D)
         case onTask
-        case dismissCountdown
-        case setGameTriggered
+        case returnedToMenu
         case timerTicked
+        case winnerNotificationDismissed
     }
 
     @Reducer
@@ -66,23 +66,16 @@ struct ChickenMapFeature {
         @ObservableState
         enum State: Equatable {
             case alert(AlertState<Action.Alert>)
-            case endGameCode(EndGameCodeFeature.State)
+            case endGameCode(String)
         }
 
         enum Action {
             case alert(Alert)
-            case endGameCode(EndGameCodeFeature.Action)
 
             enum Alert: Equatable {
                 case cancelGame
                 case gameOver
                 case noGameFound
-            }
-        }
-
-        var body: some ReducerOf<Self> {
-            Scope(state: \.endGameCode, action: \.endGameCode) {
-                EndGameCodeFeature()
             }
         }
     }
@@ -100,19 +93,19 @@ struct ChickenMapFeature {
                 return .none
             case .destination(.presented(.alert(.cancelGame))):
                 locationClient.stopTracking()
-                return .send(.goToMenu)
+                return .send(.returnedToMenu)
             case .destination(.presented(.alert(.gameOver))):
-                return .send(.goToMenu)
+                return .send(.returnedToMenu)
             case .destination:
                 return .none
-            case .dismissCountdown:
+            case .countdownDismissed:
                 state.countdownNumber = nil
                 state.countdownText = nil
                 return .none
-            case .dismissEndGameCode:
+            case .endGameCodeDismissed:
                 state.destination = nil
                 return .none
-            case .dismissWinnerNotification:
+            case .winnerNotificationDismissed:
                 state.winnerNotification = nil
                 return .none
             case let .gameUpdated(game):
@@ -125,7 +118,7 @@ struct ChickenMapFeature {
                     state.previousWinnersCount = game.winners.count
                     return .run { send in
                         try await clock.sleep(for: .seconds(AppConstants.winnerNotificationSeconds))
-                        await send(.dismissWinnerNotification)
+                        await send(.winnerNotificationDismissed)
                     }
                 }
                 state.previousWinnersCount = game.winners.count
@@ -147,14 +140,14 @@ struct ChickenMapFeature {
                 )
                 return .none
             case .beenFoundButtonTapped:
-                state.destination = .endGameCode(EndGameCodeFeature.State(foundCode: state.game.foundCode))
+                state.destination = .endGameCode(state.game.foundCode)
                 return .none
-            case .goToMenu:
+            case .returnedToMenu:
                 return .none
             case .infoButtonTapped:
                 state.showGameInfo = true
                 return .none
-            case .dismissGameInfo:
+            case .gameInfoDismissed:
                 state.showGameInfo = false
                 return .none
             case let .hunterLocationsUpdated(hunters):
@@ -269,7 +262,7 @@ struct ChickenMapFeature {
                 }
 
                 return .merge(effects)
-            case .setGameTriggered:
+            case .gameInitialized:
                 let (lastUpdate, lastRadius) = state.game.findLastUpdate()
 
                 state.radius = lastRadius
@@ -316,7 +309,7 @@ struct ChickenMapFeature {
                     state.countdownText = text
                     return .run { send in
                         try await clock.sleep(for: .seconds(AppConstants.countdownDisplaySeconds))
-                        await send(.dismissCountdown)
+                        await send(.countdownDismissed)
                     }
                 }
 
@@ -556,7 +549,7 @@ struct ChickenMapView: View {
         .safeAreaInset(edge: .top) { topBar }
         .safeAreaInset(edge: .bottom) { bottomBar }
         .task {
-            self.store.send(.setGameTriggered)
+            self.store.send(.gameInitialized)
             self.store.send(.onTask)
         }
         .alert(
@@ -566,29 +559,31 @@ struct ChickenMapView: View {
             )
         )
         .sheet(
-            item: $store.scope(
-                state: \.destination?.endGameCode,
-                action: \.destination.endGameCode
+            isPresented: Binding(
+                get: { store.destination.flatMap { if case .endGameCode = $0 { true } else { nil } } ?? false },
+                set: { if !$0 { store.send(.endGameCodeDismissed) } }
             )
-        ) { store in
+        ) {
             NavigationStack {
-                EndGameCodeView(store: store)
+                EndGameCodeView(foundCode: {
+                    if case let .endGameCode(code) = store.destination { return code }
+                    return ""
+                }())
                     .toolbar {
                         ToolbarItem {
                             Button {
-                                self.store.send(.dismissEndGameCode)
+                                self.store.send(.endGameCodeDismissed)
                             } label: {
                                 Image(systemName: "xmark")
                                     .foregroundStyle(.white)
                             }
-
                         }
                     }
             }
         }
         .sheet(isPresented: Binding(
             get: { self.store.showGameInfo },
-            set: { _ in self.store.send(.dismissGameInfo) }
+            set: { _ in self.store.send(.gameInfoDismissed) }
         )) {
             GameInfoSheet(game: self.store.game, onCancelGame: {
                 self.store.send(.cancelGameButtonTapped)

@@ -8,9 +8,8 @@
 import ComposableArchitecture
 import CoreLocation
 import MapboxMaps
+import MapKit
 import SwiftUI
-
-// MARK: - Feature
 
 @Reducer
 struct ChickenMapConfigFeature {
@@ -21,31 +20,24 @@ struct ChickenMapConfigFeature {
         @Shared var game: Game
         var marker: MarkerOverlay?
         var mapCircle: CircleOverlay?
-        var searchText: String = ""
-        var searchResults: [AddressSearchResult] = []
     }
     private static let defaultCoordinate = CLLocationCoordinate2D(latitude: AppConstants.defaultLatitude, longitude: AppConstants.defaultLongitude)
 
     enum Action: BindableAction {
         case binding(BindingAction<State>)
         case initialLocationReceived(CLLocationCoordinate2D)
-        case onLocationSelected(CLLocationCoordinate2D)
-        case onMapCameraChange(CLLocationCoordinate2D)
+        case mapLocationTapped(CLLocationCoordinate2D)
+        case mapCameraChanged(CLLocationCoordinate2D)
         case onTask
     }
 
     @Dependency(\.locationClient) var locationClient
-    @Dependency(\.addressSearchClient) var addressSearchClient
 
     var body: some ReducerOf<Self> {
         BindingReducer()
 
         Reduce { state, action in
             switch action {
-            case .binding(\.searchText):
-                return .run { [query = state.searchText] _ in
-                    await addressSearchClient.updateQuery(query)
-                }
             case .binding:
                 return .none
             case let .initialLocationReceived(coordinate):
@@ -59,36 +51,25 @@ struct ChickenMapConfigFeature {
                 return .none
             case .onTask:
                 let gameLocation = state.game.initialLocation
-                return .merge(
-                    .run { send in
-                        var firstLocation = gameLocation
-                        for await coordinate in locationClient.startTracking() {
-                            firstLocation = coordinate
-                            break
-                        }
-                        locationClient.stopTracking()
-                        await send(.initialLocationReceived(firstLocation))
-                    },
-                    .run { send in
-                        for await results in addressSearchClient.results() {
-                            await send(.searchResultsUpdated(results))
-                        }
+                return .run { send in
+                    var firstLocation = gameLocation
+                    for await coordinate in locationClient.startTracking() {
+                        firstLocation = coordinate
+                        break
                     }
-                )
-            case let .onLocationSelected(coordinate):
+                    locationClient.stopTracking()
+                    await send(.initialLocationReceived(firstLocation))
+                }
+            case let .mapLocationTapped(coordinate):
                 state.$game.withLock { $0.initialLocation = coordinate }
                 state.cameraRegion = CameraRegion(
                     center: coordinate,
                     latitudeDelta: 0.01,
                     longitudeDelta: 0.01
                 )
-                state.searchText = ""
-                state.searchResults = []
                 self.updateMapComponents(state: &state)
-                return .run { _ in
-                    await addressSearchClient.updateQuery("")
-                }
-            case let .onMapCameraChange(centerCoordinates):
+                return .none
+            case let .mapCameraChanged(centerCoordinates):
                 state.$game.withLock { $0.initialLocation = centerCoordinates }
                 self.updateMapComponents(state: &state)
                 return .none
@@ -105,6 +86,45 @@ struct ChickenMapConfigFeature {
     }
 }
 
+// MARK: - Address Search Helper
+
+class AddressSearchHelper: NSObject, ObservableObject, MKLocalSearchCompleterDelegate {
+    @Published var results: [MKLocalSearchCompletion] = []
+    private let completer = MKLocalSearchCompleter()
+
+    override init() {
+        super.init()
+        completer.delegate = self
+        completer.resultTypes = [.address, .pointOfInterest]
+    }
+
+    func search(_ query: String) {
+        if query.isEmpty {
+            results = []
+            return
+        }
+        completer.queryFragment = query
+    }
+
+    func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) {
+        results = completer.results
+    }
+
+    func completer(_ completer: MKLocalSearchCompleter, didFailWithError error: Error) {
+        results = []
+    }
+
+    func resolveLocation(for completion: MKLocalSearchCompletion) async -> CLLocationCoordinate2D? {
+        let request = MKLocalSearch.Request(completion: completion)
+        do {
+            let response = try await MKLocalSearch(request: request).start()
+            return response.mapItems.first?.placemark.coordinate
+        } catch {
+            return nil
+        }
+    }
+}
+
 
 struct ChickenMapConfigView: View {
     @Bindable var store: StoreOf<ChickenMapConfigFeature>
@@ -112,6 +132,8 @@ struct ChickenMapConfigView: View {
         center: CLLocationCoordinate2D(latitude: AppConstants.defaultLatitude, longitude: AppConstants.defaultLongitude),
         zoom: 14
     )
+    @State private var searchText = ""
+    @StateObject private var searchHelper = AddressSearchHelper()
     @FocusState private var isSearchFieldFocused: Bool
 
     var body: some View {
@@ -149,10 +171,12 @@ struct ChickenMapConfigView: View {
 
             TapInteraction { context in
                 let coordinate = context.coordinate
-                store.send(.onLocationSelected(coordinate))
+                store.send(.mapLocationTapped(coordinate))
                 withViewportAnimation(.default(maxDuration: 0.5)) {
                     viewport = .camera(center: coordinate, zoom: 14)
                 }
+                searchText = ""
+                searchHelper.results = []
                 isSearchFieldFocused = false
                 return true
             }
@@ -167,7 +191,7 @@ struct ChickenMapConfigView: View {
             store.send(.onTask)
         }
         .onChange(of: store.game.initialRadius) { _, _ in
-            store.send(.onLocationSelected(store.game.initialLocation))
+            store.send(.mapLocationTapped(store.game.initialLocation))
         }
     }
 
@@ -176,17 +200,21 @@ struct ChickenMapConfigView: View {
             HStack {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(.gray)
-                TextField("Search address", text: $store.searchText)
+                TextField("Search address", text: $searchText)
                     .foregroundColor(.primary)
                     .autocorrectionDisabled()
                     .submitLabel(.search)
                     .focused($isSearchFieldFocused)
+                    .onChange(of: searchText) { _, newValue in
+                        searchHelper.search(newValue)
+                    }
                     .onSubmit {
                         isSearchFieldFocused = false
                     }
-                if !store.searchText.isEmpty {
+                if !searchText.isEmpty {
                     Button {
-                        store.send(.clearSearch)
+                        searchText = ""
+                        searchHelper.results = []
                         isSearchFieldFocused = false
                     } label: {
                         Image(systemName: "xmark.circle.fill")
@@ -196,17 +224,26 @@ struct ChickenMapConfigView: View {
             }
             .padding(12)
             .background(Color(.systemBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .cornerRadius(12)
             .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
             .padding(.horizontal, 8)
             .padding(.top, 8)
 
-            if !store.searchResults.isEmpty {
+            if !searchHelper.results.isEmpty {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 0) {
-                        ForEach(store.searchResults.prefix(5)) { result in
+                        ForEach(searchHelper.results.prefix(5), id: \.self) { result in
                             Button {
-                                store.send(.searchResultTapped(result))
+                                Task {
+                                    if let coordinate = await searchHelper.resolveLocation(for: result) {
+                                        store.send(.mapLocationTapped(coordinate))
+                                        withViewportAnimation(.default(maxDuration: 1)) {
+                                            viewport = .camera(center: coordinate, zoom: 14)
+                                        }
+                                    }
+                                }
+                                searchText = result.title
+                                searchHelper.results = []
                                 isSearchFieldFocused = false
                             } label: {
                                 VStack(alignment: .leading, spacing: 2) {
@@ -229,7 +266,7 @@ struct ChickenMapConfigView: View {
                 }
                 .frame(maxHeight: 200)
                 .background(Color(.systemBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .cornerRadius(12)
                 .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
                 .padding(.horizontal, 8)
             }

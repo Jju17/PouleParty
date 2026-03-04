@@ -44,20 +44,20 @@ struct HunterMapFeature {
     enum Action: BindableAction {
         case binding(BindingAction<State>)
         case cancelGameButtonTapped
+        case countdownDismissed
         case destination(PresentationAction<Destination.Action>)
-        case dismissCountdown
-        case dismissGameInfo
-        case dismissWinnerNotification
         case foundButtonTapped
-        case goToMenu
-        case goToVictory
+        case gameConfigUpdated(Game)
+        case gameInfoDismissed
         case infoButtonTapped
         case newLocationFetched(CLLocationCoordinate2D)
         case onTask
-        case setGameTriggered(to: Game)
-        case submitFoundCode
+        case returnedToMenu
+        case submitCodeButtonTapped
         case timerTicked
         case userLocationUpdated(CLLocationCoordinate2D)
+        case winnerNotificationDismissed
+        case winnerRegistered
     }
 
     @Reducer
@@ -111,25 +111,25 @@ struct HunterMapFeature {
                 return .none
             case .destination(.presented(.alert(.leaveGame))):
                 locationClient.stopTracking()
-                return .send(.goToMenu)
+                return .send(.returnedToMenu)
             case .destination(.presented(.alert(.gameOver))):
-                return .send(.goToMenu)
+                return .send(.returnedToMenu)
             case .destination:
                 return .none
-            case .dismissCountdown:
+            case .countdownDismissed:
                 state.countdownNumber = nil
                 state.countdownText = nil
                 return .none
-            case .dismissGameInfo:
+            case .gameInfoDismissed:
                 state.showGameInfo = false
                 return .none
-            case .dismissWinnerNotification:
+            case .winnerNotificationDismissed:
                 state.winnerNotification = nil
                 return .none
             case .foundButtonTapped:
                 state.isEnteringFoundCode = true
                 return .none
-            case .submitFoundCode:
+            case .submitCodeButtonTapped:
                 guard !state.isCodeOnCooldown else {
                     return .none
                 }
@@ -167,16 +167,16 @@ struct HunterMapFeature {
                     do {
                         try await apiClient.addWinner(gameId, winner)
                         locationClient.stopTracking()
-                        await send(.goToVictory)
+                        await send(.winnerRegistered)
                     } catch {
                         locationClient.stopTracking()
                         logger.error("Failed to add winner: \(error.localizedDescription)")
-                        await send(.goToVictory)
+                        await send(.winnerRegistered)
                     }
                 }
-            case .goToMenu:
+            case .returnedToMenu:
                 return .none
-            case .goToVictory:
+            case .winnerRegistered:
                 return .none
             case .infoButtonTapped:
                 state.showGameInfo = true
@@ -213,7 +213,7 @@ struct HunterMapFeature {
                     .run { send in
                         for await game in apiClient.gameConfigStream(gameId) {
                             if let game {
-                                await send(.setGameTriggered(to: game))
+                                await send(.gameConfigUpdated( game))
                             }
                         }
                     },
@@ -281,7 +281,7 @@ struct HunterMapFeature {
                 )
 
                 return .merge(effects)
-            case let .setGameTriggered(game):
+            case let .gameConfigUpdated(game):
                 // React to game cancelled/ended by chicken or Cloud Function
                 if game.status == .done, state.destination == nil {
                     locationClient.stopTracking()
@@ -328,7 +328,7 @@ struct HunterMapFeature {
                     state.previousWinnersCount = game.winners.count
                     return .run { send in
                         try await clock.sleep(for: .seconds(AppConstants.winnerNotificationSeconds))
-                        await send(.dismissWinnerNotification)
+                        await send(.winnerNotificationDismissed)
                     }
                 }
                 state.previousWinnersCount = game.winners.count
@@ -366,7 +366,7 @@ struct HunterMapFeature {
                     state.countdownText = text
                     return .run { send in
                         try await clock.sleep(for: .seconds(AppConstants.countdownDisplaySeconds))
-                        await send(.dismissCountdown)
+                        await send(.countdownDismissed)
                     }
                 }
 
@@ -607,7 +607,7 @@ struct HunterMapView: View {
                 TextField("4-digit code", text: $store.enteredCode)
                     .keyboardType(.numberPad)
                 Button("Submit") {
-                    self.store.send(.submitFoundCode)
+                    self.store.send(.submitCodeButtonTapped)
                 }
                 Button("Cancel", role: .cancel) { }
             } message: {
@@ -615,7 +615,7 @@ struct HunterMapView: View {
             }
             .sheet(isPresented: Binding(
                 get: { self.store.showGameInfo },
-                set: { _ in self.store.send(.dismissGameInfo) }
+                set: { _ in self.store.send(.gameInfoDismissed) }
             )) {
                 GameInfoSheet(game: self.store.game)
             }

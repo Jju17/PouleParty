@@ -24,17 +24,17 @@ struct ChickenConfigFeature {
     }
 
     enum Action: BindableAction {
+        case backButtonTapped
         case binding(BindingAction<State>)
         case configSaveFailed
         case destination(PresentationAction<Destination.Action>)
         case expertModeToggled(Bool)
+        case gameCreated(Game)
         case gameDurationChanged(Double)
-        case goBackButtonTriggered
         case initialRadiusChanged(Double)
         case mapPreviewTapped
         case path(StackAction<ChickenMapConfigFeature.State, ChickenMapConfigFeature.Action>)
         case startGameButtonTapped
-        case startGameTriggered(Game)
     }
 
     @Reducer
@@ -98,7 +98,7 @@ struct ChickenConfigFeature {
                     self.recalculateNormalMode(state: &state)
                 }
                 return .none
-            case .goBackButtonTriggered:
+            case .backButtonTapped:
                 return .none
             case let .initialRadiusChanged(radius):
                 state.$game.withLock { $0.initialRadius = radius }
@@ -121,12 +121,12 @@ struct ChickenConfigFeature {
                 return .run { [state = state] send in
                     do {
                         try await apiClient.setConfig(state.game)
-                        await send(.startGameTriggered(state.game))
+                        await send(.gameCreated(state.game))
                     } catch {
                         await send(.configSaveFailed)
                     }
                 }
-            case .startGameTriggered:
+            case .gameCreated:
                 return .none
             }
         }
