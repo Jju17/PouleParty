@@ -29,7 +29,6 @@ struct ChickenMapConfigFeature {
         case onLocationSelected(CLLocationCoordinate2D)
         case onMapCameraChange(CLLocationCoordinate2D)
         case onTask
-        case onUpdatedRadius
     }
 
     @Dependency(\.locationClient) var locationClient
@@ -72,9 +71,6 @@ struct ChickenMapConfigFeature {
                 return .none
             case let .onMapCameraChange(centerCoordinates):
                 state.$game.withLock { $0.initialLocation = centerCoordinates }
-                self.updateMapComponents(state: &state)
-                return .none
-            case .onUpdatedRadius:
                 self.updateMapComponents(state: &state)
                 return .none
             }
@@ -194,16 +190,8 @@ struct ChickenMapConfigView: View {
         .task {
             store.send(.onTask)
         }
-        .safeAreaInset(edge: .bottom) {
-            VStack(alignment: .leading) {
-                Text("Radius: \(Int(self.store.game.initialRadius))")
-                Slider(value: $store.game.initialRadius, in: 500...2000, step: 100)
-                .onChange(of: self.store.game.initialRadius) { _, _ in
-                    store.send(.onUpdatedRadius)
-                }
-            }
-            .padding()
-            .background(.regularMaterial)
+        .onChange(of: store.game.initialRadius) { _, _ in
+            store.send(.onLocationSelected(store.game.initialLocation))
         }
     }
 

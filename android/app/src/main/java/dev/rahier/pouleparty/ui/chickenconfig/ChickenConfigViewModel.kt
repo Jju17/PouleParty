@@ -9,6 +9,7 @@ import dev.rahier.pouleparty.data.FirestoreRepository
 import dev.rahier.pouleparty.data.LocationRepository
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameMod
+import dev.rahier.pouleparty.model.calculateNormalModeSettings
 import kotlin.math.ceil
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,7 +26,9 @@ data class ChickenConfigUiState(
     val showAlert: Boolean = false,
     val alertMessage: String = "",
     val showMapConfig: Boolean = false,
-    val showTimePicker: Boolean = false
+    val showTimePicker: Boolean = false,
+    val isExpertMode: Boolean = false,
+    val gameDurationMinutes: Double = 120.0
 )
 
 @HiltViewModel
@@ -113,10 +116,37 @@ class ChickenConfigViewModel @Inject constructor(
 
     fun updateInitialRadius(value: Double) {
         _uiState.update { it.copy(game = it.game.copy(initialRadius = value)) }
+        recalculateIfNormalMode()
     }
 
     fun updateGame(game: Game) {
         _uiState.update { it.copy(game = game) }
+    }
+
+    fun toggleExpertMode(expert: Boolean) {
+        _uiState.update { it.copy(isExpertMode = expert) }
+        if (!expert) {
+            recalculateIfNormalMode()
+        }
+    }
+
+    fun updateGameDuration(minutes: Double) {
+        _uiState.update { it.copy(gameDurationMinutes = minutes) }
+        recalculateIfNormalMode()
+    }
+
+    private fun recalculateIfNormalMode() {
+        val state = _uiState.value
+        if (state.isExpertMode) return
+        val (interval, decline) = calculateNormalModeSettings(
+            state.game.initialRadius, state.gameDurationMinutes
+        )
+        _uiState.update {
+            it.copy(game = it.game.copy(
+                radiusIntervalUpdate = interval,
+                radiusDeclinePerUpdate = decline
+            ))
+        }
     }
 
     fun onCodeCopied() {
@@ -139,9 +169,9 @@ class ChickenConfigViewModel @Inject constructor(
         _uiState.update { it.copy(showMapConfig = false) }
     }
 
-    fun onLocationSelected(point: com.mapbox.geojson.Point, radius: Double) {
+    fun onLocationSelected(point: com.mapbox.geojson.Point) {
         _uiState.update {
-            it.copy(game = it.game.withInitialLocation(point).copy(initialRadius = radius))
+            it.copy(game = it.game.withInitialLocation(point))
         }
     }
 

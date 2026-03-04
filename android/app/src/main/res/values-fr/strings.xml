@@ -104,6 +104,23 @@
     <string name="next">Suivant</string>
     <string name="lets_go">C\'est parti !</string>
 
+    <!-- Notifications (onboarding) -->
+    <string name="notif_stay_in_loop">Reste dans la boucle</string>
+    <string name="notif_enabled_description">Notifications activées ! Tu sauras quand la partie commence, quand la zone rétrécit et quand un chasseur trouve la poule.</string>
+    <string name="notif_enabled">Notifications activées !</string>
+    <string name="notif_request_description">Reçois une notification quand la partie commence, quand la zone rétrécit et quand un chasseur trouve la poule !\n\nC\'est optionnel mais recommandé.</string>
+    <string name="notif_enable_button">Activer les notifications</string>
+
+    <!-- Notifications (FCM localization) -->
+    <string name="notif_chicken_start_title">C\'est parti !</string>
+    <string name="notif_chicken_start_body">Tu es la Poule ! Cache-toi vite !</string>
+    <string name="notif_hunter_start_title">La chasse commence !</string>
+    <string name="notif_hunter_start_body">La Poule se cache. Trouvez-la !</string>
+    <string name="notif_zone_shrink_title">La zone rétrécit !</string>
+    <string name="notif_zone_shrink_body">La zone vient de rétrécir. Restez dedans !</string>
+    <string name="notif_hunter_found_title">Poule trouvée !</string>
+    <string name="notif_hunter_found_body">%1$s a trouvé la poule ! %2$s chasseurs restants</string>
+
     <!-- Game Rules -->
     <string name="how_to_play">Comment jouer</string>
     <string name="game_modes">Modes de jeu</string>

@@ -1,7 +1,10 @@
 package dev.rahier.pouleparty.ui.onboarding
 
 import android.Manifest
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -17,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -45,7 +49,7 @@ fun OnboardingScreen(
         val s = viewModel.uiState.value
 
         val isBlocked = (page > 3 && !s.hasFineLocation) ||
-                (page > 4 && s.nickname.trim().isEmpty())
+                (page > 5 && s.nickname.trim().isEmpty())
 
         if (isBlocked) {
             pagerState.scrollToPage(s.currentPage)
@@ -62,6 +66,10 @@ fun OnboardingScreen(
     val backgroundLocationLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { viewModel.refreshPermissions() }
+
+    val notificationLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { viewModel.refreshNotificationPermission() }
 
     LaunchedEffect(Unit) {
         viewModel.refreshPermissions()
@@ -92,12 +100,20 @@ fun OnboardingScreen(
                         }
                     }
                 )
-                4 -> SlideNickname(
+                4 -> SlideNotifications(
+                    hasPermission = state.hasNotificationPermission,
+                    onRequestPermission = {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        }
+                    }
+                )
+                5 -> SlideNickname(
                     nickname = state.nickname,
                     maxLength = OnboardingViewModel.NICKNAME_MAX_LENGTH,
                     onNicknameChanged = { viewModel.onNicknameChanged(it) }
                 )
-                5 -> SlideReady()
+                6 -> SlideReady()
             }
         }
 
@@ -145,7 +161,7 @@ fun OnboardingScreen(
                 }
 
                 val isLocationPageBlocked = state.currentPage == 3 && !state.hasFineLocation
-                val isNicknamePageEmpty = state.currentPage == 4 && state.nickname.trim().isEmpty()
+                val isNicknamePageEmpty = state.currentPage == 5 && state.nickname.trim().isEmpty()
                 val isNextDisabled = isLocationPageBlocked || isNicknamePageEmpty
                 Button(
                     onClick = {
@@ -323,6 +339,69 @@ private fun SlideLocation(
                     Text(stringResource(R.string.allow_location_access), style = bangerStyle(20), color = Color.White)
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun SlideNotifications(
+    hasPermission: Boolean,
+    onRequestPermission: () -> Unit
+) {
+    val context = LocalContext.current
+    val emoji = if (hasPermission) "\uD83D\uDD14" else "\uD83D\uDD14"
+
+    OnboardingSlideLayout(
+        title = stringResource(R.string.notif_stay_in_loop),
+        icon = { Text(emoji, fontSize = 80.sp) }
+    ) {
+        Spacer(Modifier.height(16.dp))
+        if (hasPermission) {
+            Text(
+                stringResource(R.string.notif_enabled_description),
+                style = bangerStyle(18),
+                textAlign = TextAlign.Center,
+                color = Color.Black.copy(alpha = 0.6f)
+            )
+            Spacer(Modifier.height(16.dp))
+            Text(
+                "\u2705 " + stringResource(R.string.notif_enabled),
+                style = bangerStyle(20),
+                color = Color(0xFF4CAF50)
+            )
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            Text(
+                stringResource(R.string.notif_request_description),
+                style = bangerStyle(18),
+                textAlign = TextAlign.Center,
+                color = Color.Black.copy(alpha = 0.6f)
+            )
+            Spacer(Modifier.height(16.dp))
+            Button(
+                onClick = onRequestPermission,
+                colors = ButtonDefaults.buttonColors(containerColor = CROrange),
+                shape = RoundedCornerShape(50)
+            ) {
+                Text(
+                    stringResource(R.string.notif_enable_button),
+                    style = bangerStyle(20),
+                    color = Color.White
+                )
+            }
+        } else {
+            // Below Android 13, notifications are always enabled
+            Text(
+                stringResource(R.string.notif_enabled_description),
+                style = bangerStyle(18),
+                textAlign = TextAlign.Center,
+                color = Color.Black.copy(alpha = 0.6f)
+            )
+            Spacer(Modifier.height(16.dp))
+            Text(
+                "\u2705 " + stringResource(R.string.notif_enabled),
+                style = bangerStyle(20),
+                color = Color(0xFF4CAF50)
+            )
         }
     }
 }

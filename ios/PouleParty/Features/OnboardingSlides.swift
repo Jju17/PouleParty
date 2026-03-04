@@ -8,6 +8,7 @@
 import CoreLocation
 import SwiftUI
 import UIKit
+import UserNotifications
 
 // MARK: - Generic Slide Layout
 
@@ -214,7 +215,94 @@ struct OnboardingLocationSlide: View {
     }
 }
 
-// MARK: - Slide 5: Nickname
+// MARK: - Slide 5: Notifications
+
+struct OnboardingNotificationSlide: View {
+    let status: UNAuthorizationStatus
+    let onRequestPermission: () -> Void
+
+    private var emoji: String {
+        switch status {
+        case .authorized, .provisional, .ephemeral: "🔔"
+        case .denied: "🔕"
+        default: "🔔"
+        }
+    }
+
+    var body: some View {
+        OnboardingSlideLayout(title: String(localized: "Stay in the Loop")) {
+            Text(emoji)
+                .font(.system(size: 80))
+        } extraContent: {
+            switch status {
+            case .authorized, .provisional, .ephemeral:
+                Group {
+                    Text("Notifications enabled! You'll know when the game starts, the zone shrinks, and when hunters find the chicken.")
+                        .font(.banger(size: 18))
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(.black.opacity(0.6))
+                        .padding(.horizontal, 10)
+
+                    HStack(spacing: 8) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                            .font(.system(size: 24))
+                        Text("Notifications enabled!")
+                            .font(.banger(size: 20))
+                            .foregroundStyle(.green)
+                    }
+                    .padding(.top, 8)
+                }
+
+            case .denied:
+                Group {
+                    Text("Notifications were denied. You can enable them in Settings to get game alerts.")
+                        .font(.banger(size: 18))
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(.black.opacity(0.6))
+                        .padding(.horizontal, 10)
+
+                    Button {
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            UIApplication.shared.open(url)
+                        }
+                    } label: {
+                        Text("Open Settings")
+                            .font(.banger(size: 18))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 24)
+                            .padding(.vertical, 10)
+                            .background(Capsule().fill(Color.CROrange))
+                    }
+                    .padding(.top, 8)
+                }
+
+            default:
+                Group {
+                    Text("Get notified when the game starts, the zone shrinks, and when a hunter finds the chicken!\n\nThis is optional but recommended.")
+                        .font(.banger(size: 18))
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(.black.opacity(0.6))
+                        .padding(.horizontal, 10)
+
+                    Button {
+                        onRequestPermission()
+                    } label: {
+                        Text("Enable Notifications")
+                            .font(.banger(size: 20))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 28)
+                            .padding(.vertical, 14)
+                            .background(Capsule().fill(Color.CROrange))
+                    }
+                    .padding(.top, 8)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Slide 6: Nickname
 
 struct OnboardingNicknameSlide: View {
     @Binding var nickname: String
@@ -252,7 +340,7 @@ struct OnboardingNicknameSlide: View {
     }
 }
 
-// MARK: - Slide 6: Ready
+// MARK: - Slide 7: Ready
 
 struct OnboardingReadySlide: View {
     var body: some View {

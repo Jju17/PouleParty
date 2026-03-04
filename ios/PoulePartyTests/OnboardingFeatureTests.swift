@@ -123,9 +123,9 @@ struct OnboardingFeatureTests {
         }
     }
 
-    @Test func emptyNicknameBlocksNextOnPage4() async {
+    @Test func emptyNicknameBlocksNextOnPage5() async {
         var state = OnboardingFeature.State()
-        state.currentPage = 4
+        state.currentPage = 5
         state.nickname = ""
         state.locationAuthorizationStatus = .authorizedWhenInUse
 
@@ -137,9 +137,9 @@ struct OnboardingFeatureTests {
         await store.send(.nextButtonTapped)
     }
 
-    @Test func whitespaceOnlyNicknameBlocksNextOnPage4() async {
+    @Test func whitespaceOnlyNicknameBlocksNextOnPage5() async {
         var state = OnboardingFeature.State()
-        state.currentPage = 4
+        state.currentPage = 5
         state.nickname = "   "
         state.locationAuthorizationStatus = .authorizedWhenInUse
 
@@ -151,9 +151,9 @@ struct OnboardingFeatureTests {
         await store.send(.nextButtonTapped)
     }
 
-    @Test func validNicknameAllowsNextOnPage4() async {
+    @Test func validNicknameAllowsNextOnPage5() async {
         var state = OnboardingFeature.State()
-        state.currentPage = 4
+        state.currentPage = 5
         state.nickname = "Alice"
         state.locationAuthorizationStatus = .authorizedWhenInUse
 
@@ -162,7 +162,7 @@ struct OnboardingFeatureTests {
         }
 
         await store.send(.nextButtonTapped) {
-            $0.currentPage = 5
+            $0.currentPage = 6
         }
     }
 
@@ -322,7 +322,7 @@ struct OnboardingFeatureTests {
 
     @Test func pageChangedBlocksForwardSwipePastNicknamePage() async {
         var state = OnboardingFeature.State()
-        state.currentPage = 4
+        state.currentPage = 5
         state.locationAuthorizationStatus = .authorizedWhenInUse
         state.nickname = ""
 
@@ -331,12 +331,12 @@ struct OnboardingFeatureTests {
         }
         store.exhaustivity = .off
 
-        // Swiping forward to page 5 without nickname should snap back
-        await store.send(.pageChanged(5)) {
-            $0.currentPage = 5
+        // Swiping forward to page 6 without nickname should snap back
+        await store.send(.pageChanged(6)) {
+            $0.currentPage = 6
         }
         await store.receive(\.snapBackToPage) {
-            $0.currentPage = 4
+            $0.currentPage = 5
         }
     }
 
@@ -350,8 +350,8 @@ struct OnboardingFeatureTests {
             OnboardingFeature()
         }
 
-        await store.send(.pageChanged(5)) {
-            $0.currentPage = 5
+        await store.send(.pageChanged(6)) {
+            $0.currentPage = 6
         }
     }
 }

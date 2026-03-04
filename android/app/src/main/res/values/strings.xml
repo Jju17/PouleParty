@@ -38,6 +38,13 @@
     <string name="minutes_format">%d minutes</string>
     <string name="meters_format">%d meters</string>
     <string name="error">Error</string>
+    <string name="duration">Duration</string>
+    <string name="ends_at">Ends at</string>
+    <string name="zone_radius">Zone radius</string>
+    <string name="zone">Zone</string>
+    <string name="settings_mode">Settings mode</string>
+    <string name="normal">Normal</string>
+    <string name="expert">Expert</string>
 
     <!-- Chicken Map -->
     <string name="you_are_chicken">You are the 🐔</string>
@@ -106,6 +113,23 @@
     <string name="back">Back</string>
     <string name="next">Next</string>
     <string name="lets_go">Let\'s go!</string>
+
+    <!-- Notifications (onboarding) -->
+    <string name="notif_stay_in_loop">Stay in the Loop</string>
+    <string name="notif_enabled_description">Notifications enabled! You\'ll know when the game starts, the zone shrinks, and when hunters find the chicken.</string>
+    <string name="notif_enabled">Notifications enabled!</string>
+    <string name="notif_request_description">Get notified when the game starts, the zone shrinks, and when a hunter finds the chicken!\n\nThis is optional but recommended.</string>
+    <string name="notif_enable_button">Enable Notifications</string>
+
+    <!-- Notifications (FCM localization) -->
+    <string name="notif_chicken_start_title">Game Started!</string>
+    <string name="notif_chicken_start_body">You\'re the Chicken! Start hiding now!</string>
+    <string name="notif_hunter_start_title">The Hunt Begins!</string>
+    <string name="notif_hunter_start_body">The Chicken is hiding. Go find them!</string>
+    <string name="notif_zone_shrink_title">Zone Shrinking!</string>
+    <string name="notif_zone_shrink_body">The zone just got smaller. Stay inside!</string>
+    <string name="notif_hunter_found_title">Chicken Found!</string>
+    <string name="notif_hunter_found_body">%1$s found the chicken! %2$s hunters remaining</string>
 
     <!-- Game Rules -->
     <string name="how_to_play">How to play</string>

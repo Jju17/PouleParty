@@ -9,6 +9,7 @@ import ComposableArchitecture
 import CoreLocation
 import Sharing
 import SwiftUI
+import UserNotifications
 
 @Reducer
 struct OnboardingFeature {
@@ -19,6 +20,7 @@ struct OnboardingFeature {
         @Shared(.appStorage(AppConstants.prefUserNickname)) var savedNickname = ""
         var currentPage: Int = 0
         var locationAuthorizationStatus: CLAuthorizationStatus = .notDetermined
+        var notificationAuthorizationStatus: UNAuthorizationStatus = .notDetermined
         var nickname: String = ""
         var showLocationAlert: Bool = false
     }
@@ -30,32 +32,39 @@ struct OnboardingFeature {
         case nicknameChanged(String)
         case requestWhenInUsePermission
         case requestAlwaysPermission
+        case requestNotificationPermission
         case locationAuthorizationUpdated(CLAuthorizationStatus)
+        case notificationAuthorizationUpdated(UNAuthorizationStatus)
         case dismissLocationAlert
         case onboardingCompleted
         case onTask
         case snapBackToPage(Int)
     }
 
-    static let totalPages = 6
+    static let totalPages = 7
     static let nicknameMaxLength = 20
 
     @Dependency(\.locationClient) var locationClient
+    @Dependency(\.notificationClient) var notificationClient
 
     var body: some ReducerOf<Self> {
         Reduce { state, action in
             switch action {
             case .onTask:
                 state.locationAuthorizationStatus = locationClient.authorizationStatus()
-                return .none
+                return .run { send in
+                    let status = await notificationClient.authorizationStatus()
+                    await send(.notificationAuthorizationUpdated(status))
+                }
             case .nextButtonTapped:
-                // Block on location slide if not at least "when in use"
+                // Block on location slide (page 3) if not at least "when in use"
                 if state.currentPage == 3 {
                     let status = state.locationAuthorizationStatus
                     guard status == .authorizedAlways || status == .authorizedWhenInUse else { return .none }
                 }
-                // Block on nickname slide if nickname is empty
-                if state.currentPage == 4 {
+                // Page 4 = notifications — non-blocking, always allow next
+                // Block on nickname slide (page 5) if nickname is empty
+                if state.currentPage == 5 {
                     let trimmed = state.nickname.trimmingCharacters(in: .whitespacesAndNewlines)
                     guard !trimmed.isEmpty else { return .none }
                 }
@@ -85,7 +94,7 @@ struct OnboardingFeature {
                     state.locationAuthorizationStatus == .authorizedWhenInUse
                 let nicknameValid = !state.nickname.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
 
-                // Block forward swipe past location page if not authorized
+                // Block forward swipe past location page (3) if not authorized
                 if page > 3 && !locAuthorized {
                     state.currentPage = page
                     return .run { send in
@@ -93,12 +102,13 @@ struct OnboardingFeature {
                         await send(.snapBackToPage(3))
                     }
                 }
-                // Block forward swipe past nickname page if empty
-                if page > 4 && !nicknameValid {
+                // Page 4 (notifications) is non-blocking
+                // Block forward swipe past nickname page (5) if empty
+                if page > 5 && !nicknameValid {
                     state.currentPage = page
                     return .run { send in
                         try? await Task.sleep(for: .milliseconds(50))
-                        await send(.snapBackToPage(4))
+                        await send(.snapBackToPage(5))
                     }
                 }
                 state.currentPage = page
@@ -121,8 +131,16 @@ struct OnboardingFeature {
                     let status = locationClient.authorizationStatus()
                     await send(.locationAuthorizationUpdated(status))
                 }
+            case .requestNotificationPermission:
+                return .run { send in
+                    let status = await notificationClient.requestAuthorization()
+                    await send(.notificationAuthorizationUpdated(status))
+                }
             case let .locationAuthorizationUpdated(status):
                 state.locationAuthorizationStatus = status
+                return .none
+            case let .notificationAuthorizationUpdated(status):
+                state.notificationAuthorizationStatus = status
                 return .none
             case .onboardingCompleted:
                 let trimmedNickname = state.nickname.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -167,6 +185,14 @@ struct OnboardingView: View {
                 )
                 .tag(3)
 
+                OnboardingNotificationSlide(
+                    status: store.notificationAuthorizationStatus,
+                    onRequestPermission: {
+                        store.send(.requestNotificationPermission)
+                    }
+                )
+                .tag(4)
+
                 OnboardingNicknameSlide(
                     nickname: Binding(
                         get: { store.nickname },
@@ -174,10 +200,10 @@ struct OnboardingView: View {
                     ),
                     maxLength: OnboardingFeature.nicknameMaxLength
                 )
-                .tag(4)
+                .tag(5)
 
                 OnboardingReadySlide()
-                    .tag(5)
+                    .tag(6)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .animation(.easeInOut(duration: 0.3), value: store.currentPage)
@@ -216,7 +242,7 @@ struct OnboardingView: View {
                         Spacer()
 
                         let isLocationPageBlocked = store.currentPage == 3 && store.locationAuthorizationStatus != .authorizedAlways && store.locationAuthorizationStatus != .authorizedWhenInUse
-                        let isNicknamePageEmpty = store.currentPage == 4 && store.nickname.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        let isNicknamePageEmpty = store.currentPage == 5 && store.nickname.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                         let isNextDisabled = isLocationPageBlocked || isNicknamePageEmpty
                         Button {
                             store.send(.nextButtonTapped)
