@@ -26,6 +26,7 @@ import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.model.GameMod
 import dev.rahier.pouleparty.ui.components.GameCodeCard
 import dev.rahier.pouleparty.ui.components.circlePolygonPoints
+import dev.rahier.pouleparty.ui.components.zoomForRadius
 import dev.rahier.pouleparty.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
@@ -342,10 +343,12 @@ fun ChickenConfigScreen(
 @OptIn(MapboxExperimental::class)
 @Composable
 private fun MapPreviewContent(center: Point, radius: Double) {
+    // Extra -1 to account for the short height (180dp) of the inline preview
+    val zoom = zoomForRadius(radius, center.latitude()) - 1.0
     val mapViewportState = rememberMapViewportState {
         setCameraOptions {
             center(center)
-            zoom(13.0)
+            zoom(zoom)
         }
     }
     Box(modifier = Modifier.fillMaxSize()) {

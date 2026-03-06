@@ -38,6 +38,7 @@ struct AppFeature {
         Reduce { state, action in
             switch action {
             case .appStarted:
+                liveActivityClient.cleanupOrphaned()
                 return .run { _ in
                     do {
                         _ = try await userClient.signInAnonymously()
@@ -61,7 +62,6 @@ struct AppFeature {
                 } else {
                     return .none
                 }
-                liveActivityClient.end(nil)
                 state = AppFeature.State.selection(SelectionFeature.State())
                 return .run { _ in
                     do {
@@ -85,11 +85,9 @@ struct AppFeature {
                 state = AppFeature.State.chickenMap(ChickenMapFeature.State(game: game))
                 return .none
             case .hunterMap(.returnedToMenu):
-                liveActivityClient.end(nil)
                 state = AppFeature.State.selection(SelectionFeature.State())
                 return .none
             case .hunterMap(.winnerRegistered):
-                liveActivityClient.end(nil)
                 if case let .hunterMap(hunterState) = state {
                     state = .victory(VictoryFeature.State(
                         game: hunterState.game,

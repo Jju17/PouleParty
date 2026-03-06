@@ -108,7 +108,13 @@ struct SelectionFeature {
                     return .send(.locationPermissionDenied)
                 }
                 state.isConfirmingChicken = false
-                return .send(.chickenConfigLocationRequested)
+                // Small delay so the alert dismissal animation completes
+                // before the sheet presents (SwiftUI won't present a sheet
+                // while an alert is still animating out).
+                return .run { send in
+                    try? await Task.sleep(for: .milliseconds(150))
+                    await send(.chickenConfigLocationRequested)
+                }
             case let .destination(.presented(.chickenConfig(.gameCreated(game)))):
                 state.destination = nil
                 return .send(.chickenGameStarted(game))

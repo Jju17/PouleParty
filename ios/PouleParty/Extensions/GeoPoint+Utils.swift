@@ -14,5 +14,3 @@ extension GeoPoint {
         CLLocationCoordinate2D(latitude: self.latitude, longitude: self.longitude)
     }
 }
-
-// CLLocationCoordinate2D: Equatable conformance provided by Turf (via MapboxMaps)

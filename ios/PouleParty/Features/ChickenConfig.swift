@@ -331,7 +331,8 @@ struct MapPreviewView: View {
     let game: Game
 
     private var zoom: CGFloat {
-        zoomForRadius(CLLocationDistance(game.initialRadius), latitude: game.initialLocation.latitude)
+        // Extra -1 to account for the short height (180pt) of the inline preview
+        zoomForRadius(CLLocationDistance(game.initialRadius), latitude: game.initialLocation.latitude) - 1.0
     }
 
     var body: some View {

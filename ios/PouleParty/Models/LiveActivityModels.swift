@@ -13,6 +13,7 @@ struct PoulePartyAttributes: ActivityAttributes {
     let gameCode: String
     let playerRole: PlayerRole
     let gameModeName: String
+    let gameStartDate: Date
     let gameEndDate: Date
     let totalHunters: Int
 

@@ -51,7 +51,7 @@ struct ChickenMapFeature {
         var liveActivityState: PoulePartyAttributes.ContentState {
             .init(
                 radiusMeters: radius,
-                nextShrinkDate: nextRadiusUpdate,
+                nextShrinkDate: nextRadiusUpdate.map { $0.addingTimeInterval(2) },
                 activeHunters: max(0, game.hunterIds.count - game.winners.count),
                 winnersCount: game.winners.count,
                 isOutsideZone: isOutsideZone,
@@ -307,6 +307,7 @@ struct ChickenMapFeature {
                     gameCode: state.game.gameCode,
                     playerRole: .chicken,
                     gameModeName: state.game.gameMod.title,
+                    gameStartDate: state.game.startDate,
                     gameEndDate: state.game.endDate,
                     totalHunters: max(0, state.game.numberOfPlayers - 1)
                 )

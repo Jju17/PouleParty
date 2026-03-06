@@ -20,7 +20,11 @@ struct Game: Codable, Equatable {
     var name: String = ""
     var numberOfPlayers: Int = 10
     var radiusIntervalUpdate: Double = 5 // In minutes
-    private(set) var startTimestamp: Timestamp = .init(date: Date.now.addingTimeInterval(300))
+    private(set) var startTimestamp: Timestamp = {
+        let date = Date.now.addingTimeInterval(300)
+        let seconds = Calendar.current.component(.second, from: date)
+        return .init(date: date.addingTimeInterval(Double(-seconds)))
+    }()
     private(set) var endTimestamp: Timestamp = .init(date: Date.now.addingTimeInterval(3900))
     private(set) var initialCoordinates: GeoPoint = .init(latitude: AppConstants.defaultLatitude, longitude: AppConstants.defaultLongitude)
     var initialRadius: Double = 1500
@@ -74,7 +78,10 @@ extension Game {
             self.startTimestamp.dateValue()
         }
         set {
-            self.startTimestamp = Timestamp(date: newValue)
+            // Strip seconds so the start time is always at :00
+            let seconds = Calendar.current.component(.second, from: newValue)
+            let stripped = newValue.addingTimeInterval(Double(-seconds))
+            self.startTimestamp = Timestamp(date: stripped)
         }
     }
 

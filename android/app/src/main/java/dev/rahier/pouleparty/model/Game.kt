@@ -12,7 +12,9 @@ data class Game(
     val name: String = "",
     val numberOfPlayers: Int = 10,
     val radiusIntervalUpdate: Double = 5.0, // in minutes
-    val startTimestamp: Timestamp = Timestamp(Date(System.currentTimeMillis() + 300_000)),
+    val startTimestamp: Timestamp = Timestamp(Date(
+        ((System.currentTimeMillis() + 300_000) / 60_000) * 60_000
+    )),
     val endTimestamp: Timestamp = Timestamp(Date(System.currentTimeMillis() + 3_900_000)),
     val initialCoordinates: GeoPoint = GeoPoint(AppConstants.DEFAULT_LATITUDE, AppConstants.DEFAULT_LONGITUDE),
     val initialRadius: Double = 1500.0,

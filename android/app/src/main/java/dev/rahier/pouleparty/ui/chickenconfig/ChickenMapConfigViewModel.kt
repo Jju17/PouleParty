@@ -9,6 +9,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.rahier.pouleparty.AppConstants
 import dev.rahier.pouleparty.data.LocationRepository
+import dev.rahier.pouleparty.ui.components.zoomForRadius
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -45,16 +46,18 @@ class ChickenMapConfigViewModel @Inject constructor(
     val uiState: StateFlow<MapConfigUiState> = _uiState.asStateFlow()
 
     fun initialize(initialRadius: Double) {
-        _uiState.update { it.copy(radius = initialRadius) }
+        val zoom = zoomForRadius(initialRadius, AppConstants.DEFAULT_LATITUDE).toFloat()
+        _uiState.update { it.copy(radius = initialRadius, cameraZoom = zoom) }
 
         if (locationRepository.hasFineLocationPermission()) {
             viewModelScope.launch {
                 try {
                     val location = locationRepository.locationFlow().first()
+                    val locationZoom = zoomForRadius(initialRadius, location.latitude()).toFloat()
                     _uiState.update {
                         it.copy(
                             cameraCenter = location,
-                            cameraZoom = 14f,
+                            cameraZoom = locationZoom,
                             markerPosition = location
                         )
                     }
@@ -66,10 +69,12 @@ class ChickenMapConfigViewModel @Inject constructor(
     }
 
     fun onMapTapped(point: Point) {
+        val zoom = zoomForRadius(_uiState.value.radius, point.latitude()).toFloat()
         _uiState.update {
             it.copy(
                 markerPosition = point,
-                cameraCenter = point
+                cameraCenter = point,
+                cameraZoom = zoom
             )
         }
     }
@@ -97,10 +102,12 @@ class ChickenMapConfigViewModel @Inject constructor(
 
     fun onSearchResultSelected(result: SearchResult) {
         val point = Point.fromLngLat(result.longitude, result.latitude)
+        val zoom = zoomForRadius(_uiState.value.radius, result.latitude).toFloat()
         _uiState.update {
             it.copy(
                 markerPosition = point,
                 cameraCenter = point,
+                cameraZoom = zoom,
                 searchQuery = result.title,
                 searchResults = emptyList()
             )

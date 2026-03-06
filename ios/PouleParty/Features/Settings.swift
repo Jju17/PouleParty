@@ -263,12 +263,21 @@ struct SettingsView: View {
     // MARK: - Version
 
     private var versionSection: some View {
-        HStack {
-            BangerText("Version", size: 16)
-                .foregroundStyle(.black)
-            Spacer()
-            BangerText(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—", size: 16)
-                .foregroundStyle(.black.opacity(0.4))
+        VStack(spacing: 4) {
+            HStack {
+                BangerText("Version", size: 16)
+                    .foregroundStyle(.black)
+                Spacer()
+                BangerText(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—", size: 16)
+                    .foregroundStyle(.black.opacity(0.4))
+            }
+            HStack {
+                BangerText("Build", size: 14)
+                    .foregroundStyle(.black.opacity(0.4))
+                Spacer()
+                BangerText(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "—", size: 14)
+                    .foregroundStyle(.black.opacity(0.4))
+            }
         }
         .settingsCard()
     }

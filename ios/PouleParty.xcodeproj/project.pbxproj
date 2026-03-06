@@ -104,6 +104,13 @@
 			);
 			target = F9B1BE1F2F58DCD200E066D6 /* PoulePartyWidgetsExtension */;
 		};
+		F9B1BE402F58EC1500E066D6 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"Font+Utils.swift",
+			);
+			target = F9B1BE1F2F58DCD200E066D6 /* PoulePartyWidgetsExtension */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -111,7 +118,7 @@
 		F9961DF92F58B872006C46AC /* App */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = App; sourceTree = "<group>"; };
 		F9961DFF2F58B872006C46AC /* Clients */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Clients; sourceTree = "<group>"; };
 		F9961E052F58B872006C46AC /* Components */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Components; sourceTree = "<group>"; };
-		F9961E0D2F58B872006C46AC /* Extensions */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Extensions; sourceTree = "<group>"; };
+		F9961E0D2F58B872006C46AC /* Extensions */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (F9B1BE402F58EC1500E066D6 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = Extensions; sourceTree = "<group>"; };
 		F9961E1A2F58B872006C46AC /* Features */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Features; sourceTree = "<group>"; };
 		F9961E3E2F58B87B006C46AC /* Models */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (F9B1BE3B2F58DD5700E066D6 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = Models; sourceTree = "<group>"; };
 		F9961E482F58B87B006C46AC /* Resources */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (F9B1BE3E2F58DD8500E066D6 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = Resources; sourceTree = "<group>"; };

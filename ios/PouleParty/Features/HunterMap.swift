@@ -38,18 +38,20 @@ struct HunterMapFeature {
         var isOutsideZone: Bool = false
         var lastLiveActivityState: PoulePartyAttributes.ContentState?
 
+        var hasChickenStarted: Bool { nowDate >= game.startDate }
         var hasGameStarted: Bool { nowDate >= game.hunterStartDate }
         var isCodeOnCooldown: Bool { codeCooldownUntil.map { nowDate < $0 } ?? false }
 
         var currentGamePhase: PoulePartyAttributes.ContentState.GamePhase {
-            if !hasGameStarted { return .waitingToStart }
+            if !hasChickenStarted { return .waitingToStart }
+            if !hasGameStarted { return .chickenHeadStart }
             return .hunting
         }
 
         var liveActivityState: PoulePartyAttributes.ContentState {
             .init(
                 radiusMeters: radius,
-                nextShrinkDate: nextRadiusUpdate,
+                nextShrinkDate: nextRadiusUpdate.map { $0.addingTimeInterval(2) },
                 activeHunters: max(0, game.hunterIds.count - game.winners.count),
                 winnersCount: game.winners.count,
                 isOutsideZone: isOutsideZone,
@@ -240,6 +242,7 @@ struct HunterMapFeature {
                     gameCode: state.game.gameCode,
                     playerRole: .hunter,
                     gameModeName: state.game.gameMod.title,
+                    gameStartDate: state.game.startDate,
                     gameEndDate: state.game.endDate,
                     totalHunters: max(0, state.game.numberOfPlayers - 1)
                 )

@@ -136,6 +136,10 @@ struct ChickenMapConfigView: View {
     @StateObject private var searchHelper = AddressSearchHelper()
     @FocusState private var isSearchFieldFocused: Bool
 
+    private var radiusZoom: CGFloat {
+        zoomForRadius(CLLocationDistance(store.game.initialRadius), latitude: store.game.initialLocation.latitude)
+    }
+
     var body: some View {
         GeometryReader { proxy in
             ZStack(alignment: .top) {
@@ -173,7 +177,7 @@ struct ChickenMapConfigView: View {
                 let coordinate = context.coordinate
                 store.send(.mapLocationTapped(coordinate))
                 withViewportAnimation(.default(maxDuration: 0.5)) {
-                    viewport = .camera(center: coordinate, zoom: 14)
+                    viewport = .camera(center: coordinate, zoom: radiusZoom)
                 }
                 searchText = ""
                 searchHelper.results = []
@@ -184,7 +188,7 @@ struct ChickenMapConfigView: View {
         .ignoresSafeArea()
         .onChange(of: store.cameraRegion) { _, newRegion in
             withViewportAnimation(.default(maxDuration: 1)) {
-                viewport = .camera(center: newRegion.center, zoom: 14)
+                viewport = .camera(center: newRegion.center, zoom: radiusZoom)
             }
         }
         .task {
@@ -238,7 +242,7 @@ struct ChickenMapConfigView: View {
                                     if let coordinate = await searchHelper.resolveLocation(for: result) {
                                         store.send(.mapLocationTapped(coordinate))
                                         withViewportAnimation(.default(maxDuration: 1)) {
-                                            viewport = .camera(center: coordinate, zoom: 14)
+                                            viewport = .camera(center: coordinate, zoom: radiusZoom)
                                         }
                                     }
                                 }
@@ -281,7 +285,7 @@ struct ChickenMapConfigView: View {
                 Spacer()
                 Button {
                     withViewportAnimation(.default(maxDuration: 1)) {
-                        viewport = .followPuck(zoom: 14, bearing: .constant(0))
+                        viewport = .followPuck(zoom: radiusZoom, bearing: .constant(0))
                     }
                 } label: {
                     Image(systemName: "location.fill")

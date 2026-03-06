@@ -212,26 +212,45 @@ fun SettingsScreen(
 
             // Version section
             SettingsCard {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    val versionName = try {
-                        context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "—"
-                    } catch (_: Exception) { "—" }
+                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                    val packageInfo = try {
+                        context.packageManager.getPackageInfo(context.packageName, 0)
+                    } catch (_: Exception) { null }
+                    val versionName = packageInfo?.versionName ?: "—"
+                    @Suppress("DEPRECATION")
+                    val buildNumber = packageInfo?.versionCode?.toString() ?: "—"
 
-                    Text(
-                        stringResource(R.string.version),
-                        style = bangerStyle(16),
-                        color = Color.Black
-                    )
-                    Text(
-                        versionName,
-                        style = bangerStyle(16),
-                        color = Color.Black.copy(alpha = 0.4f)
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            stringResource(R.string.version),
+                            style = bangerStyle(16),
+                            color = Color.Black
+                        )
+                        Text(
+                            versionName,
+                            style = bangerStyle(16),
+                            color = Color.Black.copy(alpha = 0.4f)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            "Build",
+                            style = bangerStyle(14),
+                            color = Color.Black.copy(alpha = 0.4f)
+                        )
+                        Text(
+                            buildNumber,
+                            style = bangerStyle(14),
+                            color = Color.Black.copy(alpha = 0.4f)
+                        )
+                    }
                 }
             }
         }
