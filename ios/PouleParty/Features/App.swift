@@ -38,8 +38,8 @@ struct AppFeature {
         Reduce { state, action in
             switch action {
             case .appStarted:
-                liveActivityClient.cleanupOrphaned()
                 return .run { _ in
+                    await liveActivityClient.cleanupOrphaned()
                     do {
                         _ = try await userClient.signInAnonymously()
                         if let token = userClient.fcmToken() {

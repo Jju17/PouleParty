@@ -112,11 +112,15 @@ struct ChickenMapFeature {
                 return .none
             case .destination(.presented(.alert(.cancelGame))):
                 locationClient.stopTracking()
-                liveActivityClient.end(nil)
-                return .send(.returnedToMenu)
+                return .run { send in
+                    await liveActivityClient.end(nil)
+                    await send(.returnedToMenu)
+                }
             case .destination(.presented(.alert(.gameOver))):
-                liveActivityClient.end(nil)
-                return .send(.returnedToMenu)
+                return .run { send in
+                    await liveActivityClient.end(nil)
+                    await send(.returnedToMenu)
+                }
             case .destination:
                 return .none
             case .countdownDismissed:
@@ -133,10 +137,13 @@ struct ChickenMapFeature {
                 state.game = game
 
                 // Update Live Activity with new game state
+                var effects: [Effect<Action>] = []
                 let currentLAState = state.liveActivityState
                 if currentLAState != state.lastLiveActivityState {
                     state.lastLiveActivityState = currentLAState
-                    liveActivityClient.update(currentLAState)
+                    effects.append(.run { _ in
+                        await liveActivityClient.update(currentLAState)
+                    })
                 }
 
                 if let notification = detectNewWinners(
@@ -145,13 +152,13 @@ struct ChickenMapFeature {
                 ) {
                     state.winnerNotification = notification
                     state.previousWinnersCount = game.winners.count
-                    return .run { send in
+                    effects.append(.run { send in
                         try await clock.sleep(for: .seconds(AppConstants.winnerNotificationSeconds))
                         await send(.winnerNotificationDismissed)
-                    }
+                    })
                 }
                 state.previousWinnersCount = game.winners.count
-                return .none
+                return .merge(effects)
             case .cancelGameButtonTapped:
                 state.destination = .alert(
                     AlertState {
@@ -313,11 +320,15 @@ struct ChickenMapFeature {
                 )
                 let initialLAState = state.liveActivityState
                 state.lastLiveActivityState = initialLAState
-                liveActivityClient.start(attributes, initialLAState)
 
-                guard state.game.status == .waiting else { return .none }
+                guard state.game.status == .waiting else {
+                    return .run { _ in
+                        await liveActivityClient.start(attributes, initialLAState)
+                    }
+                }
                 let gameId = state.game.id
                 return .run { _ in
+                    await liveActivityClient.start(attributes, initialLAState)
                     try? await apiClient.updateGameStatus(gameId, .inProgress)
                 }
             case .timerTicked:
@@ -363,14 +374,14 @@ struct ChickenMapFeature {
                 // Game over by time
                 if checkGameOverByTime(endDate: state.game.endDate) {
                     locationClient.stopTracking()
-                    liveActivityClient.end(PoulePartyAttributes.ContentState(
+                    let endState = PoulePartyAttributes.ContentState(
                         radiusMeters: state.radius,
                         nextShrinkDate: nil,
                         activeHunters: max(0, state.game.hunterIds.count - state.game.winners.count),
                         winnersCount: state.game.winners.count,
                         isOutsideZone: false,
                         gamePhase: .gameOver
-                    ))
+                    )
                     let gameId = state.game.id
                     state.destination = .alert(
                         AlertState {
@@ -384,6 +395,7 @@ struct ChickenMapFeature {
                         }
                     )
                     return .run { _ in
+                        await liveActivityClient.end(endState)
                         do {
                             try await apiClient.updateGameStatus(gameId, .done)
                         } catch {
@@ -405,14 +417,14 @@ struct ChickenMapFeature {
                 ) {
                     if result.isGameOver {
                         locationClient.stopTracking()
-                        liveActivityClient.end(PoulePartyAttributes.ContentState(
+                        let endState = PoulePartyAttributes.ContentState(
                             radiusMeters: 0,
                             nextShrinkDate: nil,
                             activeHunters: max(0, state.game.hunterIds.count - state.game.winners.count),
                             winnersCount: state.game.winners.count,
                             isOutsideZone: false,
                             gamePhase: .gameOver
-                        ))
+                        )
                         let gameId = state.game.id
                         state.destination = .alert(
                             AlertState {
@@ -426,6 +438,7 @@ struct ChickenMapFeature {
                             }
                         )
                         return .run { _ in
+                            await liveActivityClient.end(endState)
                             do {
                                 try await apiClient.updateGameStatus(gameId, .done)
                             } catch {
@@ -454,7 +467,9 @@ struct ChickenMapFeature {
                 let currentLAState = state.liveActivityState
                 if currentLAState != state.lastLiveActivityState {
                     state.lastLiveActivityState = currentLAState
-                    liveActivityClient.update(currentLAState)
+                    return .run { _ in
+                        await liveActivityClient.update(currentLAState)
+                    }
                 }
                 return .none
             }

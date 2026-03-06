@@ -10,10 +10,10 @@ import os
 private let logger = Logger(subsystem: "dev.rahier.pouleparty", category: "LiveActivity")
 
 struct LiveActivityClient {
-    var start: (PoulePartyAttributes, PoulePartyAttributes.ContentState) -> Void
-    var update: (PoulePartyAttributes.ContentState) -> Void
-    var end: (PoulePartyAttributes.ContentState?) -> Void
-    var cleanupOrphaned: () -> Void
+    var start: @Sendable (PoulePartyAttributes, PoulePartyAttributes.ContentState) async -> Void
+    var update: @Sendable (PoulePartyAttributes.ContentState) async -> Void
+    var end: @Sendable (PoulePartyAttributes.ContentState?) async -> Void
+    var cleanupOrphaned: @Sendable () async -> Void
 }
 
 extension LiveActivityClient: TestDependencyKey {
@@ -34,9 +34,7 @@ extension LiveActivityClient: DependencyKey {
             }
             // End any existing activities first
             for activity in Activity<PoulePartyAttributes>.activities {
-                Task {
-                    await activity.end(nil, dismissalPolicy: .immediate)
-                }
+                await activity.end(nil, dismissalPolicy: .immediate)
             }
             do {
                 let activity = try Activity<PoulePartyAttributes>.request(
@@ -53,23 +51,19 @@ extension LiveActivityClient: DependencyKey {
             }
         },
         update: { state in
-            Task {
-                for activity in Activity<PoulePartyAttributes>.activities {
-                    await activity.update(.init(
-                        state: state,
-                        staleDate: .now.addingTimeInterval(15 * 60)
-                    ))
-                }
+            for activity in Activity<PoulePartyAttributes>.activities {
+                await activity.update(.init(
+                    state: state,
+                    staleDate: .now.addingTimeInterval(15 * 60)
+                ))
             }
         },
         end: { finalState in
-            Task {
-                for activity in Activity<PoulePartyAttributes>.activities {
-                    await activity.end(
-                        finalState.map { .init(state: $0, staleDate: nil) },
-                        dismissalPolicy: .after(.now.addingTimeInterval(5 * 60))
-                    )
-                }
+            for activity in Activity<PoulePartyAttributes>.activities {
+                await activity.end(
+                    finalState.map { .init(state: $0, staleDate: nil) },
+                    dismissalPolicy: .after(.now.addingTimeInterval(5 * 60))
+                )
             }
         },
         cleanupOrphaned: {
@@ -77,9 +71,7 @@ extension LiveActivityClient: DependencyKey {
             guard !activities.isEmpty else { return }
             logger.info("Cleaning up \(activities.count) orphaned Live Activities")
             for activity in activities {
-                Task {
-                    await activity.end(nil, dismissalPolicy: .immediate)
-                }
+                await activity.end(nil, dismissalPolicy: .immediate)
             }
         }
     )

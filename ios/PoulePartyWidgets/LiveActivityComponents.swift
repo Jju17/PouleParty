@@ -64,11 +64,8 @@ struct HunterStatusRow: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
             if winnersCount > 0 {
-                Text("\(activeHunters)/\(totalHunters) hunting")
+                Text("\(activeHunters)/\(totalHunters) hunting \u{00B7} \(Text("\(winnersCount) found").foregroundColor(crPink))")
                     .font(.subheadline)
-                + Text(" \u{00B7} \(winnersCount) found")
-                    .font(.subheadline)
-                    .foregroundColor(crPink)
             } else {
                 Text("\(activeHunters)/\(totalHunters) hunting")
                     .font(.subheadline)
