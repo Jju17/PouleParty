@@ -236,7 +236,8 @@ struct HunterMapFeature {
                     logger.error("hunterId is empty — cannot register hunter or write location. rawUid was: \(rawUid ?? "nil")")
                     return .none
                 }
-                logger.info("HunterMap.onTask — hunterId set to: \(hunterId), shouldWriteLocation: \(state.game.chickenCanSeeHunters)")
+                let chickenCanSeeHunters = state.game.chickenCanSeeHunters
+                logger.info("HunterMap.onTask — hunterId set to: \(hunterId), shouldWriteLocation: \(chickenCanSeeHunters)")
                 let hunterStartDate = state.game.hunterStartDate
                 let (lastUpdate, lastRadius) = state.game.findLastUpdate()
                 state.radius = lastRadius
