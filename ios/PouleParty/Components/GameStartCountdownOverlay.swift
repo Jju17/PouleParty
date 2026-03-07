@@ -43,6 +43,7 @@ struct PreGameOverlay: View {
     let gameCode: String?
     let targetDate: Date
     let nowDate: Date
+    var connectedHunters: Int = 0
     var onCancelGame: (() -> Void)? = nil
 
     @State private var codeCopied = false
@@ -51,10 +52,25 @@ struct PreGameOverlay: View {
         max(0, Int(targetDate.timeIntervalSince(nowDate)))
     }
 
+    private var days: Int { secondsRemaining / 86400 }
+    private var hours: Int { (secondsRemaining % 86400) / 3600 }
+
     private var formattedTime: String {
-        let minutes = secondsRemaining / 60
+        let minutes = (secondsRemaining % 3600) / 60
         let seconds = secondsRemaining % 60
-        return String(format: "%d:%02d", minutes, seconds)
+        if days > 0 {
+            return String(format: "%dj %02d:%02d:%02d", days, hours, minutes, seconds)
+        } else if hours > 0 {
+            return String(format: "%d:%02d:%02d", hours, minutes, seconds)
+        } else {
+            return String(format: "%d:%02d", minutes, seconds)
+        }
+    }
+
+    private var timerFontSize: CGFloat {
+        if days > 0 { return 30 }
+        if hours > 0 { return 38 }
+        return 48
     }
 
     /// Hide when the 3-2-1 countdown takes over
@@ -102,12 +118,36 @@ struct PreGameOverlay: View {
                         .padding(.top, 8)
                     }
 
+                    VStack(spacing: 6) {
+                        HStack(spacing: 6) {
+                            Text("🐔")
+                                .font(.system(size: 14))
+                            Text("1")
+                                .font(.gameboy(size: 16))
+                                .foregroundStyle(.white)
+                            Text("connected")
+                                .font(.system(size: 14))
+                                .foregroundStyle(.white.opacity(0.6))
+                        }
+                        HStack(spacing: 6) {
+                            Text("🔍")
+                                .font(.system(size: 14))
+                            Text("\(connectedHunters)")
+                                .font(.gameboy(size: 16))
+                                .foregroundStyle(.white)
+                            Text("connected")
+                                .font(.system(size: 14))
+                                .foregroundStyle(.white.opacity(0.6))
+                        }
+                    }
+                    .padding(.top, 8)
+
                     VStack(spacing: 8) {
                         Text("Game starts in")
                             .font(.system(size: 14))
                             .foregroundStyle(.white.opacity(0.6))
                         Text(formattedTime)
-                            .font(.gameboy(size: 48))
+                            .font(.gameboy(size: timerFontSize))
                             .foregroundStyle(Color.CROrange)
                             .contentTransition(.numericText())
                             .animation(.linear(duration: 0.3), value: secondsRemaining)

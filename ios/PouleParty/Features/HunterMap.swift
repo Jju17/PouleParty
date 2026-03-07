@@ -236,7 +236,7 @@ struct HunterMapFeature {
                     logger.error("hunterId is empty — cannot register hunter or write location. rawUid was: \(rawUid ?? "nil")")
                     return .none
                 }
-                logger.info("HunterMap.onTask — hunterId set to: \(hunterId), shouldWriteLocation: \(gameMod == .mutualTracking)")
+                logger.info("HunterMap.onTask — hunterId set to: \(hunterId), shouldWriteLocation: \(state.game.chickenCanSeeHunters)")
                 let hunterStartDate = state.game.hunterStartDate
                 let (lastUpdate, lastRadius) = state.game.findLastUpdate()
                 state.radius = lastRadius
@@ -276,7 +276,7 @@ struct HunterMapFeature {
                     }
                 ]
 
-                // followTheChicken & mutualTracking: circle follows the chicken
+                // followTheChicken: circle follows the chicken
                 // stayInTheZone: circle stays fixed on initial coordinates (no chicken stream)
                 // Gated behind hunterStartDate to avoid leaking position early
                 if gameMod != .stayInTheZone {
@@ -296,9 +296,9 @@ struct HunterMapFeature {
                 }
 
                 // Hunter always tracks own location (for zone check).
-                // In mutualTracking mode, also writes to Firestore.
+                // When chickenCanSeeHunters, also writes to Firestore.
                 // Gated behind hunterStartDate.
-                let shouldWriteLocation = gameMod == .mutualTracking
+                let shouldWriteLocation = state.game.chickenCanSeeHunters
                 effects.append(
                     .run { send in
                         let delay = hunterStartDate.timeIntervalSinceNow
@@ -555,13 +555,14 @@ struct HunterMapView: View {
     @State private var mapBearing: Double = 0
 
     private var hunterSubtitle: String {
+        if store.game.chickenCanSeeHunters {
+            return "Catch the 🐔 (she sees you! 👀)"
+        }
         switch store.game.gameMod {
         case .followTheChicken:
             return "Catch the 🐔 !"
         case .stayInTheZone:
             return "Stay in the zone 📍"
-        case .mutualTracking:
-            return "Catch the 🐔 (she sees you! 👀)"
         }
     }
 
@@ -742,7 +743,8 @@ struct HunterMapView: View {
                         gameModTitle: store.game.gameMod.title,
                         gameCode: nil,
                         targetDate: store.game.hunterStartDate,
-                        nowDate: store.nowDate
+                        nowDate: store.nowDate,
+                        connectedHunters: store.game.hunterIds.count
                     )
                 }
             }

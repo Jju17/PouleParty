@@ -69,9 +69,9 @@ class HunterMapViewModelTest {
     }
 
     @Test
-    fun `hunter subtitle for mutualTracking`() {
-        val game = Game(id = "test", gameMod = GameMod.MUTUAL_TRACKING.firestoreValue)
-        assertEquals(GameMod.MUTUAL_TRACKING, game.gameModEnum)
+    fun `hunter subtitle for chickenCanSeeHunters`() {
+        val game = Game(id = "test", chickenCanSeeHunters = true)
+        assertTrue(game.chickenCanSeeHunters)
     }
 
     @Test

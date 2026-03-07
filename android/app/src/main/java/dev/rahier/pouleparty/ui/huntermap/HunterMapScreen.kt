@@ -242,7 +242,8 @@ fun HunterMapScreen(
                     gameModTitle = state.game.gameModEnum.title,
                     gameCode = null,
                     targetDate = state.game.hunterStartDate,
-                    nowDate = state.nowDate
+                    nowDate = state.nowDate,
+                    connectedHunters = state.game.hunterIds.size
                 )
             }
 

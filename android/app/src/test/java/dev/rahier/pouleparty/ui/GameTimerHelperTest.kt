@@ -346,13 +346,4 @@ class GameTimerHelperTest {
         assertTrue(shouldCheckZone(PlayerRole.HUNTER, GameMod.FOLLOW_THE_CHICKEN))
     }
 
-    @Test
-    fun `shouldCheckZone chicken mutualTracking returns false`() {
-        assertFalse(shouldCheckZone(PlayerRole.CHICKEN, GameMod.MUTUAL_TRACKING))
-    }
-
-    @Test
-    fun `shouldCheckZone hunter mutualTracking returns true`() {
-        assertTrue(shouldCheckZone(PlayerRole.HUNTER, GameMod.MUTUAL_TRACKING))
-    }
 }

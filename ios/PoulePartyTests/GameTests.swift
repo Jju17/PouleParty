@@ -72,11 +72,10 @@ struct GameTests {
     @Test func gameModTitlesAreCorrect() {
         #expect(Game.GameMod.followTheChicken.title == "Follow the chicken 🐔")
         #expect(Game.GameMod.stayInTheZone.title == "Stay in the zone 📍")
-        #expect(Game.GameMod.mutualTracking.title == "Mutual tracking 👀")
     }
 
-    @Test func gameModAllCasesContainsThreeModes() {
-        #expect(Game.GameMod.allCases.count == 3)
+    @Test func gameModAllCasesContainsTwoModes() {
+        #expect(Game.GameMod.allCases.count == 2)
     }
 
     @Test func gameModCodableRoundTrip() throws {

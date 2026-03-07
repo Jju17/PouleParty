@@ -147,10 +147,12 @@
     <string name="mode_stay_detail1">No position sharing between players</string>
     <string name="mode_stay_detail2">The zone drifts randomly but always contains the starting location</string>
     <string name="mode_stay_detail3">Strategy: search the moving zone to find the Chicken!</string>
-    <string name="mode_mutual_desc">Like Follow the Chicken, but the Chicken can also see all Hunters on her map!</string>
-    <string name="mode_mutual_detail1">Chicken sends its position to Hunters</string>
-    <string name="mode_mutual_detail2">Hunters send their position to the Chicken</string>
-    <string name="mode_mutual_detail3">Both sides can track each other in real time</string>
+    <string name="chicken_can_see_hunters">Chicken can see hunters</string>
+    <string name="chicken_can_see_hunters_title">Chicken can see hunters 👀</string>
+    <string name="chicken_can_see_hunters_desc">An option available in any game mode. The Chicken can see all Hunters on her map!</string>
+    <string name="chicken_can_see_hunters_detail1">Hunters send their position to the Chicken</string>
+    <string name="chicken_can_see_hunters_detail2">Both sides can track each other in real time</string>
+    <string name="chicken_can_see_hunters_detail3">Enable this toggle in the game settings</string>
     <string name="setting_start_end_name">Start / End time</string>
     <string name="setting_start_end_desc">When the game starts and ends. The Chicken wins if the time runs out!</string>
     <string name="setting_radius_interval_desc">How often the zone shrinks (in minutes).</string>
@@ -163,7 +165,7 @@
     <string name="chicken_you_see_them">You can see them 👀</string>
     <string name="hunter_catch_chicken">Catch the 🐔 !</string>
     <string name="hunter_stay_in_zone">Stay in the zone 📍</string>
-    <string name="hunter_mutual_tracking">Catch the 🐔 (she sees you! 👀)</string>
+    <string name="hunter_chicken_sees_you">Catch the 🐔 (she sees you! 👀)</string>
 
     <!-- Zone Warning -->
     <string name="return_to_zone">Return to the zone!</string>
@@ -173,6 +175,7 @@
 
     <!-- Pre-Game Overlay -->
     <string name="game_starting_in">Game starts in</string>
+    <string name="connected">connected</string>
     <string name="share_code">Share this code:</string>
     <string name="tap_to_copy">Tap to copy:</string>
     <string name="copied">Copied!</string>

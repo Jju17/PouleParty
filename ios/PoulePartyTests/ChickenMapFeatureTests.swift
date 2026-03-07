@@ -91,11 +91,11 @@ struct ChickenMapFeatureTests {
         }
     }
 
-    // MARK: - Hunter annotations (mutualTracking)
+    // MARK: - Hunter annotations (chickenCanSeeHunters)
 
     @Test func hunterLocationsUpdatedCreatesAnnotations() async {
         var game = Game.mock
-        game.gameMod = .mutualTracking
+        game.chickenCanSeeHunters = true
         let store = TestStore(initialState: ChickenMapFeature.State(game: game)) {
             ChickenMapFeature()
         }

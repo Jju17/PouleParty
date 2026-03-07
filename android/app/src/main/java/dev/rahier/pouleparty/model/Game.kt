@@ -21,6 +21,7 @@ data class Game(
     val radiusDeclinePerUpdate: Double = 100.0,
     val chickenHeadStartMinutes: Double = 0.0, // In minutes, 0 = no head start
     val gameMod: String = GameMod.STAY_IN_THE_ZONE.firestoreValue,
+    val chickenCanSeeHunters: Boolean = false,
     val foundCode: String = "",
     val hunterIds: List<String> = emptyList(),
     val status: String = GameStatus.WAITING.firestoreValue,
@@ -82,6 +83,7 @@ data class Game(
         initialCoordinates = GeoPoint(point.latitude(), point.longitude())
     )
     fun withChickenHeadStart(minutes: Double): Game = copy(chickenHeadStartMinutes = minutes)
+    fun withChickenCanSeeHunters(value: Boolean): Game = copy(chickenCanSeeHunters = value)
 
     companion object {
         fun generateFoundCode(): String = "%04d".format((0..9999).random())
@@ -116,8 +118,7 @@ fun calculateNormalModeSettings(initialRadius: Double, gameDurationMinutes: Doub
 
 enum class GameMod(val firestoreValue: String, val title: String) {
     FOLLOW_THE_CHICKEN("followTheChicken", "Follow the chicken \uD83D\uDC14"),
-    STAY_IN_THE_ZONE("stayInTheZone", "Stay in the zone \uD83D\uDCCD"),
-    MUTUAL_TRACKING("mutualTracking", "Mutual tracking \uD83D\uDC40");
+    STAY_IN_THE_ZONE("stayInTheZone", "Stay in the zone \uD83D\uDCCD");
 
     companion object {
         fun fromFirestore(value: String): GameMod =

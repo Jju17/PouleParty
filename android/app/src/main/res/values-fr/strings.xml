@@ -138,10 +138,12 @@
     <string name="mode_stay_detail1">Pas de partage de position entre joueurs</string>
     <string name="mode_stay_detail2">La zone se déplace aléatoirement mais contient toujours le lieu de départ</string>
     <string name="mode_stay_detail3">Stratégie : fouillez la zone mouvante pour trouver la Poule !</string>
-    <string name="mode_mutual_desc">Comme Suivre la Poule, mais la Poule peut aussi voir tous les Chasseurs sur sa carte !</string>
-    <string name="mode_mutual_detail1">La Poule envoie sa position aux Chasseurs</string>
-    <string name="mode_mutual_detail2">Les Chasseurs envoient leur position à la Poule</string>
-    <string name="mode_mutual_detail3">Les deux côtés se traquent en temps réel</string>
+    <string name="chicken_can_see_hunters">La poule voit les chasseurs</string>
+    <string name="chicken_can_see_hunters_title">La poule voit les chasseurs 👀</string>
+    <string name="chicken_can_see_hunters_desc">Une option disponible dans tous les modes de jeu. La Poule peut voir tous les Chasseurs sur sa carte !</string>
+    <string name="chicken_can_see_hunters_detail1">Les Chasseurs envoient leur position à la Poule</string>
+    <string name="chicken_can_see_hunters_detail2">Les deux côtés se traquent en temps réel</string>
+    <string name="chicken_can_see_hunters_detail3">Activez cette option dans les réglages du jeu</string>
     <string name="setting_start_end_name">Début / Fin</string>
     <string name="setting_start_end_desc">Quand la partie commence et se termine. La Poule gagne si le temps est écoulé !</string>
     <string name="setting_radius_interval_desc">La fréquence de rétrécissement de la zone (en minutes).</string>
@@ -176,7 +178,7 @@
     <string name="chicken_you_see_them">Tu peux les voir 👀</string>
     <string name="hunter_catch_chicken">Attrape le 🐔 !</string>
     <string name="hunter_stay_in_zone">Reste dans la zone 📍</string>
-    <string name="hunter_mutual_tracking">Attrape le 🐔 (elle te voit ! 👀)</string>
+    <string name="hunter_chicken_sees_you">Attrape le 🐔 (elle te voit ! 👀)</string>
 
     <!-- Zone Warning -->
     <string name="return_to_zone">Retournez dans la zone !</string>
@@ -186,6 +188,7 @@
 
     <!-- Pre-Game Overlay -->
     <string name="game_starting_in">La partie commence dans</string>
+    <string name="connected">connecté(s)</string>
     <string name="share_code">Partage ce code :</string>
     <string name="tap_to_copy">Appuie pour copier :</string>
     <string name="copied">Copié !</string>

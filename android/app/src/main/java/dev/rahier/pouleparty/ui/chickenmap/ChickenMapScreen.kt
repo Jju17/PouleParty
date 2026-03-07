@@ -119,7 +119,7 @@ fun ChickenMapScreen(
                 }
             }
 
-            // Hunter annotations (mutualTracking mode) -- only after hunt starts
+            // Hunter annotations (chickenCanSeeHunters) -- only after hunt starts
             if (state.hasHuntStarted) state.hunterAnnotations.forEach { hunter ->
                 PointAnnotation(
                     point = hunter.coordinate
@@ -233,6 +233,7 @@ fun ChickenMapScreen(
                 gameCode = state.game.gameCode,
                 targetDate = state.game.startDate,
                 nowDate = state.nowDate,
+                connectedHunters = state.game.hunterIds.size,
                 onCancelGame = { viewModel.onCancelGameTapped() }
             )
         }

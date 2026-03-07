@@ -71,12 +71,12 @@ struct GameRulesView: View {
             )
 
             gameModeCard(
-                title: Game.GameMod.mutualTracking.title,
-                description: "Like Follow the Chicken, but the Chicken can also see all Hunters on her map!",
+                title: "Chicken can see hunters 👀",
+                description: "An option available in any game mode. The Chicken can see all Hunters on her map!",
                 details: [
-                    "Chicken sends its position to Hunters",
                     "Hunters send their position to the Chicken",
-                    "Both sides can track each other in real time"
+                    "Both sides can track each other in real time",
+                    "Enable this toggle in the game settings"
                 ]
             )
         }

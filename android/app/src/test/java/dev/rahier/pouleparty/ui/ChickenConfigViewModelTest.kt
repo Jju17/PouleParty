@@ -29,8 +29,8 @@ class ChickenConfigViewModelTest {
     @Test
     fun `updating game mod changes state`() {
         val game = Game(id = "test", gameMod = GameMod.FOLLOW_THE_CHICKEN.firestoreValue)
-        val updated = game.copy(gameMod = GameMod.MUTUAL_TRACKING.firestoreValue)
-        assertEquals(GameMod.MUTUAL_TRACKING, updated.gameModEnum)
+        val updated = game.copy(gameMod = GameMod.STAY_IN_THE_ZONE.firestoreValue)
+        assertEquals(GameMod.STAY_IN_THE_ZONE, updated.gameModEnum)
     }
 
     @Test

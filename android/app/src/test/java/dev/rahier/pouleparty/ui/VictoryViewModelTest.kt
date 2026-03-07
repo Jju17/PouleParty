@@ -193,8 +193,8 @@ class VictoryViewModelTest {
 
     @Test
     fun `game mode is preserved in victory state`() {
-        val game = Game(id = "test", gameMod = GameMod.MUTUAL_TRACKING.firestoreValue)
+        val game = Game(id = "test", gameMod = GameMod.STAY_IN_THE_ZONE.firestoreValue)
         val state = VictoryUiState(game = game)
-        assertEquals(GameMod.MUTUAL_TRACKING, state.game.gameModEnum)
+        assertEquals(GameMod.STAY_IN_THE_ZONE, state.game.gameModEnum)
     }
 }

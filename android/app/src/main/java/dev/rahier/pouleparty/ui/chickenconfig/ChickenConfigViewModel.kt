@@ -103,6 +103,10 @@ class ChickenConfigViewModel @Inject constructor(
         _uiState.update { it.copy(game = it.game.copy(gameMod = mod.firestoreValue)) }
     }
 
+    fun toggleChickenCanSeeHunters(value: Boolean) {
+        _uiState.update { it.copy(game = it.game.withChickenCanSeeHunters(value)) }
+    }
+
     fun updateRadiusIntervalUpdate(value: Double) {
         _uiState.update { it.copy(game = it.game.copy(radiusIntervalUpdate = value)) }
     }
@@ -113,6 +117,7 @@ class ChickenConfigViewModel @Inject constructor(
 
     fun updateChickenHeadStart(value: Double) {
         _uiState.update { it.copy(game = it.game.copy(chickenHeadStartMinutes = value)) }
+        recalculateIfNormalMode()
     }
 
     fun updateInitialRadius(value: Double) {
@@ -139,8 +144,9 @@ class ChickenConfigViewModel @Inject constructor(
     private fun recalculateIfNormalMode() {
         val state = _uiState.value
         if (state.isExpertMode) return
+        val effectiveDuration = maxOf(state.gameDurationMinutes - state.game.chickenHeadStartMinutes, 1.0)
         val (interval, decline) = calculateNormalModeSettings(
-            state.game.initialRadius, state.gameDurationMinutes
+            state.game.initialRadius, effectiveDuration
         )
         _uiState.update {
             it.copy(game = it.game.copy(
@@ -179,11 +185,18 @@ class ChickenConfigViewModel @Inject constructor(
     fun startGame(onSuccess: (String) -> Unit) {
         viewModelScope.launch {
             try {
-                // Auto-calculate endDate from radius parameters
+                // Auto-calculate endDate
                 val game = _uiState.value.game
-                val shrinks = ceil(game.initialRadius / game.radiusDeclinePerUpdate)
-                val durationMs = (shrinks * game.radiusIntervalUpdate * 60 * 1000).toLong()
-                val endDate = Date(game.hunterStartDate.time + durationMs)
+                val state = _uiState.value
+                val endDate = if (state.isExpertMode) {
+                    // Expert mode: endDate from radius parameters
+                    val shrinks = ceil(game.initialRadius / game.radiusDeclinePerUpdate)
+                    val durationMs = (shrinks * game.radiusIntervalUpdate * 60 * 1000).toLong()
+                    Date(game.hunterStartDate.time + durationMs)
+                } else {
+                    // Normal mode: endDate = startDate + total game duration
+                    Date(game.startDate.time + (state.gameDurationMinutes * 60 * 1000).toLong())
+                }
                 val finalGame = game.withEndDate(endDate)
                 firestoreRepository.setConfig(finalGame)
                 onSuccess(finalGame.id)

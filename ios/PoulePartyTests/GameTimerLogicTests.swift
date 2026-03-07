@@ -316,14 +316,6 @@ struct GameTimerLogicTests {
         #expect(shouldCheckZone(role: .hunter, gameMod: .followTheChicken) == true)
     }
 
-    @Test func shouldCheckZoneChickenMutualTracking() {
-        #expect(shouldCheckZone(role: .chicken, gameMod: .mutualTracking) == false)
-    }
-
-    @Test func shouldCheckZoneHunterMutualTracking() {
-        #expect(shouldCheckZone(role: .hunter, gameMod: .mutualTracking) == true)
-    }
-
     // MARK: - checkZoneStatus
 
     @Test func checkZoneStatusInsideZone() {

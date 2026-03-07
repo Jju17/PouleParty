@@ -31,6 +31,7 @@ struct Game: Codable, Equatable {
     var radiusDeclinePerUpdate: Double = 100
     var chickenHeadStartMinutes: Double = 0 // In minutes, 0 = no head start
     var gameMod: GameMod = .stayInTheZone
+    var chickenCanSeeHunters: Bool = false
     var foundCode: String = ""
     var hunterIds: [String] = []
     var status: GameStatus = .waiting
@@ -47,7 +48,6 @@ struct Game: Codable, Equatable {
     enum GameMod: String, CaseIterable, Equatable, Codable {
         case followTheChicken
         case stayInTheZone
-        case mutualTracking
 
         var title: String {
             switch self {
@@ -55,8 +55,6 @@ struct Game: Codable, Equatable {
                 return "Follow the chicken 🐔"
             case .stayInTheZone:
                 return "Stay in the zone 📍"
-            case .mutualTracking:
-                return "Mutual tracking 👀"
             }
         }
     }
@@ -151,6 +149,7 @@ extension Game {
             radiusDeclinePerUpdate: 100,
             chickenHeadStartMinutes: 0,
             gameMod: .followTheChicken,
+            chickenCanSeeHunters: false,
             foundCode: "1234",
             driftSeed: 42
         )

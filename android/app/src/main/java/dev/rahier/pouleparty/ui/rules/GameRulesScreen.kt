@@ -72,12 +72,12 @@ private fun GameModesSection() {
         )
 
         GameModeCard(
-            title = GameMod.MUTUAL_TRACKING.title,
-            description = stringResource(R.string.mode_mutual_desc),
+            title = stringResource(R.string.chicken_can_see_hunters_title),
+            description = stringResource(R.string.chicken_can_see_hunters_desc),
             details = listOf(
-                stringResource(R.string.mode_mutual_detail1),
-                stringResource(R.string.mode_mutual_detail2),
-                stringResource(R.string.mode_mutual_detail3)
+                stringResource(R.string.chicken_can_see_hunters_detail1),
+                stringResource(R.string.chicken_can_see_hunters_detail2),
+                stringResource(R.string.chicken_can_see_hunters_detail3)
             )
         )
     }

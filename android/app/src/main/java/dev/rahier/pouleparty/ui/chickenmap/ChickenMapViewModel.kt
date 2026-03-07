@@ -216,7 +216,7 @@ class ChickenMapViewModel @Inject constructor(
 
     /**
      * Chicken sends its position to hunters (except in stayInTheZone mode).
-     * Circle follows chicken position in followTheChicken and mutualTracking.
+     * Circle follows chicken position in followTheChicken mode.
      * In stayInTheZone, tracks location for zone check only (no Firestore writes).
      */
     private suspend fun trackLocation(game: Game) {
@@ -253,11 +253,11 @@ class ChickenMapViewModel @Inject constructor(
     }
 
     /**
-     * In mutualTracking mode, chicken can see all hunter positions.
+     * When chickenCanSeeHunters, chicken can see all hunter positions.
      * Gated behind hunterStartDate (hunters aren't active until then).
      */
     private suspend fun trackHunters(game: Game) {
-        if (game.gameModEnum != GameMod.MUTUAL_TRACKING) return
+        if (!game.chickenCanSeeHunters) return
 
         val delayMs = game.hunterStartDate.time - System.currentTimeMillis()
         if (delayMs > 0) delay(delayMs)
@@ -345,9 +345,11 @@ class ChickenMapViewModel @Inject constructor(
     }
 
     val chickenSubtitle: String
-        get() = when (_uiState.value.game.gameModEnum) {
-            GameMod.FOLLOW_THE_CHICKEN -> "Don't be seen !"
-            GameMod.STAY_IN_THE_ZONE -> "Stay in the zone \uD83D\uDCCD"
-            GameMod.MUTUAL_TRACKING -> "You can see them \uD83D\uDC40"
+        get() {
+            if (_uiState.value.game.chickenCanSeeHunters) return "You can see them \uD83D\uDC40"
+            return when (_uiState.value.game.gameModEnum) {
+                GameMod.FOLLOW_THE_CHICKEN -> "Don't be seen !"
+                GameMod.STAY_IN_THE_ZONE -> "Stay in the zone \uD83D\uDCCD"
+            }
         }
 }

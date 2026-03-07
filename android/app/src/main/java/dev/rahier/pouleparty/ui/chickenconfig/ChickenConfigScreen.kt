@@ -165,6 +165,18 @@ fun ChickenConfigScreen(
                                 Text(mod.title, modifier = Modifier.padding(start = 8.dp))
                             }
                         }
+                        Spacer(Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(stringResource(R.string.chicken_can_see_hunters))
+                            Switch(
+                                checked = state.game.chickenCanSeeHunters,
+                                onCheckedChange = { viewModel.toggleChickenCanSeeHunters(it) }
+                            )
+                        }
                     }
                 }
 

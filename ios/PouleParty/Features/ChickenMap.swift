@@ -229,7 +229,7 @@ struct ChickenMapFeature {
                     }
                 ]
 
-                // followTheChicken & mutualTracking: chicken sends position to hunters
+                // followTheChicken: chicken sends position to hunters
                 // stayInTheZone: track location for zone check only (no Firestore writes)
                 // Gated behind startDate to avoid leaking position early
                 if gameMod != .stayInTheZone {
@@ -280,9 +280,9 @@ struct ChickenMapFeature {
                     )
                 }
 
-                // mutualTracking: chicken can see all hunters
+                // chickenCanSeeHunters: chicken can see all hunters
                 // Gated behind hunterStartDate (hunters aren't active until then)
-                if gameMod == .mutualTracking {
+                if state.game.chickenCanSeeHunters {
                     let hunterStartDate = state.game.hunterStartDate
                     effects.append(
                         .run { send in
@@ -489,13 +489,14 @@ struct ChickenMapView: View {
     @State private var mapBearing: Double = 0
 
     private var chickenSubtitle: String {
+        if store.game.chickenCanSeeHunters {
+            return "You can see them 👀"
+        }
         switch store.game.gameMod {
         case .followTheChicken:
             return "Don't be seen !"
         case .stayInTheZone:
             return "Stay in the zone 📍"
-        case .mutualTracking:
-            return "You can see them 👀"
         }
     }
 
@@ -597,7 +598,7 @@ struct ChickenMapView: View {
                     .lineWidth(2)
             }
 
-            // Hunter annotations (mutualTracking mode) -- only after hunt starts
+            // Hunter annotations (chickenCanSeeHunters) -- only after hunt starts
             if store.hasHuntStarted {
                 ForEvery(self.store.hunterAnnotations) { hunter in
                     MapViewAnnotation(coordinate: hunter.coordinate) {
@@ -693,6 +694,7 @@ struct ChickenMapView: View {
                     gameCode: store.game.gameCode,
                     targetDate: store.game.startDate,
                     nowDate: store.nowDate,
+                    connectedHunters: store.game.hunterIds.count,
                     onCancelGame: { store.send(.cancelGameButtonTapped) }
                 )
             }

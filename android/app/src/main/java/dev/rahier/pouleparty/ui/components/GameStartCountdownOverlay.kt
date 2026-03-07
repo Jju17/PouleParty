@@ -66,13 +66,25 @@ fun PreGameOverlay(
     gameCode: String?,
     targetDate: Date,
     nowDate: Date,
+    connectedHunters: Int = 0,
     onCancelGame: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val secondsRemaining = maxOf(0L, (targetDate.time - nowDate.time) / 1000)
-    val minutes = secondsRemaining / 60
+    val days = secondsRemaining / 86400
+    val hours = (secondsRemaining % 86400) / 3600
+    val minutes = (secondsRemaining % 3600) / 60
     val seconds = secondsRemaining % 60
-    val formattedTime = String.format("%d:%02d", minutes, seconds)
+    val formattedTime = when {
+        days > 0 -> String.format("%dj %02d:%02d:%02d", days, hours, minutes, seconds)
+        hours > 0 -> String.format("%d:%02d:%02d", hours, minutes, seconds)
+        else -> String.format("%d:%02d", minutes, seconds)
+    }
+    val timerFontSize = when {
+        days > 0 -> 30
+        hours > 0 -> 38
+        else -> 48
+    }
     var codeCopied by remember { mutableStateOf(false) }
 
     LaunchedEffect(codeCopied) {
@@ -144,6 +156,45 @@ fun PreGameOverlay(
 
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.padding(top = 8.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(text = "\uD83D\uDC14", fontSize = 14.sp)
+                        Text(
+                            text = "1",
+                            style = gameboyStyle(16),
+                            color = Color.White
+                        )
+                        Text(
+                            text = stringResource(R.string.connected),
+                            fontSize = 14.sp,
+                            color = Color.White.copy(alpha = 0.6f)
+                        )
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(text = "\uD83D\uDD0D", fontSize = 14.sp)
+                        Text(
+                            text = "$connectedHunters",
+                            style = gameboyStyle(16),
+                            color = Color.White
+                        )
+                        Text(
+                            text = stringResource(R.string.connected),
+                            fontSize = 14.sp,
+                            color = Color.White.copy(alpha = 0.6f)
+                        )
+                    }
+                }
+
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.padding(top = 16.dp)
                 ) {
@@ -154,7 +205,7 @@ fun PreGameOverlay(
                     )
                     Text(
                         text = formattedTime,
-                        style = gameboyStyle(48),
+                        style = gameboyStyle(timerFontSize),
                         color = CROrange
                     )
                 }

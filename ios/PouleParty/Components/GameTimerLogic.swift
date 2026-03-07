@@ -26,7 +26,7 @@ func shouldCheckZone(role: PlayerRole, gameMod: Game.GameMod) -> Bool {
     switch gameMod {
     case .stayInTheZone:
         return true // both chicken and hunters are checked
-    case .followTheChicken, .mutualTracking:
+    case .followTheChicken:
         return role == .hunter // chicken defines the zone center
     }
 }

@@ -24,7 +24,7 @@ data class ZoneCheckResult(
 /** Whether this role should be zone-checked under the given game mode. */
 fun shouldCheckZone(role: PlayerRole, gameMod: GameMod): Boolean = when (gameMod) {
     GameMod.STAY_IN_THE_ZONE -> true
-    GameMod.FOLLOW_THE_CHICKEN, GameMod.MUTUAL_TRACKING -> role == PlayerRole.HUNTER
+    GameMod.FOLLOW_THE_CHICKEN -> role == PlayerRole.HUNTER
 }
 
 /** Pure check: is the user outside the zone? */

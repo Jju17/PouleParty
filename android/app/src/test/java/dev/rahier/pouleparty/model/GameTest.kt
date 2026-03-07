@@ -116,14 +116,12 @@ class GameTest {
     fun `all game mods have correct titles`() {
         assertEquals("Follow the chicken \uD83D\uDC14", GameMod.FOLLOW_THE_CHICKEN.title)
         assertEquals("Stay in the zone \uD83D\uDCCD", GameMod.STAY_IN_THE_ZONE.title)
-        assertEquals("Mutual tracking \uD83D\uDC40", GameMod.MUTUAL_TRACKING.title)
     }
 
     @Test
     fun `GameMod fromFirestore returns correct enum`() {
         assertEquals(GameMod.FOLLOW_THE_CHICKEN, GameMod.fromFirestore("followTheChicken"))
         assertEquals(GameMod.STAY_IN_THE_ZONE, GameMod.fromFirestore("stayInTheZone"))
-        assertEquals(GameMod.MUTUAL_TRACKING, GameMod.fromFirestore("mutualTracking"))
     }
 
     @Test

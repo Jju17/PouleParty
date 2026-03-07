@@ -268,7 +268,7 @@ class HunterMapViewModel @Inject constructor(
     }
 
     /**
-     * Circle follows chicken position in followTheChicken and mutualTracking modes.
+     * Circle follows chicken position in followTheChicken mode.
      * In stayInTheZone, no chicken stream (circle stays on initial coordinates).
      */
     private suspend fun streamChickenLocation(game: Game) {
@@ -285,10 +285,10 @@ class HunterMapViewModel @Inject constructor(
 
     /**
      * Hunter always tracks own location (for zone check).
-     * In mutualTracking mode, also writes to Firestore.
+     * When chickenCanSeeHunters, also writes to Firestore.
      */
     private suspend fun trackHunterSelfLocation(game: Game) {
-        val shouldWrite = game.gameModEnum == GameMod.MUTUAL_TRACKING
+        val shouldWrite = game.chickenCanSeeHunters
 
         val delayMs = game.hunterStartDate.time - System.currentTimeMillis()
         if (delayMs > 0) delay(delayMs)
@@ -376,10 +376,12 @@ class HunterMapViewModel @Inject constructor(
     }
 
     val hunterSubtitle: String
-        get() = when (_uiState.value.game.gameModEnum) {
-            GameMod.FOLLOW_THE_CHICKEN -> "Catch the \uD83D\uDC14 !"
-            GameMod.STAY_IN_THE_ZONE -> "Stay in the zone \uD83D\uDCCD"
-            GameMod.MUTUAL_TRACKING -> "Catch the \uD83D\uDC14 (she sees you! \uD83D\uDC40)"
+        get() {
+            if (_uiState.value.game.chickenCanSeeHunters) return "Catch the \uD83D\uDC14 (she sees you! \uD83D\uDC40)"
+            return when (_uiState.value.game.gameModEnum) {
+                GameMod.FOLLOW_THE_CHICKEN -> "Catch the \uD83D\uDC14 !"
+                GameMod.STAY_IN_THE_ZONE -> "Stay in the zone \uD83D\uDCCD"
+            }
         }
 
     fun onInfoTapped() {

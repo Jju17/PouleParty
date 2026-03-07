@@ -26,6 +26,7 @@ struct ChickenConfigFeature {
     enum Action: BindableAction {
         case backButtonTapped
         case binding(BindingAction<State>)
+        case chickenHeadStartChanged(Double)
         case configSaveFailed
         case destination(PresentationAction<Destination.Action>)
         case expertModeToggled(Bool)
@@ -54,9 +55,10 @@ struct ChickenConfigFeature {
     @Dependency(\.apiClient) var apiClient
 
     private func recalculateNormalMode(state: inout State) {
+        let effectiveDuration = max(state.gameDurationMinutes - state.game.chickenHeadStartMinutes, 1)
         let (interval, decline) = calculateNormalModeSettings(
             initialRadius: state.game.initialRadius,
-            gameDurationMinutes: state.gameDurationMinutes
+            gameDurationMinutes: effectiveDuration
         )
         state.$game.withLock { game in
             game.radiusIntervalUpdate = interval
@@ -100,6 +102,12 @@ struct ChickenConfigFeature {
                 return .none
             case .backButtonTapped:
                 return .none
+            case let .chickenHeadStartChanged(minutes):
+                state.$game.withLock { $0.chickenHeadStartMinutes = minutes }
+                if !state.isExpertMode {
+                    self.recalculateNormalMode(state: &state)
+                }
+                return .none
             case let .initialRadiusChanged(radius):
                 state.$game.withLock { $0.initialRadius = radius }
                 if !state.isExpertMode {
@@ -112,11 +120,17 @@ struct ChickenConfigFeature {
             case .path:
                 return .none
             case .startGameButtonTapped:
-                // Auto-calculate endDate from radius parameters
+                // Auto-calculate endDate
                 state.$game.withLock { game in
-                    let shrinks = ceil(game.initialRadius / game.radiusDeclinePerUpdate)
-                    let duration = shrinks * game.radiusIntervalUpdate * 60
-                    game.endDate = game.hunterStartDate.addingTimeInterval(duration)
+                    if state.isExpertMode {
+                        // Expert mode: endDate from radius parameters
+                        let shrinks = ceil(game.initialRadius / game.radiusDeclinePerUpdate)
+                        let duration = shrinks * game.radiusIntervalUpdate * 60
+                        game.endDate = game.hunterStartDate.addingTimeInterval(duration)
+                    } else {
+                        // Normal mode: endDate = startDate + total game duration
+                        game.endDate = game.startDate.addingTimeInterval(state.gameDurationMinutes * 60)
+                    }
                 }
                 return .run { [state = state] send in
                     do {
@@ -236,6 +250,7 @@ struct ChickenConfigView: View {
                     Text(mode.title).tag(mode)
                 }
             }
+            Toggle("Chicken can see hunters", isOn: $store.game.chickenCanSeeHunters)
         }
     }
 
@@ -306,7 +321,14 @@ struct ChickenConfigView: View {
                     Spacer()
                     Text("\(Int(self.store.game.chickenHeadStartMinutes)) minutes")
                 }
-                Slider(value: self.$store.game.chickenHeadStartMinutes, in: 0...45, step: 1)
+                Slider(
+                    value: Binding(
+                        get: { store.game.chickenHeadStartMinutes },
+                        set: { store.send(.chickenHeadStartChanged($0)) }
+                    ),
+                    in: 0...45,
+                    step: 1
+                )
             }
         }
     }
