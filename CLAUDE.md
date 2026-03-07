@@ -85,7 +85,7 @@ PouleParty/
 |---|---|---|
 | UI | SwiftUI | Jetpack Compose + Material 3 |
 | Architecture | TCA (Composable Architecture) | MVVM + Hilt DI |
-| Maps | MapKit | Google Maps Compose |
+| Maps | Mapbox Maps SDK | Mapbox Maps Compose SDK |
 | Location | CoreLocation | FusedLocationProvider (Play Services) |
 | Async | AsyncStream / async-await | Kotlin Coroutines + Flow |
 | Backend | Firebase Firestore, Auth, Analytics | Firebase Firestore, Auth, Analytics |
