@@ -21,6 +21,7 @@ struct ChickenConfigFeature {
         var path = StackState<ChickenMapConfigFeature.State>()
         var isExpertMode: Bool = false
         var gameDurationMinutes: Double = 120
+        var showPowerUpSelection: Bool = false
     }
 
     enum Action: BindableAction {
@@ -35,6 +36,9 @@ struct ChickenConfigFeature {
         case initialRadiusChanged(Double)
         case mapPreviewTapped
         case path(StackAction<ChickenMapConfigFeature.State, ChickenMapConfigFeature.Action>)
+        case powerUpsToggled(Bool)
+        case powerUpTypeToggled(PowerUp.PowerUpType)
+        case powerUpSelectionTapped
         case startGameButtonTapped
     }
 
@@ -117,6 +121,24 @@ struct ChickenConfigFeature {
             case .mapPreviewTapped:
                 state.path.append(ChickenMapConfigFeature.State(game: state.$game))
                 return .none
+            case let .powerUpsToggled(enabled):
+                state.$game.withLock { $0.powerUpsEnabled = enabled }
+                return .none
+            case let .powerUpTypeToggled(type):
+                state.$game.withLock { game in
+                    if let index = game.enabledPowerUpTypes.firstIndex(of: type.rawValue) {
+                        // Don't allow deselecting the last one
+                        if game.enabledPowerUpTypes.count > 1 {
+                            game.enabledPowerUpTypes.remove(at: index)
+                        }
+                    } else {
+                        game.enabledPowerUpTypes.append(type.rawValue)
+                    }
+                }
+                return .none
+            case .powerUpSelectionTapped:
+                state.showPowerUpSelection = true
+                return .none
             case .path:
                 return .none
             case .startGameButtonTapped:
@@ -171,12 +193,19 @@ struct ChickenConfigView: View {
                 gameCodeSection
                 scheduleSection
                 gameModeSection
+                powerUpsSection
                 zoneSection
                 if store.isExpertMode {
                     advancedSection
                 }
                 headStartSection
                 settingsModeSection
+            }
+            .sheet(isPresented: $store.showPowerUpSelection) {
+                PowerUpSelectionView(
+                    enabledTypes: store.game.enabledPowerUpTypes,
+                    onToggle: { type in store.send(.powerUpTypeToggled(type)) }
+                )
             }
             .safeAreaInset(edge: .bottom) {
                 Button {
@@ -251,6 +280,34 @@ struct ChickenConfigView: View {
                 }
             }
             Toggle("Chicken can see hunters", isOn: $store.game.chickenCanSeeHunters)
+        }
+    }
+
+    private var powerUpsSection: some View {
+        Section("Power-Ups") {
+            Toggle("Enable Power-Ups", isOn: Binding(
+                get: { store.game.powerUpsEnabled },
+                set: { store.send(.powerUpsToggled($0)) }
+            ))
+
+            if store.game.powerUpsEnabled {
+                let enabledCount = store.game.enabledPowerUpTypes.count
+                let totalCount = PowerUp.PowerUpType.allCases.count
+                Button {
+                    store.send(.powerUpSelectionTapped)
+                } label: {
+                    HStack {
+                        Text("Choose Power-Ups")
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        Text("\(enabledCount)/\(totalCount)")
+                            .foregroundStyle(.secondary)
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
         }
     }
 

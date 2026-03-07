@@ -28,6 +28,8 @@ data class Game(
     val winners: List<Winner> = emptyList(),
     val creatorId: String = "",
     val driftSeed: Int = 0,
+    val powerUpsEnabled: Boolean = false,
+    val enabledPowerUpTypes: List<String> = PowerUpType.entries.map { it.firestoreValue },
     val activeInvisibilityUntil: Timestamp? = null,
     val activeZoneFreezeUntil: Timestamp? = null,
     val activeRadarPingUntil: Timestamp? = null

@@ -370,13 +370,15 @@ class ChickenMapViewModel @Inject constructor(
     // ── Power-ups ──────────────────────────────────────
 
     private suspend fun spawnInitialPowerUps(game: Game) {
+        if (!game.powerUpsEnabled) return
         val center = game.initialLocation
         val powerUps = generatePowerUps(
             center = center,
             radius = game.initialRadius,
             count = AppConstants.POWER_UP_INITIAL_BATCH_SIZE,
             driftSeed = game.driftSeed,
-            batchIndex = 0
+            batchIndex = 0,
+            enabledTypes = game.enabledPowerUpTypes
         )
         try {
             firestoreRepository.spawnPowerUps(gameId, powerUps)
@@ -387,13 +389,15 @@ class ChickenMapViewModel @Inject constructor(
 
     fun spawnPeriodicPowerUps(batchIndex: Int) {
         val state = _uiState.value
+        if (!state.game.powerUpsEnabled) return
         val center = state.circleCenter ?: state.game.initialLocation
         val powerUps = generatePowerUps(
             center = center,
             radius = state.radius.toDouble(),
             count = AppConstants.POWER_UP_PERIODIC_BATCH_SIZE,
             driftSeed = state.game.driftSeed,
-            batchIndex = batchIndex
+            batchIndex = batchIndex,
+            enabledTypes = state.game.enabledPowerUpTypes
         )
         viewModelScope.launch {
             try {

@@ -202,6 +202,13 @@
     <string name="delete_error_message">Failed to delete your account. Please try again later.</string>
     <string name="version">Version</string>
 
+    <!-- Power-Ups -->
+    <string name="power_ups">Power-Ups</string>
+    <string name="enable_power_ups">Enable Power-Ups</string>
+    <string name="choose_power_ups">Choose Power-Ups</string>
+    <string name="done">Done</string>
+    <string name="power_ups_count_format">%1$d/%2$d</string>
+
     <!-- Mapbox -->
     <string name="mapbox_access_token" translatable="false">pk.eyJ1Ijoiamp1MTciLCJhIjoiY20yaGpwaG53MGI2YzJsc2NxOTNzMWJ2bCJ9.D6NMFnmGF7pA2LN64vmqcA</string>
 </resources>

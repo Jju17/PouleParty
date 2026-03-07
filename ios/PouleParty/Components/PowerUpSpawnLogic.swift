@@ -10,15 +10,17 @@ import CoreLocation
 import Foundation
 import FirebaseFirestore
 
-private let powerUpTypes: [PowerUp.PowerUpType] = PowerUp.PowerUpType.allCases
-
 func generatePowerUps(
     center: CLLocationCoordinate2D,
     radius: Double,
     count: Int,
     driftSeed: Int,
-    batchIndex: Int
+    batchIndex: Int,
+    enabledTypes: [String] = PowerUp.PowerUpType.allCases.map(\.rawValue)
 ) -> [PowerUp] {
+    let powerUpTypes = PowerUp.PowerUpType.allCases.filter { enabledTypes.contains($0.rawValue) }
+    guard !powerUpTypes.isEmpty else { return [] }
+
     var result: [PowerUp] = []
     let baseSeed = driftSeed ^ (batchIndex &* 7919)
 

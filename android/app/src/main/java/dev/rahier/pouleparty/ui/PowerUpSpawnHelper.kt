@@ -14,15 +14,17 @@ import kotlin.math.*
  * identical spawn positions on all clients.
  */
 
-private val powerUpTypes = PowerUpType.entries.toList()
-
 fun generatePowerUps(
     center: Point,
     radius: Double,
     count: Int,
     driftSeed: Int,
-    batchIndex: Int
+    batchIndex: Int,
+    enabledTypes: List<String> = PowerUpType.entries.map { it.firestoreValue }
 ): List<PowerUp> {
+    val powerUpTypes = PowerUpType.entries.filter { enabledTypes.contains(it.firestoreValue) }
+    if (powerUpTypes.isEmpty()) return emptyList()
+
     val result = mutableListOf<PowerUp>()
     val baseSeed = driftSeed xor (batchIndex * 7919)
 

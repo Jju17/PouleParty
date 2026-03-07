@@ -38,6 +38,8 @@ struct Game: Codable, Equatable {
     var winners: [Winner] = []
     var creatorId: String = ""
     var driftSeed: Int = 0
+    var powerUpsEnabled: Bool = false
+    var enabledPowerUpTypes: [String] = PowerUp.PowerUpType.allCases.map(\.rawValue)
     var activeInvisibilityUntil: Timestamp?
     var activeZoneFreezeUntil: Timestamp?
     var activeRadarPingUntil: Timestamp?
@@ -170,6 +172,8 @@ extension Game {
             chickenCanSeeHunters: false,
             foundCode: "1234",
             driftSeed: 42,
+            powerUpsEnabled: false,
+            enabledPowerUpTypes: PowerUp.PowerUpType.allCases.map(\.rawValue),
             activeInvisibilityUntil: nil,
             activeZoneFreezeUntil: nil,
             activeRadarPingUntil: nil

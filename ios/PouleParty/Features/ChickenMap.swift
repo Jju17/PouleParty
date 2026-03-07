@@ -286,17 +286,20 @@ struct ChickenMapFeature {
                         }
                     },
                     .run { send in
+                        guard state.game.powerUpsEnabled else { return }
                         for await powerUps in apiClient.powerUpsStream(gameId) {
                             await send(.powerUpsUpdated(powerUps))
                         }
                     },
                     .run { _ in
+                        guard state.game.powerUpsEnabled else { return }
                         let powerUps = generatePowerUps(
                             center: initialCenter,
                             radius: initialRadius,
                             count: AppConstants.powerUpInitialBatchSize,
                             driftSeed: driftSeed,
-                            batchIndex: 0
+                            batchIndex: 0,
+                            enabledTypes: state.game.enabledPowerUpTypes
                         )
                         try? await apiClient.spawnPowerUps(gameId, powerUps)
                     }
@@ -532,13 +535,16 @@ struct ChickenMapFeature {
                         let currentRadius = Double(state.radius)
                         let seed = state.game.driftSeed
                         let gId = state.game.id
+                        let enabledTypes = state.game.enabledPowerUpTypes
+                        guard state.game.powerUpsEnabled else { return nil }
                         return .run { _ in
                             let newPowerUps = generatePowerUps(
                                 center: center,
                                 radius: currentRadius,
                                 count: AppConstants.powerUpPeriodicBatchSize,
                                 driftSeed: seed,
-                                batchIndex: nextBatch
+                                batchIndex: nextBatch,
+                                enabledTypes: enabledTypes
                             )
                             try? await apiClient.spawnPowerUps(gId, newPowerUps)
                         }
