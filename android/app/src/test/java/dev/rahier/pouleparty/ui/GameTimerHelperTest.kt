@@ -326,6 +326,41 @@ class GameTimerHelperTest {
 
     // ── shouldCheckZone ────────────────────────────────
 
+    // ── Zone freeze ──────────────────────────────────
+
+    @Test
+    fun `processRadiusUpdate returns null when zone is frozen`() {
+        val result = processRadiusUpdate(
+            nextRadiusUpdate = Date(System.currentTimeMillis() - 1000),
+            currentRadius = 1500,
+            radiusDeclinePerUpdate = 100.0,
+            radiusIntervalUpdate = 5.0,
+            gameMod = GameMod.STAY_IN_THE_ZONE,
+            initialCoordinates = Point.fromLngLat(4.3528, 50.8466),
+            currentCircle = null,
+            isZoneFrozen = true
+        )
+        assertNull(result)
+    }
+
+    @Test
+    fun `processRadiusUpdate proceeds when zone is not frozen`() {
+        val result = processRadiusUpdate(
+            nextRadiusUpdate = Date(System.currentTimeMillis() - 1000),
+            currentRadius = 1500,
+            radiusDeclinePerUpdate = 100.0,
+            radiusIntervalUpdate = 5.0,
+            gameMod = GameMod.STAY_IN_THE_ZONE,
+            initialCoordinates = Point.fromLngLat(4.3528, 50.8466),
+            currentCircle = null,
+            isZoneFrozen = false
+        )
+        assertNotNull(result)
+        assertEquals(1400, result!!.newRadius)
+    }
+
+    // ── shouldCheckZone ────────────────────────────────
+
     @Test
     fun `shouldCheckZone chicken stayInTheZone returns true`() {
         assertTrue(shouldCheckZone(PlayerRole.CHICKEN, GameMod.STAY_IN_THE_ZONE))

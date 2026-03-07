@@ -44,6 +44,12 @@ enum AppConstants {
     static let codeMaxWrongAttempts = 3
     static let codeCooldownSeconds: TimeInterval = 10
 
+    // MARK: - Power-Ups
+    static let powerUpCollectionRadiusMeters: Double = 30
+    static let powerUpMinSpacingMeters: Double = 50
+    static let powerUpInitialBatchSize = 5
+    static let powerUpPeriodicBatchSize = 2
+
     // MARK: - Nickname
     static let nicknameMaxLength = 20
 

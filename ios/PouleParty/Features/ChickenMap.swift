@@ -6,6 +6,7 @@
 //
 
 import ComposableArchitecture
+import FirebaseFirestore
 import MapboxMaps
 import os
 import SwiftUI
@@ -38,6 +39,11 @@ struct ChickenMapFeature {
         var userLocation: CLLocationCoordinate2D?
         var isOutsideZone: Bool = false
         var lastLiveActivityState: PoulePartyAttributes.ContentState?
+        var availablePowerUps: [PowerUp] = []
+        var collectedPowerUps: [PowerUp] = []
+        var showPowerUpInventory: Bool = false
+        var powerUpNotification: String? = nil
+        var lastSpawnBatchIndex: Int = 0
 
         var hasGameStarted: Bool { nowDate >= game.startDate }
         var hasHuntStarted: Bool { nowDate >= game.hunterStartDate }
@@ -77,6 +83,12 @@ struct ChickenMapFeature {
         case returnedToMenu
         case timerTicked
         case winnerNotificationDismissed
+        case powerUpsUpdated([PowerUp])
+        case powerUpCollected(PowerUp)
+        case powerUpActivated(PowerUp)
+        case powerUpNotificationDismissed
+        case powerUpInventoryTapped
+        case powerUpInventoryDismissed
     }
 
     @Reducer
@@ -102,6 +114,7 @@ struct ChickenMapFeature {
     @Dependency(\.continuousClock) var clock
     @Dependency(\.liveActivityClient) var liveActivityClient
     @Dependency(\.locationClient) var locationClient
+    @Dependency(\.userClient) var userClient
 
     var body: some ReducerOf<Self> {
         BindingReducer()
@@ -132,6 +145,48 @@ struct ChickenMapFeature {
                 return .none
             case .winnerNotificationDismissed:
                 state.winnerNotification = nil
+                return .none
+            case let .powerUpsUpdated(allPowerUps):
+                let userId = userClient.currentUserId() ?? ""
+                state.availablePowerUps = allPowerUps.filter { !$0.type.isHunterPowerUp && !$0.isCollected }
+                state.collectedPowerUps = allPowerUps.filter { $0.collectedBy == userId && $0.activatedAt == nil }
+                return .none
+            case let .powerUpCollected(powerUp):
+                let gameId = state.game.id
+                let userId = userClient.currentUserId() ?? ""
+                state.powerUpNotification = "Collected: \(powerUp.type.displayName)!"
+                return .run { send in
+                    try? await apiClient.collectPowerUp(gameId, powerUp.id, userId)
+                    try await clock.sleep(for: .seconds(2))
+                    await send(.powerUpNotificationDismissed)
+                }
+            case let .powerUpActivated(powerUp):
+                let gameId = state.game.id
+                let duration = powerUp.type.durationSeconds ?? 0
+                let expiresAt = Timestamp(date: .now.addingTimeInterval(duration))
+                state.showPowerUpInventory = false
+                state.powerUpNotification = "Activated: \(powerUp.type.displayName)!"
+                return .run { send in
+                    try? await apiClient.activatePowerUp(gameId, powerUp.id, expiresAt)
+                    switch powerUp.type {
+                    case .invisibility:
+                        try? await apiClient.updateGameActiveEffect(gameId, "activeInvisibilityUntil", expiresAt)
+                    case .zoneFreeze:
+                        try? await apiClient.updateGameActiveEffect(gameId, "activeZoneFreezeUntil", expiresAt)
+                    default:
+                        break
+                    }
+                    try await clock.sleep(for: .seconds(2))
+                    await send(.powerUpNotificationDismissed)
+                }
+            case .powerUpNotificationDismissed:
+                state.powerUpNotification = nil
+                return .none
+            case .powerUpInventoryTapped:
+                state.showPowerUpInventory = true
+                return .none
+            case .powerUpInventoryDismissed:
+                state.showPowerUpInventory = false
                 return .none
             case let .gameUpdated(game):
                 state.game = game
@@ -213,6 +268,9 @@ struct ChickenMapFeature {
                 let gameId = state.game.id
                 let gameMod = state.game.gameMod
                 let startDate = state.game.startDate
+                let initialCenter = state.game.initialCoordinates.toCLCoordinates
+                let initialRadius = state.game.initialRadius
+                let driftSeed = state.game.driftSeed
 
                 var effects: [Effect<Action>] = [
                     .run { send in
@@ -226,6 +284,21 @@ struct ChickenMapFeature {
                                 await send(.gameUpdated(game))
                             }
                         }
+                    },
+                    .run { send in
+                        for await powerUps in apiClient.powerUpsStream(gameId) {
+                            await send(.powerUpsUpdated(powerUps))
+                        }
+                    },
+                    .run { _ in
+                        let powerUps = generatePowerUps(
+                            center: initialCenter,
+                            radius: initialRadius,
+                            count: AppConstants.powerUpInitialBatchSize,
+                            driftSeed: driftSeed,
+                            batchIndex: 0
+                        )
+                        try? await apiClient.spawnPowerUps(gameId, powerUps)
                     }
                 ]
 
@@ -413,7 +486,8 @@ struct ChickenMapFeature {
                     gameMod: state.game.gameMod,
                     initialCoordinates: state.game.initialCoordinates.toCLCoordinates,
                     currentCircle: state.mapCircle,
-                    driftSeed: state.game.driftSeed
+                    driftSeed: state.game.driftSeed,
+                    isZoneFrozen: state.game.isZoneFrozen
                 ) {
                     if result.isGameOver {
                         locationClient.stopTracking()
@@ -449,6 +523,37 @@ struct ChickenMapFeature {
                     state.radius = result.newRadius
                     state.nextRadiusUpdate = result.newNextUpdate
                     state.mapCircle = result.newCircle
+
+                    // Spawn periodic power-ups on zone shrink
+                    if !result.isGameOver {
+                        let nextBatch = state.lastSpawnBatchIndex + 1
+                        state.lastSpawnBatchIndex = nextBatch
+                        let center = state.mapCircle?.center ?? state.game.initialCoordinates.toCLCoordinates
+                        let currentRadius = Double(state.radius)
+                        let seed = state.game.driftSeed
+                        let gId = state.game.id
+                        return .run { _ in
+                            let newPowerUps = generatePowerUps(
+                                center: center,
+                                radius: currentRadius,
+                                count: AppConstants.powerUpPeriodicBatchSize,
+                                driftSeed: seed,
+                                batchIndex: nextBatch
+                            )
+                            try? await apiClient.spawnPowerUps(gId, newPowerUps)
+                        }
+                    }
+                }
+
+                // Power-up proximity check
+                if let userLoc = state.userLocation {
+                    for powerUp in state.availablePowerUps {
+                        let dist = CLLocation(latitude: userLoc.latitude, longitude: userLoc.longitude)
+                            .distance(from: CLLocation(latitude: powerUp.coordinate.latitude, longitude: powerUp.coordinate.longitude))
+                        if dist <= AppConstants.powerUpCollectionRadiusMeters {
+                            return .send(.powerUpCollected(powerUp))
+                        }
+                    }
                 }
 
                 // Zone check (visual warning only — no elimination)
@@ -557,6 +662,25 @@ struct ChickenMapView: View {
                 CountdownView(nowDate: self.$store.nowDate, nextUpdateDate: self.$store.nextRadiusUpdate, chickenStartDate: store.game.startDate, hunterStartDate: store.game.hunterStartDate, isChicken: true)
             }
             Spacer()
+            if !store.collectedPowerUps.isEmpty {
+                Button {
+                    self.store.send(.powerUpInventoryTapped)
+                } label: {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 5)
+                            .fill(.purple)
+                        HStack(spacing: 2) {
+                            Image(systemName: "bolt.fill")
+                                .font(.system(size: 10))
+                            Text("\(store.collectedPowerUps.count)")
+                                .font(.system(size: 11, weight: .bold))
+                        }
+                        .foregroundStyle(.white)
+                    }
+                }
+                .accessibilityLabel("Power-ups inventory")
+                .frame(width: 44, height: 40)
+            }
             Button {
                 self.store.send(.beenFoundButtonTapped)
             } label: {
@@ -596,6 +720,21 @@ struct ChickenMapView: View {
                 PolylineAnnotation(lineCoordinates: circlePolygon.outerRing.coordinates)
                     .lineColor(StyleColor(UIColor.green.withAlphaComponent(0.7)))
                     .lineWidth(2)
+            }
+
+            // Power-up markers (chicken power-ups only)
+            if store.hasGameStarted {
+                ForEvery(store.availablePowerUps) { powerUp in
+                    MapViewAnnotation(coordinate: powerUp.coordinate) {
+                        Image(systemName: powerUp.type.iconName)
+                            .font(.system(size: 24))
+                            .foregroundStyle(.purple)
+                            .padding(4)
+                            .background(.white.opacity(0.9))
+                            .clipShape(Circle())
+                            .shadow(radius: 3)
+                    }
+                }
             }
 
             // Hunter annotations (chickenCanSeeHunters) -- only after hunt starts
@@ -698,6 +837,31 @@ struct ChickenMapView: View {
                     onCancelGame: { store.send(.cancelGameButtonTapped) }
                 )
             }
+        }
+        .overlay(alignment: .top) {
+            if let notification = store.powerUpNotification {
+                Text(notification)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(.purple.opacity(0.9))
+                    .clipShape(Capsule())
+                    .padding(.top, 100)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .animation(.easeInOut, value: store.powerUpNotification)
+            }
+        }
+        .sheet(isPresented: Binding(
+            get: { self.store.showPowerUpInventory },
+            set: { _ in self.store.send(.powerUpInventoryDismissed) }
+        )) {
+            PowerUpInventorySheet(
+                powerUps: store.collectedPowerUps,
+                onActivate: { powerUp in
+                    store.send(.powerUpActivated(powerUp))
+                }
+            )
         }
     }
 }

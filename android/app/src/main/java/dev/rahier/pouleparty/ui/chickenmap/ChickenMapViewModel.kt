@@ -11,7 +11,12 @@ import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameMod
 import dev.rahier.pouleparty.model.GameStatus
 import dev.rahier.pouleparty.model.HunterLocation
+import dev.rahier.pouleparty.model.PowerUp
+import dev.rahier.pouleparty.model.PowerUpType
 import dev.rahier.pouleparty.AppConstants
+import com.google.firebase.Timestamp
+import com.google.firebase.auth.FirebaseAuth
+import android.location.Location
 import dev.rahier.pouleparty.ui.CountdownPhase
 import dev.rahier.pouleparty.ui.CountdownResult
 import dev.rahier.pouleparty.ui.PlayerRole
@@ -19,6 +24,7 @@ import dev.rahier.pouleparty.ui.checkGameOverByTime
 import dev.rahier.pouleparty.ui.checkZoneStatus
 import dev.rahier.pouleparty.ui.detectNewWinners
 import dev.rahier.pouleparty.ui.evaluateCountdown
+import dev.rahier.pouleparty.ui.generatePowerUps
 import dev.rahier.pouleparty.ui.processRadiusUpdate
 import dev.rahier.pouleparty.ui.shouldCheckZone
 import kotlinx.coroutines.Job
@@ -59,17 +65,24 @@ data class ChickenMapUiState(
     val countdownNumber: Int? = null,
     val countdownText: String? = null,
     val userLocation: Point? = null,
-    val isOutsideZone: Boolean = false
+    val isOutsideZone: Boolean = false,
+    val availablePowerUps: List<PowerUp> = emptyList(),
+    val collectedPowerUps: List<PowerUp> = emptyList(),
+    val showPowerUpInventory: Boolean = false,
+    val powerUpNotification: String? = null,
+    val lastSpawnBatchIndex: Int = 0
 )
 
 @HiltViewModel
 class ChickenMapViewModel @Inject constructor(
     private val firestoreRepository: FirestoreRepository,
     private val locationRepository: LocationRepository,
+    private val auth: FirebaseAuth,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     private val gameId: String = savedStateHandle["gameId"] ?: ""
+    private val userId: String = auth.currentUser?.uid ?: ""
     /** Tracked separately from viewModelScope to allow early cancellation on game over. */
     private val streamJobs = mutableListOf<Job>()
 
@@ -102,6 +115,8 @@ class ChickenMapViewModel @Inject constructor(
             streamJobs += viewModelScope.launch { trackLocation(game) }
             streamJobs += viewModelScope.launch { trackHunters(game) }
             streamJobs += viewModelScope.launch { streamGameConfig() }
+            streamJobs += viewModelScope.launch { streamPowerUps() }
+            viewModelScope.launch { spawnInitialPowerUps(game) }
         }
     }
 
@@ -172,7 +187,8 @@ class ChickenMapViewModel @Inject constructor(
                     gameMod = state.game.gameModEnum,
                     initialLocation = state.game.initialLocation,
                     currentCircleCenter = state.circleCenter,
-                    driftSeed = state.game.driftSeed
+                    driftSeed = state.game.driftSeed,
+                    isZoneFrozen = state.game.isZoneFrozen
                 )
                 if (radiusResult != null) {
                     if (radiusResult.isGameOver) {
@@ -192,8 +208,14 @@ class ChickenMapViewModel @Inject constructor(
                                 circleCenter = radiusResult.newCircleCenter ?: it.circleCenter
                             )
                         }
+                        // Spawn new power-ups on zone shrink
+                        val nextBatch = _uiState.value.lastSpawnBatchIndex + 1
+                        spawnPeriodicPowerUps(nextBatch)
                     }
                 }
+
+                // Power-up proximity check
+                checkPowerUpProximity()
 
                 // Zone check (visual warning only — no elimination)
                 val currentState = _uiState.value
@@ -244,8 +266,9 @@ class ChickenMapViewModel @Inject constructor(
         locationRepository.locationFlow().collect { latLng ->
             _uiState.update { it.copy(circleCenter = latLng, userLocation = latLng) }
 
-            // Throttle Firestore writes
-            if (Date().time - lastWrite.time >= AppConstants.LOCATION_THROTTLE_MS) {
+            // Throttle Firestore writes (skip when invisible)
+            if (Date().time - lastWrite.time >= AppConstants.LOCATION_THROTTLE_MS
+                && !_uiState.value.game.isChickenInvisible) {
                 firestoreRepository.setChickenLocation(gameId, latLng)
                 lastWrite = Date()
             }
@@ -342,6 +365,126 @@ class ChickenMapViewModel @Inject constructor(
             delay(AppConstants.CODE_COPY_FEEDBACK_MS)
             _uiState.update { it.copy(codeCopied = false) }
         }
+    }
+
+    // ── Power-ups ──────────────────────────────────────
+
+    private suspend fun spawnInitialPowerUps(game: Game) {
+        val center = game.initialLocation
+        val powerUps = generatePowerUps(
+            center = center,
+            radius = game.initialRadius,
+            count = AppConstants.POWER_UP_INITIAL_BATCH_SIZE,
+            driftSeed = game.driftSeed,
+            batchIndex = 0
+        )
+        try {
+            firestoreRepository.spawnPowerUps(gameId, powerUps)
+        } catch (e: Exception) {
+            Log.e("ChickenMapVM", "Failed to spawn initial power-ups", e)
+        }
+    }
+
+    fun spawnPeriodicPowerUps(batchIndex: Int) {
+        val state = _uiState.value
+        val center = state.circleCenter ?: state.game.initialLocation
+        val powerUps = generatePowerUps(
+            center = center,
+            radius = state.radius.toDouble(),
+            count = AppConstants.POWER_UP_PERIODIC_BATCH_SIZE,
+            driftSeed = state.game.driftSeed,
+            batchIndex = batchIndex
+        )
+        viewModelScope.launch {
+            try {
+                firestoreRepository.spawnPowerUps(gameId, powerUps)
+                _uiState.update { it.copy(lastSpawnBatchIndex = batchIndex) }
+            } catch (e: Exception) {
+                Log.e("ChickenMapVM", "Failed to spawn periodic power-ups", e)
+            }
+        }
+    }
+
+    private suspend fun streamPowerUps() {
+        firestoreRepository.powerUpsFlow(gameId).collect { allPowerUps ->
+            val chickenPowerUps = allPowerUps.filter { !it.typeEnum.isHunterPowerUp && !it.isCollected }
+            val collected = allPowerUps.filter {
+                it.collectedBy == userId && it.activatedAt == null
+            }
+            _uiState.update {
+                it.copy(availablePowerUps = chickenPowerUps, collectedPowerUps = collected)
+            }
+        }
+    }
+
+    private fun checkPowerUpProximity() {
+        val state = _uiState.value
+        val userLoc = state.userLocation ?: return
+        for (powerUp in state.availablePowerUps) {
+            val results = FloatArray(1)
+            Location.distanceBetween(
+                userLoc.latitude(), userLoc.longitude(),
+                powerUp.location.latitude, powerUp.location.longitude,
+                results
+            )
+            if (results[0] <= AppConstants.POWER_UP_COLLECTION_RADIUS_METERS) {
+                viewModelScope.launch {
+                    try {
+                        firestoreRepository.collectPowerUp(gameId, powerUp.id, userId)
+                        _uiState.update {
+                            it.copy(powerUpNotification = "Collected: ${powerUp.typeEnum.title}!")
+                        }
+                        delay(2000)
+                        _uiState.update { it.copy(powerUpNotification = null) }
+                    } catch (e: Exception) {
+                        Log.e("ChickenMapVM", "Failed to collect power-up", e)
+                    }
+                }
+                break // collect one at a time
+            }
+        }
+    }
+
+    fun activatePowerUp(powerUp: PowerUp) {
+        viewModelScope.launch {
+            try {
+                val duration = powerUp.typeEnum.durationSeconds ?: 0
+                val expiresAt = Timestamp(Date(System.currentTimeMillis() + duration * 1000))
+                firestoreRepository.activatePowerUp(gameId, powerUp.id, expiresAt)
+
+                when (powerUp.typeEnum) {
+                    PowerUpType.INVISIBILITY -> {
+                        firestoreRepository.updateGameActiveEffect(
+                            gameId, "activeInvisibilityUntil", expiresAt
+                        )
+                    }
+                    PowerUpType.ZONE_FREEZE -> {
+                        firestoreRepository.updateGameActiveEffect(
+                            gameId, "activeZoneFreezeUntil", expiresAt
+                        )
+                    }
+                    else -> {}
+                }
+                _uiState.update {
+                    it.copy(
+                        showPowerUpInventory = false,
+                        powerUpNotification = "Activated: ${powerUp.typeEnum.title}!"
+                    )
+                }
+                delay(2000)
+                _uiState.update { it.copy(powerUpNotification = null) }
+            } catch (e: Exception) {
+                Log.e("ChickenMapVM", "Failed to activate power-up", e)
+            }
+        }
+    }
+
+    fun onPowerUpInventoryTapped() {
+        _uiState.update { it.copy(showPowerUpInventory = true) }
+    }
+
+    fun dismissPowerUpInventory() {
+        _uiState.update { it.copy(showPowerUpInventory = false) }
     }
 
     val chickenSubtitle: String

@@ -6,6 +6,7 @@
 //
 
 import ComposableArchitecture
+import FirebaseFirestore
 import MapboxMaps
 import os
 import SwiftUI
@@ -37,6 +38,11 @@ struct HunterMapFeature {
         var userLocation: CLLocationCoordinate2D?
         var isOutsideZone: Bool = false
         var lastLiveActivityState: PoulePartyAttributes.ContentState?
+        var availablePowerUps: [PowerUp] = []
+        var collectedPowerUps: [PowerUp] = []
+        var showPowerUpInventory: Bool = false
+        var powerUpNotification: String? = nil
+        var previewCircle: CircleOverlay? = nil
 
         var hasChickenStarted: Bool { nowDate >= game.startDate }
         var hasGameStarted: Bool { nowDate >= game.hunterStartDate }
@@ -77,6 +83,12 @@ struct HunterMapFeature {
         case userLocationUpdated(CLLocationCoordinate2D)
         case winnerNotificationDismissed
         case winnerRegistered
+        case powerUpsUpdated([PowerUp])
+        case powerUpCollected(PowerUp)
+        case powerUpActivated(PowerUp)
+        case powerUpNotificationDismissed
+        case powerUpInventoryTapped
+        case powerUpInventoryDismissed
     }
 
     @Reducer
@@ -151,6 +163,52 @@ struct HunterMapFeature {
                 return .none
             case .winnerNotificationDismissed:
                 state.winnerNotification = nil
+                return .none
+            case let .powerUpsUpdated(allPowerUps):
+                let hunterId = state.hunterId
+                state.availablePowerUps = allPowerUps.filter { $0.type.isHunterPowerUp && !$0.isCollected }
+                state.collectedPowerUps = allPowerUps.filter { $0.collectedBy == hunterId && $0.activatedAt == nil }
+                return .none
+            case let .powerUpCollected(powerUp):
+                let gameId = state.game.id
+                let hunterId = state.hunterId
+                state.powerUpNotification = "Collected: \(powerUp.type.displayName)!"
+                return .run { send in
+                    try? await apiClient.collectPowerUp(gameId, powerUp.id, hunterId)
+                    try await clock.sleep(for: .seconds(2))
+                    await send(.powerUpNotificationDismissed)
+                }
+            case let .powerUpActivated(powerUp):
+                let gameId = state.game.id
+                let duration = powerUp.type.durationSeconds ?? 0
+                let expiresAt = Timestamp(date: .now.addingTimeInterval(duration))
+                state.showPowerUpInventory = false
+                state.powerUpNotification = "Activated: \(powerUp.type.displayName)!"
+
+                // Zone Preview: compute next zone boundary client-side
+                if powerUp.type == .zonePreview {
+                    let nextRadius = state.radius - Int(state.game.radiusDeclinePerUpdate)
+                    if nextRadius > 0, let center = state.mapCircle?.center {
+                        state.previewCircle = CircleOverlay(center: center, radius: CLLocationDistance(nextRadius))
+                    }
+                }
+
+                return .run { send in
+                    try? await apiClient.activatePowerUp(gameId, powerUp.id, expiresAt)
+                    if powerUp.type == .radarPing {
+                        try? await apiClient.updateGameActiveEffect(gameId, "activeRadarPingUntil", expiresAt)
+                    }
+                    try await clock.sleep(for: .seconds(2))
+                    await send(.powerUpNotificationDismissed)
+                }
+            case .powerUpNotificationDismissed:
+                state.powerUpNotification = nil
+                return .none
+            case .powerUpInventoryTapped:
+                state.showPowerUpInventory = true
+                return .none
+            case .powerUpInventoryDismissed:
+                state.showPowerUpInventory = false
                 return .none
             case .foundButtonTapped:
                 state.isEnteringFoundCode = true
@@ -273,6 +331,11 @@ struct HunterMapFeature {
                     .run { send in
                         for await _ in self.clock.timer(interval: .seconds(1)) {
                             await send(.timerTicked)
+                        }
+                    },
+                    .run { send in
+                        for await powerUps in apiClient.powerUpsStream(gameId) {
+                            await send(.powerUpsUpdated(powerUps))
                         }
                     }
                 ]
@@ -483,7 +546,8 @@ struct HunterMapFeature {
                     gameMod: state.game.gameMod,
                     initialCoordinates: state.game.initialCoordinates.toCLCoordinates,
                     currentCircle: state.mapCircle,
-                    driftSeed: state.game.driftSeed
+                    driftSeed: state.game.driftSeed,
+                    isZoneFrozen: state.game.isZoneFrozen
                 ) {
                     if result.isGameOver {
                         locationClient.stopTracking()
@@ -513,6 +577,19 @@ struct HunterMapFeature {
                     state.radius = result.newRadius
                     state.nextRadiusUpdate = result.newNextUpdate
                     state.mapCircle = result.newCircle
+                    // Clear zone preview on actual zone shrink
+                    state.previewCircle = nil
+                }
+
+                // Power-up proximity check
+                if let userLoc = state.userLocation {
+                    for powerUp in state.availablePowerUps {
+                        let dist = CLLocation(latitude: userLoc.latitude, longitude: userLoc.longitude)
+                            .distance(from: CLLocation(latitude: powerUp.coordinate.latitude, longitude: powerUp.coordinate.longitude))
+                        if dist <= AppConstants.powerUpCollectionRadiusMeters {
+                            return .send(.powerUpCollected(powerUp))
+                        }
+                    }
                 }
 
                 // Zone check (visual warning only — no elimination)
@@ -624,6 +701,25 @@ struct HunterMapView: View {
                 CountdownView(nowDate: self.$store.nowDate, nextUpdateDate: self.$store.nextRadiusUpdate, chickenStartDate: store.game.startDate, hunterStartDate: store.game.hunterStartDate, isChicken: false)
             }
             Spacer()
+            if !store.collectedPowerUps.isEmpty {
+                Button {
+                    self.store.send(.powerUpInventoryTapped)
+                } label: {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 5)
+                            .fill(.orange)
+                        HStack(spacing: 2) {
+                            Image(systemName: "bolt.fill")
+                                .font(.system(size: 10))
+                            Text("\(store.collectedPowerUps.count)")
+                                .font(.system(size: 11, weight: .bold))
+                        }
+                        .foregroundStyle(.white)
+                    }
+                }
+                .accessibilityLabel("Power-ups inventory")
+                .frame(width: 44, height: 40)
+            }
             if store.hasGameStarted {
                 Button {
                     self.store.send(.foundButtonTapped)
@@ -677,6 +773,29 @@ struct HunterMapView: View {
                 PolylineAnnotation(lineCoordinates: circlePolygon.outerRing.coordinates)
                     .lineColor(StyleColor(UIColor.green.withAlphaComponent(0.7)))
                     .lineWidth(2)
+            }
+
+            // Zone Preview power-up effect (dashed preview of next zone)
+            if let preview = store.previewCircle {
+                let previewPolygon = Polygon(center: preview.center, radius: preview.radius, vertices: 72)
+                PolylineAnnotation(lineCoordinates: previewPolygon.outerRing.coordinates)
+                    .lineColor(StyleColor(UIColor.cyan.withAlphaComponent(0.6)))
+                    .lineWidth(2)
+            }
+
+            // Power-up markers (hunter power-ups only)
+            if store.hasGameStarted {
+                ForEvery(store.availablePowerUps) { powerUp in
+                    MapViewAnnotation(coordinate: powerUp.coordinate) {
+                        Image(systemName: powerUp.type.iconName)
+                            .font(.system(size: 24))
+                            .foregroundStyle(.orange)
+                            .padding(4)
+                            .background(.white.opacity(0.9))
+                            .clipShape(Circle())
+                            .shadow(radius: 3)
+                    }
+                }
             }
         }
         .onCameraChanged { context in
@@ -748,6 +867,31 @@ struct HunterMapView: View {
                         connectedHunters: store.game.hunterIds.count
                     )
                 }
+            }
+            .overlay(alignment: .top) {
+                if let notification = store.powerUpNotification {
+                    Text(notification)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(.orange.opacity(0.9))
+                        .clipShape(Capsule())
+                        .padding(.top, 100)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                        .animation(.easeInOut, value: store.powerUpNotification)
+                }
+            }
+            .sheet(isPresented: Binding(
+                get: { self.store.showPowerUpInventory },
+                set: { _ in self.store.send(.powerUpInventoryDismissed) }
+            )) {
+                PowerUpInventorySheet(
+                    powerUps: store.collectedPowerUps,
+                    onActivate: { powerUp in
+                        store.send(.powerUpActivated(powerUp))
+                    }
+                )
             }
     }
 }

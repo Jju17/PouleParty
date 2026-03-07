@@ -27,8 +27,22 @@ data class Game(
     val status: String = GameStatus.WAITING.firestoreValue,
     val winners: List<Winner> = emptyList(),
     val creatorId: String = "",
-    val driftSeed: Int = 0
+    val driftSeed: Int = 0,
+    val activeInvisibilityUntil: Timestamp? = null,
+    val activeZoneFreezeUntil: Timestamp? = null,
+    val activeRadarPingUntil: Timestamp? = null
 ) {
+    @get:Exclude
+    val isChickenInvisible: Boolean
+        get() = activeInvisibilityUntil != null && Date().before(activeInvisibilityUntil.toDate())
+
+    @get:Exclude
+    val isZoneFrozen: Boolean
+        get() = activeZoneFreezeUntil != null && Date().before(activeZoneFreezeUntil.toDate())
+
+    @get:Exclude
+    val isRadarPingActive: Boolean
+        get() = activeRadarPingUntil != null && Date().before(activeRadarPingUntil.toDate())
     /** Computed: CLLocationCoordinate2D equivalent */
     @get:Exclude
     val initialLocation: Point

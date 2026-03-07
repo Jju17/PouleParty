@@ -162,10 +162,12 @@ fun processRadiusUpdate(
     gameMod: GameMod,
     initialLocation: Point,
     currentCircleCenter: Point?,
-    driftSeed: Int = 0
+    driftSeed: Int = 0,
+    isZoneFrozen: Boolean = false
 ): RadiusUpdateResult? {
     val nextUpdate = nextRadiusUpdate ?: return null
     if (!Date().after(nextUpdate)) return null
+    if (isZoneFrozen) return null
 
     val newRadius = currentRadius - radiusDeclinePerUpdate.toInt()
     if (newRadius <= 0) {

@@ -155,9 +155,11 @@ func processRadiusUpdate(
     gameMod: Game.GameMod,
     initialCoordinates: CLLocationCoordinate2D,
     currentCircle: CircleOverlay?,
-    driftSeed: Int = 0
+    driftSeed: Int = 0,
+    isZoneFrozen: Bool = false
 ) -> RadiusUpdateResult? {
     guard let nextUpdate = nextRadiusUpdate, .now >= nextUpdate else { return nil }
+    if isZoneFrozen { return nil }
 
     let newRadius = currentRadius - Int(radiusDeclinePerUpdate)
 

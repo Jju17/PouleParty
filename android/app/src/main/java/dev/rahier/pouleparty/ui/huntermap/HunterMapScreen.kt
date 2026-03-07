@@ -129,6 +129,27 @@ fun HunterMapScreen(
                         }
                     }
                 }
+
+                // Power-up markers (hunter power-ups only)
+                if (state.hasGameStarted) state.availablePowerUps.forEach { powerUp ->
+                    PointAnnotation(
+                        point = powerUp.locationPoint
+                    ) {
+                        iconImage = IconImage("marker-15")
+                        textField = powerUp.typeEnum.title
+                    }
+                }
+
+                // Zone preview circle (from Zone Preview power-up)
+                state.previewCircle?.let { (center, radius) ->
+                    val previewPoints = circlePolygonPoints(center, radius)
+                    PolylineAnnotation(
+                        points = previewPoints + listOf(previewPoints.first())
+                    ) {
+                        lineColor = Color(0f, 1f, 1f, 0.6f)
+                        lineWidth = 2.0
+                    }
+                }
             }
 
             // Compass button — reset to north
@@ -209,6 +230,19 @@ fun HunterMapScreen(
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // Power-up inventory button
+                    if (state.collectedPowerUps.isNotEmpty()) {
+                        Button(
+                            onClick = { viewModel.onPowerUpInventoryTapped() },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9800)),
+                            shape = RoundedCornerShape(5.dp),
+                            modifier = Modifier.size(width = 44.dp, height = 40.dp),
+                            contentPadding = PaddingValues(0.dp)
+                        ) {
+                            Text("\u26A1${state.collectedPowerUps.size}", fontSize = 11.sp, color = Color.White)
+                        }
+                    }
+
                     // FOUND button (only visible after game starts)
                     if (state.hasGameStarted) {
                         Button(
@@ -337,6 +371,67 @@ fun HunterMapScreen(
             codeCopied = state.codeCopied,
             onCodeCopied = { viewModel.onCodeCopied() },
             onDismiss = { viewModel.dismissGameInfo() }
+        )
+    }
+
+    // Power-up notification
+    state.powerUpNotification?.let { notification ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = 120.dp),
+            contentAlignment = Alignment.TopCenter
+        ) {
+            Text(
+                text = notification,
+                color = Color.White,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier
+                    .background(Color(0xFFFF9800).copy(alpha = 0.9f), RoundedCornerShape(20.dp))
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+        }
+    }
+
+    // Power-up inventory dialog
+    if (state.showPowerUpInventory) {
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissPowerUpInventory() },
+            title = { Text("Power-Ups") },
+            text = {
+                Column {
+                    if (state.collectedPowerUps.isEmpty()) {
+                        Text("No power-ups collected yet")
+                    } else {
+                        state.collectedPowerUps.forEach { powerUp ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp)
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(powerUp.typeEnum.title, fontWeight = FontWeight.Bold)
+                                    val durationText = powerUp.typeEnum.durationSeconds?.let { "${it}s" } ?: "Instant"
+                                    Text(durationText, fontSize = 12.sp, color = Color.Gray)
+                                }
+                                Button(
+                                    onClick = { viewModel.activatePowerUp(powerUp) },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9800))
+                                ) {
+                                    Text("Activate")
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { viewModel.dismissPowerUpInventory() }) {
+                    Text("Close")
+                }
+            }
         )
     }
 }

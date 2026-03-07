@@ -38,6 +38,9 @@ struct Game: Codable, Equatable {
     var winners: [Winner] = []
     var creatorId: String = ""
     var driftSeed: Int = 0
+    var activeInvisibilityUntil: Timestamp?
+    var activeZoneFreezeUntil: Timestamp?
+    var activeRadarPingUntil: Timestamp?
 
     enum GameStatus: String, CaseIterable, Equatable, Codable {
         case waiting
@@ -100,6 +103,21 @@ extension Game {
         String(id.prefix(6)).uppercased()
     }
 
+    var isChickenInvisible: Bool {
+        guard let until = activeInvisibilityUntil else { return false }
+        return .now < until.dateValue()
+    }
+
+    var isZoneFrozen: Bool {
+        guard let until = activeZoneFreezeUntil else { return false }
+        return .now < until.dateValue()
+    }
+
+    var isRadarPingActive: Bool {
+        guard let until = activeRadarPingUntil else { return false }
+        return .now < until.dateValue()
+    }
+
     static func generateFoundCode() -> String {
         String(format: "%04d", Int.random(in: 0...9999))
     }
@@ -151,7 +169,10 @@ extension Game {
             gameMod: .followTheChicken,
             chickenCanSeeHunters: false,
             foundCode: "1234",
-            driftSeed: 42
+            driftSeed: 42,
+            activeInvisibilityUntil: nil,
+            activeZoneFreezeUntil: nil,
+            activeRadarPingUntil: nil
         )
     }
 }
