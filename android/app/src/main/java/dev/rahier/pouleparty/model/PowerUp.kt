@@ -45,12 +45,16 @@ enum class PowerUpType(
     val firestoreValue: String,
     val title: String,
     val durationSeconds: Long?,
-    val isHunterPowerUp: Boolean
+    val isHunterPowerUp: Boolean,
+    val description: String
 ) {
-    ZONE_PREVIEW("zonePreview", "Zone Preview", null, true),
-    RADAR_PING("radarPing", "Radar Ping", 10, true),
-    INVISIBILITY("invisibility", "Invisibility", 30, false),
-    ZONE_FREEZE("zoneFreeze", "Zone Freeze", 120, false);
+    ZONE_PREVIEW("zonePreview", "Zone Preview", null, true, "Shows the next zone boundary before it shrinks"),
+    RADAR_PING("radarPing", "Radar Ping", 10, true, "Reveals the chicken's position for 10 seconds"),
+    INVISIBILITY("invisibility", "Invisibility", 30, false, "Hides the chicken from all hunters for 30 seconds"),
+    ZONE_FREEZE("zoneFreeze", "Zone Freeze", 120, false, "Freezes the zone, preventing it from shrinking for 2 minutes");
+
+    val targetLabel: String get() = if (isHunterPowerUp) "Hunter" else "Chicken"
+    val targetEmoji: String get() = if (isHunterPowerUp) "🎯" else "🐔"
 
     companion object {
         fun fromFirestore(value: String): PowerUpType =

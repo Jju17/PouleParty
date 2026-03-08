@@ -60,6 +60,23 @@ struct PowerUp: Codable, Equatable, Identifiable {
             case .zoneFreeze: return "snowflake.circle.fill"
             }
         }
+
+        var description: String {
+            switch self {
+            case .zonePreview: return "Shows the next zone boundary before it shrinks"
+            case .radarPing: return "Reveals the chicken's position for 10 seconds"
+            case .invisibility: return "Hides the chicken from all hunters for 30 seconds"
+            case .zoneFreeze: return "Freezes the zone, preventing it from shrinking for 2 minutes"
+            }
+        }
+
+        var targetLabel: String {
+            isHunterPowerUp ? "Hunter" : "Chicken"
+        }
+
+        var targetEmoji: String {
+            isHunterPowerUp ? "🎯" : "🐔"
+        }
     }
 
     static var mock: PowerUp {
