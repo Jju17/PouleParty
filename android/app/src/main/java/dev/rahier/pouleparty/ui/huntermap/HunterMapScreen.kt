@@ -443,6 +443,7 @@ fun HunterMapScreen(
                                 }
                                 Button(
                                     onClick = { viewModel.activatePowerUp(powerUp) },
+                                    enabled = state.activatingPowerUpId == null,
                                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9800))
                                 ) {
                                     Text("Activate")

@@ -267,14 +267,19 @@ class FirestoreRepository @Inject constructor(
 
     suspend fun collectPowerUp(gameId: String, powerUpId: String, userId: String) {
         withRetry("collectPowerUp($gameId, $powerUpId)") {
-            firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
+            val docRef = firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
                 .collection(AppConstants.SUBCOLLECTION_POWER_UPS).document(powerUpId)
-                .update(
-                    mapOf(
-                        "collectedBy" to userId,
-                        "collectedAt" to Timestamp.now()
-                    )
-                ).await()
+            firestore.runTransaction { transaction ->
+                val snapshot = transaction.get(docRef)
+                val alreadyCollected = snapshot.getString("collectedBy")
+                if (alreadyCollected != null) {
+                    throw IllegalStateException("Power-up already collected by $alreadyCollected")
+                }
+                transaction.update(docRef, mapOf(
+                    "collectedBy" to userId,
+                    "collectedAt" to Timestamp.now()
+                ))
+            }.await()
         }
     }
 

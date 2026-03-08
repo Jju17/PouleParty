@@ -312,13 +312,28 @@ extension ApiClient: DependencyKey {
         },
         collectPowerUp: { gameId, powerUpId, userId in
             try await withRetry("collectPowerUp(\(gameId), \(powerUpId))") {
-                try await Firestore.firestore()
-                    .collection(gamesCollection).document(gameId)
+                let db = Firestore.firestore()
+                let docRef = db.collection(gamesCollection).document(gameId)
                     .collection(powerUpsSubcollection).document(powerUpId)
-                    .updateData([
+                try await db.runTransaction { transaction, errorPointer in
+                    let snapshot: DocumentSnapshot
+                    do {
+                        snapshot = try transaction.getDocument(docRef)
+                    } catch let error as NSError {
+                        errorPointer?.pointee = error
+                        return nil
+                    }
+                    if snapshot.data()?["collectedBy"] != nil {
+                        let error = NSError(domain: "ApiClient", code: -2, userInfo: [NSLocalizedDescriptionKey: "Power-up already collected"])
+                        errorPointer?.pointee = error
+                        return nil
+                    }
+                    transaction.updateData([
                         "collectedBy": userId,
                         "collectedAt": Timestamp(date: .now)
-                    ])
+                    ], forDocument: docRef)
+                    return nil
+                }
             }
         },
         activatePowerUp: { gameId, powerUpId, expiresAt in

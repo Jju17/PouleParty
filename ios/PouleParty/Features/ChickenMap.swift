@@ -154,11 +154,12 @@ struct ChickenMapFeature {
             case let .powerUpCollected(powerUp):
                 let gameId = state.game.id
                 let userId = userClient.currentUserId() ?? ""
-                state.powerUpNotification = "Collected: \(powerUp.type.displayName)!"
                 return .run { send in
-                    try? await apiClient.collectPowerUp(gameId, powerUp.id, userId)
-                    try await clock.sleep(for: .seconds(2))
-                    await send(.powerUpNotificationDismissed)
+                    do {
+                        try await apiClient.collectPowerUp(gameId, powerUp.id, userId)
+                    } catch {
+                        logger.error("Failed to collect power-up: \(error)")
+                    }
                 }
             case let .powerUpActivated(powerUp):
                 let gameId = state.game.id

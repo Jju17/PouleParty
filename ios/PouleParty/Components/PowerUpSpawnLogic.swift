@@ -50,7 +50,7 @@ func generatePowerUps(
         let type = powerUpTypes[typeIndex]
 
         // Deterministic ID based on seed for idempotency
-        let id = "pu-\(batchIndex)-\(i)-\(abs(itemSeed) % 100000)"
+        let id = "pu-\(batchIndex)-\(i)-\(abs(itemSeed))"
 
         result.append(
             PowerUp(

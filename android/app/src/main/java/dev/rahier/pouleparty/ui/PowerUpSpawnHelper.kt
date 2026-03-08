@@ -54,7 +54,7 @@ fun generatePowerUps(
         val type = powerUpTypes[typeIndex]
 
         // Deterministic ID based on seed for idempotency
-        val id = "pu-${batchIndex}-${i}-${abs(itemSeed) % 100000}"
+        val id = "pu-${batchIndex}-${i}-${abs(itemSeed)}"
 
         result.add(
             PowerUp(

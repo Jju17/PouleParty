@@ -73,7 +73,8 @@ data class ChickenMapUiState(
     val collectedPowerUps: List<PowerUp> = emptyList(),
     val showPowerUpInventory: Boolean = false,
     val powerUpNotification: String? = null,
-    val lastSpawnBatchIndex: Int = 0
+    val lastSpawnBatchIndex: Int = 0,
+    val activatingPowerUpId: String? = null
 )
 
 @HiltViewModel
@@ -89,6 +90,7 @@ class ChickenMapViewModel @Inject constructor(
     private val userId: String = auth.currentUser?.uid ?: ""
     /** Tracked separately from viewModelScope to allow early cancellation on game over. */
     private val streamJobs = mutableListOf<Job>()
+    private var notificationJob: Job? = null
 
     private val _uiState = MutableStateFlow(ChickenMapUiState())
     val uiState: StateFlow<ChickenMapUiState> = _uiState.asStateFlow()
@@ -427,10 +429,20 @@ class ChickenMapViewModel @Inject constructor(
         }
     }
 
+    private fun showNotification(message: String) {
+        notificationJob?.cancel()
+        notificationJob = viewModelScope.launch {
+            _uiState.update { it.copy(powerUpNotification = message) }
+            delay(2000)
+            _uiState.update { it.copy(powerUpNotification = null) }
+        }
+    }
+
     private fun checkPowerUpProximity() {
         val state = _uiState.value
         val userLoc = state.userLocation ?: return
-        for (powerUp in state.availablePowerUps) {
+        val powerUps = state.availablePowerUps.toList()
+        for (powerUp in powerUps) {
             val results = FloatArray(1)
             Location.distanceBetween(
                 userLoc.latitude(), userLoc.longitude(),
@@ -441,21 +453,19 @@ class ChickenMapViewModel @Inject constructor(
                 viewModelScope.launch {
                     try {
                         firestoreRepository.collectPowerUp(gameId, powerUp.id, userId)
-                        _uiState.update {
-                            it.copy(powerUpNotification = "Collected: ${powerUp.typeEnum.title}!")
-                        }
-                        delay(2000)
-                        _uiState.update { it.copy(powerUpNotification = null) }
+                        showNotification("Collected: ${powerUp.typeEnum.title}!")
                     } catch (e: Exception) {
                         Log.e("ChickenMapVM", "Failed to collect power-up", e)
+                        showNotification("Failed to collect power-up")
                     }
                 }
-                break // collect one at a time
             }
         }
     }
 
     fun activatePowerUp(powerUp: PowerUp) {
+        if (_uiState.value.activatingPowerUpId != null) return
+        _uiState.update { it.copy(activatingPowerUpId = powerUp.id) }
         viewModelScope.launch {
             try {
                 val duration = powerUp.typeEnum.durationSeconds ?: 0
@@ -475,16 +485,12 @@ class ChickenMapViewModel @Inject constructor(
                     }
                     else -> {}
                 }
-                _uiState.update {
-                    it.copy(
-                        showPowerUpInventory = false,
-                        powerUpNotification = "Activated: ${powerUp.typeEnum.title}!"
-                    )
-                }
-                delay(2000)
-                _uiState.update { it.copy(powerUpNotification = null) }
+                _uiState.update { it.copy(showPowerUpInventory = false) }
+                showNotification("Activated: ${powerUp.typeEnum.title}!")
             } catch (e: Exception) {
                 Log.e("ChickenMapVM", "Failed to activate power-up", e)
+            } finally {
+                _uiState.update { it.copy(activatingPowerUpId = null) }
             }
         }
     }
