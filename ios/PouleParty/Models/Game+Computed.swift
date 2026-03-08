@@ -84,9 +84,18 @@ extension Game {
             return (lastUpdate, lastRadius)
         }
 
+        // Zone freeze window: skip radius reductions for shrinks inside [freezeStart, freezeEnd)
+        let freezeEnd = activeZoneFreezeUntil?.dateValue()
+        let freezeDuration = PowerUp.PowerUpType.zoneFreeze.durationSeconds ?? 0
+        let freezeStart = freezeEnd?.addingTimeInterval(-freezeDuration)
+
         while lastUpdate.addingTimeInterval(TimeInterval(self.radiusIntervalUpdate * 60)) < .now {
             lastUpdate.addTimeInterval(TimeInterval(self.radiusIntervalUpdate * 60))
-            lastRadius -= Int(self.radiusDeclinePerUpdate)
+            let isFrozen = freezeStart != nil && freezeEnd != nil
+                && lastUpdate >= freezeStart! && lastUpdate < freezeEnd!
+            if !isFrozen {
+                lastRadius -= Int(self.radiusDeclinePerUpdate)
+            }
         }
 
         lastRadius = max(0, lastRadius)

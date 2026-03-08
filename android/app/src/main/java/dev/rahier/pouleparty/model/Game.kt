@@ -82,9 +82,18 @@ data class Game(
         val now = Date()
         val intervalMs = (radiusIntervalUpdate * 60 * 1000).toLong()
 
+        // Zone freeze window: skip radius reductions for shrinks inside [freezeStart, freezeEnd)
+        val freezeEnd = activeZoneFreezeUntil?.toDate()
+        val freezeDuration = (PowerUpType.ZONE_FREEZE.durationSeconds ?: 0) * 1000L
+        val freezeStart = freezeEnd?.let { Date(it.time - freezeDuration) }
+
         while (Date(lastUpdate.time + intervalMs).before(now)) {
             lastUpdate = Date(lastUpdate.time + intervalMs)
-            lastRadius -= radiusDeclinePerUpdate.toInt()
+            val isFrozen = freezeStart != null && freezeEnd != null
+                && !lastUpdate.before(freezeStart) && lastUpdate.before(freezeEnd)
+            if (!isFrozen) {
+                lastRadius -= radiusDeclinePerUpdate.toInt()
+            }
         }
 
         lastRadius = maxOf(0, lastRadius)

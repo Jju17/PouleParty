@@ -274,6 +274,9 @@ struct ChickenMapFeature {
                 let powerUpsEnabled = state.game.powerUpsEnabled
                 let enabledPowerUpTypes = state.game.enabledPowerUpTypes
 
+                // Shared reference so the tracking loop can check invisibility
+                let invisibilityUntil = LockIsolated<Date?>(nil)
+
                 var effects: [Effect<Action>] = [
                     .run { send in
                         for await _ in self.clock.timer(interval: .seconds(1)) {
@@ -283,6 +286,7 @@ struct ChickenMapFeature {
                     .run { send in
                         for await game in apiClient.gameConfigStream(gameId) {
                             if let game {
+                                invisibilityUntil.setValue(game.activeInvisibilityUntil?.dateValue())
                                 await send(.gameUpdated(game))
                             }
                         }
@@ -330,7 +334,8 @@ struct ChickenMapFeature {
                             var lastWrite = Date.now
                             for await coordinate in locationClient.startTracking() {
                                 await send(.newLocationFetched(coordinate))
-                                if Date.now.timeIntervalSince(lastWrite) >= AppConstants.locationThrottleSeconds {
+                                let isInvisible = invisibilityUntil.value.map { Date.now < $0 } ?? false
+                                if Date.now.timeIntervalSince(lastWrite) >= AppConstants.locationThrottleSeconds && !isInvisible {
                                     do {
                                         try apiClient.setChickenLocation(gameId, coordinate)
                                     } catch {
