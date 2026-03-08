@@ -12,6 +12,8 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import dev.rahier.pouleparty.AppConstants
+import dev.rahier.pouleparty.R
+import javax.inject.Named
 import javax.inject.Singleton
 
 @Module
@@ -41,4 +43,11 @@ object AppModule {
         @ApplicationContext context: Context
     ): SharedPreferences =
         context.getSharedPreferences(AppConstants.PREFS_NAME, Context.MODE_PRIVATE)
+
+    @Provides
+    @Singleton
+    @Named("mapboxAccessToken")
+    fun provideMapboxAccessToken(
+        @ApplicationContext context: Context
+    ): String = context.getString(R.string.mapbox_access_token)
 }
