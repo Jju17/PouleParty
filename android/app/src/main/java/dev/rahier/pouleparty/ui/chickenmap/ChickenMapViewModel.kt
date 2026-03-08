@@ -24,7 +24,9 @@ import dev.rahier.pouleparty.ui.checkGameOverByTime
 import dev.rahier.pouleparty.ui.checkZoneStatus
 import dev.rahier.pouleparty.ui.detectNewWinners
 import dev.rahier.pouleparty.ui.evaluateCountdown
+import dev.rahier.pouleparty.ui.RoadSnapService
 import dev.rahier.pouleparty.ui.generatePowerUps
+import dev.rahier.pouleparty.ui.snapPowerUpsToRoads
 import dev.rahier.pouleparty.ui.processRadiusUpdate
 import dev.rahier.pouleparty.ui.shouldCheckZone
 import kotlinx.coroutines.Job
@@ -38,6 +40,7 @@ import kotlinx.coroutines.launch
 import android.util.Log
 import java.util.Date
 import javax.inject.Inject
+import javax.inject.Named
 
 data class HunterAnnotation(
     val id: String,
@@ -78,6 +81,7 @@ class ChickenMapViewModel @Inject constructor(
     private val firestoreRepository: FirestoreRepository,
     private val locationRepository: LocationRepository,
     private val auth: FirebaseAuth,
+    @Named("mapboxAccessToken") private val mapboxAccessToken: String,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -372,7 +376,7 @@ class ChickenMapViewModel @Inject constructor(
     private suspend fun spawnInitialPowerUps(game: Game) {
         if (!game.powerUpsEnabled) return
         val center = game.initialLocation
-        val powerUps = generatePowerUps(
+        var powerUps = generatePowerUps(
             center = center,
             radius = game.initialRadius,
             count = AppConstants.POWER_UP_INITIAL_BATCH_SIZE,
@@ -380,6 +384,7 @@ class ChickenMapViewModel @Inject constructor(
             batchIndex = 0,
             enabledTypes = game.enabledPowerUpTypes
         )
+        powerUps = snapPowerUpsToRoads(powerUps, mapboxAccessToken)
         try {
             firestoreRepository.spawnPowerUps(gameId, powerUps)
         } catch (e: Exception) {
@@ -391,7 +396,7 @@ class ChickenMapViewModel @Inject constructor(
         val state = _uiState.value
         if (!state.game.powerUpsEnabled) return
         val center = state.circleCenter ?: state.game.initialLocation
-        val powerUps = generatePowerUps(
+        var powerUps = generatePowerUps(
             center = center,
             radius = state.radius.toDouble(),
             count = AppConstants.POWER_UP_PERIODIC_BATCH_SIZE,
@@ -401,6 +406,7 @@ class ChickenMapViewModel @Inject constructor(
         )
         viewModelScope.launch {
             try {
+                powerUps = snapPowerUpsToRoads(powerUps, mapboxAccessToken)
                 firestoreRepository.spawnPowerUps(gameId, powerUps)
                 _uiState.update { it.copy(lastSpawnBatchIndex = batchIndex) }
             } catch (e: Exception) {
