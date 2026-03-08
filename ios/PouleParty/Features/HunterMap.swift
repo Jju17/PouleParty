@@ -631,6 +631,7 @@ struct HunterMapView: View {
         zoom: 14
     )
     @State private var mapBearing: Double = 0
+    @State private var selectedPowerUp: PowerUp?
 
     private var hunterSubtitle: String {
         if store.game.chickenCanSeeHunters {
@@ -787,14 +788,20 @@ struct HunterMapView: View {
             if store.hasGameStarted {
                 ForEvery(store.availablePowerUps) { powerUp in
                     MapViewAnnotation(coordinate: powerUp.coordinate) {
-                        Image(systemName: powerUp.type.iconName)
-                            .font(.system(size: 24))
-                            .foregroundStyle(.orange)
-                            .padding(4)
-                            .background(.white.opacity(0.9))
-                            .clipShape(Circle())
-                            .shadow(radius: 3)
+                        Button {
+                            selectedPowerUp = powerUp
+                        } label: {
+                            Image(systemName: powerUp.type.iconName)
+                                .font(.system(size: 24))
+                                .foregroundStyle(.orange)
+                                .padding(4)
+                                .background(.white.opacity(0.9))
+                                .clipShape(Circle())
+                                .shadow(radius: 3)
+                        }
                     }
+                    .allowOverlap(true)
+                    .allowOverlapWithPuck(true)
                 }
             }
         }
@@ -897,6 +904,10 @@ struct HunterMapView: View {
                         store.send(.powerUpActivated(powerUp))
                     }
                 )
+            }
+            .sheet(item: $selectedPowerUp) { powerUp in
+                PowerUpDetailSheet(powerUpType: powerUp.type)
+                    .presentationDetents([.height(200)])
             }
     }
 }

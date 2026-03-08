@@ -37,8 +37,10 @@ import dev.rahier.pouleparty.ui.components.CountdownView
 import dev.rahier.pouleparty.ui.components.GameInfoDialog
 import dev.rahier.pouleparty.ui.components.GameOverAlertDialog
 import dev.rahier.pouleparty.model.GameMod
+import dev.rahier.pouleparty.model.PowerUpType
 import dev.rahier.pouleparty.ui.components.ActivePowerUpBadge
 import dev.rahier.pouleparty.ui.components.GameStartCountdownOverlay
+import dev.rahier.pouleparty.ui.components.PowerUpDetailDialog
 import dev.rahier.pouleparty.ui.components.PreGameOverlay
 
 @OptIn(MapboxExperimental::class)
@@ -64,6 +66,8 @@ fun HunterMapScreen(
             snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Short)
         }
     }
+
+    var selectedPowerUpType by remember { mutableStateOf<PowerUpType?>(null) }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -134,10 +138,16 @@ fun HunterMapScreen(
                 // Power-up markers (hunter power-ups only)
                 if (state.hasGameStarted) state.availablePowerUps.forEach { powerUp ->
                     PointAnnotation(
-                        point = powerUp.locationPoint
+                        point = powerUp.locationPoint,
+                        onClick = {
+                            selectedPowerUpType = powerUp.typeEnum
+                            true
+                        }
                     ) {
                         iconImage = IconImage("marker-15")
                         textField = powerUp.typeEnum.title
+                        iconAllowOverlap = true
+                        textAllowOverlap = true
                     }
                 }
 
@@ -402,6 +412,11 @@ fun HunterMapScreen(
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             )
         }
+    }
+
+    // Power-up detail popup (tap on map icon)
+    selectedPowerUpType?.let { type ->
+        PowerUpDetailDialog(type = type, onDismiss = { selectedPowerUpType = null })
     }
 
     // Power-up inventory dialog
