@@ -276,10 +276,6 @@ fun HunterMapScreen(
                         }
                     }
 
-                    // Quit button
-                    TextButton(onClick = { viewModel.onLeaveGameTapped() }) {
-                        Text(stringResource(R.string.quit), fontSize = 14.sp, color = Color.Gray)
-                    }
                 }
             }
 
@@ -384,13 +380,15 @@ fun HunterMapScreen(
         )
     }
 
-    // Game info dialog (no cancel button for hunters)
+    // Game info dialog
     if (state.showGameInfo) {
         GameInfoDialog(
             game = state.game,
             codeCopied = state.codeCopied,
             onCodeCopied = { viewModel.onCodeCopied() },
-            onDismiss = { viewModel.dismissGameInfo() }
+            onDismiss = { viewModel.dismissGameInfo() },
+            onCancelGame = { viewModel.onLeaveGameTapped() },
+            leaveGameLabel = stringResource(R.string.quit)
         )
     }
 

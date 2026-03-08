@@ -23,7 +23,8 @@ fun GameInfoDialog(
     codeCopied: Boolean,
     onCodeCopied: () -> Unit,
     onDismiss: () -> Unit,
-    onCancelGame: (() -> Unit)? = null
+    onCancelGame: (() -> Unit)? = null,
+    leaveGameLabel: String? = null
 ) {
     val dateFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
 
@@ -76,7 +77,7 @@ fun GameInfoDialog(
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(stringResource(R.string.cancel_game), color = Color.Red)
+                        Text(leaveGameLabel ?: stringResource(R.string.cancel_game), color = Color.Red)
                     }
                 }
             }

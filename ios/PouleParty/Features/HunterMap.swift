@@ -737,18 +737,6 @@ struct HunterMapView: View {
                 .accessibilityLabel("I found the chicken")
                 .frame(width: 50, height: 40)
             }
-            Button {
-                self.store.send(.cancelGameButtonTapped)
-            } label: {
-                Text("Quit")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(.ultraThinMaterial)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-            }
-            .accessibilityLabel("Quit game")
         }
         .padding()
         .background(.thinMaterial)
@@ -852,7 +840,11 @@ struct HunterMapView: View {
                 get: { self.store.showGameInfo },
                 set: { _ in self.store.send(.gameInfoDismissed) }
             )) {
-                GameInfoSheet(game: self.store.game)
+                GameInfoSheet(
+                    game: self.store.game,
+                    onCancelGame: { self.store.send(.cancelGameButtonTapped) },
+                    leaveGameLabel: "Leave game"
+                )
             }
             .overlay(alignment: .top) {
                 WinnerNotificationOverlay(notification: store.winnerNotification)

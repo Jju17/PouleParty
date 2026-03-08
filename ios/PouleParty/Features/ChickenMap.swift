@@ -895,6 +895,7 @@ struct ChickenMapView: View {
 struct GameInfoSheet: View {
     let game: Game
     var onCancelGame: (() -> Void)? = nil
+    var leaveGameLabel: String = "Cancel game"
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -931,7 +932,7 @@ struct GameInfoSheet: View {
                         } label: {
                             HStack {
                                 Spacer()
-                                Text("Cancel game")
+                                Text(leaveGameLabel)
                                 Spacer()
                             }
                         }
