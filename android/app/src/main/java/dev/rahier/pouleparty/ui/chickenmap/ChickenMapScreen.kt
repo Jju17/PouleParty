@@ -134,7 +134,9 @@ fun ChickenMapScreen(
                     }
                 ) {
                     iconImage = IconImage("marker-15")
+                    iconColor = Color(0xFFFF9800)
                     textField = powerUp.typeEnum.title
+                    textColor = Color(0xFFFF9800)
                     iconAllowOverlap = true
                     textAllowOverlap = true
                 }
@@ -241,7 +243,7 @@ fun ChickenMapScreen(
             if (state.collectedPowerUps.isNotEmpty()) {
                 Button(
                     onClick = { viewModel.onPowerUpInventoryTapped() },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9C27B0)),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9800)),
                     shape = RoundedCornerShape(5.dp),
                     modifier = Modifier.size(width = 44.dp, height = 40.dp),
                     contentPadding = PaddingValues(0.dp)

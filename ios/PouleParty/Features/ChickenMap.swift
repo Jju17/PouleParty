@@ -679,7 +679,7 @@ struct ChickenMapView: View {
                 } label: {
                     ZStack {
                         RoundedRectangle(cornerRadius: 5)
-                            .fill(.purple)
+                            .fill(.orange)
                         HStack(spacing: 2) {
                             Image(systemName: "bolt.fill")
                                 .font(.system(size: 10))
@@ -742,7 +742,7 @@ struct ChickenMapView: View {
                         } label: {
                             Image(systemName: powerUp.type.iconName)
                                 .font(.system(size: 24))
-                                .foregroundStyle(.purple)
+                                .foregroundStyle(.orange)
                                 .padding(4)
                                 .background(.white.opacity(0.9))
                                 .clipShape(Circle())

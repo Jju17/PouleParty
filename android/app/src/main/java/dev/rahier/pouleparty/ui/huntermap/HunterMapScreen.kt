@@ -145,7 +145,9 @@ fun HunterMapScreen(
                         }
                     ) {
                         iconImage = IconImage("marker-15")
+                        iconColor = Color(0xFFFF9800)
                         textField = powerUp.typeEnum.title
+                        textColor = Color(0xFFFF9800)
                         iconAllowOverlap = true
                         textAllowOverlap = true
                     }
