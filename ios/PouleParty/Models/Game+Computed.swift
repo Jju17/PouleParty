@@ -20,6 +20,19 @@ extension Game {
         }
     }
 
+    var finalLocation: CLLocationCoordinate2D? {
+        get {
+            self.finalCoordinates?.toCLCoordinates
+        }
+        set {
+            if let newValue {
+                self.finalCoordinates = GeoPoint(latitude: newValue.latitude, longitude: newValue.longitude)
+            } else {
+                self.finalCoordinates = nil
+            }
+        }
+    }
+
     var startDate: Date {
         get {
             self.startTimestamp.dateValue()

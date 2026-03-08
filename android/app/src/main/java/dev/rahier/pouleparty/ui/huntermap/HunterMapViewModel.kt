@@ -24,6 +24,7 @@ import dev.rahier.pouleparty.ui.checkGameOverByTime
 import dev.rahier.pouleparty.ui.checkZoneStatus
 import dev.rahier.pouleparty.ui.detectNewWinners
 import dev.rahier.pouleparty.ui.evaluateCountdown
+import dev.rahier.pouleparty.ui.interpolateZoneCenter
 import dev.rahier.pouleparty.ui.processRadiusUpdate
 import dev.rahier.pouleparty.ui.shouldCheckZone
 import kotlinx.coroutines.Job
@@ -188,7 +189,9 @@ class HunterMapViewModel @Inject constructor(
                     initialLocation = state.game.initialLocation,
                     currentCircleCenter = state.circleCenter,
                     driftSeed = state.game.driftSeed,
-                    isZoneFrozen = state.game.isZoneFrozen
+                    isZoneFrozen = state.game.isZoneFrozen,
+                    finalLocation = state.game.finalLocation,
+                    initialRadius = state.game.initialRadius
                 )
                 if (radiusResult != null) {
                     if (radiusResult.isGameOver) {
@@ -264,7 +267,13 @@ class HunterMapViewModel @Inject constructor(
                 // For stayInTheZone, only set initial circle if none exists yet
                 // (drift center is computed by processRadiusUpdate, don't overwrite it)
                 if (updatedGame.gameModEnum == GameMod.STAY_IN_THE_ZONE && _uiState.value.circleCenter == null) {
-                    _uiState.update { it.copy(circleCenter = updatedGame.initialLocation) }
+                    val interpolatedCenter = interpolateZoneCenter(
+                        initialCenter = updatedGame.initialLocation,
+                        finalCenter = updatedGame.finalLocation,
+                        initialRadius = updatedGame.initialRadius,
+                        currentRadius = lastRadius.toDouble()
+                    )
+                    _uiState.update { it.copy(circleCenter = interpolatedCenter) }
                 }
 
                 // Detect new winners

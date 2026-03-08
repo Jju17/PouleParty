@@ -388,8 +388,14 @@ struct ChickenMapFeature {
 
                 state.radius = lastRadius
                 state.nextRadiusUpdate = lastUpdate
+                let circleCenter = interpolateZoneCenter(
+                    initialCenter: state.game.initialCoordinates.toCLCoordinates,
+                    finalCenter: state.game.finalLocation,
+                    initialRadius: state.game.initialRadius,
+                    currentRadius: Double(lastRadius)
+                )
                 state.mapCircle = CircleOverlay(
-                    center: state.game.initialCoordinates.toCLCoordinates,
+                    center: circleCenter,
                     radius: CLLocationDistance(state.radius)
                 )
 
@@ -499,7 +505,9 @@ struct ChickenMapFeature {
                     initialCoordinates: state.game.initialCoordinates.toCLCoordinates,
                     currentCircle: state.mapCircle,
                     driftSeed: state.game.driftSeed,
-                    isZoneFrozen: state.game.isZoneFrozen
+                    isZoneFrozen: state.game.isZoneFrozen,
+                    finalCoordinates: state.game.finalLocation,
+                    initialRadius: state.game.initialRadius
                 ) {
                     if result.isGameOver {
                         locationClient.stopTracking()

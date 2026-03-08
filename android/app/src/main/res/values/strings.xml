@@ -43,6 +43,9 @@
     <string name="ends_at">Ends at</string>
     <string name="zone_radius">Zone radius</string>
     <string name="zone">Zone</string>
+    <string name="start_zone">Start zone</string>
+    <string name="final_zone">Final zone</string>
+    <string name="final_zone_hint">Tap inside the start zone to place the final zone center</string>
     <string name="settings_mode">Settings mode</string>
     <string name="normal">Normal</string>
     <string name="expert">Expert</string>

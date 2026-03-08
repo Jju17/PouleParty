@@ -95,6 +95,32 @@ func checkGameOverByTime(endDate: Date) -> Bool {
     .now >= endDate
 }
 
+// MARK: - Center Interpolation
+
+/// Interpolates the zone center between `initialCenter` and `finalCenter`
+/// based on how much the radius has shrunk.
+///
+/// When currentRadius == initialRadius → returns initialCenter
+/// When currentRadius == 0             → returns finalCenter
+///
+/// If `finalCenter` is nil, returns `initialCenter` unchanged.
+func interpolateZoneCenter(
+    initialCenter: CLLocationCoordinate2D,
+    finalCenter: CLLocationCoordinate2D?,
+    initialRadius: Double,
+    currentRadius: Double
+) -> CLLocationCoordinate2D {
+    guard let finalCenter else { return initialCenter }
+    guard initialRadius > 0 else { return initialCenter }
+
+    let progress = min(max((initialRadius - currentRadius) / initialRadius, 0), 1)
+
+    let lat = initialCenter.latitude + progress * (finalCenter.latitude - initialCenter.latitude)
+    let lng = initialCenter.longitude + progress * (finalCenter.longitude - initialCenter.longitude)
+
+    return CLLocationCoordinate2D(latitude: lat, longitude: lng)
+}
+
 // MARK: - Deterministic Drift
 
 /// Computes a deterministic drifted center for stayInTheZone mode.
@@ -156,7 +182,9 @@ func processRadiusUpdate(
     initialCoordinates: CLLocationCoordinate2D,
     currentCircle: CircleOverlay?,
     driftSeed: Int = 0,
-    isZoneFrozen: Bool = false
+    isZoneFrozen: Bool = false,
+    finalCoordinates: CLLocationCoordinate2D? = nil,
+    initialRadius: Double = 0
 ) -> RadiusUpdateResult? {
     guard let nextUpdate = nextRadiusUpdate, .now >= nextUpdate else { return nil }
     if isZoneFrozen { return nil }
@@ -177,8 +205,14 @@ func processRadiusUpdate(
 
     let newCircle: CircleOverlay?
     if gameMod == .stayInTheZone {
+        let interpolated = interpolateZoneCenter(
+            initialCenter: initialCoordinates,
+            finalCenter: finalCoordinates,
+            initialRadius: initialRadius,
+            currentRadius: Double(newRadius)
+        )
         let driftedCenter = deterministicDriftCenter(
-            basePoint: initialCoordinates,
+            basePoint: interpolated,
             oldRadius: Double(currentRadius),
             newRadius: Double(newRadius),
             driftSeed: driftSeed

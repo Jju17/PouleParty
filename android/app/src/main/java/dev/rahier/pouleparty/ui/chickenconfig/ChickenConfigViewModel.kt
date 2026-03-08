@@ -183,6 +183,12 @@ class ChickenConfigViewModel @Inject constructor(
         }
     }
 
+    fun onFinalLocationSelected(point: com.mapbox.geojson.Point?) {
+        _uiState.update {
+            it.copy(game = it.game.withFinalLocation(point))
+        }
+    }
+
     fun togglePowerUps(enabled: Boolean) {
         _uiState.update { it.copy(game = it.game.copy(powerUpsEnabled = enabled)) }
     }

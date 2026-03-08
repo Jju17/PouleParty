@@ -33,17 +33,19 @@ import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.ui.components.circlePolygonPoints
 import dev.rahier.pouleparty.ui.theme.CROrange
 
-@OptIn(MapboxExperimental::class)
+@OptIn(MapboxExperimental::class, ExperimentalMaterial3Api::class)
 @Composable
 fun ChickenMapConfigScreen(
     initialRadius: Double,
+    finalMarker: Point?,
     onLocationSelected: (Point) -> Unit,
+    onFinalLocationSelected: (Point?) -> Unit,
     viewModel: ChickenMapConfigViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
 
     LaunchedEffect(Unit) {
-        viewModel.initialize(initialRadius)
+        viewModel.initialize(initialRadius, finalMarker)
     }
 
     val mapViewportState = rememberMapViewportState {
@@ -76,12 +78,17 @@ fun ChickenMapConfigScreen(
                 }
                 mapView.gestures.addOnMapClickListener { point ->
                     viewModel.onMapTapped(point)
-                    onLocationSelected(point)
+                    val updatedState = viewModel.uiState.value
+                    if (updatedState.pinMode == MapConfigPinMode.START) {
+                        onLocationSelected(point)
+                    } else {
+                        onFinalLocationSelected(updatedState.finalMarkerPosition)
+                    }
                     true
                 }
             }
 
-            // Circle showing radius — CROrange
+            // Initial zone circle — CROrange
             val circlePoints = circlePolygonPoints(state.markerPosition, state.radius)
             PolylineAnnotation(
                 points = circlePoints + listOf(circlePoints.first())
@@ -90,22 +97,62 @@ fun ChickenMapConfigScreen(
                 lineWidth = 2.0
             }
 
-            // Center marker
+            // Start center marker
             PointAnnotation(
                 point = state.markerPosition
             ) {
                 iconImage = IconImage("marker-15")
                 textField = "Start"
             }
+
+            // Final zone marker + circle (smaller, green)
+            state.finalMarkerPosition?.let { finalPos ->
+                PointAnnotation(point = finalPos) {
+                    iconImage = IconImage("marker-15")
+                    textField = "Final"
+                }
+
+                // Small circle at final position to visualize it
+                val finalCirclePoints = circlePolygonPoints(finalPos, 50.0)
+                PolylineAnnotation(
+                    points = finalCirclePoints + listOf(finalCirclePoints.first())
+                ) {
+                    lineColor = Color.Green.copy(alpha = 0.8f)
+                    lineWidth = 2.0
+                }
+            }
         }
 
-        // Search bar + results overlay
+        // Pin mode toggle at top
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.TopCenter)
                 .padding(8.dp)
         ) {
+            // Pin mode segmented control
+            SingleChoiceSegmentedButtonRow(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                SegmentedButton(
+                    selected = state.pinMode == MapConfigPinMode.START,
+                    onClick = { viewModel.setPinMode(MapConfigPinMode.START) },
+                    shape = SegmentedButtonDefaults.itemShape(0, 2)
+                ) {
+                    Text(stringResource(R.string.start_zone))
+                }
+                SegmentedButton(
+                    selected = state.pinMode == MapConfigPinMode.FINAL,
+                    onClick = { viewModel.setPinMode(MapConfigPinMode.FINAL) },
+                    shape = SegmentedButtonDefaults.itemShape(1, 2)
+                ) {
+                    Text(stringResource(R.string.final_zone))
+                }
+            }
+
+            Spacer(Modifier.height(4.dp))
+
+            // Search bar
             OutlinedTextField(
                 value = state.searchQuery,
                 onValueChange = { viewModel.onSearchQueryChanged(it) },
@@ -141,9 +188,14 @@ fun ChickenMapConfigScreen(
                                     .fillMaxWidth()
                                     .clickable {
                                         viewModel.onSearchResultSelected(result)
-                                        onLocationSelected(
-                                            Point.fromLngLat(result.longitude, result.latitude)
-                                        )
+                                        val updatedState = viewModel.uiState.value
+                                        if (updatedState.pinMode == MapConfigPinMode.START) {
+                                            onLocationSelected(
+                                                Point.fromLngLat(result.longitude, result.latitude)
+                                            )
+                                        } else {
+                                            onFinalLocationSelected(updatedState.finalMarkerPosition)
+                                        }
                                     }
                                     .padding(horizontal = 16.dp, vertical = 10.dp)
                             ) {
@@ -155,6 +207,22 @@ fun ChickenMapConfigScreen(
                             HorizontalDivider()
                         }
                     }
+                }
+            }
+
+            // Hint text
+            if (state.pinMode == MapConfigPinMode.FINAL) {
+                Spacer(Modifier.height(4.dp))
+                Card(
+                    shape = RoundedCornerShape(8.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.9f))
+                ) {
+                    Text(
+                        text = stringResource(R.string.final_zone_hint),
+                        fontSize = 12.sp,
+                        color = Color.Gray,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                    )
                 }
             }
         }

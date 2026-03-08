@@ -441,8 +441,14 @@ struct HunterMapFeature {
                         radius: CLLocationDistance(state.radius)
                     )
                 } else {
+                    let interpolatedCenter = interpolateZoneCenter(
+                        initialCenter: game.initialCoordinates.toCLCoordinates,
+                        finalCenter: game.finalLocation,
+                        initialRadius: game.initialRadius,
+                        currentRadius: Double(lastRadius)
+                    )
                     state.mapCircle = CircleOverlay(
-                        center: game.initialCoordinates.toCLCoordinates,
+                        center: interpolatedCenter,
                         radius: CLLocationDistance(state.radius)
                     )
                 }
@@ -550,7 +556,9 @@ struct HunterMapFeature {
                     initialCoordinates: state.game.initialCoordinates.toCLCoordinates,
                     currentCircle: state.mapCircle,
                     driftSeed: state.game.driftSeed,
-                    isZoneFrozen: state.game.isZoneFrozen
+                    isZoneFrozen: state.game.isZoneFrozen,
+                    finalCoordinates: state.game.finalLocation,
+                    initialRadius: state.game.initialRadius
                 ) {
                     if result.isGameOver {
                         locationClient.stopTracking()

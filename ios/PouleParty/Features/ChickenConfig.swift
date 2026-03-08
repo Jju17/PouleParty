@@ -119,7 +119,8 @@ struct ChickenConfigFeature {
                 }
                 return .none
             case .mapPreviewTapped:
-                state.path.append(ChickenMapConfigFeature.State(game: state.$game))
+                let finalMarker = state.game.finalLocation.map { MarkerOverlay(title: "Final", coordinate: $0) }
+                state.path.append(ChickenMapConfigFeature.State(game: state.$game, finalMarker: finalMarker))
                 return .none
             case let .powerUpsToggled(enabled):
                 state.$game.withLock { $0.powerUpsEnabled = enabled }
@@ -425,6 +426,20 @@ struct MapPreviewView: View {
                 Image(systemName: "mappin.circle.fill")
                     .font(.title)
                     .foregroundStyle(.red)
+            }
+
+            // Final zone marker (green)
+            if let finalLoc = game.finalLocation {
+                MapViewAnnotation(coordinate: finalLoc) {
+                    Image(systemName: "mappin.circle.fill")
+                        .font(.title)
+                        .foregroundStyle(.green)
+                }
+
+                let finalCircle = Polygon(center: finalLoc, radius: 50, vertices: 36)
+                PolylineAnnotation(lineCoordinates: finalCircle.outerRing.coordinates)
+                    .lineColor(StyleColor(UIColor.green.withAlphaComponent(0.8)))
+                    .lineWidth(2)
             }
         }
         .allowsHitTesting(false)

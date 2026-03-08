@@ -21,6 +21,7 @@ struct Game: Codable, Equatable {
     }()
     var endTimestamp: Timestamp = .init(date: Date.now.addingTimeInterval(3900))
     var initialCoordinates: GeoPoint = .init(latitude: AppConstants.defaultLatitude, longitude: AppConstants.defaultLongitude)
+    var finalCoordinates: GeoPoint?
     var initialRadius: Double = 1500
     var radiusDeclinePerUpdate: Double = 100
     var chickenHeadStartMinutes: Double = 0 // In minutes, 0 = no head start

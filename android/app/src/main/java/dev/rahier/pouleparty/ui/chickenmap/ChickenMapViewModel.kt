@@ -27,6 +27,7 @@ import dev.rahier.pouleparty.ui.evaluateCountdown
 import dev.rahier.pouleparty.ui.RoadSnapService
 import dev.rahier.pouleparty.ui.generatePowerUps
 import dev.rahier.pouleparty.ui.snapPowerUpsToRoads
+import dev.rahier.pouleparty.ui.interpolateZoneCenter
 import dev.rahier.pouleparty.ui.processRadiusUpdate
 import dev.rahier.pouleparty.ui.shouldCheckZone
 import kotlinx.coroutines.Job
@@ -104,12 +105,18 @@ class ChickenMapViewModel @Inject constructor(
             val game = firestoreRepository.getConfig(gameId) ?: return@launch
             val (lastUpdate, lastRadius) = game.findLastUpdate()
 
+            val interpolatedCenter = interpolateZoneCenter(
+                initialCenter = game.initialLocation,
+                finalCenter = game.finalLocation,
+                initialRadius = game.initialRadius,
+                currentRadius = lastRadius.toDouble()
+            )
             _uiState.update {
                 it.copy(
                     game = game,
                     radius = lastRadius,
                     nextRadiusUpdate = lastUpdate,
-                    circleCenter = game.initialLocation
+                    circleCenter = interpolatedCenter
                 )
             }
 
@@ -194,7 +201,9 @@ class ChickenMapViewModel @Inject constructor(
                     initialLocation = state.game.initialLocation,
                     currentCircleCenter = state.circleCenter,
                     driftSeed = state.game.driftSeed,
-                    isZoneFrozen = state.game.isZoneFrozen
+                    isZoneFrozen = state.game.isZoneFrozen,
+                    finalLocation = state.game.finalLocation,
+                    initialRadius = state.game.initialRadius
                 )
                 if (radiusResult != null) {
                     if (radiusResult.isGameOver) {

@@ -17,6 +17,7 @@ data class Game(
     )),
     val endTimestamp: Timestamp = Timestamp(Date(System.currentTimeMillis() + 3_900_000)),
     val initialCoordinates: GeoPoint = GeoPoint(AppConstants.DEFAULT_LATITUDE, AppConstants.DEFAULT_LONGITUDE),
+    val finalCoordinates: GeoPoint? = null,
     val initialRadius: Double = 1500.0,
     val radiusDeclinePerUpdate: Double = 100.0,
     val chickenHeadStartMinutes: Double = 0.0, // In minutes, 0 = no head start
@@ -53,6 +54,10 @@ data class Game(
     @get:Exclude
     val initialLocation: Point
         get() = Point.fromLngLat(initialCoordinates.longitude, initialCoordinates.latitude)
+
+    @get:Exclude
+    val finalLocation: Point?
+        get() = finalCoordinates?.let { Point.fromLngLat(it.longitude, it.latitude) }
 
     val startDate: Date get() = startTimestamp.toDate()
     val endDate: Date get() = endTimestamp.toDate()
@@ -107,6 +112,9 @@ data class Game(
     fun withEndDate(date: Date): Game = copy(endTimestamp = Timestamp(date))
     fun withInitialLocation(point: Point): Game = copy(
         initialCoordinates = GeoPoint(point.latitude(), point.longitude())
+    )
+    fun withFinalLocation(point: Point?): Game = copy(
+        finalCoordinates = point?.let { GeoPoint(it.latitude(), it.longitude()) }
     )
     fun withChickenHeadStart(minutes: Double): Game = copy(chickenHeadStartMinutes = minutes)
     fun withChickenCanSeeHunters(value: Boolean): Game = copy(chickenCanSeeHunters = value)

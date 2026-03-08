@@ -97,6 +97,34 @@ fun evaluateCountdown(
 
 fun checkGameOverByTime(endDate: Date): Boolean = Date().after(endDate)
 
+// ── Center Interpolation ─────────────────────────────
+
+/**
+ * Interpolates the zone center between [initialCenter] and [finalCenter]
+ * based on how much the radius has shrunk.
+ *
+ * When currentRadius == initialRadius → returns initialCenter
+ * When currentRadius == 0             → returns finalCenter
+ *
+ * If [finalCenter] is null, returns [initialCenter] unchanged.
+ */
+fun interpolateZoneCenter(
+    initialCenter: Point,
+    finalCenter: Point?,
+    initialRadius: Double,
+    currentRadius: Double
+): Point {
+    if (finalCenter == null) return initialCenter
+    if (initialRadius <= 0) return initialCenter
+
+    val progress = ((initialRadius - currentRadius) / initialRadius).coerceIn(0.0, 1.0)
+
+    val lat = initialCenter.latitude() + progress * (finalCenter.latitude() - initialCenter.latitude())
+    val lng = initialCenter.longitude() + progress * (finalCenter.longitude() - initialCenter.longitude())
+
+    return Point.fromLngLat(lng, lat)
+}
+
 // ── Deterministic Drift ──────────────────────────────
 
 /**
@@ -163,7 +191,9 @@ fun processRadiusUpdate(
     initialLocation: Point,
     currentCircleCenter: Point?,
     driftSeed: Int = 0,
-    isZoneFrozen: Boolean = false
+    isZoneFrozen: Boolean = false,
+    finalLocation: Point? = null,
+    initialRadius: Double = 0.0
 ): RadiusUpdateResult? {
     val nextUpdate = nextRadiusUpdate ?: return null
     if (!Date().after(nextUpdate)) return null
@@ -184,8 +214,14 @@ fun processRadiusUpdate(
     val newNextUpdate = Date(nextUpdate.time + intervalMs)
 
     val newCenter = if (gameMod == GameMod.STAY_IN_THE_ZONE) {
+        val interpolated = interpolateZoneCenter(
+            initialCenter = initialLocation,
+            finalCenter = finalLocation,
+            initialRadius = initialRadius,
+            currentRadius = newRadius.toDouble()
+        )
         deterministicDriftCenter(
-            basePoint = initialLocation,
+            basePoint = interpolated,
             oldRadius = currentRadius.toDouble(),
             newRadius = newRadius.toDouble(),
             driftSeed = driftSeed

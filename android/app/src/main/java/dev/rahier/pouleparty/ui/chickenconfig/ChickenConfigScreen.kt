@@ -70,8 +70,12 @@ fun ChickenConfigScreen(
             Box(modifier = Modifier.padding(padding)) {
                 ChickenMapConfigScreen(
                     initialRadius = state.game.initialRadius,
+                    finalMarker = state.game.finalLocation,
                     onLocationSelected = { point ->
                         viewModel.onLocationSelected(point)
+                    },
+                    onFinalLocationSelected = { point ->
+                        viewModel.onFinalLocationSelected(point)
                     }
                 )
             }
@@ -257,7 +261,8 @@ fun ChickenConfigScreen(
                         ) {
                             MapPreviewContent(
                                 center = state.game.initialLocation,
-                                radius = state.game.initialRadius
+                                radius = state.game.initialRadius,
+                                finalCenter = state.game.finalLocation
                             )
                         }
                         Spacer(Modifier.height(12.dp))
@@ -416,7 +421,7 @@ fun ChickenConfigScreen(
 
 @OptIn(MapboxExperimental::class)
 @Composable
-private fun MapPreviewContent(center: Point, radius: Double) {
+private fun MapPreviewContent(center: Point, radius: Double, finalCenter: Point? = null) {
     // Extra -1 to account for the short height (180dp) of the inline preview
     val zoom = zoomForRadius(radius, center.latitude()) - 1.0
     val mapViewportState = rememberMapViewportState {
@@ -436,6 +441,17 @@ private fun MapPreviewContent(center: Point, radius: Double) {
             ) {
                 lineColor = CROrange.copy(alpha = 0.8f)
                 lineWidth = 2.0
+            }
+
+            // Final zone marker
+            finalCenter?.let { fc ->
+                val finalCirclePoints = circlePolygonPoints(fc, 50.0)
+                PolylineAnnotation(
+                    points = finalCirclePoints + listOf(finalCirclePoints.first())
+                ) {
+                    lineColor = Color.Green.copy(alpha = 0.8f)
+                    lineWidth = 2.0
+                }
             }
         }
         // Overlay to absorb all touch events — makes the map preview non-interactive
