@@ -37,6 +37,7 @@ import dev.rahier.pouleparty.ui.components.CountdownView
 import dev.rahier.pouleparty.ui.components.GameInfoDialog
 import dev.rahier.pouleparty.ui.components.GameOverAlertDialog
 import dev.rahier.pouleparty.model.GameMod
+import dev.rahier.pouleparty.ui.components.ActivePowerUpBadge
 import dev.rahier.pouleparty.ui.components.GameStartCountdownOverlay
 import dev.rahier.pouleparty.ui.components.PreGameOverlay
 import dev.rahier.pouleparty.ui.endgamecode.EndGameCodeContent
@@ -140,31 +141,40 @@ fun ChickenMapScreen(
             }
         }
 
-        // Compass button — reset to north
-        IconButton(
-            onClick = {
-                state.circleCenter?.let { center ->
-                    mapViewportState.flyTo(
-                        cameraOptions = CameraOptions.Builder()
-                            .center(center)
-                            .zoom(zoomForRadius(state.radius.toDouble(), center.latitude()))
-                            .bearing(0.0)
-                            .build()
-                    )
-                }
-            },
+        // Compass button + active power-up badges
+        Column(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .statusBarsPadding()
-                .padding(end = 8.dp, top = 96.dp)
-                .background(Color.White.copy(alpha = 0.8f), CircleShape)
-                .size(40.dp)
+                .padding(top = 96.dp),
+            horizontalAlignment = Alignment.End
         ) {
-            Icon(
-                Icons.Default.Navigation,
-                contentDescription = "North",
-                modifier = Modifier.rotate(-currentBearing)
-            )
+            IconButton(
+                onClick = {
+                    state.circleCenter?.let { center ->
+                        mapViewportState.flyTo(
+                            cameraOptions = CameraOptions.Builder()
+                                .center(center)
+                                .zoom(zoomForRadius(state.radius.toDouble(), center.latitude()))
+                                .bearing(0.0)
+                                .build()
+                        )
+                    }
+                },
+                modifier = Modifier
+                    .padding(end = 8.dp)
+                    .background(Color.White.copy(alpha = 0.8f), CircleShape)
+                    .size(40.dp)
+            ) {
+                Icon(
+                    Icons.Default.Navigation,
+                    contentDescription = "North",
+                    modifier = Modifier.rotate(-currentBearing)
+                )
+            }
+            if (state.game.powerUpsEnabled) {
+                ActivePowerUpBadge(game = state.game)
+            }
         }
 
         // Top bar

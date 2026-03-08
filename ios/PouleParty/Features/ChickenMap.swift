@@ -776,7 +776,12 @@ struct ChickenMapView: View {
             }
         }
         .overlay(alignment: .topTrailing) {
-            compassButton
+            VStack(spacing: 0) {
+                compassButton
+                if store.game.powerUpsEnabled {
+                    ActivePowerUpBadge(game: store.game)
+                }
+            }
         }
         .safeAreaInset(edge: .top) { topBar }
         .safeAreaInset(edge: .bottom) { bottomBar }
