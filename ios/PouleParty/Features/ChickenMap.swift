@@ -271,6 +271,8 @@ struct ChickenMapFeature {
                 let initialCenter = state.game.initialCoordinates.toCLCoordinates
                 let initialRadius = state.game.initialRadius
                 let driftSeed = state.game.driftSeed
+                let powerUpsEnabled = state.game.powerUpsEnabled
+                let enabledPowerUpTypes = state.game.enabledPowerUpTypes
 
                 var effects: [Effect<Action>] = [
                     .run { send in
@@ -286,20 +288,20 @@ struct ChickenMapFeature {
                         }
                     },
                     .run { send in
-                        guard state.game.powerUpsEnabled else { return }
+                        guard powerUpsEnabled else { return }
                         for await powerUps in apiClient.powerUpsStream(gameId) {
                             await send(.powerUpsUpdated(powerUps))
                         }
                     },
                     .run { _ in
-                        guard state.game.powerUpsEnabled else { return }
+                        guard powerUpsEnabled else { return }
                         let powerUps = generatePowerUps(
                             center: initialCenter,
                             radius: initialRadius,
                             count: AppConstants.powerUpInitialBatchSize,
                             driftSeed: driftSeed,
                             batchIndex: 0,
-                            enabledTypes: state.game.enabledPowerUpTypes
+                            enabledTypes: enabledPowerUpTypes
                         )
                         try? await apiClient.spawnPowerUps(gameId, powerUps)
                     }
@@ -536,7 +538,7 @@ struct ChickenMapFeature {
                         let seed = state.game.driftSeed
                         let gId = state.game.id
                         let enabledTypes = state.game.enabledPowerUpTypes
-                        guard state.game.powerUpsEnabled else { return nil }
+                        guard state.game.powerUpsEnabled else { return .none }
                         return .run { _ in
                             let newPowerUps = generatePowerUps(
                                 center: center,

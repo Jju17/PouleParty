@@ -14,13 +14,13 @@ struct Game: Codable, Equatable {
     var name: String = ""
     var numberOfPlayers: Int = 10
     var radiusIntervalUpdate: Double = 5 // In minutes
-    private(set) var startTimestamp: Timestamp = {
+    var startTimestamp: Timestamp = {
         let date = Date.now.addingTimeInterval(300)
         let seconds = Calendar.current.component(.second, from: date)
         return .init(date: date.addingTimeInterval(Double(-seconds)))
     }()
-    private(set) var endTimestamp: Timestamp = .init(date: Date.now.addingTimeInterval(3900))
-    private(set) var initialCoordinates: GeoPoint = .init(latitude: AppConstants.defaultLatitude, longitude: AppConstants.defaultLongitude)
+    var endTimestamp: Timestamp = .init(date: Date.now.addingTimeInterval(3900))
+    var initialCoordinates: GeoPoint = .init(latitude: AppConstants.defaultLatitude, longitude: AppConstants.defaultLongitude)
     var initialRadius: Double = 1500
     var radiusDeclinePerUpdate: Double = 100
     var chickenHeadStartMinutes: Double = 0 // In minutes, 0 = no head start
