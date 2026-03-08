@@ -295,7 +295,7 @@ struct ChickenMapFeature {
                     },
                     .run { _ in
                         guard powerUpsEnabled else { return }
-                        let powerUps = generatePowerUps(
+                        let generated = generatePowerUps(
                             center: initialCenter,
                             radius: initialRadius,
                             count: AppConstants.powerUpInitialBatchSize,
@@ -303,7 +303,7 @@ struct ChickenMapFeature {
                             batchIndex: 0,
                             enabledTypes: enabledPowerUpTypes
                         )
-                        powerUps = await snapPowerUpsToRoads(powerUps)
+                        let powerUps = await snapPowerUpsToRoads(generated)
                         try? await apiClient.spawnPowerUps(gameId, powerUps)
                     }
                 ]
@@ -541,7 +541,7 @@ struct ChickenMapFeature {
                         let enabledTypes = state.game.enabledPowerUpTypes
                         guard state.game.powerUpsEnabled else { return .none }
                         return .run { _ in
-                            var newPowerUps = generatePowerUps(
+                            let generated = generatePowerUps(
                                 center: center,
                                 radius: currentRadius,
                                 count: AppConstants.powerUpPeriodicBatchSize,
@@ -549,7 +549,7 @@ struct ChickenMapFeature {
                                 batchIndex: nextBatch,
                                 enabledTypes: enabledTypes
                             )
-                            newPowerUps = await snapPowerUpsToRoads(newPowerUps)
+                            let newPowerUps = await snapPowerUpsToRoads(generated)
                             try? await apiClient.spawnPowerUps(gId, newPowerUps)
                         }
                     }
