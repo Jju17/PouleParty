@@ -17,6 +17,7 @@ data class Game(
     )),
     val endTimestamp: Timestamp = Timestamp(Date(System.currentTimeMillis() + 3_900_000)),
     val initialCoordinates: GeoPoint = GeoPoint(AppConstants.DEFAULT_LATITUDE, AppConstants.DEFAULT_LONGITUDE),
+    val finalCoordinates: GeoPoint? = null,
     val initialRadius: Double = 1500.0,
     val radiusDeclinePerUpdate: Double = 100.0,
     val chickenHeadStartMinutes: Double = 0.0, // In minutes, 0 = no head start
@@ -27,35 +28,54 @@ data class Game(
     val status: String = GameStatus.WAITING.firestoreValue,
     val winners: List<Winner> = emptyList(),
     val creatorId: String = "",
-    val driftSeed: Int = 0
+    val driftSeed: Int = 0,
+    val powerUpsEnabled: Boolean = false,
+    val enabledPowerUpTypes: List<String> = PowerUpType.entries.map { it.firestoreValue },
+    val activeInvisibilityUntil: Timestamp? = null,
+    val activeZoneFreezeUntil: Timestamp? = null,
+    val activeRadarPingUntil: Timestamp? = null
 ) {
-    /** Computed: CLLocationCoordinate2D equivalent */
+    // ── Power-Up Active Effects ────────────────────────
+
+    @get:Exclude
+    val isChickenInvisible: Boolean
+        get() = activeInvisibilityUntil != null && Date().before(activeInvisibilityUntil.toDate())
+
+    @get:Exclude
+    val isZoneFrozen: Boolean
+        get() = activeZoneFreezeUntil != null && Date().before(activeZoneFreezeUntil.toDate())
+
+    @get:Exclude
+    val isRadarPingActive: Boolean
+        get() = activeRadarPingUntil != null && Date().before(activeRadarPingUntil.toDate())
+
+    // ── Computed Properties ────────────────────────────
+
     @get:Exclude
     val initialLocation: Point
         get() = Point.fromLngLat(initialCoordinates.longitude, initialCoordinates.latitude)
+
+    @get:Exclude
+    val finalLocation: Point?
+        get() = finalCoordinates?.let { Point.fromLngLat(it.longitude, it.latitude) }
 
     val startDate: Date get() = startTimestamp.toDate()
     val endDate: Date get() = endTimestamp.toDate()
     val hunterStartDate: Date get() = Date(startDate.time + (chickenHeadStartMinutes * 60 * 1000).toLong())
 
-    /** Game code = first 6 chars of ID uppercased (matches iOS) */
     val gameCode: String
         get() = id.take(6).uppercase()
 
-    /** Parsed game mod enum */
     @get:Exclude
     val gameModEnum: GameMod
         get() = GameMod.fromFirestore(gameMod)
 
-    /** Parsed game status enum */
     @get:Exclude
     val gameStatusEnum: GameStatus
         get() = GameStatus.fromFirestore(status)
 
-    /**
-     * Walk forward from startDate in steps of radiusIntervalUpdate
-     * until we pass "now". Returns the next update date and current radius.
-     */
+    // ── Game Logic ─────────────────────────────────────
+
     fun findLastUpdate(): Pair<Date, Int> {
         var lastUpdate = hunterStartDate
         var lastRadius = initialRadius.toInt()
@@ -67,9 +87,18 @@ data class Game(
         val now = Date()
         val intervalMs = (radiusIntervalUpdate * 60 * 1000).toLong()
 
+        // Zone freeze window: skip radius reductions for shrinks inside [freezeStart, freezeEnd)
+        val freezeEnd = activeZoneFreezeUntil?.toDate()
+        val freezeDuration = (PowerUpType.ZONE_FREEZE.durationSeconds ?: 0) * 1000L
+        val freezeStart = freezeEnd?.let { Date(it.time - freezeDuration) }
+
         while (Date(lastUpdate.time + intervalMs).before(now)) {
             lastUpdate = Date(lastUpdate.time + intervalMs)
-            lastRadius -= radiusDeclinePerUpdate.toInt()
+            val isFrozen = freezeStart != null && freezeEnd != null
+                && !lastUpdate.before(freezeStart) && lastUpdate.before(freezeEnd)
+            if (!isFrozen) {
+                lastRadius -= radiusDeclinePerUpdate.toInt()
+            }
         }
 
         lastRadius = maxOf(0, lastRadius)
@@ -77,10 +106,15 @@ data class Game(
         return Pair(nextUpdate, lastRadius)
     }
 
+    // ── Builder Helpers ────────────────────────────────
+
     fun withStartDate(date: Date): Game = copy(startTimestamp = Timestamp(date))
     fun withEndDate(date: Date): Game = copy(endTimestamp = Timestamp(date))
     fun withInitialLocation(point: Point): Game = copy(
         initialCoordinates = GeoPoint(point.latitude(), point.longitude())
+    )
+    fun withFinalLocation(point: Point?): Game = copy(
+        finalCoordinates = point?.let { GeoPoint(it.latitude(), it.longitude()) }
     )
     fun withChickenHeadStart(minutes: Double): Game = copy(chickenHeadStartMinutes = minutes)
     fun withChickenCanSeeHunters(value: Boolean): Game = copy(chickenCanSeeHunters = value)
@@ -102,37 +136,5 @@ data class Game(
             foundCode = "1234",
             driftSeed = 42
         )
-    }
-}
-
-// Normal Mode Settings
-const val NORMAL_MODE_FIXED_INTERVAL = 5.0 // minutes
-const val NORMAL_MODE_MINIMUM_RADIUS = 100.0 // meters
-
-fun calculateNormalModeSettings(initialRadius: Double, gameDurationMinutes: Double): Pair<Double, Double> {
-    val numberOfShrinks = gameDurationMinutes / NORMAL_MODE_FIXED_INTERVAL
-    if (numberOfShrinks <= 0) return Pair(NORMAL_MODE_FIXED_INTERVAL, 0.0)
-    val declinePerUpdate = (initialRadius - NORMAL_MODE_MINIMUM_RADIUS) / numberOfShrinks
-    return Pair(NORMAL_MODE_FIXED_INTERVAL, maxOf(0.0, declinePerUpdate))
-}
-
-enum class GameMod(val firestoreValue: String, val title: String) {
-    FOLLOW_THE_CHICKEN("followTheChicken", "Follow the chicken \uD83D\uDC14"),
-    STAY_IN_THE_ZONE("stayInTheZone", "Stay in the zone \uD83D\uDCCD");
-
-    companion object {
-        fun fromFirestore(value: String): GameMod =
-            entries.firstOrNull { it.firestoreValue == value } ?: FOLLOW_THE_CHICKEN
-    }
-}
-
-enum class GameStatus(val firestoreValue: String) {
-    WAITING("waiting"),
-    IN_PROGRESS("inProgress"),
-    DONE("done");
-
-    companion object {
-        fun fromFirestore(value: String): GameStatus =
-            entries.firstOrNull { it.firestoreValue == value } ?: WAITING
     }
 }

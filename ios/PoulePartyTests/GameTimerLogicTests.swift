@@ -298,6 +298,37 @@ struct GameTimerLogicTests {
         #expect(result == "Alice found the chicken! 🐔")
     }
 
+    // MARK: - Zone freeze
+
+    @Test func processRadiusUpdateReturnsNilWhenZoneFrozen() {
+        let result = processRadiusUpdate(
+            nextRadiusUpdate: Date.now.addingTimeInterval(-1),
+            currentRadius: 1500,
+            radiusDeclinePerUpdate: 100,
+            radiusIntervalUpdate: 5,
+            gameMod: .stayInTheZone,
+            initialCoordinates: CLLocationCoordinate2D(latitude: 50.8466, longitude: 4.3528),
+            currentCircle: nil,
+            isZoneFrozen: true
+        )
+        #expect(result == nil)
+    }
+
+    @Test func processRadiusUpdateProceedsWhenNotFrozen() {
+        let result = processRadiusUpdate(
+            nextRadiusUpdate: Date.now.addingTimeInterval(-1),
+            currentRadius: 1500,
+            radiusDeclinePerUpdate: 100,
+            radiusIntervalUpdate: 5,
+            gameMod: .stayInTheZone,
+            initialCoordinates: CLLocationCoordinate2D(latitude: 50.8466, longitude: 4.3528),
+            currentCircle: nil,
+            isZoneFrozen: false
+        )
+        #expect(result != nil)
+        #expect(result!.newRadius == 1400)
+    }
+
     // MARK: - shouldCheckZone
 
     @Test func shouldCheckZoneChickenStayInTheZone() {

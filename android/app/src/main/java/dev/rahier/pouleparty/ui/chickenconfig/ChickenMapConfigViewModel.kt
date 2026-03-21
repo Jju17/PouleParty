@@ -2,6 +2,7 @@ package dev.rahier.pouleparty.ui.chickenconfig
 
 import android.content.Context
 import android.location.Geocoder
+import android.location.Location
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mapbox.geojson.Point
@@ -27,11 +28,15 @@ data class SearchResult(
     val longitude: Double
 )
 
+enum class MapConfigPinMode { START, FINAL }
+
 data class MapConfigUiState(
     val cameraCenter: Point = Point.fromLngLat(AppConstants.DEFAULT_LONGITUDE, AppConstants.DEFAULT_LATITUDE),
     val cameraZoom: Float = AppConstants.MAP_CAMERA_ZOOM,
     val markerPosition: Point = Point.fromLngLat(AppConstants.DEFAULT_LONGITUDE, AppConstants.DEFAULT_LATITUDE),
+    val finalMarkerPosition: Point? = null,
     val radius: Double = AppConstants.DEFAULT_INITIAL_RADIUS,
+    val pinMode: MapConfigPinMode = MapConfigPinMode.START,
     val searchQuery: String = "",
     val searchResults: List<SearchResult> = emptyList()
 )
@@ -45,9 +50,9 @@ class ChickenMapConfigViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(MapConfigUiState())
     val uiState: StateFlow<MapConfigUiState> = _uiState.asStateFlow()
 
-    fun initialize(initialRadius: Double) {
+    fun initialize(initialRadius: Double, finalMarker: Point?) {
         val zoom = zoomForRadius(initialRadius, AppConstants.DEFAULT_LATITUDE).toFloat()
-        _uiState.update { it.copy(radius = initialRadius, cameraZoom = zoom) }
+        _uiState.update { it.copy(radius = initialRadius, cameraZoom = zoom, finalMarkerPosition = finalMarker) }
 
         if (locationRepository.hasFineLocationPermission()) {
             viewModelScope.launch {
@@ -68,14 +73,32 @@ class ChickenMapConfigViewModel @Inject constructor(
         }
     }
 
+    fun setPinMode(mode: MapConfigPinMode) {
+        _uiState.update { it.copy(pinMode = mode) }
+    }
+
     fun onMapTapped(point: Point) {
-        val zoom = zoomForRadius(_uiState.value.radius, point.latitude()).toFloat()
-        _uiState.update {
-            it.copy(
-                markerPosition = point,
-                cameraCenter = point,
-                cameraZoom = zoom
+        val state = _uiState.value
+        if (state.pinMode == MapConfigPinMode.FINAL) {
+            // Validate: final point must be within initial circle
+            val results = FloatArray(1)
+            Location.distanceBetween(
+                state.markerPosition.latitude(), state.markerPosition.longitude(),
+                point.latitude(), point.longitude(),
+                results
             )
+            if (results[0] > state.radius) return // Outside initial zone, ignore
+
+            _uiState.update { it.copy(finalMarkerPosition = point) }
+        } else {
+            val zoom = zoomForRadius(state.radius, point.latitude()).toFloat()
+            _uiState.update {
+                it.copy(
+                    markerPosition = point,
+                    cameraCenter = point,
+                    cameraZoom = zoom
+                )
+            }
         }
     }
 
@@ -102,15 +125,34 @@ class ChickenMapConfigViewModel @Inject constructor(
 
     fun onSearchResultSelected(result: SearchResult) {
         val point = Point.fromLngLat(result.longitude, result.latitude)
-        val zoom = zoomForRadius(_uiState.value.radius, result.latitude).toFloat()
-        _uiState.update {
-            it.copy(
-                markerPosition = point,
-                cameraCenter = point,
-                cameraZoom = zoom,
-                searchQuery = result.title,
-                searchResults = emptyList()
+        val state = _uiState.value
+        if (state.pinMode == MapConfigPinMode.FINAL) {
+            val results = FloatArray(1)
+            Location.distanceBetween(
+                state.markerPosition.latitude(), state.markerPosition.longitude(),
+                point.latitude(), point.longitude(),
+                results
             )
+            if (results[0] <= state.radius) {
+                _uiState.update {
+                    it.copy(
+                        finalMarkerPosition = point,
+                        searchQuery = result.title,
+                        searchResults = emptyList()
+                    )
+                }
+            }
+        } else {
+            val zoom = zoomForRadius(state.radius, result.latitude).toFloat()
+            _uiState.update {
+                it.copy(
+                    markerPosition = point,
+                    cameraCenter = point,
+                    cameraZoom = zoom,
+                    searchQuery = result.title,
+                    searchResults = emptyList()
+                )
+            }
         }
     }
 

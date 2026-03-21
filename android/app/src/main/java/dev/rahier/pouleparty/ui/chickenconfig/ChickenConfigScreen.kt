@@ -41,6 +41,17 @@ fun ChickenConfigScreen(
     val state by viewModel.uiState.collectAsState()
     val dateFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
 
+    // Power-up selection overlay
+    if (state.showPowerUpSelection) {
+        BackHandler { viewModel.dismissPowerUpSelection() }
+        PowerUpSelectionScreen(
+            enabledTypes = state.game.enabledPowerUpTypes,
+            onToggle = { viewModel.togglePowerUpType(it) },
+            onDismiss = { viewModel.dismissPowerUpSelection() }
+        )
+        return
+    }
+
     // Map config full-screen overlay
     if (state.showMapConfig) {
         BackHandler { viewModel.dismissMapConfig() }
@@ -59,8 +70,12 @@ fun ChickenConfigScreen(
             Box(modifier = Modifier.padding(padding)) {
                 ChickenMapConfigScreen(
                     initialRadius = state.game.initialRadius,
+                    finalMarker = state.game.finalLocation,
                     onLocationSelected = { point ->
                         viewModel.onLocationSelected(point)
+                    },
+                    onFinalLocationSelected = { point ->
+                        viewModel.onFinalLocationSelected(point)
                     }
                 )
             }
@@ -180,6 +195,57 @@ fun ChickenConfigScreen(
                     }
                 }
 
+                // Power-Ups card
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(stringResource(R.string.enable_power_ups))
+                            Switch(
+                                checked = state.game.powerUpsEnabled,
+                                onCheckedChange = { viewModel.togglePowerUps(it) }
+                            )
+                        }
+                        if (state.game.powerUpsEnabled) {
+                            Spacer(Modifier.height(8.dp))
+                            val enabledCount = state.game.enabledPowerUpTypes.size
+                            val totalCount = dev.rahier.pouleparty.model.PowerUpType.entries.size
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { viewModel.onPowerUpSelectionTapped() },
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(stringResource(R.string.choose_power_ups))
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            stringResource(R.string.power_ups_count_format, enabledCount, totalCount),
+                                            color = Color.Gray
+                                        )
+                                        Spacer(Modifier.width(4.dp))
+                                        Icon(
+                                            Icons.AutoMirrored.Filled.ArrowForward,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp),
+                                            tint = Color.Gray
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // Zone card — inline map preview + radius slider
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(16.dp)) {
@@ -195,7 +261,8 @@ fun ChickenConfigScreen(
                         ) {
                             MapPreviewContent(
                                 center = state.game.initialLocation,
-                                radius = state.game.initialRadius
+                                radius = state.game.initialRadius,
+                                finalCenter = state.game.finalLocation
                             )
                         }
                         Spacer(Modifier.height(12.dp))
@@ -354,7 +421,7 @@ fun ChickenConfigScreen(
 
 @OptIn(MapboxExperimental::class)
 @Composable
-private fun MapPreviewContent(center: Point, radius: Double) {
+private fun MapPreviewContent(center: Point, radius: Double, finalCenter: Point? = null) {
     // Extra -1 to account for the short height (180dp) of the inline preview
     val zoom = zoomForRadius(radius, center.latitude()) - 1.0
     val mapViewportState = rememberMapViewportState {
@@ -374,6 +441,17 @@ private fun MapPreviewContent(center: Point, radius: Double) {
             ) {
                 lineColor = CROrange.copy(alpha = 0.8f)
                 lineWidth = 2.0
+            }
+
+            // Final zone marker
+            finalCenter?.let { fc ->
+                val finalCirclePoints = circlePolygonPoints(fc, 50.0)
+                PolylineAnnotation(
+                    points = finalCirclePoints + listOf(finalCirclePoints.first())
+                ) {
+                    lineColor = Color.Green.copy(alpha = 0.8f)
+                    lineWidth = 2.0
+                }
             }
         }
         // Overlay to absorb all touch events — makes the map preview non-interactive

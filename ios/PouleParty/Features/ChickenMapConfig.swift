@@ -11,6 +11,11 @@ import MapboxMaps
 import MapKit
 import SwiftUI
 
+enum MapConfigPinMode: Equatable {
+    case start
+    case final_
+}
+
 @Reducer
 struct ChickenMapConfigFeature {
 
@@ -19,7 +24,9 @@ struct ChickenMapConfigFeature {
         var cameraRegion: CameraRegion = .brussels
         @Shared var game: Game
         var marker: MarkerOverlay?
+        var finalMarker: MarkerOverlay?
         var mapCircle: CircleOverlay?
+        var pinMode: MapConfigPinMode = .start
     }
     private static let defaultCoordinate = CLLocationCoordinate2D(latitude: AppConstants.defaultLatitude, longitude: AppConstants.defaultLongitude)
 
@@ -29,6 +36,7 @@ struct ChickenMapConfigFeature {
         case mapLocationTapped(CLLocationCoordinate2D)
         case mapCameraChanged(CLLocationCoordinate2D)
         case onTask
+        case pinModeChanged(MapConfigPinMode)
     }
 
     @Dependency(\.locationClient) var locationClient
@@ -61,24 +69,39 @@ struct ChickenMapConfigFeature {
                     await send(.initialLocationReceived(firstLocation))
                 }
             case let .mapLocationTapped(coordinate):
-                state.$game.withLock { $0.initialLocation = coordinate }
-                state.cameraRegion = CameraRegion(
-                    center: coordinate,
-                    latitudeDelta: 0.01,
-                    longitudeDelta: 0.01
-                )
-                self.updateMapComponents(state: &state)
+                if state.pinMode == .final_ {
+                    // Validate: final point must be within initial circle
+                    let initialLoc = CLLocation(latitude: state.game.initialLocation.latitude, longitude: state.game.initialLocation.longitude)
+                    let tappedLoc = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+                    let distance = initialLoc.distance(from: tappedLoc)
+                    if distance > state.game.initialRadius {
+                        return .none // Outside initial zone, ignore
+                    }
+                    state.$game.withLock { $0.finalLocation = coordinate }
+                    state.finalMarker = MarkerOverlay(title: "Final", coordinate: coordinate)
+                } else {
+                    state.$game.withLock { $0.initialLocation = coordinate }
+                    state.cameraRegion = CameraRegion(
+                        center: coordinate,
+                        latitudeDelta: 0.01,
+                        longitudeDelta: 0.01
+                    )
+                    self.updateMapComponents(state: &state)
+                }
                 return .none
             case let .mapCameraChanged(centerCoordinates):
                 state.$game.withLock { $0.initialLocation = centerCoordinates }
                 self.updateMapComponents(state: &state)
+                return .none
+            case let .pinModeChanged(mode):
+                state.pinMode = mode
                 return .none
             }
         }
     }
 
     private func updateMapComponents(state: inout ChickenMapConfigFeature.State) {
-        state.marker = MarkerOverlay(title: "", coordinate: state.game.initialLocation)
+        state.marker = MarkerOverlay(title: "Start", coordinate: state.game.initialLocation)
         state.mapCircle = CircleOverlay(
             center: state.game.initialLocation,
             radius: CLLocationDistance(state.game.initialRadius)
@@ -145,8 +168,33 @@ struct ChickenMapConfigView: View {
             ZStack(alignment: .top) {
                 mapContent
 
-                // Search bar + results
-                searchOverlay
+                VStack(spacing: 4) {
+                    // Pin mode picker
+                    Picker("Pin Mode", selection: Binding(
+                        get: { store.pinMode },
+                        set: { store.send(.pinModeChanged($0)) }
+                    )) {
+                        Text("Start zone").tag(MapConfigPinMode.start)
+                        Text("Final zone").tag(MapConfigPinMode.final_)
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal, 8)
+                    .padding(.top, 8)
+
+                    // Search bar + results
+                    searchOverlay
+
+                    if store.pinMode == .final_ {
+                        Text("Tap inside the start zone to place the final zone center")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(.regularMaterial)
+                            .cornerRadius(8)
+                            .padding(.horizontal, 8)
+                    }
+                }
 
                 // Location button
                 locationButton
@@ -173,11 +221,28 @@ struct ChickenMapConfigView: View {
                 }
             }
 
+            // Final zone marker (green)
+            if let finalMarker = self.store.finalMarker {
+                MapViewAnnotation(coordinate: finalMarker.coordinate) {
+                    Image(systemName: "mappin.circle.fill")
+                        .font(.title)
+                        .foregroundStyle(.green)
+                }
+
+                // Small circle at final position
+                let finalCircle = Polygon(center: finalMarker.coordinate, radius: 50, vertices: 36)
+                PolylineAnnotation(lineCoordinates: finalCircle.outerRing.coordinates)
+                    .lineColor(StyleColor(UIColor.green.withAlphaComponent(0.8)))
+                    .lineWidth(2)
+            }
+
             TapInteraction { context in
                 let coordinate = context.coordinate
                 store.send(.mapLocationTapped(coordinate))
-                withViewportAnimation(.default(maxDuration: 0.5)) {
-                    viewport = .camera(center: coordinate, zoom: radiusZoom)
+                if store.pinMode == .start {
+                    withViewportAnimation(.default(maxDuration: 0.5)) {
+                        viewport = .camera(center: coordinate, zoom: radiusZoom)
+                    }
                 }
                 searchText = ""
                 searchHelper.results = []
@@ -231,7 +296,6 @@ struct ChickenMapConfigView: View {
             .cornerRadius(12)
             .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
             .padding(.horizontal, 8)
-            .padding(.top, 8)
 
             if !searchHelper.results.isEmpty {
                 ScrollView {

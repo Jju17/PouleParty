@@ -28,7 +28,8 @@ data class ChickenConfigUiState(
     val showMapConfig: Boolean = false,
     val showTimePicker: Boolean = false,
     val isExpertMode: Boolean = false,
-    val gameDurationMinutes: Double = 120.0
+    val gameDurationMinutes: Double = 120.0,
+    val showPowerUpSelection: Boolean = false
 )
 
 @HiltViewModel
@@ -180,6 +181,36 @@ class ChickenConfigViewModel @Inject constructor(
         _uiState.update {
             it.copy(game = it.game.withInitialLocation(point))
         }
+    }
+
+    fun onFinalLocationSelected(point: com.mapbox.geojson.Point?) {
+        _uiState.update {
+            it.copy(game = it.game.withFinalLocation(point))
+        }
+    }
+
+    fun togglePowerUps(enabled: Boolean) {
+        _uiState.update { it.copy(game = it.game.copy(powerUpsEnabled = enabled)) }
+    }
+
+    fun togglePowerUpType(type: dev.rahier.pouleparty.model.PowerUpType) {
+        _uiState.update { state ->
+            val current = state.game.enabledPowerUpTypes
+            val newList = if (current.contains(type.firestoreValue)) {
+                if (current.size > 1) current - type.firestoreValue else current
+            } else {
+                current + type.firestoreValue
+            }
+            state.copy(game = state.game.copy(enabledPowerUpTypes = newList))
+        }
+    }
+
+    fun onPowerUpSelectionTapped() {
+        _uiState.update { it.copy(showPowerUpSelection = true) }
+    }
+
+    fun dismissPowerUpSelection() {
+        _uiState.update { it.copy(showPowerUpSelection = false) }
     }
 
     fun startGame(onSuccess: (String) -> Unit) {

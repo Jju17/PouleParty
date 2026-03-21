@@ -14,6 +14,7 @@ object AppConstants {
     const val COLLECTION_GAMES = "games"
     const val SUBCOLLECTION_CHICKEN_LOCATIONS = "chickenLocations"
     const val SUBCOLLECTION_HUNTER_LOCATIONS = "hunterLocations"
+    const val SUBCOLLECTION_POWER_UPS = "powerUps"
 
     // Time Intervals
     const val LOCATION_THROTTLE_MS = 5_000L
@@ -48,6 +49,12 @@ object AppConstants {
 
     // Zone — grace period disabled, kept for future game mode
     // const val OUTSIDE_ZONE_GRACE_PERIOD_SECONDS = 30
+
+    // Power-Ups
+    const val POWER_UP_COLLECTION_RADIUS_METERS = 30.0
+    const val POWER_UP_MIN_SPACING_METERS = 50.0
+    const val POWER_UP_INITIAL_BATCH_SIZE = 5
+    const val POWER_UP_PERIODIC_BATCH_SIZE = 2
 
     // Map
     const val MAP_CAMERA_ZOOM = 14f

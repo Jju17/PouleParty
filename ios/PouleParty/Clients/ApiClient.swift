@@ -24,12 +24,18 @@ struct ApiClient {
     var setChickenLocation: (String, CLLocationCoordinate2D) throws -> Void
     var setConfig: (Game) async throws -> Void
     var setHunterLocation: (String, String, CLLocationCoordinate2D) throws -> Void
+    var spawnPowerUps: (String, [PowerUp]) async throws -> Void
+    var collectPowerUp: (String, String, String) async throws -> Void
+    var activatePowerUp: (String, String, Timestamp) async throws -> Void
+    var updateGameActiveEffect: (String, String, Timestamp) async throws -> Void
+    var powerUpsStream: (String) -> AsyncStream<[PowerUp]>
 }
 
 private let logger = Logger(subsystem: "dev.rahier.pouleparty", category: "ApiClient")
 private let gamesCollection = "games"
 private let chickenLocationsSubcollection = "chickenLocations"
 private let hunterLocationsSubcollection = "hunterLocations"
+private let powerUpsSubcollection = "powerUps"
 private let maxRetries = 3
 private let initialDelayNs: UInt64 = 500_000_000
 
@@ -64,7 +70,12 @@ extension ApiClient: TestDependencyKey {
         hunterLocationsStream: { _ in AsyncStream { _ in } },
         setChickenLocation: { _, _ in },
         setConfig: { _ in },
-        setHunterLocation: { _, _, _ in }
+        setHunterLocation: { _, _, _ in },
+        spawnPowerUps: { _, _ in },
+        collectPowerUp: { _, _, _ in },
+        activatePowerUp: { _, _, _ in },
+        updateGameActiveEffect: { _, _, _ in },
+        powerUpsStream: { _ in AsyncStream { _ in } }
     )
 }
 
@@ -286,6 +297,87 @@ extension ApiClient: DependencyKey {
             let ref = Firestore.firestore()
                 .collection(gamesCollection).document(gameId).collection(hunterLocationsSubcollection).document(hunterId)
             try ref.setData(from: hunterLocation, merge: true)
+        },
+        spawnPowerUps: { gameId, powerUps in
+            try await withRetry("spawnPowerUps(\(gameId), \(powerUps.count) items)") {
+                let batch = Firestore.firestore().batch()
+                for powerUp in powerUps {
+                    let ref = Firestore.firestore()
+                        .collection(gamesCollection).document(gameId)
+                        .collection(powerUpsSubcollection).document(powerUp.id)
+                    try batch.setData(from: powerUp, forDocument: ref)
+                }
+                try await batch.commit()
+            }
+        },
+        collectPowerUp: { gameId, powerUpId, userId in
+            try await withRetry("collectPowerUp(\(gameId), \(powerUpId))") {
+                let db = Firestore.firestore()
+                let docRef = db.collection(gamesCollection).document(gameId)
+                    .collection(powerUpsSubcollection).document(powerUpId)
+                try await db.runTransaction { transaction, errorPointer in
+                    let snapshot: DocumentSnapshot
+                    do {
+                        snapshot = try transaction.getDocument(docRef)
+                    } catch let error as NSError {
+                        errorPointer?.pointee = error
+                        return nil
+                    }
+                    if snapshot.data()?["collectedBy"] != nil {
+                        let error = NSError(domain: "ApiClient", code: -2, userInfo: [NSLocalizedDescriptionKey: "Power-up already collected"])
+                        errorPointer?.pointee = error
+                        return nil
+                    }
+                    transaction.updateData([
+                        "collectedBy": userId,
+                        "collectedAt": Timestamp(date: .now)
+                    ], forDocument: docRef)
+                    return nil
+                }
+            }
+        },
+        activatePowerUp: { gameId, powerUpId, expiresAt in
+            try await withRetry("activatePowerUp(\(gameId), \(powerUpId))") {
+                try await Firestore.firestore()
+                    .collection(gamesCollection).document(gameId)
+                    .collection(powerUpsSubcollection).document(powerUpId)
+                    .updateData([
+                        "activatedAt": Timestamp(date: .now),
+                        "expiresAt": expiresAt
+                    ])
+            }
+        },
+        updateGameActiveEffect: { gameId, field, until in
+            try await withRetry("updateGameActiveEffect(\(gameId), \(field))") {
+                try await Firestore.firestore()
+                    .collection(gamesCollection).document(gameId)
+                    .updateData([field: until])
+            }
+        },
+        powerUpsStream: { gameId in
+            AsyncStream { continuation in
+                let listener = Firestore.firestore()
+                    .collection(gamesCollection).document(gameId)
+                    .collection(powerUpsSubcollection)
+                    .addSnapshotListener { snapshot, error in
+                        if let error {
+                            logger.warning("Power-ups listener error for game \(gameId): \(error.localizedDescription)")
+                        }
+                        guard let documents = snapshot?.documents else {
+                            continuation.yield([])
+                            return
+                        }
+                        let powerUps = documents.compactMap { doc -> PowerUp? in
+                            do { return try doc.data(as: PowerUp.self) }
+                            catch { logger.error("Failed to decode PowerUp \(doc.documentID): \(error.localizedDescription)"); return nil }
+                        }
+                        continuation.yield(powerUps)
+                    }
+
+                continuation.onTermination = { _ in
+                    listener.remove()
+                }
+            }
         }
     )
 }

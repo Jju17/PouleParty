@@ -12,6 +12,7 @@ import dev.rahier.pouleparty.model.ChickenLocation
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameStatus
 import dev.rahier.pouleparty.model.HunterLocation
+import dev.rahier.pouleparty.model.PowerUp
 import dev.rahier.pouleparty.model.Winner
 import dev.rahier.pouleparty.ui.PlayerRole
 import kotlinx.coroutines.channels.awaitClose
@@ -249,6 +250,83 @@ class FirestoreRepository @Inject constructor(
             .set(data)
             .addOnFailureListener { e -> Log.e(TAG, "Failed to set hunter location $hunterId in game $gameId", e) }
     }
+
+    // ── Power-ups ──────────────────────────────────────
+
+    suspend fun spawnPowerUps(gameId: String, powerUps: List<PowerUp>) {
+        withRetry("spawnPowerUps($gameId, ${powerUps.size} items)") {
+            val batch = firestore.batch()
+            for (powerUp in powerUps) {
+                val ref = firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
+                    .collection(AppConstants.SUBCOLLECTION_POWER_UPS).document(powerUp.id)
+                batch.set(ref, powerUp)
+            }
+            batch.commit().await()
+        }
+    }
+
+    suspend fun collectPowerUp(gameId: String, powerUpId: String, userId: String) {
+        withRetry("collectPowerUp($gameId, $powerUpId)") {
+            val docRef = firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
+                .collection(AppConstants.SUBCOLLECTION_POWER_UPS).document(powerUpId)
+            firestore.runTransaction { transaction ->
+                val snapshot = transaction.get(docRef)
+                val alreadyCollected = snapshot.getString("collectedBy")
+                if (alreadyCollected != null) {
+                    throw IllegalStateException("Power-up already collected by $alreadyCollected")
+                }
+                transaction.update(docRef, mapOf(
+                    "collectedBy" to userId,
+                    "collectedAt" to Timestamp.now()
+                ))
+            }.await()
+        }
+    }
+
+    suspend fun activatePowerUp(gameId: String, powerUpId: String, expiresAt: Timestamp) {
+        withRetry("activatePowerUp($gameId, $powerUpId)") {
+            firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
+                .collection(AppConstants.SUBCOLLECTION_POWER_UPS).document(powerUpId)
+                .update(
+                    mapOf(
+                        "activatedAt" to Timestamp.now(),
+                        "expiresAt" to expiresAt
+                    )
+                ).await()
+        }
+    }
+
+    suspend fun updateGameActiveEffect(gameId: String, field: String, until: Timestamp) {
+        withRetry("updateGameActiveEffect($gameId, $field)") {
+            firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
+                .update(field, until)
+                .await()
+        }
+    }
+
+    fun powerUpsFlow(gameId: String): Flow<List<PowerUp>> = callbackFlow {
+        val listener = firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
+            .collection(AppConstants.SUBCOLLECTION_POWER_UPS)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    Log.w(TAG, "Power-ups listener error for game $gameId", error)
+                    trySend(emptyList())
+                    return@addSnapshotListener
+                }
+                if (snapshot == null) {
+                    trySend(emptyList())
+                    return@addSnapshotListener
+                }
+                val powerUps = snapshot.documents.mapNotNull { doc ->
+                    doc.toObject(PowerUp::class.java)?.copy(id = doc.id)
+                }
+                trySend(powerUps)
+            }
+
+        awaitClose { listener.remove() }
+    }
+
+    // ── Hunter locations ──────────────────────────────────
 
     fun hunterLocationsFlow(gameId: String): Flow<List<HunterLocation>> = callbackFlow {
         val listener = firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)

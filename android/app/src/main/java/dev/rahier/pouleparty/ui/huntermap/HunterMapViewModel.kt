@@ -13,7 +13,10 @@ import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameMod
 import dev.rahier.pouleparty.model.GameStatus
 import dev.rahier.pouleparty.AppConstants
+import dev.rahier.pouleparty.model.PowerUp
+import dev.rahier.pouleparty.model.PowerUpType
 import dev.rahier.pouleparty.model.Winner
+import android.location.Location
 import dev.rahier.pouleparty.ui.CountdownPhase
 import dev.rahier.pouleparty.ui.CountdownResult
 import dev.rahier.pouleparty.ui.PlayerRole
@@ -21,6 +24,7 @@ import dev.rahier.pouleparty.ui.checkGameOverByTime
 import dev.rahier.pouleparty.ui.checkZoneStatus
 import dev.rahier.pouleparty.ui.detectNewWinners
 import dev.rahier.pouleparty.ui.evaluateCountdown
+import dev.rahier.pouleparty.ui.interpolateZoneCenter
 import dev.rahier.pouleparty.ui.processRadiusUpdate
 import dev.rahier.pouleparty.ui.shouldCheckZone
 import kotlinx.coroutines.Job
@@ -58,7 +62,13 @@ data class HunterMapUiState(
     val wrongCodeAttempts: Int = 0,
     val codeCooldownUntil: Long = 0,
     val userLocation: Point? = null,
-    val isOutsideZone: Boolean = false
+    val isOutsideZone: Boolean = false,
+    val availablePowerUps: List<PowerUp> = emptyList(),
+    val collectedPowerUps: List<PowerUp> = emptyList(),
+    val showPowerUpInventory: Boolean = false,
+    val powerUpNotification: String? = null,
+    val previewCircle: Pair<Point, Double>? = null,
+    val activatingPowerUpId: String? = null
 )
 
 @HiltViewModel
@@ -78,6 +88,7 @@ class HunterMapViewModel @Inject constructor(
     val hunterId: String = auth.currentUser?.uid ?: ""
     /** Tracked separately from viewModelScope to allow early cancellation on game over. */
     private val streamJobs = mutableListOf<Job>()
+    private var notificationJob: Job? = null
 
     private val _uiState = MutableStateFlow(HunterMapUiState())
     val uiState: StateFlow<HunterMapUiState> = _uiState.asStateFlow()
@@ -108,6 +119,7 @@ class HunterMapViewModel @Inject constructor(
             streamJobs += viewModelScope.launch { streamGameConfig(game) }
             streamJobs += viewModelScope.launch { streamChickenLocation(game) }
             streamJobs += viewModelScope.launch { trackHunterSelfLocation(game) }
+            streamJobs += viewModelScope.launch { streamPowerUps() }
         }
     }
 
@@ -176,7 +188,10 @@ class HunterMapViewModel @Inject constructor(
                     gameMod = state.game.gameModEnum,
                     initialLocation = state.game.initialLocation,
                     currentCircleCenter = state.circleCenter,
-                    driftSeed = state.game.driftSeed
+                    driftSeed = state.game.driftSeed,
+                    isZoneFrozen = state.game.isZoneFrozen,
+                    finalLocation = state.game.finalLocation,
+                    initialRadius = state.game.initialRadius
                 )
                 if (radiusResult != null) {
                     if (radiusResult.isGameOver) {
@@ -197,6 +212,9 @@ class HunterMapViewModel @Inject constructor(
                         }
                     }
                 }
+
+                // Power-up proximity check
+                checkPowerUpProximity()
 
                 // Zone check (visual warning only — no elimination)
                 val currentState = _uiState.value
@@ -249,7 +267,13 @@ class HunterMapViewModel @Inject constructor(
                 // For stayInTheZone, only set initial circle if none exists yet
                 // (drift center is computed by processRadiusUpdate, don't overwrite it)
                 if (updatedGame.gameModEnum == GameMod.STAY_IN_THE_ZONE && _uiState.value.circleCenter == null) {
-                    _uiState.update { it.copy(circleCenter = updatedGame.initialLocation) }
+                    val interpolatedCenter = interpolateZoneCenter(
+                        initialCenter = updatedGame.initialLocation,
+                        finalCenter = updatedGame.finalLocation,
+                        initialRadius = updatedGame.initialRadius,
+                        currentRadius = lastRadius.toDouble()
+                    )
+                    _uiState.update { it.copy(circleCenter = interpolatedCenter) }
                 }
 
                 // Detect new winners
@@ -311,6 +335,100 @@ class HunterMapViewModel @Inject constructor(
         }
     }
 
+    // ── Power-ups ──────────────────────────────────────
+
+    private suspend fun streamPowerUps() {
+        firestoreRepository.powerUpsFlow(gameId).collect { allPowerUps ->
+            val hunterPowerUps = allPowerUps.filter { it.typeEnum.isHunterPowerUp && !it.isCollected }
+            val collected = allPowerUps.filter {
+                it.collectedBy == hunterId && it.activatedAt == null
+            }
+            _uiState.update {
+                it.copy(availablePowerUps = hunterPowerUps, collectedPowerUps = collected)
+            }
+        }
+    }
+
+    private fun showNotification(message: String) {
+        notificationJob?.cancel()
+        notificationJob = viewModelScope.launch {
+            _uiState.update { it.copy(powerUpNotification = message) }
+            delay(2000)
+            _uiState.update { it.copy(powerUpNotification = null) }
+        }
+    }
+
+    private fun checkPowerUpProximity() {
+        val state = _uiState.value
+        val userLoc = state.userLocation ?: return
+        val powerUps = state.availablePowerUps.toList()
+        for (powerUp in powerUps) {
+            val results = FloatArray(1)
+            Location.distanceBetween(
+                userLoc.latitude(), userLoc.longitude(),
+                powerUp.location.latitude, powerUp.location.longitude,
+                results
+            )
+            if (results[0] <= AppConstants.POWER_UP_COLLECTION_RADIUS_METERS) {
+                viewModelScope.launch {
+                    try {
+                        firestoreRepository.collectPowerUp(gameId, powerUp.id, hunterId)
+                        showNotification("Collected: ${powerUp.typeEnum.title}!")
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to collect power-up", e)
+                        showNotification("Failed to collect power-up")
+                    }
+                }
+            }
+        }
+    }
+
+    fun activatePowerUp(powerUp: PowerUp) {
+        if (_uiState.value.activatingPowerUpId != null) return
+        _uiState.update { it.copy(activatingPowerUpId = powerUp.id) }
+        viewModelScope.launch {
+            try {
+                val duration = powerUp.typeEnum.durationSeconds ?: 0
+                val expiresAt = Timestamp(Date(System.currentTimeMillis() + duration * 1000))
+                firestoreRepository.activatePowerUp(gameId, powerUp.id, expiresAt)
+
+                when (powerUp.typeEnum) {
+                    PowerUpType.ZONE_PREVIEW -> {
+                        // Compute next zone preview (client-side only)
+                        val state = _uiState.value
+                        val nextRadius = state.radius - state.game.radiusDeclinePerUpdate.toInt()
+                        if (nextRadius > 0) {
+                            val center = state.circleCenter ?: state.game.initialLocation
+                            _uiState.update {
+                                it.copy(previewCircle = Pair(center, nextRadius.toDouble()))
+                            }
+                        }
+                    }
+                    PowerUpType.RADAR_PING -> {
+                        firestoreRepository.updateGameActiveEffect(
+                            gameId, "activeRadarPingUntil", expiresAt
+                        )
+                    }
+                    else -> {}
+                }
+                _uiState.update { it.copy(showPowerUpInventory = false) }
+                showNotification("Activated: ${powerUp.typeEnum.title}!")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to activate power-up", e)
+            } finally {
+                _uiState.update { it.copy(activatingPowerUpId = null) }
+            }
+        }
+    }
+
+    fun onPowerUpInventoryTapped() {
+        _uiState.update { it.copy(showPowerUpInventory = true) }
+    }
+
+    fun dismissPowerUpInventory() {
+        _uiState.update { it.copy(showPowerUpInventory = false) }
+    }
+
     fun onFoundButtonTapped() {
         _uiState.update { it.copy(isEnteringFoundCode = true) }
     }
@@ -366,12 +484,12 @@ class HunterMapViewModel @Inject constructor(
     }
 
     fun confirmLeaveGame(onGoToMenu: () -> Unit) {
-        _uiState.update { it.copy(showLeaveAlert = false) }
+        _uiState.update { it.copy(showLeaveAlert = false, previewCircle = null) }
         onGoToMenu()
     }
 
     fun confirmGameOver(onGoToMenu: () -> Unit) {
-        _uiState.update { it.copy(showGameOverAlert = false) }
+        _uiState.update { it.copy(showGameOverAlert = false, previewCircle = null) }
         onGoToMenu()
     }
 
