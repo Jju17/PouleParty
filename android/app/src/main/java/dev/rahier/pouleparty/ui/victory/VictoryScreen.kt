@@ -262,6 +262,7 @@ private fun ConfettiOverlay(modifier: Modifier = Modifier) {
                             }
                         }
                     }
+                    if (!isActive && particles.isEmpty()) return@LaunchedEffect
                 }
                 lastFrameTime = frameTimeMs
             }

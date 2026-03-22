@@ -26,7 +26,7 @@ struct HunterMapFeature {
         var isEnteringFoundCode: Bool = false
         var nextRadiusUpdate: Date?
         var nowDate: Date = .now
-        var previousWinnersCount: Int = 0
+        var previousWinnersCount: Int = -1
         var radius: Int = 1500
         var mapCircle: CircleOverlay?
         var showGameInfo: Bool = false
@@ -109,6 +109,10 @@ struct HunterMapFeature {
                 case wrongCode
             }
         }
+    }
+
+    enum CancelID {
+        case powerUpNotificationDismiss
     }
 
     @Dependency(\.apiClient) var apiClient
@@ -207,6 +211,7 @@ struct HunterMapFeature {
                     try await clock.sleep(for: .seconds(2))
                     await send(.powerUpNotificationDismissed)
                 }
+                .cancellable(id: CancelID.powerUpNotificationDismiss, cancelInFlight: true)
             case .powerUpNotificationDismissed:
                 state.powerUpNotification = nil
                 return .none
@@ -301,6 +306,7 @@ struct HunterMapFeature {
                     return .none
                 }
                 let chickenCanSeeHunters = state.game.chickenCanSeeHunters
+                let powerUpsEnabled = state.game.powerUpsEnabled
                 logger.info("HunterMap.onTask — hunterId set to: \(hunterId), shouldWriteLocation: \(chickenCanSeeHunters)")
                 let hunterStartDate = state.game.hunterStartDate
                 let (lastUpdate, lastRadius) = state.game.findLastUpdate()
@@ -340,6 +346,7 @@ struct HunterMapFeature {
                         }
                     },
                     .run { send in
+                        guard powerUpsEnabled else { return }
                         for await powerUps in apiClient.powerUpsStream(gameId) {
                             await send(.powerUpsUpdated(powerUps))
                         }
@@ -434,46 +441,20 @@ struct HunterMapFeature {
 
                 let (lastUpdate, lastRadius) = game.findLastUpdate()
 
-                // Detect newly activated power-ups (compare old vs new)
-                let now = Date.now
-                var powerUpNotificationText: String?
-                var powerUpNotificationType: PowerUp.PowerUpType?
-
-                if let until = game.activeInvisibilityUntil?.dateValue(), until > now,
-                   state.game.activeInvisibilityUntil?.dateValue() != until {
-                    powerUpNotificationText = "\(PowerUp.PowerUpType.invisibility.emoji) Invisibility activated!"
-                    powerUpNotificationType = .invisibility
-                }
-                if let until = game.activeZoneFreezeUntil?.dateValue(), until > now,
-                   state.game.activeZoneFreezeUntil?.dateValue() != until {
-                    powerUpNotificationText = "\(PowerUp.PowerUpType.zoneFreeze.emoji) Zone Freeze activated!"
-                    powerUpNotificationType = .zoneFreeze
-                }
-                if let until = game.activeRadarPingUntil?.dateValue(), until > now,
-                   state.game.activeRadarPingUntil?.dateValue() != until {
-                    powerUpNotificationText = "\(PowerUp.PowerUpType.radarPing.emoji) Radar Ping activated!"
-                    powerUpNotificationType = .radarPing
-                }
-                if let until = game.activeDecoyUntil?.dateValue(), until > now,
-                   state.game.activeDecoyUntil?.dateValue() != until {
-                    powerUpNotificationText = "\(PowerUp.PowerUpType.decoy.emoji) Decoy activated!"
-                    powerUpNotificationType = .decoy
-                }
-                if let until = game.activeJammerUntil?.dateValue(), until > now,
-                   state.game.activeJammerUntil?.dateValue() != until {
-                    powerUpNotificationText = "\(PowerUp.PowerUpType.jammer.emoji) Jammer activated!"
-                    powerUpNotificationType = .jammer
-                }
+                let activatedPowerUp = detectActivatedPowerUp(oldGame: state.game, newGame: game)
 
                 state.game = game
                 state.radius = lastRadius
                 state.nextRadiusUpdate = lastUpdate
 
-                if game.gameMod != .stayInTheZone, let currentCircle = state.mapCircle {
-                    state.mapCircle = CircleOverlay(
-                        center: currentCircle.center,
-                        radius: CLLocationDistance(state.radius)
-                    )
+                if game.gameMod != .stayInTheZone {
+                    if let currentCircle = state.mapCircle {
+                        state.mapCircle = CircleOverlay(
+                            center: currentCircle.center,
+                            radius: CLLocationDistance(state.radius)
+                        )
+                    }
+                    // else: no chicken location yet, leave mapCircle nil
                 } else {
                     let interpolatedCenter = interpolateZoneCenter(
                         initialCenter: game.initialCoordinates.toCLCoordinates,
@@ -490,9 +471,10 @@ struct HunterMapFeature {
                 // Decoy: show a fake chicken marker when decoy is active
                 if game.isDecoyActive {
                     if state.decoyLocation == nil, let center = state.mapCircle?.center {
-                        // Generate fake location at random offset (200-500m from circle center)
-                        let angle = Double.random(in: 0..<2 * .pi)
-                        let distance = Double.random(in: 200...500) / 111_320.0 // degrees
+                        // Deterministic fake location so all hunters see the same decoy
+                        let seed = game.driftSeed ^ Int(game.activeDecoyUntil!.dateValue().timeIntervalSince1970)
+                        let angle = seededRandom(seed: seed, index: 0) * 2 * .pi
+                        let distance = (200 + seededRandom(seed: seed, index: 1) * 300) / 111_320.0
                         state.decoyLocation = CLLocationCoordinate2D(
                             latitude: center.latitude + distance * cos(angle),
                             longitude: center.longitude + distance * sin(angle) / cos(center.latitude * .pi / 180)
@@ -503,40 +485,47 @@ struct HunterMapFeature {
                 }
 
                 // Update Live Activity with new game state
-                let currentLAState = state.liveActivityState
                 var effects: [Effect<Action>] = []
-                if currentLAState != state.lastLiveActivityState {
-                    state.lastLiveActivityState = currentLAState
+                if let laUpdate = checkLiveActivityUpdate(
+                    currentState: state.liveActivityState,
+                    lastState: state.lastLiveActivityState
+                ) {
+                    state.lastLiveActivityState = laUpdate.newState
                     effects.append(.run { _ in
-                        await liveActivityClient.update(currentLAState)
+                        await liveActivityClient.update(laUpdate.newState)
                     })
                 }
 
                 // Show global power-up notification
-                if let text = powerUpNotificationText {
-                    state.powerUpNotification = text
-                    state.lastActivatedPowerUpType = powerUpNotificationType
-                    effects.append(.run { send in
-                        try await clock.sleep(for: .seconds(2))
-                        await send(.powerUpNotificationDismissed)
-                    })
+                if let activated = activatedPowerUp {
+                    state.powerUpNotification = activated.text
+                    state.lastActivatedPowerUpType = activated.type
+                    effects.append(
+                        .run { send in
+                            try await clock.sleep(for: .seconds(2))
+                            await send(.powerUpNotificationDismissed)
+                        }
+                        .cancellable(id: CancelID.powerUpNotificationDismiss, cancelInFlight: true)
+                    )
                 }
 
                 // Detect new winners
-                if let notification = detectNewWinners(
-                    winners: game.winners,
-                    previousCount: state.previousWinnersCount,
-                    ownHunterId: state.hunterId
-                ) {
-                    state.winnerNotification = notification
+                if state.previousWinnersCount >= 0 {
+                    if let notification = detectNewWinners(
+                        winners: game.winners,
+                        previousCount: state.previousWinnersCount,
+                        ownHunterId: state.hunterId
+                    ) {
+                        state.winnerNotification = notification
+                        state.previousWinnersCount = game.winners.count
+                        effects.append(.run { send in
+                            try await clock.sleep(for: .seconds(AppConstants.winnerNotificationSeconds))
+                            await send(.winnerNotificationDismissed)
+                        })
+                    }
+                } else {
                     state.previousWinnersCount = game.winners.count
-                    effects.append(.run { send in
-                        try await clock.sleep(for: .seconds(AppConstants.winnerNotificationSeconds))
-                        await send(.winnerNotificationDismissed)
-                    })
-                    return .merge(effects)
                 }
-                state.previousWinnersCount = game.winners.count
                 return effects.isEmpty ? .none : .merge(effects)
             case .timerTicked:
                 state.nowDate = .now
@@ -652,15 +641,12 @@ struct HunterMapFeature {
                 }
 
                 // Power-up proximity check — collect all nearby power-ups
-                if let userLoc = state.userLocation {
-                    let nearbyPowerUps = state.availablePowerUps.filter { powerUp in
-                        CLLocation(latitude: userLoc.latitude, longitude: userLoc.longitude)
-                            .distance(from: CLLocation(latitude: powerUp.coordinate.latitude, longitude: powerUp.coordinate.longitude))
-                            <= AppConstants.powerUpCollectionRadiusMeters
-                    }
-                    if !nearbyPowerUps.isEmpty {
-                        return .merge(nearbyPowerUps.map { .send(.powerUpCollected($0)) })
-                    }
+                let nearbyPowerUps = findNearbyPowerUps(
+                    userLocation: state.userLocation,
+                    availablePowerUps: state.availablePowerUps
+                )
+                if !nearbyPowerUps.isEmpty {
+                    return .merge(nearbyPowerUps.map { .send(.powerUpCollected($0)) })
                 }
 
                 // Zone check (visual warning only — no elimination)
@@ -676,11 +662,13 @@ struct HunterMapFeature {
                 }
 
                 // Update Live Activity only when state meaningfully changes
-                let currentLAState = state.liveActivityState
-                if currentLAState != state.lastLiveActivityState {
-                    state.lastLiveActivityState = currentLAState
+                if let laUpdate = checkLiveActivityUpdate(
+                    currentState: state.liveActivityState,
+                    lastState: state.lastLiveActivityState
+                ) {
+                    state.lastLiveActivityState = laUpdate.newState
                     return .run { _ in
-                        await liveActivityClient.update(currentLAState)
+                        await liveActivityClient.update(laUpdate.newState)
                     }
                 }
                 return .none
@@ -720,54 +708,12 @@ struct HunterMapView: View {
         store.isOutsideZone ? UIColor(Color.zoneDanger).withAlphaComponent(0.4) : UIColor.black.withAlphaComponent(0.3)
     }
 
-    private var compassButton: some View {
-        Button {
-            withViewportAnimation(.default(maxDuration: 0.5)) {
-                if let circle = store.mapCircle {
-                    viewport = .camera(
-                        center: circle.center,
-                        zoom: zoomForRadius(circle.radius, latitude: circle.center.latitude),
-                        bearing: 0
-                    )
-                }
-            }
-        } label: {
-            Image(systemName: "location.north.fill")
-                .rotationEffect(.degrees(-mapBearing))
-                .frame(width: 40, height: 40)
-                .background(Color.surface)
-                .clipShape(Circle())
-                .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
-        }
-        .padding(.trailing, 8)
-        .padding(.top, 8)
-    }
-
     private var topBar: some View {
-        HStack {
-            Spacer()
-            VStack(spacing: 2) {
-                BangerText("You are the Hunter", size: 20)
-                    .foregroundStyle(.white)
-                    .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
-                Text(hunterSubtitle)
-                    .font(.gameboy(size: 10))
-                    .foregroundStyle(.white.opacity(0.8))
-            }
-            Spacer()
-            Button {
-                self.store.send(.infoButtonTapped)
-            } label: {
-                Image(systemName: "info.circle")
-                    .font(.system(size: 20))
-                    .foregroundStyle(.white.opacity(0.8))
-            }
-            .accessibilityLabel("Game info")
-            .padding(.trailing, 4)
-        }
-        .padding()
-        .background(
-            LinearGradient(colors: [.hunterRed, .CRPink], startPoint: .leading, endPoint: .trailing)
+        MapTopBar(
+            title: "You are the Hunter",
+            subtitle: hunterSubtitle,
+            gradient: LinearGradient(colors: [.hunterRed, .CRPink], startPoint: .leading, endPoint: .trailing),
+            onInfoTapped: { self.store.send(.infoButtonTapped) }
         )
     }
 
@@ -906,9 +852,9 @@ struct HunterMapView: View {
         }
         .overlay(alignment: .topTrailing) {
             VStack(spacing: 0) {
-                compassButton
+                MapCompassButton(mapCircle: store.mapCircle, mapBearing: mapBearing, viewport: $viewport)
                 if store.game.powerUpsEnabled {
-                    ActivePowerUpBadge(game: store.game)
+                    ActivePowerUpBadge(game: store.game, now: store.nowDate)
                 }
             }
         }
@@ -974,19 +920,10 @@ struct HunterMapView: View {
                 }
             }
             .overlay(alignment: .top) {
-                if let notification = store.powerUpNotification {
-                    Text(notification)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .background((store.lastActivatedPowerUpType?.color ?? Color.CROrange).opacity(0.9))
-                        .neonGlow(store.lastActivatedPowerUpType?.color ?? .CROrange, intensity: .subtle)
-                        .clipShape(Capsule())
-                        .padding(.top, 100)
-                        .transition(.move(edge: .top).combined(with: .opacity))
-                        .animation(.easeInOut, value: store.powerUpNotification)
-                }
+                PowerUpNotificationBanner(
+                    notification: store.powerUpNotification,
+                    powerUpType: store.lastActivatedPowerUpType
+                )
             }
             .sheet(isPresented: Binding(
                 get: { self.store.showPowerUpInventory },

@@ -74,13 +74,9 @@ struct MarkerOverlay: Equatable {
 
 struct CameraRegion: Equatable {
     var center: CLLocationCoordinate2D
-    var latitudeDelta: Double
-    var longitudeDelta: Double
 
     static let brussels = CameraRegion(
-        center: CLLocationCoordinate2D(latitude: AppConstants.defaultLatitude, longitude: AppConstants.defaultLongitude),
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01
+        center: CLLocationCoordinate2D(latitude: AppConstants.defaultLatitude, longitude: AppConstants.defaultLongitude)
     )
 }
 

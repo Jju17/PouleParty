@@ -11,7 +11,7 @@ import Foundation
 
 // MARK: - Zone Check
 
-enum PlayerRole: Equatable {
+enum GameRole: Equatable {
     case chicken
     case hunter
 }
@@ -22,7 +22,7 @@ struct ZoneCheckResult: Equatable {
 }
 
 /// Whether this role should be zone-checked under the given game mode.
-func shouldCheckZone(role: PlayerRole, gameMod: Game.GameMod) -> Bool {
+func shouldCheckZone(role: GameRole, gameMod: Game.GameMod) -> Bool {
     switch gameMod {
     case .stayInTheZone:
         return true // both chicken and hunters are checked
@@ -247,4 +247,83 @@ func detectNewWinners(
     guard let latest = newWinners.last else { return nil }
     if let ownId = ownHunterId, latest.hunterId == ownId { return nil }
     return "\(latest.hunterName) found the chicken! 🐔"
+}
+
+// MARK: - Power-Up Activation Detection
+
+func detectActivatedPowerUp(
+    oldGame: Game,
+    newGame: Game,
+    now: Date = .now
+) -> (text: String, type: PowerUp.PowerUpType)? {
+    let checks: [(KeyPath<Game, Timestamp?>, PowerUp.PowerUpType)] = [
+        (\.activeInvisibilityUntil, .invisibility),
+        (\.activeZoneFreezeUntil, .zoneFreeze),
+        (\.activeRadarPingUntil, .radarPing),
+        (\.activeDecoyUntil, .decoy),
+        (\.activeJammerUntil, .jammer),
+    ]
+
+    for (keyPath, type) in checks {
+        if let until = newGame[keyPath: keyPath]?.dateValue(), until > now,
+           oldGame[keyPath: keyPath]?.dateValue() != until {
+            return ("\(type.emoji) \(type.displayName) activated!", type)
+        }
+    }
+    return nil
+}
+
+// MARK: - Power-Up Proximity
+
+/// Finds all available power-ups within collection radius of the user's location.
+func findNearbyPowerUps(
+    userLocation: CLLocationCoordinate2D?,
+    availablePowerUps: [PowerUp],
+    collectionRadius: Double = AppConstants.powerUpCollectionRadiusMeters
+) -> [PowerUp] {
+    guard let userLoc = userLocation else { return [] }
+    let userCLLocation = CLLocation(latitude: userLoc.latitude, longitude: userLoc.longitude)
+    return availablePowerUps.filter { powerUp in
+        userCLLocation
+            .distance(from: CLLocation(latitude: powerUp.coordinate.latitude, longitude: powerUp.coordinate.longitude))
+            <= collectionRadius
+    }
+}
+
+// MARK: - Live Activity Update
+
+struct LiveActivityUpdate: Equatable {
+    let newState: PoulePartyAttributes.ContentState
+    let didChange: Bool
+}
+
+/// Compares current Live Activity state against the last known state.
+/// Returns an update only when the state has meaningfully changed.
+func checkLiveActivityUpdate(
+    currentState: PoulePartyAttributes.ContentState,
+    lastState: PoulePartyAttributes.ContentState?
+) -> LiveActivityUpdate? {
+    guard currentState != lastState else { return nil }
+    return LiveActivityUpdate(newState: currentState, didChange: true)
+}
+
+// MARK: - Jammer Noise
+
+func applyJammerNoise(to coordinate: CLLocationCoordinate2D) -> CLLocationCoordinate2D {
+    let latNoise = Double.random(in: -0.0018...0.0018) // ~200m
+    let lonNoise = Double.random(in: -0.0018...0.0018)
+    return CLLocationCoordinate2D(
+        latitude: coordinate.latitude + latNoise,
+        longitude: coordinate.longitude + lonNoise
+    )
+}
+
+// MARK: - Seeded Random (stateless hash, matches Android)
+
+func seededRandom(seed: Int, index: Int) -> Double {
+    var z = Int64(seed) &+ Int64(index) &* 0x9e3779b97f4a7c15
+    z = (z ^ (z >> 30)) &* -4658895280553007687 // 0xbf58476d1ce4e5b9
+    z = (z ^ (z >> 27)) &* -7723592293110705685 // 0x94d049bb133111eb
+    z = z ^ (z >> 31)
+    return Double(z &>> 1) / Double(Int64.max)
 }

@@ -116,7 +116,7 @@ struct OnboardingFeatureTests {
         }
 
         let longName = String(repeating: "A", count: 30)
-        let expectedName = String(repeating: "A", count: OnboardingFeature.nicknameMaxLength)
+        let expectedName = String(repeating: "A", count: AppConstants.nicknameMaxLength)
 
         await store.send(.nicknameChanged(longName)) {
             $0.nickname = expectedName

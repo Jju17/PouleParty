@@ -44,7 +44,9 @@ struct OnboardingFeature {
     }
 
     static let totalPages = 7
-    static let nicknameMaxLength = 20
+    static let locationPageIndex = 3
+    static let notificationPageIndex = 4
+    static let nicknamePageIndex = 5
     enum CancelID { case snapBack }
 
     @Dependency(\.locationClient) var locationClient
@@ -60,14 +62,14 @@ struct OnboardingFeature {
                     await send(.notificationAuthorizationUpdated(status))
                 }
             case .nextButtonTapped:
-                // Block on location slide (page 3) if not at least "when in use"
-                if state.currentPage == 3 {
+                // Block on location slide if not at least "when in use"
+                if state.currentPage == Self.locationPageIndex {
                     let status = state.locationAuthorizationStatus
                     guard status == .authorizedAlways || status == .authorizedWhenInUse else { return .none }
                 }
-                // Page 4 = notifications — non-blocking, always allow next
-                // Block on nickname slide (page 5) if nickname is empty or inappropriate
-                if state.currentPage == 5 {
+                // Notification page is non-blocking, always allow next
+                // Block on nickname slide if nickname is empty or inappropriate
+                if state.currentPage == Self.nicknamePageIndex {
                     let trimmed = state.nickname.trimmingCharacters(in: .whitespacesAndNewlines)
                     guard !trimmed.isEmpty else { return .none }
                     if ProfanityFilter.containsProfanity(trimmed) {
@@ -94,29 +96,29 @@ struct OnboardingFeature {
                 }
                 return .none
             case let .nicknameChanged(name):
-                state.nickname = String(name.prefix(Self.nicknameMaxLength))
+                state.nickname = String(name.prefix(AppConstants.nicknameMaxLength))
                 return .none
             case let .pageChanged(page):
                 let locAuthorized = state.locationAuthorizationStatus == .authorizedAlways ||
                     state.locationAuthorizationStatus == .authorizedWhenInUse
                 let nicknameValid = !state.nickname.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
 
-                // Block forward swipe past location page (3) if not authorized
-                if page > 3 && !locAuthorized {
+                // Block forward swipe past location page if not authorized
+                if page > Self.locationPageIndex && !locAuthorized {
                     state.currentPage = page
                     return .run { send in
                         try? await Task.sleep(for: .milliseconds(50))
-                        await send(.pageSnappedBack(3))
+                        await send(.pageSnappedBack(Self.locationPageIndex))
                     }
                     .cancellable(id: CancelID.snapBack, cancelInFlight: true)
                 }
-                // Page 4 (notifications) is non-blocking
-                // Block forward swipe past nickname page (5) if empty
-                if page > 5 && !nicknameValid {
+                // Notification page is non-blocking
+                // Block forward swipe past nickname page if empty
+                if page > Self.nicknamePageIndex && !nicknameValid {
                     state.currentPage = page
                     return .run { send in
                         try? await Task.sleep(for: .milliseconds(50))
-                        await send(.pageSnappedBack(5))
+                        await send(.pageSnappedBack(Self.nicknamePageIndex))
                     }
                     .cancellable(id: CancelID.snapBack, cancelInFlight: true)
                 }
@@ -210,7 +212,7 @@ struct OnboardingView: View {
                         get: { store.nickname },
                         set: { store.send(.nicknameChanged($0)) }
                     ),
-                    maxLength: OnboardingFeature.nicknameMaxLength
+                    maxLength: AppConstants.nicknameMaxLength
                 )
                 .tag(5)
 

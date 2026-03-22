@@ -14,7 +14,6 @@ import kotlin.math.ceil
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.Date
@@ -68,12 +67,8 @@ class ChickenConfigViewModel @Inject constructor(
     private fun resolveInitialLocation() {
         if (locationRepository.hasFineLocationPermission()) {
             viewModelScope.launch {
-                try {
-                    val location = locationRepository.locationFlow().first()
-                    _uiState.update { it.copy(game = it.game.withInitialLocation(location)) }
-                } catch (_: Exception) {
-                    // Fallback: keep Brussels default
-                }
+                val location = locationRepository.getLastLocation() ?: return@launch
+                _uiState.update { it.copy(game = it.game.withInitialLocation(location)) }
             }
         }
     }
@@ -124,10 +119,6 @@ class ChickenConfigViewModel @Inject constructor(
     fun updateInitialRadius(value: Double) {
         _uiState.update { it.copy(game = it.game.copy(initialRadius = value)) }
         recalculateIfNormalMode()
-    }
-
-    fun updateGame(game: Game) {
-        _uiState.update { it.copy(game = game) }
     }
 
     fun toggleExpertMode(expert: Boolean) {

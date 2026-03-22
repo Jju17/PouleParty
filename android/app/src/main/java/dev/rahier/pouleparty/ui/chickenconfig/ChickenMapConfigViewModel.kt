@@ -15,7 +15,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -56,18 +55,14 @@ class ChickenMapConfigViewModel @Inject constructor(
 
         if (locationRepository.hasFineLocationPermission()) {
             viewModelScope.launch {
-                try {
-                    val location = locationRepository.locationFlow().first()
-                    val locationZoom = zoomForRadius(initialRadius, location.latitude()).toFloat()
-                    _uiState.update {
-                        it.copy(
-                            cameraCenter = location,
-                            cameraZoom = locationZoom,
-                            markerPosition = location
-                        )
-                    }
-                } catch (_: Exception) {
-                    // Fallback: stay at Brussels
+                val location = locationRepository.getLastLocation() ?: return@launch
+                val locationZoom = zoomForRadius(initialRadius, location.latitude()).toFloat()
+                _uiState.update {
+                    it.copy(
+                        cameraCenter = location,
+                        cameraZoom = locationZoom,
+                        markerPosition = location
+                    )
                 }
             }
         }
@@ -100,14 +95,6 @@ class ChickenMapConfigViewModel @Inject constructor(
                 )
             }
         }
-    }
-
-    fun onCameraMove(center: Point) {
-        _uiState.update { it.copy(markerPosition = center) }
-    }
-
-    fun onRadiusChanged(radius: Double) {
-        _uiState.update { it.copy(radius = radius) }
     }
 
     fun onSearchQueryChanged(query: String) {

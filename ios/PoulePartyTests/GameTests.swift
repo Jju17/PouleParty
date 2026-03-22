@@ -155,7 +155,7 @@ struct GameTests {
         let durations: [Double] = [5, 30, 60, 90, 120, 150, 180]
         for duration in durations {
             let (interval, _) = calculateNormalModeSettings(initialRadius: 1500, gameDurationMinutes: duration)
-            #expect(interval == normalModeFixedInterval, "interval should be \(normalModeFixedInterval) for duration \(duration)")
+            #expect(interval == AppConstants.normalModeFixedInterval, "interval should be \(AppConstants.normalModeFixedInterval) for duration \(duration)")
         }
     }
 
@@ -182,7 +182,7 @@ struct GameTests {
             let (interval, decline) = calculateNormalModeSettings(initialRadius: radius, gameDurationMinutes: duration)
             let numberOfShrinks = duration / interval
             let finalRadius = radius - (decline * numberOfShrinks)
-            #expect(abs(finalRadius - normalModeMinimumRadius) < 0.01, "duration \(duration) should reach 100m, got \(finalRadius)")
+            #expect(abs(finalRadius - AppConstants.normalModeMinimumRadius) < 0.01, "duration \(duration) should reach 100m, got \(finalRadius)")
         }
     }
 
@@ -195,7 +195,7 @@ struct GameTests {
             let (interval, decline) = calculateNormalModeSettings(initialRadius: radius, gameDurationMinutes: 120)
             let numberOfShrinks = 120.0 / interval
             let finalRadius = radius - (decline * numberOfShrinks)
-            #expect(abs(finalRadius - normalModeMinimumRadius) < 0.01, "radius \(radius) should reach 100m, got \(finalRadius)")
+            #expect(abs(finalRadius - AppConstants.normalModeMinimumRadius) < 0.01, "radius \(radius) should reach 100m, got \(finalRadius)")
         }
     }
 
@@ -209,7 +209,7 @@ struct GameTests {
                 let (interval, decline) = calculateNormalModeSettings(initialRadius: radius, gameDurationMinutes: duration)
                 let numberOfShrinks = duration / interval
                 let finalRadius = radius - (decline * numberOfShrinks)
-                #expect(abs(finalRadius - normalModeMinimumRadius) < 0.01, "radius \(radius), duration \(duration) should reach 100m, got \(finalRadius)")
+                #expect(abs(finalRadius - AppConstants.normalModeMinimumRadius) < 0.01, "radius \(radius), duration \(duration) should reach 100m, got \(finalRadius)")
             }
         }
     }
@@ -233,13 +233,13 @@ struct GameTests {
 
     @Test func zeroDurationReturnsZeroDecline() {
         let (interval, decline) = calculateNormalModeSettings(initialRadius: 1500, gameDurationMinutes: 0)
-        #expect(interval == normalModeFixedInterval)
+        #expect(interval == AppConstants.normalModeFixedInterval)
         #expect(decline == 0)
     }
 
     @Test func negativeDurationReturnsZeroDecline() {
         let (interval, decline) = calculateNormalModeSettings(initialRadius: 1500, gameDurationMinutes: -10)
-        #expect(interval == normalModeFixedInterval)
+        #expect(interval == AppConstants.normalModeFixedInterval)
         #expect(decline == 0)
     }
 
@@ -250,13 +250,13 @@ struct GameTests {
         #expect(interval == 5)
         // 5/5 = 1 shrink, decline = 1500 - 100 = 1400 in one step
         let finalRadius = 1500.0 - decline
-        #expect(abs(finalRadius - normalModeMinimumRadius) < 0.01)
+        #expect(abs(finalRadius - AppConstants.normalModeMinimumRadius) < 0.01)
     }
 
     // MARK: - Edge cases: radius at or below minimum
 
     @Test func radiusExactlyAtMinimumGivesZeroDecline() {
-        let (_, decline) = calculateNormalModeSettings(initialRadius: normalModeMinimumRadius, gameDurationMinutes: 120)
+        let (_, decline) = calculateNormalModeSettings(initialRadius: AppConstants.normalModeMinimumRadius, gameDurationMinutes: 120)
         #expect(decline == 0)
     }
 
@@ -270,7 +270,7 @@ struct GameTests {
         #expect(interval == 5)
         let numberOfShrinks = 120.0 / interval
         let finalRadius = 101.0 - (decline * numberOfShrinks)
-        #expect(abs(finalRadius - normalModeMinimumRadius) < 0.01)
+        #expect(abs(finalRadius - AppConstants.normalModeMinimumRadius) < 0.01)
     }
 
     // MARK: - Edge cases: large values
@@ -280,7 +280,7 @@ struct GameTests {
         let (interval, decline) = calculateNormalModeSettings(initialRadius: radius, gameDurationMinutes: 120)
         let numberOfShrinks = 120.0 / interval
         let finalRadius = radius - (decline * numberOfShrinks)
-        #expect(abs(finalRadius - normalModeMinimumRadius) < 0.01)
+        #expect(abs(finalRadius - AppConstants.normalModeMinimumRadius) < 0.01)
         #expect(decline > 0)
     }
 
@@ -291,7 +291,7 @@ struct GameTests {
         #expect(decline < 12)
         #expect(decline > 11)
         let finalRadius = 1500.0 - (decline * numberOfShrinks)
-        #expect(abs(finalRadius - normalModeMinimumRadius) < 0.01)
+        #expect(abs(finalRadius - AppConstants.normalModeMinimumRadius) < 0.01)
     }
 
     // MARK: - Integration: findLastUpdate with normal mode settings

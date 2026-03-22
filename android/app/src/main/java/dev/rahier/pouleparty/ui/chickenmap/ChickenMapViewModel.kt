@@ -1,7 +1,6 @@
 package dev.rahier.pouleparty.ui.chickenmap
 
 import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mapbox.geojson.Point
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -10,13 +9,11 @@ import dev.rahier.pouleparty.data.LocationRepository
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameMod
 import dev.rahier.pouleparty.model.GameStatus
-import dev.rahier.pouleparty.model.HunterLocation
 import dev.rahier.pouleparty.model.PowerUp
 import dev.rahier.pouleparty.model.PowerUpType
 import dev.rahier.pouleparty.AppConstants
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
-import android.location.Location
 import dev.rahier.pouleparty.ui.CountdownPhase
 import dev.rahier.pouleparty.ui.CountdownResult
 import dev.rahier.pouleparty.ui.PlayerRole
@@ -24,6 +21,7 @@ import dev.rahier.pouleparty.ui.checkGameOverByTime
 import dev.rahier.pouleparty.ui.checkZoneStatus
 import dev.rahier.pouleparty.ui.detectNewWinners
 import dev.rahier.pouleparty.ui.evaluateCountdown
+import dev.rahier.pouleparty.ui.BaseMapViewModel
 import dev.rahier.pouleparty.ui.RoadSnapService
 import dev.rahier.pouleparty.ui.generatePowerUps
 import dev.rahier.pouleparty.ui.snapPowerUpsToRoads
@@ -62,7 +60,7 @@ data class ChickenMapUiState(
     val showGameInfo: Boolean = false,
     val codeCopied: Boolean = false,
     val showFoundCode: Boolean = false,
-    val previousWinnersCount: Int = 0,
+    val previousWinnersCount: Int = -1,
     val winnerNotification: String? = null,
     val hasGameStarted: Boolean = false,
     val hasHuntStarted: Boolean = false,
@@ -81,21 +79,19 @@ data class ChickenMapUiState(
 
 @HiltViewModel
 class ChickenMapViewModel @Inject constructor(
-    private val firestoreRepository: FirestoreRepository,
-    private val locationRepository: LocationRepository,
-    private val auth: FirebaseAuth,
+    firestoreRepository: FirestoreRepository,
+    locationRepository: LocationRepository,
+    auth: FirebaseAuth,
     @Named("mapboxAccessToken") private val mapboxAccessToken: String,
     savedStateHandle: SavedStateHandle
-) : ViewModel() {
+) : BaseMapViewModel(firestoreRepository, locationRepository, auth) {
 
-    private val gameId: String = savedStateHandle["gameId"] ?: ""
-    private val userId: String = auth.currentUser?.uid ?: ""
-    /** Tracked separately from viewModelScope to allow early cancellation on game over. */
-    private val streamJobs = mutableListOf<Job>()
-    private var notificationJob: Job? = null
+    override val gameId: String = savedStateHandle["gameId"] ?: ""
+    override val playerId: String = auth.currentUser?.uid ?: ""
 
     private val _uiState = MutableStateFlow(ChickenMapUiState())
     val uiState: StateFlow<ChickenMapUiState> = _uiState.asStateFlow()
+    private var hasSpawnedInitialPowerUps = false
 
     init {
         loadGame()
@@ -125,17 +121,17 @@ class ChickenMapViewModel @Inject constructor(
                 try { firestoreRepository.updateGameStatus(gameId, GameStatus.IN_PROGRESS) } catch (_: Exception) {}
             }
 
-            startTimer()
+            streamJobs += startTimer()
             streamJobs += viewModelScope.launch { trackLocation(game) }
             streamJobs += viewModelScope.launch { trackHunters(game) }
             streamJobs += viewModelScope.launch { streamGameConfig() }
             streamJobs += viewModelScope.launch { streamPowerUps() }
-            viewModelScope.launch { spawnInitialPowerUps(game) }
+            streamJobs += viewModelScope.launch { spawnInitialPowerUps(game) }
         }
     }
 
-    private fun startTimer() {
-        viewModelScope.launch {
+    private fun startTimer(): Job {
+        return viewModelScope.launch {
             while (isActive) {
                 delay(1000)
                 val state = _uiState.value
@@ -176,7 +172,7 @@ class ChickenMapViewModel @Inject constructor(
                     }
                 }
 
-                if (state.showGameOverAlert) continue
+                if (_uiState.value.showGameOverAlert) continue
                 if (!huntStarted) continue
 
                 // Game over by time
@@ -245,11 +241,6 @@ class ChickenMapViewModel @Inject constructor(
                 }
             }
         }
-    }
-
-    private fun cancelStreams() {
-        streamJobs.forEach { it.cancel() }
-        streamJobs.clear()
     }
 
     /**
@@ -345,7 +336,21 @@ class ChickenMapViewModel @Inject constructor(
     private suspend fun streamGameConfig() {
         firestoreRepository.gameConfigFlow(gameId).collect { updatedGame ->
             if (updatedGame != null) {
+                // React to game cancelled/ended by external source
+                if (updatedGame.gameStatusEnum == GameStatus.DONE && !_uiState.value.showGameOverAlert) {
+                    cancelStreams()
+                    _uiState.update {
+                        it.copy(
+                            game = updatedGame,
+                            showGameOverAlert = true,
+                            gameOverMessage = "The game has ended!"
+                        )
+                    }
+                    return@collect
+                }
+
                 val previousCount = _uiState.value.previousWinnersCount
+                val oldGame = _uiState.value.game
                 _uiState.update {
                     it.copy(
                         game = updatedGame,
@@ -353,14 +358,22 @@ class ChickenMapViewModel @Inject constructor(
                     )
                 }
 
-                val notification = detectNewWinners(
-                    winners = updatedGame.winners,
-                    previousCount = previousCount
-                )
-                if (notification != null) {
-                    _uiState.update { it.copy(winnerNotification = notification) }
-                    delay(AppConstants.WINNER_NOTIFICATION_MS)
-                    _uiState.update { it.copy(winnerNotification = null) }
+                // Detect cross-player power-up activations
+                detectCrossPlayerPowerUp(oldGame, updatedGame) { msg, type -> showNotification(msg, type) }
+
+                // Skip winner detection on first snapshot (previousCount == -1 means uninitialized)
+                if (previousCount >= 0) {
+                    val notification = detectNewWinners(
+                        winners = updatedGame.winners,
+                        previousCount = previousCount
+                    )
+                    if (notification != null) {
+                        viewModelScope.launch {
+                            _uiState.update { it.copy(winnerNotification = notification) }
+                            delay(AppConstants.WINNER_NOTIFICATION_MS)
+                            _uiState.update { it.copy(winnerNotification = null) }
+                        }
+                    }
                 }
             }
         }
@@ -404,11 +417,7 @@ class ChickenMapViewModel @Inject constructor(
     }
 
     fun onCodeCopied() {
-        _uiState.update { it.copy(codeCopied = true) }
-        viewModelScope.launch {
-            delay(AppConstants.CODE_COPY_FEEDBACK_MS)
-            _uiState.update { it.copy(codeCopied = false) }
-        }
+        handleCodeCopied { copied -> _uiState.update { it.copy(codeCopied = copied) } }
     }
 
     // ── Power-ups ──────────────────────────────────────
@@ -427,6 +436,8 @@ class ChickenMapViewModel @Inject constructor(
     }
 
     private suspend fun spawnInitialPowerUps(game: Game) {
+        if (hasSpawnedInitialPowerUps) return
+        hasSpawnedInitialPowerUps = true
         if (!game.powerUpsEnabled) return
         val center = game.initialLocation
         var powerUps = generatePowerUps(
@@ -457,7 +468,7 @@ class ChickenMapViewModel @Inject constructor(
             batchIndex = batchIndex,
             enabledTypes = filterEnabledTypes(state.game)
         )
-        viewModelScope.launch {
+        streamJobs += viewModelScope.launch {
             try {
                 powerUps = snapPowerUpsToRoads(powerUps, mapboxAccessToken)
                 firestoreRepository.spawnPowerUps(gameId, powerUps)
@@ -472,7 +483,7 @@ class ChickenMapViewModel @Inject constructor(
         firestoreRepository.powerUpsFlow(gameId).collect { allPowerUps ->
             val chickenPowerUps = allPowerUps.filter { !it.typeEnum.isHunterPowerUp && !it.isCollected }
             val collected = allPowerUps.filter {
-                it.collectedBy == userId && it.activatedAt == null
+                it.collectedBy == playerId && it.activatedAt == null
             }
             _uiState.update {
                 it.copy(availablePowerUps = chickenPowerUps, collectedPowerUps = collected)
@@ -481,37 +492,18 @@ class ChickenMapViewModel @Inject constructor(
     }
 
     private fun showNotification(message: String, type: PowerUpType? = null) {
-        notificationJob?.cancel()
-        notificationJob = viewModelScope.launch {
-            _uiState.update { it.copy(powerUpNotification = message, lastActivatedPowerUpType = type) }
-            delay(2000)
-            _uiState.update { it.copy(powerUpNotification = null) }
+        showPowerUpNotification(message, type) { msg, pwrType ->
+            _uiState.update { it.copy(powerUpNotification = msg, lastActivatedPowerUpType = pwrType) }
         }
     }
 
     private fun checkPowerUpProximity() {
         val state = _uiState.value
-        val userLoc = state.userLocation ?: return
-        val powerUps = state.availablePowerUps.toList()
-        for (powerUp in powerUps) {
-            val results = FloatArray(1)
-            Location.distanceBetween(
-                userLoc.latitude(), userLoc.longitude(),
-                powerUp.location.latitude, powerUp.location.longitude,
-                results
-            )
-            if (results[0] <= AppConstants.POWER_UP_COLLECTION_RADIUS_METERS) {
-                viewModelScope.launch {
-                    try {
-                        firestoreRepository.collectPowerUp(gameId, powerUp.id, userId)
-                        showNotification("Collected: ${powerUp.typeEnum.title}!", powerUp.typeEnum)
-                    } catch (e: Exception) {
-                        Log.e("ChickenMapVM", "Failed to collect power-up", e)
-                        showNotification("Failed to collect power-up")
-                    }
-                }
-            }
-        }
+        checkPowerUpProximity(
+            userLocation = state.userLocation,
+            availablePowerUps = state.availablePowerUps,
+            tag = "ChickenMapVM"
+        ) { message, type -> showNotification(message, type) }
     }
 
     fun activatePowerUp(powerUp: PowerUp) {

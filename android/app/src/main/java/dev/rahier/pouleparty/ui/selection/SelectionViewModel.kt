@@ -24,7 +24,6 @@ data class SelectionUiState(
     val isShowingJoinDialog: Boolean = false,
     val isShowingGameRules: Boolean = false,
     val isShowingGameNotFound: Boolean = false,
-    val isShowingGameInProgress: Boolean = false,
     val isShowingLocationRequired: Boolean = false,
     val isMusicMuted: Boolean = false,
     val gameCode: String = "",
@@ -122,10 +121,6 @@ class SelectionViewModel @Inject constructor(
 
     fun onGameNotFoundDismissed() {
         _uiState.update { it.copy(isShowingGameNotFound = false) }
-    }
-
-    fun onGameInProgressDismissed() {
-        _uiState.update { it.copy(isShowingGameInProgress = false) }
     }
 
     fun onLocationRequiredDismissed() {

@@ -3,13 +3,23 @@ package dev.rahier.pouleparty.navigation
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -54,15 +64,20 @@ fun AppNavigation() {
     val hasCompletedOnboarding = prefs.getBoolean(AppConstants.PREF_ONBOARDING_COMPLETED, false)
 
     var isAuthReady by remember { mutableStateOf(FirebaseAuth.getInstance().currentUser != null) }
+    var authError by remember { mutableStateOf(false) }
+    var authRetryTrigger by remember { mutableIntStateOf(0) }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(authRetryTrigger) {
         if (!isAuthReady) {
+            authError = false
             try {
                 FirebaseAuth.getInstance().signInAnonymously().await()
+                isAuthReady = true
             } catch (e: Exception) {
                 Log.e("AppNavigation", "Anonymous sign-in failed", e)
+                authError = true
+                return@LaunchedEffect
             }
-            isAuthReady = true
         }
         // Save FCM token after auth
         val userId = FirebaseAuth.getInstance().currentUser?.uid
@@ -83,6 +98,24 @@ fun AppNavigation() {
                 Log.e("AppNavigation", "Failed to save FCM token", e)
             }
         }
+    }
+
+    if (authError) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text("Connection failed. Please check your internet and try again.")
+                Button(onClick = { authRetryTrigger++ }) {
+                    Text("Retry")
+                }
+            }
+        }
+        return
     }
 
     if (!isAuthReady) return

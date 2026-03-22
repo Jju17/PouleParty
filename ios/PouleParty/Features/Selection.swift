@@ -24,13 +24,13 @@ struct SelectionFeature {
         var isConfirmingChicken = false
         var isJoiningGame = false
         var activeGame: Game? = nil
-        var activeGameRole: PlayerRole? = nil
+        var activeGameRole: GameRole? = nil
     }
 
     enum Action: BindableAction {
         case accountDeletionCompleted
         case activeGameBannerDismissed
-        case activeGameFound(Game, PlayerRole)
+        case activeGameFound(Game, GameRole)
         case binding(BindingAction<State>)
         case chickenConfigLocationRequested
         case chickenGameStarted(Game)
@@ -38,7 +38,6 @@ struct SelectionFeature {
         case confirmChickenTapped
         case destination(PresentationAction<Destination.Action>)
         case destinationDismissed
-        case gameFoundInProgress
         case gameNotFound
         case hunterGameJoined(Game, String)
         case initialLocationResolved(CLLocationCoordinate2D?)
@@ -129,19 +128,6 @@ struct SelectionFeature {
                 return .none
             case .destinationDismissed:
                 state.destination = nil
-                return .none
-            case .gameFoundInProgress:
-                state.destination = .alert(
-                    AlertState {
-                        TextState("Game in progress")
-                    } actions: {
-                        ButtonState(role: .cancel) {
-                            TextState("OK")
-                        }
-                    } message: {
-                        TextState("This game is already in progress. You cannot join anymore.")
-                    }
-                )
                 return .none
             case .gameNotFound:
                 state.destination = .alert(

@@ -98,7 +98,6 @@ struct SettingsFeature {
 
 struct SettingsView: View {
     @Bindable var store: StoreOf<SettingsFeature>
-    var onAccountDeleted: (() -> Void)? = nil
     @FocusState private var isNicknameFocused: Bool
     @State private var nicknameText = ""
     @Environment(\.openURL) private var openURL
@@ -138,7 +137,6 @@ struct SettingsView: View {
         .alert("Data Deleted", isPresented: $store.showingDeleteSuccess) {
             Button("OK") {
                 store.send(.deleteSuccessAlertDismissed)
-                onAccountDeleted?()
             }
         } message: {
             Text("Your account and data have been deleted.")

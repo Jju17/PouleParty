@@ -13,12 +13,6 @@ import SwiftUI
 
 private let logger = Logger(subsystem: "dev.rahier.pouleparty", category: "ChickenMap")
 
-struct HunterAnnotation: Equatable, Identifiable {
-    let id: String
-    var coordinate: CLLocationCoordinate2D
-    var displayName: String
-}
-
 @Reducer
 struct ChickenMapFeature {
 
@@ -29,7 +23,7 @@ struct ChickenMapFeature {
         var hunterAnnotations: [HunterAnnotation] = []
         var nextRadiusUpdate: Date?
         var nowDate: Date = .now
-        var previousWinnersCount: Int = 0
+        var previousWinnersCount: Int = -1
         var radius: Int = 1500
         var mapCircle: CircleOverlay?
         var showGameInfo: Bool = false
@@ -111,6 +105,10 @@ struct ChickenMapFeature {
         }
     }
 
+    enum CancelID {
+        case powerUpNotificationDismiss
+    }
+
     @Dependency(\.apiClient) var apiClient
     @Dependency(\.continuousClock) var clock
     @Dependency(\.liveActivityClient) var liveActivityClient
@@ -126,8 +124,15 @@ struct ChickenMapFeature {
                 return .none
             case .destination(.presented(.alert(.cancelGame))):
                 locationClient.stopTracking()
+                let gameId = state.game.id
                 return .run { send in
                     await liveActivityClient.end(nil)
+                    do {
+                        try await apiClient.updateGameStatus(gameId, .done)
+                    } catch {
+                        Logger(subsystem: "dev.rahier.pouleparty", category: "ChickenMapFeature")
+                            .error("Failed to update game status to done: \(error.localizedDescription)")
+                    }
                     await send(.returnedToMenu)
                 }
             case .destination(.presented(.alert(.gameOver))):
@@ -186,6 +191,7 @@ struct ChickenMapFeature {
                     try await clock.sleep(for: .seconds(2))
                     await send(.powerUpNotificationDismissed)
                 }
+                .cancellable(id: CancelID.powerUpNotificationDismiss, cancelInFlight: true)
             case .powerUpNotificationDismissed:
                 state.powerUpNotification = nil
                 return .none
@@ -198,69 +204,50 @@ struct ChickenMapFeature {
             case let .gameUpdated(game):
                 // Detect newly activated power-ups (compare old vs new)
                 let now = Date.now
-                var powerUpNotificationText: String?
-                var powerUpNotificationType: PowerUp.PowerUpType?
-
-                if let until = game.activeInvisibilityUntil?.dateValue(), until > now,
-                   state.game.activeInvisibilityUntil?.dateValue() != until {
-                    powerUpNotificationText = "\(PowerUp.PowerUpType.invisibility.emoji) Invisibility activated!"
-                    powerUpNotificationType = .invisibility
-                }
-                if let until = game.activeZoneFreezeUntil?.dateValue(), until > now,
-                   state.game.activeZoneFreezeUntil?.dateValue() != until {
-                    powerUpNotificationText = "\(PowerUp.PowerUpType.zoneFreeze.emoji) Zone Freeze activated!"
-                    powerUpNotificationType = .zoneFreeze
-                }
-                if let until = game.activeRadarPingUntil?.dateValue(), until > now,
-                   state.game.activeRadarPingUntil?.dateValue() != until {
-                    powerUpNotificationText = "\(PowerUp.PowerUpType.radarPing.emoji) Radar Ping activated!"
-                    powerUpNotificationType = .radarPing
-                }
-                if let until = game.activeDecoyUntil?.dateValue(), until > now,
-                   state.game.activeDecoyUntil?.dateValue() != until {
-                    powerUpNotificationText = "\(PowerUp.PowerUpType.decoy.emoji) Decoy activated!"
-                    powerUpNotificationType = .decoy
-                }
-                if let until = game.activeJammerUntil?.dateValue(), until > now,
-                   state.game.activeJammerUntil?.dateValue() != until {
-                    powerUpNotificationText = "\(PowerUp.PowerUpType.jammer.emoji) Jammer activated!"
-                    powerUpNotificationType = .jammer
-                }
+                let activatedPowerUp = detectActivatedPowerUp(oldGame: state.game, newGame: game)
 
                 state.game = game
 
                 // Update Live Activity with new game state
                 var effects: [Effect<Action>] = []
-                let currentLAState = state.liveActivityState
-                if currentLAState != state.lastLiveActivityState {
-                    state.lastLiveActivityState = currentLAState
+                if let laUpdate = checkLiveActivityUpdate(
+                    currentState: state.liveActivityState,
+                    lastState: state.lastLiveActivityState
+                ) {
+                    state.lastLiveActivityState = laUpdate.newState
                     effects.append(.run { _ in
-                        await liveActivityClient.update(currentLAState)
+                        await liveActivityClient.update(laUpdate.newState)
                     })
                 }
 
                 // Show global power-up notification
-                if let text = powerUpNotificationText {
-                    state.powerUpNotification = text
-                    state.lastActivatedPowerUpType = powerUpNotificationType
-                    effects.append(.run { send in
-                        try await clock.sleep(for: .seconds(2))
-                        await send(.powerUpNotificationDismissed)
-                    })
+                if let activated = activatedPowerUp {
+                    state.powerUpNotification = activated.text
+                    state.lastActivatedPowerUpType = activated.type
+                    effects.append(
+                        .run { send in
+                            try await clock.sleep(for: .seconds(2))
+                            await send(.powerUpNotificationDismissed)
+                        }
+                        .cancellable(id: CancelID.powerUpNotificationDismiss, cancelInFlight: true)
+                    )
                 }
 
-                if let notification = detectNewWinners(
-                    winners: game.winners,
-                    previousCount: state.previousWinnersCount
-                ) {
-                    state.winnerNotification = notification
+                if state.previousWinnersCount >= 0 {
+                    if let notification = detectNewWinners(
+                        winners: game.winners,
+                        previousCount: state.previousWinnersCount
+                    ) {
+                        state.winnerNotification = notification
+                        state.previousWinnersCount = game.winners.count
+                        effects.append(.run { send in
+                            try await clock.sleep(for: .seconds(AppConstants.winnerNotificationSeconds))
+                            await send(.winnerNotificationDismissed)
+                        })
+                    }
+                } else {
                     state.previousWinnersCount = game.winners.count
-                    effects.append(.run { send in
-                        try await clock.sleep(for: .seconds(AppConstants.winnerNotificationSeconds))
-                        await send(.winnerNotificationDismissed)
-                    })
                 }
-                state.previousWinnersCount = game.winners.count
                 return effects.isEmpty ? .none : .merge(effects)
             case .cancelGameButtonTapped:
                 state.destination = .alert(
@@ -400,17 +387,8 @@ struct ChickenMapFeature {
                                 await send(.newLocationFetched(coordinate))
                                 let isInvisible = invisibilityUntil.value.map { Date.now < $0 } ?? false
                                 if Date.now.timeIntervalSince(lastWrite) >= AppConstants.locationThrottleSeconds && !isInvisible {
-                                    var sendCoordinate = coordinate
-                                    // Jammer: add +/-200m random noise to position
                                     let isJammed = jammerUntil.value.map { Date.now < $0 } ?? false
-                                    if isJammed {
-                                        let latNoise = Double.random(in: -0.0018...0.0018) // ~200m
-                                        let lonNoise = Double.random(in: -0.0018...0.0018)
-                                        sendCoordinate = CLLocationCoordinate2D(
-                                            latitude: coordinate.latitude + latNoise,
-                                            longitude: coordinate.longitude + lonNoise
-                                        )
-                                    }
+                                    let sendCoordinate = isJammed ? applyJammerNoise(to: coordinate) : coordinate
                                     do {
                                         try apiClient.setChickenLocation(gameId, sendCoordinate)
                                     } catch {
@@ -438,17 +416,8 @@ struct ChickenMapFeature {
                                 await send(.newLocationFetched(coordinate))
                                 let isRadarPinged = radarPingUntil.value.map { Date.now < $0 } ?? false
                                 if isRadarPinged && Date.now.timeIntervalSince(lastWrite) >= AppConstants.locationThrottleSeconds {
-                                    var sendCoordinate = coordinate
-                                    // Jammer: add +/-200m random noise to position
                                     let isJammed = jammerUntil.value.map { Date.now < $0 } ?? false
-                                    if isJammed {
-                                        let latNoise = Double.random(in: -0.0018...0.0018)
-                                        let lonNoise = Double.random(in: -0.0018...0.0018)
-                                        sendCoordinate = CLLocationCoordinate2D(
-                                            latitude: coordinate.latitude + latNoise,
-                                            longitude: coordinate.longitude + lonNoise
-                                        )
-                                    }
+                                    let sendCoordinate = isJammed ? applyJammerNoise(to: coordinate) : coordinate
                                     do {
                                         try apiClient.setChickenLocation(gameId, sendCoordinate)
                                     } catch {
@@ -641,40 +610,83 @@ struct ChickenMapFeature {
                     state.mapCircle = result.newCircle
 
                     // Spawn periodic power-ups on zone shrink
-                    if !result.isGameOver {
+                    var spawnEffect: Effect<Action>? = nil
+                    if !result.isGameOver, state.game.powerUpsEnabled {
                         let nextBatch = state.lastSpawnBatchIndex + 1
                         state.lastSpawnBatchIndex = nextBatch
                         let center = state.mapCircle?.center ?? state.game.initialCoordinates.toCLCoordinates
                         let currentRadius = Double(state.radius)
                         let seed = state.game.driftSeed
                         let gId = state.game.id
-                        let enabledTypes = state.game.enabledPowerUpTypes
-                        guard state.game.powerUpsEnabled else { return .none }
-                        return .run { _ in
+                        var spawnTypes = state.game.enabledPowerUpTypes
+                        if state.game.gameMod == .stayInTheZone {
+                            let uselessInZone: Set<String> = [
+                                PowerUp.PowerUpType.invisibility.rawValue,
+                                PowerUp.PowerUpType.decoy.rawValue,
+                                PowerUp.PowerUpType.jammer.rawValue
+                            ]
+                            spawnTypes.removeAll { uselessInZone.contains($0) }
+                        }
+                        spawnEffect = .run { _ in
                             let generated = generatePowerUps(
                                 center: center,
                                 radius: currentRadius,
                                 count: AppConstants.powerUpPeriodicBatchSize,
                                 driftSeed: seed,
                                 batchIndex: nextBatch,
-                                enabledTypes: enabledTypes
+                                enabledTypes: spawnTypes
                             )
                             let newPowerUps = await snapPowerUpsToRoads(generated)
                             try? await apiClient.spawnPowerUps(gId, newPowerUps)
                         }
                     }
+                    if let spawnEffect {
+                        // Don't return early — fall through to zone check and LA update below
+                        // We'll merge the spawn effect with any other effects at the end
+                        var effects: [Effect<Action>] = [spawnEffect]
+
+                        // Power-up proximity check — collect all nearby power-ups
+                        let nearbyPowerUps = findNearbyPowerUps(
+                            userLocation: state.userLocation,
+                            availablePowerUps: state.availablePowerUps
+                        )
+                        if !nearbyPowerUps.isEmpty {
+                            effects.append(contentsOf: nearbyPowerUps.map { .send(.powerUpCollected($0)) })
+                        }
+
+                        // Zone check (visual warning only — no elimination)
+                        if shouldCheckZone(role: .chicken, gameMod: state.game.gameMod),
+                           let userLoc = state.userLocation,
+                           let circle = state.mapCircle {
+                            let zoneResult = checkZoneStatus(
+                                userLocation: userLoc,
+                                zoneCenter: circle.center,
+                                zoneRadius: circle.radius
+                            )
+                            state.isOutsideZone = zoneResult.isOutsideZone
+                        }
+
+                        // Update Live Activity only when state meaningfully changes
+                        if let laUpdate = checkLiveActivityUpdate(
+                            currentState: state.liveActivityState,
+                            lastState: state.lastLiveActivityState
+                        ) {
+                            state.lastLiveActivityState = laUpdate.newState
+                            effects.append(.run { _ in
+                                await liveActivityClient.update(laUpdate.newState)
+                            })
+                        }
+                        return .merge(effects)
+                    }
                 }
 
                 // Power-up proximity check — collect all nearby power-ups
-                if let userLoc = state.userLocation {
-                    let nearbyPowerUps = state.availablePowerUps.filter { powerUp in
-                        CLLocation(latitude: userLoc.latitude, longitude: userLoc.longitude)
-                            .distance(from: CLLocation(latitude: powerUp.coordinate.latitude, longitude: powerUp.coordinate.longitude))
-                            <= AppConstants.powerUpCollectionRadiusMeters
-                    }
-                    if !nearbyPowerUps.isEmpty {
-                        return .merge(nearbyPowerUps.map { .send(.powerUpCollected($0)) })
-                    }
+                let nearbyPowerUps = findNearbyPowerUps(
+                    userLocation: state.userLocation,
+                    availablePowerUps: state.availablePowerUps
+                )
+                if !nearbyPowerUps.isEmpty {
+                    return .merge(nearbyPowerUps.map { .send(.powerUpCollected($0)) })
                 }
 
                 // Zone check (visual warning only — no elimination)
@@ -690,11 +702,13 @@ struct ChickenMapFeature {
                 }
 
                 // Update Live Activity only when state meaningfully changes
-                let currentLAState = state.liveActivityState
-                if currentLAState != state.lastLiveActivityState {
-                    state.lastLiveActivityState = currentLAState
+                if let laUpdate = checkLiveActivityUpdate(
+                    currentState: state.liveActivityState,
+                    lastState: state.lastLiveActivityState
+                ) {
+                    state.lastLiveActivityState = laUpdate.newState
                     return .run { _ in
-                        await liveActivityClient.update(currentLAState)
+                        await liveActivityClient.update(laUpdate.newState)
                     }
                 }
                 return .none
@@ -731,54 +745,12 @@ struct ChickenMapView: View {
         store.isOutsideZone ? UIColor(Color.zoneDanger).withAlphaComponent(0.4) : UIColor.black.withAlphaComponent(0.3)
     }
 
-    private var compassButton: some View {
-        Button {
-            withViewportAnimation(.default(maxDuration: 0.5)) {
-                if let circle = store.mapCircle {
-                    viewport = .camera(
-                        center: circle.center,
-                        zoom: zoomForRadius(circle.radius, latitude: circle.center.latitude),
-                        bearing: 0
-                    )
-                }
-            }
-        } label: {
-            Image(systemName: "location.north.fill")
-                .rotationEffect(.degrees(-mapBearing))
-                .frame(width: 40, height: 40)
-                .background(Color.surface)
-                .clipShape(Circle())
-                .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
-        }
-        .padding(.trailing, 8)
-        .padding(.top, 8)
-    }
-
     private var topBar: some View {
-        HStack {
-            Spacer()
-            VStack(spacing: 2) {
-                BangerText("You are the 🐔", size: 20)
-                    .foregroundStyle(.white)
-                    .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
-                Text(chickenSubtitle)
-                    .font(.gameboy(size: 10))
-                    .foregroundStyle(.white.opacity(0.8))
-            }
-            Spacer()
-            Button {
-                self.store.send(.infoButtonTapped)
-            } label: {
-                Image(systemName: "info.circle")
-                    .font(.system(size: 20))
-                    .foregroundStyle(.white.opacity(0.8))
-            }
-            .accessibilityLabel("Game info")
-            .padding(.trailing, 4)
-        }
-        .padding()
-        .background(
-            LinearGradient(colors: [.chickenYellow, .CROrange], startPoint: .leading, endPoint: .trailing)
+        MapTopBar(
+            title: "You are the 🐔",
+            subtitle: chickenSubtitle,
+            gradient: LinearGradient(colors: [.chickenYellow, .CROrange], startPoint: .leading, endPoint: .trailing),
+            onInfoTapped: { self.store.send(.infoButtonTapped) }
         )
     }
 
@@ -914,9 +886,9 @@ struct ChickenMapView: View {
         }
         .overlay(alignment: .topTrailing) {
             VStack(spacing: 0) {
-                compassButton
+                MapCompassButton(mapCircle: store.mapCircle, mapBearing: mapBearing, viewport: $viewport)
                 if store.game.powerUpsEnabled {
-                    ActivePowerUpBadge(game: store.game)
+                    ActivePowerUpBadge(game: store.game, now: store.nowDate)
                 }
             }
         }
@@ -991,19 +963,10 @@ struct ChickenMapView: View {
             }
         }
         .overlay(alignment: .top) {
-            if let notification = store.powerUpNotification {
-                Text(notification)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background((store.lastActivatedPowerUpType?.color ?? Color.CROrange).opacity(0.9))
-                    .neonGlow(store.lastActivatedPowerUpType?.color ?? .CROrange, intensity: .subtle)
-                    .clipShape(Capsule())
-                    .padding(.top, 100)
-                    .transition(.move(edge: .top).combined(with: .opacity))
-                    .animation(.easeInOut, value: store.powerUpNotification)
-            }
+            PowerUpNotificationBanner(
+                notification: store.powerUpNotification,
+                powerUpType: store.lastActivatedPowerUpType
+            )
         }
         .sheet(isPresented: Binding(
             get: { self.store.showPowerUpInventory },
@@ -1020,70 +983,6 @@ struct ChickenMapView: View {
             PowerUpDetailSheet(powerUpType: powerUp.type)
                 .presentationDetents([.medium, .large])
         }
-    }
-}
-
-struct GameInfoSheet: View {
-    let game: Game
-    var onCancelGame: (() -> Void)? = nil
-    var leaveGameLabel: String = "Cancel game"
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationStack {
-            List {
-                Section("Game Code") {
-                    GameCodeRow(gameCode: game.gameCode)
-                }
-
-                Section("Game Mode") {
-                    Text(game.gameMod.title)
-                }
-
-                Section("Schedule") {
-                    HStack {
-                        Text("Start")
-                        Spacer()
-                        Text(game.startDate, style: .time)
-                            .foregroundStyle(.secondary)
-                    }
-                    HStack {
-                        Text("End")
-                        Spacer()
-                        Text(game.endDate, style: .time)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                if let onCancelGame {
-                    Section {
-                        Button(role: .destructive) {
-                            dismiss()
-                            onCancelGame()
-                        } label: {
-                            HStack {
-                                Spacer()
-                                Text(leaveGameLabel)
-                                Spacer()
-                            }
-                        }
-                    }
-                }
-            }
-            .navigationTitle("Game Info")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
-        }
-        .presentationDetents([.medium])
     }
 }
 

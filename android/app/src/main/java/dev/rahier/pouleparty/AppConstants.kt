@@ -23,6 +23,7 @@ object AppConstants {
     const val COUNTDOWN_DISPLAY_MS = 1_500L
     const val WINNER_NOTIFICATION_MS = 4_000L
     const val CODE_COPY_FEEDBACK_MS = 1_000L
+    const val POWER_UP_NOTIFICATION_MS = 2_000L
     const val CONFETTI_DURATION_MS = 10_000L
 
     // Game Defaults
@@ -52,7 +53,6 @@ object AppConstants {
 
     // Power-Ups
     const val POWER_UP_COLLECTION_RADIUS_METERS = 30.0
-    const val POWER_UP_MIN_SPACING_METERS = 50.0
     const val POWER_UP_INITIAL_BATCH_SIZE = 5
     const val POWER_UP_PERIODIC_BATCH_SIZE = 2
 

@@ -13,7 +13,7 @@ import SwiftUI
 
 enum MapConfigPinMode: Equatable {
     case start
-    case final_
+    case finalZone
 }
 
 @Reducer
@@ -35,7 +35,6 @@ struct ChickenMapConfigFeature {
         case initialLocationReceived(CLLocationCoordinate2D)
         case initialRadiusChanged(Double)
         case mapLocationTapped(CLLocationCoordinate2D)
-        case mapCameraChanged(CLLocationCoordinate2D)
         case onTask
         case pinModeChanged(MapConfigPinMode)
     }
@@ -50,11 +49,7 @@ struct ChickenMapConfigFeature {
             case .binding:
                 return .none
             case let .initialLocationReceived(coordinate):
-                state.cameraRegion = CameraRegion(
-                    center: coordinate,
-                    latitudeDelta: 0.01,
-                    longitudeDelta: 0.01
-                )
+                state.cameraRegion = CameraRegion(center: coordinate)
                 state.$game.withLock { $0.initialLocation = coordinate }
                 self.updateMapComponents(state: &state)
                 // Restore final marker if game has a final location
@@ -82,7 +77,7 @@ struct ChickenMapConfigFeature {
                     await send(.initialLocationReceived(firstLocation))
                 }
             case let .mapLocationTapped(coordinate):
-                if state.pinMode == .final_ {
+                if state.pinMode == .finalZone {
                     // Validate: final point must be within initial circle
                     let initialLoc = CLLocation(latitude: state.game.initialLocation.latitude, longitude: state.game.initialLocation.longitude)
                     let tappedLoc = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
@@ -94,11 +89,7 @@ struct ChickenMapConfigFeature {
                     state.finalMarker = MarkerOverlay(title: "Final", coordinate: coordinate)
                 } else {
                     state.$game.withLock { $0.initialLocation = coordinate }
-                    state.cameraRegion = CameraRegion(
-                        center: coordinate,
-                        latitudeDelta: 0.01,
-                        longitudeDelta: 0.01
-                    )
+                    state.cameraRegion = CameraRegion(center: coordinate)
                     self.updateMapComponents(state: &state)
 
                     // Validate existing final zone — clear if now outside new start zone
@@ -112,12 +103,8 @@ struct ChickenMapConfigFeature {
                     }
 
                     // Auto-switch to final zone mode after placing start
-                    state.pinMode = .final_
+                    state.pinMode = .finalZone
                 }
-                return .none
-            case let .mapCameraChanged(centerCoordinates):
-                state.$game.withLock { $0.initialLocation = centerCoordinates }
-                self.updateMapComponents(state: &state)
                 return .none
             case let .initialRadiusChanged(radius):
                 state.$game.withLock { $0.initialRadius = radius }
@@ -220,7 +207,7 @@ struct ChickenMapConfigView: View {
                 VStack {
                     Spacer()
                     VStack(spacing: 10) {
-                        if store.pinMode == .final_ {
+                        if store.pinMode == .finalZone {
                             Text("Tap inside the start zone to place the final zone center")
                                 .font(.gameboy(size: 8))
                                 .foregroundStyle(.secondary)
@@ -254,7 +241,7 @@ struct ChickenMapConfigView: View {
                             set: { store.send(.pinModeChanged($0)) }
                         )) {
                             Text("Start zone").tag(MapConfigPinMode.start)
-                            Text("Final zone").tag(MapConfigPinMode.final_)
+                            Text("Final zone").tag(MapConfigPinMode.finalZone)
                         }
                         .pickerStyle(.segmented)
                     }
@@ -368,8 +355,8 @@ struct ChickenMapConfigView: View {
         .task {
             store.send(.onTask)
         }
-        .onChange(of: store.game.initialRadius) { _, _ in
-            store.send(.mapLocationTapped(store.game.initialLocation))
+        .onChange(of: store.game.initialRadius) { _, newRadius in
+            store.send(.initialRadiusChanged(newRadius))
         }
     }
 

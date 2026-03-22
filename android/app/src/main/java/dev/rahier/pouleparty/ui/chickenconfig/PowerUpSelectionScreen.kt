@@ -27,8 +27,8 @@ fun powerUpColor(type: PowerUpType): Color = when (type) {
     PowerUpType.ZONE_FREEZE -> PowerupFreeze
     PowerUpType.RADAR_PING -> PowerupRadar
     PowerUpType.ZONE_PREVIEW -> PowerupVision
-    PowerUpType.DECOY -> PowerupSpeed
-    PowerUpType.JAMMER -> PowerupShield
+    PowerUpType.DECOY -> PowerupDecoy
+    PowerUpType.JAMMER -> PowerupJammer
 }
 
 fun powerUpEmoji(type: PowerUpType): String = when (type) {

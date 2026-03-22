@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -13,7 +12,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -30,7 +28,6 @@ import com.mapbox.maps.extension.compose.annotation.generated.PointAnnotation
 import com.mapbox.maps.extension.compose.annotation.generated.PolygonAnnotation
 import com.mapbox.maps.extension.compose.annotation.generated.PolylineAnnotation
 import com.mapbox.maps.plugin.locationcomponent.location
-import dev.rahier.pouleparty.AppConstants
 import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.ui.components.circlePolygonPoints
 import dev.rahier.pouleparty.ui.components.outerBoundsPoints
@@ -38,14 +35,15 @@ import dev.rahier.pouleparty.ui.components.zoomForRadius
 import dev.rahier.pouleparty.ui.components.CountdownView
 import dev.rahier.pouleparty.ui.components.GameInfoDialog
 import dev.rahier.pouleparty.ui.components.GameOverAlertDialog
-import dev.rahier.pouleparty.model.GameMod
 import dev.rahier.pouleparty.model.PowerUpType
 import dev.rahier.pouleparty.ui.components.ActivePowerUpBadge
+import dev.rahier.pouleparty.ui.components.MapTopBar
 import dev.rahier.pouleparty.ui.components.PowerUpDetailDialog
+import dev.rahier.pouleparty.ui.components.PowerUpInventoryDialog
+import dev.rahier.pouleparty.ui.components.PowerUpNotificationOverlay
 import dev.rahier.pouleparty.ui.components.GameStartCountdownOverlay
 import dev.rahier.pouleparty.ui.components.PreGameOverlay
 import dev.rahier.pouleparty.ui.endgamecode.EndGameCodeContent
-import dev.rahier.pouleparty.ui.chickenconfig.powerUpColor
 import dev.rahier.pouleparty.ui.theme.*
 
 @OptIn(MapboxExperimental::class)
@@ -213,32 +211,12 @@ fun ChickenMapScreen(
         }
 
         // Top bar
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.TopCenter)
-                .background(Brush.linearGradient(listOf(ChickenYellow, CROrange)))
-                .statusBarsPadding()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Spacer(Modifier.width(40.dp))
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(stringResource(R.string.you_are_chicken), style = bangerStyle(20), color = Color.White)
-                Text(viewModel.chickenSubtitle, style = gameboyStyle(10), color = Color.White.copy(alpha = 0.8f))
-            }
-            IconButton(onClick = { viewModel.onInfoTapped() }) {
-                Icon(
-                    imageVector = Icons.Default.Info,
-                    contentDescription = stringResource(R.string.game_info),
-                    tint = Color.White.copy(alpha = 0.8f)
-                )
-            }
-        }
+        MapTopBar(
+            titleRes = R.string.you_are_chicken,
+            subtitle = viewModel.chickenSubtitle,
+            gradientColors = listOf(ChickenYellow, CROrange),
+            onInfoTapped = { viewModel.onInfoTapped() }
+        )
 
         // Bottom bar
         Row(
@@ -275,15 +253,17 @@ fun ChickenMapScreen(
                 }
             }
 
-            // FOUND button
-            Button(
-                onClick = { viewModel.onFoundButtonTapped() },
-                colors = ButtonDefaults.buttonColors(containerColor = HunterRed),
-                shape = RoundedCornerShape(50.dp),
-                modifier = Modifier.size(width = 50.dp, height = 40.dp),
-                contentPadding = PaddingValues(0.dp)
-            ) {
-                Text(stringResource(R.string.found), fontSize = 11.sp, color = Color.White)
+            // FOUND button (only visible after game starts)
+            if (state.hasGameStarted) {
+                Button(
+                    onClick = { viewModel.onFoundButtonTapped() },
+                    colors = ButtonDefaults.buttonColors(containerColor = HunterRed),
+                    shape = RoundedCornerShape(50.dp),
+                    modifier = Modifier.size(width = 50.dp, height = 40.dp),
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Text(stringResource(R.string.found), fontSize = 11.sp, color = Color.White)
+                }
             }
         }
 
@@ -376,24 +356,10 @@ fun ChickenMapScreen(
     }
 
     // Power-up notification
-    state.powerUpNotification?.let { notification ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(top = 120.dp),
-            contentAlignment = Alignment.TopCenter
-        ) {
-            Text(
-                text = notification,
-                color = Color.White,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier
-                    .background((state.lastActivatedPowerUpType?.let { powerUpColor(it) } ?: CROrange).copy(alpha = 0.9f), RoundedCornerShape(20.dp))
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            )
-        }
-    }
+    PowerUpNotificationOverlay(
+        notification = state.powerUpNotification,
+        powerUpType = state.lastActivatedPowerUpType
+    )
 
     // Power-up detail popup (tap on map icon)
     selectedPowerUpType?.let { type ->
@@ -402,43 +368,12 @@ fun ChickenMapScreen(
 
     // Power-up inventory dialog
     if (state.showPowerUpInventory) {
-        AlertDialog(
-            onDismissRequest = { viewModel.dismissPowerUpInventory() },
-            title = { Text("Power-Ups") },
-            text = {
-                Column {
-                    if (state.collectedPowerUps.isEmpty()) {
-                        Text("No power-ups collected yet")
-                    } else {
-                        state.collectedPowerUps.forEach { powerUp ->
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp)
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(powerUp.typeEnum.title, fontWeight = FontWeight.Bold)
-                                    val durationText = powerUp.typeEnum.durationSeconds?.let { "${it}s" } ?: "Instant"
-                                    Text(durationText, fontSize = 12.sp, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f))
-                                }
-                                Button(
-                                    onClick = { viewModel.activatePowerUp(powerUp) },
-                                    enabled = state.activatingPowerUpId == null,
-                                    colors = ButtonDefaults.buttonColors(containerColor = PowerupStealth)
-                                ) {
-                                    Text("Activate")
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { viewModel.dismissPowerUpInventory() }) {
-                    Text("Close")
-                }
-            }
+        PowerUpInventoryDialog(
+            collectedPowerUps = state.collectedPowerUps,
+            activatingPowerUpId = state.activatingPowerUpId,
+            activateButtonColor = PowerupStealth,
+            onActivate = { viewModel.activatePowerUp(it) },
+            onDismiss = { viewModel.dismissPowerUpInventory() }
         )
     }
 }

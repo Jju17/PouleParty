@@ -2,7 +2,6 @@ package dev.rahier.pouleparty.ui.huntermap
 
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mapbox.geojson.Point
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,7 +15,6 @@ import dev.rahier.pouleparty.AppConstants
 import dev.rahier.pouleparty.model.PowerUp
 import dev.rahier.pouleparty.model.PowerUpType
 import dev.rahier.pouleparty.model.Winner
-import android.location.Location
 import dev.rahier.pouleparty.ui.CountdownPhase
 import dev.rahier.pouleparty.ui.CountdownResult
 import dev.rahier.pouleparty.ui.PlayerRole
@@ -24,6 +22,7 @@ import dev.rahier.pouleparty.ui.checkGameOverByTime
 import dev.rahier.pouleparty.ui.checkZoneStatus
 import dev.rahier.pouleparty.ui.detectNewWinners
 import dev.rahier.pouleparty.ui.evaluateCountdown
+import dev.rahier.pouleparty.ui.BaseMapViewModel
 import dev.rahier.pouleparty.ui.interpolateZoneCenter
 import dev.rahier.pouleparty.ui.processRadiusUpdate
 import dev.rahier.pouleparty.ui.shouldCheckZone
@@ -51,7 +50,7 @@ data class HunterMapUiState(
     val isEnteringFoundCode: Boolean = false,
     val enteredCode: String = "",
     val showWrongCodeAlert: Boolean = false,
-    val previousWinnersCount: Int = 0,
+    val previousWinnersCount: Int = -1,
     val winnerNotification: String? = null,
     val shouldNavigateToVictory: Boolean = false,
     val hasGameStarted: Boolean = false,
@@ -75,22 +74,21 @@ data class HunterMapUiState(
 
 @HiltViewModel
 class HunterMapViewModel @Inject constructor(
-    private val firestoreRepository: FirestoreRepository,
-    private val locationRepository: LocationRepository,
-    private val auth: FirebaseAuth,
+    firestoreRepository: FirestoreRepository,
+    locationRepository: LocationRepository,
+    auth: FirebaseAuth,
     savedStateHandle: SavedStateHandle
-) : ViewModel() {
+) : BaseMapViewModel(firestoreRepository, locationRepository, auth) {
 
     companion object {
         private const val TAG = "HunterMapViewModel"
     }
 
-    val gameId: String = savedStateHandle["gameId"] ?: ""
+    override val gameId: String = savedStateHandle["gameId"] ?: ""
     val hunterName: String = savedStateHandle["hunterName"] ?: "Hunter"
-    val hunterId: String = auth.currentUser?.uid ?: ""
-    /** Tracked separately from viewModelScope to allow early cancellation on game over. */
-    private val streamJobs = mutableListOf<Job>()
-    private var notificationJob: Job? = null
+    override val playerId: String = auth.currentUser?.uid ?: ""
+    /** Public alias kept for external callers (e.g. HunterMapScreen). */
+    val hunterId: String get() = playerId
 
     private val _uiState = MutableStateFlow(HunterMapUiState())
     val uiState: StateFlow<HunterMapUiState> = _uiState.asStateFlow()
@@ -117,7 +115,7 @@ class HunterMapViewModel @Inject constructor(
             }
 
             firestoreRepository.registerHunter(gameId, hunterId)
-            startTimer()
+            streamJobs += startTimer()
             streamJobs += viewModelScope.launch { streamGameConfig(game) }
             streamJobs += viewModelScope.launch { streamChickenLocation(game) }
             streamJobs += viewModelScope.launch { trackHunterSelfLocation(game) }
@@ -125,8 +123,8 @@ class HunterMapViewModel @Inject constructor(
         }
     }
 
-    private fun startTimer() {
-        viewModelScope.launch {
+    private fun startTimer(): Job {
+        return viewModelScope.launch {
             while (isActive) {
                 delay(1000)
                 val state = _uiState.value
@@ -166,7 +164,7 @@ class HunterMapViewModel @Inject constructor(
                     }
                 }
 
-                if (state.showGameOverAlert) continue
+                if (_uiState.value.showGameOverAlert) continue
                 if (!gameStarted) continue
 
                 // Game over by time
@@ -209,7 +207,8 @@ class HunterMapViewModel @Inject constructor(
                             it.copy(
                                 radius = radiusResult.newRadius,
                                 nextRadiusUpdate = radiusResult.newNextUpdate,
-                                circleCenter = radiusResult.newCircleCenter ?: it.circleCenter
+                                circleCenter = radiusResult.newCircleCenter ?: it.circleCenter,
+                                previewCircle = null
                             )
                         }
                     }
@@ -232,11 +231,6 @@ class HunterMapViewModel @Inject constructor(
         }
     }
 
-    private fun cancelStreams() {
-        streamJobs.forEach { it.cancel() }
-        streamJobs.clear()
-    }
-
     /** Stream game config changes in real time */
     private suspend fun streamGameConfig(game: Game) {
         firestoreRepository.gameConfigFlow(gameId).collect { updatedGame ->
@@ -256,6 +250,7 @@ class HunterMapViewModel @Inject constructor(
 
                 val (lastUpdate, lastRadius) = updatedGame.findLastUpdate()
                 val previousCount = _uiState.value.previousWinnersCount
+                val oldGame = _uiState.value.game
 
                 _uiState.update {
                     it.copy(
@@ -265,6 +260,9 @@ class HunterMapViewModel @Inject constructor(
                         previousWinnersCount = updatedGame.winners.size
                     )
                 }
+
+                // Detect cross-player power-up activations
+                detectCrossPlayerPowerUp(oldGame, updatedGame) { msg, type -> showNotification(msg, type) }
 
                 // For stayInTheZone, only set initial circle if none exists yet
                 // (drift center is computed by processRadiusUpdate, don't overwrite it)
@@ -282,8 +280,10 @@ class HunterMapViewModel @Inject constructor(
                 if (updatedGame.isDecoyActive) {
                     if (_uiState.value.decoyLocation == null) {
                         val center = _uiState.value.circleCenter ?: updatedGame.initialLocation
-                        val angle = Math.random() * 2 * Math.PI
-                        val distance = (200 + Math.random() * 300) / 111_320.0 // 200-500m in degrees
+                        val decoyTimestamp = (updatedGame.activeDecoyUntil?.toDate()?.time ?: 0L) / 1000 // seconds, matching iOS
+                        val seed = updatedGame.driftSeed.toLong() xor decoyTimestamp
+                        val angle = seededRandom(seed, 0) * 2 * Math.PI
+                        val distance = (200 + seededRandom(seed, 1) * 300) / 111_320.0 // 200-500m in degrees
                         val decoy = Point.fromLngLat(
                             center.longitude() + distance * Math.sin(angle) / Math.cos(Math.toRadians(center.latitude())),
                             center.latitude() + distance * Math.cos(angle)
@@ -296,16 +296,20 @@ class HunterMapViewModel @Inject constructor(
                     }
                 }
 
-                // Detect new winners
-                val notification = detectNewWinners(
-                    winners = updatedGame.winners,
-                    previousCount = previousCount,
-                    ownHunterId = hunterId
-                )
-                if (notification != null) {
-                    _uiState.update { it.copy(winnerNotification = notification) }
-                    delay(AppConstants.WINNER_NOTIFICATION_MS)
-                    _uiState.update { it.copy(winnerNotification = null) }
+                // Skip winner detection on first snapshot (previousCount == -1 means uninitialized)
+                if (previousCount >= 0) {
+                    val notification = detectNewWinners(
+                        winners = updatedGame.winners,
+                        previousCount = previousCount,
+                        ownHunterId = hunterId
+                    )
+                    if (notification != null) {
+                        viewModelScope.launch {
+                            _uiState.update { it.copy(winnerNotification = notification) }
+                            delay(AppConstants.WINNER_NOTIFICATION_MS)
+                            _uiState.update { it.copy(winnerNotification = null) }
+                        }
+                    }
                 }
             }
         }
@@ -369,37 +373,18 @@ class HunterMapViewModel @Inject constructor(
     }
 
     private fun showNotification(message: String, type: PowerUpType? = null) {
-        notificationJob?.cancel()
-        notificationJob = viewModelScope.launch {
-            _uiState.update { it.copy(powerUpNotification = message, lastActivatedPowerUpType = type) }
-            delay(2000)
-            _uiState.update { it.copy(powerUpNotification = null) }
+        showPowerUpNotification(message, type) { msg, pwrType ->
+            _uiState.update { it.copy(powerUpNotification = msg, lastActivatedPowerUpType = pwrType) }
         }
     }
 
     private fun checkPowerUpProximity() {
         val state = _uiState.value
-        val userLoc = state.userLocation ?: return
-        val powerUps = state.availablePowerUps.toList()
-        for (powerUp in powerUps) {
-            val results = FloatArray(1)
-            Location.distanceBetween(
-                userLoc.latitude(), userLoc.longitude(),
-                powerUp.location.latitude, powerUp.location.longitude,
-                results
-            )
-            if (results[0] <= AppConstants.POWER_UP_COLLECTION_RADIUS_METERS) {
-                viewModelScope.launch {
-                    try {
-                        firestoreRepository.collectPowerUp(gameId, powerUp.id, hunterId)
-                        showNotification("Collected: ${powerUp.typeEnum.title}!", powerUp.typeEnum)
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Failed to collect power-up", e)
-                        showNotification("Failed to collect power-up")
-                    }
-                }
-            }
-        }
+        checkPowerUpProximity(
+            userLocation = state.userLocation,
+            availablePowerUps = state.availablePowerUps,
+            tag = TAG
+        ) { message, type -> showNotification(message, type) }
     }
 
     fun activatePowerUp(powerUp: PowerUp) {
@@ -490,6 +475,10 @@ class HunterMapViewModel @Inject constructor(
         }
     }
 
+    fun onVictoryNavigated() {
+        _uiState.update { it.copy(shouldNavigateToVictory = false) }
+    }
+
     fun dismissWrongCodeAlert() {
         _uiState.update { it.copy(showWrongCodeAlert = false) }
     }
@@ -530,10 +519,15 @@ class HunterMapViewModel @Inject constructor(
     }
 
     fun onCodeCopied() {
-        _uiState.update { it.copy(codeCopied = true) }
-        viewModelScope.launch {
-            delay(AppConstants.CODE_COPY_FEEDBACK_MS)
-            _uiState.update { it.copy(codeCopied = false) }
-        }
+        handleCodeCopied { copied -> _uiState.update { it.copy(codeCopied = copied) } }
+    }
+
+    private fun seededRandom(seed: Long, index: Int): Double {
+        @Suppress("INTEGER_OVERFLOW")
+        var z = seed + index * 0x9e3779b97f4a7c15uL.toLong()
+        z = (z xor (z ushr 30)) * 0xbf58476d1ce4e5b9uL.toLong()
+        z = (z xor (z ushr 27)) * 0x94d049bb133111ebuL.toLong()
+        z = z xor (z ushr 31)
+        return (z ushr 1).toDouble() / Long.MAX_VALUE.toDouble()
     }
 }

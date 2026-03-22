@@ -11,7 +11,7 @@ import FirebaseFirestore
 import os
 
 struct ApiClient {
-    var findActiveGame: (String) async throws -> (Game, PlayerRole)?
+    var findActiveGame: (String) async throws -> (Game, GameRole)?
     var addWinner: (String, Winner) async throws -> Void
     var deleteConfig: (String) async throws -> Void
     var getConfig: (String) async throws -> Game?

@@ -22,7 +22,7 @@ service cloud.firestore {
       // Any authenticated player can update power-up active effect fields
       allow update: if request.auth != null
                     && request.resource.data.diff(resource.data).affectedKeys()
-                        .hasOnly(['activeInvisibilityUntil', 'activeZoneFreezeUntil', 'activeRadarPingUntil']);
+                        .hasOnly(['activeInvisibilityUntil', 'activeZoneFreezeUntil', 'activeRadarPingUntil', 'activeDecoyUntil', 'activeJammerUntil']);
 
       // Only the creator can update status, gameCode, or other game settings
       allow update: if request.auth != null

@@ -132,7 +132,7 @@ data class Game(
     companion object {
         fun generateFoundCode(): String = "%04d".format((0..9999).random())
 
-        val mock = Game(
+        val mock get() = Game(
             id = java.util.UUID.randomUUID().toString(),
             name = "Mock",
             numberOfPlayers = 10,

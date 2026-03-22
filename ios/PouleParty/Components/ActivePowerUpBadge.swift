@@ -12,10 +12,8 @@ import FirebaseFirestore
 
 struct ActivePowerUpBadge: View {
     let game: Game
+    let now: Date
     @State private var expandedType: PowerUp.PowerUpType?
-    @State private var now = Date.now
-
-    private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     private var activeEffects: [(type: PowerUp.PowerUpType, until: Date)] {
         var effects: [(PowerUp.PowerUpType, Date)] = []
@@ -46,9 +44,6 @@ struct ActivePowerUpBadge: View {
             }
             .padding(.trailing, 8)
             .padding(.top, 4)
-            .onReceive(timer) { _ in
-                now = .now
-            }
         }
     }
 
@@ -80,20 +75,9 @@ struct ActivePowerUpBadge: View {
             }
             .padding(.horizontal, isExpanded ? 10 : 0)
             .frame(width: isExpanded ? nil : 36, height: 36)
-            .background(badgeColor(for: type))
-            .clipShape(RoundedRectangle(cornerRadius: isExpanded ? 18 : 18))
-            .neonGlow(badgeColor(for: type), intensity: .medium)
-        }
-    }
-
-    private func badgeColor(for type: PowerUp.PowerUpType) -> Color {
-        switch type {
-        case .invisibility: return .powerupStealth
-        case .zoneFreeze: return .powerupFreeze
-        case .radarPing: return .powerupRadar
-        case .zonePreview: return .powerupVision
-        case .decoy: return .powerupSpeed
-        case .jammer: return .powerupShield
+            .background(type.color)
+            .clipShape(RoundedRectangle(cornerRadius: 18))
+            .neonGlow(type.color, intensity: .medium)
         }
     }
 }

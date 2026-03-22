@@ -21,8 +21,8 @@ val PowerupStealth = Color(0xFFBF40BF)
 val PowerupFreeze = Color(0xFF00F5FF)
 val PowerupRadar = Color(0xFFFF6F3C)
 val PowerupVision = Color(0xFF4D96FF)
-val PowerupSpeed = Color(0xFFDFFF00)
-val PowerupShield = Color(0xFFFFD700)
+val PowerupDecoy = Color(0xFFDFFF00)
+val PowerupJammer = Color(0xFFFFD700)
 
 // Semantic
 val Success = Color(0xFF39FF14)

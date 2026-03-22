@@ -349,18 +349,6 @@ fun SelectionScreen(
         )
     }
 
-    // Game in progress alert
-    if (state.isShowingGameInProgress) {
-        AlertDialog(
-            onDismissRequest = { viewModel.onGameInProgressDismissed() },
-            title = { Text(stringResource(R.string.game_in_progress)) },
-            text = { Text(stringResource(R.string.game_in_progress_message)) },
-            confirmButton = {
-                TextButton(onClick = { viewModel.onGameInProgressDismissed() }) { Text(stringResource(R.string.ok)) }
-            }
-        )
-    }
-
     // Game Rules bottom sheet
     if (state.isShowingGameRules) {
         GameRulesDialog(onDismiss = { viewModel.onRulesDismissed() })

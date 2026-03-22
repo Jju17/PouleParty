@@ -39,7 +39,7 @@ struct GameStartCountdownOverlay: View {
 // MARK: - Pre-Game Overlay
 
 struct PreGameOverlay: View {
-    let role: PlayerRole
+    let role: GameRole
     let gameModTitle: String
     let gameCode: String?
     let targetDate: Date

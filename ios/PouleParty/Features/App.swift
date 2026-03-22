@@ -56,21 +56,8 @@ struct AppFeature {
             case .onboarding:
                 return .none
             case .chickenMap(.returnedToMenu):
-                let gameId: String
-                if case let .chickenMap(chickenState) = state {
-                    gameId = chickenState.game.id
-                } else {
-                    return .none
-                }
                 state = AppFeature.State.selection(SelectionFeature.State())
-                return .run { _ in
-                    do {
-                        try await apiClient.updateGameStatus(gameId, .done)
-                    } catch {
-                        Logger(subsystem: "dev.rahier.pouleparty", category: "AppFeature")
-                            .error("Failed to update game status to done: \(error.localizedDescription)")
-                    }
-                }
+                return .none
             case let .selection(.completedGameFound(game)):
                 state = .victory(VictoryFeature.State(
                     game: game,

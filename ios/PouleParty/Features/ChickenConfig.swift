@@ -192,7 +192,11 @@ struct ChickenConfigView: View {
         let loc = store.game.initialLocation
         let isDefault = abs(loc.latitude - AppConstants.defaultLatitude) < 0.001
             && abs(loc.longitude - AppConstants.defaultLongitude) < 0.001
-        return !isDefault && store.game.finalLocation != nil
+        guard !isDefault else { return false }
+        if store.game.gameMod == .stayInTheZone {
+            return store.game.finalLocation != nil
+        }
+        return true
     }
 
     var body: some View {
@@ -219,7 +223,9 @@ struct ChickenConfigView: View {
             .safeAreaInset(edge: .bottom) {
                 VStack(spacing: 10) {
                     if !isZoneConfigured {
-                        Text("Set a start zone and final zone to start")
+                        Text(store.game.gameMod == .stayInTheZone
+                             ? "Set a start zone and final zone to start"
+                             : "Set a start zone to start")
                             .font(.gameboy(size: 8))
                             .foregroundStyle(Color.CROrange)
                             .multilineTextAlignment(.center)
