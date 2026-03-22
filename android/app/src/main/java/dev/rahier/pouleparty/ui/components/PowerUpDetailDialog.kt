@@ -28,10 +28,12 @@ fun PowerUpDetailDialog(type: PowerUpType, onDismiss: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 val icon = when (type) {
-                    PowerUpType.ZONE_PREVIEW -> "👁️"
+                    PowerUpType.ZONE_PREVIEW -> "🔮"
                     PowerUpType.RADAR_PING -> "📡"
-                    PowerUpType.INVISIBILITY -> "🫥"
+                    PowerUpType.INVISIBILITY -> "👻"
                     PowerUpType.ZONE_FREEZE -> "❄️"
+                    PowerUpType.DECOY -> "🎭"
+                    PowerUpType.JAMMER -> "📶"
                 }
                 Text(icon, fontSize = 32.sp)
                 Text(type.title)

@@ -171,7 +171,7 @@ struct OnboardingView: View {
 
     var body: some View {
         ZStack {
-            Color.CRBeige.ignoresSafeArea()
+            Color.gradientBackgroundWarmth.ignoresSafeArea()
 
             TabView(selection: Binding(
                 get: { store.currentPage },
@@ -231,7 +231,7 @@ struct OnboardingView: View {
                     HStack(spacing: 8) {
                         ForEach(0..<OnboardingFeature.totalPages, id: \.self) { index in
                             Circle()
-                                .fill(index == store.currentPage ? Color.black : Color.black.opacity(0.2))
+                                .fill(index == store.currentPage ? Color.onBackground : Color.onBackground.opacity(0.2))
                                 .frame(width: 8, height: 8)
                         }
                     }
@@ -243,7 +243,7 @@ struct OnboardingView: View {
                                 store.send(.backButtonTapped)
                             } label: {
                                 BangerText("Back", size: 18)
-                                    .foregroundStyle(.black.opacity(0.5))
+                                    .foregroundStyle(Color.onBackground.opacity(0.5))
                                     .padding(.horizontal, 16)
                                     .padding(.vertical, 12)
                                     .contentShape(Rectangle())
@@ -259,13 +259,15 @@ struct OnboardingView: View {
                             store.send(.nextButtonTapped)
                         } label: {
                             BangerText(store.currentPage == OnboardingFeature.totalPages - 1 ? "Let's go!" : "Next", size: 22)
-                                .foregroundStyle(.white.opacity(isNextDisabled ? 0.6 : 1.0))
+                                .foregroundStyle(.black.opacity(isNextDisabled ? 0.6 : 1.0))
                                 .padding(.horizontal, 32)
                                 .padding(.vertical, 12)
                                 .background(
                                     Capsule()
-                                        .fill(Color.CROrange.opacity(isNextDisabled ? 0.4 : 1.0))
+                                        .fill(isNextDisabled ? AnyShapeStyle(Color.CROrange.opacity(0.4)) : AnyShapeStyle(Color.gradientFire))
+                                        .overlay(Capsule().stroke(Color.onBackground.opacity(isNextDisabled ? 0.2 : 1.0), lineWidth: 3))
                                 )
+                                .shadow(color: .black.opacity(isNextDisabled ? 0 : 0.2), radius: 4, y: 2)
                         }
                         .disabled(isNextDisabled)
                     }

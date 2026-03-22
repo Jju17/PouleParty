@@ -33,6 +33,7 @@ struct ChickenMapConfigFeature {
     enum Action: BindableAction {
         case binding(BindingAction<State>)
         case initialLocationReceived(CLLocationCoordinate2D)
+        case initialRadiusChanged(Double)
         case mapLocationTapped(CLLocationCoordinate2D)
         case mapCameraChanged(CLLocationCoordinate2D)
         case onTask
@@ -56,9 +57,21 @@ struct ChickenMapConfigFeature {
                 )
                 state.$game.withLock { $0.initialLocation = coordinate }
                 self.updateMapComponents(state: &state)
+                // Restore final marker if game has a final location
+                if let finalCoord = state.game.finalLocation {
+                    state.finalMarker = MarkerOverlay(title: "Final", coordinate: finalCoord)
+                }
                 return .none
             case .onTask:
+                // If game already has a configured location (not default Brussels), keep it
                 let gameLocation = state.game.initialLocation
+                let isDefault = abs(gameLocation.latitude - AppConstants.defaultLatitude) < 0.001
+                    && abs(gameLocation.longitude - AppConstants.defaultLongitude) < 0.001
+                if !isDefault {
+                    // Restore existing configuration without resetting
+                    return .send(.initialLocationReceived(gameLocation))
+                }
+                // Otherwise, get current location
                 return .run { send in
                     var firstLocation = gameLocation
                     for await coordinate in locationClient.startTracking() {
@@ -87,11 +100,37 @@ struct ChickenMapConfigFeature {
                         longitudeDelta: 0.01
                     )
                     self.updateMapComponents(state: &state)
+
+                    // Validate existing final zone — clear if now outside new start zone
+                    if let finalCoord = state.game.finalLocation {
+                        let newStart = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+                        let finalLoc = CLLocation(latitude: finalCoord.latitude, longitude: finalCoord.longitude)
+                        if newStart.distance(from: finalLoc) > state.game.initialRadius {
+                            state.$game.withLock { $0.finalLocation = nil }
+                            state.finalMarker = nil
+                        }
+                    }
+
+                    // Auto-switch to final zone mode after placing start
+                    state.pinMode = .final_
                 }
                 return .none
             case let .mapCameraChanged(centerCoordinates):
                 state.$game.withLock { $0.initialLocation = centerCoordinates }
                 self.updateMapComponents(state: &state)
+                return .none
+            case let .initialRadiusChanged(radius):
+                state.$game.withLock { $0.initialRadius = radius }
+                self.updateMapComponents(state: &state)
+                // Validate final zone against new radius
+                if let finalCoord = state.game.finalLocation {
+                    let start = CLLocation(latitude: state.game.initialLocation.latitude, longitude: state.game.initialLocation.longitude)
+                    let finalLoc = CLLocation(latitude: finalCoord.latitude, longitude: finalCoord.longitude)
+                    if start.distance(from: finalLoc) > radius {
+                        state.$game.withLock { $0.finalLocation = nil }
+                        state.finalMarker = nil
+                    }
+                }
                 return .none
             case let .pinModeChanged(mode):
                 state.pinMode = mode
@@ -165,39 +204,65 @@ struct ChickenMapConfigView: View {
 
     var body: some View {
         GeometryReader { proxy in
-            ZStack(alignment: .top) {
+            ZStack {
                 mapContent
 
-                VStack(spacing: 4) {
-                    // Pin mode picker
-                    Picker("Pin Mode", selection: Binding(
-                        get: { store.pinMode },
-                        set: { store.send(.pinModeChanged($0)) }
-                    )) {
-                        Text("Start zone").tag(MapConfigPinMode.start)
-                        Text("Final zone").tag(MapConfigPinMode.final_)
-                    }
-                    .pickerStyle(.segmented)
-                    .padding(.horizontal, 8)
-                    .padding(.top, 8)
-
-                    // Search bar + results
+                // Search bar at top
+                VStack {
                     searchOverlay
-
-                    if store.pinMode == .final_ {
-                        Text("Tap inside the start zone to place the final zone center")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(.regularMaterial)
-                            .cornerRadius(8)
-                            .padding(.horizontal, 8)
-                    }
+                    Spacer()
                 }
 
                 // Location button
                 locationButton
+
+                // Bottom bar: radius slider + pin mode picker + hint
+                VStack {
+                    Spacer()
+                    VStack(spacing: 10) {
+                        if store.pinMode == .final_ {
+                            Text("Tap inside the start zone to place the final zone center")
+                                .font(.gameboy(size: 8))
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+                        }
+
+                        // Radius slider
+                        VStack(spacing: 4) {
+                            HStack {
+                                Text("Radius")
+                                    .font(.gameboy(size: 9))
+                                    .foregroundStyle(.primary)
+                                Spacer()
+                                Text("\(Int(store.game.initialRadius)) m")
+                                    .font(.gameboy(size: 9))
+                                    .foregroundStyle(Color.CROrange)
+                            }
+                            Slider(
+                                value: Binding(
+                                    get: { store.game.initialRadius },
+                                    set: { store.send(.initialRadiusChanged($0)) }
+                                ),
+                                in: 500...2000,
+                                step: 100
+                            )
+                            .tint(.CROrange)
+                        }
+
+                        Picker("Pin Mode", selection: Binding(
+                            get: { store.pinMode },
+                            set: { store.send(.pinModeChanged($0)) }
+                        )) {
+                            Text("Start zone").tag(MapConfigPinMode.start)
+                            Text("Final zone").tag(MapConfigPinMode.final_)
+                        }
+                        .pickerStyle(.segmented)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(.thinMaterial)
+                }
+                .ignoresSafeArea(.keyboard)
             }
         }
     }
@@ -208,32 +273,76 @@ struct ChickenMapConfigView: View {
 
             if let circle = self.store.mapCircle {
                 let circlePolygon = Polygon(center: circle.center, radius: circle.radius, vertices: 72)
+                // Neon glow on start zone circle
                 PolylineAnnotation(lineCoordinates: circlePolygon.outerRing.coordinates)
-                    .lineColor(StyleColor(UIColor(Color.CROrange).withAlphaComponent(0.8)))
-                    .lineWidth(2)
+                    .lineColor(StyleColor(UIColor(Color.CROrange).withAlphaComponent(0.08)))
+                    .lineWidth(16)
+                PolylineAnnotation(lineCoordinates: circlePolygon.outerRing.coordinates)
+                    .lineColor(StyleColor(UIColor(Color.CROrange).withAlphaComponent(0.15)))
+                    .lineWidth(8)
+                PolylineAnnotation(lineCoordinates: circlePolygon.outerRing.coordinates)
+                    .lineColor(StyleColor(UIColor(Color.CROrange).withAlphaComponent(0.35)))
+                    .lineWidth(4)
+                PolylineAnnotation(lineCoordinates: circlePolygon.outerRing.coordinates)
+                    .lineColor(StyleColor(UIColor(Color.CROrange).withAlphaComponent(0.9)))
+                    .lineWidth(2.5)
             }
 
             if let marker = self.store.marker {
                 MapViewAnnotation(coordinate: marker.coordinate) {
-                    Image(systemName: "mappin.circle.fill")
-                        .font(.title)
-                        .foregroundStyle(.red)
+                    VStack(spacing: 0) {
+                        Text("START")
+                            .font(.gameboy(size: 7))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(
+                                Capsule()
+                                    .fill(Color.CROrange)
+                                    .shadow(color: Color.CROrange.opacity(0.5), radius: 6, y: 2)
+                            )
+                        Image(systemName: "triangle.fill")
+                            .font(.system(size: 8))
+                            .foregroundStyle(Color.CROrange)
+                            .rotationEffect(.degrees(180))
+                    }
                 }
+                .allowOverlap(true)
             }
 
-            // Final zone marker (green)
+            // Final zone marker
             if let finalMarker = self.store.finalMarker {
                 MapViewAnnotation(coordinate: finalMarker.coordinate) {
-                    Image(systemName: "mappin.circle.fill")
-                        .font(.title)
-                        .foregroundStyle(.green)
+                    VStack(spacing: 0) {
+                        Text("FINAL")
+                            .font(.gameboy(size: 7))
+                            .foregroundStyle(.black)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(
+                                Capsule()
+                                    .fill(Color.zoneGreen)
+                                    .shadow(color: Color.zoneGreen.opacity(0.5), radius: 6, y: 2)
+                            )
+                        Image(systemName: "triangle.fill")
+                            .font(.system(size: 8))
+                            .foregroundStyle(Color.zoneGreen)
+                            .rotationEffect(.degrees(180))
+                    }
                 }
+                .allowOverlap(true)
 
-                // Small circle at final position
+                // Neon glow circle at final position
                 let finalCircle = Polygon(center: finalMarker.coordinate, radius: 50, vertices: 36)
                 PolylineAnnotation(lineCoordinates: finalCircle.outerRing.coordinates)
-                    .lineColor(StyleColor(UIColor.green.withAlphaComponent(0.8)))
-                    .lineWidth(2)
+                    .lineColor(StyleColor(UIColor(Color.zoneGreen).withAlphaComponent(0.15)))
+                    .lineWidth(8)
+                PolylineAnnotation(lineCoordinates: finalCircle.outerRing.coordinates)
+                    .lineColor(StyleColor(UIColor(Color.zoneGreen).withAlphaComponent(0.5)))
+                    .lineWidth(3)
+                PolylineAnnotation(lineCoordinates: finalCircle.outerRing.coordinates)
+                    .lineColor(StyleColor(UIColor(Color.zoneGreen).withAlphaComponent(0.9)))
+                    .lineWidth(1.5)
             }
 
             TapInteraction { context in
@@ -310,7 +419,7 @@ struct ChickenMapConfigView: View {
                                         }
                                     }
                                 }
-                                searchText = result.title
+                                searchText = ""
                                 searchHelper.results = []
                                 isSearchFieldFocused = false
                             } label: {

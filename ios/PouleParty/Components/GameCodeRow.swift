@@ -22,7 +22,7 @@ struct GameCodeRow: View {
                 }
             } label: {
                 Image(systemName: codeCopied ? "checkmark" : "doc.on.doc")
-                    .foregroundStyle(codeCopied ? .green : .gray)
+                    .foregroundStyle(codeCopied ? Color.success : .gray)
                     .contentTransition(.symbolEffect(.replace))
             }
             .buttonStyle(.plain)

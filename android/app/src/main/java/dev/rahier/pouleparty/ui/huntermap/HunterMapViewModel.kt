@@ -67,8 +67,10 @@ data class HunterMapUiState(
     val collectedPowerUps: List<PowerUp> = emptyList(),
     val showPowerUpInventory: Boolean = false,
     val powerUpNotification: String? = null,
+    val lastActivatedPowerUpType: PowerUpType? = null,
     val previewCircle: Pair<Point, Double>? = null,
-    val activatingPowerUpId: String? = null
+    val activatingPowerUpId: String? = null,
+    val decoyLocation: Point? = null
 )
 
 @HiltViewModel
@@ -276,6 +278,24 @@ class HunterMapViewModel @Inject constructor(
                     _uiState.update { it.copy(circleCenter = interpolatedCenter) }
                 }
 
+                // Decoy: show a fake chicken marker when decoy is active
+                if (updatedGame.isDecoyActive) {
+                    if (_uiState.value.decoyLocation == null) {
+                        val center = _uiState.value.circleCenter ?: updatedGame.initialLocation
+                        val angle = Math.random() * 2 * Math.PI
+                        val distance = (200 + Math.random() * 300) / 111_320.0 // 200-500m in degrees
+                        val decoy = Point.fromLngLat(
+                            center.longitude() + distance * Math.sin(angle) / Math.cos(Math.toRadians(center.latitude())),
+                            center.latitude() + distance * Math.cos(angle)
+                        )
+                        _uiState.update { it.copy(decoyLocation = decoy) }
+                    }
+                } else {
+                    if (_uiState.value.decoyLocation != null) {
+                        _uiState.update { it.copy(decoyLocation = null) }
+                    }
+                }
+
                 // Detect new winners
                 val notification = detectNewWinners(
                     winners = updatedGame.winners,
@@ -293,11 +313,10 @@ class HunterMapViewModel @Inject constructor(
 
     /**
      * Circle follows chicken position in followTheChicken mode.
-     * In stayInTheZone, no chicken stream (circle stays on initial coordinates).
+     * In stayInTheZone, chicken only writes when radarPing is active,
+     * so hunter will only receive updates during pings.
      */
     private suspend fun streamChickenLocation(game: Game) {
-        if (game.gameModEnum == GameMod.STAY_IN_THE_ZONE) return
-
         val delayMs = game.hunterStartDate.time - System.currentTimeMillis()
         if (delayMs > 0) delay(delayMs)
         firestoreRepository.chickenLocationFlow(gameId).collect { location ->
@@ -349,10 +368,10 @@ class HunterMapViewModel @Inject constructor(
         }
     }
 
-    private fun showNotification(message: String) {
+    private fun showNotification(message: String, type: PowerUpType? = null) {
         notificationJob?.cancel()
         notificationJob = viewModelScope.launch {
-            _uiState.update { it.copy(powerUpNotification = message) }
+            _uiState.update { it.copy(powerUpNotification = message, lastActivatedPowerUpType = type) }
             delay(2000)
             _uiState.update { it.copy(powerUpNotification = null) }
         }
@@ -373,7 +392,7 @@ class HunterMapViewModel @Inject constructor(
                 viewModelScope.launch {
                     try {
                         firestoreRepository.collectPowerUp(gameId, powerUp.id, hunterId)
-                        showNotification("Collected: ${powerUp.typeEnum.title}!")
+                        showNotification("Collected: ${powerUp.typeEnum.title}!", powerUp.typeEnum)
                     } catch (e: Exception) {
                         Log.e(TAG, "Failed to collect power-up", e)
                         showNotification("Failed to collect power-up")
@@ -412,7 +431,7 @@ class HunterMapViewModel @Inject constructor(
                     else -> {}
                 }
                 _uiState.update { it.copy(showPowerUpInventory = false) }
-                showNotification("Activated: ${powerUp.typeEnum.title}!")
+                showNotification("Activated: ${powerUp.typeEnum.title}!", powerUp.typeEnum)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to activate power-up", e)
             } finally {

@@ -114,12 +114,11 @@ struct SettingsView: View {
             .padding(.horizontal, 20)
             .padding(.vertical, 16)
         }
-        .background(Color.CRBeige)
+        .background(Color.gradientBackgroundWarmth)
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(Color.CRBeige, for: .navigationBar)
+        .toolbarBackground(Color.background, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
-        .toolbarColorScheme(.light, for: .navigationBar)
         .onAppear {
             nicknameText = store.savedNickname
         }
@@ -175,20 +174,20 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 10) {
             Label("Nickname", systemImage: "person")
                 .font(.banger(size: 18))
-                .foregroundStyle(.black)
+                .foregroundStyle(Color.onBackground)
 
             TextField("Your nickname", text: $nicknameText)
                 .font(.banger(size: 22))
-                .foregroundStyle(.black)
+                .foregroundStyle(Color.onBackground)
                 .multilineTextAlignment(.center)
                 .padding()
                 .background(
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.white)
+                        .fill(Color.surface)
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.black.opacity(0.2), lineWidth: 1)
+                        .stroke(Color.onBackground.opacity(0.2), lineWidth: 1)
                 )
                 .focused($isNicknameFocused)
                 .submitLabel(.done)
@@ -202,7 +201,7 @@ struct SettingsView: View {
                 }
 
             BangerText("\(nicknameText.count)/\(AppConstants.nicknameMaxLength)", size: 14)
-                .foregroundStyle(.black.opacity(0.4))
+                .foregroundStyle(Color.onBackground.opacity(0.4))
                 .frame(maxWidth: .infinity, alignment: .trailing)
         }
         .settingsCard()
@@ -250,12 +249,12 @@ struct SettingsView: View {
                 .padding(.vertical, 14)
                 .background(
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.red.opacity(0.85))
+                        .fill(Color.danger.opacity(0.85))
                 )
             }
 
             BangerText("This will delete your anonymous account and all associated data. A new anonymous account will be created automatically.", size: 13)
-                .foregroundStyle(.black.opacity(0.4))
+                .foregroundStyle(Color.onBackground.opacity(0.4))
         }
         .settingsCard()
     }
@@ -266,17 +265,17 @@ struct SettingsView: View {
         VStack(spacing: 4) {
             HStack {
                 BangerText("Version", size: 16)
-                    .foregroundStyle(.black)
+                    .foregroundStyle(Color.onBackground)
                 Spacer()
                 BangerText(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—", size: 16)
-                    .foregroundStyle(.black.opacity(0.4))
+                    .foregroundStyle(Color.onBackground.opacity(0.4))
             }
             HStack {
                 BangerText("Build", size: 14)
-                    .foregroundStyle(.black.opacity(0.4))
+                    .foregroundStyle(Color.onBackground.opacity(0.4))
                 Spacer()
                 BangerText(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "—", size: 14)
-                    .foregroundStyle(.black.opacity(0.4))
+                    .foregroundStyle(Color.onBackground.opacity(0.4))
             }
         }
         .settingsCard()
@@ -294,9 +293,9 @@ struct SettingsView: View {
                 Spacer()
                 Image(systemName: "chevron.right")
                     .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(.black.opacity(0.3))
+                    .foregroundStyle(Color.onBackground.opacity(0.3))
             }
-            .foregroundStyle(.black)
+            .foregroundStyle(Color.onBackground)
             .padding(14)
         }
     }
@@ -313,8 +312,9 @@ private struct SettingsCardModifier: ViewModifier {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.white)
+                    .fill(Color.surface)
             )
+            .shadow(color: .black.opacity(0.15), radius: 2, y: 1)
     }
 }
 

@@ -157,11 +157,11 @@ fun ChickenMapConfigScreen(
                 value = state.searchQuery,
                 onValueChange = { viewModel.onSearchQueryChanged(it) },
                 placeholder = { Text(stringResource(R.string.search_address), fontSize = 14.sp) },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray) },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)) },
                 trailingIcon = {
                     if (state.searchQuery.isNotEmpty()) {
                         IconButton(onClick = { viewModel.clearSearch() }) {
-                            Icon(Icons.Default.Clear, contentDescription = null, tint = Color.Gray)
+                            Icon(Icons.Default.Clear, contentDescription = null, tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f))
                         }
                     }
                 },
@@ -169,8 +169,8 @@ fun ChickenMapConfigScreen(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = Color.White.copy(alpha = 0.95f),
-                    unfocusedContainerColor = Color.White.copy(alpha = 0.95f)
+                    focusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
                 )
             )
 
@@ -201,7 +201,7 @@ fun ChickenMapConfigScreen(
                             ) {
                                 Text(result.title, fontSize = 14.sp)
                                 if (result.subtitle.isNotEmpty()) {
-                                    Text(result.subtitle, fontSize = 12.sp, color = Color.Gray)
+                                    Text(result.subtitle, fontSize = 12.sp, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f))
                                 }
                             }
                             HorizontalDivider()
@@ -215,12 +215,12 @@ fun ChickenMapConfigScreen(
                 Spacer(Modifier.height(4.dp))
                 Card(
                     shape = RoundedCornerShape(8.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.9f))
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f))
                 ) {
                     Text(
                         text = stringResource(R.string.final_zone_hint),
                         fontSize = 12.sp,
-                        color = Color.Gray,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                     )
                 }

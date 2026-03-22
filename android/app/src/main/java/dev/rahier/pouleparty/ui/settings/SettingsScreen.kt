@@ -21,6 +21,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -29,8 +30,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import dev.rahier.pouleparty.R
-import dev.rahier.pouleparty.ui.theme.CRBeige
-import dev.rahier.pouleparty.ui.theme.bangerStyle
+import dev.rahier.pouleparty.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,11 +54,11 @@ fun SettingsScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = CRBeige
+                    containerColor = MaterialTheme.colorScheme.background
                 )
             )
         },
-        containerColor = CRBeige
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Column(
             modifier = Modifier
@@ -82,12 +82,12 @@ fun SettingsScreen(
                             Icons.Filled.Person,
                             contentDescription = null,
                             modifier = Modifier.size(20.dp),
-                            tint = Color.Black
+                            tint = MaterialTheme.colorScheme.onBackground
                         )
                         Text(
                             stringResource(R.string.nickname),
                             style = bangerStyle(18),
-                            color = Color.Black
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                     }
 
@@ -98,10 +98,10 @@ fun SettingsScreen(
                         textStyle = bangerStyle(22).copy(textAlign = TextAlign.Center),
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            unfocusedContainerColor = Color.White,
-                            focusedContainerColor = Color.White,
-                            unfocusedBorderColor = Color.Black.copy(alpha = 0.2f),
-                            focusedBorderColor = Color.Black.copy(alpha = 0.4f)
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                            focusedContainerColor = MaterialTheme.colorScheme.surface,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f),
+                            focusedBorderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
                         ),
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -114,7 +114,7 @@ fun SettingsScreen(
                         Text(
                             "${state.nickname.length}/${SettingsViewModel.NICKNAME_MAX_LENGTH}",
                             style = bangerStyle(14),
-                            color = Color.Black.copy(alpha = 0.4f)
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
                         )
 
                         Button(
@@ -147,7 +147,7 @@ fun SettingsScreen(
                     )
                     HorizontalDivider(
                         modifier = Modifier.padding(horizontal = 14.dp),
-                        color = Color.Black.copy(alpha = 0.1f)
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f)
                     )
                     SettingsRow(
                         icon = Icons.Outlined.Description,
@@ -158,7 +158,7 @@ fun SettingsScreen(
                     )
                     HorizontalDivider(
                         modifier = Modifier.padding(horizontal = 14.dp),
-                        color = Color.Black.copy(alpha = 0.1f)
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f)
                     )
                     SettingsRow(
                         icon = Icons.Filled.Email,
@@ -179,7 +179,7 @@ fun SettingsScreen(
                     Button(
                         onClick = { viewModel.onDeleteDataTapped() },
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color.Red.copy(alpha = 0.85f),
+                            containerColor = Danger.copy(alpha = 0.85f),
                             contentColor = Color.White
                         ),
                         shape = RoundedCornerShape(12.dp),
@@ -205,7 +205,7 @@ fun SettingsScreen(
                     Text(
                         stringResource(R.string.delete_data_footer),
                         style = bangerStyle(13),
-                        color = Color.Black.copy(alpha = 0.4f)
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
                     )
                 }
             }
@@ -227,12 +227,12 @@ fun SettingsScreen(
                         Text(
                             stringResource(R.string.version),
                             style = bangerStyle(16),
-                            color = Color.Black
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                         Text(
                             versionName,
                             style = bangerStyle(16),
-                            color = Color.Black.copy(alpha = 0.4f)
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
                         )
                     }
                     Spacer(modifier = Modifier.height(4.dp))
@@ -243,12 +243,12 @@ fun SettingsScreen(
                         Text(
                             "Build",
                             style = bangerStyle(14),
-                            color = Color.Black.copy(alpha = 0.4f)
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
                         )
                         Text(
                             buildNumber,
                             style = bangerStyle(14),
-                            color = Color.Black.copy(alpha = 0.4f)
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
                         )
                     }
                 }
@@ -327,8 +327,9 @@ private fun SettingsCard(
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .shadow(2.dp, RoundedCornerShape(12.dp))
             .clip(RoundedCornerShape(12.dp))
-            .background(Color.White)
+            .background(MaterialTheme.colorScheme.surface)
     ) {
         content()
     }
@@ -351,20 +352,20 @@ private fun SettingsRow(
             icon,
             contentDescription = null,
             modifier = Modifier.size(20.dp),
-            tint = Color.Black
+            tint = MaterialTheme.colorScheme.onBackground
         )
         Spacer(Modifier.width(10.dp))
         Text(
             title,
             style = bangerStyle(18),
-            color = Color.Black
+            color = MaterialTheme.colorScheme.onBackground
         )
         Spacer(Modifier.weight(1f))
         Icon(
             Icons.AutoMirrored.Filled.KeyboardArrowRight,
             contentDescription = null,
             modifier = Modifier.size(16.dp),
-            tint = Color.Black.copy(alpha = 0.3f)
+            tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f)
         )
     }
 }

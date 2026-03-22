@@ -42,7 +42,9 @@ struct HunterMapFeature {
         var collectedPowerUps: [PowerUp] = []
         var showPowerUpInventory: Bool = false
         var powerUpNotification: String? = nil
+        var lastActivatedPowerUpType: PowerUp.PowerUpType? = nil
         var previewCircle: CircleOverlay? = nil
+        var decoyLocation: CLLocationCoordinate2D? = nil
 
         var hasChickenStarted: Bool { nowDate >= game.startDate }
         var hasGameStarted: Bool { nowDate >= game.hunterStartDate }
@@ -187,6 +189,7 @@ struct HunterMapFeature {
                 let expiresAt = Timestamp(date: .now.addingTimeInterval(duration))
                 state.showPowerUpInventory = false
                 state.powerUpNotification = "Activated: \(powerUp.type.displayName)!"
+                state.lastActivatedPowerUpType = powerUp.type
 
                 // Zone Preview: compute next zone boundary client-side
                 if powerUp.type == .zonePreview {
@@ -343,24 +346,24 @@ struct HunterMapFeature {
                     }
                 ]
 
-                // followTheChicken: circle follows the chicken
-                // stayInTheZone: circle stays fixed on initial coordinates (no chicken stream)
-                // Gated behind hunterStartDate to avoid leaking position early
-                if gameMod != .stayInTheZone {
-                    effects.append(
-                        .run { send in
-                            let delay = hunterStartDate.timeIntervalSinceNow
-                            if delay > 0 {
-                                try await clock.sleep(for: .seconds(delay))
-                            }
-                            for await location in apiClient.chickenLocationStream(gameId) {
-                                if let location {
-                                    await send(.newLocationFetched(location))
-                                }
+                // Subscribe to chicken location stream in all modes.
+                // In followTheChicken: circle follows the chicken continuously.
+                // In stayInTheZone: chicken only writes when radarPing is active,
+                //   so hunter will only receive updates during pings.
+                // Gated behind hunterStartDate to avoid leaking position early.
+                effects.append(
+                    .run { send in
+                        let delay = hunterStartDate.timeIntervalSinceNow
+                        if delay > 0 {
+                            try await clock.sleep(for: .seconds(delay))
+                        }
+                        for await location in apiClient.chickenLocationStream(gameId) {
+                            if let location {
+                                await send(.newLocationFetched(location))
                             }
                         }
-                    )
-                }
+                    }
+                )
 
                 // Hunter always tracks own location (for zone check).
                 // When chickenCanSeeHunters, also writes to Firestore.
@@ -431,6 +434,37 @@ struct HunterMapFeature {
 
                 let (lastUpdate, lastRadius) = game.findLastUpdate()
 
+                // Detect newly activated power-ups (compare old vs new)
+                let now = Date.now
+                var powerUpNotificationText: String?
+                var powerUpNotificationType: PowerUp.PowerUpType?
+
+                if let until = game.activeInvisibilityUntil?.dateValue(), until > now,
+                   state.game.activeInvisibilityUntil?.dateValue() != until {
+                    powerUpNotificationText = "\(PowerUp.PowerUpType.invisibility.emoji) Invisibility activated!"
+                    powerUpNotificationType = .invisibility
+                }
+                if let until = game.activeZoneFreezeUntil?.dateValue(), until > now,
+                   state.game.activeZoneFreezeUntil?.dateValue() != until {
+                    powerUpNotificationText = "\(PowerUp.PowerUpType.zoneFreeze.emoji) Zone Freeze activated!"
+                    powerUpNotificationType = .zoneFreeze
+                }
+                if let until = game.activeRadarPingUntil?.dateValue(), until > now,
+                   state.game.activeRadarPingUntil?.dateValue() != until {
+                    powerUpNotificationText = "\(PowerUp.PowerUpType.radarPing.emoji) Radar Ping activated!"
+                    powerUpNotificationType = .radarPing
+                }
+                if let until = game.activeDecoyUntil?.dateValue(), until > now,
+                   state.game.activeDecoyUntil?.dateValue() != until {
+                    powerUpNotificationText = "\(PowerUp.PowerUpType.decoy.emoji) Decoy activated!"
+                    powerUpNotificationType = .decoy
+                }
+                if let until = game.activeJammerUntil?.dateValue(), until > now,
+                   state.game.activeJammerUntil?.dateValue() != until {
+                    powerUpNotificationText = "\(PowerUp.PowerUpType.jammer.emoji) Jammer activated!"
+                    powerUpNotificationType = .jammer
+                }
+
                 state.game = game
                 state.radius = lastRadius
                 state.nextRadiusUpdate = lastUpdate
@@ -453,6 +487,21 @@ struct HunterMapFeature {
                     )
                 }
 
+                // Decoy: show a fake chicken marker when decoy is active
+                if game.isDecoyActive {
+                    if state.decoyLocation == nil, let center = state.mapCircle?.center {
+                        // Generate fake location at random offset (200-500m from circle center)
+                        let angle = Double.random(in: 0..<2 * .pi)
+                        let distance = Double.random(in: 200...500) / 111_320.0 // degrees
+                        state.decoyLocation = CLLocationCoordinate2D(
+                            latitude: center.latitude + distance * cos(angle),
+                            longitude: center.longitude + distance * sin(angle) / cos(center.latitude * .pi / 180)
+                        )
+                    }
+                } else {
+                    state.decoyLocation = nil
+                }
+
                 // Update Live Activity with new game state
                 let currentLAState = state.liveActivityState
                 var effects: [Effect<Action>] = []
@@ -460,6 +509,16 @@ struct HunterMapFeature {
                     state.lastLiveActivityState = currentLAState
                     effects.append(.run { _ in
                         await liveActivityClient.update(currentLAState)
+                    })
+                }
+
+                // Show global power-up notification
+                if let text = powerUpNotificationText {
+                    state.powerUpNotification = text
+                    state.lastActivatedPowerUpType = powerUpNotificationType
+                    effects.append(.run { send in
+                        try await clock.sleep(for: .seconds(2))
+                        await send(.powerUpNotificationDismissed)
                     })
                 }
 
@@ -592,14 +651,15 @@ struct HunterMapFeature {
                     state.previewCircle = nil
                 }
 
-                // Power-up proximity check
+                // Power-up proximity check — collect all nearby power-ups
                 if let userLoc = state.userLocation {
-                    for powerUp in state.availablePowerUps {
-                        let dist = CLLocation(latitude: userLoc.latitude, longitude: userLoc.longitude)
+                    let nearbyPowerUps = state.availablePowerUps.filter { powerUp in
+                        CLLocation(latitude: userLoc.latitude, longitude: userLoc.longitude)
                             .distance(from: CLLocation(latitude: powerUp.coordinate.latitude, longitude: powerUp.coordinate.longitude))
-                        if dist <= AppConstants.powerUpCollectionRadiusMeters {
-                            return .send(.powerUpCollected(powerUp))
-                        }
+                            <= AppConstants.powerUpCollectionRadiusMeters
+                    }
+                    if !nearbyPowerUps.isEmpty {
+                        return .merge(nearbyPowerUps.map { .send(.powerUpCollected($0)) })
                     }
                 }
 
@@ -657,7 +717,7 @@ struct HunterMapView: View {
     }
 
     private var overlayColor: UIColor {
-        store.isOutsideZone ? UIColor.red.withAlphaComponent(0.4) : UIColor.black.withAlphaComponent(0.3)
+        store.isOutsideZone ? UIColor(Color.zoneDanger).withAlphaComponent(0.4) : UIColor.black.withAlphaComponent(0.3)
     }
 
     private var compassButton: some View {
@@ -675,8 +735,9 @@ struct HunterMapView: View {
             Image(systemName: "location.north.fill")
                 .rotationEffect(.degrees(-mapBearing))
                 .frame(width: 40, height: 40)
-                .background(.thinMaterial)
+                .background(Color.surface)
                 .clipShape(Circle())
+                .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
         }
         .padding(.trailing, 8)
         .padding(.top, 8)
@@ -685,10 +746,13 @@ struct HunterMapView: View {
     private var topBar: some View {
         HStack {
             Spacer()
-            VStack {
-                Text("You are the Hunter")
+            VStack(spacing: 2) {
+                BangerText("You are the Hunter", size: 20)
+                    .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
                 Text(hunterSubtitle)
-                    .font(.system(size: 12))
+                    .font(.gameboy(size: 10))
+                    .foregroundStyle(.white.opacity(0.8))
             }
             Spacer()
             Button {
@@ -696,19 +760,23 @@ struct HunterMapView: View {
             } label: {
                 Image(systemName: "info.circle")
                     .font(.system(size: 20))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.white.opacity(0.8))
             }
             .accessibilityLabel("Game info")
             .padding(.trailing, 4)
         }
         .padding()
-        .background(.thinMaterial)
+        .background(
+            LinearGradient(colors: [.hunterRed, .CRPink], startPoint: .leading, endPoint: .trailing)
+        )
     }
 
     private var bottomBar: some View {
         HStack {
             VStack(alignment: .leading) {
                 Text("Radius : \(self.store.radius)m")
+                    .font(.gameboy(size: 14))
+                    .foregroundStyle(.white)
                     .accessibilityLabel("Radius \(self.store.radius) meters")
                 CountdownView(nowDate: self.$store.nowDate, nextUpdateDate: self.$store.nextRadiusUpdate, chickenStartDate: store.game.startDate, hunterStartDate: store.game.hunterStartDate, isChicken: false)
             }
@@ -718,8 +786,8 @@ struct HunterMapView: View {
                     self.store.send(.powerUpInventoryTapped)
                 } label: {
                     ZStack {
-                        RoundedRectangle(cornerRadius: 5)
-                            .fill(.orange)
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.CROrange)
                         HStack(spacing: 2) {
                             Image(systemName: "bolt.fill")
                                 .font(.system(size: 10))
@@ -731,14 +799,15 @@ struct HunterMapView: View {
                 }
                 .accessibilityLabel("Power-ups inventory")
                 .frame(width: 44, height: 40)
+                .neonGlow(.CROrange, intensity: .subtle)
             }
             if store.hasGameStarted {
                 Button {
                     self.store.send(.foundButtonTapped)
                 } label: {
                     ZStack {
-                        RoundedRectangle(cornerRadius: 5)
-                            .fill(.red)
+                        Capsule()
+                            .fill(Color.hunterRed)
                         Text("FOUND")
                             .font(Font.system(size: 11))
                             .fontWeight(.bold)
@@ -747,10 +816,11 @@ struct HunterMapView: View {
                 }
                 .accessibilityLabel("I found the chicken")
                 .frame(width: 50, height: 40)
+                .neonGlow(.hunterRed, intensity: .subtle)
             }
         }
         .padding()
-        .background(.thinMaterial)
+        .background(Color.darkBackground.opacity(0.85))
     }
 
     private var mapView: some View {
@@ -769,17 +839,26 @@ struct HunterMapView: View {
                     .fillColor(StyleColor(overlayColor))
                     .fillOpacity(1.0)
 
-                // Zone border circle
+                // Zone border circle — neon glow effect (layered polylines)
                 PolylineAnnotation(lineCoordinates: circlePolygon.outerRing.coordinates)
-                    .lineColor(StyleColor(UIColor.green.withAlphaComponent(0.7)))
-                    .lineWidth(2)
+                    .lineColor(StyleColor(UIColor(Color.zoneGreen).withAlphaComponent(0.08)))
+                    .lineWidth(16)
+                PolylineAnnotation(lineCoordinates: circlePolygon.outerRing.coordinates)
+                    .lineColor(StyleColor(UIColor(Color.zoneGreen).withAlphaComponent(0.15)))
+                    .lineWidth(8)
+                PolylineAnnotation(lineCoordinates: circlePolygon.outerRing.coordinates)
+                    .lineColor(StyleColor(UIColor(Color.zoneGreen).withAlphaComponent(0.35)))
+                    .lineWidth(4)
+                PolylineAnnotation(lineCoordinates: circlePolygon.outerRing.coordinates)
+                    .lineColor(StyleColor(UIColor(Color.zoneGreen).withAlphaComponent(0.9)))
+                    .lineWidth(2.5)
             }
 
             // Zone Preview power-up effect (dashed preview of next zone)
             if let preview = store.previewCircle {
                 let previewPolygon = Polygon(center: preview.center, radius: preview.radius, vertices: 72)
                 PolylineAnnotation(lineCoordinates: previewPolygon.outerRing.coordinates)
-                    .lineColor(StyleColor(UIColor.cyan.withAlphaComponent(0.6)))
+                    .lineColor(StyleColor(UIColor(Color.powerupFreeze).withAlphaComponent(0.6)))
                     .lineWidth(2)
             }
 
@@ -791,17 +870,28 @@ struct HunterMapView: View {
                             selectedPowerUp = powerUp
                         } label: {
                             Image(systemName: powerUp.type.iconName)
-                                .font(.system(size: 24))
-                                .foregroundStyle(.orange)
-                                .padding(4)
-                                .background(.white.opacity(0.9))
+                                .font(.system(size: 20))
+                                .foregroundStyle(.white)
+                                .padding(8)
+                                .background(powerUp.type.color)
                                 .clipShape(Circle())
-                                .shadow(radius: 3)
+                                .shadow(color: powerUp.type.color.opacity(0.5), radius: 6, y: 2)
                         }
                     }
                     .allowOverlap(true)
                     .allowOverlapWithPuck(true)
                 }
+            }
+
+            // Decoy: fake chicken marker when decoy is active
+            if let decoyLocation = store.decoyLocation {
+                MapViewAnnotation(coordinate: decoyLocation) {
+                    Text("🐔")
+                        .font(.system(size: 28))
+                        .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
+                }
+                .allowOverlap(true)
+                .allowOverlapWithPuck(true)
             }
         }
         .onCameraChanged { context in
@@ -890,7 +980,8 @@ struct HunterMapView: View {
                         .foregroundStyle(.white)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 8)
-                        .background(.orange.opacity(0.9))
+                        .background((store.lastActivatedPowerUpType?.color ?? Color.CROrange).opacity(0.9))
+                        .neonGlow(store.lastActivatedPowerUpType?.color ?? .CROrange, intensity: .subtle)
                         .clipShape(Capsule())
                         .padding(.top, 100)
                         .transition(.move(edge: .top).combined(with: .opacity))
@@ -910,7 +1001,7 @@ struct HunterMapView: View {
             }
             .sheet(item: $selectedPowerUp) { powerUp in
                 PowerUpDetailSheet(powerUpType: powerUp.type)
-                    .presentationDetents([.height(200)])
+                    .presentationDetents([.medium, .large])
             }
     }
 }

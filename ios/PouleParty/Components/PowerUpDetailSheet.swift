@@ -7,22 +7,12 @@ import SwiftUI
 
 struct PowerUpDetailSheet: View {
     let powerUpType: PowerUp.PowerUpType
-    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         VStack(spacing: 12) {
-            HStack {
-                Spacer()
-                Button { dismiss() } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.title3)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
             Image(systemName: powerUpType.iconName)
                 .font(.system(size: 36))
-                .foregroundStyle(powerUpType.isHunterPowerUp ? .orange : .purple)
+                .foregroundStyle(powerUpType.color)
 
             Text(powerUpType.displayName)
                 .font(.headline)
@@ -38,6 +28,7 @@ struct PowerUpDetailSheet: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
 
             if let duration = powerUpType.durationSeconds {
                 Text("Duration: \(Int(duration))s")
@@ -46,5 +37,6 @@ struct PowerUpDetailSheet: View {
             }
         }
         .padding()
+        .presentationDragIndicator(.visible)
     }
 }

@@ -21,7 +21,7 @@ struct PowerUpInventorySheet: View {
                         HStack {
                             Image(systemName: powerUp.type.iconName)
                                 .font(.title2)
-                                .foregroundStyle(.purple)
+                                .foregroundStyle(powerUp.type.color)
                                 .frame(width: 40)
                             VStack(alignment: .leading) {
                                 Text(powerUp.type.displayName)
@@ -41,7 +41,7 @@ struct PowerUpInventorySheet: View {
                                 onActivate(powerUp)
                             }
                             .buttonStyle(.borderedProminent)
-                            .tint(.purple)
+                            .tint(powerUp.type.color)
                         }
                     }
                 }

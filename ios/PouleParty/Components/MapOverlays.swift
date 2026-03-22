@@ -20,7 +20,8 @@ struct ZoneWarningOverlay: View {
             .foregroundStyle(.white)
             .padding(.horizontal, 24)
             .padding(.vertical, 12)
-            .background(.red.opacity(0.9))
+            .background(Color.zoneDanger.opacity(0.9))
+            .neonGlow(.zoneDanger, intensity: .subtle)
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .padding(.top, 140)
     }
@@ -57,7 +58,7 @@ struct WinnerNotificationOverlay: View {
                 .foregroundStyle(.white)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
-                .background(.green.opacity(0.9))
+                .background(Color.zoneGreen.opacity(0.9))
                 .clipShape(RoundedRectangle(cornerRadius: 10))
                 .padding(.top, 100)
                 .transition(.move(edge: .top).combined(with: .opacity))

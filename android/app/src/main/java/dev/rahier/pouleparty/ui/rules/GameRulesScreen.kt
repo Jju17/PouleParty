@@ -6,6 +6,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -37,7 +38,7 @@ fun GameRulesScreen() {
 @Composable
 private fun HowToPlaySection() {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(stringResource(R.string.how_to_play), style = bangerStyle(32), color = Color.Black)
+        Text(stringResource(R.string.how_to_play), style = bangerStyle(32), color = MaterialTheme.colorScheme.onBackground)
 
         RuleRow(stringResource(R.string.rule_one_chicken))
         RuleRow(stringResource(R.string.rule_circular_zone))
@@ -49,7 +50,7 @@ private fun HowToPlaySection() {
 @Composable
 private fun GameModesSection() {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Text(stringResource(R.string.game_modes), style = bangerStyle(32), color = Color.Black)
+        Text(stringResource(R.string.game_modes), style = bangerStyle(32), color = MaterialTheme.colorScheme.onBackground)
 
         GameModeCard(
             title = GameMod.FOLLOW_THE_CHICKEN.title,
@@ -86,7 +87,7 @@ private fun GameModesSection() {
 @Composable
 private fun SettingsSection() {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(stringResource(R.string.game_settings), style = bangerStyle(32), color = Color.Black)
+        Text(stringResource(R.string.game_settings), style = bangerStyle(32), color = MaterialTheme.colorScheme.onBackground)
 
         SettingRow(stringResource(R.string.setting_start_end_name), stringResource(R.string.setting_start_end_desc))
         SettingRow(stringResource(R.string.radius_interval_update), stringResource(R.string.setting_radius_interval_desc))
@@ -102,7 +103,7 @@ private fun RuleRow(text: String) {
         verticalAlignment = Alignment.Top
     ) {
         Text("●", color = CROrange, fontSize = 10.sp)
-        Text(text, fontSize = 14.sp, color = Color.Black)
+        Text(text, fontSize = 14.sp, color = MaterialTheme.colorScheme.onBackground)
     }
 }
 
@@ -111,17 +112,17 @@ private fun GameModeCard(title: String, description: String, details: List<Strin
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .border(2.dp, CROrange, RoundedCornerShape(8.dp))
+            .border(2.dp, CROrange, RoundedCornerShape(12.dp))
             .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Text(title, style = bangerStyle(22), color = Color.Black)
-        Text(description, fontSize = 14.sp, color = Color.Black.copy(alpha = 0.7f))
+        Text(title, style = bangerStyle(22), color = MaterialTheme.colorScheme.onBackground)
+        Text(description, fontSize = 14.sp, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
 
         details.forEach { detail ->
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.Top) {
                 Text(">", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = CROrange)
-                Text(detail, fontSize = 14.sp, color = Color.Black)
+                Text(detail, fontSize = 14.sp, color = MaterialTheme.colorScheme.onBackground)
             }
         }
     }
@@ -131,6 +132,6 @@ private fun GameModeCard(title: String, description: String, details: List<Strin
 private fun SettingRow(name: String, explanation: String) {
     Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
         Text(name, style = gameboyStyle(10), color = CROrange)
-        Text(explanation, fontSize = 14.sp, color = Color.Black.copy(alpha = 0.7f))
+        Text(explanation, fontSize = 14.sp, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
     }
 }

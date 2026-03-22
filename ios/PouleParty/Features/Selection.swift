@@ -256,7 +256,14 @@ struct SelectionFeature {
                     return .none
                 }
                 return .run { [apiClient] send in
-                    if let (game, role) = try await apiClient.findActiveGame(userId) {
+                    // First attempt may fail on cold start while auth token refreshes
+                    if let (game, role) = try? await apiClient.findActiveGame(userId) {
+                        await send(.activeGameFound(game, role))
+                        return
+                    }
+                    // Retry once after a short delay to allow auth token refresh
+                    try? await Task.sleep(for: .seconds(2))
+                    if let (game, role) = try? await apiClient.findActiveGame(userId) {
                         await send(.activeGameFound(game, role))
                     } else {
                         await send(.noActiveGameFound)
@@ -309,11 +316,15 @@ struct SelectionView: View {
             VStack(alignment: .center, spacing: 0) {
                 Spacer()
                 VStack(alignment: .center, spacing: 10) {
-                    Image("logo")
+                    Image("chicken")
                         .resizable()
+                        .interpolation(.none)
                         .scaledToFit()
-                        .frame(width: 200, height: 200)
+                        .frame(width: 150, height: 150)
                         .accessibilityLabel("PouleParty logo")
+                    Text("POULE PARTY")
+                        .font(.gameboy(size: 20))
+                        .foregroundStyle(Color.onBackground)
 
                     Button {
                         self.store.send(.startButtonTapped)
@@ -322,10 +333,10 @@ struct SelectionView: View {
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                             .font(.gameboy(size: 22))
                             .padding()
-                            .foregroundStyle(.black)
+                            .foregroundStyle(Color.onBackground)
                             .background(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .stroke(.black, lineWidth: 4)
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.onBackground, lineWidth: 4)
                             )
                             .opacity(self.isVisible ? 1 : 0)
                             .onAppear {
@@ -337,12 +348,12 @@ struct SelectionView: View {
 
                     Text("Press start to play")
                         .font(.gameboy(size: 12))
-                        .foregroundStyle(Color.black)
+                        .foregroundStyle(Color.onBackground)
                 }
                 Spacer()
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color.CRBeige)
+            .background(Color.gradientBackgroundWarmth)
 
             VStack {
                 HStack {
@@ -359,7 +370,7 @@ struct SelectionView: View {
                     } label: {
                         Image(systemName: store.isMusicMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
                             .font(.system(size: 20))
-                            .foregroundColor(.black)
+                            .foregroundColor(Color.onBackground)
                             .padding()
                             .contentTransition(.symbolEffect(.replace))
                     }
@@ -373,7 +384,7 @@ struct SelectionView: View {
                     } label: {
                         Image(systemName: "gearshape")
                             .font(.system(size: 20))
-                            .foregroundColor(.black)
+                            .foregroundColor(Color.onBackground)
                             .padding()
                     }
                     .accessibilityLabel("Settings")
@@ -391,11 +402,11 @@ struct SelectionView: View {
                     } label: {
                         Text("Rules")
                             .padding()
-                            .foregroundColor(.black)
+                            .foregroundColor(Color.onBackground)
                             .font(.gameboy(size: 8))
                             .background(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(.black, lineWidth: 1.5)
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.onBackground, lineWidth: 2)
                             )
                     }
                     .accessibilityLabel("Game rules")
@@ -408,11 +419,11 @@ struct SelectionView: View {
                     } label: {
                         Text("I am la poule")
                             .padding()
-                            .foregroundColor(.black)
+                            .foregroundColor(Color.onBackground)
                             .font(.gameboy(size: 8))
                             .background(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(.black, lineWidth: 1.5)
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.onBackground, lineWidth: 2)
                             )
                     }
                     .accessibilityLabel("I am the chicken")
@@ -493,7 +504,7 @@ struct SelectionView: View {
                                 store.send(.destinationDismissed)
                             } label: {
                                 Image(systemName: "xmark")
-                                    .foregroundStyle(.black)
+                                    .foregroundStyle(Color.onBackground)
                             }
                         }
                     }
@@ -538,7 +549,7 @@ struct SelectionView: View {
                         .padding(.horizontal, 24)
                         .padding(.vertical, 10)
                         .background(
-                            RoundedRectangle(cornerRadius: 10)
+                            RoundedRectangle(cornerRadius: 12)
                                 .stroke(.white, lineWidth: 3)
                         )
                 }
@@ -560,7 +571,8 @@ struct SelectionView: View {
         }
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color.CROrange)
+                .fill(Color.gradientFire)
+                .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
         )
         .padding(.horizontal, 24)
         .transition(.move(edge: .bottom).combined(with: .opacity))

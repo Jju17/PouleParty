@@ -15,8 +15,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AcUnit
+import androidx.compose.material.icons.filled.PersonPin
 import androidx.compose.material.icons.filled.RemoveRedEye
 import androidx.compose.material.icons.filled.Sensors
+import androidx.compose.material.icons.filled.SensorsOff
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -38,6 +40,7 @@ import androidx.compose.ui.unit.sp
 import com.google.firebase.Timestamp
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.PowerUpType
+import dev.rahier.pouleparty.ui.theme.*
 import kotlinx.coroutines.delay
 import java.util.Date
 
@@ -72,6 +75,12 @@ fun ActivePowerUpBadge(game: Game, modifier: Modifier = Modifier) {
         game.activeRadarPingUntil?.let {
             if (now.before(it.toDate())) add(ActiveEffect(PowerUpType.RADAR_PING, it.toDate()))
         }
+        game.activeDecoyUntil?.let {
+            if (now.before(it.toDate())) add(ActiveEffect(PowerUpType.DECOY, it.toDate()))
+        }
+        game.activeJammerUntil?.let {
+            if (now.before(it.toDate())) add(ActiveEffect(PowerUpType.JAMMER, it.toDate()))
+        }
     }
 
     if (activeEffects.isEmpty()) return
@@ -99,10 +108,12 @@ private fun BadgeItem(
     onClick: () -> Unit
 ) {
     val bgColor = when (type) {
-        PowerUpType.INVISIBILITY -> Color(0xFF9C27B0) // Purple
-        PowerUpType.ZONE_FREEZE -> Color(0xFF00BCD4)  // Cyan
-        PowerUpType.RADAR_PING -> Color(0xFFFF9800)   // Orange
-        PowerUpType.ZONE_PREVIEW -> Color(0xFF2196F3) // Blue
+        PowerUpType.INVISIBILITY -> PowerupStealth
+        PowerUpType.ZONE_FREEZE -> PowerupFreeze
+        PowerUpType.RADAR_PING -> PowerupRadar
+        PowerUpType.ZONE_PREVIEW -> PowerupVision
+        PowerUpType.DECOY -> PowerupSpeed
+        PowerUpType.JAMMER -> PowerupShield
     }
 
     Row(
@@ -121,6 +132,8 @@ private fun BadgeItem(
                 PowerUpType.ZONE_FREEZE -> Icons.Default.AcUnit
                 PowerUpType.RADAR_PING -> Icons.Default.Sensors
                 PowerUpType.ZONE_PREVIEW -> Icons.Default.RemoveRedEye
+                PowerUpType.DECOY -> Icons.Default.PersonPin
+                PowerUpType.JAMMER -> Icons.Default.SensorsOff
             },
             contentDescription = type.title,
             tint = Color.White,

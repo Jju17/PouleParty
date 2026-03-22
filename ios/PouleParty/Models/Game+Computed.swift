@@ -80,6 +80,14 @@ extension Game {
         guard let until = activeRadarPingUntil else { return false }
         return .now < until.dateValue()
     }
+
+    var isDecoyActive: Bool {
+        activeDecoyUntil.map { Date.now < $0.dateValue() } ?? false
+    }
+
+    var isJammerActive: Bool {
+        activeJammerUntil.map { Date.now < $0.dateValue() } ?? false
+    }
 }
 
 // MARK: - Game Logic
@@ -140,7 +148,9 @@ extension Game {
             enabledPowerUpTypes: PowerUp.PowerUpType.allCases.map(\.rawValue),
             activeInvisibilityUntil: nil,
             activeZoneFreezeUntil: nil,
-            activeRadarPingUntil: nil
+            activeRadarPingUntil: nil,
+            activeDecoyUntil: nil,
+            activeJammerUntil: nil
         )
     }
 }

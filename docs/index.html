@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PouleParty — Design System</title>
+  <style>
+    /* ── Fonts ── */
+    @font-face {
+      font-family: 'Bangers';
+      src: url('./Bangers-Regular.ttf') format('truetype');
+      font-weight: normal;
+    }
+    @font-face {
+      font-family: 'EarlyGameBoy';
+      src: url('./Early GameBoy.ttf') format('truetype');
+      font-weight: normal;
+    }
+
+    /* ── Reset & Base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      /* Core */
+      --beige: #FDF9D5;
+      --beige-warm: #FFE8C8;
+      --orange: #FE6A00;
+      --pink: #EF0778;
+      /* Roles */
+      --chicken-yellow: #FFD23F;
+      --hunter-red: #C41E45;
+      /* Zone */
+      --zone-green: #39FF14;
+      --zone-danger: #CC0530;
+      /* Power-ups */
+      --powerup-stealth: #BF40BF;
+      --powerup-freeze: #00F5FF;
+      --powerup-radar: #FF6F3C;
+      --powerup-vision: #4D96FF;
+      --powerup-speed: #DFFF00;
+      --powerup-shield: #FFD700;
+      /* Semantic */
+      --success: #39FF14;
+      --danger: #CC0530;
+      --warning: #FFD23F;
+      --info: #4D96FF;
+      --disabled: #9E9E9E;
+      /* Dark */
+      --dark-bg: #1A1A2E;
+      --dark-surface: #16213E;
+      /* Misc */
+      --black: #000000;
+      --white: #FFFFFF;
+
+      --bg: var(--beige);
+      --fg: var(--black);
+      --surface: var(--white);
+      --on-surface: var(--black);
+    }
+
+    [data-theme="dark"] {
+      --bg: var(--dark-bg);
+      --fg: var(--white);
+      --surface: var(--dark-surface);
+      --on-surface: var(--white);
+      --orange: #FF8C33;
+      --pink: #F54D9E;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Bangers', 'Arial Black', sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      letter-spacing: 0.5px;
+      line-height: 1.4;
+      transition: background 0.4s, color 0.4s;
+    }
+
+    /* ── Gradient background for lobby feel ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse at center, var(--beige) 30%, var(--beige-warm) 100%);
+      z-index: -1;
+      opacity: 1;
+      transition: opacity 0.4s;
+    }
+    [data-theme="dark"] body::before {
+      background: radial-gradient(ellipse at center, var(--dark-bg) 30%, #0F0F23 100%);
+    }
+
+    /* ── Layout ── */
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+    /* ── Header ── */
+    header {
+      padding: 48px 0 32px;
+      text-align: center;
+      position: relative;
+    }
+    header h1 {
+      font-family: 'Bangers', sans-serif;
+      font-size: 64px;
+      letter-spacing: 3px;
+      background: linear-gradient(135deg, var(--orange), var(--pink));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.15));
+    }
+    header p {
+      font-family: 'EarlyGameBoy', monospace;
+      font-size: 11px;
+      margin-top: 12px;
+      opacity: 0.6;
+    }
+
+    /* ── Theme toggle ── */
+    .theme-toggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 100;
+      background: var(--surface);
+      border: 2px solid var(--orange);
+      border-radius: 50px;
+      padding: 8px 16px;
+      font-family: 'EarlyGameBoy', monospace;
+      font-size: 10px;
+      color: var(--on-surface);
+      cursor: pointer;
+      transition: all 0.3s;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    .theme-toggle:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    }
+
+    /* ── Nav ── */
+    nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      padding: 16px 0 40px;
+    }
+    nav a {
+      font-family: 'EarlyGameBoy', monospace;
+      font-size: 9px;
+      text-decoration: none;
+      color: var(--fg);
+      border: 2px solid var(--fg);
+      border-radius: 8px;
+      padding: 6px 14px;
+      transition: all 0.2s;
+    }
+    nav a:hover {
+      background: var(--orange);
+      color: white;
+      border-color: var(--orange);
+      transform: translateY(-2px);
+    }
+
+    /* ── Section ── */
+    section {
+      margin-bottom: 56px;
+    }
+    section h2 {
+      font-family: 'Bangers', sans-serif;
+      font-size: 36px;
+      letter-spacing: 1.5px;
+      margin-bottom: 8px;
+      color: var(--orange);
+    }
+    section h2 span {
+      font-family: 'EarlyGameBoy', monospace;
+      font-size: 10px;
+      opacity: 0.5;
+      vertical-align: middle;
+      margin-left: 8px;
+      color: var(--fg);
+    }
+    section > p.section-desc {
+      font-family: 'EarlyGameBoy', monospace;
+      font-size: 10px;
+      opacity: 0.6;
+      margin-bottom: 24px;
+      max-width: 600px;
+    }
+    h3 {
+      font-family: 'Bangers', sans-serif;
+      font-size: 24px;
+      letter-spacing: 1px;
+      margin: 24px 0 12px;
+    }
+
+    /* ── Color Swatches ── */
+    .swatch-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 16px;
+    }
+    .swatch {
+      border-radius: 12px;
+      overflow: hidden;
+      background: var(--surface);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .swatch:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    }
+    .swatch-color {
+      height: 80px;
+      position: relative;
+    }
+    .swatch-color::after {
+      content: attr(data-hex);
+      position: absolute;
+      bottom: 6px;
+      right: 8px;
+      font-family: 'EarlyGameBoy', monospace;
+      font-size: 8px;
+      color: white;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    }
+    .swatch-info {
+      padding: 10px 12px;
+    }
+    .swatch-info .token {
+      font-family: 'EarlyGameBoy', monospace;
+      font-size: 9px;
+      display: block;
+      margin-bottom: 2px;
+    }
+    .swatch-info .role {
+      font-family: 'Bangers', sans-serif;
+      font-size: 14px;
+      letter-spacing: 0.5px;
+      opacity: 0.7;
+    }
+
+    /* ── Gradient Cards ── */
+    .gradient-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+    }
+    .gradient-card {
+      border-radius: 12px;
+      overflow: hidden;
+      background: var(--surface);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      transition: transform 0.2s;
+    }
+    .gradient-card:hover { transform: translateY(-4px); }
+    .gradient-bar {
+      height: 64px;
+    }
+    .gradient-card .info {
+      padding: 12px;
+    }
+    .gradient-card .info .name {
+      font-family: 'Bangers', sans-serif;
+      font-size: 20px;
+      letter-spacing: 0.5px;
+    }
+    .gradient-card .info .usage {
+      font-family: 'EarlyGameBoy', monospace;
+      font-size: 8px;
+      opacity: 0.6;
+      margin-top: 4px;
+    }
+
+    /* ── Typography ── */
+    .type-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .type-table th {
+      font-family: 'EarlyGameBoy', monospace;
+      font-size: 9px;
+      text-align: left;
+      padding: 8px 12px;
+      border-bottom: 2px solid var(--orange);
+      opacity: 0.6;
+    }
+    .type-table td {
+      padding: 12px;
+      border-bottom: 1px solid rgba(128,128,128,0.15);
+      vertical-align: middle;
+    }
+    .type-table td:first-child {
+      font-family: 'EarlyGameBoy', monospace;
+      font-size: 9px;
+      white-space: nowrap;
+      opacity: 0.7;
+    }
+    .type-table td:nth-child(3) {
+      font-family: 'EarlyGameBoy', monospace;
+      font-size: 9px;
+      opacity: 0.5;
+    }
+
+    /* ── Power-up Cards ── */
+    .powerup-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 16px;
+    }
+    .powerup-card {
+      border-radius: 18px;
+      padding: 20px 16px;
+      text-align: center;
+      color: white;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .powerup-card:hover {
+      transform: translateY(-6px) scale(1.02);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+    .powerup-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.25) 0%, transparent 60%);
+    }
+    .powerup-card .icon {
+      font-size: 36px;
+      margin-bottom: 8px;
+      position: relative;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+    }
+    .powerup-card .name {
+      font-family: 'Bangers', sans-serif;
+      font-size: 18px;
+      letter-spacing: 1px;
+      position: relative;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+    .powerup-card .token-label {
+      font-family: 'EarlyGameBoy', monospace;
+      font-size: 7px;
+      opacity: 0.7;
+      margin-top: 6px;
+      position: relative;
+    }
+
+    /* ── Role Comparison ── */
+    .role-compare {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    @media (max-width: 600px) {
+      .role-compare { grid-template-columns: 1fr; }
+    }
+    .role-card {
+      border-radius: 16px;
+      padding: 32px 24px;
+      text-align: center;
+      color: white;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    }
+    .role-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 50% 20%, rgba(255,255,255,0.15) 0%, transparent 50%);
+    }
+    .role-card .emoji {
+      font-size: 64px;
+      position: relative;
+      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+    }
+    .role-card h3 {
+      font-family: 'Bangers', sans-serif;
+      font-size: 32px;
+      letter-spacing: 2px;
+      position: relative;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      color: white;
+    }
+    .role-card .detail {
+      font-family: 'EarlyGameBoy', monospace;
+      font-size: 8px;
+      opacity: 0.8;
+      margin-top: 8px;
+      position: relative;
+      line-height: 1.8;
+    }
+
+    /* ── Elevation Demo ── */
+    .elevation-grid {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    .elevation-box {
+      width: 120px;
+      height: 80px;
+      background: var(--surface);
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--on-surface);
+      transition: transform 0.2s;
+    }
+    .elevation-box:hover { transform: translateY(-2px); }
+    .elevation-box .level {
+      font-family: 'Bangers', sans-serif;
+      font-size: 24px;
+    }
+    .elevation-box .label {
+      font-family: 'EarlyGameBoy', monospace;
+      font-size: 7px;
+      opacity: 0.5;
+      margin-top: 4px;
+    }
+
+    /* ── Radius Demo ── */
+    .radius-grid {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      align-items: end;
+    }
+    .radius-box {
+      width: 80px;
+      height: 80px;
+      background: var(--orange);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      transition: transform 0.2s;
+    }
+    .radius-box:hover { transform: scale(1.1); }
+    .radius-box .val {
+      font-family: 'Bangers', sans-serif;
+      font-size: 18px;
+    }
+    .radius-box .label {
+      font-family: 'EarlyGameBoy', monospace;
+      font-size: 7px;
+      opacity: 0.8;
+      margin-top: 2px;
+    }
+
+    /* ── Button Demos ── */
+    .btn-row {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .btn {
+      font-family: 'Bangers', sans-serif;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn:hover { transform: translateY(-2px); }
+    .btn:active { transform: translateY(0); }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #FE6A00, #EF0778);
+      color: black;
+      border: 3px solid black;
+      border-radius: 50px;
+      padding: 12px 32px;
+      font-size: 22px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .btn-primary:hover {
+      box-shadow: 0 0 7px rgba(254,106,0,0.6), 0 0 14px rgba(254,106,0,0.3), 0 6px 20px rgba(254,106,0,0.4);
+    }
+    .btn-secondary {
+      background: transparent;
+      color: var(--fg);
+      border: 2px solid var(--fg);
+      border-radius: 12px;
+      padding: 10px 24px;
+      font-size: 18px;
+    }
+    .btn-secondary:hover {
+      background: var(--orange);
+      color: white;
+      border-color: var(--orange);
+    }
+    .btn-danger {
+      background: rgba(255,7,58,0.85);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 10px 24px;
+      font-size: 18px;
+    }
+    .btn-danger:hover {
+      background: rgba(255,7,58,1);
+    }
+    .btn-powerup {
+      background: var(--powerup-freeze);
+      color: white;
+      border: none;
+      border-radius: 18px;
+      padding: 8px 20px;
+      font-size: 16px;
+      box-shadow: 0 4px 12px rgba(0,245,255,0.4);
+    }
+
+    /* ── Background Demo ── */
+    .bg-demo {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 600px) {
+      .bg-demo { grid-template-columns: 1fr; }
+    }
+    .bg-demo-card {
+      height: 160px;
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .bg-demo-card .label {
+      font-family: 'Bangers', sans-serif;
+      font-size: 20px;
+      position: relative;
+      z-index: 1;
+    }
+    .bg-demo-card .sublabel {
+      font-family: 'EarlyGameBoy', monospace;
+      font-size: 8px;
+      opacity: 0.6;
+      position: relative;
+      z-index: 1;
+      margin-top: 4px;
+    }
+
+    /* ── Opacity demo ── */
+    .opacity-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: end;
+    }
+    .opacity-chip {
+      width: 60px;
+      height: 50px;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .opacity-chip .val {
+      font-family: 'EarlyGameBoy', monospace;
+      font-size: 9px;
+    }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 40px 0;
+      margin-top: 40px;
+      border-top: 2px solid rgba(128,128,128,0.15);
+    }
+    footer p {
+      font-family: 'EarlyGameBoy', monospace;
+      font-size: 9px;
+      opacity: 0.4;
+    }
+
+    /* ── Divider ── */
+    hr {
+      border: none;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--orange), transparent);
+      margin: 48px 0;
+    }
+  </style>
+</head>
+<body>
+
+  <button class="theme-toggle" onclick="toggleTheme()">LIGHT / DARK</button>
+
+  <div class="container">
+
+    <!-- Header -->
+    <header>
+      <h1>PouleParty</h1>
+      <p>Design System &mdash; Retro Arcade Edition</p>
+    </header>
+
+    <nav>
+      <a href="#colors">Colors</a>
+      <a href="#contrast">Contrast</a>
+      <a href="#glow">Neon Glow</a>
+      <a href="#gradients">Gradients</a>
+      <a href="#typography">Typography</a>
+      <a href="#powerups">Power-Ups</a>
+      <a href="#roles">Roles</a>
+      <a href="#backgrounds">Backgrounds</a>
+      <a href="#buttons">Buttons</a>
+      <a href="#elevation">Elevation</a>
+      <a href="#radius">Radius</a>
+      <a href="#opacity">Opacity</a>
+    </nav>
+
+    <!-- ═══ COLORS ═══ -->
+    <section id="colors">
+      <h2>Colors <span>// PALETTE</span></h2>
+      <p class="section-desc">Neon-arcade energy. Flashy but cohesive.</p>
+
+      <h3>Core Brand</h3>
+      <div class="swatch-grid">
+        <div class="swatch">
+          <div class="swatch-color" style="background:#FDF9D5;" data-hex="#FDF9D5"></div>
+          <div class="swatch-info"><span class="token">beige</span><span class="role">Light background</span></div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background:#FFE8C8;" data-hex="#FFE8C8"></div>
+          <div class="swatch-info"><span class="token">beige-warm</span><span class="role">Warm gradient edge</span></div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background:#FE6A00;" data-hex="#FE6A00"></div>
+          <div class="swatch-info"><span class="token">orange</span><span class="role">Primary action</span></div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background:#EF0778;" data-hex="#EF0778"></div>
+          <div class="swatch-info"><span class="token">pink</span><span class="role">Secondary accent</span></div>
+        </div>
+      </div>
+
+      <h3>Game Roles</h3>
+      <div class="swatch-grid">
+        <div class="swatch">
+          <div class="swatch-color" style="background:#FFD23F;" data-hex="#FFD23F"></div>
+          <div class="swatch-info"><span class="token">chicken-yellow</span><span class="role">Chicken side UI</span></div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background:#C41E45;" data-hex="#C41E45"></div>
+          <div class="swatch-info"><span class="token">hunter-red</span><span class="role">Hunter side UI (5.8:1)</span></div>
+        </div>
+      </div>
+
+      <h3>Zone & Map</h3>
+      <div class="swatch-grid">
+        <div class="swatch">
+          <div class="swatch-color" style="background:#39FF14;" data-hex="#39FF14"></div>
+          <div class="swatch-info"><span class="token">zone-green</span><span class="role">Safe zone, success</span></div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background:#CC0530;" data-hex="#CC0530"></div>
+          <div class="swatch-info"><span class="token">zone-danger</span><span class="role">Outside zone, alert</span></div>
+        </div>
+      </div>
+
+      <h3>Semantic</h3>
+      <div class="swatch-grid">
+        <div class="swatch">
+          <div class="swatch-color" style="background:#39FF14;" data-hex="#39FF14"></div>
+          <div class="swatch-info"><span class="token">success</span><span class="role">OK, confirmed</span></div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background:#CC0530;" data-hex="#CC0530"></div>
+          <div class="swatch-info"><span class="token">danger</span><span class="role">Error, delete</span></div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background:#FFD23F;" data-hex="#FFD23F"></div>
+          <div class="swatch-info"><span class="token">warning</span><span class="role">Time low, alert</span></div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background:#4D96FF;" data-hex="#4D96FF"></div>
+          <div class="swatch-info"><span class="token">info</span><span class="role">Neutral info</span></div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background:#9E9E9E;" data-hex="#9E9E9E"></div>
+          <div class="swatch-info"><span class="token">disabled</span><span class="role">Inactive</span></div>
+        </div>
+      </div>
+
+      <h3>Dark Mode</h3>
+      <div class="swatch-grid">
+        <div class="swatch">
+          <div class="swatch-color" style="background:#1A1A2E;" data-hex="#1A1A2E"></div>
+          <div class="swatch-info"><span class="token">dark-bg</span><span class="role">Deep navy base</span></div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background:#16213E;" data-hex="#16213E"></div>
+          <div class="swatch-info"><span class="token">dark-surface</span><span class="role">Elevated surface</span></div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background:#FF8C33;" data-hex="#FF8C33"></div>
+          <div class="swatch-info"><span class="token">orange (dark)</span><span class="role">Primary in dark</span></div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background:#F54D9E;" data-hex="#F54D9E"></div>
+          <div class="swatch-info"><span class="token">pink (dark)</span><span class="role">Secondary in dark</span></div>
+        </div>
+      </div>
+    </section>
+
+    <hr>
+
+    <!-- ═══ CONTRAST RULES ═══ -->
+    <section id="contrast">
+      <h2>Contrast Rules <span>// WCAG AA</span></h2>
+      <p class="section-desc">Mandatory. Never violate these.</p>
+
+      <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:12px;">
+        <div style="background: linear-gradient(135deg, #FE6A00, #EF0778); color: black; padding:16px; border-radius:12px; border:3px solid black; text-align:center;">
+          <div style="font-family:'Bangers'; font-size:20px;">Start Game</div>
+          <div style="font-family:'EarlyGameBoy'; font-size:7px; margin-top:6px; opacity:0.7;">gradient-fire + black text (5.0-7.3:1)</div>
+        </div>
+        <div style="background: #FE6A00; color: black; padding:16px; border-radius:12px; border:3px solid black; text-align:center;">
+          <div style="font-family:'Bangers'; font-size:20px;">Orange Button</div>
+          <div style="font-family:'EarlyGameBoy'; font-size:7px; margin-top:6px; opacity:0.7;">black text on orange (7.3:1)</div>
+        </div>
+        <div style="background: #C41E45; color: white; padding:16px; border-radius:12px; text-align:center;">
+          <div style="font-family:'Bangers'; font-size:20px;">Hunter Alert</div>
+          <div style="font-family:'EarlyGameBoy'; font-size:7px; margin-top:6px; opacity:0.8;">white text on hunter-red (5.8:1)</div>
+        </div>
+        <div style="background: #FFD23F; color: black; padding:16px; border-radius:12px; text-align:center;">
+          <div style="font-family:'Bangers'; font-size:20px;">Chicken Badge</div>
+          <div style="font-family:'EarlyGameBoy'; font-size:7px; margin-top:6px; opacity:0.7;">black text on chicken-yellow (14.5:1)</div>
+        </div>
+        <div style="background: #FDF9D5; color: #CC0530; padding:16px; border-radius:12px; border:2px solid #CC0530; text-align:center;">
+          <div style="font-family:'Bangers'; font-size:20px;">Zone Danger</div>
+          <div style="font-family:'EarlyGameBoy'; font-size:7px; margin-top:6px; color:black; opacity:0.7;">danger text on beige (5.4:1)</div>
+        </div>
+        <div style="background: #FDF9D5; color: black; padding:16px; border-radius:12px; border:2px solid rgba(0,0,0,0.2); text-align:center;">
+          <div style="font-family:'Bangers'; font-size:20px; color:#FE6A00; text-decoration:line-through; opacity:0.5;">Orange Text</div>
+          <div style="font-family:'EarlyGameBoy'; font-size:7px; margin-top:6px; opacity:0.7;">NEVER orange text on beige (2.7:1 FAIL)</div>
+        </div>
+      </div>
+    </section>
+
+    <hr>
+
+    <!-- ═══ NEON GLOW ═══ -->
+    <section id="glow">
+      <h2>Neon Glow <span>// ARCADE EFFECTS</span></h2>
+      <p class="section-desc">Layered shadows using the element's own color. Three intensity levels.</p>
+
+      <div style="display:flex; gap:24px; flex-wrap:wrap; align-items:center; margin-bottom:24px;">
+        <div style="background:var(--dark-bg); padding:24px 32px; border-radius:16px; text-align:center;">
+          <div style="font-family:'EarlyGameBoy'; font-size:28px; color:var(--orange); text-shadow: 0 0 4px rgba(254,106,0,0.4);">04:32</div>
+          <div style="font-family:'EarlyGameBoy'; font-size:7px; color:white; opacity:0.5; margin-top:8px;">SUBTLE GLOW</div>
+        </div>
+        <div style="background:var(--dark-bg); padding:24px 32px; border-radius:16px; text-align:center;">
+          <div style="font-family:'EarlyGameBoy'; font-size:28px; color:var(--orange); text-shadow: 0 0 7px rgba(254,106,0,0.6), 0 0 14px rgba(254,106,0,0.3);">04:32</div>
+          <div style="font-family:'EarlyGameBoy'; font-size:7px; color:white; opacity:0.5; margin-top:8px;">MEDIUM GLOW</div>
+        </div>
+        <div style="background:var(--dark-bg); padding:24px 32px; border-radius:16px; text-align:center;">
+          <div style="font-family:'EarlyGameBoy'; font-size:28px; color:var(--orange); text-shadow: 0 0 7px #FE6A00, 0 0 14px rgba(254,106,0,0.8), 0 0 28px rgba(254,106,0,0.4);">04:32</div>
+          <div style="font-family:'EarlyGameBoy'; font-size:7px; color:white; opacity:0.5; margin-top:8px;">INTENSE GLOW</div>
+        </div>
+      </div>
+
+      <h3>Countdown (intense glow)</h3>
+      <div style="background:var(--dark-bg); padding:32px; border-radius:16px; text-align:center; margin-bottom:24px;">
+        <div style="font-family:'EarlyGameBoy'; font-size:64px; color:var(--orange); text-shadow: 0 0 10px #FE6A00, 0 0 20px rgba(254,106,0,0.8), 0 0 40px rgba(254,106,0,0.4);">3</div>
+      </div>
+
+      <h3>Power-up badges with glow</h3>
+      <div style="display:flex; gap:16px; flex-wrap:wrap; margin-bottom:24px;">
+        <div style="background:#BF40BF; color:white; padding:10px 20px; border-radius:18px; font-family:'Bangers'; font-size:16px; box-shadow: 0 0 7px rgba(191,64,191,0.6), 0 0 14px rgba(191,64,191,0.3);">
+          Invisibility
+        </div>
+        <div style="background:#00F5FF; color:black; padding:10px 20px; border-radius:18px; font-family:'Bangers'; font-size:16px; box-shadow: 0 0 7px rgba(0,245,255,0.6), 0 0 14px rgba(0,245,255,0.3);">
+          Zone Freeze
+        </div>
+        <div style="background:#FF6F3C; color:white; padding:10px 20px; border-radius:18px; font-family:'Bangers'; font-size:16px; box-shadow: 0 0 7px rgba(255,111,60,0.6), 0 0 14px rgba(255,111,60,0.3);">
+          Radar Ping
+        </div>
+        <div style="background:#4D96FF; color:white; padding:10px 20px; border-radius:18px; font-family:'Bangers'; font-size:16px; box-shadow: 0 0 7px rgba(77,150,255,0.6), 0 0 14px rgba(77,150,255,0.3);">
+          Zone Preview
+        </div>
+        <div style="background:#DFFF00; color:black; padding:10px 20px; border-radius:18px; font-family:'Bangers'; font-size:16px; box-shadow: 0 0 7px rgba(223,255,0,0.6), 0 0 14px rgba(223,255,0,0.3);">
+          Speed Boost
+        </div>
+        <div style="background:#FFD700; color:black; padding:10px 20px; border-radius:18px; font-family:'Bangers'; font-size:16px; box-shadow: 0 0 7px rgba(255,215,0,0.6), 0 0 14px rgba(255,215,0,0.3);">
+          Shield
+        </div>
+      </div>
+
+      <h3>Zone border glow</h3>
+      <div style="background:var(--dark-bg); padding:32px; border-radius:16px; display:flex; justify-content:center;">
+        <div style="width:180px; height:180px; border-radius:50%; border:3px solid #39FF14; box-shadow: 0 0 7px rgba(57,255,20,0.6), 0 0 14px rgba(57,255,20,0.3), inset 0 0 14px rgba(57,255,20,0.15); display:flex; align-items:center; justify-content:center;">
+          <div style="font-family:'EarlyGameBoy'; font-size:9px; color:#39FF14; text-shadow: 0 0 4px rgba(57,255,20,0.6);">SAFE ZONE</div>
+        </div>
+      </div>
+    </section>
+
+    <hr>
+
+    <!-- ═══ GRADIENTS ═══ -->
+    <section id="gradients">
+      <h2>Gradients <span>// NEON ENERGY</span></h2>
+      <p class="section-desc">Gradients bring the arcade glow that flat colors can't.</p>
+
+      <div class="gradient-grid">
+        <div class="gradient-card">
+          <div class="gradient-bar" style="background: linear-gradient(135deg, #FE6A00, #EF0778);"></div>
+          <div class="info"><div class="name">Fire</div><div class="usage">Primary CTA, Start Game</div></div>
+        </div>
+        <div class="gradient-card">
+          <div class="gradient-bar" style="background: linear-gradient(135deg, #FFD23F, #FE6A00);"></div>
+          <div class="info"><div class="name">Chicken</div><div class="usage">Chicken marker, halo</div></div>
+        </div>
+        <div class="gradient-card">
+          <div class="gradient-bar" style="background: linear-gradient(135deg, #C41E45, #EF0778);"></div>
+          <div class="info"><div class="name">Hunter</div><div class="usage">Hunter alerts, markers</div></div>
+        </div>
+        <div class="gradient-card">
+          <div class="gradient-bar" style="background: linear-gradient(135deg, #39FF14, rgba(57,255,20,0.1));"></div>
+          <div class="info"><div class="name">Zone Edge</div><div class="usage">Neon fade on zone border</div></div>
+        </div>
+        <div class="gradient-card">
+          <div class="gradient-bar" style="background: radial-gradient(circle, #FDF9D5 30%, #FFE8C8 100%);"></div>
+          <div class="info"><div class="name">Background Warmth</div><div class="usage">Radial vignette on menus</div></div>
+        </div>
+        <div class="gradient-card">
+          <div class="gradient-bar" style="background: radial-gradient(circle, #1A1A2E 30%, #0F0F23 100%);"></div>
+          <div class="info"><div class="name">Dark Background</div><div class="usage">Dark mode vignette</div></div>
+        </div>
+      </div>
+    </section>
+
+    <hr>
+
+    <!-- ═══ TYPOGRAPHY ═══ -->
+    <section id="typography">
+      <h2>Typography <span>// RETRO FONTS</span></h2>
+      <p class="section-desc">Bangers = fun. Early GameBoy = data.</p>
+
+      <h3>Bangers — Expressive</h3>
+      <table class="type-table">
+        <tr><th>Token</th><th>Sample</th><th>Size</th></tr>
+        <tr><td>title-xl</td><td style="font-family:'Bangers';font-size:36px;">PouleParty!</td><td>36px</td></tr>
+        <tr><td>title-lg</td><td style="font-family:'Bangers';font-size:32px;">Game Rules</td><td>32px</td></tr>
+        <tr><td>title-md</td><td style="font-family:'Bangers';font-size:24px;">Start Game</td><td>24px</td></tr>
+        <tr><td>title-sm</td><td style="font-family:'Bangers';font-size:20px;">Join a Party</td><td>20px</td></tr>
+        <tr><td>body-lg</td><td style="font-family:'Bangers';font-size:18px;">Choose your role carefully</td><td>18px</td></tr>
+        <tr><td>body</td><td style="font-family:'Bangers';font-size:16px;">The zone shrinks every 5 minutes</td><td>16px</td></tr>
+        <tr><td>body-sm</td><td style="font-family:'Bangers';font-size:14px;">Tap to copy game code</td><td>14px</td></tr>
+      </table>
+
+      <h3>Early GameBoy — Technical</h3>
+      <table class="type-table">
+        <tr><th>Token</th><th>Sample</th><th>Size</th></tr>
+        <tr><td>display</td><td style="font-family:'EarlyGameBoy';font-size:64px;color:var(--orange);">3</td><td>80px</td></tr>
+        <tr><td>mono-xl</td><td style="font-family:'EarlyGameBoy';font-size:48px;color:var(--orange);">04:32</td><td>48px</td></tr>
+        <tr><td>mono-lg</td><td style="font-family:'EarlyGameBoy';font-size:28px;">A3F2K9</td><td>28px</td></tr>
+        <tr><td>mono-md</td><td style="font-family:'EarlyGameBoy';font-size:20px;">1.2 km</td><td>20px</td></tr>
+        <tr><td>mono-sm</td><td style="font-family:'EarlyGameBoy';font-size:14px;">connected: 5/10</td><td>14px</td></tr>
+        <tr><td>mono-xs</td><td style="font-family:'EarlyGameBoy';font-size:10px;">last update 2m ago</td><td>10px</td></tr>
+        <tr><td>mono-xxs</td><td style="font-family:'EarlyGameBoy';font-size:8px;">v1.2.0</td><td>8px</td></tr>
+      </table>
+    </section>
+
+    <hr>
+
+    <!-- ═══ POWER-UPS ═══ -->
+    <section id="powerups">
+      <h2>Power-Ups <span>// NEON FAMILY</span></h2>
+      <p class="section-desc">Same saturation range. Same brightness range. One family.</p>
+
+      <div class="powerup-grid">
+        <div class="powerup-card" style="background: linear-gradient(135deg, #BF40BF, #8B2F8B); box-shadow: 0 0 7px rgba(191,64,191,0.5), 0 4px 12px rgba(0,0,0,0.2);">
+          <div class="icon">👻</div>
+          <div class="name" style="color:white;">Invisibility</div>
+          <div class="token-label">powerup-stealth #BF40BF</div>
+        </div>
+        <div class="powerup-card" style="background: linear-gradient(135deg, #00F5FF, #009BA8); box-shadow: 0 0 7px rgba(0,245,255,0.5), 0 4px 12px rgba(0,0,0,0.2);">
+          <div class="icon">❄️</div>
+          <div class="name" style="color:black;">Zone Freeze</div>
+          <div class="token-label" style="color:rgba(0,0,0,0.6);">powerup-freeze #00F5FF</div>
+        </div>
+        <div class="powerup-card" style="background: linear-gradient(135deg, #FF6F3C, #C44D22); box-shadow: 0 0 7px rgba(255,111,60,0.5), 0 4px 12px rgba(0,0,0,0.2);">
+          <div class="icon">📡</div>
+          <div class="name" style="color:white;">Radar Ping</div>
+          <div class="token-label">powerup-radar #FF6F3C</div>
+        </div>
+        <div class="powerup-card" style="background: linear-gradient(135deg, #4D96FF, #2F6BC4); box-shadow: 0 0 7px rgba(77,150,255,0.5), 0 4px 12px rgba(0,0,0,0.2);">
+          <div class="icon">🔮</div>
+          <div class="name" style="color:white;">Zone Preview</div>
+          <div class="token-label">powerup-vision #4D96FF</div>
+        </div>
+        <div class="powerup-card" style="background: linear-gradient(135deg, #DFFF00, #A8BF00); box-shadow: 0 0 7px rgba(223,255,0,0.5), 0 4px 12px rgba(0,0,0,0.2);">
+          <div class="icon">⚡</div>
+          <div class="name" style="color:black;">Speed Boost</div>
+          <div class="token-label" style="color:rgba(0,0,0,0.6);">powerup-speed #DFFF00</div>
+        </div>
+        <div class="powerup-card" style="background: linear-gradient(135deg, #FFD700, #C4A500); box-shadow: 0 0 7px rgba(255,215,0,0.5), 0 4px 12px rgba(0,0,0,0.2);">
+          <div class="icon">🛡️</div>
+          <div class="name" style="color:black;">Shield</div>
+          <div class="token-label" style="color:rgba(0,0,0,0.6);">powerup-shield #FFD700</div>
+        </div>
+      </div>
+    </section>
+
+    <hr>
+
+    <!-- ═══ ROLES ═══ -->
+    <section id="roles">
+      <h2>Role Identity <span>// CHICKEN vs HUNTER</span></h2>
+      <p class="section-desc">Different vibes for different sides. Immersion through color.</p>
+
+      <div class="role-compare">
+        <div class="role-card" style="background: linear-gradient(135deg, #FFD23F, #FE6A00);">
+          <div class="emoji">🐔</div>
+          <h3>Chicken</h3>
+          <div class="detail">
+            DOMINANT: chicken-yellow #FFD23F<br>
+            GRADIENT: yellow &rarr; orange<br>
+            MARKER: yellow halo + neon glow<br>
+            TEXT: black (14.5:1 PASS)
+          </div>
+        </div>
+        <div class="role-card" style="background: linear-gradient(135deg, #C41E45, #EF0778);">
+          <div class="emoji">🎯</div>
+          <h3>Hunter</h3>
+          <div class="detail">
+            DOMINANT: hunter-red #C41E45<br>
+            GRADIENT: red &rarr; pink<br>
+            MARKER: red crosshair + neon glow<br>
+            TEXT: white (5.8:1 PASS)
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <hr>
+
+    <!-- ═══ BACKGROUNDS ═══ -->
+    <section id="backgrounds">
+      <h2>Backgrounds <span>// THE BEIGE SOLUTION</span></h2>
+      <p class="section-desc">Beige stays, but never alone. Radial warmth ties menus to the arcade.</p>
+
+      <div class="bg-demo">
+        <div class="bg-demo-card" style="background: #FDF9D5; color: black;">
+          <div class="label">Before: Flat Beige</div>
+          <div class="sublabel">Feels disconnected from game</div>
+        </div>
+        <div class="bg-demo-card" style="background: radial-gradient(ellipse at center, #FDF9D5 30%, #FFE8C8 100%); color: black;">
+          <div class="label">After: Warm Vignette</div>
+          <div class="sublabel">Beige center, warm-orange edges</div>
+        </div>
+        <div class="bg-demo-card" style="background: #1A1A2E; color: white;">
+          <div class="label">Dark: Flat Navy</div>
+          <div class="sublabel">Not gray, deep navy blue</div>
+        </div>
+        <div class="bg-demo-card" style="background: radial-gradient(ellipse at center, #1A1A2E 30%, #0F0F23 100%); color: white;">
+          <div class="label">Dark: Arcade Vignette</div>
+          <div class="sublabel">Navy center, deep void edges</div>
+        </div>
+      </div>
+    </section>
+
+    <hr>
+
+    <!-- ═══ BUTTONS ═══ -->
+    <section id="buttons">
+      <h2>Buttons <span>// INTERACTIONS</span></h2>
+      <p class="section-desc">Gradient CTA. Black stroke secondary. Role-specific variants.</p>
+
+      <div class="btn-row" style="margin-bottom: 16px;">
+        <button class="btn btn-primary">Start Game</button>
+        <button class="btn btn-secondary">Join Party</button>
+        <button class="btn btn-danger">Delete Game</button>
+        <button class="btn btn-powerup">Activate</button>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" style="background: linear-gradient(135deg, #FFD23F, #FE6A00); font-size: 18px; padding: 10px 24px; color: black;">Chicken CTA</button>
+        <button class="btn btn-primary" style="background: linear-gradient(135deg, #C41E45, #EF0778); font-size: 18px; padding: 10px 24px; color: white;">Hunter CTA</button>
+      </div>
+    </section>
+
+    <hr>
+
+    <!-- ═══ ELEVATION ═══ -->
+    <section id="elevation">
+      <h2>Elevation <span>// DEPTH</span></h2>
+      <p class="section-desc">Three levels. Subtle but consistent.</p>
+
+      <div class="elevation-grid">
+        <div class="elevation-box" style="box-shadow: none;">
+          <div class="level">0</div>
+          <div class="label">FLAT</div>
+        </div>
+        <div class="elevation-box" style="box-shadow: 0 2px 4px rgba(0,0,0,0.15);">
+          <div class="level">1</div>
+          <div class="label">CARDS</div>
+        </div>
+        <div class="elevation-box" style="box-shadow: 0 4px 8px rgba(0,0,0,0.20);">
+          <div class="level">2</div>
+          <div class="label">BUTTONS</div>
+        </div>
+        <div class="elevation-box" style="box-shadow: 0 8px 16px rgba(0,0,0,0.25);">
+          <div class="level">3</div>
+          <div class="label">MODALS</div>
+        </div>
+      </div>
+    </section>
+
+    <hr>
+
+    <!-- ═══ RADIUS ═══ -->
+    <section id="radius">
+      <h2>Corner Radius <span>// SHAPES</span></h2>
+
+      <div class="radius-grid">
+        <div>
+          <div class="radius-box" style="border-radius: 8px;">
+            <div class="val">8</div>
+            <div class="label">SM</div>
+          </div>
+        </div>
+        <div>
+          <div class="radius-box" style="border-radius: 12px;">
+            <div class="val">12</div>
+            <div class="label">MD</div>
+          </div>
+        </div>
+        <div>
+          <div class="radius-box" style="border-radius: 16px;">
+            <div class="val">16</div>
+            <div class="label">LG</div>
+          </div>
+        </div>
+        <div>
+          <div class="radius-box" style="border-radius: 50px; width: 100px;">
+            <div class="val">50</div>
+            <div class="label">PILL</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <hr>
+
+    <!-- ═══ OPACITY ═══ -->
+    <section id="opacity">
+      <h2>Opacity Scale <span>// TRANSPARENCY</span></h2>
+      <p class="section-desc">Consistent alpha values across the app.</p>
+
+      <div class="opacity-row">
+        <div class="opacity-chip" style="background: rgba(254,106,0,0.1);">
+          <div class="val" style="color: var(--fg);">0.1</div>
+        </div>
+        <div class="opacity-chip" style="background: rgba(254,106,0,0.2);">
+          <div class="val" style="color: var(--fg);">0.2</div>
+        </div>
+        <div class="opacity-chip" style="background: rgba(254,106,0,0.3);">
+          <div class="val">0.3</div>
+        </div>
+        <div class="opacity-chip" style="background: rgba(254,106,0,0.4);">
+          <div class="val" style="color: white;">0.4</div>
+        </div>
+        <div class="opacity-chip" style="background: rgba(254,106,0,0.6);">
+          <div class="val" style="color: white;">0.6</div>
+        </div>
+        <div class="opacity-chip" style="background: rgba(254,106,0,0.7);">
+          <div class="val" style="color: white;">0.7</div>
+        </div>
+        <div class="opacity-chip" style="background: rgba(254,106,0,0.8);">
+          <div class="val" style="color: white;">0.8</div>
+        </div>
+        <div class="opacity-chip" style="background: rgba(254,106,0,0.9);">
+          <div class="val" style="color: white;">0.9</div>
+        </div>
+        <div class="opacity-chip" style="background: rgba(254,106,0,1.0);">
+          <div class="val" style="color: white;">1.0</div>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <p>PouleParty Design System v1.0 &mdash; Retro Arcade Edition</p>
+    </footer>
+
+  </div>
+
+  <script>
+    function toggleTheme() {
+      const html = document.documentElement;
+      const current = html.getAttribute('data-theme');
+      html.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+    }
+  </script>
+
+</body>
+</html>

@@ -9,6 +9,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -19,6 +21,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -78,7 +82,7 @@ fun OnboardingScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(CRBeige)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         HorizontalPager(
             state = pagerState,
@@ -133,8 +137,8 @@ fun OnboardingScreen(
                             .size(8.dp)
                             .clip(CircleShape)
                             .background(
-                                if (index == state.currentPage) Color.Black
-                                else Color.Black.copy(alpha = 0.2f)
+                                if (index == state.currentPage) MaterialTheme.colorScheme.onBackground
+                                else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f)
                             )
                     )
                 }
@@ -153,7 +157,7 @@ fun OnboardingScreen(
                         Text(
                             stringResource(R.string.back),
                             style = bangerStyle(18),
-                            color = Color.Black.copy(alpha = 0.5f)
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                         )
                     }
                 } else {
@@ -163,28 +167,36 @@ fun OnboardingScreen(
                 val isLocationPageBlocked = state.currentPage == 3 && !state.hasFineLocation
                 val isNicknamePageEmpty = state.currentPage == 5 && state.nickname.trim().isEmpty()
                 val isNextDisabled = isLocationPageBlocked || isNicknamePageEmpty
-                Button(
-                    onClick = {
-                        if (viewModel.isLastPage) {
-                            if (viewModel.canCompleteOnboarding()) {
-                                onOnboardingCompleted(state.nickname.trim())
+                Box(
+                    modifier = Modifier
+                        .height(50.dp)
+                        .widthIn(min = 120.dp)
+                        .shadow(4.dp, RoundedCornerShape(50.dp))
+                        .clip(RoundedCornerShape(50.dp))
+                        .background(
+                            if (!isNextDisabled) GradientFire
+                            else Brush.linearGradient(listOf(CROrange.copy(alpha = 0.4f), CRPink.copy(alpha = 0.4f)))
+                        )
+                        .border(
+                            3.dp,
+                            MaterialTheme.colorScheme.onBackground.copy(alpha = if (!isNextDisabled) 1f else 0.2f),
+                            RoundedCornerShape(50.dp)
+                        )
+                        .clickable(enabled = !isNextDisabled) {
+                            if (viewModel.isLastPage) {
+                                if (viewModel.canCompleteOnboarding()) {
+                                    onOnboardingCompleted(state.nickname.trim())
+                                }
+                            } else {
+                                viewModel.nextPage()
                             }
-                        } else {
-                            viewModel.nextPage()
-                        }
-                    },
-                    enabled = !isNextDisabled,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = CROrange,
-                        disabledContainerColor = CROrange.copy(alpha = 0.4f),
-                        disabledContentColor = Color.White.copy(alpha = 0.6f)
-                    ),
-                    shape = RoundedCornerShape(50)
+                        },
+                    contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = if (viewModel.isLastPage) stringResource(R.string.lets_go) else stringResource(R.string.next),
                         style = bangerStyle(22),
-                        color = Color.White,
+                        color = Color.Black,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                     )
                 }
@@ -240,7 +252,7 @@ private fun OnboardingSlideLayout(
             title,
             style = bangerStyle(titleSize),
             textAlign = TextAlign.Center,
-            color = Color.Black
+            color = MaterialTheme.colorScheme.onBackground
         )
         if (subtitle != null) {
             Spacer(Modifier.height(16.dp))
@@ -248,7 +260,7 @@ private fun OnboardingSlideLayout(
                 subtitle,
                 style = bangerStyle(18),
                 textAlign = TextAlign.Center,
-                color = Color.Black.copy(alpha = 0.6f)
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
             )
         }
         extraContent()
@@ -314,25 +326,35 @@ private fun SlideLocation(
                     stringResource(R.string.location_granted),
                     style = bangerStyle(18),
                     textAlign = TextAlign.Center,
-                    color = Color.Black.copy(alpha = 0.6f)
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                 )
                 Spacer(Modifier.height(16.dp))
-                Text("\u2705 " + stringResource(R.string.always_allowed), style = bangerStyle(20), color = Color(0xFF4CAF50))
+                Text("\u2705 " + stringResource(R.string.always_allowed), style = bangerStyle(20), color = Success)
             }
             hasFineLocation -> {
                 Text(
                     stringResource(R.string.location_partial),
                     style = bangerStyle(18),
                     textAlign = TextAlign.Center,
-                    color = Color.Black.copy(alpha = 0.6f)
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                 )
                 Spacer(Modifier.height(16.dp))
-                Button(
-                    onClick = onRequestBackgroundLocation,
-                    colors = ButtonDefaults.buttonColors(containerColor = CROrange),
-                    shape = RoundedCornerShape(50)
+                Box(
+                    modifier = Modifier
+                        .height(50.dp)
+                        .shadow(4.dp, RoundedCornerShape(50.dp))
+                        .clip(RoundedCornerShape(50.dp))
+                        .background(GradientFire)
+                        .border(3.dp, MaterialTheme.colorScheme.onBackground, RoundedCornerShape(50.dp))
+                        .clickable { onRequestBackgroundLocation() },
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text(stringResource(R.string.allow_always), style = bangerStyle(20), color = Color.White)
+                    Text(
+                        stringResource(R.string.allow_always),
+                        style = bangerStyle(20),
+                        color = Color.Black,
+                        modifier = Modifier.padding(horizontal = 24.dp)
+                    )
                 }
             }
             else -> {
@@ -340,15 +362,25 @@ private fun SlideLocation(
                     stringResource(R.string.location_denied),
                     style = bangerStyle(18),
                     textAlign = TextAlign.Center,
-                    color = Color.Black.copy(alpha = 0.6f)
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                 )
                 Spacer(Modifier.height(16.dp))
-                Button(
-                    onClick = onRequestFineLocation,
-                    colors = ButtonDefaults.buttonColors(containerColor = CROrange),
-                    shape = RoundedCornerShape(50)
+                Box(
+                    modifier = Modifier
+                        .height(50.dp)
+                        .shadow(4.dp, RoundedCornerShape(50.dp))
+                        .clip(RoundedCornerShape(50.dp))
+                        .background(GradientFire)
+                        .border(3.dp, MaterialTheme.colorScheme.onBackground, RoundedCornerShape(50.dp))
+                        .clickable { onRequestFineLocation() },
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text(stringResource(R.string.allow_location_access), style = bangerStyle(20), color = Color.White)
+                    Text(
+                        stringResource(R.string.allow_location_access),
+                        style = bangerStyle(20),
+                        color = Color.Black,
+                        modifier = Modifier.padding(horizontal = 24.dp)
+                    )
                 }
             }
         }
@@ -373,31 +405,37 @@ private fun SlideNotifications(
                 stringResource(R.string.notif_enabled_description),
                 style = bangerStyle(18),
                 textAlign = TextAlign.Center,
-                color = Color.Black.copy(alpha = 0.6f)
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
             )
             Spacer(Modifier.height(16.dp))
             Text(
                 "\u2705 " + stringResource(R.string.notif_enabled),
                 style = bangerStyle(20),
-                color = Color(0xFF4CAF50)
+                color = Success
             )
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             Text(
                 stringResource(R.string.notif_request_description),
                 style = bangerStyle(18),
                 textAlign = TextAlign.Center,
-                color = Color.Black.copy(alpha = 0.6f)
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
             )
             Spacer(Modifier.height(16.dp))
-            Button(
-                onClick = onRequestPermission,
-                colors = ButtonDefaults.buttonColors(containerColor = CROrange),
-                shape = RoundedCornerShape(50)
+            Box(
+                modifier = Modifier
+                    .height(50.dp)
+                    .shadow(4.dp, RoundedCornerShape(50.dp))
+                    .clip(RoundedCornerShape(50.dp))
+                    .background(GradientFire)
+                    .border(3.dp, MaterialTheme.colorScheme.onBackground, RoundedCornerShape(50.dp))
+                    .clickable { onRequestPermission() },
+                contentAlignment = Alignment.Center
             ) {
                 Text(
                     stringResource(R.string.notif_enable_button),
                     style = bangerStyle(20),
-                    color = Color.White
+                    color = Color.Black,
+                    modifier = Modifier.padding(horizontal = 24.dp)
                 )
             }
         } else {
@@ -406,13 +444,13 @@ private fun SlideNotifications(
                 stringResource(R.string.notif_enabled_description),
                 style = bangerStyle(18),
                 textAlign = TextAlign.Center,
-                color = Color.Black.copy(alpha = 0.6f)
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
             )
             Spacer(Modifier.height(16.dp))
             Text(
                 "\u2705 " + stringResource(R.string.notif_enabled),
                 style = bangerStyle(20),
-                color = Color(0xFF4CAF50)
+                color = Success
             )
         }
     }
@@ -442,7 +480,7 @@ private fun SlideNickname(
         Text(
             "${nickname.length}/$maxLength",
             style = bangerStyle(14),
-            color = Color.Black.copy(alpha = 0.4f)
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
         )
     }
 }

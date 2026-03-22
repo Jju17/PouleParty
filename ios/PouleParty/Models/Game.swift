@@ -38,6 +38,8 @@ struct Game: Codable, Equatable {
     var activeInvisibilityUntil: Timestamp?
     var activeZoneFreezeUntil: Timestamp?
     var activeRadarPingUntil: Timestamp?
+    var activeDecoyUntil: Timestamp?
+    var activeJammerUntil: Timestamp?
 
     enum GameStatus: String, CaseIterable, Equatable, Codable {
         case waiting

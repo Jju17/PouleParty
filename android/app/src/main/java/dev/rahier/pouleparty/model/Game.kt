@@ -33,7 +33,9 @@ data class Game(
     val enabledPowerUpTypes: List<String> = PowerUpType.entries.map { it.firestoreValue },
     val activeInvisibilityUntil: Timestamp? = null,
     val activeZoneFreezeUntil: Timestamp? = null,
-    val activeRadarPingUntil: Timestamp? = null
+    val activeRadarPingUntil: Timestamp? = null,
+    val activeDecoyUntil: Timestamp? = null,
+    val activeJammerUntil: Timestamp? = null
 ) {
     // ── Power-Up Active Effects ────────────────────────
 
@@ -48,6 +50,14 @@ data class Game(
     @get:Exclude
     val isRadarPingActive: Boolean
         get() = activeRadarPingUntil != null && Date().before(activeRadarPingUntil.toDate())
+
+    @get:Exclude
+    val isDecoyActive: Boolean
+        get() = activeDecoyUntil != null && Date().before(activeDecoyUntil.toDate())
+
+    @get:Exclude
+    val isJammerActive: Boolean
+        get() = activeJammerUntil != null && Date().before(activeJammerUntil.toDate())
 
     // ── Computed Properties ────────────────────────────
 

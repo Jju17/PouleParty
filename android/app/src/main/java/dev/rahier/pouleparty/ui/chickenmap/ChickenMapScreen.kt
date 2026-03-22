@@ -12,6 +12,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -43,6 +45,8 @@ import dev.rahier.pouleparty.ui.components.PowerUpDetailDialog
 import dev.rahier.pouleparty.ui.components.GameStartCountdownOverlay
 import dev.rahier.pouleparty.ui.components.PreGameOverlay
 import dev.rahier.pouleparty.ui.endgamecode.EndGameCodeContent
+import dev.rahier.pouleparty.ui.chickenconfig.powerUpColor
+import dev.rahier.pouleparty.ui.theme.*
 
 @OptIn(MapboxExperimental::class)
 @Composable
@@ -103,7 +107,7 @@ fun ChickenMapScreen(
             // Inverted zone overlay
             state.circleCenter?.let { center ->
                 val overlayColor = if (state.isOutsideZone) {
-                    Color(1f, 0f, 0f, 0.4f) // Red with ~0.4 alpha
+                    ZoneDanger.copy(alpha = 0.4f)
                 } else {
                     Color(0f, 0f, 0f, 0.3f) // Black with ~0.3 alpha
                 }
@@ -115,12 +119,30 @@ fun ChickenMapScreen(
                     fillOpacity = 1.0
                 }
 
-                // Zone border circle
+                // Zone border circle — neon glow effect (layered polylines)
                 PolylineAnnotation(
                     points = circlePoints + listOf(circlePoints.first())
                 ) {
-                    lineColor = Color(0f, 1f, 0f, 0.7f)
-                    lineWidth = 2.0
+                    lineColor = ZoneGreen.copy(alpha = 0.08f)
+                    lineWidth = 16.0
+                }
+                PolylineAnnotation(
+                    points = circlePoints + listOf(circlePoints.first())
+                ) {
+                    lineColor = ZoneGreen.copy(alpha = 0.15f)
+                    lineWidth = 8.0
+                }
+                PolylineAnnotation(
+                    points = circlePoints + listOf(circlePoints.first())
+                ) {
+                    lineColor = ZoneGreen.copy(alpha = 0.35f)
+                    lineWidth = 4.0
+                }
+                PolylineAnnotation(
+                    points = circlePoints + listOf(circlePoints.first())
+                ) {
+                    lineColor = ZoneGreen.copy(alpha = 0.9f)
+                    lineWidth = 2.5
                 }
             }
 
@@ -134,9 +156,9 @@ fun ChickenMapScreen(
                     }
                 ) {
                     iconImage = IconImage("marker-15")
-                    iconColor = Color(0xFFFF9800)
+                    iconColor = CROrange
                     textField = powerUp.typeEnum.title
-                    textColor = Color(0xFFFF9800)
+                    textColor = CROrange
                     iconAllowOverlap = true
                     textAllowOverlap = true
                 }
@@ -175,7 +197,8 @@ fun ChickenMapScreen(
                 },
                 modifier = Modifier
                     .padding(end = 8.dp)
-                    .background(Color.White.copy(alpha = 0.8f), CircleShape)
+                    .shadow(4.dp, CircleShape)
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.9f), CircleShape)
                     .size(40.dp)
             ) {
                 Icon(
@@ -194,7 +217,7 @@ fun ChickenMapScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.TopCenter)
-                .background(Color.White.copy(alpha = 0.9f))
+                .background(Brush.linearGradient(listOf(ChickenYellow, CROrange)))
                 .statusBarsPadding()
                 .padding(16.dp),
             horizontalArrangement = Arrangement.Center,
@@ -205,14 +228,14 @@ fun ChickenMapScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.weight(1f)
             ) {
-                Text(stringResource(R.string.you_are_chicken), fontSize = 16.sp)
-                Text(viewModel.chickenSubtitle, fontSize = 14.sp)
+                Text(stringResource(R.string.you_are_chicken), style = bangerStyle(20), color = Color.White)
+                Text(viewModel.chickenSubtitle, style = gameboyStyle(10), color = Color.White.copy(alpha = 0.8f))
             }
             IconButton(onClick = { viewModel.onInfoTapped() }) {
                 Icon(
                     imageVector = Icons.Default.Info,
                     contentDescription = stringResource(R.string.game_info),
-                    tint = Color.Gray
+                    tint = Color.White.copy(alpha = 0.8f)
                 )
             }
         }
@@ -222,14 +245,14 @@ fun ChickenMapScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.BottomCenter)
-                .background(Color.White.copy(alpha = 0.9f))
+                .background(CRDarkBackground.copy(alpha = 0.85f))
                 .navigationBarsPadding()
                 .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text(stringResource(R.string.radius_format, state.radius))
+                Text(stringResource(R.string.radius_format, state.radius), style = gameboyStyle(14), color = Color.White)
                 CountdownView(
                     nowDate = state.nowDate,
                     nextUpdateDate = state.nextRadiusUpdate,
@@ -243,8 +266,8 @@ fun ChickenMapScreen(
             if (state.collectedPowerUps.isNotEmpty()) {
                 Button(
                     onClick = { viewModel.onPowerUpInventoryTapped() },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9800)),
-                    shape = RoundedCornerShape(5.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = CROrange),
+                    shape = RoundedCornerShape(8.dp),
                     modifier = Modifier.size(width = 44.dp, height = 40.dp),
                     contentPadding = PaddingValues(0.dp)
                 ) {
@@ -255,8 +278,8 @@ fun ChickenMapScreen(
             // FOUND button
             Button(
                 onClick = { viewModel.onFoundButtonTapped() },
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
-                shape = RoundedCornerShape(5.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = HunterRed),
+                shape = RoundedCornerShape(50.dp),
                 modifier = Modifier.size(width = 50.dp, height = 40.dp),
                 contentPadding = PaddingValues(0.dp)
             ) {
@@ -293,7 +316,7 @@ fun ChickenMapScreen(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .padding(top = 140.dp)
-                    .background(Color.Red.copy(alpha = 0.9f), RoundedCornerShape(12.dp))
+                    .background(ZoneDanger.copy(alpha = 0.9f), RoundedCornerShape(12.dp))
                     .padding(horizontal = 24.dp, vertical = 12.dp)
             )
         }
@@ -308,7 +331,7 @@ fun ChickenMapScreen(
             text = { Text(stringResource(R.string.cancel_game_message)) },
             confirmButton = {
                 TextButton(onClick = { viewModel.confirmCancelGame(onGoToMenu) }) {
-                    Text(stringResource(R.string.cancel_game), color = Color.Red)
+                    Text(stringResource(R.string.cancel_game), color = Danger)
                 }
             },
             dismissButton = {
@@ -366,7 +389,7 @@ fun ChickenMapScreen(
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier
-                    .background(Color(0xFF9C27B0).copy(alpha = 0.9f), RoundedCornerShape(20.dp))
+                    .background((state.lastActivatedPowerUpType?.let { powerUpColor(it) } ?: CROrange).copy(alpha = 0.9f), RoundedCornerShape(20.dp))
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             )
         }
@@ -397,12 +420,12 @@ fun ChickenMapScreen(
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(powerUp.typeEnum.title, fontWeight = FontWeight.Bold)
                                     val durationText = powerUp.typeEnum.durationSeconds?.let { "${it}s" } ?: "Instant"
-                                    Text(durationText, fontSize = 12.sp, color = Color.Gray)
+                                    Text(durationText, fontSize = 12.sp, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f))
                                 }
                                 Button(
                                     onClick = { viewModel.activatePowerUp(powerUp) },
                                     enabled = state.activatingPowerUpId == null,
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9C27B0))
+                                    colors = ButtonDefaults.buttonColors(containerColor = PowerupStealth)
                                 ) {
                                     Text("Activate")
                                 }

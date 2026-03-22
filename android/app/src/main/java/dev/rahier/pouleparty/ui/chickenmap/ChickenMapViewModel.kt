@@ -74,6 +74,7 @@ data class ChickenMapUiState(
     val collectedPowerUps: List<PowerUp> = emptyList(),
     val showPowerUpInventory: Boolean = false,
     val powerUpNotification: String? = null,
+    val lastActivatedPowerUpType: PowerUpType? = null,
     val lastSpawnBatchIndex: Int = 0,
     val activatingPowerUpId: String? = null
 )
@@ -262,11 +263,29 @@ class ChickenMapViewModel @Inject constructor(
 
         if (game.gameModEnum == GameMod.STAY_IN_THE_ZONE) {
             // stayInTheZone: track location for zone check only
+            // When radar ping is active, force-write location so hunters can see the chicken
             locationRepository.getLastLocation()?.let { latLng ->
                 _uiState.update { it.copy(userLocation = latLng) }
             }
+            var lastWrite = Date()
             locationRepository.locationFlow().collect { latLng ->
                 _uiState.update { it.copy(userLocation = latLng) }
+                val currentGame = _uiState.value.game
+                if (currentGame.isRadarPingActive
+                    && Date().time - lastWrite.time >= AppConstants.LOCATION_THROTTLE_MS) {
+                    var sendLatLng = latLng
+                    // Jammer: add +/-200m random noise
+                    if (currentGame.isJammerActive) {
+                        val latNoise = (Math.random() - 0.5) * 0.0036 // ~200m
+                        val lonNoise = (Math.random() - 0.5) * 0.0036
+                        sendLatLng = Point.fromLngLat(
+                            latLng.longitude() + lonNoise,
+                            latLng.latitude() + latNoise
+                        )
+                    }
+                    firestoreRepository.setChickenLocation(gameId, sendLatLng)
+                    lastWrite = Date()
+                }
             }
             return
         }
@@ -284,7 +303,17 @@ class ChickenMapViewModel @Inject constructor(
             // Throttle Firestore writes (skip when invisible)
             if (Date().time - lastWrite.time >= AppConstants.LOCATION_THROTTLE_MS
                 && !_uiState.value.game.isChickenInvisible) {
-                firestoreRepository.setChickenLocation(gameId, latLng)
+                var sendLatLng = latLng
+                // Jammer: add +/-200m random noise to position
+                if (_uiState.value.game.isJammerActive) {
+                    val latNoise = (Math.random() - 0.5) * 0.0036 // ~200m
+                    val lonNoise = (Math.random() - 0.5) * 0.0036
+                    sendLatLng = Point.fromLngLat(
+                        latLng.longitude() + lonNoise,
+                        latLng.latitude() + latNoise
+                    )
+                }
+                firestoreRepository.setChickenLocation(gameId, sendLatLng)
                 lastWrite = Date()
             }
         }
@@ -384,6 +413,19 @@ class ChickenMapViewModel @Inject constructor(
 
     // ── Power-ups ──────────────────────────────────────
 
+    private fun filterEnabledTypes(game: Game): List<String> {
+        val types = game.enabledPowerUpTypes.toMutableList()
+        if (game.gameModEnum == GameMod.STAY_IN_THE_ZONE) {
+            // These power-ups have no effect in stayInTheZone (no position sharing)
+            types.removeAll {
+                it == PowerUpType.INVISIBILITY.firestoreValue
+                    || it == PowerUpType.DECOY.firestoreValue
+                    || it == PowerUpType.JAMMER.firestoreValue
+            }
+        }
+        return types
+    }
+
     private suspend fun spawnInitialPowerUps(game: Game) {
         if (!game.powerUpsEnabled) return
         val center = game.initialLocation
@@ -393,7 +435,7 @@ class ChickenMapViewModel @Inject constructor(
             count = AppConstants.POWER_UP_INITIAL_BATCH_SIZE,
             driftSeed = game.driftSeed,
             batchIndex = 0,
-            enabledTypes = game.enabledPowerUpTypes
+            enabledTypes = filterEnabledTypes(game)
         )
         powerUps = snapPowerUpsToRoads(powerUps, mapboxAccessToken)
         try {
@@ -413,7 +455,7 @@ class ChickenMapViewModel @Inject constructor(
             count = AppConstants.POWER_UP_PERIODIC_BATCH_SIZE,
             driftSeed = state.game.driftSeed,
             batchIndex = batchIndex,
-            enabledTypes = state.game.enabledPowerUpTypes
+            enabledTypes = filterEnabledTypes(state.game)
         )
         viewModelScope.launch {
             try {
@@ -438,10 +480,10 @@ class ChickenMapViewModel @Inject constructor(
         }
     }
 
-    private fun showNotification(message: String) {
+    private fun showNotification(message: String, type: PowerUpType? = null) {
         notificationJob?.cancel()
         notificationJob = viewModelScope.launch {
-            _uiState.update { it.copy(powerUpNotification = message) }
+            _uiState.update { it.copy(powerUpNotification = message, lastActivatedPowerUpType = type) }
             delay(2000)
             _uiState.update { it.copy(powerUpNotification = null) }
         }
@@ -462,7 +504,7 @@ class ChickenMapViewModel @Inject constructor(
                 viewModelScope.launch {
                     try {
                         firestoreRepository.collectPowerUp(gameId, powerUp.id, userId)
-                        showNotification("Collected: ${powerUp.typeEnum.title}!")
+                        showNotification("Collected: ${powerUp.typeEnum.title}!", powerUp.typeEnum)
                     } catch (e: Exception) {
                         Log.e("ChickenMapVM", "Failed to collect power-up", e)
                         showNotification("Failed to collect power-up")
@@ -492,10 +534,20 @@ class ChickenMapViewModel @Inject constructor(
                             gameId, "activeZoneFreezeUntil", expiresAt
                         )
                     }
+                    PowerUpType.DECOY -> {
+                        firestoreRepository.updateGameActiveEffect(
+                            gameId, "activeDecoyUntil", expiresAt
+                        )
+                    }
+                    PowerUpType.JAMMER -> {
+                        firestoreRepository.updateGameActiveEffect(
+                            gameId, "activeJammerUntil", expiresAt
+                        )
+                    }
                     else -> {}
                 }
                 _uiState.update { it.copy(showPowerUpInventory = false) }
-                showNotification("Activated: ${powerUp.typeEnum.title}!")
+                showNotification("Activated: ${powerUp.typeEnum.title}!", powerUp.typeEnum)
             } catch (e: Exception) {
                 Log.e("ChickenMapVM", "Failed to activate power-up", e)
             } finally {

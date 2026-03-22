@@ -148,7 +148,7 @@ fun PreGameOverlay(
                             Icon(
                                 imageVector = if (codeCopied) Icons.Default.Check else Icons.Outlined.ContentCopy,
                                 contentDescription = stringResource(R.string.copy_game_code),
-                                tint = if (codeCopied) Color(0xFF4CAF50) else Color.White.copy(alpha = 0.6f)
+                                tint = if (codeCopied) Success else Color.White.copy(alpha = 0.6f)
                             )
                         }
                     }
@@ -219,7 +219,7 @@ fun PreGameOverlay(
                             text = stringResource(R.string.cancel_game),
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Medium,
-                            color = Color.Red
+                            color = Danger
                         )
                     }
                 }

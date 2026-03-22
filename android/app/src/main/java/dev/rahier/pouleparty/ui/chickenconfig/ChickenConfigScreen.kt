@@ -1,6 +1,8 @@
 package dev.rahier.pouleparty.ui.chickenconfig
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -13,6 +15,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -46,6 +50,7 @@ fun ChickenConfigScreen(
         BackHandler { viewModel.dismissPowerUpSelection() }
         PowerUpSelectionScreen(
             enabledTypes = state.game.enabledPowerUpTypes,
+            gameMod = state.game.gameModEnum,
             onToggle = { viewModel.togglePowerUpType(it) },
             onDismiss = { viewModel.dismissPowerUpSelection() }
         )
@@ -157,7 +162,7 @@ fun ChickenConfigScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Text(stringResource(R.string.ends_at))
-                                Text(dateFormat.format(endTime), color = Color.Gray)
+                                Text(dateFormat.format(endTime), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f))
                             }
                         }
                     }
@@ -230,14 +235,14 @@ fun ChickenConfigScreen(
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Text(
                                             stringResource(R.string.power_ups_count_format, enabledCount, totalCount),
-                                            color = Color.Gray
+                                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                                         )
                                         Spacer(Modifier.width(4.dp))
                                         Icon(
                                             Icons.AutoMirrored.Filled.ArrowForward,
                                             contentDescription = null,
                                             modifier = Modifier.size(16.dp),
-                                            tint = Color.Gray
+                                            tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                                         )
                                     }
                                 }
@@ -370,16 +375,19 @@ fun ChickenConfigScreen(
             }
 
             // Start game button — prominent, outside the scrollable form
-            Button(
-                onClick = { viewModel.startGame(onStartGame) },
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)
-                    .height(56.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = CROrange),
-                shape = RoundedCornerShape(12.dp)
+                    .height(56.dp)
+                    .shadow(4.dp, RoundedCornerShape(50.dp))
+                    .clip(RoundedCornerShape(50.dp))
+                    .background(GradientFire)
+                    .border(3.dp, MaterialTheme.colorScheme.onBackground, RoundedCornerShape(50.dp))
+                    .clickable { viewModel.startGame(onStartGame) },
+                contentAlignment = Alignment.Center
             ) {
-                Text(stringResource(R.string.start_game), color = Color.White, style = bangerStyle(24))
+                Text(stringResource(R.string.start_game), color = Color.Black, style = bangerStyle(24))
             }
         }
     }
@@ -449,7 +457,7 @@ private fun MapPreviewContent(center: Point, radius: Double, finalCenter: Point?
                 PolylineAnnotation(
                     points = finalCirclePoints + listOf(finalCirclePoints.first())
                 ) {
-                    lineColor = Color.Green.copy(alpha = 0.8f)
+                    lineColor = ZoneGreen.copy(alpha = 0.8f)
                     lineWidth = 2.0
                 }
             }

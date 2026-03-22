@@ -41,12 +41,12 @@ struct OnboardingSlideLayout<Icon: View, Extra: View>: View {
 
             BangerText(title, size: titleSize)
                 .multilineTextAlignment(.center)
-                .foregroundStyle(.black)
+                .foregroundStyle(Color.onBackground)
 
             if let subtitle {
                 BangerText(subtitle, size: 18)
                     .multilineTextAlignment(.center)
-                    .foregroundStyle(.black.opacity(0.6))
+                    .foregroundStyle(Color.onBackground.opacity(0.6))
                     .padding(.horizontal, 10)
             }
 
@@ -129,15 +129,15 @@ struct OnboardingLocationSlide: View {
                 Group {
                     BangerText("You're all set! The game will track location even in the background.\n\nMaximum fun guaranteed!", size: 18)
                         .multilineTextAlignment(.center)
-                        .foregroundStyle(.black.opacity(0.6))
+                        .foregroundStyle(Color.onBackground.opacity(0.6))
                         .padding(.horizontal, 10)
 
                     HStack(spacing: 8) {
                         Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
+                            .foregroundStyle(Color.success)
                             .font(.system(size: 24))
                         BangerText("Always allowed!", size: 20)
-                            .foregroundStyle(.green)
+                            .foregroundStyle(Color.success)
                     }
                     .padding(.top, 8)
                 }
@@ -146,17 +146,22 @@ struct OnboardingLocationSlide: View {
                 Group {
                     BangerText("Almost there! The game needs to track the Chicken even when the app is in the background.\n\nPlease select \"Always Allow\" so the Hunters can find you!", size: 18)
                         .multilineTextAlignment(.center)
-                        .foregroundStyle(.black.opacity(0.6))
+                        .foregroundStyle(Color.onBackground.opacity(0.6))
                         .padding(.horizontal, 10)
 
                     Button {
                         onRequestAlways()
                     } label: {
                         BangerText("Allow Always", size: 20)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.black)
                             .padding(.horizontal, 28)
                             .padding(.vertical, 14)
-                            .background(Capsule().fill(Color.CROrange))
+                            .background(
+                                Capsule()
+                                    .fill(Color.gradientFire)
+                                    .overlay(Capsule().stroke(Color.onBackground, lineWidth: 3))
+                            )
+                            .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
                     }
                     .padding(.top, 8)
                 }
@@ -165,7 +170,7 @@ struct OnboardingLocationSlide: View {
                 Group {
                     BangerText("Location access was denied.\nPlease enable it in Settings to play.", size: 18)
                         .multilineTextAlignment(.center)
-                        .foregroundStyle(.black.opacity(0.6))
+                        .foregroundStyle(Color.onBackground.opacity(0.6))
                         .padding(.horizontal, 10)
 
                     Button {
@@ -174,10 +179,15 @@ struct OnboardingLocationSlide: View {
                         }
                     } label: {
                         BangerText("Open Settings", size: 18)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.black)
                             .padding(.horizontal, 24)
                             .padding(.vertical, 10)
-                            .background(Capsule().fill(Color.CROrange))
+                            .background(
+                                Capsule()
+                                    .fill(Color.gradientFire)
+                                    .overlay(Capsule().stroke(Color.onBackground, lineWidth: 3))
+                            )
+                            .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
                     }
                     .padding(.top, 8)
                 }
@@ -186,17 +196,22 @@ struct OnboardingLocationSlide: View {
                 Group {
                     BangerText("Without it, the game can't work.\nNo location = no map = no fun.\n\nWe promise we only use it during the game!", size: 18)
                         .multilineTextAlignment(.center)
-                        .foregroundStyle(.black.opacity(0.6))
+                        .foregroundStyle(Color.onBackground.opacity(0.6))
                         .padding(.horizontal, 10)
 
                     Button {
                         onRequestWhenInUse()
                     } label: {
                         BangerText("Allow Location Access", size: 20)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.black)
                             .padding(.horizontal, 28)
                             .padding(.vertical, 14)
-                            .background(Capsule().fill(Color.CROrange))
+                            .background(
+                                Capsule()
+                                    .fill(Color.gradientFire)
+                                    .overlay(Capsule().stroke(Color.onBackground, lineWidth: 3))
+                            )
+                            .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
                     }
                     .padding(.top, 8)
                 }
@@ -230,16 +245,16 @@ struct OnboardingNotificationSlide: View {
                     Text("Notifications enabled! You'll know when the game starts, the zone shrinks, and when hunters find the chicken.")
                         .font(.banger(size: 18))
                         .multilineTextAlignment(.center)
-                        .foregroundStyle(.black.opacity(0.6))
+                        .foregroundStyle(Color.onBackground.opacity(0.6))
                         .padding(.horizontal, 10)
 
                     HStack(spacing: 8) {
                         Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
+                            .foregroundStyle(Color.success)
                             .font(.system(size: 24))
                         Text("Notifications enabled!")
                             .font(.banger(size: 20))
-                            .foregroundStyle(.green)
+                            .foregroundStyle(Color.success)
                     }
                     .padding(.top, 8)
                 }
@@ -249,7 +264,7 @@ struct OnboardingNotificationSlide: View {
                     Text("Notifications were denied. You can enable them in Settings to get game alerts.")
                         .font(.banger(size: 18))
                         .multilineTextAlignment(.center)
-                        .foregroundStyle(.black.opacity(0.6))
+                        .foregroundStyle(Color.onBackground.opacity(0.6))
                         .padding(.horizontal, 10)
 
                     Button {
@@ -259,10 +274,15 @@ struct OnboardingNotificationSlide: View {
                     } label: {
                         Text("Open Settings")
                             .font(.banger(size: 18))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.black)
                             .padding(.horizontal, 24)
                             .padding(.vertical, 10)
-                            .background(Capsule().fill(Color.CROrange))
+                            .background(
+                                Capsule()
+                                    .fill(Color.gradientFire)
+                                    .overlay(Capsule().stroke(Color.onBackground, lineWidth: 3))
+                            )
+                            .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
                     }
                     .padding(.top, 8)
                 }
@@ -272,7 +292,7 @@ struct OnboardingNotificationSlide: View {
                     Text("Get notified when the game starts, the zone shrinks, and when a hunter finds the chicken!\n\nThis is optional but recommended.")
                         .font(.banger(size: 18))
                         .multilineTextAlignment(.center)
-                        .foregroundStyle(.black.opacity(0.6))
+                        .foregroundStyle(Color.onBackground.opacity(0.6))
                         .padding(.horizontal, 10)
 
                     Button {
@@ -280,10 +300,15 @@ struct OnboardingNotificationSlide: View {
                     } label: {
                         Text("Enable Notifications")
                             .font(.banger(size: 20))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.black)
                             .padding(.horizontal, 28)
                             .padding(.vertical, 14)
-                            .background(Capsule().fill(Color.CROrange))
+                            .background(
+                                Capsule()
+                                    .fill(Color.gradientFire)
+                                    .overlay(Capsule().stroke(Color.onBackground, lineWidth: 3))
+                            )
+                            .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
                     }
                     .padding(.top, 8)
                 }
@@ -309,21 +334,21 @@ struct OnboardingNicknameSlide: View {
             VStack(spacing: 8) {
                 TextField("Your nickname", text: $nickname)
                     .font(.banger(size: 22))
-                    .foregroundStyle(.black)
+                    .foregroundStyle(Color.onBackground)
                     .multilineTextAlignment(.center)
                     .padding()
                     .background(
                         RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.white)
+                            .fill(Color.surface)
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.black.opacity(0.2), lineWidth: 1)
+                            .stroke(Color.onBackground.opacity(0.2), lineWidth: 1)
                     )
                     .padding(.horizontal, 20)
 
                 BangerText("\(nickname.count)/\(maxLength)", size: 14)
-                    .foregroundStyle(.black.opacity(0.4))
+                    .foregroundStyle(Color.onBackground.opacity(0.4))
             }
         }
     }

@@ -14,7 +14,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.rahier.pouleparty.R
-import dev.rahier.pouleparty.ui.theme.GameBoyFont
+import dev.rahier.pouleparty.ui.theme.*
 
 @Composable
 fun GameCodeCard(
@@ -46,7 +46,7 @@ fun GameCodeCard(
                 Icon(
                     imageVector = if (codeCopied) Icons.Default.Check else Icons.Outlined.ContentCopy,
                     contentDescription = stringResource(R.string.copy_game_code),
-                    tint = if (codeCopied) Color(0xFF4CAF50) else Color.Gray
+                    tint = if (codeCopied) Success else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                 )
             }
         }

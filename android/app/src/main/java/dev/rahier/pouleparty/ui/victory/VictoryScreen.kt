@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -42,7 +43,7 @@ fun VictoryScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(CRBeige)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         // Confetti overlay (only for participants)
         if (!isSpectator) {
@@ -72,7 +73,7 @@ fun VictoryScreen(
             Text(
                 text = if (isSpectator) stringResource(R.string.game_results) else stringResource(R.string.you_found_chicken),
                 style = gameboyStyle(16),
-                color = Color.Black,
+                color = MaterialTheme.colorScheme.onBackground,
                 textAlign = TextAlign.Center
             )
 
@@ -90,7 +91,7 @@ fun VictoryScreen(
             // Back to menu button
             SelectionButton(
                 text = stringResource(R.string.back_to_menu),
-                color = Color.Black,
+                color = MaterialTheme.colorScheme.onBackground,
                 onClick = onGoToMenu
             )
 
@@ -131,7 +132,7 @@ private fun LeaderboardSection(
                 Text(
                     text = stringResource(R.string.still_in_party, remaining),
                     style = bangerStyle(18),
-                    color = Color.Gray,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
                     modifier = Modifier.padding(vertical = 4.dp)
                 )
             }
@@ -173,14 +174,14 @@ private fun LeaderboardRow(
         Text(
             text = medal,
             fontSize = if (rank <= 3) 24.sp else 16.sp,
-            color = Color.Black,
+            color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.width(40.dp)
         )
 
         Text(
             text = winner.hunterName,
             style = bangerStyle(20),
-            color = Color.Black,
+            color = MaterialTheme.colorScheme.onBackground,
             maxLines = 1,
             modifier = Modifier.weight(1f)
         )
@@ -188,7 +189,7 @@ private fun LeaderboardRow(
         Text(
             text = timeString,
             style = gameboyStyle(10),
-            color = Color.Gray
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
         )
     }
 }
@@ -208,7 +209,7 @@ private data class ConfettiParticle(
     var shapeType: Int // 0 = circle, 1 = rect
 )
 
-private val confettiColors = listOf(CROrange, CRPink, Color.Yellow, Color.Green, Color.Blue, Color.Red)
+private val confettiColors = listOf(CROrange, CRPink, ChickenYellow, ZoneGreen, PowerupVision, HunterRed)
 
 @Composable
 private fun ConfettiOverlay(modifier: Modifier = Modifier) {

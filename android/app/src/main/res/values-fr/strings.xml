@@ -183,6 +183,24 @@
     <!-- Zone Warning -->
     <string name="return_to_zone">Retournez dans la zone !</string>
 
+    <!-- Power-Ups -->
+    <string name="power_ups">Power-Ups</string>
+    <string name="enable_power_ups">Activer les Power-Ups</string>
+    <string name="choose_power_ups">Choisir les Power-Ups</string>
+    <string name="done">Terminé</string>
+
+    <!-- Chicken Config extras -->
+    <string name="duration">Durée</string>
+    <string name="ends_at">Fin à</string>
+    <string name="zone_radius">Rayon de la zone</string>
+    <string name="zone">Zone</string>
+    <string name="start_zone">Zone de départ</string>
+    <string name="final_zone">Zone finale</string>
+    <string name="final_zone_hint">Appuie dans la zone de départ pour placer le centre de la zone finale</string>
+    <string name="settings_mode">Mode de réglages</string>
+    <string name="normal">Normal</string>
+    <string name="expert">Expert</string>
+
     <!-- Map Config -->
     <string name="search_address">Chercher une adresse</string>
 

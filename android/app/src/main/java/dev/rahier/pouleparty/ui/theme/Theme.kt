@@ -5,6 +5,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
 private val LightColorScheme = lightColorScheme(
@@ -12,7 +13,7 @@ private val LightColorScheme = lightColorScheme(
     secondary = CRPink,
     background = CRBeige,
     surface = CRBeige,
-    onPrimary = Color.White,
+    onPrimary = Color.Black,
     onSecondary = Color.White,
     onBackground = Color.Black,
     onSurface = Color.Black,
@@ -28,6 +29,12 @@ private val DarkColorScheme = darkColorScheme(
     onBackground = Color.White,
     onSurface = Color.White,
 )
+
+// Gradient brushes
+val GradientFire = Brush.linearGradient(listOf(CROrange, CRPink))
+val GradientChicken = Brush.linearGradient(listOf(ChickenYellow, CROrange))
+val GradientHunter = Brush.linearGradient(listOf(HunterRed, CRPink))
+val GradientBackgroundWarmth = Brush.radialGradient(listOf(CRBeige, CRBeigeWarm))
 
 @Composable
 fun PoulePartyTheme(

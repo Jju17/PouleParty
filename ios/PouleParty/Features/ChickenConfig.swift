@@ -188,6 +188,13 @@ struct ChickenConfigView: View {
         ("3h", 180),
     ]
 
+    private var isZoneConfigured: Bool {
+        let loc = store.game.initialLocation
+        let isDefault = abs(loc.latitude - AppConstants.defaultLatitude) < 0.001
+            && abs(loc.longitude - AppConstants.defaultLongitude) < 0.001
+        return !isDefault && store.game.finalLocation != nil
+    }
+
     var body: some View {
         NavigationStack(path: $store.scope(state: \.path, action: \.path)) {
             Form {
@@ -205,22 +212,36 @@ struct ChickenConfigView: View {
             .sheet(isPresented: $store.showPowerUpSelection) {
                 PowerUpSelectionView(
                     enabledTypes: store.game.enabledPowerUpTypes,
+                    gameMod: store.game.gameMod,
                     onToggle: { type in store.send(.powerUpTypeToggled(type)) }
                 )
             }
             .safeAreaInset(edge: .bottom) {
-                Button {
-                    store.send(.startGameButtonTapped)
-                } label: {
-                    BangerText("Start game", size: 24)
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.CROrange)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                VStack(spacing: 10) {
+                    if !isZoneConfigured {
+                        Text("Set a start zone and final zone to start")
+                            .font(.gameboy(size: 8))
+                            .foregroundStyle(Color.CROrange)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 16)
+                    }
+                    Button {
+                        store.send(.startGameButtonTapped)
+                    } label: {
+                        BangerText("Start game", size: 24)
+                            .foregroundStyle(.black)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(isZoneConfigured ? AnyShapeStyle(Color.gradientFire) : AnyShapeStyle(Color.gray.opacity(0.3)))
+                            .clipShape(Capsule())
+                            .overlay(Capsule().stroke(Color.onBackground.opacity(isZoneConfigured ? 1 : 0.3), lineWidth: 3))
+                            .shadow(color: .black.opacity(isZoneConfigured ? 0.2 : 0), radius: 4, y: 2)
+                    }
+                    .disabled(!isZoneConfigured)
+                    .padding(.horizontal, 20)
                 }
-                .padding(.horizontal)
-                .padding(.bottom, 8)
+                .padding(.top, 12)
+                .padding(.bottom, 16)
                 .background(.thinMaterial)
             }
             .navigationTitle("Game Settings")
@@ -418,28 +439,62 @@ struct MapPreviewView: View {
     var body: some View {
         Map(viewport: .constant(.camera(center: game.initialLocation, zoom: zoom))) {
             let circlePolygon = Polygon(center: game.initialLocation, radius: CLLocationDistance(game.initialRadius), vertices: 72)
+            // Neon glow on start zone circle
             PolylineAnnotation(lineCoordinates: circlePolygon.outerRing.coordinates)
-                .lineColor(StyleColor(UIColor(Color.CROrange).withAlphaComponent(0.8)))
+                .lineColor(StyleColor(UIColor(Color.CROrange).withAlphaComponent(0.1)))
+                .lineWidth(12)
+            PolylineAnnotation(lineCoordinates: circlePolygon.outerRing.coordinates)
+                .lineColor(StyleColor(UIColor(Color.CROrange).withAlphaComponent(0.3)))
+                .lineWidth(4)
+            PolylineAnnotation(lineCoordinates: circlePolygon.outerRing.coordinates)
+                .lineColor(StyleColor(UIColor(Color.CROrange).withAlphaComponent(0.9)))
                 .lineWidth(2)
 
             MapViewAnnotation(coordinate: game.initialLocation) {
-                Image(systemName: "mappin.circle.fill")
-                    .font(.title)
-                    .foregroundStyle(.red)
+                VStack(spacing: 0) {
+                    Text("START")
+                        .font(.gameboy(size: 6))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(
+                            Capsule().fill(Color.CROrange)
+                        )
+                    Image(systemName: "triangle.fill")
+                        .font(.system(size: 6))
+                        .foregroundStyle(Color.CROrange)
+                        .rotationEffect(.degrees(180))
+                }
             }
+            .allowOverlap(true)
 
-            // Final zone marker (green)
+            // Final zone marker
             if let finalLoc = game.finalLocation {
                 MapViewAnnotation(coordinate: finalLoc) {
-                    Image(systemName: "mappin.circle.fill")
-                        .font(.title)
-                        .foregroundStyle(.green)
+                    VStack(spacing: 0) {
+                        Text("FINAL")
+                            .font(.gameboy(size: 6))
+                            .foregroundStyle(.black)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(
+                                Capsule().fill(Color.zoneGreen)
+                            )
+                        Image(systemName: "triangle.fill")
+                            .font(.system(size: 6))
+                            .foregroundStyle(Color.zoneGreen)
+                            .rotationEffect(.degrees(180))
+                    }
                 }
+                .allowOverlap(true)
 
                 let finalCircle = Polygon(center: finalLoc, radius: 50, vertices: 36)
                 PolylineAnnotation(lineCoordinates: finalCircle.outerRing.coordinates)
-                    .lineColor(StyleColor(UIColor.green.withAlphaComponent(0.8)))
-                    .lineWidth(2)
+                    .lineColor(StyleColor(UIColor(Color.zoneGreen).withAlphaComponent(0.4)))
+                    .lineWidth(3)
+                PolylineAnnotation(lineCoordinates: finalCircle.outerRing.coordinates)
+                    .lineColor(StyleColor(UIColor(Color.zoneGreen).withAlphaComponent(0.9)))
+                    .lineWidth(1.5)
             }
         }
         .allowsHitTesting(false)

@@ -1,8 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="cr_beige">#FDF9D5</color>
+    <color name="cr_beige_warm">#FFE8C8</color>
     <color name="cr_orange">#FE6A00</color>
     <color name="cr_pink">#EF0778</color>
+    <color name="chicken_yellow">#FFD23F</color>
+    <color name="hunter_red">#C41E45</color>
+    <color name="zone_green">#39FF14</color>
+    <color name="zone_danger">#CC0530</color>
+    <color name="dark_background">#1A1A2E</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 </resources>

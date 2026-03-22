@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -100,9 +101,16 @@ fun SelectionScreen(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Image(
-                painter = painterResource(R.drawable.logo),
+                painter = painterResource(R.drawable.chicken),
                 contentDescription = stringResource(R.string.app_name),
-                modifier = Modifier.size(200.dp)
+                modifier = Modifier.size(150.dp),
+                filterQuality = FilterQuality.None
+            )
+            Text(
+                "POULE PARTY",
+                fontFamily = GameBoyFont,
+                fontSize = 20.sp,
+                color = MaterialTheme.colorScheme.onBackground
             )
 
             TextButton(
@@ -111,7 +119,7 @@ fun SelectionScreen(
                     .width(200.dp)
                     .height(50.dp)
                     .alpha(alpha)
-                    .border(4.dp, MaterialTheme.colorScheme.onBackground, RoundedCornerShape(10.dp))
+                    .border(4.dp, MaterialTheme.colorScheme.onBackground, RoundedCornerShape(12.dp))
             ) {
                 Text(
                     stringResource(R.string.start),
@@ -125,7 +133,7 @@ fun SelectionScreen(
                 stringResource(R.string.press_start),
                 fontFamily = GameBoyFont,
                 fontSize = 12.sp,
-                color = Color.Black
+                color = MaterialTheme.colorScheme.onBackground
             )
         }
 
@@ -149,14 +157,14 @@ fun SelectionScreen(
                     imageVector = if (state.isMusicMuted) Icons.AutoMirrored.Filled.VolumeOff
                     else Icons.AutoMirrored.Filled.VolumeUp,
                     contentDescription = if (state.isMusicMuted) "Unmute music" else "Mute music",
-                    tint = Color.Black
+                    tint = MaterialTheme.colorScheme.onBackground
                 )
             }
             IconButton(onClick = onNavigateToSettings) {
                 Icon(
                     painter = painterResource(android.R.drawable.ic_menu_preferences),
                     contentDescription = stringResource(R.string.settings),
-                    tint = Color.Black
+                    tint = MaterialTheme.colorScheme.onBackground
                 )
             }
         }
@@ -173,7 +181,7 @@ fun SelectionScreen(
                 Box(
                     modifier = Modifier
                         .padding(horizontal = 24.dp)
-                        .background(CROrange, RoundedCornerShape(16.dp))
+                        .background(GradientFire, RoundedCornerShape(16.dp))
                 ) {
                     Column(
                         modifier = Modifier
@@ -236,26 +244,26 @@ fun SelectionScreen(
                     onClick = { viewModel.onRulesTapped() },
                     modifier = Modifier
                         .padding(16.dp)
-                        .border(1.5.dp, MaterialTheme.colorScheme.onBackground, RoundedCornerShape(8.dp))
+                        .border(2.dp, MaterialTheme.colorScheme.onBackground, RoundedCornerShape(12.dp))
                 ) {
                     Text(
                         stringResource(R.string.rules),
                         fontFamily = GameBoyFont,
                         fontSize = 8.sp,
-                        color = Color.Black
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                 }
                 TextButton(
                     onClick = { viewModel.onIAmLaPouleTapped() },
                     modifier = Modifier
                         .padding(16.dp)
-                        .border(1.5.dp, MaterialTheme.colorScheme.onBackground, RoundedCornerShape(8.dp))
+                        .border(2.dp, MaterialTheme.colorScheme.onBackground, RoundedCornerShape(12.dp))
                 ) {
                     Text(
                         stringResource(R.string.i_am_la_poule),
                         fontFamily = GameBoyFont,
                         fontSize = 8.sp,
-                        color = Color.Black
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                 }
             }

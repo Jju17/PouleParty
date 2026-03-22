@@ -57,7 +57,7 @@ struct VictoryView: View {
 
     var body: some View {
         ZStack {
-            Color.CRBeige.ignoresSafeArea()
+            Color.gradientBackgroundWarmth.ignoresSafeArea()
 
             if !isSpectator {
                 ConfettiView()
@@ -75,13 +75,13 @@ struct VictoryView: View {
                 Text(isSpectator ? "Game Results" : "You found\nthe chicken!")
                     .font(.gameboy(size: 16))
                     .multilineTextAlignment(.center)
-                    .foregroundStyle(.black)
+                    .foregroundStyle(Color.onBackground)
 
                 leaderboardSection
 
                 Spacer()
 
-                SelectionButton("BACK TO MENU", color: .black) {
+                SelectionButton("BACK TO MENU", color: .onBackground) {
                     store.send(.menuButtonTapped)
                 }
                 .frame(height: 60)
@@ -111,7 +111,7 @@ struct VictoryView: View {
                     .padding(.horizontal, 24)
 
                 BangerText("\(remaining) still in the party 🔍", size: 18)
-                    .foregroundStyle(.black.opacity(0.5))
+                    .foregroundStyle(Color.onBackground.opacity(0.5))
                     .padding(.vertical, 4)
             }
         }
@@ -136,14 +136,14 @@ struct VictoryView: View {
                 .frame(width: 40)
 
             BangerText(winner.hunterName, size: 20)
-                .foregroundStyle(.black)
+                .foregroundStyle(Color.onBackground)
                 .lineLimit(1)
 
             Spacer()
 
             Text(timeString)
                 .font(.gameboy(size: 10))
-                .foregroundStyle(.black.opacity(0.5))
+                .foregroundStyle(Color.onBackground.opacity(0.5))
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(medal) \(winner.hunterName), \(timeString)")
@@ -180,7 +180,7 @@ private struct ConfettiView: View {
     @State private var startTime: Date = .now
     @State private var isActive: Bool = true
 
-    private static let colors: [Color] = [.CROrange, .CRPink, .yellow, .green, .blue, .red]
+    private static let colors: [Color] = [.CROrange, .CRPink, .chickenYellow, .zoneGreen, .powerupVision, .hunterRed]
     private static let duration: TimeInterval = AppConstants.confettiDurationSeconds
 
     var body: some View {

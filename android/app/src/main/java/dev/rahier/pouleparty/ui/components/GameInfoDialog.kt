@@ -10,6 +10,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.model.Game
+import dev.rahier.pouleparty.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -46,7 +47,7 @@ fun GameInfoDialog(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(stringResource(R.string.mode))
-                    Text(game.gameModEnum.title, color = Color.Gray)
+                    Text(game.gameModEnum.title, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f))
                 }
 
                 // Start time
@@ -55,7 +56,7 @@ fun GameInfoDialog(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(stringResource(R.string.start_label))
-                    Text(dateFormat.format(game.startDate), color = Color.Gray)
+                    Text(dateFormat.format(game.startDate), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f))
                 }
 
                 // End time
@@ -64,7 +65,7 @@ fun GameInfoDialog(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(stringResource(R.string.end_label))
-                    Text(dateFormat.format(game.endDate), color = Color.Gray)
+                    Text(dateFormat.format(game.endDate), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f))
                 }
 
                 // Optional cancel game button (chicken only)
@@ -77,7 +78,7 @@ fun GameInfoDialog(
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(leaveGameLabel ?: stringResource(R.string.cancel_game), color = Color.Red)
+                        Text(leaveGameLabel ?: stringResource(R.string.cancel_game), color = Danger)
                     }
                 }
             }

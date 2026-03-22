@@ -18,6 +18,7 @@ struct GameStartCountdownOverlay: View {
                 Text("\(number)")
                     .font(.gameboy(size: 80))
                     .foregroundStyle(Color.CROrange)
+                    .neonGlow(.CROrange, intensity: .intense)
                     .id(number)
                     .transition(.scale.combined(with: .opacity))
                     .animation(.easeOut(duration: 0.3), value: number)
@@ -149,6 +150,7 @@ struct PreGameOverlay: View {
                         Text(formattedTime)
                             .font(.gameboy(size: timerFontSize))
                             .foregroundStyle(Color.CROrange)
+                            .neonGlow(.CROrange, intensity: .medium)
                             .contentTransition(.numericText())
                             .animation(.linear(duration: 0.3), value: secondsRemaining)
                     }
@@ -160,7 +162,7 @@ struct PreGameOverlay: View {
                         } label: {
                             Text("Cancel game")
                                 .font(.system(size: 16, weight: .medium))
-                                .foregroundStyle(.red)
+                                .foregroundStyle(Color.danger)
                         }
                         .padding(.top, 8)
                     }

@@ -28,6 +28,12 @@ struct ActivePowerUpBadge: View {
         if let ts = game.activeRadarPingUntil, now < ts.dateValue() {
             effects.append((.radarPing, ts.dateValue()))
         }
+        if let ts = game.activeDecoyUntil, now < ts.dateValue() {
+            effects.append((.decoy, ts.dateValue()))
+        }
+        if let ts = game.activeJammerUntil, now < ts.dateValue() {
+            effects.append((.jammer, ts.dateValue()))
+        }
         return effects
     }
 
@@ -76,16 +82,18 @@ struct ActivePowerUpBadge: View {
             .frame(width: isExpanded ? nil : 36, height: 36)
             .background(badgeColor(for: type))
             .clipShape(RoundedRectangle(cornerRadius: isExpanded ? 18 : 18))
-            .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
+            .neonGlow(badgeColor(for: type), intensity: .medium)
         }
     }
 
     private func badgeColor(for type: PowerUp.PowerUpType) -> Color {
         switch type {
-        case .invisibility: return .purple
-        case .zoneFreeze: return .cyan
-        case .radarPing: return .orange
-        case .zonePreview: return .blue
+        case .invisibility: return .powerupStealth
+        case .zoneFreeze: return .powerupFreeze
+        case .radarPing: return .powerupRadar
+        case .zonePreview: return .powerupVision
+        case .decoy: return .powerupSpeed
+        case .jammer: return .powerupShield
         }
     }
 }

@@ -19,12 +19,11 @@ struct GameRulesView: View {
             .padding(.vertical, 16)
         }
         .scrollContentBackground(.hidden)
-        .background(Color.CRBeige)
+        .background(Color.gradientBackgroundWarmth)
         .navigationTitle("Rules")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(Color.CRBeige, for: .navigationBar)
+        .toolbarBackground(Color.background, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
-        .toolbarColorScheme(.light, for: .navigationBar)
     }
 
     // MARK: - How to play
@@ -32,7 +31,7 @@ struct GameRulesView: View {
     private var howToPlaySection: some View {
         VStack(alignment: .leading, spacing: 12) {
             BangerText("How to play", size: 32)
-                .foregroundStyle(.black)
+                .foregroundStyle(Color.onBackground)
 
             VStack(alignment: .leading, spacing: 10) {
                 ruleRow(icon: "person.fill", text: "One player is the Chicken, the others are Hunters.")
@@ -48,7 +47,7 @@ struct GameRulesView: View {
     private var gameModesSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             BangerText("Game Modes", size: 32)
-                .foregroundStyle(.black)
+                .foregroundStyle(Color.onBackground)
 
             gameModeCard(
                 title: Game.GameMod.followTheChicken.title,
@@ -87,7 +86,7 @@ struct GameRulesView: View {
     private var settingsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             BangerText("Game Settings", size: 32)
-                .foregroundStyle(.black)
+                .foregroundStyle(Color.onBackground)
 
             VStack(alignment: .leading, spacing: 10) {
                 settingRow(
@@ -119,18 +118,18 @@ struct GameRulesView: View {
                 .frame(width: 20)
             Text(text)
                 .font(.system(size: 14))
-                .foregroundStyle(.black)
+                .foregroundStyle(Color.onBackground)
         }
     }
 
     private func gameModeCard(title: String, description: String, details: [String]) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             BangerText(title, size: 22)
-                .foregroundStyle(.black)
+                .foregroundStyle(Color.onBackground)
 
             Text(description)
                 .font(.system(size: 14))
-                .foregroundStyle(.black.opacity(0.7))
+                .foregroundStyle(Color.onBackground.opacity(0.7))
 
             ForEach(details, id: \.self) { detail in
                 HStack(alignment: .top, spacing: 6) {
@@ -139,17 +138,17 @@ struct GameRulesView: View {
                         .foregroundStyle(Color.CROrange)
                     Text(detail)
                         .font(.system(size: 14))
-                        .foregroundStyle(.black)
+                        .foregroundStyle(Color.onBackground)
                 }
             }
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: 12)
                 .stroke(Color.CROrange, lineWidth: 2)
                 .background(
-                    RoundedRectangle(cornerRadius: 8)
+                    RoundedRectangle(cornerRadius: 12)
                         .fill(Color.CROrange.opacity(0.1))
                 )
         )
@@ -162,7 +161,7 @@ struct GameRulesView: View {
                 .foregroundStyle(Color.CROrange)
             Text(explanation)
                 .font(.system(size: 14))
-                .foregroundStyle(.black.opacity(0.7))
+                .foregroundStyle(Color.onBackground.opacity(0.7))
         }
     }
 }

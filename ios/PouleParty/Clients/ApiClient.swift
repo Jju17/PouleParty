@@ -305,7 +305,7 @@ extension ApiClient: DependencyKey {
                     let ref = Firestore.firestore()
                         .collection(gamesCollection).document(gameId)
                         .collection(powerUpsSubcollection).document(powerUp.id)
-                    try batch.setData(from: powerUp, forDocument: ref)
+                    try batch.setData(from: powerUp, forDocument: ref, merge: true)
                 }
                 try await batch.commit()
             }

@@ -43,5 +43,5 @@ struct SelectionButton: View {
         .frame(width: 300, height: 90)
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
-    .background(.linearGradient(Gradient(colors: [.CROrange, .CRPink]), startPoint: .top, endPoint: .bottom))
+    .background(Color.gradientFire)
 }
