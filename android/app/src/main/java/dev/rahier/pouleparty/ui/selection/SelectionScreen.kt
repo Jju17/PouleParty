@@ -17,7 +17,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -103,8 +102,7 @@ fun SelectionScreen(
             Image(
                 painter = painterResource(R.drawable.chicken),
                 contentDescription = stringResource(R.string.app_name),
-                modifier = Modifier.size(150.dp),
-                filterQuality = FilterQuality.None
+                modifier = Modifier.size(150.dp)
             )
             Text(
                 "POULE PARTY",

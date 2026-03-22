@@ -9,6 +9,7 @@ import dev.rahier.pouleparty.data.FirestoreRepository
 import dev.rahier.pouleparty.data.LocationRepository
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameMod
+import dev.rahier.pouleparty.model.PowerUpType
 import dev.rahier.pouleparty.model.calculateNormalModeSettings
 import kotlin.math.ceil
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -187,8 +188,15 @@ class ChickenConfigViewModel @Inject constructor(
     fun togglePowerUpType(type: dev.rahier.pouleparty.model.PowerUpType) {
         _uiState.update { state ->
             val current = state.game.enabledPowerUpTypes
+            val unavailable = if (state.game.gameModEnum == GameMod.STAY_IN_THE_ZONE) {
+                setOf(PowerUpType.INVISIBILITY.firestoreValue, PowerUpType.DECOY.firestoreValue, PowerUpType.JAMMER.firestoreValue)
+            } else emptySet()
             val newList = if (current.contains(type.firestoreValue)) {
-                if (current.size > 1) current - type.firestoreValue else current
+                // Count available (non-unavailable) enabled types
+                val availableEnabledCount = current.count { it !in unavailable }
+                val isAvailable = type.firestoreValue !in unavailable
+                // Don't allow deselecting the last available one
+                if (!isAvailable || availableEnabledCount > 1) current - type.firestoreValue else current
             } else {
                 current + type.firestoreValue
             }

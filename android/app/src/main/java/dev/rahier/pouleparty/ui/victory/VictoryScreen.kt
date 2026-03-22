@@ -235,7 +235,8 @@ private fun ConfettiOverlay(modifier: Modifier = Modifier) {
     var isActive by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
-        while (true) {
+        var done = false
+        while (!done) {
             withInfiniteAnimationFrameMillis { frameTimeMs ->
                 if (startTime == 0L) startTime = frameTimeMs
                 if (lastFrameTime > 0L) {
@@ -262,7 +263,7 @@ private fun ConfettiOverlay(modifier: Modifier = Modifier) {
                             }
                         }
                     }
-                    if (!isActive && particles.isEmpty()) return@LaunchedEffect
+                    if (!isActive && particles.isEmpty()) done = true
                 }
                 lastFrameTime = frameTimeMs
             }

@@ -36,7 +36,7 @@ abstract class BaseMapViewModel(
     private val collectingPowerUpIds = mutableSetOf<String>()
 
     /** The game document ID — provided by SavedStateHandle in each subclass. */
-    protected abstract val gameId: String
+    abstract val gameId: String
 
     /** The current player's ID (userId for chicken, hunterId for hunter). */
     protected abstract val playerId: String

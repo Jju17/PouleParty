@@ -157,8 +157,6 @@ fun ChickenMapScreen(
                     iconColor = CROrange
                     textField = powerUp.typeEnum.title
                     textColor = CROrange
-                    iconAllowOverlap = true
-                    textAllowOverlap = true
                 }
             }
 

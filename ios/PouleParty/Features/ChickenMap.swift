@@ -203,7 +203,7 @@ struct ChickenMapFeature {
                 return .none
             case let .gameUpdated(game):
                 // Detect newly activated power-ups (compare old vs new)
-                let now = Date.now
+                    _ = Date.now
                 let activatedPowerUp = detectActivatedPowerUp(oldGame: state.game, newGame: game)
 
                 state.game = game

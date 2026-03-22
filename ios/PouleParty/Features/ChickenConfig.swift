@@ -128,8 +128,14 @@ struct ChickenConfigFeature {
             case let .powerUpTypeToggled(type):
                 state.$game.withLock { game in
                     if let index = game.enabledPowerUpTypes.firstIndex(of: type.rawValue) {
-                        // Don't allow deselecting the last one
-                        if game.enabledPowerUpTypes.count > 1 {
+                        // Count available (non-unavailable) enabled types
+                        let unavailableRaw: Set<String> = game.gameMod == .stayInTheZone
+                            ? [PowerUp.PowerUpType.invisibility.rawValue, PowerUp.PowerUpType.decoy.rawValue, PowerUp.PowerUpType.jammer.rawValue]
+                            : []
+                        let availableEnabledCount = game.enabledPowerUpTypes.filter { !unavailableRaw.contains($0) }.count
+                        let isAvailable = !unavailableRaw.contains(type.rawValue)
+                        // Don't allow deselecting the last available one
+                        if !isAvailable || availableEnabledCount > 1 {
                             game.enabledPowerUpTypes.remove(at: index)
                         }
                     } else {
@@ -319,8 +325,11 @@ struct ChickenConfigView: View {
             ))
 
             if store.game.powerUpsEnabled {
-                let enabledCount = store.game.enabledPowerUpTypes.count
-                let totalCount = PowerUp.PowerUpType.allCases.count
+                let unavailableRaw: Set<String> = store.game.gameMod == .stayInTheZone
+                    ? [PowerUp.PowerUpType.invisibility.rawValue, PowerUp.PowerUpType.decoy.rawValue, PowerUp.PowerUpType.jammer.rawValue]
+                    : []
+                let enabledCount = store.game.enabledPowerUpTypes.filter { !unavailableRaw.contains($0) }.count
+                let totalCount = PowerUp.PowerUpType.allCases.filter { !unavailableRaw.contains($0.rawValue) }.count
                 Button {
                     store.send(.powerUpSelectionTapped)
                 } label: {

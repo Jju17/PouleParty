@@ -171,8 +171,6 @@ fun HunterMapScreen(
                         iconColor = CROrange
                         textField = powerUp.typeEnum.title
                         textColor = CROrange
-                        iconAllowOverlap = true
-                        textAllowOverlap = true
                     }
                 }
 
@@ -181,8 +179,6 @@ fun HunterMapScreen(
                     PointAnnotation(point = decoy) {
                         textField = "🐔"
                         textSize = 28.0
-                        textAllowOverlap = true
-                        iconAllowOverlap = true
                     }
                 }
 

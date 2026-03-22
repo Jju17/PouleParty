@@ -216,8 +216,15 @@ fun ChickenConfigScreen(
                         }
                         if (state.game.powerUpsEnabled) {
                             Spacer(Modifier.height(8.dp))
-                            val enabledCount = state.game.enabledPowerUpTypes.size
-                            val totalCount = dev.rahier.pouleparty.model.PowerUpType.entries.size
+                            val unavailable = if (state.game.gameModEnum == dev.rahier.pouleparty.model.GameMod.STAY_IN_THE_ZONE) {
+                                setOf(
+                                    dev.rahier.pouleparty.model.PowerUpType.INVISIBILITY.firestoreValue,
+                                    dev.rahier.pouleparty.model.PowerUpType.DECOY.firestoreValue,
+                                    dev.rahier.pouleparty.model.PowerUpType.JAMMER.firestoreValue
+                                )
+                            } else emptySet()
+                            val enabledCount = state.game.enabledPowerUpTypes.count { it !in unavailable }
+                            val totalCount = dev.rahier.pouleparty.model.PowerUpType.entries.count { it.firestoreValue !in unavailable }
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
