@@ -1,5 +1,6 @@
 export default {
   nav: {
+    register: "Register",
     privacy: "Privacy",
     terms: "Terms",
     support: "Support",
@@ -140,6 +141,61 @@ export default {
       "We may update these terms from time to time. Continued use of the app after changes constitutes acceptance of the new terms.",
     contact: "Contact",
     contactText: "If you have questions about these terms, please contact us at",
+  },
+  register: {
+    date: "April 23, 2026 — 7:00 PM",
+    intro:
+      "Get ready for a totally unique experience: a life-size chicken hunt, right in the heart of the city.",
+    description:
+      "Inspired by urban games like \"hide-and-seek meets treasure hunt\", Poule Party is a collective adventure where strategy, speed, and creativity make all the difference.",
+    conceptTitle: "🎯 The concept",
+    conceptText:
+      "A \"Chicken\" is released into the city with a few minutes head start…",
+    mission: "Your mission? Find it before the other teams.",
+    zoneText:
+      "Thanks to an evolving location system, a zone around the Chicken appears and gradually shrinks… It's up to you to get closer, investigate, and strike at the right moment.",
+    butWait: "But that's not all 👇",
+    pointsTitle: "🏆 Earn points (and glory)",
+    pointsList: [
+      "🧭 Find the Chicken before the others",
+      "📸 Complete fun and quirky challenges",
+      "🎭 Show creativity (and boldness)",
+      "😈 (Optional) Sabotage the other teams",
+    ],
+    pointsOutro:
+      "Every action earns you points… and in the end, only one team will be crowned the winner.",
+    whyTitle: "🎉 Why participate?",
+    whyList: [
+      "A unique and super fun activity",
+      "Perfect for meeting new people",
+      "Accessible to everyone (no need to be athletic)",
+      "Unforgettable memories (and often hilarious ones)",
+    ],
+    infoTitle: "📅 Practical info",
+    infoList: [
+      "📆 Date: April 23 at 7 PM",
+      "👥 Limited spots: 35 participants",
+      "🎮 Format: teams + outdoor game",
+      "⏱ Duration: ± 2 hours of gameplay",
+      "📍 Starting point: shared after registration",
+    ],
+    formTitle: "Register",
+    firstNameLabel: "First name",
+    firstNamePlaceholder: "John",
+    lastNameLabel: "Last name",
+    lastNamePlaceholder: "Doe",
+    emailLabel: "Email",
+    emailPlaceholder: "john@example.com",
+    willingToPayLabel: "How much would you be willing to pay to participate?",
+    willingToPayPlaceholder: "E.g. 5€, 10€, free…",
+    submitButton: "Sign me up!",
+    submitting: "Registering…",
+    duplicateText: "This name is already registered! If this is a mistake, contact us at julien@rahier.dev.",
+    fullText: "Sorry, all spots are taken!",
+    errorText: "Something went wrong. Please try again!",
+    successTitle: "Registration confirmed!",
+    successText:
+      "You'll receive an email with all the details before the event. Get ready for the hunt!",
   },
   footer: {
     rights: "All rights reserved.",

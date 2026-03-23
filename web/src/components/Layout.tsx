@@ -12,6 +12,9 @@ export default function Layout({ children }: { children: ReactNode }) {
           Poule Party
         </Link>
         <nav className="flex items-center gap-4 text-sm">
+          <Link to="/register" className="text-[#FE6A00] font-semibold hover:text-[#e55e00] transition-colors">
+            {t.nav.register}
+          </Link>
           <Link to="/privacy" className="hover:text-[#FE6A00] transition-colors">
             {t.nav.privacy}
           </Link>

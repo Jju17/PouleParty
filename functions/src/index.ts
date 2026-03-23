@@ -4,11 +4,16 @@ import { getFunctions } from "firebase-admin/functions";
 import { getMessaging } from "firebase-admin/messaging";
 import { onDocumentCreated, onDocumentUpdated } from "firebase-functions/v2/firestore";
 import { onTaskDispatched } from "firebase-functions/v2/tasks";
+import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { defineString } from "firebase-functions/params";
+import { google } from "googleapis";
 
 initializeApp();
 
 const REGION = "europe-west1";
 const db = getFirestore();
+
+const REGISTRATION_SHEET_ID = defineString("REGISTRATION_SHEET_ID");
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -331,5 +336,85 @@ export const onGameUpdated = onDocumentUpdated(
       [hunterName, String(remainingCount)],
       { gameId: event.params.gameId }
     );
+  }
+);
+
+// ---------------------------------------------------------------------------
+// Callable: register for an event (server-side validation, dedup, anti-spam)
+// ---------------------------------------------------------------------------
+
+const MAX_REGISTRATIONS = 35;
+
+export const registerForEvent = onCall(
+  { region: REGION },
+  async (request) => {
+    const { firstName, lastName, email, willingToPay } = request.data as {
+      firstName?: string;
+      lastName?: string;
+      email?: string;
+      willingToPay?: string;
+    };
+
+    // --- Validation ---
+    if (
+      !firstName?.trim() ||
+      !lastName?.trim() ||
+      !email?.trim() ||
+      !willingToPay?.trim()
+    ) {
+      throw new HttpsError("invalid-argument", "All fields are required.");
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      throw new HttpsError("invalid-argument", "Invalid email format.");
+    }
+
+    const cleanFirst = firstName.trim();
+    const cleanLast = lastName.trim();
+    const cleanEmail = email.trim();
+    const cleanWTP = willingToPay.trim();
+
+    // --- Duplicate check ---
+    const docId = `${cleanFirst.toLowerCase()}_${cleanLast.toLowerCase()}`;
+    const ref = db.collection("registrations").doc(docId);
+    const existing = await ref.get();
+    if (existing.exists) {
+      throw new HttpsError("already-exists", "This name is already registered.");
+    }
+
+    // --- Capacity check (anti-spam + real limit) ---
+    const countSnap = await db.collection("registrations").count().get();
+    if (countSnap.data().count >= MAX_REGISTRATIONS) {
+      throw new HttpsError("resource-exhausted", "Event is full.");
+    }
+
+    // --- Write to Firestore ---
+    const now = new Date();
+    await ref.set({
+      firstName: cleanFirst,
+      lastName: cleanLast,
+      email: cleanEmail,
+      willingToPay: cleanWTP,
+      event: "2026-04-23",
+      createdAt: now,
+    });
+
+    // --- Append to Google Sheet ---
+    const auth = new google.auth.GoogleAuth({
+      scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+    });
+    const sheets = google.sheets({ version: "v4", auth });
+
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: REGISTRATION_SHEET_ID.value(),
+      range: "A:F",
+      valueInputOption: "USER_ENTERED",
+      requestBody: {
+        values: [[cleanFirst, cleanLast, cleanEmail, cleanWTP, "2026-04-23", now.toISOString()]],
+      },
+    });
+
+    return { success: true };
   }
 );

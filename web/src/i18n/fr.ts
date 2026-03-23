@@ -1,5 +1,6 @@
 export default {
   nav: {
+    register: "Inscription",
     privacy: "Confidentialité",
     terms: "CGU",
     support: "Support",
@@ -140,6 +141,61 @@ export default {
       "Nous pouvons mettre à jour ces conditions de temps à autre. L'utilisation continue de l'application après les modifications constitue une acceptation des nouvelles conditions.",
     contact: "Contact",
     contactText: "Si vous avez des questions concernant ces conditions, contactez-nous à",
+  },
+  register: {
+    date: "23 avril 2026 — 19h00",
+    intro:
+      "Prépare-toi pour une expérience totalement insolite : une chasse à la poule grandeur nature, en plein cœur de la ville.",
+    description:
+      "Inspirée du concept de jeu urbain façon \"cache-cache + jeu de piste\", la Poule Party est une aventure collective où stratégie, rapidité et créativité feront toute la différence.",
+    conceptTitle: "🎯 Le concept",
+    conceptText:
+      "Une \"Poule\" est lâchée dans la ville avec quelques minutes d'avance…",
+    mission: "Votre mission ? La retrouver avant les autres équipes.",
+    zoneText:
+      "Grâce à un système de localisation évolutif, une zone autour de la Poule apparaît et se réduit progressivement… À vous de vous rapprocher, enquêter, et foncer au bon moment.",
+    butWait: "Mais ce n'est pas tout 👇",
+    pointsTitle: "🏆 Gagnez des points (et la gloire)",
+    pointsList: [
+      "🧭 Retrouvez la Poule avant les autres",
+      "📸 Réalisez des défis fun et décalés",
+      "🎭 Faites preuve de créativité (et d'audace)",
+      "😈 (Optionnel) Sabotez les autres équipes",
+    ],
+    pointsOutro:
+      "Chaque action vous rapporte des points… et à la fin, une seule équipe sera sacrée gagnante.",
+    whyTitle: "🎉 Pourquoi participer ?",
+    whyList: [
+      "Une activité originale et ultra fun",
+      "Parfait pour rencontrer du monde",
+      "Accessible à tous (pas besoin d'être sportif)",
+      "Des souvenirs mémorables (et souvent très drôles)",
+    ],
+    infoTitle: "📅 Infos pratiques",
+    infoList: [
+      "📆 Date : 23 avril à 19h",
+      "👥 Places limitées : 35 participants",
+      "🎮 Format : équipes + jeu en extérieur",
+      "⏱ Durée : ± 2h de jeu",
+      "📍 Lieu de départ : communiqué après inscription",
+    ],
+    formTitle: "Inscription",
+    firstNameLabel: "Prénom",
+    firstNamePlaceholder: "Jean",
+    lastNameLabel: "Nom",
+    lastNamePlaceholder: "Dupont",
+    emailLabel: "Email",
+    emailPlaceholder: "jean@example.com",
+    willingToPayLabel: "Combien serais-tu prêt à payer pour participer ?",
+    willingToPayPlaceholder: "Ex : 5€, 10€, gratuit…",
+    submitButton: "Je m'inscris !",
+    submitting: "Inscription en cours…",
+    duplicateText: "Ce nom est déjà inscrit ! Si c'est une erreur, contacte-nous à julien@rahier.dev.",
+    fullText: "Désolé, toutes les places sont prises !",
+    errorText: "Une erreur est survenue. Réessaye !",
+    successTitle: "Inscription confirmée !",
+    successText:
+      "Tu recevras un email avec tous les détails avant l'événement. Prépare-toi pour la chasse !",
   },
   footer: {
     rights: "Tous droits réservés.",

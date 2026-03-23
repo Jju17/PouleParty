@@ -23,6 +23,7 @@ android/*.keystore
 # === Cloud Functions ===
 functions/lib/
 functions/node_modules/
+functions/.env
 
 # === IDE ===
 .idea/

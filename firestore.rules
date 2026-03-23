@@ -83,6 +83,11 @@ service cloud.firestore {
                          && request.auth.uid == userId;
     }
 
+    // Event registrations — fully locked, only Cloud Functions (admin SDK) can read/write
+    match /registrations/{docId} {
+      allow read, write: if false;
+    }
+
     // Deny access to everything else
     match /{document=**} {
       allow read, write: if false;
