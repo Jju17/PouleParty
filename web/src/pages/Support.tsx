@@ -8,7 +8,7 @@ export default function Support() {
     <Layout>
       <h1 className="text-3xl font-bold mb-8">{t.support.title}</h1>
 
-      <div className="space-y-6 text-gray-700 leading-relaxed">
+      <div className="space-y-6 text-black dark:text-gray-300 leading-relaxed">
         <section>
           <h2 className="text-xl font-semibold mb-2">{t.support.needHelp}</h2>
           <p>{t.support.needHelpText}</p>
@@ -19,15 +19,15 @@ export default function Support() {
           <div className="space-y-4">
             <div>
               <h3 className="font-medium">{t.support.locationTitle}</h3>
-              <p className="text-sm text-gray-600">{t.support.locationText}</p>
+              <p className="text-sm text-black/70 dark:text-gray-400">{t.support.locationText}</p>
             </div>
             <div>
               <h3 className="font-medium">{t.support.joinTitle}</h3>
-              <p className="text-sm text-gray-600">{t.support.joinText}</p>
+              <p className="text-sm text-black/70 dark:text-gray-400">{t.support.joinText}</p>
             </div>
             <div>
               <h3 className="font-medium">{t.support.mapTitle}</h3>
-              <p className="text-sm text-gray-600">{t.support.mapText}</p>
+              <p className="text-sm text-black/70 dark:text-gray-400">{t.support.mapText}</p>
             </div>
           </div>
         </section>

@@ -31,8 +31,14 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
   const setLocale = (l: Locale) => {
     localStorage.setItem("locale", l);
+    document.documentElement.lang = l;
     setLocaleState(l);
   };
+
+  // Set lang on initial render
+  if (typeof document !== "undefined") {
+    document.documentElement.lang = locale;
+  }
 
   return (
     <I18nContext.Provider value={{ locale, t: translations[locale], setLocale }}>

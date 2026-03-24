@@ -7,9 +7,9 @@ export default function Privacy() {
   return (
     <Layout>
       <h1 className="text-3xl font-bold mb-8">{t.privacy.title}</h1>
-      <p className="text-sm text-gray-500 mb-8">{t.privacy.lastUpdated}</p>
+      <p className="text-sm text-black/70 dark:text-gray-400 mb-8">{t.privacy.lastUpdated}</p>
 
-      <div className="space-y-6 text-gray-700 leading-relaxed">
+      <div className="space-y-6 text-black dark:text-gray-300 leading-relaxed">
         <section>
           <h2 className="text-xl font-semibold mb-2">{t.privacy.overview}</h2>
           <p>{t.privacy.overviewText}</p>

@@ -6,6 +6,7 @@ import { onDocumentCreated, onDocumentUpdated } from "firebase-functions/v2/fire
 import { onTaskDispatched } from "firebase-functions/v2/tasks";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { defineString } from "firebase-functions/params";
+import { createHash } from "crypto";
 import { google } from "googleapis";
 
 initializeApp();
@@ -348,10 +349,11 @@ const MAX_REGISTRATIONS = 35;
 export const registerForEvent = onCall(
   { region: REGION },
   async (request) => {
-    const { firstName, lastName, email, willingToPay } = request.data as {
+    const { firstName, lastName, email, gsm, willingToPay } = request.data as {
       firstName?: string;
       lastName?: string;
       email?: string;
+      gsm?: string;
       willingToPay?: string;
     };
 
@@ -360,6 +362,7 @@ export const registerForEvent = onCall(
       !firstName?.trim() ||
       !lastName?.trim() ||
       !email?.trim() ||
+      !gsm?.trim() ||
       !willingToPay?.trim()
     ) {
       throw new HttpsError("invalid-argument", "All fields are required.");
@@ -370,17 +373,26 @@ export const registerForEvent = onCall(
       throw new HttpsError("invalid-argument", "Invalid email format.");
     }
 
+    const gsmRegex = /^(\+\d{1,4}|0)\s*[1-9][\d\s.\-]{6,}$/;
+    if (!gsmRegex.test(gsm.trim())) {
+      throw new HttpsError("invalid-argument", "Invalid phone number format.");
+    }
+
     const cleanFirst = firstName.trim();
     const cleanLast = lastName.trim();
     const cleanEmail = email.trim();
+    const rawGsm = gsm.trim().startsWith("0")
+      ? "+32" + gsm.trim().slice(1)
+      : gsm.trim();
+    const cleanGsm = "+" + rawGsm.replace(/[^\d]/g, "");
     const cleanWTP = willingToPay.trim();
 
-    // --- Duplicate check ---
-    const docId = `${cleanFirst.toLowerCase()}_${cleanLast.toLowerCase()}`;
+    // --- Duplicate check (by email hash) ---
+    const docId = createHash("sha256").update(cleanEmail.toLowerCase()).digest("hex");
     const ref = db.collection("registrations").doc(docId);
     const existing = await ref.get();
     if (existing.exists) {
-      throw new HttpsError("already-exists", "This name is already registered.");
+      throw new HttpsError("already-exists", "This email is already registered.");
     }
 
     // --- Capacity check (anti-spam + real limit) ---
@@ -395,6 +407,7 @@ export const registerForEvent = onCall(
       firstName: cleanFirst,
       lastName: cleanLast,
       email: cleanEmail,
+      gsm: cleanGsm,
       willingToPay: cleanWTP,
       event: "2026-04-23",
       createdAt: now,
@@ -408,10 +421,10 @@ export const registerForEvent = onCall(
 
     await sheets.spreadsheets.values.append({
       spreadsheetId: REGISTRATION_SHEET_ID.value(),
-      range: "A:F",
+      range: "A:G",
       valueInputOption: "USER_ENTERED",
       requestBody: {
-        values: [[cleanFirst, cleanLast, cleanEmail, cleanWTP, "2026-04-23", now.toISOString()]],
+        values: [[cleanFirst, cleanLast, cleanEmail, cleanGsm, cleanWTP, "2026-04-23", now.toISOString()]],
       },
     });
 

@@ -1,8 +1,115 @@
 @import "tailwindcss";
 
+/* Use class-based dark mode so our ThemeProvider controls it */
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  color-scheme: light dark;
+  forced-color-adjust: none;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Force dark background for browsers that apply their own dark mode (Samsung Internet) */
+@media (prefers-color-scheme: dark) {
+  html:not(.light-forced) {
+    background-color: #1A1A2E !important;
+    color-scheme: dark !important;
+  }
+  html:not(.light-forced) body,
+  html:not(.light-forced) #root {
+    background-color: #1A1A2E !important;
+  }
+}
+
 @font-face {
   font-family: "Bangers";
   src: url("/Bangers-Regular.ttf") format("truetype");
   font-weight: 400;
   font-style: normal;
 }
+
+/* ── Animations ── */
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes bounce-in {
+  0% { opacity: 0; transform: scale(0.3); }
+  50% { opacity: 1; transform: scale(1.08); }
+  70% { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(254, 106, 0, 0.4); }
+  50% { box-shadow: 0 0 24px 8px rgba(254, 106, 0, 0.15); }
+}
+
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes confetti-fall {
+  0% { transform: translateY(-10px) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(60px) rotate(360deg); opacity: 0; }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s ease-out both;
+}
+
+.animate-bounce-in {
+  animation: bounce-in 0.7s ease-out both;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2.5s ease-in-out infinite;
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient-shift 3s ease infinite;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  15% { transform: translateX(-6px) rotate(-5deg); }
+  30% { transform: translateX(5px) rotate(4deg); }
+  45% { transform: translateX(-4px) rotate(-3deg); }
+  60% { transform: translateX(3px) rotate(2deg); }
+  75% { transform: translateX(-2px) rotate(-1deg); }
+}
+
+@keyframes hit-particle {
+  0% { opacity: 1; transform: scale(0.5) translateY(0); }
+  50% { opacity: 1; transform: scale(1.3) translateY(-20px); }
+  100% { opacity: 0; transform: scale(0.8) translateY(-40px); }
+}
+
+.animate-shake {
+  animation: shake 0.4s ease-in-out;
+}
+
+.animate-hit-particle {
+  animation: hit-particle 0.7s ease-out both;
+}
+
+.stagger-1 { animation-delay: 0.1s; }
+.stagger-2 { animation-delay: 0.2s; }
+.stagger-3 { animation-delay: 0.3s; }
+.stagger-4 { animation-delay: 0.4s; }
+.stagger-5 { animation-delay: 0.5s; }
+.stagger-6 { animation-delay: 0.6s; }
