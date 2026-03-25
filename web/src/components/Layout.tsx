@@ -33,15 +33,16 @@ export default function Layout({ children }: { children: ReactNode }) {
       <header className="px-4 py-4 sm:px-6 sm:py-6 flex justify-between items-center max-w-4xl mx-auto w-full">
         <Link
           to="/"
-          className="text-2xl sm:text-3xl font-bold tracking-wide bg-gradient-to-r from-[#FE6A00] to-[#EF0778] bg-clip-text text-transparent hover:scale-105 transition-transform duration-300 pb-1 shrink-0"
-          style={{ fontFamily: "Bangers, cursive", letterSpacing: "0.06em", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", lineHeight: 1 }}
+          className="text-2xl sm:text-3xl font-bold tracking-wide hover:scale-105 transition-transform duration-300 pb-1 shrink-0"
+          style={{ fontFamily: "Bangers, cursive", letterSpacing: "0.06em", lineHeight: 1, backgroundImage: "linear-gradient(to right, #FE6A00, #EF0778)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", color: "transparent" }}
         >
           Poule Party
         </Link>
         <nav className="flex items-center gap-2">
           <Link
             to="/register"
-            className="px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-[#FE6A00] to-[#EF0778] shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300 whitespace-nowrap"
+            className="px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-bold text-white shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300 whitespace-nowrap"
+            style={{ backgroundImage: "linear-gradient(to right, #FE6A00, #EF0778)" }}
           >
             {t.nav.register}
           </Link>

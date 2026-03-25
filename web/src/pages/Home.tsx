@@ -12,8 +12,8 @@ export default function Home() {
         <ClickableChicken className="mb-6 animate-bounce-in" />
 
         <h1
-          className="text-5xl md:text-6xl font-bold mb-4 animate-fade-in-up stagger-1 bg-gradient-to-r from-[#FE6A00] to-[#EF0778] bg-clip-text text-transparent"
-          style={{ fontFamily: "Bangers, cursive", letterSpacing: "0.06em", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
+          className="text-5xl md:text-6xl font-bold mb-4 animate-fade-in-up stagger-1"
+          style={{ fontFamily: "Bangers, cursive", letterSpacing: "0.06em", backgroundImage: "linear-gradient(to right, #FE6A00, #EF0778)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", color: "transparent" }}
         >
           Poule Party
         </h1>
@@ -25,8 +25,8 @@ export default function Home() {
         <div className="mt-10 animate-fade-in-up stagger-3">
           <Link
             to="/register"
-            className="inline-block px-8 py-4 rounded-full text-white font-bold text-lg bg-gradient-to-r from-[#FE6A00] to-[#EF0778] animate-gradient animate-pulse-glow hover:scale-105 hover:shadow-xl transition-all duration-300"
-            style={{ fontFamily: "Bangers, cursive", letterSpacing: "0.08em" }}
+            className="inline-block px-8 py-4 rounded-full text-white font-bold text-lg animate-pulse-glow hover:scale-105 hover:shadow-xl transition-all duration-300"
+            style={{ fontFamily: "Bangers, cursive", letterSpacing: "0.08em", backgroundImage: "linear-gradient(to right, #FE6A00, #EF0778)" }}
           >
             {t.home.cta}
           </Link>

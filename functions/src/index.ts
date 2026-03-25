@@ -349,12 +349,13 @@ const MAX_REGISTRATIONS = 35;
 export const registerForEvent = onCall(
   { region: REGION },
   async (request) => {
-    const { firstName, lastName, email, gsm, willingToPay } = request.data as {
+    const { firstName, lastName, email, gsm, willingToPay, comment } = request.data as {
       firstName?: string;
       lastName?: string;
       email?: string;
       gsm?: string;
       willingToPay?: string;
+      comment?: string;
     };
 
     // --- Validation ---
@@ -386,6 +387,7 @@ export const registerForEvent = onCall(
       : gsm.trim();
     const cleanGsm = "+" + rawGsm.replace(/[^\d]/g, "");
     const cleanWTP = willingToPay.trim();
+    const cleanComment = (comment ?? "").trim();
 
     // --- Duplicate check (by email hash) ---
     const docId = createHash("sha256").update(cleanEmail.toLowerCase()).digest("hex");
@@ -409,6 +411,7 @@ export const registerForEvent = onCall(
       email: cleanEmail,
       gsm: cleanGsm,
       willingToPay: cleanWTP,
+      comment: cleanComment,
       event: "2026-04-23",
       createdAt: now,
     });
@@ -421,13 +424,25 @@ export const registerForEvent = onCall(
 
     await sheets.spreadsheets.values.append({
       spreadsheetId: REGISTRATION_SHEET_ID.value(),
-      range: "A:G",
+      range: "A:H",
       valueInputOption: "USER_ENTERED",
       requestBody: {
-        values: [[cleanFirst, cleanLast, cleanEmail, cleanGsm, cleanWTP, "2026-04-23", now.toISOString()]],
+        values: [[cleanFirst, cleanLast, cleanEmail, cleanGsm, cleanWTP, cleanComment, "2026-04-23", now.toISOString()]],
       },
     });
 
     return { success: true };
+  }
+);
+
+// ---------------------------------------------------------------------------
+// Callable: get registration count
+// ---------------------------------------------------------------------------
+
+export const getRegistrationCount = onCall(
+  { region: REGION },
+  async () => {
+    const countSnap = await db.collection("registrations").count().get();
+    return { count: countSnap.data().count, max: MAX_REGISTRATIONS };
   }
 );
