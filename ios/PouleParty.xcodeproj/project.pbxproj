@@ -25,7 +25,6 @@
 		BB0000072F47000100000001 /* Dependencies in Frameworks */ = {isa = PBXBuildFile; productRef = BB0000082F47000100000001 /* Dependencies */; };
 		BB0000092F47000100000001 /* SwiftNavigation in Frameworks */ = {isa = PBXBuildFile; productRef = BB00000A2F47000100000001 /* SwiftNavigation */; };
 		F90899CC2F58B24D0006C8DF /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = F90899CB2F58B24D0006C8DF /* FirebaseMessaging */; };
-		F986A3752F48AAC00086DF16 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = F986A3742F48AAC00086DF16 /* GoogleService-Info.plist */; };
 		F9B1BE232F58DCD200E066D6 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F9B1BE222F58DCD200E066D6 /* WidgetKit.framework */; };
 		F9B1BE252F58DCD200E066D6 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F9B1BE242F58DCD200E066D6 /* SwiftUI.framework */; };
 		F9B1BE322F58DCD300E066D6 /* PoulePartyWidgetsExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F9B1BE202F58DCD200E066D6 /* PoulePartyWidgetsExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -378,7 +377,6 @@
 			files = (
 				645DF8282D306D0B005D8731 /* Lille.gpx in Resources */,
 				645DF82B2D306E5D005D8731 /* Stockholm.gpx in Resources */,
-	
 				64CE0F842CEE8E8200762232 /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
