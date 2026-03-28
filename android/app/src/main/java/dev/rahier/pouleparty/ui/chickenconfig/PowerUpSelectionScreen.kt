@@ -54,7 +54,7 @@ fun PowerUpSelectionScreen(
     val chickenPowerUps = PowerUpType.entries.filter { !it.isHunterPowerUp }
     val hunterPowerUps = PowerUpType.entries.filter { it.isHunterPowerUp }
 
-    Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+    Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).statusBarsPadding()) {
         // Top bar
         Row(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -135,6 +135,7 @@ private fun PowerUpCard(
         enabled = !unavailable,
         modifier = Modifier
             .fillMaxWidth()
+            .heightIn(min = 160.dp)
             .then(if (isEnabled) Modifier.shadow(6.dp, RoundedCornerShape(12.dp), ambientColor = color.copy(alpha = 0.4f), spotColor = color.copy(alpha = 0.4f)) else Modifier)
             .then(if (unavailable) Modifier.alpha(0.5f) else Modifier),
         shape = RoundedCornerShape(12.dp),

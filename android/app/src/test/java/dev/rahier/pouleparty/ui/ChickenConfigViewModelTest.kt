@@ -1,5 +1,7 @@
 package dev.rahier.pouleparty.ui
 
+import com.google.firebase.firestore.GeoPoint
+import dev.rahier.pouleparty.AppConstants
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameMod
 import dev.rahier.pouleparty.model.NORMAL_MODE_FIXED_INTERVAL
@@ -346,5 +348,94 @@ class ChickenConfigViewModelTest {
         // interval and decline unchanged
         assertEquals(10.0, newState.game.radiusIntervalUpdate, 0.01)
         assertEquals(200.0, newState.game.radiusDeclinePerUpdate, 0.01)
+    }
+
+    // MARK: Zone configuration — isZoneConfigured
+
+    @Test
+    fun `isZoneConfigured is false with default location`() {
+        val state = ChickenConfigUiState(
+            game = Game(
+                id = "test",
+                initialCoordinates = GeoPoint(AppConstants.DEFAULT_LATITUDE, AppConstants.DEFAULT_LONGITUDE)
+            )
+        )
+        assertFalse(state.isZoneConfigured)
+    }
+
+    @Test
+    fun `isZoneConfigured is true with custom location in followTheChicken mode`() {
+        val state = ChickenConfigUiState(
+            game = Game(
+                id = "test",
+                initialCoordinates = GeoPoint(48.8566, 2.3522), // Paris
+                gameMod = GameMod.FOLLOW_THE_CHICKEN.firestoreValue
+            )
+        )
+        assertTrue(state.isZoneConfigured)
+    }
+
+    @Test
+    fun `isZoneConfigured is false with custom location but no final zone in stayInTheZone mode`() {
+        val state = ChickenConfigUiState(
+            game = Game(
+                id = "test",
+                initialCoordinates = GeoPoint(48.8566, 2.3522), // Paris
+                finalCoordinates = null,
+                gameMod = GameMod.STAY_IN_THE_ZONE.firestoreValue
+            )
+        )
+        assertFalse(state.isZoneConfigured)
+    }
+
+    @Test
+    fun `isZoneConfigured is true with custom location and final zone in stayInTheZone mode`() {
+        val state = ChickenConfigUiState(
+            game = Game(
+                id = "test",
+                initialCoordinates = GeoPoint(48.8566, 2.3522), // Paris
+                finalCoordinates = GeoPoint(48.8600, 2.3500),
+                gameMod = GameMod.STAY_IN_THE_ZONE.firestoreValue
+            )
+        )
+        assertTrue(state.isZoneConfigured)
+    }
+
+    @Test
+    fun `isZoneConfigured is false with default location even with final zone set`() {
+        val state = ChickenConfigUiState(
+            game = Game(
+                id = "test",
+                initialCoordinates = GeoPoint(AppConstants.DEFAULT_LATITUDE, AppConstants.DEFAULT_LONGITUDE),
+                finalCoordinates = GeoPoint(48.8600, 2.3500),
+                gameMod = GameMod.STAY_IN_THE_ZONE.firestoreValue
+            )
+        )
+        assertFalse(state.isZoneConfigured)
+    }
+
+    @Test
+    fun `isZoneConfigured detects near-default location as default`() {
+        // Within 0.001 tolerance
+        val state = ChickenConfigUiState(
+            game = Game(
+                id = "test",
+                initialCoordinates = GeoPoint(AppConstants.DEFAULT_LATITUDE + 0.0005, AppConstants.DEFAULT_LONGITUDE - 0.0003),
+                gameMod = GameMod.FOLLOW_THE_CHICKEN.firestoreValue
+            )
+        )
+        assertFalse(state.isZoneConfigured)
+    }
+
+    @Test
+    fun `isZoneConfigured detects location just outside tolerance as custom`() {
+        val state = ChickenConfigUiState(
+            game = Game(
+                id = "test",
+                initialCoordinates = GeoPoint(AppConstants.DEFAULT_LATITUDE + 0.002, AppConstants.DEFAULT_LONGITUDE),
+                gameMod = GameMod.FOLLOW_THE_CHICKEN.firestoreValue
+            )
+        )
+        assertTrue(state.isZoneConfigured)
     }
 }

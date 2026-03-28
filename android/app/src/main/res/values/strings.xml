@@ -28,11 +28,19 @@
 
     <!-- Chicken Config -->
     <string name="game_settings">Game Settings</string>
+    <string name="game_code_label">Game Code</string>
+    <string name="schedule_label">Schedule</string>
+    <string name="power_ups_label">Power-Ups</string>
+    <string name="advanced_label">Advanced</string>
+    <string name="head_start_label">Head Start</string>
+    <string name="mode_label">Mode</string>
     <string name="start_at">Start at</string>
     <string name="end_at">End at</string>
     <string name="game_mode">Game Mode</string>
     <string name="map_setup">Map setup</string>
     <string name="start_game">Start game</string>
+    <string name="set_start_zone">Set a start zone to start</string>
+    <string name="set_start_and_final_zone">Set a start zone and final zone to start</string>
     <string name="radius_interval_update">Radius interval update</string>
     <string name="radius_decline">Radius decline</string>
     <string name="chicken_head_start">Chicken head start</string>

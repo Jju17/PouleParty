@@ -336,8 +336,8 @@ class GameTimerHelperTest {
             radiusDeclinePerUpdate = 100.0,
             radiusIntervalUpdate = 5.0,
             gameMod = GameMod.STAY_IN_THE_ZONE,
-            initialCoordinates = Point.fromLngLat(4.3528, 50.8466),
-            currentCircle = null,
+            initialLocation = Point.fromLngLat(4.3528, 50.8466),
+            currentCircleCenter = null,
             isZoneFrozen = true
         )
         assertNull(result)
@@ -351,8 +351,8 @@ class GameTimerHelperTest {
             radiusDeclinePerUpdate = 100.0,
             radiusIntervalUpdate = 5.0,
             gameMod = GameMod.STAY_IN_THE_ZONE,
-            initialCoordinates = Point.fromLngLat(4.3528, 50.8466),
-            currentCircle = null,
+            initialLocation = Point.fromLngLat(4.3528, 50.8466),
+            currentCircleCenter = null,
             isZoneFrozen = false
         )
         assertNotNull(result)

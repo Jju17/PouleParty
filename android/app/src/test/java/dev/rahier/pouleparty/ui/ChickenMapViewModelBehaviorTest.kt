@@ -1,6 +1,7 @@
 package dev.rahier.pouleparty.ui
 
 import androidx.lifecycle.SavedStateHandle
+import com.google.firebase.auth.FirebaseAuth
 import dev.rahier.pouleparty.data.FirestoreRepository
 import dev.rahier.pouleparty.data.LocationRepository
 import dev.rahier.pouleparty.model.Game
@@ -40,6 +41,8 @@ class ChickenMapViewModelBehaviorTest {
         return ChickenMapViewModel(
             firestoreRepository = firestoreRepository,
             locationRepository = locationRepository,
+            auth = mockk<FirebaseAuth>(relaxed = true),
+            mapboxAccessToken = "test-token",
             savedStateHandle = SavedStateHandle(mapOf("gameId" to gameId))
         )
     }

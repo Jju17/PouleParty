@@ -319,12 +319,12 @@ func applyJammerNoise(to coordinate: CLLocationCoordinate2D) -> CLLocationCoordi
     )
 }
 
-// MARK: - Seeded Random (stateless hash, matches Android)
+// MARK: - Seeded Random (splitmix64 — unsigned shifts to match Android's `ushr`)
 
 func seededRandom(seed: Int, index: Int) -> Double {
-    var z = Int64(bitPattern: UInt64(bitPattern: Int64(seed)) &+ UInt64(bitPattern: Int64(index)) &* 0x9e3779b97f4a7c15)
-    z = (z ^ (z >> 30)) &* Int64(bitPattern: 0xbf58476d1ce4e5b9)
-    z = (z ^ (z >> 27)) &* Int64(bitPattern: 0x94d049bb133111eb)
+    var z = UInt64(bitPattern: Int64(seed)) &+ UInt64(bitPattern: Int64(index)) &* 0x9e3779b97f4a7c15
+    z = (z ^ (z >> 30)) &* 0xbf58476d1ce4e5b9
+    z = (z ^ (z >> 27)) &* 0x94d049bb133111eb
     z = z ^ (z >> 31)
-    return Double(z &>> 1) / Double(Int64.max)
+    return Double(z >> 1) / Double(Int64.max)
 }

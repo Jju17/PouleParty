@@ -30,7 +30,19 @@ data class ChickenConfigUiState(
     val isExpertMode: Boolean = false,
     val gameDurationMinutes: Double = 120.0,
     val showPowerUpSelection: Boolean = false
-)
+) {
+    val isZoneConfigured: Boolean
+        get() {
+            val loc = game.initialLocation
+            val isDefault = kotlin.math.abs(loc.latitude() - dev.rahier.pouleparty.AppConstants.DEFAULT_LATITUDE) < 0.001
+                    && kotlin.math.abs(loc.longitude() - dev.rahier.pouleparty.AppConstants.DEFAULT_LONGITUDE) < 0.001
+            if (isDefault) return false
+            if (game.gameModEnum == GameMod.STAY_IN_THE_ZONE) {
+                return game.finalLocation != null
+            }
+            return true
+        }
+}
 
 @HiltViewModel
 class ChickenConfigViewModel @Inject constructor(

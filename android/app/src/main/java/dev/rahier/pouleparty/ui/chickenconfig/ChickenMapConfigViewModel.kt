@@ -72,6 +72,24 @@ class ChickenMapConfigViewModel @Inject constructor(
         _uiState.update { it.copy(pinMode = mode) }
     }
 
+    fun updateRadius(radius: Double) {
+        val zoom = zoomForRadius(radius, _uiState.value.markerPosition.latitude()).toFloat()
+        _uiState.update { it.copy(radius = radius, cameraZoom = zoom) }
+        // Validate final zone against new radius
+        val state = _uiState.value
+        state.finalMarkerPosition?.let { finalPos ->
+            val results = FloatArray(1)
+            Location.distanceBetween(
+                state.markerPosition.latitude(), state.markerPosition.longitude(),
+                finalPos.latitude(), finalPos.longitude(),
+                results
+            )
+            if (results[0] > radius) {
+                _uiState.update { it.copy(finalMarkerPosition = null) }
+            }
+        }
+    }
+
     fun onMapTapped(point: Point) {
         val state = _uiState.value
         if (state.pinMode == MapConfigPinMode.FINAL) {
@@ -91,8 +109,22 @@ class ChickenMapConfigViewModel @Inject constructor(
                 it.copy(
                     markerPosition = point,
                     cameraCenter = point,
-                    cameraZoom = zoom
+                    cameraZoom = zoom,
+                    pinMode = MapConfigPinMode.FINAL // Auto-switch to final mode after placing start
                 )
+            }
+
+            // Validate existing final zone — clear if now outside new start zone
+            _uiState.value.finalMarkerPosition?.let { finalPos ->
+                val results = FloatArray(1)
+                Location.distanceBetween(
+                    point.latitude(), point.longitude(),
+                    finalPos.latitude(), finalPos.longitude(),
+                    results
+                )
+                if (results[0] > state.radius) {
+                    _uiState.update { it.copy(finalMarkerPosition = null) }
+                }
             }
         }
     }

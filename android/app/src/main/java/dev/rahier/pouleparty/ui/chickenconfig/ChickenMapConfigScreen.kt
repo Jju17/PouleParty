@@ -32,6 +32,8 @@ import com.mapbox.maps.plugin.locationcomponent.location
 import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.ui.components.circlePolygonPoints
 import dev.rahier.pouleparty.ui.theme.CROrange
+import dev.rahier.pouleparty.ui.theme.ZoneGreen
+import dev.rahier.pouleparty.ui.theme.gameboyStyle
 
 @OptIn(MapboxExperimental::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -40,6 +42,7 @@ fun ChickenMapConfigScreen(
     finalMarker: Point?,
     onLocationSelected: (Point) -> Unit,
     onFinalLocationSelected: (Point?) -> Unit,
+    onRadiusChanged: (Double) -> Unit,
     viewModel: ChickenMapConfigViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -88,71 +91,67 @@ fun ChickenMapConfigScreen(
                 }
             }
 
-            // Initial zone circle — CROrange
+            // Initial zone circle — neon glow (4 layers like iOS)
             val circlePoints = circlePolygonPoints(state.markerPosition, state.radius)
-            PolylineAnnotation(
-                points = circlePoints + listOf(circlePoints.first())
-            ) {
-                lineColor = CROrange.copy(alpha = 0.8f)
-                lineWidth = 2.0
+            PolylineAnnotation(points = circlePoints + listOf(circlePoints.first())) {
+                lineColor = CROrange.copy(alpha = 0.08f)
+                lineWidth = 16.0
+            }
+            PolylineAnnotation(points = circlePoints + listOf(circlePoints.first())) {
+                lineColor = CROrange.copy(alpha = 0.15f)
+                lineWidth = 8.0
+            }
+            PolylineAnnotation(points = circlePoints + listOf(circlePoints.first())) {
+                lineColor = CROrange.copy(alpha = 0.35f)
+                lineWidth = 4.0
+            }
+            PolylineAnnotation(points = circlePoints + listOf(circlePoints.first())) {
+                lineColor = CROrange.copy(alpha = 0.9f)
+                lineWidth = 2.5
             }
 
-            // Start center marker
-            PointAnnotation(
-                point = state.markerPosition
-            ) {
-                iconImage = IconImage("marker-15")
-                textField = "Start"
+            // Start center pin
+            PointAnnotation(point = state.markerPosition) {
+                textField = "📍 START"
+                textSize = 12.0
+                textOffset = listOf(0.0, -1.5)
+                textColor = CROrange
             }
 
-            // Final zone marker + circle (smaller, green)
+            // Final zone marker + circle (neon green glow)
             state.finalMarkerPosition?.let { finalPos ->
+                // Final zone pin
                 PointAnnotation(point = finalPos) {
-                    iconImage = IconImage("marker-15")
-                    textField = "Final"
+                    textField = "🏁 FINAL"
+                    textSize = 12.0
+                    textOffset = listOf(0.0, -1.5)
+                    textColor = ZoneGreen
                 }
 
-                // Small circle at final position to visualize it
+                // Neon glow circle at final position
                 val finalCirclePoints = circlePolygonPoints(finalPos, 50.0)
-                PolylineAnnotation(
-                    points = finalCirclePoints + listOf(finalCirclePoints.first())
-                ) {
-                    lineColor = Color.Green.copy(alpha = 0.8f)
-                    lineWidth = 2.0
+                PolylineAnnotation(points = finalCirclePoints + listOf(finalCirclePoints.first())) {
+                    lineColor = ZoneGreen.copy(alpha = 0.15f)
+                    lineWidth = 8.0
+                }
+                PolylineAnnotation(points = finalCirclePoints + listOf(finalCirclePoints.first())) {
+                    lineColor = ZoneGreen.copy(alpha = 0.5f)
+                    lineWidth = 3.0
+                }
+                PolylineAnnotation(points = finalCirclePoints + listOf(finalCirclePoints.first())) {
+                    lineColor = ZoneGreen.copy(alpha = 0.9f)
+                    lineWidth = 1.5
                 }
             }
         }
 
-        // Pin mode toggle at top
+        // Search bar at top
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.TopCenter)
                 .padding(8.dp)
         ) {
-            // Pin mode segmented control
-            SingleChoiceSegmentedButtonRow(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                SegmentedButton(
-                    selected = state.pinMode == MapConfigPinMode.START,
-                    onClick = { viewModel.setPinMode(MapConfigPinMode.START) },
-                    shape = SegmentedButtonDefaults.itemShape(0, 2)
-                ) {
-                    Text(stringResource(R.string.start_zone))
-                }
-                SegmentedButton(
-                    selected = state.pinMode == MapConfigPinMode.FINAL,
-                    onClick = { viewModel.setPinMode(MapConfigPinMode.FINAL) },
-                    shape = SegmentedButtonDefaults.itemShape(1, 2)
-                ) {
-                    Text(stringResource(R.string.final_zone))
-                }
-            }
-
-            Spacer(Modifier.height(4.dp))
-
-            // Search bar
             OutlinedTextField(
                 value = state.searchQuery,
                 onValueChange = { viewModel.onSearchQueryChanged(it) },
@@ -209,20 +208,66 @@ fun ChickenMapConfigScreen(
                     }
                 }
             }
+        }
 
+        // Bottom bar: hint + radius slider + pin mode picker
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter)
+                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.92f))
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             // Hint text
             if (state.pinMode == MapConfigPinMode.FINAL) {
-                Spacer(Modifier.height(4.dp))
-                Card(
-                    shape = RoundedCornerShape(8.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f))
+                Text(
+                    text = stringResource(R.string.final_zone_hint),
+                    style = gameboyStyle(8),
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+            }
+
+            // Radius slider
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(stringResource(R.string.zone_radius), style = gameboyStyle(9))
+                Text(
+                    stringResource(R.string.meters_format, state.radius.toInt()),
+                    style = gameboyStyle(9),
+                    color = CROrange
+                )
+            }
+            Slider(
+                value = state.radius.toFloat(),
+                onValueChange = {
+                    viewModel.updateRadius(it.toDouble())
+                    onRadiusChanged(it.toDouble())
+                },
+                valueRange = 500f..2000f,
+                steps = 14,
+                colors = SliderDefaults.colors(thumbColor = CROrange, activeTrackColor = CROrange)
+            )
+
+            // Pin mode segmented control
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                SegmentedButton(
+                    selected = state.pinMode == MapConfigPinMode.START,
+                    onClick = { viewModel.setPinMode(MapConfigPinMode.START) },
+                    shape = SegmentedButtonDefaults.itemShape(0, 2)
                 ) {
-                    Text(
-                        text = stringResource(R.string.final_zone_hint),
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                    )
+                    Text(stringResource(R.string.start_zone))
+                }
+                SegmentedButton(
+                    selected = state.pinMode == MapConfigPinMode.FINAL,
+                    onClick = { viewModel.setPinMode(MapConfigPinMode.FINAL) },
+                    shape = SegmentedButtonDefaults.itemShape(1, 2)
+                ) {
+                    Text(stringResource(R.string.final_zone))
                 }
             }
         }

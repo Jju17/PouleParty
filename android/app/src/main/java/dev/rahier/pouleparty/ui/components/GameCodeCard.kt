@@ -21,11 +21,12 @@ fun GameCodeCard(
     gameCode: String,
     codeCopied: Boolean,
     onCodeCopied: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    colors: CardColors = CardDefaults.cardColors()
 ) {
     val context = LocalContext.current
 
-    Card(modifier = modifier.fillMaxWidth()) {
+    Card(modifier = modifier.fillMaxWidth(), colors = colors) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()

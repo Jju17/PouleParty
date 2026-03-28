@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1024">
+<title>Poule Party - Feature Graphic</title>
+<style>
+  @font-face {
+    font-family: 'EarlyGameBoy';
+    src: url('ios/PouleParty/Resources/Early GameBoy.ttf') format('truetype');
+  }
+  @font-face {
+    font-family: 'Bangers';
+    src: url('ios/PouleParty/Resources/Bangers-Regular.ttf') format('truetype');
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: #1a1a2e;
+  }
+
+  .graphic {
+    width: 1024px;
+    height: 500px;
+    background: linear-gradient(135deg, #FDF9D5 0%, #FFF3B0 30%, #FFE08A 60%, #FFC857 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Decorative circles */
+  .graphic::before {
+    content: '';
+    position: absolute;
+    width: 600px;
+    height: 600px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(254, 106, 0, 0.15) 0%, transparent 70%);
+    top: -200px;
+    right: -100px;
+  }
+
+  .graphic::after {
+    content: '';
+    position: absolute;
+    width: 400px;
+    height: 400px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(239, 7, 120, 0.12) 0%, transparent 70%);
+    bottom: -150px;
+    left: -50px;
+  }
+
+  /* Shrinking zone ring (game reference) */
+  .zone-ring {
+    position: absolute;
+    width: 420px;
+    height: 420px;
+    border-radius: 50%;
+    border: 3px dashed rgba(239, 7, 120, 0.25);
+    top: 50%;
+    left: 38%;
+    transform: translate(-50%, -50%);
+  }
+
+  .zone-ring-inner {
+    position: absolute;
+    width: 300px;
+    height: 300px;
+    border-radius: 50%;
+    border: 2px dashed rgba(254, 106, 0, 0.2);
+    top: 50%;
+    left: 38%;
+    transform: translate(-50%, -50%);
+  }
+
+  .content {
+    display: flex;
+    align-items: center;
+    gap: 50px;
+    z-index: 1;
+    position: relative;
+  }
+
+  .chicken-container {
+    position: relative;
+  }
+
+  .chicken-container img {
+    width: 220px;
+    height: auto;
+    image-rendering: pixelated;
+    filter: drop-shadow(4px 4px 0px rgba(0,0,0,0.15));
+  }
+
+  /* Small pixel footprints */
+  .footprint {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background: rgba(0,0,0,0.1);
+    border-radius: 1px;
+  }
+  .footprint:nth-child(2) { bottom: -15px; left: 60px; transform: rotate(-15deg); }
+  .footprint:nth-child(3) { bottom: -30px; left: 30px; transform: rotate(10deg); }
+  .footprint:nth-child(4) { bottom: -45px; left: 55px; transform: rotate(-5deg); }
+
+  .text-block {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .title {
+    font-family: 'EarlyGameBoy', monospace;
+    font-size: 58px;
+    line-height: 1.15;
+    letter-spacing: 2px;
+  }
+
+  .title .poule {
+    color: #FE6A00;
+    text-shadow: 3px 3px 0px rgba(0,0,0,0.12);
+  }
+
+  .title .party {
+    color: #EF0778;
+    text-shadow: 3px 3px 0px rgba(0,0,0,0.12);
+  }
+
+  .divider {
+    width: 120px;
+    height: 4px;
+    background: linear-gradient(90deg, #FE6A00, #EF0778);
+    border-radius: 2px;
+    margin: 4px 0;
+  }
+
+  .tagline {
+    font-family: 'Bangers', 'EarlyGameBoy', sans-serif;
+    font-size: 26px;
+    color: #4A3728;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  /* Pixel dots decoration */
+  .pixel-dots {
+    position: absolute;
+    bottom: 20px;
+    right: 30px;
+    display: flex;
+    gap: 6px;
+    z-index: 1;
+  }
+  .pixel-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 1px;
+  }
+  .pixel-dot:nth-child(1) { background: #FE6A00; }
+  .pixel-dot:nth-child(2) { background: #EF0778; }
+  .pixel-dot:nth-child(3) { background: #FE6A00; }
+  .pixel-dot:nth-child(4) { background: #EF0778; }
+  .pixel-dot:nth-child(5) { background: #FE6A00; }
+
+  .pixel-dots-top {
+    position: absolute;
+    top: 20px;
+    left: 30px;
+    display: flex;
+    gap: 6px;
+    z-index: 1;
+  }
+  .pixel-dots-top .pixel-dot:nth-child(1) { background: #EF0778; }
+  .pixel-dots-top .pixel-dot:nth-child(2) { background: #FE6A00; }
+  .pixel-dots-top .pixel-dot:nth-child(3) { background: #EF0778; }
+</style>
+</head>
+<body>
+  <div class="graphic">
+    <div class="zone-ring"></div>
+    <div class="zone-ring-inner"></div>
+
+    <div class="content">
+      <div class="chicken-container">
+        <img src="web/public/chicken-logo.png" alt="Chicken">
+        <div class="footprint"></div>
+        <div class="footprint"></div>
+        <div class="footprint"></div>
+        <div class="footprint"></div>
+      </div>
+
+      <div class="text-block">
+        <div class="title">
+          <div class="poule">POULE</div>
+          <div class="party">PARTY</div>
+        </div>
+        <div class="divider"></div>
+        <div class="tagline">Catch the Chicken!</div>
+      </div>
+    </div>
+
+    <div class="pixel-dots-top">
+      <div class="pixel-dot"></div>
+      <div class="pixel-dot"></div>
+      <div class="pixel-dot"></div>
+    </div>
+    <div class="pixel-dots">
+      <div class="pixel-dot"></div>
+      <div class="pixel-dot"></div>
+      <div class="pixel-dot"></div>
+      <div class="pixel-dot"></div>
+      <div class="pixel-dot"></div>
+    </div>
+  </div>
+</body>
+</html>

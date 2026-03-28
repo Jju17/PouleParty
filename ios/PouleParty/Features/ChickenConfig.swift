@@ -27,18 +27,23 @@ struct ChickenConfigFeature {
     enum Action: BindableAction {
         case backButtonTapped
         case binding(BindingAction<State>)
+        case chickenCanSeeHuntersChanged(Bool)
         case chickenHeadStartChanged(Double)
         case configSaveFailed
         case destination(PresentationAction<Destination.Action>)
         case expertModeToggled(Bool)
         case gameCreated(Game)
         case gameDurationChanged(Double)
+        case gameModChanged(Game.GameMod)
         case initialRadiusChanged(Double)
         case mapPreviewTapped
         case path(StackAction<ChickenMapConfigFeature.State, ChickenMapConfigFeature.Action>)
         case powerUpsToggled(Bool)
         case powerUpTypeToggled(PowerUp.PowerUpType)
         case powerUpSelectionTapped
+        case radiusDeclinePerUpdateChanged(Double)
+        case radiusIntervalUpdateChanged(Double)
+        case startDateChanged(Date)
         case startGameButtonTapped
     }
 
@@ -77,6 +82,9 @@ struct ChickenConfigFeature {
             switch action {
             case .binding:
                 return .none
+            case let .chickenCanSeeHuntersChanged(value):
+                state.$game.withLock { $0.chickenCanSeeHunters = value }
+                return .none
             case .configSaveFailed:
                 state.destination = .alert(
                     AlertState {
@@ -103,6 +111,9 @@ struct ChickenConfigFeature {
                 if !state.isExpertMode {
                     self.recalculateNormalMode(state: &state)
                 }
+                return .none
+            case let .gameModChanged(mode):
+                state.$game.withLock { $0.gameMod = mode }
                 return .none
             case .backButtonTapped:
                 return .none
@@ -145,6 +156,21 @@ struct ChickenConfigFeature {
                 return .none
             case .powerUpSelectionTapped:
                 state.showPowerUpSelection = true
+                return .none
+            case let .radiusDeclinePerUpdateChanged(value):
+                state.$game.withLock { $0.radiusDeclinePerUpdate = value }
+                return .none
+            case let .radiusIntervalUpdateChanged(value):
+                state.$game.withLock { $0.radiusIntervalUpdate = value }
+                return .none
+            case let .startDateChanged(date):
+                state.$game.withLock { $0.startDate = date }
+                return .none
+            case .path(.popFrom):
+                // Recalculate when returning from map config (radius may have changed)
+                if !state.isExpertMode {
+                    self.recalculateNormalMode(state: &state)
+                }
                 return .none
             case .path:
                 return .none
@@ -276,7 +302,10 @@ struct ChickenConfigView: View {
 
     private var scheduleSection: some View {
         Section("Schedule") {
-            DatePicker(selection: $store.game.startDate, in: .now.addingTimeInterval(120)...) {
+            DatePicker(selection: Binding(
+                get: { store.game.startDate },
+                set: { store.send(.startDateChanged($0)) }
+            ), in: .now.addingTimeInterval(120)...) {
                 Text("Start at")
             }
             .datePickerStyle(.compact)
@@ -308,12 +337,18 @@ struct ChickenConfigView: View {
 
     private var gameModeSection: some View {
         Section("Game Mode") {
-            Picker("Game Mode", selection: $store.game.gameMod) {
+            Picker("Game Mode", selection: Binding(
+                get: { store.game.gameMod },
+                set: { store.send(.gameModChanged($0)) }
+            )) {
                 ForEach(Game.GameMod.allCases, id: \.self) { mode in
                     Text(mode.title).tag(mode)
                 }
             }
-            Toggle("Chicken can see hunters", isOn: $store.game.chickenCanSeeHunters)
+            Toggle("Chicken can see hunters", isOn: Binding(
+                get: { store.game.chickenCanSeeHunters },
+                set: { store.send(.chickenCanSeeHuntersChanged($0)) }
+            ))
         }
     }
 
@@ -367,22 +402,6 @@ struct ChickenConfigView: View {
                 .onTapGesture {
                     store.send(.mapPreviewTapped)
                 }
-
-            VStack(alignment: .leading) {
-                HStack {
-                    Text("Radius")
-                    Spacer()
-                    Text("\(Int(store.game.initialRadius)) m")
-                }
-                Slider(
-                    value: Binding(
-                        get: { store.game.initialRadius },
-                        set: { store.send(.initialRadiusChanged($0)) }
-                    ),
-                    in: 500...2000,
-                    step: 100
-                )
-            }
         }
     }
 
@@ -394,7 +413,10 @@ struct ChickenConfigView: View {
                     Spacer()
                     Text("\(Int(self.store.game.radiusIntervalUpdate)) minutes")
                 }
-                Slider(value: self.$store.game.radiusIntervalUpdate, in: 1...60, step: 1)
+                Slider(value: Binding(
+                    get: { store.game.radiusIntervalUpdate },
+                    set: { store.send(.radiusIntervalUpdateChanged($0)) }
+                ), in: 1...60, step: 1)
             }
             VStack(alignment: .leading) {
                 HStack {
@@ -402,7 +424,10 @@ struct ChickenConfigView: View {
                     Spacer()
                     Text("\(Int(self.store.game.radiusDeclinePerUpdate)) meters")
                 }
-                Slider(value: self.$store.game.radiusDeclinePerUpdate, in: 50...1000, step: 10)
+                Slider(value: Binding(
+                    get: { store.game.radiusDeclinePerUpdate },
+                    set: { store.send(.radiusDeclinePerUpdateChanged($0)) }
+                ), in: 50...1000, step: 10)
             }
         }
     }

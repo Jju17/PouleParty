@@ -30,6 +30,13 @@ val Danger = Color(0xFFCC0530)
 val Warning = Color(0xFFFFD23F)
 val Info = Color(0xFF4D96FF)
 
+// Surface variants (warm tones for cards, segmented buttons, etc.)
+val CRSurfaceVariant = Color(0xFFF5F0C8)       // warm beige for card backgrounds
+val CROnSurfaceVariant = Color(0xFF4A4A4A)      // dark gray text on cards
+val CRSecondaryContainer = Color(0xFFFFE0B2)    // warm peach for selected segments
+val CROnSecondaryContainer = Color(0xFF3E2723)  // dark brown text on selected segments
+val CROutline = Color(0xFFD6C98E)               // warm outline for segmented buttons
+
 // Dark mode variants
 val CRDarkBackground = Color(0xFF1A1A2E)
 val CRDarkSurface = Color(0xFF16213E)

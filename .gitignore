@@ -13,8 +13,7 @@ android/.gradle/
 android/build/
 android/app/build/
 android/local.properties
-android/google-services.json
-android/app/google-services.json
+android/**/google-services.json
 android/keystore.properties
 android/*.keystore
 *.apk

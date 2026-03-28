@@ -10,13 +10,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -81,6 +84,9 @@ fun ChickenConfigScreen(
                     },
                     onFinalLocationSelected = { point ->
                         viewModel.onFinalLocationSelected(point)
+                    },
+                    onRadiusChanged = { radius ->
+                        viewModel.updateInitialRadius(radius)
                     }
                 )
             }
@@ -88,7 +94,12 @@ fun ChickenConfigScreen(
         return
     }
 
+    val formBackground = Color(0xFFF2EFE5)
+    val formCardColors = CardDefaults.cardColors(containerColor = Color.White)
+    val isZoneConfigured = state.isZoneConfigured
+
     Scaffold(
+        containerColor = formBackground,
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.game_settings)) },
@@ -96,7 +107,8 @@ fun ChickenConfigScreen(
                     IconButton(onClick = onDismiss) {
                         Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = formBackground)
             )
         }
     ) { padding ->
@@ -110,38 +122,40 @@ fun ChickenConfigScreen(
                     .weight(1f)
                     .padding(horizontal = 16.dp)
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Spacer(Modifier.height(0.dp))
 
-                // Game Code section
+                // --- Game Code section ---
+                SectionHeader(stringResource(R.string.game_code_label))
                 GameCodeCard(
                     gameCode = state.game.gameCode,
                     codeCopied = state.codeCopied,
-                    onCodeCopied = { viewModel.onCodeCopied() }
+                    onCodeCopied = { viewModel.onCodeCopied() },
+                    colors = formCardColors
                 )
 
-                // Start time (tappable to open time picker)
-                Card(
-                    modifier = Modifier.fillMaxWidth().clickable { viewModel.onStartTimeTapped() }
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(stringResource(R.string.start_at))
-                        Text(dateFormat.format(state.game.startDate))
-                    }
-                }
+                // --- Schedule section ---
+                SectionHeader(stringResource(R.string.schedule_label))
+                Card(modifier = Modifier.fillMaxWidth(), colors = formCardColors) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        // Start time row
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.onStartTimeTapped() },
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(stringResource(R.string.start_at))
+                            Text(dateFormat.format(state.game.startDate))
+                        }
 
-                // Duration picker (normal mode only)
-                if (!state.isExpertMode) {
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(stringResource(R.string.duration), style = MaterialTheme.typography.labelLarge)
+                        if (!state.isExpertMode) {
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
+                            // Duration picker
+                            Text(stringResource(R.string.duration))
                             Spacer(Modifier.height(8.dp))
                             val durationOptions = listOf(60.0 to "1h", 90.0 to "1h30", 120.0 to "2h", 150.0 to "2h30", 180.0 to "3h")
                             SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
@@ -155,7 +169,10 @@ fun ChickenConfigScreen(
                                     }
                                 }
                             }
-                            Spacer(Modifier.height(8.dp))
+
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
+                            // Ends at row
                             val endTime = Date(state.game.startDate.time + (state.gameDurationMinutes * 60 * 1000).toLong())
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -168,24 +185,55 @@ fun ChickenConfigScreen(
                     }
                 }
 
-                // Game Mode picker
-                Card(modifier = Modifier.fillMaxWidth()) {
+                // --- Game Mode section ---
+                SectionHeader(stringResource(R.string.game_mode))
+                Card(modifier = Modifier.fillMaxWidth(), colors = formCardColors) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text(stringResource(R.string.game_mode), style = MaterialTheme.typography.labelLarge)
-                        Spacer(Modifier.height(8.dp))
-                        GameMod.entries.forEach { mod ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(
-                                    selected = state.game.gameModEnum == mod,
-                                    onClick = { viewModel.updateGameMod(mod) }
-                                )
-                                Text(mod.title, modifier = Modifier.padding(start = 8.dp))
+                        // Game mode dropdown
+                        var modeExpanded by remember { mutableStateOf(false) }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(stringResource(R.string.game_mode))
+                            Box {
+                                Row(
+                                    modifier = Modifier.clickable { modeExpanded = true },
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        state.game.gameModEnum.title,
+                                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                                    )
+                                    Spacer(Modifier.width(4.dp))
+                                    Icon(
+                                        Icons.Default.ArrowDropDown,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(20.dp),
+                                        tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                                    )
+                                }
+                                DropdownMenu(
+                                    expanded = modeExpanded,
+                                    onDismissRequest = { modeExpanded = false }
+                                ) {
+                                    GameMod.entries.forEach { mod ->
+                                        DropdownMenuItem(
+                                            text = { Text(mod.title) },
+                                            onClick = {
+                                                viewModel.updateGameMod(mod)
+                                                modeExpanded = false
+                                            }
+                                        )
+                                    }
+                                }
                             }
                         }
-                        Spacer(Modifier.height(8.dp))
+
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
+                        // Chicken can see hunters toggle
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -200,8 +248,9 @@ fun ChickenConfigScreen(
                     }
                 }
 
-                // Power-Ups card
-                Card(modifier = Modifier.fillMaxWidth()) {
+                // --- Power-Ups section ---
+                SectionHeader(stringResource(R.string.power_ups_label))
+                Card(modifier = Modifier.fillMaxWidth(), colors = formCardColors) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -215,7 +264,7 @@ fun ChickenConfigScreen(
                             )
                         }
                         if (state.game.powerUpsEnabled) {
-                            Spacer(Modifier.height(8.dp))
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
                             val unavailable = if (state.game.gameModEnum == dev.rahier.pouleparty.model.GameMod.STAY_IN_THE_ZONE) {
                                 setOf(
                                     dev.rahier.pouleparty.model.PowerUpType.INVISIBILITY.firestoreValue,
@@ -225,50 +274,46 @@ fun ChickenConfigScreen(
                             } else emptySet()
                             val enabledCount = state.game.enabledPowerUpTypes.count { it !in unavailable }
                             val totalCount = dev.rahier.pouleparty.model.PowerUpType.entries.count { it.firestoreValue !in unavailable }
-                            Card(
+                            Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable { viewModel.onPowerUpSelectionTapped() },
-                                shape = RoundedCornerShape(8.dp)
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(12.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(stringResource(R.string.choose_power_ups))
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(
-                                            stringResource(R.string.power_ups_count_format, enabledCount, totalCount),
-                                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
-                                        )
-                                        Spacer(Modifier.width(4.dp))
-                                        Icon(
-                                            Icons.AutoMirrored.Filled.ArrowForward,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(16.dp),
-                                            tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
-                                        )
-                                    }
+                                Text(stringResource(R.string.choose_power_ups))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        stringResource(R.string.power_ups_count_format, enabledCount, totalCount),
+                                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                                    )
+                                    Spacer(Modifier.width(4.dp))
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.ArrowForward,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp),
+                                        tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                                    )
                                 }
                             }
                         }
                     }
                 }
 
-                // Zone card — inline map preview + radius slider
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(stringResource(R.string.zone), style = MaterialTheme.typography.labelLarge)
-                        Spacer(Modifier.height(8.dp))
-                        // Inline map preview (tap to open full map config)
+                // --- Zone section ---
+                SectionHeader(stringResource(R.string.zone))
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { viewModel.onMapSetupTapped() },
+                    colors = formCardColors
+                ) {
+                    // Inline map preview (tap to open full map config)
+                    Box(modifier = Modifier.padding(8.dp)) {
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(180.dp)
-                                .clickable { viewModel.onMapSetupTapped() },
+                                .height(180.dp),
                             shape = RoundedCornerShape(8.dp)
                         ) {
                             MapPreviewContent(
@@ -277,27 +322,13 @@ fun ChickenConfigScreen(
                                 finalCenter = state.game.finalLocation
                             )
                         }
-                        Spacer(Modifier.height(12.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(stringResource(R.string.zone_radius))
-                            Text(stringResource(R.string.meters_format, state.game.initialRadius.toInt()))
-                        }
-                        Slider(
-                            value = state.game.initialRadius.toFloat(),
-                            onValueChange = { viewModel.updateInitialRadius(it.toDouble()) },
-                            valueRange = 500f..2000f,
-                            steps = 14
-                        )
                     }
                 }
 
-                // Advanced settings (expert mode only)
+                // --- Advanced settings (expert mode only) ---
                 if (state.isExpertMode) {
-                    // Radius interval update slider
-                    Card(modifier = Modifier.fillMaxWidth()) {
+                    SectionHeader(stringResource(R.string.advanced_label))
+                    Card(modifier = Modifier.fillMaxWidth(), colors = formCardColors) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -312,12 +343,9 @@ fun ChickenConfigScreen(
                                 valueRange = 1f..60f,
                                 steps = 58
                             )
-                        }
-                    }
 
-                    // Radius decline slider
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Column(modifier = Modifier.padding(16.dp)) {
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
@@ -335,8 +363,9 @@ fun ChickenConfigScreen(
                     }
                 }
 
-                // Chicken head start slider
-                Card(modifier = Modifier.fillMaxWidth()) {
+                // --- Head Start section ---
+                SectionHeader(stringResource(R.string.head_start_label))
+                Card(modifier = Modifier.fillMaxWidth(), colors = formCardColors) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -354,11 +383,10 @@ fun ChickenConfigScreen(
                     }
                 }
 
-                // Settings mode toggle (Normal / Expert)
-                Card(modifier = Modifier.fillMaxWidth()) {
+                // --- Settings mode toggle (Normal / Expert) ---
+                SectionHeader(stringResource(R.string.mode_label))
+                Card(modifier = Modifier.fillMaxWidth(), colors = formCardColors) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text(stringResource(R.string.settings_mode), style = MaterialTheme.typography.labelLarge)
-                        Spacer(Modifier.height(8.dp))
                         SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                             SegmentedButton(
                                 selected = !state.isExpertMode,
@@ -378,23 +406,42 @@ fun ChickenConfigScreen(
                     }
                 }
 
-                Spacer(Modifier.height(0.dp))
+                Spacer(Modifier.height(8.dp))
             }
 
             // Start game button — prominent, outside the scrollable form
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-                    .height(56.dp)
-                    .shadow(4.dp, RoundedCornerShape(50.dp))
-                    .clip(RoundedCornerShape(50.dp))
-                    .background(GradientFire)
-                    .border(3.dp, MaterialTheme.colorScheme.onBackground, RoundedCornerShape(50.dp))
-                    .clickable { viewModel.startGame(onStartGame) },
-                contentAlignment = Alignment.Center
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 16.dp, top = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(stringResource(R.string.start_game), color = Color.Black, style = bangerStyle(24))
+                if (!isZoneConfigured) {
+                    Text(
+                        text = if (state.game.gameModEnum == GameMod.STAY_IN_THE_ZONE)
+                            stringResource(R.string.set_start_and_final_zone)
+                        else
+                            stringResource(R.string.set_start_zone),
+                        style = gameboyStyle(8),
+                        color = CROrange
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .then(if (isZoneConfigured) Modifier.shadow(4.dp, RoundedCornerShape(50.dp)) else Modifier)
+                        .clip(RoundedCornerShape(50.dp))
+                        .background(if (isZoneConfigured) GradientFire else Brush.linearGradient(listOf(Color.Gray.copy(alpha = 0.3f), Color.Gray.copy(alpha = 0.3f))))
+                        .border(3.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = if (isZoneConfigured) 1f else 0.3f), RoundedCornerShape(50.dp))
+                        .then(if (isZoneConfigured) Modifier.clickable { viewModel.startGame(onStartGame) } else Modifier),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        stringResource(R.string.start_game),
+                        color = Color.Black.copy(alpha = if (isZoneConfigured) 1f else 0.4f),
+                        style = bangerStyle(24)
+                    )
+                }
             }
         }
     }
@@ -434,6 +481,16 @@ fun ChickenConfigScreen(
     }
 }
 
+@Composable
+private fun SectionHeader(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+        modifier = Modifier.padding(top = 8.dp)
+    )
+}
+
 @OptIn(MapboxExperimental::class)
 @Composable
 private fun MapPreviewContent(center: Point, radius: Double, finalCenter: Point? = null) {
@@ -450,30 +507,47 @@ private fun MapPreviewContent(center: Point, radius: Double, finalCenter: Point?
             modifier = Modifier.fillMaxSize(),
             mapViewportState = mapViewportState
         ) {
+            // Neon glow start zone circle
             val circlePoints = circlePolygonPoints(center, radius)
-            PolylineAnnotation(
-                points = circlePoints + listOf(circlePoints.first())
-            ) {
-                lineColor = CROrange.copy(alpha = 0.8f)
+            PolylineAnnotation(points = circlePoints + listOf(circlePoints.first())) {
+                lineColor = CROrange.copy(alpha = 0.1f)
+                lineWidth = 12.0
+            }
+            PolylineAnnotation(points = circlePoints + listOf(circlePoints.first())) {
+                lineColor = CROrange.copy(alpha = 0.3f)
+                lineWidth = 4.0
+            }
+            PolylineAnnotation(points = circlePoints + listOf(circlePoints.first())) {
+                lineColor = CROrange.copy(alpha = 0.9f)
                 lineWidth = 2.0
             }
 
-            // Final zone marker
+            // Final zone marker — neon green glow
             finalCenter?.let { fc ->
                 val finalCirclePoints = circlePolygonPoints(fc, 50.0)
-                PolylineAnnotation(
-                    points = finalCirclePoints + listOf(finalCirclePoints.first())
-                ) {
-                    lineColor = ZoneGreen.copy(alpha = 0.8f)
-                    lineWidth = 2.0
+                PolylineAnnotation(points = finalCirclePoints + listOf(finalCirclePoints.first())) {
+                    lineColor = ZoneGreen.copy(alpha = 0.4f)
+                    lineWidth = 3.0
+                }
+                PolylineAnnotation(points = finalCirclePoints + listOf(finalCirclePoints.first())) {
+                    lineColor = ZoneGreen.copy(alpha = 0.9f)
+                    lineWidth = 1.5
                 }
             }
         }
-        // Overlay to absorb all touch events — makes the map preview non-interactive
+        // Transparent overlay to block map gestures while letting parent Card clicks through
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .clickable(enabled = false, onClick = {})
+                .pointerInput(Unit) {
+                    // Consume all pointer events so the map doesn't pan/zoom,
+                    // but don't use clickable so the Card's click handler still works
+                    awaitPointerEventScope {
+                        while (true) {
+                            awaitPointerEvent()
+                        }
+                    }
+                }
         )
     }
 }
