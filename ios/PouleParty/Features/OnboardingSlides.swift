@@ -68,8 +68,9 @@ struct OnboardingWelcomeSlide: View {
             subtitle: "The ultimate real-world\nhide-and-seek game",
             titleSize: 36
         ) {
-            Image("logo")
+            Image("chicken")
                 .resizable()
+                .interpolation(.none)
                 .scaledToFit()
                 .frame(width: 160, height: 160)
         }
@@ -159,8 +160,7 @@ struct OnboardingLocationSlide: View {
                             .background(
                                 Capsule()
                                     .fill(Color.gradientFire)
-                                    .overlay(Capsule().stroke(Color.onBackground, lineWidth: 3))
-                            )
+                                                                )
                             .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
                     }
                     .padding(.top, 8)
@@ -185,8 +185,7 @@ struct OnboardingLocationSlide: View {
                             .background(
                                 Capsule()
                                     .fill(Color.gradientFire)
-                                    .overlay(Capsule().stroke(Color.onBackground, lineWidth: 3))
-                            )
+                                                                )
                             .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
                     }
                     .padding(.top, 8)
@@ -209,8 +208,7 @@ struct OnboardingLocationSlide: View {
                             .background(
                                 Capsule()
                                     .fill(Color.gradientFire)
-                                    .overlay(Capsule().stroke(Color.onBackground, lineWidth: 3))
-                            )
+                                                                )
                             .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
                     }
                     .padding(.top, 8)
@@ -280,8 +278,7 @@ struct OnboardingNotificationSlide: View {
                             .background(
                                 Capsule()
                                     .fill(Color.gradientFire)
-                                    .overlay(Capsule().stroke(Color.onBackground, lineWidth: 3))
-                            )
+                                                                )
                             .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
                     }
                     .padding(.top, 8)
@@ -306,8 +303,7 @@ struct OnboardingNotificationSlide: View {
                             .background(
                                 Capsule()
                                     .fill(Color.gradientFire)
-                                    .overlay(Capsule().stroke(Color.onBackground, lineWidth: 3))
-                            )
+                                                                )
                             .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
                     }
                     .padding(.top, 8)

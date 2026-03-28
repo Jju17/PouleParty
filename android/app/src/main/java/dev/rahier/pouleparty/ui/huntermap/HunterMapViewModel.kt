@@ -311,6 +311,16 @@ class HunterMapViewModel @Inject constructor(
                         }
                     }
                 }
+
+                // Navigate to victory when all hunters have found the chicken
+                // (Chicken is authoritative for setting game status to DONE)
+                if (!_uiState.value.shouldNavigateToVictory &&
+                    updatedGame.hunterIds.isNotEmpty() &&
+                    updatedGame.winners.size >= updatedGame.hunterIds.size) {
+                    cancelStreams()
+                    _uiState.update { it.copy(shouldNavigateToVictory = true) }
+                    return@collect
+                }
             }
         }
     }

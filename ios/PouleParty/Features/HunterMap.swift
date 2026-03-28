@@ -91,6 +91,7 @@ struct HunterMapFeature {
         case powerUpNotificationDismissed
         case powerUpInventoryTapped
         case powerUpInventoryDismissed
+        case allHuntersFound
     }
 
     @Reducer
@@ -270,6 +271,8 @@ struct HunterMapFeature {
                     }
                 }
             case .returnedToMenu:
+                return .none
+            case .allHuntersFound:
                 return .none
             case .winnerRegistered:
                 let endState = PoulePartyAttributes.ContentState(
@@ -526,6 +529,19 @@ struct HunterMapFeature {
                 } else {
                     state.previousWinnersCount = game.winners.count
                 }
+
+                // Navigate to victory when all hunters have found the chicken
+                // (Chicken is authoritative for setting game status to DONE)
+                if state.destination == nil &&
+                   !game.hunterIds.isEmpty &&
+                   game.winners.count >= game.hunterIds.count {
+                    locationClient.stopTracking()
+                    effects.append(.run { send in
+                        await liveActivityClient.end(nil)
+                        await send(.allHuntersFound)
+                    })
+                }
+
                 return effects.isEmpty ? .none : .merge(effects)
             case .timerTicked:
                 state.nowDate = .now

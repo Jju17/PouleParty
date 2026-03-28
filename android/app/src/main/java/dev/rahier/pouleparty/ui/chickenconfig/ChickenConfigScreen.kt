@@ -94,8 +94,8 @@ fun ChickenConfigScreen(
         return
     }
 
-    val formBackground = Color(0xFFF2EFE5)
-    val formCardColors = CardDefaults.cardColors(containerColor = Color.White)
+    val formBackground = MaterialTheme.colorScheme.background
+    val formCardColors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     val isZoneConfigured = state.isZoneConfigured
 
     Scaffold(
@@ -179,7 +179,7 @@ fun ChickenConfigScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Text(stringResource(R.string.ends_at))
-                                Text(dateFormat.format(endTime), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f))
+                                Text(dateFormat.format(endTime), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
                             }
                         }
                     }
@@ -204,14 +204,14 @@ fun ChickenConfigScreen(
                                 ) {
                                     Text(
                                         state.game.gameModEnum.title,
-                                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                                     )
                                     Spacer(Modifier.width(4.dp))
                                     Icon(
                                         Icons.Default.ArrowDropDown,
                                         contentDescription = null,
                                         modifier = Modifier.size(20.dp),
-                                        tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                                     )
                                 }
                                 DropdownMenu(
@@ -285,14 +285,14 @@ fun ChickenConfigScreen(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
                                         stringResource(R.string.power_ups_count_format, enabledCount, totalCount),
-                                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                                     )
                                     Spacer(Modifier.width(4.dp))
                                     Icon(
                                         Icons.AutoMirrored.Filled.ArrowForward,
                                         contentDescription = null,
                                         modifier = Modifier.size(16.dp),
-                                        tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                                     )
                                 }
                             }
@@ -432,7 +432,6 @@ fun ChickenConfigScreen(
                         .then(if (isZoneConfigured) Modifier.shadow(4.dp, RoundedCornerShape(50.dp)) else Modifier)
                         .clip(RoundedCornerShape(50.dp))
                         .background(if (isZoneConfigured) GradientFire else Brush.linearGradient(listOf(Color.Gray.copy(alpha = 0.3f), Color.Gray.copy(alpha = 0.3f))))
-                        .border(3.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = if (isZoneConfigured) 1f else 0.3f), RoundedCornerShape(50.dp))
                         .then(if (isZoneConfigured) Modifier.clickable { viewModel.startGame(onStartGame) } else Modifier),
                     contentAlignment = Alignment.Center
                 ) {
@@ -486,7 +485,7 @@ private fun SectionHeader(title: String) {
     Text(
         text = title,
         style = MaterialTheme.typography.titleSmall,
-        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
         modifier = Modifier.padding(top = 8.dp)
     )
 }

@@ -272,7 +272,6 @@ struct ChickenConfigView: View {
                             .padding(.vertical, 14)
                             .background(isZoneConfigured ? AnyShapeStyle(Color.gradientFire) : AnyShapeStyle(Color.gray.opacity(0.3)))
                             .clipShape(Capsule())
-                            .overlay(Capsule().stroke(Color.onBackground.opacity(isZoneConfigured ? 1 : 0.3), lineWidth: 3))
                             .shadow(color: .black.opacity(isZoneConfigured ? 0.2 : 0), radius: 4, y: 2)
                     }
                     .disabled(!isZoneConfigured)

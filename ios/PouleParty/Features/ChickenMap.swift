@@ -84,6 +84,7 @@ struct ChickenMapFeature {
         case powerUpNotificationDismissed
         case powerUpInventoryTapped
         case powerUpInventoryDismissed
+        case allHuntersFound
     }
 
     @Reducer
@@ -248,6 +249,26 @@ struct ChickenMapFeature {
                 } else {
                     state.previousWinnersCount = game.winners.count
                 }
+
+                // End the game when all hunters have found the chicken
+                // Chicken is authoritative: it sets game status to DONE
+                if state.destination == nil &&
+                   !game.hunterIds.isEmpty &&
+                   game.winners.count >= game.hunterIds.count {
+                    locationClient.stopTracking()
+                    let gameId = game.id
+                    effects.append(.run { send in
+                        do {
+                            try await apiClient.updateGameStatus(gameId, .done)
+                        } catch {
+                            Logger(subsystem: "dev.rahier.pouleparty", category: "ChickenMapFeature")
+                                .error("Failed to set game DONE when all hunters found: \(error.localizedDescription)")
+                        }
+                        await liveActivityClient.end(nil)
+                        await send(.allHuntersFound)
+                    })
+                }
+
                 return effects.isEmpty ? .none : .merge(effects)
             case .cancelGameButtonTapped:
                 state.destination = .alert(
@@ -269,6 +290,8 @@ struct ChickenMapFeature {
                 state.destination = .endGameCode(state.game.foundCode)
                 return .none
             case .returnedToMenu:
+                return .none
+            case .allHuntersFound:
                 return .none
             case .infoButtonTapped:
                 state.showGameInfo = true

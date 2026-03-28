@@ -50,6 +50,10 @@ class SelectionViewModel @Inject constructor(
         checkForActiveGame()
     }
 
+    fun refreshActiveGame() {
+        checkForActiveGame()
+    }
+
     private fun checkForActiveGame() {
         val userId = auth.currentUser?.uid ?: return
         viewModelScope.launch {

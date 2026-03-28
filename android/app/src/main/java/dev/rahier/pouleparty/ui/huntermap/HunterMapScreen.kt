@@ -45,6 +45,7 @@ import dev.rahier.pouleparty.ui.components.PowerUpDetailDialog
 import dev.rahier.pouleparty.ui.components.PowerUpInventoryDialog
 import dev.rahier.pouleparty.ui.components.PowerUpNotificationOverlay
 import dev.rahier.pouleparty.ui.components.PreGameOverlay
+import dev.rahier.pouleparty.ui.chickenconfig.powerUpEmoji
 import dev.rahier.pouleparty.ui.theme.*
 
 @OptIn(MapboxExperimental::class)
@@ -167,10 +168,8 @@ fun HunterMapScreen(
                             true
                         }
                     ) {
-                        iconImage = IconImage("marker-15")
-                        iconColor = CROrange
-                        textField = powerUp.typeEnum.title
-                        textColor = CROrange
+                        textField = powerUpEmoji(powerUp.typeEnum)
+                        textSize = 28.0
                     }
                 }
 

@@ -267,8 +267,7 @@ struct OnboardingView: View {
                                 .background(
                                     Capsule()
                                         .fill(isNextDisabled ? AnyShapeStyle(Color.CROrange.opacity(0.4)) : AnyShapeStyle(Color.gradientFire))
-                                        .overlay(Capsule().stroke(Color.onBackground.opacity(isNextDisabled ? 0.2 : 1.0), lineWidth: 3))
-                                )
+                                                                        )
                                 .shadow(color: .black.opacity(isNextDisabled ? 0 : 0.2), radius: 4, y: 2)
                         }
                         .disabled(isNextDisabled)

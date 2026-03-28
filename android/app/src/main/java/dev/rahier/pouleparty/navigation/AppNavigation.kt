@@ -195,6 +195,11 @@ fun AppNavigation() {
                     navController.navigate(Routes.SELECTION) {
                         popUpTo(Routes.SELECTION) { inclusive = true }
                     }
+                },
+                onVictory = { gameId ->
+                    navController.navigate(Routes.victory(gameId, "", "")) {
+                        popUpTo(Routes.SELECTION) { inclusive = false }
+                    }
                 }
             )
         }

@@ -40,5 +40,9 @@ val CROutline = Color(0xFFD6C98E)               // warm outline for segmented bu
 // Dark mode variants
 val CRDarkBackground = Color(0xFF1A1A2E)
 val CRDarkSurface = Color(0xFF16213E)
+val CRDarkSurfaceVariant = Color(0xFF1F2B47)
+val CRDarkOnSurfaceVariant = Color(0xFFB0B0B0)
+val CRDarkSecondaryContainer = Color(0xFF2A3A5C)
+val CRDarkOutline = Color(0xFF3A4A6C)
 val CROrangeDark = Color(0xFFFF8C33)
 val CRPinkDark = Color(0xFFF54D9E)

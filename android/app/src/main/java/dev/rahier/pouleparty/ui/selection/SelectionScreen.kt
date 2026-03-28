@@ -3,6 +3,8 @@ package dev.rahier.pouleparty.ui.selection
 import android.media.MediaPlayer
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -76,6 +78,11 @@ fun SelectionScreen(
         }
     }
 
+    // Re-check for active game when screen is resumed (e.g. back navigation)
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        viewModel.refreshActiveGame()
+    }
+
     // Blinking animation for START text
     val infiniteTransition = rememberInfiniteTransition(label = "blink")
     val alpha by infiniteTransition.animateFloat(
@@ -140,8 +147,8 @@ fun SelectionScreen(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()
-                .padding(16.dp)
-                .padding(top = 32.dp),
+                .statusBarsPadding()
+                .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             IconButton(
@@ -171,7 +178,8 @@ fun SelectionScreen(
         Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .navigationBarsPadding(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Rejoin banner

@@ -74,7 +74,8 @@ data class ChickenMapUiState(
     val powerUpNotification: String? = null,
     val lastActivatedPowerUpType: PowerUpType? = null,
     val lastSpawnBatchIndex: Int = 0,
-    val activatingPowerUpId: String? = null
+    val activatingPowerUpId: String? = null,
+    val shouldNavigateToVictory: Boolean = false
 )
 
 @HiltViewModel
@@ -374,6 +375,21 @@ class ChickenMapViewModel @Inject constructor(
                             _uiState.update { it.copy(winnerNotification = null) }
                         }
                     }
+                }
+
+                // End the game when all hunters have found the chicken
+                // Chicken is authoritative: it sets game status to DONE
+                if (!_uiState.value.shouldNavigateToVictory &&
+                    updatedGame.hunterIds.isNotEmpty() &&
+                    updatedGame.winners.size >= updatedGame.hunterIds.size) {
+                    cancelStreams()
+                    try {
+                        firestoreRepository.updateGameStatus(gameId, GameStatus.DONE)
+                    } catch (e: Exception) {
+                        android.util.Log.e("ChickenMapVM", "Failed to set game DONE when all hunters found", e)
+                    }
+                    _uiState.update { it.copy(shouldNavigateToVictory = true) }
+                    return@collect
                 }
             }
         }

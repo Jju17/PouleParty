@@ -107,9 +107,9 @@ dependencies {
     implementation("com.google.firebase:firebase-auth-ktx")
     implementation("com.google.firebase:firebase-messaging-ktx")
 
-    // Mapbox Maps
-    implementation("com.mapbox.maps:android:11.19.0")
-    implementation("com.mapbox.extension:maps-compose:11.19.0")
+    // Mapbox Maps (ndk27 artifacts for 16 KB page size support on Android 15+)
+    implementation("com.mapbox.maps:android-ndk27:11.20.2")
+    implementation("com.mapbox.extension:maps-compose-ndk27:11.20.2")
 
     // Location (Google Play Services - independent of map SDK)
     implementation("com.google.android.gms:play-services-location:21.3.0")

@@ -84,18 +84,19 @@ extension ApiClient: DependencyKey {
         findActiveGame: { userId in
             let db = Firestore.firestore()
             let activeStatuses = [Game.GameStatus.waiting.rawValue, Game.GameStatus.inProgress.rawValue]
+            var candidates: [(Game, GameRole)] = []
 
-            // Query 1: Is the user a hunter in an active game?
+            // Query 1: Is the user a hunter in active games?
             do {
                 let hunterSnapshot = try await db.collection(gamesCollection)
                     .whereField("hunterIds", arrayContains: userId)
                     .whereField("status", in: activeStatuses)
-                    .limit(to: 1)
                     .getDocuments()
 
-                if let doc = hunterSnapshot.documents.first,
-                   let game = try? doc.data(as: Game.self) {
-                    return (game, .hunter)
+                for doc in hunterSnapshot.documents {
+                    if let game = try? doc.data(as: Game.self) {
+                        candidates.append((game, .hunter))
+                    }
                 }
             } catch {
                 logger.error("findActiveGame hunter query failed: \(error.localizedDescription)")
@@ -106,18 +107,19 @@ extension ApiClient: DependencyKey {
                 let creatorSnapshot = try await db.collection(gamesCollection)
                     .whereField("creatorId", isEqualTo: userId)
                     .whereField("status", in: activeStatuses)
-                    .limit(to: 1)
                     .getDocuments()
 
-                if let doc = creatorSnapshot.documents.first,
-                   let game = try? doc.data(as: Game.self) {
-                    return (game, .chicken)
+                for doc in creatorSnapshot.documents {
+                    if let game = try? doc.data(as: Game.self) {
+                        candidates.append((game, .chicken))
+                    }
                 }
             } catch {
                 logger.error("findActiveGame creator query failed: \(error.localizedDescription)")
             }
 
-            return nil
+            // Return the most recently started game
+            return candidates.max(by: { $0.0.startDate < $1.0.startDate })
         },
         addWinner: { gameId, winner in
             try await withRetry("addWinner(\(gameId))") {

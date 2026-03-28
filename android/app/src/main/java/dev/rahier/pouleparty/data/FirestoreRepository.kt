@@ -78,28 +78,32 @@ class FirestoreRepository @Inject constructor(
             GameStatus.IN_PROGRESS.firestoreValue
         )
         try {
-            // Check if user is a hunter in an active game
+            val candidates = mutableListOf<Pair<Game, PlayerRole>>()
+
+            // Check if user is a hunter in active games
             val hunterSnapshot = firestore.collection(AppConstants.COLLECTION_GAMES)
                 .whereArrayContains("hunterIds", userId)
                 .whereIn("status", activeStatuses)
-                .limit(1)
                 .get()
                 .await()
-            hunterSnapshot.documents.firstOrNull()?.let { doc ->
+            hunterSnapshot.documents.forEach { doc ->
                 val game = doc.toObject(Game::class.java)?.copy(id = doc.id)
-                if (game != null) return Pair(game, PlayerRole.HUNTER)
+                if (game != null) candidates.add(Pair(game, PlayerRole.HUNTER))
             }
-            // Check if user is the chicken (creator) of an active game
+
+            // Check if user is the chicken (creator) of active games
             val chickenSnapshot = firestore.collection(AppConstants.COLLECTION_GAMES)
                 .whereEqualTo("creatorId", userId)
                 .whereIn("status", activeStatuses)
-                .limit(1)
                 .get()
                 .await()
-            chickenSnapshot.documents.firstOrNull()?.let { doc ->
+            chickenSnapshot.documents.forEach { doc ->
                 val game = doc.toObject(Game::class.java)?.copy(id = doc.id)
-                if (game != null) return Pair(game, PlayerRole.CHICKEN)
+                if (game != null) candidates.add(Pair(game, PlayerRole.CHICKEN))
             }
+
+            // Return the most recently started game
+            return candidates.maxByOrNull { it.first.startDate.time }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to find active game for user $userId", e)
         }

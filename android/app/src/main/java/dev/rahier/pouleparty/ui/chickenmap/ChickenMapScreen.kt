@@ -43,6 +43,7 @@ import dev.rahier.pouleparty.ui.components.PowerUpInventoryDialog
 import dev.rahier.pouleparty.ui.components.PowerUpNotificationOverlay
 import dev.rahier.pouleparty.ui.components.GameStartCountdownOverlay
 import dev.rahier.pouleparty.ui.components.PreGameOverlay
+import dev.rahier.pouleparty.ui.chickenconfig.powerUpEmoji
 import dev.rahier.pouleparty.ui.endgamecode.EndGameCodeContent
 import dev.rahier.pouleparty.ui.theme.*
 
@@ -50,10 +51,18 @@ import dev.rahier.pouleparty.ui.theme.*
 @Composable
 fun ChickenMapScreen(
     onGoToMenu: () -> Unit,
+    onVictory: (gameId: String) -> Unit = {},
     viewModel: ChickenMapViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // Navigate to victory when all hunters found
+    LaunchedEffect(state.shouldNavigateToVictory) {
+        if (state.shouldNavigateToVictory) {
+            onVictory(state.game.id)
+        }
+    }
 
     // Show winner notification as snackbar
     LaunchedEffect(state.winnerNotification) {
@@ -153,10 +162,8 @@ fun ChickenMapScreen(
                         true
                     }
                 ) {
-                    iconImage = IconImage("marker-15")
-                    iconColor = CROrange
-                    textField = powerUp.typeEnum.title
-                    textColor = CROrange
+                    textField = powerUpEmoji(powerUp.typeEnum)
+                    textSize = 28.0
                 }
             }
 

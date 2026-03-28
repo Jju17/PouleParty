@@ -177,11 +177,6 @@ fun OnboardingScreen(
                             if (!isNextDisabled) GradientFire
                             else Brush.linearGradient(listOf(CROrange.copy(alpha = 0.4f), CRPink.copy(alpha = 0.4f)))
                         )
-                        .border(
-                            3.dp,
-                            MaterialTheme.colorScheme.onBackground.copy(alpha = if (!isNextDisabled) 1f else 0.2f),
-                            RoundedCornerShape(50.dp)
-                        )
                         .clickable(enabled = !isNextDisabled) {
                             if (viewModel.isLastPage) {
                                 if (viewModel.canCompleteOnboarding()) {
@@ -277,7 +272,7 @@ private fun SlideWelcome() {
         titleSize = 36,
         icon = {
             Image(
-                painter = painterResource(R.drawable.logo),
+                painter = painterResource(R.drawable.chicken),
                 contentDescription = stringResource(R.string.app_name),
                 modifier = Modifier.size(160.dp)
             )
@@ -345,7 +340,6 @@ private fun SlideLocation(
                         .shadow(4.dp, RoundedCornerShape(50.dp))
                         .clip(RoundedCornerShape(50.dp))
                         .background(GradientFire)
-                        .border(3.dp, MaterialTheme.colorScheme.onBackground, RoundedCornerShape(50.dp))
                         .clickable { onRequestBackgroundLocation() },
                     contentAlignment = Alignment.Center
                 ) {
@@ -371,7 +365,6 @@ private fun SlideLocation(
                         .shadow(4.dp, RoundedCornerShape(50.dp))
                         .clip(RoundedCornerShape(50.dp))
                         .background(GradientFire)
-                        .border(3.dp, MaterialTheme.colorScheme.onBackground, RoundedCornerShape(50.dp))
                         .clickable { onRequestFineLocation() },
                     contentAlignment = Alignment.Center
                 ) {
@@ -427,7 +420,6 @@ private fun SlideNotifications(
                     .shadow(4.dp, RoundedCornerShape(50.dp))
                     .clip(RoundedCornerShape(50.dp))
                     .background(GradientFire)
-                    .border(3.dp, MaterialTheme.colorScheme.onBackground, RoundedCornerShape(50.dp))
                     .clickable { onRequestPermission() },
                 contentAlignment = Alignment.Center
             ) {
