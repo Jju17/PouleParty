@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.rahier.pouleparty.model.PowerUpType
 import dev.rahier.pouleparty.ui.chickenconfig.powerUpColor
+import dev.rahier.pouleparty.ui.chickenconfig.powerUpTextColor
 import dev.rahier.pouleparty.ui.theme.CROrange
 
 @Composable
@@ -32,7 +33,7 @@ fun PowerUpNotificationOverlay(
         ) {
             Text(
                 text = it,
-                color = Color.White,
+                color = powerUpType?.let { type -> powerUpTextColor(type) } ?: Color.White,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier

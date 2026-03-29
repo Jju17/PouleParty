@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
@@ -29,6 +30,22 @@ fun powerUpColor(type: PowerUpType): Color = when (type) {
     PowerUpType.ZONE_PREVIEW -> PowerupVision
     PowerUpType.DECOY -> PowerupDecoy
     PowerUpType.JAMMER -> PowerupJammer
+}
+
+/** Darker variant for gradient bottom (matches DA). */
+fun powerUpColorDark(type: PowerUpType): Color = when (type) {
+    PowerUpType.INVISIBILITY -> PowerupStealthDark
+    PowerUpType.ZONE_FREEZE -> PowerupFreezeDark
+    PowerUpType.RADAR_PING -> PowerupRadarDark
+    PowerUpType.ZONE_PREVIEW -> PowerupVisionDark
+    PowerUpType.DECOY -> PowerupDecoyDark
+    PowerUpType.JAMMER -> PowerupJammerDark
+}
+
+/** Text color that ensures readability on the power-up's background color. */
+fun powerUpTextColor(type: PowerUpType): Color = when (type) {
+    PowerUpType.ZONE_FREEZE, PowerUpType.DECOY, PowerUpType.JAMMER -> Color.Black
+    PowerUpType.INVISIBILITY, PowerUpType.RADAR_PING, PowerUpType.ZONE_PREVIEW -> Color.White
 }
 
 fun powerUpEmoji(type: PowerUpType): String = when (type) {
@@ -78,7 +95,8 @@ fun PowerUpSelectionScreen(
                 SectionHeader(
                     title = "Chicken Power-Ups",
                     emoji = "🐔",
-                    gradient = GradientChicken
+                    gradient = GradientChicken,
+                    textColor = Color.Black
                 )
             }
             items(chickenPowerUps) { type ->
@@ -106,7 +124,7 @@ fun PowerUpSelectionScreen(
 }
 
 @Composable
-private fun SectionHeader(title: String, emoji: String, gradient: Brush) {
+private fun SectionHeader(title: String, emoji: String, gradient: Brush, textColor: Color = Color.White) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -116,7 +134,7 @@ private fun SectionHeader(title: String, emoji: String, gradient: Brush) {
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Text(emoji, fontSize = 24.sp)
-        Text(title, style = bangerStyle(20), color = Color.White)
+        Text(title, style = bangerStyle(20), color = textColor)
     }
 }
 
@@ -128,54 +146,88 @@ private fun PowerUpCard(
     onClick: () -> Unit
 ) {
     val color = powerUpColor(type)
+    val colorDark = powerUpColorDark(type)
     val emoji = powerUpEmoji(type)
+    val textColor = powerUpTextColor(type)
+    val shape = RoundedCornerShape(18.dp)
+
+    // Gradient background (DA: linear-gradient 135deg, color → darkerColor)
+    val cardGradient = Brush.linearGradient(
+        colors = listOf(color, colorDark),
+        start = Offset(0f, 0f),
+        end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
+    )
+    // Glossy radial overlay (DA: radial-gradient at 30% 30%, white 0.25 → transparent)
+    val glossOverlay = Brush.radialGradient(
+        colors = listOf(Color.White.copy(alpha = 0.25f), Color.Transparent),
+        center = Offset(0.3f * 400f, 0.3f * 400f),
+        radius = 300f
+    )
 
     Card(
         onClick = onClick,
         enabled = !unavailable,
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 160.dp)
-            .then(if (isEnabled) Modifier.shadow(6.dp, RoundedCornerShape(12.dp), ambientColor = color.copy(alpha = 0.4f), spotColor = color.copy(alpha = 0.4f)) else Modifier)
+            .heightIn(min = 180.dp)
+            // Neon glow (DA: box-shadow 0 0 7px rgba(color,0.5), 0 4px 12px rgba(0,0,0,0.2))
+            .then(
+                if (isEnabled) Modifier.shadow(
+                    12.dp, shape,
+                    ambientColor = color.copy(alpha = 0.5f),
+                    spotColor = color.copy(alpha = 0.5f)
+                ) else Modifier.shadow(4.dp, shape, ambientColor = Color.Black.copy(alpha = 0.05f))
+            )
             .then(if (unavailable) Modifier.alpha(0.5f) else Modifier),
-        shape = RoundedCornerShape(12.dp),
+        shape = shape,
         colors = CardDefaults.cardColors(
-            containerColor = if (isEnabled) color else MaterialTheme.colorScheme.surfaceVariant
+            containerColor = if (isEnabled) Color.Transparent else MaterialTheme.colorScheme.surfaceVariant
         )
     ) {
-        Column(
-            modifier = Modifier.padding(vertical = 14.dp, horizontal = 8.dp).fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .then(if (isEnabled) Modifier.background(cardGradient) else Modifier)
         ) {
-            Text(emoji, fontSize = 28.sp)
-            Text(
-                type.title,
-                style = gameboyStyle(10),
-                color = if (isEnabled) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            if (unavailable) {
-                Text(
-                    "Not available in this mode",
-                    fontSize = 8.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                    textAlign = TextAlign.Center
-                )
-            } else {
-                Text(
-                    type.description,
-                    fontSize = 9.sp,
-                    color = if (isEnabled) Color.White.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                    textAlign = TextAlign.Center,
-                    maxLines = 3
-                )
+            // Glossy overlay
+            if (isEnabled) {
+                Box(modifier = Modifier.fillMaxSize().background(glossOverlay))
             }
-            type.durationSeconds?.let { duration ->
+
+            Column(
+                modifier = Modifier.padding(vertical = 16.dp, horizontal = 10.dp).fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(emoji, fontSize = 36.sp)
                 Text(
-                    "${duration}s",
-                    style = gameboyStyle(8),
-                    color = if (isEnabled) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    type.title,
+                    style = bangerStyle(18),
+                    color = if (isEnabled) textColor else MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                if (unavailable) {
+                    Text(
+                        "Not available in this mode",
+                        fontSize = 8.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        textAlign = TextAlign.Center
+                    )
+                } else {
+                    Text(
+                        type.description,
+                        fontSize = 9.sp,
+                        color = if (isEnabled) textColor.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        textAlign = TextAlign.Center,
+                        maxLines = 3
+                    )
+                }
+                type.durationSeconds?.let { duration ->
+                    Text(
+                        "${duration}s",
+                        style = gameboyStyle(8),
+                        color = if (isEnabled) textColor.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    )
+                }
             }
         }
     }

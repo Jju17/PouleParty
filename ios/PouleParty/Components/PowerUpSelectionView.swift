@@ -39,7 +39,7 @@ struct PowerUpSelectionView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     // Chicken section
-                    sectionHeader(title: "Chicken Power-Ups", emoji: "🐔", gradient: Color.gradientChicken)
+                    sectionHeader(title: "Chicken Power-Ups", emoji: "🐔", gradient: Color.gradientChicken, textColor: .black)
                     LazyVGrid(columns: columns, spacing: 12) {
                         ForEach(chickenPowerUps, id: \.self) { type in
                             let unavailable = isUnavailable(type)
@@ -75,12 +75,12 @@ struct PowerUpSelectionView: View {
         }
     }
 
-    private func sectionHeader(title: String, emoji: String, gradient: LinearGradient) -> some View {
+    private func sectionHeader(title: String, emoji: String, gradient: LinearGradient, textColor: Color = .white) -> some View {
         HStack(spacing: 8) {
             Text(emoji)
                 .font(.title2)
             BangerText(title, size: 20)
-                .foregroundStyle(.white)
+                .foregroundStyle(textColor)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 12)

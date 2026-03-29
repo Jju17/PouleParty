@@ -96,6 +96,7 @@ fun ChickenConfigScreen(
 
     val formBackground = MaterialTheme.colorScheme.background
     val formCardColors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    val formCardElevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     val isZoneConfigured = state.isZoneConfigured
 
     Scaffold(
@@ -132,12 +133,13 @@ fun ChickenConfigScreen(
                     gameCode = state.game.gameCode,
                     codeCopied = state.codeCopied,
                     onCodeCopied = { viewModel.onCodeCopied() },
-                    colors = formCardColors
+                    colors = formCardColors,
+                    elevation = formCardElevation
                 )
 
                 // --- Schedule section ---
                 SectionHeader(stringResource(R.string.schedule_label))
-                Card(modifier = Modifier.fillMaxWidth(), colors = formCardColors) {
+                Card(modifier = Modifier.fillMaxWidth(), colors = formCardColors, elevation = formCardElevation) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         // Start time row
                         Row(
@@ -187,7 +189,7 @@ fun ChickenConfigScreen(
 
                 // --- Game Mode section ---
                 SectionHeader(stringResource(R.string.game_mode))
-                Card(modifier = Modifier.fillMaxWidth(), colors = formCardColors) {
+                Card(modifier = Modifier.fillMaxWidth(), colors = formCardColors, elevation = formCardElevation) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         // Game mode dropdown
                         var modeExpanded by remember { mutableStateOf(false) }
@@ -250,7 +252,7 @@ fun ChickenConfigScreen(
 
                 // --- Power-Ups section ---
                 SectionHeader(stringResource(R.string.power_ups_label))
-                Card(modifier = Modifier.fillMaxWidth(), colors = formCardColors) {
+                Card(modifier = Modifier.fillMaxWidth(), colors = formCardColors, elevation = formCardElevation) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -306,7 +308,8 @@ fun ChickenConfigScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { viewModel.onMapSetupTapped() },
-                    colors = formCardColors
+                    colors = formCardColors,
+                    elevation = formCardElevation
                 ) {
                     // Inline map preview (tap to open full map config)
                     Box(modifier = Modifier.padding(8.dp)) {
@@ -328,7 +331,7 @@ fun ChickenConfigScreen(
                 // --- Advanced settings (expert mode only) ---
                 if (state.isExpertMode) {
                     SectionHeader(stringResource(R.string.advanced_label))
-                    Card(modifier = Modifier.fillMaxWidth(), colors = formCardColors) {
+                    Card(modifier = Modifier.fillMaxWidth(), colors = formCardColors, elevation = formCardElevation) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -365,7 +368,7 @@ fun ChickenConfigScreen(
 
                 // --- Head Start section ---
                 SectionHeader(stringResource(R.string.head_start_label))
-                Card(modifier = Modifier.fillMaxWidth(), colors = formCardColors) {
+                Card(modifier = Modifier.fillMaxWidth(), colors = formCardColors, elevation = formCardElevation) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -385,7 +388,7 @@ fun ChickenConfigScreen(
 
                 // --- Settings mode toggle (Normal / Expert) ---
                 SectionHeader(stringResource(R.string.mode_label))
-                Card(modifier = Modifier.fillMaxWidth(), colors = formCardColors) {
+                Card(modifier = Modifier.fillMaxWidth(), colors = formCardColors, elevation = formCardElevation) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                             SegmentedButton(

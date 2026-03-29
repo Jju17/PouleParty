@@ -40,6 +40,8 @@ import androidx.compose.ui.unit.sp
 import com.google.firebase.Timestamp
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.PowerUpType
+import dev.rahier.pouleparty.ui.chickenconfig.powerUpColor
+import dev.rahier.pouleparty.ui.chickenconfig.powerUpTextColor
 import dev.rahier.pouleparty.ui.theme.*
 import kotlinx.coroutines.delay
 import java.util.Date
@@ -107,18 +109,12 @@ private fun BadgeItem(
     isExpanded: Boolean,
     onClick: () -> Unit
 ) {
-    val bgColor = when (type) {
-        PowerUpType.INVISIBILITY -> PowerupStealth
-        PowerUpType.ZONE_FREEZE -> PowerupFreeze
-        PowerUpType.RADAR_PING -> PowerupRadar
-        PowerUpType.ZONE_PREVIEW -> PowerupVision
-        PowerUpType.DECOY -> PowerupDecoy
-        PowerUpType.JAMMER -> PowerupJammer
-    }
+    val bgColor = powerUpColor(type)
+    val fgColor = powerUpTextColor(type)
 
     Row(
         modifier = Modifier
-            .shadow(4.dp, RoundedCornerShape(18.dp))
+            .shadow(8.dp, RoundedCornerShape(18.dp), ambientColor = bgColor.copy(alpha = 0.6f), spotColor = bgColor.copy(alpha = 0.6f))
             .clip(RoundedCornerShape(18.dp))
             .background(bgColor)
             .clickable(onClick = onClick)
@@ -136,7 +132,7 @@ private fun BadgeItem(
                 PowerUpType.JAMMER -> Icons.Default.SensorsOff
             },
             contentDescription = type.title,
-            tint = Color.White,
+            tint = fgColor,
             modifier = Modifier
                 .then(if (!isExpanded) Modifier.padding(8.dp) else Modifier)
                 .size(20.dp)
@@ -152,13 +148,13 @@ private fun BadgeItem(
                 Column {
                     Text(
                         type.title,
-                        color = Color.White,
+                        color = fgColor,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
                         "${remainingSeconds}s remaining",
-                        color = Color.White.copy(alpha = 0.8f),
+                        color = fgColor.copy(alpha = 0.8f),
                         fontSize = 10.sp
                     )
                 }

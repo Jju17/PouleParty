@@ -24,11 +24,22 @@ val PowerupVision = Color(0xFF4D96FF)
 val PowerupDecoy = Color(0xFFDFFF00)
 val PowerupJammer = Color(0xFFFFD700)
 
+// Power-ups darker variants (for gradient bottom)
+val PowerupStealthDark = Color(0xFF8B2F8B)
+val PowerupFreezeDark = Color(0xFF009BA8)
+val PowerupRadarDark = Color(0xFFC44D22)
+val PowerupVisionDark = Color(0xFF2F6BC4)
+val PowerupDecoyDark = Color(0xFFA8BF00)
+val PowerupJammerDark = Color(0xFFC4A500)
+
 // Semantic
 val Success = Color(0xFF39FF14)
 val Danger = Color(0xFFCC0530)
 val Warning = Color(0xFFFFD23F)
 val Info = Color(0xFF4D96FF)
+
+// Form card surface (DA: --surface = white, contrasts with beige background)
+val CRCardSurface = Color(0xFFFFFFFF)
 
 // Surface variants (warm tones for cards, segmented buttons, etc.)
 val CRSurfaceVariant = Color(0xFFF5F0C8)       // warm beige for card backgrounds
