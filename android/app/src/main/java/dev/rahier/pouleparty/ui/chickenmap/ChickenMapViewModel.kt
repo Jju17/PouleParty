@@ -178,6 +178,8 @@ class ChickenMapViewModel @Inject constructor(
 
                 // Game over by time
                 if (checkGameOverByTime(state.game.endDate)) {
+                    // Update status BEFORE cancelling streams to avoid coroutine self-cancellation
+                    try { firestoreRepository.updateGameStatus(gameId, GameStatus.DONE) } catch (e: Exception) { Log.e("ChickenMapVM", "Failed to update game status", e) }
                     cancelStreams()
                     _uiState.update {
                         it.copy(
@@ -185,7 +187,6 @@ class ChickenMapViewModel @Inject constructor(
                             gameOverMessage = "Time's up! The Chicken survived!"
                         )
                     }
-                    try { firestoreRepository.updateGameStatus(gameId, GameStatus.DONE) } catch (e: Exception) { Log.e("ChickenMapVM", "Failed to update game status", e) }
                     continue
                 }
 
@@ -205,6 +206,8 @@ class ChickenMapViewModel @Inject constructor(
                 )
                 if (radiusResult != null) {
                     if (radiusResult.isGameOver) {
+                        // Update status BEFORE cancelling streams to avoid coroutine self-cancellation
+                        try { firestoreRepository.updateGameStatus(gameId, GameStatus.DONE) } catch (e: Exception) { Log.e("ChickenMapVM", "Failed to update game status", e) }
                         cancelStreams()
                         _uiState.update {
                             it.copy(
@@ -212,7 +215,6 @@ class ChickenMapViewModel @Inject constructor(
                                 gameOverMessage = radiusResult.gameOverMessage ?: "Game over"
                             )
                         }
-                        try { firestoreRepository.updateGameStatus(gameId, GameStatus.DONE) } catch (e: Exception) { Log.e("ChickenMapVM", "Failed to update game status", e) }
                     } else {
                         _uiState.update {
                             it.copy(
@@ -382,12 +384,12 @@ class ChickenMapViewModel @Inject constructor(
                 if (!_uiState.value.shouldNavigateToVictory &&
                     updatedGame.hunterIds.isNotEmpty() &&
                     updatedGame.winners.size >= updatedGame.hunterIds.size) {
-                    cancelStreams()
                     try {
                         firestoreRepository.updateGameStatus(gameId, GameStatus.DONE)
                     } catch (e: Exception) {
                         android.util.Log.e("ChickenMapVM", "Failed to set game DONE when all hunters found", e)
                     }
+                    cancelStreams()
                     _uiState.update { it.copy(shouldNavigateToVictory = true) }
                     return@collect
                 }

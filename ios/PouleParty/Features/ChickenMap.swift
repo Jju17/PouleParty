@@ -137,8 +137,17 @@ struct ChickenMapFeature {
                     await send(.returnedToMenu)
                 }
             case .destination(.presented(.alert(.gameOver))):
+                let gameId = state.game.id
                 return .run { send in
                     await liveActivityClient.end(nil)
+                    // Ensure status is set to done (the timer effect may have
+                    // been cancelled if the user tapped OK before it completed)
+                    do {
+                        try await apiClient.updateGameStatus(gameId, .done)
+                    } catch {
+                        Logger(subsystem: "dev.rahier.pouleparty", category: "ChickenMapFeature")
+                            .error("Failed to update game status to done: \(error.localizedDescription)")
+                    }
                     await send(.returnedToMenu)
                 }
             case .destination:

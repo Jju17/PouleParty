@@ -7,6 +7,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.GeoPoint
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.FieldValue
+import java.util.Date
 import dev.rahier.pouleparty.AppConstants
 import dev.rahier.pouleparty.model.ChickenLocation
 import dev.rahier.pouleparty.model.Game
@@ -102,8 +103,13 @@ class FirestoreRepository @Inject constructor(
                 if (game != null) candidates.add(Pair(game, PlayerRole.CHICKEN))
             }
 
+            // Filter out games whose end time has already passed (status may
+            // not have been updated to DONE yet due to network/Cloud Task lag)
+            val now = Date()
+            val stillActive = candidates.filter { it.first.endDate.after(now) }
+
             // Return the most recently started game
-            return candidates.maxByOrNull { it.first.startDate.time }
+            return stillActive.maxByOrNull { it.first.startDate.time }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to find active game for user $userId", e)
         }

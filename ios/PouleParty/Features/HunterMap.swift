@@ -157,8 +157,11 @@ struct HunterMapFeature {
                 }
             case .destination(.presented(.alert(.gameOver))):
                 state.previewCircle = nil
+                let gameId = state.game.id
                 return .run { send in
                     await liveActivityClient.end(nil)
+                    // Fallback: also update status from hunter side in case chicken didn't
+                    try? await apiClient.updateGameStatus(gameId, .done)
                     await send(.returnedToMenu)
                 }
             case .destination:

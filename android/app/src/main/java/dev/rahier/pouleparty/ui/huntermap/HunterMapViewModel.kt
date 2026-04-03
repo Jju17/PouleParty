@@ -169,6 +169,8 @@ class HunterMapViewModel @Inject constructor(
 
                 // Game over by time
                 if (checkGameOverByTime(state.game.endDate)) {
+                    // Fallback: also update status from hunter side in case chicken didn't
+                    try { firestoreRepository.updateGameStatus(gameId, GameStatus.DONE) } catch (_: Exception) {}
                     cancelStreams()
                     _uiState.update {
                         it.copy(
@@ -195,6 +197,8 @@ class HunterMapViewModel @Inject constructor(
                 )
                 if (radiusResult != null) {
                     if (radiusResult.isGameOver) {
+                        // Fallback: also update status from hunter side in case chicken didn't
+                        try { firestoreRepository.updateGameStatus(gameId, GameStatus.DONE) } catch (_: Exception) {}
                         cancelStreams()
                         _uiState.update {
                             it.copy(
@@ -507,6 +511,7 @@ class HunterMapViewModel @Inject constructor(
     }
 
     fun confirmGameOver(onGoToMenu: () -> Unit) {
+        cancelStreams()
         _uiState.update { it.copy(showGameOverAlert = false, previewCircle = null) }
         onGoToMenu()
     }

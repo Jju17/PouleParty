@@ -118,8 +118,12 @@ extension ApiClient: DependencyKey {
                 logger.error("findActiveGame creator query failed: \(error.localizedDescription)")
             }
 
+            // Filter out games whose end time has already passed (status may
+            // not have been updated to DONE yet due to network/Cloud Task lag)
+            let stillActive = candidates.filter { $0.0.endDate > .now }
+
             // Return the most recently started game
-            return candidates.max(by: { $0.0.startDate < $1.0.startDate })
+            return stillActive.max(by: { $0.0.startDate < $1.0.startDate })
         },
         addWinner: { gameId, winner in
             try await withRetry("addWinner(\(gameId))") {
