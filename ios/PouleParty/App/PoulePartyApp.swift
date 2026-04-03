@@ -25,7 +25,7 @@ struct PoulePartyApp: App {
             AppView(
                 store: Store(
                     initialState: hasCompletedOnboarding
-                        ? AppFeature.State.selection(SelectionFeature.State())
+                        ? AppFeature.State.home(HomeFeature.State())
                         : AppFeature.State.onboarding(OnboardingFeature.State())
                 ) {
                     AppFeature()

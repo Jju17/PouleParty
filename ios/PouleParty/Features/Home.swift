@@ -13,7 +13,7 @@ import Sharing
 import SwiftUI
 
 @Reducer
-struct SelectionFeature {
+struct HomeFeature {
 
     @ObservableState
     struct State: Equatable {
@@ -292,8 +292,8 @@ struct SelectionFeature {
     }
 }
 
-struct SelectionView: View {
-    @Bindable var store: StoreOf<SelectionFeature>
+struct HomeView: View {
+    @Bindable var store: StoreOf<HomeFeature>
     @State private var isVisible = true
     @State private var audioPlayer: AVAudioPlayer?
     @State private var musicButtonScale: CGFloat = 1.0
@@ -596,10 +596,10 @@ struct SelectionView: View {
 }
 
 #Preview {
-    SelectionView(
+    HomeView(
         store:
-            Store(initialState: SelectionFeature.State()) {
-                SelectionFeature()
+            Store(initialState: HomeFeature.State()) {
+                HomeFeature()
             }
     )
 }

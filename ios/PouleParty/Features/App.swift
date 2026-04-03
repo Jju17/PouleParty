@@ -17,7 +17,7 @@ struct AppFeature {
         case onboarding(OnboardingFeature.State)
         case chickenMap(ChickenMapFeature.State)
         case hunterMap(HunterMapFeature.State)
-        case selection(SelectionFeature.State)
+        case home(HomeFeature.State)
         case victory(VictoryFeature.State)
     }
 
@@ -26,7 +26,7 @@ struct AppFeature {
         case chickenMap(ChickenMapFeature.Action)
         case hunterMap(HunterMapFeature.Action)
         case onboarding(OnboardingFeature.Action)
-        case selection(SelectionFeature.Action)
+        case home(HomeFeature.Action)
         case victory(VictoryFeature.Action)
     }
 
@@ -51,12 +51,12 @@ struct AppFeature {
                     }
                 }
             case .onboarding(.onboardingCompleted):
-                state = .selection(SelectionFeature.State())
+                state = .home(HomeFeature.State())
                 return .none
             case .onboarding:
                 return .none
             case .chickenMap(.returnedToMenu):
-                state = AppFeature.State.selection(SelectionFeature.State())
+                state = AppFeature.State.home(HomeFeature.State())
                 return .none
             case .chickenMap(.allHuntersFound):
                 if case let .chickenMap(chickenState) = state {
@@ -67,21 +67,21 @@ struct AppFeature {
                     ))
                 }
                 return .none
-            case let .selection(.completedGameFound(game)):
+            case let .home(.completedGameFound(game)):
                 state = .victory(VictoryFeature.State(
                     game: game,
                     hunterId: "",
                     hunterName: ""
                 ))
                 return .none
-            case let .selection(.hunterGameJoined(game, hunterName)):
+            case let .home(.hunterGameJoined(game, hunterName)):
                 state = AppFeature.State.hunterMap(HunterMapFeature.State(game: game, hunterName: hunterName))
                 return .none
-            case let .selection(.chickenGameStarted(game)):
+            case let .home(.chickenGameStarted(game)):
                 state = AppFeature.State.chickenMap(ChickenMapFeature.State(game: game))
                 return .none
             case .hunterMap(.returnedToMenu):
-                state = AppFeature.State.selection(SelectionFeature.State())
+                state = AppFeature.State.home(HomeFeature.State())
                 return .none
             case .hunterMap(.allHuntersFound):
                 if case let .hunterMap(hunterState) = state {
@@ -102,12 +102,12 @@ struct AppFeature {
                 }
                 return .none
             case .victory(.menuButtonTapped):
-                state = AppFeature.State.selection(SelectionFeature.State())
+                state = AppFeature.State.home(HomeFeature.State())
                 return .none
-            case .selection(.accountDeletionCompleted):
+            case .home(.accountDeletionCompleted):
                 state = .onboarding(OnboardingFeature.State())
                 return .none
-            case .chickenMap, .hunterMap, .selection, .victory:
+            case .chickenMap, .hunterMap, .home, .victory:
                 return .none
             }
         }
@@ -120,8 +120,8 @@ struct AppFeature {
         .ifCaseLet(\.hunterMap, action: \.hunterMap) {
             HunterMapFeature()
         }
-        .ifCaseLet(\.selection, action: \.selection) {
-            SelectionFeature()
+        .ifCaseLet(\.home, action: \.home) {
+            HomeFeature()
         }
         .ifCaseLet(\.victory, action: \.victory) {
             VictoryFeature()
@@ -147,9 +147,9 @@ struct AppView: View {
                 if let store = store.scope(state: \.hunterMap, action: \.hunterMap) {
                     HunterMapView(store: store)
                 }
-            case .selection:
-                if let store = store.scope(state: \.selection, action: \.selection) {
-                    SelectionView(store: store)
+            case .home:
+                if let store = store.scope(state: \.home, action: \.home) {
+                    HomeView(store: store)
                 }
             case .victory:
                 if let store = store.scope(state: \.victory, action: \.victory) {
@@ -171,9 +171,9 @@ struct AppView: View {
     )
 }
 
-#Preview("Selection") {
+#Preview("Home") {
     AppView(
-        store: Store(initialState: AppFeature.State.selection(SelectionFeature.State())) {
+        store: Store(initialState: AppFeature.State.home(HomeFeature.State())) {
             AppFeature()
         }
     )

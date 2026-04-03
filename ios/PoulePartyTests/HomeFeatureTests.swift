@@ -1,5 +1,5 @@
 //
-//  SelectionFeatureTests.swift
+//  HomeFeatureTests.swift
 //  PoulePartyTests
 //
 
@@ -10,11 +10,11 @@ import Testing
 @testable import PouleParty
 
 @MainActor
-struct SelectionFeatureTests {
+struct HomeFeatureTests {
 
     @Test func startButtonTappedShowsJoinDialog() async {
-        let store = TestStore(initialState: SelectionFeature.State()) {
-            SelectionFeature()
+        let store = TestStore(initialState: HomeFeature.State()) {
+            HomeFeature()
         }
 
         await store.send(.startButtonTapped) {
@@ -23,11 +23,11 @@ struct SelectionFeatureTests {
     }
 
     @Test func confirmChickenWithoutLocationShowsAlert() async {
-        var state = SelectionFeature.State()
+        var state = HomeFeature.State()
         state.isConfirmingChicken = true
 
         let store = TestStore(initialState: state) {
-            SelectionFeature()
+            HomeFeature()
         } withDependencies: {
             $0.locationClient.authorizationStatus = { .denied }
         }
@@ -51,7 +51,7 @@ struct SelectionFeatureTests {
     }
 
     @Test func initialStateHasDefaultValues() {
-        let state = SelectionFeature.State()
+        let state = HomeFeature.State()
         #expect(state.gameCode == "")
         #expect(state.isJoiningGame == false)
         #expect(state.destination == nil)
@@ -60,14 +60,14 @@ struct SelectionFeatureTests {
     // MARK: - Rejoin Game
 
     @Test func initialStateHasNilActiveGame() {
-        let state = SelectionFeature.State()
+        let state = HomeFeature.State()
         #expect(state.activeGame == nil)
         #expect(state.activeGameRole == nil)
     }
 
     @Test func onTaskWithNoUserIdDoesNothing() async {
-        let store = TestStore(initialState: SelectionFeature.State()) {
-            SelectionFeature()
+        let store = TestStore(initialState: HomeFeature.State()) {
+            HomeFeature()
         } withDependencies: {
             $0.userClient.currentUserId = { nil }
         }
@@ -77,8 +77,8 @@ struct SelectionFeatureTests {
 
     @Test func onTaskFindsActiveGameAsHunter() async {
         let game = Game.mock
-        let store = TestStore(initialState: SelectionFeature.State()) {
-            SelectionFeature()
+        let store = TestStore(initialState: HomeFeature.State()) {
+            HomeFeature()
         } withDependencies: {
             $0.userClient.currentUserId = { "user-123" }
             $0.apiClient.findActiveGame = { _ in (game, .hunter) }
@@ -93,8 +93,8 @@ struct SelectionFeatureTests {
 
     @Test func onTaskFindsActiveGameAsChicken() async {
         let game = Game.mock
-        let store = TestStore(initialState: SelectionFeature.State()) {
-            SelectionFeature()
+        let store = TestStore(initialState: HomeFeature.State()) {
+            HomeFeature()
         } withDependencies: {
             $0.userClient.currentUserId = { "user-123" }
             $0.apiClient.findActiveGame = { _ in (game, .chicken) }
@@ -108,8 +108,8 @@ struct SelectionFeatureTests {
     }
 
     @Test func onTaskFindsNoActiveGame() async {
-        let store = TestStore(initialState: SelectionFeature.State()) {
-            SelectionFeature()
+        let store = TestStore(initialState: HomeFeature.State()) {
+            HomeFeature()
         } withDependencies: {
             $0.userClient.currentUserId = { "user-123" }
             $0.apiClient.findActiveGame = { _ in nil }
@@ -120,12 +120,12 @@ struct SelectionFeatureTests {
     }
 
     @Test func rejoinGameTappedAsHunterNavigatesToHunterMap() async {
-        var state = SelectionFeature.State()
+        var state = HomeFeature.State()
         state.activeGame = Game.mock
         state.activeGameRole = .hunter
 
         let store = TestStore(initialState: state) {
-            SelectionFeature()
+            HomeFeature()
         }
 
         await store.send(.rejoinGameTapped) {
@@ -136,12 +136,12 @@ struct SelectionFeatureTests {
     }
 
     @Test func rejoinGameTappedAsChickenNavigatesToChickenMap() async {
-        var state = SelectionFeature.State()
+        var state = HomeFeature.State()
         state.activeGame = Game.mock
         state.activeGameRole = .chicken
 
         let store = TestStore(initialState: state) {
-            SelectionFeature()
+            HomeFeature()
         }
 
         await store.send(.rejoinGameTapped) {
@@ -152,8 +152,8 @@ struct SelectionFeatureTests {
     }
 
     @Test func rejoinGameTappedWithNoActiveGameDoesNothing() async {
-        let store = TestStore(initialState: SelectionFeature.State()) {
-            SelectionFeature()
+        let store = TestStore(initialState: HomeFeature.State()) {
+            HomeFeature()
         }
 
         await store.send(.rejoinGameTapped)
