@@ -1,4 +1,4 @@
-package dev.rahier.pouleparty.ui.selection
+package dev.rahier.pouleparty.ui.home
 
 import android.content.SharedPreferences
 import androidx.lifecycle.ViewModel
@@ -19,7 +19,7 @@ import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
 
-data class SelectionUiState(
+data class HomeUiState(
     val isShowingChickenConfirm: Boolean = false,
     val isShowingJoinDialog: Boolean = false,
     val isShowingGameRules: Boolean = false,
@@ -33,15 +33,15 @@ data class SelectionUiState(
 )
 
 @HiltViewModel
-class SelectionViewModel @Inject constructor(
+class HomeViewModel @Inject constructor(
     private val firestoreRepository: FirestoreRepository,
     private val locationRepository: LocationRepository,
     private val prefs: SharedPreferences,
     private val auth: FirebaseAuth
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(SelectionUiState())
-    val uiState: StateFlow<SelectionUiState> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow(HomeUiState())
+    val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
     init {
         _uiState.update {

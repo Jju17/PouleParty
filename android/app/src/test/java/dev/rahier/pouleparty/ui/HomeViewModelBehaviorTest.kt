@@ -7,7 +7,7 @@ import dev.rahier.pouleparty.AppConstants
 import dev.rahier.pouleparty.data.FirestoreRepository
 import dev.rahier.pouleparty.data.LocationRepository
 import dev.rahier.pouleparty.model.Game
-import dev.rahier.pouleparty.ui.selection.SelectionViewModel
+import dev.rahier.pouleparty.ui.home.HomeViewModel
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -22,7 +22,7 @@ import org.junit.Before
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class SelectionViewModelBehaviorTest {
+class HomeViewModelBehaviorTest {
 
     private val testDispatcher = StandardTestDispatcher()
     private lateinit var firestoreRepository: FirestoreRepository
@@ -54,8 +54,8 @@ class SelectionViewModelBehaviorTest {
         }
     }
 
-    private fun createViewModel(): SelectionViewModel {
-        return SelectionViewModel(
+    private fun createViewModel(): HomeViewModel {
+        return HomeViewModel(
             firestoreRepository = firestoreRepository,
             locationRepository = locationRepository,
             prefs = prefs,
@@ -77,20 +77,22 @@ class SelectionViewModelBehaviorTest {
     @Test
     fun `checkForActiveGame finds hunter game`() {
         mockAuthUser("user-123")
-        coEvery { firestoreRepository.findActiveGame("user-123") } returns Pair(Game.mock, PlayerRole.HUNTER)
+        val game = Game.mock
+        coEvery { firestoreRepository.findActiveGame("user-123") } returns Pair(game, PlayerRole.HUNTER)
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
-        assertEquals(Game.mock, vm.uiState.value.activeGame)
+        assertEquals(game, vm.uiState.value.activeGame)
         assertEquals(PlayerRole.HUNTER, vm.uiState.value.activeGameRole)
     }
 
     @Test
     fun `checkForActiveGame finds chicken game`() {
         mockAuthUser("user-123")
-        coEvery { firestoreRepository.findActiveGame("user-123") } returns Pair(Game.mock, PlayerRole.CHICKEN)
+        val game = Game.mock
+        coEvery { firestoreRepository.findActiveGame("user-123") } returns Pair(game, PlayerRole.CHICKEN)
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
-        assertEquals(Game.mock, vm.uiState.value.activeGame)
+        assertEquals(game, vm.uiState.value.activeGame)
         assertEquals(PlayerRole.CHICKEN, vm.uiState.value.activeGameRole)
     }
 
@@ -109,7 +111,8 @@ class SelectionViewModelBehaviorTest {
     @Test
     fun `rejoinGame as hunter calls onRejoinAsHunter with game id and nickname`() {
         mockAuthUser("user-123")
-        coEvery { firestoreRepository.findActiveGame("user-123") } returns Pair(Game.mock, PlayerRole.HUNTER)
+        val game = Game.mock
+        coEvery { firestoreRepository.findActiveGame("user-123") } returns Pair(game, PlayerRole.HUNTER)
         every { prefs.getString(AppConstants.PREF_USER_NICKNAME, "") } returns "Julien"
 
         val vm = createViewModel()
@@ -122,14 +125,15 @@ class SelectionViewModelBehaviorTest {
             onRejoinAsHunter = { id, name -> hunterGameId = id; hunterName = name }
         )
 
-        assertEquals(Game.mock.id, hunterGameId)
+        assertEquals(game.id, hunterGameId)
         assertEquals("Julien", hunterName)
     }
 
     @Test
     fun `rejoinGame as hunter uses default name when nickname is empty`() {
         mockAuthUser("user-123")
-        coEvery { firestoreRepository.findActiveGame("user-123") } returns Pair(Game.mock, PlayerRole.HUNTER)
+        val game = Game.mock
+        coEvery { firestoreRepository.findActiveGame("user-123") } returns Pair(game, PlayerRole.HUNTER)
         every { prefs.getString(AppConstants.PREF_USER_NICKNAME, "") } returns ""
 
         val vm = createViewModel()
@@ -147,7 +151,8 @@ class SelectionViewModelBehaviorTest {
     @Test
     fun `rejoinGame as chicken calls onRejoinAsChicken with game id`() {
         mockAuthUser("user-123")
-        coEvery { firestoreRepository.findActiveGame("user-123") } returns Pair(Game.mock, PlayerRole.CHICKEN)
+        val game = Game.mock
+        coEvery { firestoreRepository.findActiveGame("user-123") } returns Pair(game, PlayerRole.CHICKEN)
 
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
@@ -158,13 +163,14 @@ class SelectionViewModelBehaviorTest {
             onRejoinAsHunter = { _, _ -> fail("Should not call hunter callback") }
         )
 
-        assertEquals(Game.mock.id, chickenGameId)
+        assertEquals(game.id, chickenGameId)
     }
 
     @Test
     fun `rejoinGame clears active game from state`() {
         mockAuthUser("user-123")
-        coEvery { firestoreRepository.findActiveGame("user-123") } returns Pair(Game.mock, PlayerRole.CHICKEN)
+        val game = Game.mock
+        coEvery { firestoreRepository.findActiveGame("user-123") } returns Pair(game, PlayerRole.CHICKEN)
 
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()

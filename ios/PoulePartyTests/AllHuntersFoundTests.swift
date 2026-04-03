@@ -143,8 +143,7 @@ struct AllHuntersFoundTests {
 
         var state = ChickenMapFeature.State(game: game)
         state.previousWinnersCount = 0 // Already initialized
-        state.hasGameStarted = true
-        state.hasHuntStarted = true
+        state.nowDate = .now // Ensure game/hunt appear started (startDate is in the past)
 
         let store = TestStore(initialState: state) {
             ChickenMapFeature()
@@ -161,15 +160,14 @@ struct AllHuntersFoundTests {
 
         store.exhaustivity = .off
         await store.send(.gameUpdated(updatedGame))
-        await store.receive(.allHuntersFound)
+        await store.receive(\.allHuntersFound)
     }
 
     // MARK: - findActiveGame ordering logic
 
     @Test func mostRecentGameSelectedFromCandidates() {
         let olderGame = Game.mock
-        var newer = Game.mock
-        newer.id = "game-new"
+        var newer = Game(id: "game-new")
         newer.startDate = .now.addingTimeInterval(1000)
 
         let candidates: [(Game, GameRole)] = [

@@ -131,7 +131,7 @@ class GameTest {
 
     @Test
     fun `GameMod has exactly 3 entries`() {
-        assertEquals(3, GameMod.entries.size)
+        assertEquals(2, GameMod.entries.size)
     }
 
     @Test

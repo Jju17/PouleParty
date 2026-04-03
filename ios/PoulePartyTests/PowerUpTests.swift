@@ -3,6 +3,7 @@
 //  PoulePartyTests
 //
 
+import CoreLocation
 import Testing
 import FirebaseFirestore
 @testable import PouleParty

@@ -1,4 +1,4 @@
-package dev.rahier.pouleparty.ui.selection
+package dev.rahier.pouleparty.ui.home
 
 import android.media.MediaPlayer
 import androidx.compose.animation.core.*
@@ -31,13 +31,13 @@ import dev.rahier.pouleparty.ui.rules.GameRulesScreen
 import dev.rahier.pouleparty.ui.theme.*
 
 @Composable
-fun SelectionScreen(
+fun HomeScreen(
     onNavigateToChickenConfig: (String) -> Unit,
     onNavigateToChickenMap: (String) -> Unit,
     onNavigateToHunterMap: (String, String) -> Unit,
     onNavigateToVictory: (String) -> Unit,
     onNavigateToSettings: () -> Unit = {},
-    viewModel: SelectionViewModel = hiltViewModel()
+    viewModel: HomeViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current

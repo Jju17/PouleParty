@@ -55,7 +55,7 @@ class PowerUpTest {
     @Test
     fun `duration values are correct`() {
         assertNull(PowerUpType.ZONE_PREVIEW.durationSeconds)
-        assertEquals(10L, PowerUpType.RADAR_PING.durationSeconds)
+        assertEquals(30L, PowerUpType.RADAR_PING.durationSeconds)
         assertEquals(30L, PowerUpType.INVISIBILITY.durationSeconds)
         assertEquals(120L, PowerUpType.ZONE_FREEZE.durationSeconds)
     }

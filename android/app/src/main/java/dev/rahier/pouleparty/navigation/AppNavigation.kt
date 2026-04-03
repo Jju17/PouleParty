@@ -36,13 +36,13 @@ import dev.rahier.pouleparty.ui.chickenconfig.ChickenConfigScreen
 import dev.rahier.pouleparty.ui.chickenmap.ChickenMapScreen
 import dev.rahier.pouleparty.ui.huntermap.HunterMapScreen
 import dev.rahier.pouleparty.ui.onboarding.OnboardingScreen
-import dev.rahier.pouleparty.ui.selection.SelectionScreen
+import dev.rahier.pouleparty.ui.home.HomeScreen
 import dev.rahier.pouleparty.ui.settings.SettingsScreen
 import dev.rahier.pouleparty.ui.victory.VictoryScreen
 
 object Routes {
     const val ONBOARDING = "onboarding"
-    const val SELECTION = "selection"
+    const val HOME = "home"
     const val CHICKEN_CONFIG = "chicken_config/{gameId}"
     const val CHICKEN_MAP = "chicken_map/{gameId}"
     const val HUNTER_MAP = "hunter_map/{gameId}/{hunterName}"
@@ -120,7 +120,7 @@ fun AppNavigation() {
 
     if (!isAuthReady) return
 
-    val startDestination = if (hasCompletedOnboarding) Routes.SELECTION else Routes.ONBOARDING
+    val startDestination = if (hasCompletedOnboarding) Routes.HOME else Routes.ONBOARDING
 
     NavHost(navController = navController, startDestination = startDestination) {
 
@@ -131,31 +131,31 @@ fun AppNavigation() {
                         .putBoolean(AppConstants.PREF_ONBOARDING_COMPLETED, true)
                         .putString(AppConstants.PREF_USER_NICKNAME, nickname)
                         .apply()
-                    navController.navigate(Routes.SELECTION) {
+                    navController.navigate(Routes.HOME) {
                         popUpTo(Routes.ONBOARDING) { inclusive = true }
                     }
                 }
             )
         }
 
-        composable(Routes.SELECTION) {
-            SelectionScreen(
+        composable(Routes.HOME) {
+            HomeScreen(
                 onNavigateToChickenConfig = { gameId ->
                     navController.navigate(Routes.chickenConfig(gameId))
                 },
                 onNavigateToChickenMap = { gameId ->
                     navController.navigate(Routes.chickenMap(gameId)) {
-                        popUpTo(Routes.SELECTION) { inclusive = false }
+                        popUpTo(Routes.HOME) { inclusive = false }
                     }
                 },
                 onNavigateToHunterMap = { gameId, hunterName ->
                     navController.navigate(Routes.hunterMap(gameId, hunterName)) {
-                        popUpTo(Routes.SELECTION) { inclusive = false }
+                        popUpTo(Routes.HOME) { inclusive = false }
                     }
                 },
                 onNavigateToVictory = { gameId ->
                     navController.navigate(Routes.victory(gameId, "", "")) {
-                        popUpTo(Routes.SELECTION) { inclusive = false }
+                        popUpTo(Routes.HOME) { inclusive = false }
                     }
                 },
                 onNavigateToSettings = {
@@ -177,7 +177,7 @@ fun AppNavigation() {
             ChickenConfigScreen(
                 onStartGame = { gameId ->
                     navController.navigate(Routes.chickenMap(gameId)) {
-                        popUpTo(Routes.SELECTION) { inclusive = false }
+                        popUpTo(Routes.HOME) { inclusive = false }
                     }
                 },
                 onDismiss = {
@@ -192,13 +192,13 @@ fun AppNavigation() {
         ) {
             ChickenMapScreen(
                 onGoToMenu = {
-                    navController.navigate(Routes.SELECTION) {
-                        popUpTo(Routes.SELECTION) { inclusive = true }
+                    navController.navigate(Routes.HOME) {
+                        popUpTo(Routes.HOME) { inclusive = true }
                     }
                 },
                 onVictory = { gameId ->
                     navController.navigate(Routes.victory(gameId, "", "")) {
-                        popUpTo(Routes.SELECTION) { inclusive = false }
+                        popUpTo(Routes.HOME) { inclusive = false }
                     }
                 }
             )
@@ -213,13 +213,13 @@ fun AppNavigation() {
         ) {
             HunterMapScreen(
                 onGoToMenu = {
-                    navController.navigate(Routes.SELECTION) {
-                        popUpTo(Routes.SELECTION) { inclusive = true }
+                    navController.navigate(Routes.HOME) {
+                        popUpTo(Routes.HOME) { inclusive = true }
                     }
                 },
                 onVictory = { gameId, hunterName, hunterId ->
                     navController.navigate(Routes.victory(gameId, hunterName, hunterId)) {
-                        popUpTo(Routes.SELECTION) { inclusive = false }
+                        popUpTo(Routes.HOME) { inclusive = false }
                     }
                 }
             )
@@ -235,8 +235,8 @@ fun AppNavigation() {
         ) {
             VictoryScreen(
                 onGoToMenu = {
-                    navController.navigate(Routes.SELECTION) {
-                        popUpTo(Routes.SELECTION) { inclusive = true }
+                    navController.navigate(Routes.HOME) {
+                        popUpTo(Routes.HOME) { inclusive = true }
                     }
                 }
             )
