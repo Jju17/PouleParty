@@ -43,7 +43,7 @@ data class MapConfigUiState(
 @HiltViewModel
 class ChickenMapConfigViewModel @Inject constructor(
     private val locationRepository: LocationRepository,
-    @ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MapConfigUiState())

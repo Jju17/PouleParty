@@ -16,6 +16,7 @@ struct SettingsFeature {
         @Shared(.appStorage(AppConstants.prefUserNickname)) var savedNickname = ""
         @Shared(.appStorage(AppConstants.prefOnboardingCompleted)) var hasCompletedOnboarding = false
         var showingDeleteConfirmation = false
+        var currentNickname: String { savedNickname }
         var showingDeleteSuccess = false
         var showingDeleteError = false
         var showingProfanityAlert = false
@@ -119,7 +120,7 @@ struct SettingsView: View {
         .toolbarBackground(Color.background, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .onAppear {
-            nicknameText = store.savedNickname
+            nicknameText = store.currentNickname
         }
         .onChange(of: isNicknameFocused) { _, focused in
             if !focused {
@@ -151,7 +152,7 @@ struct SettingsView: View {
         .alert("Inappropriate Nickname", isPresented: $store.showingProfanityAlert) {
             Button("OK") {
                 store.send(.profanityAlertDismissed)
-                nicknameText = store.savedNickname
+                nicknameText = store.currentNickname
             }
         } message: {
             Text("Please choose a different nickname. This one contains inappropriate language.")
@@ -159,7 +160,7 @@ struct SettingsView: View {
         .alert("Empty Nickname", isPresented: $store.showingEmptyNicknameAlert) {
             Button("OK") {
                 store.send(.emptyNicknameAlertDismissed)
-                nicknameText = store.savedNickname
+                nicknameText = store.currentNickname
             }
         } message: {
             Text("Your nickname cannot be empty.")

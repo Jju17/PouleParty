@@ -74,7 +74,6 @@
 		647D9FCA2BA3ABF3005B6566 /* PouleParty.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PouleParty.entitlements; sourceTree = "<group>"; };
 		64CE0F832CEE8E8200762232 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		64FDBE382BC32AD60073DC85 /* La Rochelle.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = "La Rochelle.gpx"; sourceTree = "<group>"; };
-		F986A3742F48AAC00086DF16 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		F9B1BE202F58DCD200E066D6 /* PoulePartyWidgetsExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PoulePartyWidgetsExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		F9B1BE222F58DCD200E066D6 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		F9B1BE242F58DCD200E066D6 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
@@ -172,7 +171,6 @@
 			children = (
 				64CE0F832CEE8E8200762232 /* Localizable.xcstrings */,
 				6405C2912BFC871B00A35A50 /* Bxl.gpx */,
-				F986A3742F48AAC00086DF16 /* GoogleService-Info.plist */,
 				64FDBE382BC32AD60073DC85 /* La Rochelle.gpx */,
 				645DF8272D306D0B005D8731 /* Lille.gpx */,
 				645DF82A2D306E5D005D8731 /* Stockholm.gpx */,

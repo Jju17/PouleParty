@@ -21,6 +21,7 @@ struct SelectionFeature {
         @Shared(.appStorage(AppConstants.prefIsMusicMuted)) var isMusicMuted = false
         @Shared(.appStorage(AppConstants.prefUserNickname)) var savedNickname = ""
         var gameCode: String = ""
+        var musicMuted: Bool { isMusicMuted }
         var isConfirmingChicken = false
         var isJoiningGame = false
         var activeGame: Game? = nil
@@ -74,12 +75,13 @@ struct SelectionFeature {
         }
 
         var body: some ReducerOf<Self> {
-            Scope(state: \.chickenConfig, action: \.chickenConfig) {
-                ChickenConfigFeature()
-            }
-            Scope(state: \.settings, action: \.settings) {
-                SettingsFeature()
-            }
+            EmptyReducer()
+                .ifCaseLet(\.chickenConfig, action: \.chickenConfig) {
+                    ChickenConfigFeature()
+                }
+                .ifCaseLet(\.settings, action: \.settings) {
+                    SettingsFeature()
+                }
         }
     }
 
@@ -354,14 +356,14 @@ struct SelectionView: View {
                             }
                         }
                     } label: {
-                        Image(systemName: store.isMusicMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
+                        Image(systemName: store.musicMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
                             .font(.system(size: 20))
                             .foregroundColor(Color.onBackground)
                             .padding()
                             .contentTransition(.symbolEffect(.replace))
                     }
                     .scaleEffect(musicButtonScale)
-                    .accessibilityLabel(store.isMusicMuted ? "Unmute music" : "Mute music")
+                    .accessibilityLabel(store.musicMuted ? "Unmute music" : "Mute music")
                     .padding(.leading, 4)
 
                     Spacer()
@@ -438,7 +440,7 @@ struct SelectionView: View {
             self.audioPlayer?.stop()
             self.audioPlayer = nil
         }
-        .onChange(of: store.isMusicMuted) { _, isMuted in
+        .onChange(of: store.musicMuted) { _, isMuted in
             if isMuted {
                 self.audioPlayer?.pause()
             } else {
@@ -584,7 +586,7 @@ struct SelectionView: View {
             self.audioPlayer = try AVAudioPlayer(contentsOf: url)
             self.audioPlayer?.numberOfLoops = -1
             self.audioPlayer?.volume = 0.1
-            if !store.isMusicMuted {
+            if !store.musicMuted {
                 self.audioPlayer?.play()
             }
         } catch {

@@ -27,6 +27,7 @@ struct ChickenMapConfigFeature {
         var finalMarker: MarkerOverlay?
         var mapCircle: CircleOverlay?
         var pinMode: MapConfigPinMode = .start
+        var currentGame: Game { game }
     }
     private static let defaultCoordinate = CLLocationCoordinate2D(latitude: AppConstants.defaultLatitude, longitude: AppConstants.defaultLongitude)
 
@@ -186,7 +187,7 @@ struct ChickenMapConfigView: View {
     @FocusState private var isSearchFieldFocused: Bool
 
     private var radiusZoom: CGFloat {
-        zoomForRadius(CLLocationDistance(store.game.initialRadius), latitude: store.game.initialLocation.latitude)
+        zoomForRadius(CLLocationDistance(store.currentGame.initialRadius), latitude: store.currentGame.initialLocation.latitude)
     }
 
     var body: some View {
@@ -221,13 +222,13 @@ struct ChickenMapConfigView: View {
                                     .font(.gameboy(size: 9))
                                     .foregroundStyle(.primary)
                                 Spacer()
-                                Text("\(Int(store.game.initialRadius)) m")
+                                Text("\(Int(store.currentGame.initialRadius)) m")
                                     .font(.gameboy(size: 9))
                                     .foregroundStyle(Color.CROrange)
                             }
                             Slider(
                                 value: Binding(
-                                    get: { store.game.initialRadius },
+                                    get: { store.currentGame.initialRadius },
                                     set: { store.send(.initialRadiusChanged($0)) }
                                 ),
                                 in: 500...2000,
@@ -355,7 +356,7 @@ struct ChickenMapConfigView: View {
         .task {
             store.send(.onTask)
         }
-        .onChange(of: store.game.initialRadius) { _, newRadius in
+        .onChange(of: store.currentGame.initialRadius) { _, newRadius in
             store.send(.initialRadiusChanged(newRadius))
         }
     }

@@ -104,8 +104,8 @@ data class Game(
 
         while (Date(lastUpdate.time + intervalMs).before(now)) {
             lastUpdate = Date(lastUpdate.time + intervalMs)
-            val isFrozen = freezeStart != null && freezeEnd != null
-                && !lastUpdate.before(freezeStart) && lastUpdate.before(freezeEnd)
+            val isFrozen = freezeStart != null
+                && !lastUpdate.before(freezeStart) && lastUpdate.before(freezeEnd!!)
             if (!isFrozen) {
                 lastRadius -= radiusDeclinePerUpdate.toInt()
             }

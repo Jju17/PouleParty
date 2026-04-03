@@ -83,7 +83,7 @@ class ChickenMapViewModel @Inject constructor(
     firestoreRepository: FirestoreRepository,
     locationRepository: LocationRepository,
     auth: FirebaseAuth,
-    @Named("mapboxAccessToken") private val mapboxAccessToken: String,
+    @param:Named("mapboxAccessToken") private val mapboxAccessToken: String,
     savedStateHandle: SavedStateHandle
 ) : BaseMapViewModel(firestoreRepository, locationRepository, auth) {
 

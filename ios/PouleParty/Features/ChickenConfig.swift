@@ -22,6 +22,7 @@ struct ChickenConfigFeature {
         var isExpertMode: Bool = false
         var gameDurationMinutes: Double = 120
         var showPowerUpSelection: Bool = false
+        var currentGame: Game { game }
     }
 
     enum Action: BindableAction {
@@ -221,12 +222,12 @@ struct ChickenConfigView: View {
     ]
 
     private var isZoneConfigured: Bool {
-        let loc = store.game.initialLocation
+        let loc = store.currentGame.initialLocation
         let isDefault = abs(loc.latitude - AppConstants.defaultLatitude) < 0.001
             && abs(loc.longitude - AppConstants.defaultLongitude) < 0.001
         guard !isDefault else { return false }
-        if store.game.gameMod == .stayInTheZone {
-            return store.game.finalLocation != nil
+        if store.currentGame.gameMod == .stayInTheZone {
+            return store.currentGame.finalLocation != nil
         }
         return true
     }
@@ -247,15 +248,15 @@ struct ChickenConfigView: View {
             }
             .sheet(isPresented: $store.showPowerUpSelection) {
                 PowerUpSelectionView(
-                    enabledTypes: store.game.enabledPowerUpTypes,
-                    gameMod: store.game.gameMod,
+                    enabledTypes: store.currentGame.enabledPowerUpTypes,
+                    gameMod: store.currentGame.gameMod,
                     onToggle: { type in store.send(.powerUpTypeToggled(type)) }
                 )
             }
             .safeAreaInset(edge: .bottom) {
                 VStack(spacing: 10) {
                     if !isZoneConfigured {
-                        Text(store.game.gameMod == .stayInTheZone
+                        Text(store.currentGame.gameMod == .stayInTheZone
                              ? "Set a start zone and final zone to start"
                              : "Set a start zone to start")
                             .font(.gameboy(size: 8))
@@ -295,14 +296,14 @@ struct ChickenConfigView: View {
 
     private var gameCodeSection: some View {
         Section("Game Code") {
-            GameCodeRow(gameCode: store.game.gameCode)
+            GameCodeRow(gameCode: store.currentGame.gameCode)
         }
     }
 
     private var scheduleSection: some View {
         Section("Schedule") {
             DatePicker(selection: Binding(
-                get: { store.game.startDate },
+                get: { store.currentGame.startDate },
                 set: { store.send(.startDateChanged($0)) }
             ), in: .now.addingTimeInterval(120)...) {
                 Text("Start at")
@@ -326,7 +327,7 @@ struct ChickenConfigView: View {
                 HStack {
                     Text("Ends at")
                     Spacer()
-                    let endDate = store.game.startDate.addingTimeInterval(store.gameDurationMinutes * 60)
+                    let endDate = store.currentGame.startDate.addingTimeInterval(store.gameDurationMinutes * 60)
                     Text(endDate, style: .time)
                         .foregroundStyle(.secondary)
                 }
@@ -337,7 +338,7 @@ struct ChickenConfigView: View {
     private var gameModeSection: some View {
         Section("Game Mode") {
             Picker("Game Mode", selection: Binding(
-                get: { store.game.gameMod },
+                get: { store.currentGame.gameMod },
                 set: { store.send(.gameModChanged($0)) }
             )) {
                 ForEach(Game.GameMod.allCases, id: \.self) { mode in
@@ -345,7 +346,7 @@ struct ChickenConfigView: View {
                 }
             }
             Toggle("Chicken can see hunters", isOn: Binding(
-                get: { store.game.chickenCanSeeHunters },
+                get: { store.currentGame.chickenCanSeeHunters },
                 set: { store.send(.chickenCanSeeHuntersChanged($0)) }
             ))
         }
@@ -354,15 +355,15 @@ struct ChickenConfigView: View {
     private var powerUpsSection: some View {
         Section("Power-Ups") {
             Toggle("Enable Power-Ups", isOn: Binding(
-                get: { store.game.powerUpsEnabled },
+                get: { store.currentGame.powerUpsEnabled },
                 set: { store.send(.powerUpsToggled($0)) }
             ))
 
-            if store.game.powerUpsEnabled {
-                let unavailableRaw: Set<String> = store.game.gameMod == .stayInTheZone
+            if store.currentGame.powerUpsEnabled {
+                let unavailableRaw: Set<String> = store.currentGame.gameMod == .stayInTheZone
                     ? [PowerUp.PowerUpType.invisibility.rawValue, PowerUp.PowerUpType.decoy.rawValue, PowerUp.PowerUpType.jammer.rawValue]
                     : []
-                let enabledCount = store.game.enabledPowerUpTypes.filter { !unavailableRaw.contains($0) }.count
+                let enabledCount = store.currentGame.enabledPowerUpTypes.filter { !unavailableRaw.contains($0) }.count
                 let totalCount = PowerUp.PowerUpType.allCases.filter { !unavailableRaw.contains($0.rawValue) }.count
                 Button {
                     store.send(.powerUpSelectionTapped)
@@ -384,7 +385,7 @@ struct ChickenConfigView: View {
 
     private var zoneSection: some View {
         Section("Zone") {
-            MapPreviewView(game: store.game)
+            MapPreviewView(game: store.currentGame)
                 .frame(height: 180)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
                 .overlay(alignment: .bottomTrailing) {
@@ -410,10 +411,10 @@ struct ChickenConfigView: View {
                 HStack {
                     Text("Radius interval update")
                     Spacer()
-                    Text("\(Int(self.store.game.radiusIntervalUpdate)) minutes")
+                    Text("\(Int(self.store.currentGame.radiusIntervalUpdate)) minutes")
                 }
                 Slider(value: Binding(
-                    get: { store.game.radiusIntervalUpdate },
+                    get: { store.currentGame.radiusIntervalUpdate },
                     set: { store.send(.radiusIntervalUpdateChanged($0)) }
                 ), in: 1...60, step: 1)
             }
@@ -421,10 +422,10 @@ struct ChickenConfigView: View {
                 HStack {
                     Text("Radius decline")
                     Spacer()
-                    Text("\(Int(self.store.game.radiusDeclinePerUpdate)) meters")
+                    Text("\(Int(self.store.currentGame.radiusDeclinePerUpdate)) meters")
                 }
                 Slider(value: Binding(
-                    get: { store.game.radiusDeclinePerUpdate },
+                    get: { store.currentGame.radiusDeclinePerUpdate },
                     set: { store.send(.radiusDeclinePerUpdateChanged($0)) }
                 ), in: 50...1000, step: 10)
             }
@@ -437,11 +438,11 @@ struct ChickenConfigView: View {
                 HStack {
                     Text("Chicken head start")
                     Spacer()
-                    Text("\(Int(self.store.game.chickenHeadStartMinutes)) minutes")
+                    Text("\(Int(self.store.currentGame.chickenHeadStartMinutes)) minutes")
                 }
                 Slider(
                     value: Binding(
-                        get: { store.game.chickenHeadStartMinutes },
+                        get: { store.currentGame.chickenHeadStartMinutes },
                         set: { store.send(.chickenHeadStartChanged($0)) }
                     ),
                     in: 0...45,
@@ -491,7 +492,7 @@ struct MapPreviewView: View {
 
             MapViewAnnotation(coordinate: game.initialLocation) {
                 VStack(spacing: 0) {
-                    Text("START")
+                    Text("JOIN")
                         .font(.gameboy(size: 6))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 6)

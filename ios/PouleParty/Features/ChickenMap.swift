@@ -650,14 +650,16 @@ struct ChickenMapFeature {
                         let currentRadius = Double(state.radius)
                         let seed = state.game.driftSeed
                         let gId = state.game.id
-                        var spawnTypes = state.game.enabledPowerUpTypes
+                        let spawnTypes: [String]
                         if state.game.gameMod == .stayInTheZone {
                             let uselessInZone: Set<String> = [
                                 PowerUp.PowerUpType.invisibility.rawValue,
                                 PowerUp.PowerUpType.decoy.rawValue,
                                 PowerUp.PowerUpType.jammer.rawValue
                             ]
-                            spawnTypes.removeAll { uselessInZone.contains($0) }
+                            spawnTypes = state.game.enabledPowerUpTypes.filter { !uselessInZone.contains($0) }
+                        } else {
+                            spawnTypes = state.game.enabledPowerUpTypes
                         }
                         spawnEffect = .run { _ in
                             let generated = generatePowerUps(

@@ -321,7 +321,7 @@ extension ApiClient: DependencyKey {
                 let db = Firestore.firestore()
                 let docRef = db.collection(gamesCollection).document(gameId)
                     .collection(powerUpsSubcollection).document(powerUpId)
-                try await db.runTransaction { transaction, errorPointer in
+                _ = try await db.runTransaction { transaction, errorPointer in
                     let snapshot: DocumentSnapshot
                     do {
                         snapshot = try transaction.getDocument(docRef)

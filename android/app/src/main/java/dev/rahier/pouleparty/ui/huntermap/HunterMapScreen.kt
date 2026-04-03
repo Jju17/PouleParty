@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package dev.rahier.pouleparty.ui.huntermap
 
 import androidx.compose.foundation.background
