@@ -4,79 +4,66 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What is this project?
 
-A cross-platform (iOS + Android) location-based mobile game. One player is the **Chicken** (Poule) who must evade **Hunters**. The game takes place on a real map with a shrinking circular zone. Players' positions are synced in real-time via Firebase Firestore.
+A cross-platform (iOS + Android) location-based mobile game. One player is the **Chicken** (Poule) who must evade **Hunters** within a shrinking circular zone on a real map. Positions are synced in real-time via Firebase Firestore.
 
-## Game modes
+There's also a **web** landing page (React/Vite) and **Cloud Functions** backend for game lifecycle management and push notifications.
 
-- **followTheChicken** (default): Hunters see a circle following the Chicken; Chicken doesn't see Hunters
-- **stayInTheZone**: Fixed zone that shrinks over time, no position sharing
-- **mutualTracking**: Both sides see each other in real-time
+## Game Concepts
+
+### Roles
+- **Chicken** (creator): Creates the game, defines the zone, runs and hides. Shows a 4-digit "found code" to hunters who physically find them.
+- **Hunters**: Join via a 6-character game code. Must physically find the chicken and enter the found code to win.
+
+### Game Modes
+- **Follow the Chicken** (`followTheChicken`): The zone circle follows the chicken's live GPS. Hunters see where the chicken is (within the zone). Chicken doesn't see hunters unless `chickenCanSeeHunters` is enabled.
+- **Stay in the Zone** (`stayInTheZone`): Fixed zone that shrinks and drifts deterministically. No position sharing at all (except via Radar Ping power-up).
+
+### Zone Mechanics
+The zone is a circle that shrinks periodically. The shrink interval and amount are configurable. In "Stay in the Zone" mode, the center drifts deterministically using a seed stored in the game document — every client computes the same drift. There's also a "final zone" point: as the radius shrinks, the center interpolates linearly from start to final position.
+
+### Power-Ups
+6 types, split between chicken and hunter. They spawn deterministically on the map (using the game's `driftSeed`), get snapped to nearest roads via Mapbox API, and are collected by proximity (30m). Some have timed effects tracked as `active{Type}Until` timestamps on the game document. In `stayInTheZone` mode, position-dependent chicken power-ups (invisibility, decoy, jammer) are automatically disabled.
+
+### Game Lifecycle
+1. Chicken creates game → Firestore document created → Cloud Functions schedule status transitions and notifications via Cloud Tasks
+2. Game starts at `startTimestamp` (status: waiting → inProgress)
+3. Hunters get a head start delay (`chickenHeadStartMinutes`) before the hunt begins
+4. Zone shrinks periodically until collapse or `endTimestamp`
+5. Hunters who find the chicken enter the found code → added to `winners` array
+6. Game ends when time runs out, zone collapses, chicken cancels, or all hunters find the chicken
 
 ## Build & run
 
-Both platforms require a Firebase project with Firestore, Auth, and Analytics enabled.
-
 ### iOS
 
-Open `ios/PouleParty.xcodeproj` in Xcode. Requires `GoogleService-Info.plist` (gitignored).
-
 ```bash
-# Build
 xcodebuild -scheme PouleParty -configuration Debug build
-
-# Run all tests
 xcodebuild -scheme PoulePartyTests test
-
-# Run a specific test class
 xcodebuild -scheme PoulePartyTests test -only-testing:PoulePartyTests/GameTests
-
-# Run a specific test method
-xcodebuild -scheme PoulePartyTests test -only-testing:PoulePartyTests/GameTests/testGameCode
 ```
 
-GPX files in `ios/` (Bxl, La Rochelle, Lasne, Lille, Namur, Stockholm) simulate locations in the iOS Simulator. The `PouleParty` scheme defaults to `Bxl.gpx`.
+Requires `GoogleService-Info.plist` in `ios/Firebase/` (gitignored). GPX files in `ios/` simulate locations in the Simulator.
 
 ### Android
 
-Open `android/` in Android Studio. Requires `google-services.json` (gitignored). compileSdk 35, minSdk 26, JVM target 17.
+```bash
+cd android && ./gradlew assembleDebug
+cd android && ./gradlew test
+cd android && ./gradlew testDebugUnitTest --tests "dev.rahier.pouleparty.GameTest"
+```
+
+compileSdk 35, minSdk 26, JVM target 17. Requires `google-services.json` (gitignored). Product flavors: `staging` and `production`.
+
+### Cloud Functions
 
 ```bash
-# Build debug APK
-cd android && ./gradlew assembleDebug
-
-# Run all unit tests
-cd android && ./gradlew test
-
-# Run a specific test class
-cd android && ./gradlew testDebugUnitTest --tests "dev.rahier.pouleparty.GameTest"
-
-# Run instrumentation tests (requires emulator/device)
-cd android && ./gradlew connectedAndroidTest
-
-# Full build + tests
-cd android && ./gradlew build
+cd functions && npm run build && firebase deploy --only functions
 ```
 
-No CI/CD pipelines or linting tools are configured.
+### Web
 
-## Project structure
-
-```
-PouleParty/
-├── ios/                          iOS app (SwiftUI + TCA)
-│   ├── PouleParty/              Source (~25 Swift files)
-│   ├── PouleParty.xcodeproj/
-│   ├── PoulePartyTests/         4 test files (Game, Selection, ChickenMap, HunterMap)
-│   └── *.gpx                    Simulator location files
-└── android/                      Android app (Jetpack Compose + MVVM + Hilt)
-    └── app/src/
-        ├── main/java/dev/rahier/pouleparty/
-        │   ├── model/           Data models (Game, ChickenLocation, HunterLocation)
-        │   ├── data/            Repositories (FirestoreRepository, LocationRepository)
-        │   ├── di/              Hilt DI module (AppModule)
-        │   ├── navigation/      Compose Navigation (Routes + NavHost)
-        │   └── ui/              Screens & ViewModels (chickenconfig/, chickenmap/, huntermap/, onboarding/, selection/, rules/, endgamecode/, components/, theme/)
-        └── test/                8 test files (model + ViewModel tests)
+```bash
+cd web && npm run dev
 ```
 
 ## Tech stack
@@ -88,52 +75,66 @@ PouleParty/
 | Maps | Mapbox Maps SDK | Mapbox Maps Compose SDK |
 | Location | CoreLocation | FusedLocationProvider (Play Services) |
 | Async | AsyncStream / async-await | Kotlin Coroutines + Flow |
-| Backend | Firebase Firestore, Auth, Analytics | Firebase Firestore, Auth, Analytics |
+| Backend | Firebase Firestore, Auth, Analytics, Messaging | Firebase Firestore, Auth, Analytics, Messaging |
 
 ## Firestore data model
 
 ```
-/games/{gameId}                    → Game document
-  /chickenLocations/{docId}        → ChickenLocation (location: GeoPoint, timestamp)
-  /hunterLocations/{hunterId}      → HunterLocation (hunterId, location: GeoPoint, timestamp)
+/games/{gameId}                    → Game config + live state (status, winners, active effects)
+  /chickenLocations/latest         → Single doc, overwritten each position update
+  /hunterLocations/{hunterId}      → One doc per hunter, overwritten
+  /powerUps/{powerUpId}            → One doc per spawned power-up (collected/activated state)
+
+/fcmTokens/{userId}                → FCM token for push notifications
+/registrations/{docId}             → Event registration (admin-only, used by web)
 ```
 
-## Game model (shared across platforms)
+The `gameCode` field is stored separately (first 6 chars of ID, uppercased) to enable Firestore queries by code.
 
-Key fields: `id`, `name`, `numberOfPlayers` (default 10), `radiusIntervalUpdate` (minutes, default 5), `startTimestamp` (default +5min from now), `endTimestamp` (default +65min from now), `initialCoordinates` (default Brussels 50.8466, 4.3528), `initialRadius` (meters, default 1500), `radiusDeclinePerUpdate` (meters, default 100), `gameMod`.
+## Cross-platform parity
 
-- `gameCode` = first 6 chars of ID, uppercased
-- `findLastUpdate()` walks from startDate in interval steps to find next shrink time and current radius
-- Both models have a `.mock` static property for testing
-- Android `GameMod` enum uses `firestoreValue` string for Firestore serialization
+**This is critical**: iOS and Android must produce identical results for all game logic. Several pure functions are duplicated across platforms and must stay in sync:
 
-## iOS architecture (TCA)
+- **Zone computation**: `findLastUpdate()`, `deterministicDriftCenter()`, `interpolateZoneCenter()`, `processRadiusUpdate()`
+- **Power-up spawning**: `generatePowerUps()` — deterministic positions from seed
+- **Seeded random**: Uses splitmix64-style PRNG with unsigned shifts
+- **Game timer logic**: Countdown, zone check, winner detection, power-up activation detection
+- **Normal mode settings**: `calculateNormalModeSettings()` — auto-computes shrink params from duration
 
-- **AppFeature** (`App.swift`): Root reducer, enum-based state machine with cases: `.onboarding`, `.selection`, `.chickenMap`, `.hunterMap`
-- Each feature = Reducer + State + Action + View in a single file
-- **ApiClient** (`ApiClient.swift`): TCA dependency wrapping all Firestore operations (CRUD + AsyncStream listeners via `addSnapshotListener`)
-- **LocationClient** (`LocationClient.swift`): TCA dependency wrapping CoreLocation (auth status, permission requests, tracking via AsyncStream)
-- Navigation is state-driven via AppFeature's enum state
-- Onboarding flag: `UserDefaults "hasCompletedOnboarding"`
-- Distance filter: 10m minimum movement
+When modifying any of these, **always update both platforms** and verify with unit tests that outputs match for the same inputs.
 
-## Android architecture (MVVM + Hilt)
+## Authentication
 
-- **AppNavigation** (`navigation/AppNavigation.kt`): Compose NavHost with routes: `onboarding`, `selection`, `chicken_config/{gameId}`, `chicken_map/{gameId}`, `hunter_map/{gameId}`
-- Each screen = Screen composable + ViewModel in separate files under `ui/<feature>/`
-- **FirestoreRepository** (`data/FirestoreRepository.kt`): Singleton, all Firestore ops (suspend CRUD + `callbackFlow` listeners)
-- **LocationRepository** (`data/LocationRepository.kt`): Singleton, FusedLocationProvider
-- **AppModule** (`di/AppModule.kt`): Hilt `@Module` providing Firebase & Location singletons
-- Onboarding flag: `SharedPreferences "pouleparty" → "hasCompletedOnboarding"`
+Anonymous Firebase Auth. Users don't create accounts — a UID is generated on first launch and persists. The chicken's UID is stored as `creatorId`, hunters are identified by their UID in `hunterIds`. FCM tokens are saved to `/fcmTokens/{userId}`.
+
+## Location tracking
+
+- 10m minimum distance filter, 5s write throttle to Firestore
+- Chicken writes to `chickenLocations/latest` (simple overwrite, not a growing collection)
+- Hunter writes only when `chickenCanSeeHunters` is enabled
+- Location tracking is gated behind game start times (no early position leaking)
+- Power-ups affect location: Invisibility stops writes, Jammer adds ~200m noise, Radar Ping forces writes even in stayInTheZone
+
+## Security rules
+
+See `firestore.rules`. Key principle: the creator has full control over their game, hunters can only update `hunterIds`, `winners`, and `active*Until` fields. Subcollection writes are restricted by role. Power-up collection uses transactions to prevent double-collection.
 
 ## Conventions
 
-- iOS: Each TCA feature groups State, Action, Reducer, and View in a single Swift file
-- Android: Screen and ViewModel are in separate files under `ui/<feature>/`
-- Shared UI components go in `ui/components/` (Android) or as standalone files (iOS)
-- iOS utility extensions: `Color+Utils`, `Date+Utils`, `Font+Utils`, `GeoPoint+Utils`, `Image+Utils`, `UUID+Utils`
-- Android theme files: `Color.kt`, `Theme.kt`, `Type.kt`
-- Custom fonts: `Early GameBoy.ttf`, `Bangers-Regular.ttf` (retro gaming aesthetic)
-- Color palette: CRBeige, CROrange, CRPink (custom brand colors)
-- Location writes are throttled (5s intervals) to limit Firestore usage
+- Custom fonts: `Early GameBoy` (retro pixel) and `Bangers` (display/headings)
+- Color palette: CRBeige, CROrange (#FE6A00), CRPink (#EF0778) — consistent hex values across platforms
+- Dark mode: fully supported everywhere
+- Profanity filter on nicknames (FR + EN, with leetspeak detection)
+- Game codes: 6 chars, found codes: 4 digits
+- All Firestore write operations use retry logic (3 attempts, exponential backoff)
 - When adding a new feature, keep parity between iOS and Android implementations
+- No CI/CD pipelines or linting tools configured
+
+## Adding a new feature
+
+1. **Both platforms** — implement on iOS AND Android with identical behavior
+2. **Determinism** — if it involves game state computation, both platforms must produce the same result
+3. **Firestore rules** — if it touches new fields, update `firestore.rules`
+4. **Cloud Functions** — if it needs server-side scheduling or validation
+5. **Tests** — both platforms have unit tests for models and game logic
+6. **README.md** — update the root `README.md` to reflect any new or changed functionality
