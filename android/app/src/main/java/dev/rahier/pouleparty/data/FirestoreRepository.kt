@@ -12,6 +12,7 @@ import dev.rahier.pouleparty.AppConstants
 import dev.rahier.pouleparty.model.ChickenLocation
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameStatus
+import dev.rahier.pouleparty.model.PartyPlansConfig
 import dev.rahier.pouleparty.model.HunterLocation
 import dev.rahier.pouleparty.model.PowerUp
 import dev.rahier.pouleparty.model.Winner
@@ -382,5 +383,14 @@ class FirestoreRepository @Inject constructor(
             Log.e(TAG, "Failed to count free games today for $userId", e)
             0
         }
+    }
+
+    suspend fun fetchPartyPlansConfig(): PartyPlansConfig {
+        val doc = firestore.collection("config")
+            .document("partyPlans")
+            .get()
+            .await()
+        return doc.toObject(PartyPlansConfig::class.java)
+            ?: throw IllegalStateException("Party plans config document is missing or malformed")
     }
 }

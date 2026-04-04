@@ -11,10 +11,16 @@ struct PlanSelectionFeature {
 
     @ObservableState
     struct State: Equatable {
+        var plansConfig: PartyPlansConfig?
+        var isLoading: Bool = true
+        var loadFailed: Bool = false
         var selectedPlan: Game.PricingModel?
+        // Flat
         var numberOfPlayers: Double = 10
-        var pricePerPlayer: String = ""
-        var depositAmount: String = ""
+        // Deposit
+        var pricePerHunter: String = ""
+        var hasMaxPlayers: Bool = false
+        var maxPlayers: Double = 20
 
         var step: Step {
             selectedPlan == nil ? .choosePlan : .configurePricing
@@ -25,11 +31,17 @@ struct PlanSelectionFeature {
 
     enum Action: BindableAction {
         case binding(BindingAction<State>)
+        case onAppear
+        case plansConfigLoaded(PartyPlansConfig)
+        case plansConfigFailed
+        case retryTapped
         case planTileTapped(Game.PricingModel)
         case backToPlans
         case confirmPricing
         case planSelected(Game.PricingModel, numberOfPlayers: Int, pricePerPlayerCents: Int, depositAmountCents: Int)
     }
+
+    @Dependency(\.apiClient) var apiClient
 
     var body: some ReducerOf<Self> {
         BindingReducer()
@@ -37,46 +49,69 @@ struct PlanSelectionFeature {
             switch action {
             case .binding:
                 return .none
+            case .onAppear:
+                state.isLoading = true
+                state.loadFailed = false
+                return .run { send in
+                    do {
+                        let config = try await apiClient.fetchPartyPlansConfig()
+                        await send(.plansConfigLoaded(config))
+                    } catch {
+                        await send(.plansConfigFailed)
+                    }
+                }
+            case let .plansConfigLoaded(config):
+                state.plansConfig = config
+                state.numberOfPlayers = Double(config.flat.minPlayers)
+                state.isLoading = false
+                return .none
+            case .plansConfigFailed:
+                state.isLoading = false
+                state.loadFailed = true
+                return .none
+            case .retryTapped:
+                return .send(.onAppear)
             case let .planTileTapped(plan):
                 if plan == .free {
-                    return .send(.planSelected(.free, numberOfPlayers: 5, pricePerPlayerCents: 0, depositAmountCents: 0))
+                    let maxPlayers = state.plansConfig?.free.maxPlayers ?? 5
+                    return .send(.planSelected(.free, numberOfPlayers: maxPlayers, pricePerPlayerCents: 0, depositAmountCents: 0))
                 }
                 state.selectedPlan = plan
-                if plan == .flat {
-                    state.numberOfPlayers = 10
-                    state.pricePerPlayer = ""
+                if plan == .flat, let config = state.plansConfig {
+                    state.numberOfPlayers = Double(config.flat.minPlayers)
                 }
                 if plan == .deposit {
-                    state.depositAmount = ""
-                    state.pricePerPlayer = ""
+                    state.pricePerHunter = ""
+                    state.hasMaxPlayers = false
+                    state.maxPlayers = 20
                 }
                 return .none
             case .backToPlans:
                 state.selectedPlan = nil
                 return .none
             case .confirmPricing:
-                guard let plan = state.selectedPlan else { return .none }
-                let numPlayers = plan == .flat ? Int(state.numberOfPlayers) : 10
-                let priceCents: Int
-                let depositCents: Int
+                guard let plan = state.selectedPlan, let config = state.plansConfig else { return .none }
                 switch plan {
                 case .flat:
-                    let perPlayer: Int
-                    switch numPlayers {
-                    case ...10: perPlayer = 300
-                    case ...20: perPlayer = 200
-                    default: perPlayer = 100
-                    }
-                    priceCents = perPlayer
-                    depositCents = 0
+                    let numPlayers = Int(state.numberOfPlayers)
+                    return .send(.planSelected(
+                        .flat,
+                        numberOfPlayers: numPlayers,
+                        pricePerPlayerCents: config.flat.pricePerPlayerCents,
+                        depositAmountCents: 0
+                    ))
                 case .deposit:
-                    priceCents = (Int(state.pricePerPlayer) ?? 0) * 100
-                    depositCents = (Int(state.depositAmount) ?? 0) * 100
+                    let priceCents = (Int(state.pricePerHunter) ?? 0) * 100
+                    let numPlayers = state.hasMaxPlayers ? Int(state.maxPlayers) : 50
+                    return .send(.planSelected(
+                        .deposit,
+                        numberOfPlayers: numPlayers,
+                        pricePerPlayerCents: priceCents,
+                        depositAmountCents: config.deposit.depositAmountCents
+                    ))
                 case .free:
-                    priceCents = 0
-                    depositCents = 0
+                    return .none
                 }
-                return .send(.planSelected(plan, numberOfPlayers: numPlayers, pricePerPlayerCents: priceCents, depositAmountCents: depositCents))
             case .planSelected:
                 return .none
             }
@@ -94,59 +129,92 @@ struct PlanSelectionView: View {
                 .padding(.top, 32)
                 .padding(.bottom, 8)
 
-            Text(store.step == .choosePlan ? "Choose your plan" : store.selectedPlan?.title ?? "")
-                .font(.gameboy(size: 10))
-                .foregroundStyle(Color.onBackground.opacity(0.7))
-                .padding(.bottom, 32)
+            if store.isLoading {
+                Spacer()
+                ProgressView()
+                    .tint(Color.CROrange)
+                Spacer()
+            } else if store.loadFailed {
+                Spacer()
+                VStack(spacing: 16) {
+                    Text("Failed to load pricing")
+                        .font(.gameboy(size: 9))
+                        .foregroundStyle(Color.onBackground.opacity(0.7))
+                    Button {
+                        store.send(.retryTapped)
+                    } label: {
+                        BangerText("Retry", size: 20)
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 32)
+                            .padding(.vertical, 12)
+                            .background(Color.CROrange)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                    .buttonStyle(.plain)
+                }
+                Spacer()
+            } else {
+                ScrollView {
+                    Text(store.step == .choosePlan ? "Choose your plan" : store.selectedPlan?.title ?? "")
+                        .font(.gameboy(size: 10))
+                        .foregroundStyle(Color.onBackground.opacity(0.7))
+                        .padding(.bottom, 32)
 
-            switch store.step {
-            case .choosePlan:
-                planTiles
-            case .configurePricing:
-                pricingConfig
+                    switch store.step {
+                    case .choosePlan:
+                        planTiles
+                    case .configurePricing:
+                        plansConfigView
+                    }
+                }
             }
-
-            Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.gradientBackgroundWarmth)
         .animation(.easeInOut(duration: 0.25), value: store.step)
-    }
-
-    private var planTiles: some View {
-        VStack(spacing: 16) {
-            PlanTile(
-                title: "FREE",
-                subtitle: "1 game per day, up to 5 players",
-                icon: "🎮"
-            ) {
-                store.send(.planTileTapped(.free))
-            }
-
-            PlanTile(
-                title: "Forfait",
-                subtitle: "Pay once for unlimited players",
-                icon: "⭐",
-                gradient: Color.gradientFire,
-                isFeatured: true
-            ) {
-                store.send(.planTileTapped(.flat))
-            }
-
-            PlanTile(
-                title: "Caution + %",
-                subtitle: "Deposit + commission per player",
-                icon: "💎",
-                gradient: Color.gradientDeposit
-            ) {
-                store.send(.planTileTapped(.deposit))
-            }
-        }
-        .padding(.horizontal, 24)
+        .task { store.send(.onAppear) }
     }
 
     @ViewBuilder
-    private var pricingConfig: some View {
+    private var planTiles: some View {
+        if let config = store.plansConfig {
+            VStack(spacing: 16) {
+                PlanTile(
+                    title: "FREE",
+                    subtitle: "1 game per day, up to \(config.free.maxPlayers) players",
+                    icon: "🎮",
+                    isEnabled: config.free.enabled
+                ) {
+                    store.send(.planTileTapped(.free))
+                }
+
+                PlanTile(
+                    title: "Forfait",
+                    subtitle: "\(config.flat.pricePerPlayerCents / 100)€ per player",
+                    icon: "⭐",
+                    gradient: Color.gradientFire,
+                    isFeatured: true,
+                    isEnabled: config.flat.enabled
+                ) {
+                    store.send(.planTileTapped(.flat))
+                }
+
+                PlanTile(
+                    title: "Caution + %",
+                    subtitle: "\(config.deposit.depositAmountCents / 100)€ deposit + \(Int(config.deposit.commissionPercent))% commission",
+                    icon: "💎",
+                    gradient: Color.gradientDeposit,
+                    isEnabled: config.deposit.enabled
+                ) {
+                    store.send(.planTileTapped(.deposit))
+                }
+            }
+            .padding(.horizontal, 24)
+        }
+    }
+
+    @ViewBuilder
+    private var plansConfigView: some View {
         VStack(spacing: 24) {
             if store.selectedPlan == .flat {
                 flatConfig
@@ -177,8 +245,13 @@ struct PlanSelectionView: View {
         .padding(.horizontal, 24)
     }
 
+    @ViewBuilder
     private var flatConfig: some View {
-        VStack(spacing: 16) {
+        let config = store.plansConfig ?? PartyPlansConfig()
+        let pricePerPlayer = config.flat.pricePerPlayerCents / 100
+        let total = Int(store.numberOfPlayers) * pricePerPlayer
+
+        return VStack(spacing: 16) {
             Text("Number of players")
                 .font(.gameboy(size: 9))
                 .foregroundStyle(Color.onBackground.opacity(0.7))
@@ -186,47 +259,73 @@ struct PlanSelectionView: View {
             BangerText("\(Int(store.numberOfPlayers))", size: 48)
                 .foregroundStyle(Color.onBackground)
 
-            Slider(value: $store.numberOfPlayers, in: 6...50, step: 1)
-                .tint(Color.crOrange)
+            Slider(
+                value: $store.numberOfPlayers,
+                in: Double(config.flat.minPlayers)...Double(config.flat.maxPlayers),
+                step: 1
+            )
+            .tint(Color.CROrange)
 
             PriceSummaryRow(
                 label: "Price per player",
-                value: "\(flatPricePerPlayer)€"
+                value: "\(pricePerPlayer)€"
             )
 
             PriceSummaryRow(
                 label: "Total",
-                value: "\(Int(store.numberOfPlayers) * flatPricePerPlayer)€",
+                value: "\(total)€",
                 isTotal: true
             )
         }
     }
 
+    @ViewBuilder
     private var depositConfig: some View {
-        VStack(spacing: 16) {
-            PriceField(
-                label: "Deposit amount",
-                placeholder: "10",
-                text: $store.depositAmount,
-                suffix: "€"
-            )
+        let config = store.plansConfig ?? PartyPlansConfig()
+        let depositEuros = config.deposit.depositAmountCents / 100
+        let commissionPct = Int(config.deposit.commissionPercent)
 
+        return VStack(spacing: 16) {
+            // Admin-defined info
+            PriceSummaryRow(label: "Deposit", value: "\(depositEuros)€")
+            PriceSummaryRow(label: "Commission", value: "\(commissionPct)%")
+
+            Divider()
+
+            // User sets price per hunter
             PriceField(
                 label: "Price per hunter",
                 placeholder: "5",
-                text: $store.pricePerPlayer,
+                text: $store.pricePerHunter,
                 suffix: "€"
             )
 
-            if let deposit = Int(store.depositAmount), let price = Int(store.pricePerPlayer), price > 0 {
-                let commission = Int(Double(price) * 0.15)
+            // Optional max players
+            Toggle(isOn: $store.hasMaxPlayers) {
+                Text("Limit number of players")
+                    .font(.gameboy(size: 8))
+                    .foregroundStyle(Color.onBackground.opacity(0.7))
+            }
+            .tint(Color.CROrange)
+
+            if store.hasMaxPlayers {
+                VStack(spacing: 8) {
+                    BangerText("\(Int(store.maxPlayers)) players max", size: 22)
+                        .foregroundStyle(Color.onBackground)
+
+                    Slider(value: $store.maxPlayers, in: 2...50, step: 1)
+                        .tint(Color.CROrange)
+                }
+            }
+
+            // Summary
+            if let price = Int(store.pricePerHunter), price > 0 {
+                Divider()
+
+                let commission = Double(price) * Double(commissionPct) / 100.0
                 PriceSummaryRow(
-                    label: "Your deposit",
-                    value: "\(deposit)€"
-                )
-                PriceSummaryRow(
-                    label: "Commission (15%)",
-                    value: "\(commission)€ / player"
+                    label: "You earn per hunter",
+                    value: String(format: "%.2f€", Double(price) - commission)
                 )
                 PriceSummaryRow(
                     label: "Hunter pays",
@@ -234,15 +333,6 @@ struct PlanSelectionView: View {
                     isTotal: true
                 )
             }
-        }
-    }
-
-    private var flatPricePerPlayer: Int {
-        let n = Int(store.numberOfPlayers)
-        switch n {
-        case ...10: return 3
-        case ...20: return 2
-        default: return 1
         }
     }
 }
@@ -255,6 +345,7 @@ private struct PlanTile: View {
     let icon: String
     var gradient: LinearGradient? = nil
     var isFeatured: Bool = false
+    var isEnabled: Bool = true
     let action: () -> Void
 
     private var hasGradient: Bool { gradient != nil }
@@ -264,6 +355,7 @@ private struct PlanTile: View {
             HStack(spacing: 16) {
                 Text(icon)
                     .font(.system(size: 32))
+                    .grayscale(isEnabled ? 0 : 1)
 
                 VStack(alignment: .leading, spacing: 4) {
                     BangerText(title, size: 22)
@@ -291,8 +383,11 @@ private struct PlanTile: View {
                     .stroke(hasGradient ? Color.clear : Color.onBackground.opacity(0.15), lineWidth: 1.5)
             )
             .shadow(color: .black.opacity(isFeatured ? 0.2 : hasGradient ? 0.1 : 0.05), radius: isFeatured ? 8 : 5, y: 3)
+            .opacity(isEnabled ? 1 : 0.4)
+            .saturation(isEnabled ? 1 : 0)
         }
         .buttonStyle(.plain)
+        .disabled(!isEnabled)
     }
 }
 
@@ -308,7 +403,7 @@ private struct PriceSummaryRow: View {
                 .foregroundStyle(Color.onBackground.opacity(isTotal ? 1 : 0.6))
             Spacer()
             BangerText(value, size: isTotal ? 24 : 18)
-                .foregroundStyle(isTotal ? Color.crOrange : Color.onBackground)
+                .foregroundStyle(isTotal ? Color.CROrange : Color.onBackground)
         }
     }
 }

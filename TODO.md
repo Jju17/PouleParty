@@ -224,3 +224,9 @@ Inspiré du design ci-dessous (2 sections sur un même écran) :
 - **Scoring** : Calculé en temps réel côté client à partir des `challenges` complétés + objectif principal. Pas besoin de collection séparée si les scores restent dans le game doc.
 - **Anti-triche** : Les défis auto (distance, temps) doivent être validés côté serveur en croisant `hunterLocations` / `winners` timestamps.
 - **UI** : Accessible depuis la HunterMap (bouton ou swipe up). Affiche les 2 sections : défis perso + leaderboard équipe.
+
+---
+
+## 5. Better handling no location allowed
+
+Améliorer le flow quand l'utilisateur n'a pas autorisé la localisation. Actuellement une simple alerte s'affiche — proposer un meilleur UX (redirection vers les Settings, explication claire, re-check au retour).

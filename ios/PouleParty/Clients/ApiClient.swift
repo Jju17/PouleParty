@@ -30,6 +30,7 @@ struct ApiClient {
     var updateGameActiveEffect: (String, String, Timestamp) async throws -> Void
     var powerUpsStream: (String) -> AsyncStream<[PowerUp]>
     var countFreeGamesToday: (String) async throws -> Int
+    var fetchPartyPlansConfig: () async throws -> PartyPlansConfig
 }
 
 private let logger = Logger(subsystem: "dev.rahier.pouleparty", category: "ApiClient")
@@ -77,7 +78,8 @@ extension ApiClient: TestDependencyKey {
         activatePowerUp: { _, _, _ in },
         updateGameActiveEffect: { _, _, _ in },
         powerUpsStream: { _ in AsyncStream { _ in } },
-        countFreeGamesToday: { _ in 0 }
+        countFreeGamesToday: { _ in 0 },
+        fetchPartyPlansConfig: { PartyPlansConfig() }
     )
 }
 
@@ -400,6 +402,12 @@ extension ApiClient: DependencyKey {
                 .getDocuments()
 
             return snapshot.documents.count
+        },
+        fetchPartyPlansConfig: {
+            try await Firestore.firestore()
+                .collection("config")
+                .document("partyPlans")
+                .getDocument(as: PartyPlansConfig.self)
         }
     )
 }

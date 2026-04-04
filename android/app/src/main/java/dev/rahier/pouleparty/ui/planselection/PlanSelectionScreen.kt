@@ -17,6 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.draw.shadow
@@ -25,6 +26,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import dev.rahier.pouleparty.model.PartyPlansConfig
 import dev.rahier.pouleparty.model.PricingModel
 import dev.rahier.pouleparty.ui.theme.*
 import kotlinx.coroutines.launch
@@ -91,74 +93,104 @@ fun PlanSelectionScreen(
                 modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
             )
 
-            Text(
-                text = if (uiState.step == PlanSelectionUiState.Step.CHOOSE_PLAN) "Choose your plan"
-                       else uiState.selectedPlan?.title ?: "",
-                style = gameboyStyle(10),
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-                modifier = Modifier.padding(bottom = 32.dp)
-            )
+            when {
+                uiState.isLoading -> {
+                    Spacer(modifier = Modifier.weight(1f))
+                    CircularProgressIndicator(color = CROrange)
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+                uiState.loadFailed -> {
+                    Spacer(modifier = Modifier.weight(1f))
+                    Text(
+                        "Failed to load pricing",
+                        style = gameboyStyle(9),
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = { viewModel.loadPlansConfig() },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = CROrange)
+                    ) {
+                        Text("Retry", style = bangerStyle(20), color = Color.White)
+                    }
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+                else -> {
+                    Text(
+                        text = if (uiState.step == PlanSelectionUiState.Step.CHOOSE_PLAN) "Choose your plan"
+                               else uiState.selectedPlan?.title ?: "",
+                        style = gameboyStyle(10),
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                        modifier = Modifier.padding(bottom = 32.dp)
+                    )
 
-            AnimatedContent(targetState = uiState.step, label = "plan_step") { step ->
-                when (step) {
-                    PlanSelectionUiState.Step.CHOOSE_PLAN -> {
-                        PlanTilesContent(
-                            onFreeTapped = {
-                                scope.launch {
-                                    if (viewModel.canCreateFreeGame()) {
-                                        onPlanSelected(PricingParams("free", 5, 0, 0))
-                                    } else {
-                                        viewModel.showDailyLimitAlert()
-                                    }
-                                }
-                            },
-                            onFlatTapped = { viewModel.selectPlan(PricingModel.FLAT) },
-                            onDepositTapped = { viewModel.selectPlan(PricingModel.DEPOSIT) }
-                        )
+                    val config = uiState.plansConfig ?: return@Column
+                    AnimatedContent(targetState = uiState.step, label = "plan_step") { step ->
+                        when (step) {
+                            PlanSelectionUiState.Step.CHOOSE_PLAN -> {
+                                PlanTilesContent(
+                                    config = config,
+                                    onFreeTapped = {
+                                        scope.launch {
+                                            if (viewModel.canCreateFreeGame()) {
+                                                onPlanSelected(PricingParams("free", 5, 0, 0))
+                                            } else {
+                                                viewModel.showDailyLimitAlert()
+                                            }
+                                        }
+                                    },
+                                    onFlatTapped = { viewModel.selectPlan(PricingModel.FLAT) },
+                                    onDepositTapped = { viewModel.selectPlan(PricingModel.DEPOSIT) }
+                                )
+                            }
+                            PlanSelectionUiState.Step.CONFIGURE_PRICING -> {
+                                PricingConfigContent(
+                                    uiState = uiState,
+                                    viewModel = viewModel,
+                                    onConfirm = { onPlanSelected(viewModel.buildNavigationParams()) }
+                                )
+                            }
+                        }
                     }
-                    PlanSelectionUiState.Step.CONFIGURE_PRICING -> {
-                        PricingConfigContent(
-                            uiState = uiState,
-                            viewModel = viewModel,
-                            onConfirm = { onPlanSelected(viewModel.buildNavigationParams()) }
-                        )
-                    }
+
+                    Spacer(modifier = Modifier.weight(1f))
                 }
             }
-
-            Spacer(modifier = Modifier.weight(1f))
         }
     }
 }
 
 @Composable
 private fun PlanTilesContent(
+    config: PartyPlansConfig,
     onFreeTapped: () -> Unit,
     onFlatTapped: () -> Unit,
     onDepositTapped: () -> Unit
 ) {
-    Column {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         PlanTile(
             title = "FREE",
-            subtitle = "1 game per day, up to 5 players",
+            subtitle = "1 game per day, up to ${config.free.maxPlayers} players",
             emoji = "\uD83C\uDFAE",
+            isEnabled = config.free.enabled,
             onClick = onFreeTapped
         )
-        Spacer(modifier = Modifier.height(16.dp))
         PlanTile(
             title = "Forfait",
-            subtitle = "Pay once for unlimited players",
+            subtitle = "${config.flat.pricePerPlayerCents / 100}€ per player",
             emoji = "\u2B50",
             gradient = GradientFire,
             isFeatured = true,
+            isEnabled = config.flat.enabled,
             onClick = onFlatTapped
         )
-        Spacer(modifier = Modifier.height(16.dp))
         PlanTile(
             title = "Caution + %",
-            subtitle = "Deposit + commission per player",
+            subtitle = "${config.deposit.depositAmountCents / 100}€ deposit + ${config.deposit.commissionPercent.toInt()}% commission",
             emoji = "\uD83D\uDC8E",
             gradient = GradientDeposit,
+            isEnabled = config.deposit.enabled,
             onClick = onDepositTapped
         )
     }
@@ -210,6 +242,10 @@ private fun PricingConfigContent(
 
 @Composable
 private fun FlatConfig(uiState: PlanSelectionUiState, viewModel: PlanSelectionViewModel) {
+    val config = uiState.plansConfig?.flat ?: return
+    val pricePerPlayer = config.pricePerPlayerCents / 100
+    val total = uiState.numberOfPlayers.toInt() * pricePerPlayer
+
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             "Number of players",
@@ -224,39 +260,78 @@ private fun FlatConfig(uiState: PlanSelectionUiState, viewModel: PlanSelectionVi
         Slider(
             value = uiState.numberOfPlayers,
             onValueChange = { viewModel.updateNumberOfPlayers(it) },
-            valueRange = 6f..50f,
-            steps = 43,
+            valueRange = config.minPlayers.toFloat()..config.maxPlayers.toFloat(),
+            steps = config.maxPlayers - config.minPlayers - 1,
             colors = SliderDefaults.colors(thumbColor = CROrange, activeTrackColor = CROrange)
         )
-        PriceSummaryRow("Price per player", "${uiState.flatPricePerPlayer}€")
-        PriceSummaryRow("Total", "${uiState.flatTotal}€", isTotal = true)
+        PriceSummaryRow("Price per player", "${pricePerPlayer}€")
+        PriceSummaryRow("Total", "${total}€", isTotal = true)
     }
 }
 
 @Composable
 private fun DepositConfig(uiState: PlanSelectionUiState, viewModel: PlanSelectionViewModel) {
+    val config = uiState.plansConfig?.deposit ?: return
+    val depositEuros = config.depositAmountCents / 100
+    val commissionPct = config.commissionPercent.toInt()
+
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        PriceField(
-            label = "Deposit amount",
-            placeholder = "10",
-            value = uiState.depositAmount,
-            onValueChange = { viewModel.updateDepositAmount(it) },
-            suffix = "€"
-        )
+        // Admin-defined info
+        PriceSummaryRow("Deposit", "${depositEuros}€")
+        PriceSummaryRow("Commission", "${commissionPct}%")
+
+        HorizontalDivider()
+
+        // User sets price per hunter
         PriceField(
             label = "Price per hunter",
             placeholder = "5",
-            value = uiState.pricePerPlayer,
-            onValueChange = { viewModel.updatePricePerPlayer(it) },
+            value = uiState.pricePerHunter,
+            onValueChange = { viewModel.updatePricePerHunter(it) },
             suffix = "€"
         )
 
-        val deposit = uiState.depositAmount.toIntOrNull()
-        val price = uiState.pricePerPlayer.toIntOrNull()
-        if (deposit != null && price != null && price > 0) {
-            val commission = (price * 0.15).toInt()
-            PriceSummaryRow("Your deposit", "${deposit}€")
-            PriceSummaryRow("Commission (15%)", "${commission}€ / player")
+        // Optional max players toggle + slider
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "Limit number of players",
+                style = gameboyStyle(8),
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+            )
+            Switch(
+                checked = uiState.hasMaxPlayers,
+                onCheckedChange = { viewModel.updateHasMaxPlayers(it) },
+                colors = SwitchDefaults.colors(checkedTrackColor = CROrange)
+            )
+        }
+
+        if (uiState.hasMaxPlayers) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    "${uiState.maxPlayers.toInt()} players max",
+                    style = bangerStyle(22),
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Slider(
+                    value = uiState.maxPlayers,
+                    onValueChange = { viewModel.updateMaxPlayers(it) },
+                    valueRange = 2f..50f,
+                    steps = 47,
+                    colors = SliderDefaults.colors(thumbColor = CROrange, activeTrackColor = CROrange)
+                )
+            }
+        }
+
+        // Summary
+        val price = uiState.pricePerHunter.toIntOrNull()
+        if (price != null && price > 0) {
+            HorizontalDivider()
+            val commission = price.toDouble() * commissionPct / 100.0
+            PriceSummaryRow("You earn per hunter", String.format("%.2f€", price - commission))
             PriceSummaryRow("Hunter pays", "${price}€", isTotal = true)
         }
     }
@@ -333,10 +408,10 @@ private fun PlanTile(
     emoji: String,
     gradient: Brush? = null,
     isFeatured: Boolean = false,
+    isEnabled: Boolean = true,
     onClick: () -> Unit
 ) {
     val shape = RoundedCornerShape(16.dp)
-    val hasGradient = gradient != null
 
     Row(
         modifier = Modifier
@@ -344,16 +419,19 @@ private fun PlanTile(
             .shadow(if (isFeatured) 8.dp else 4.dp, shape)
             .clip(shape)
             .then(
-                if (hasGradient) {
-                    Modifier.background(gradient!!)
+                if (gradient != null) {
+                    Modifier.background(gradient)
                 } else {
                     Modifier
                         .background(MaterialTheme.colorScheme.surface)
                         .border(1.5.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.15f), shape)
                 }
             )
-            .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 18.dp),
+            .then(
+                if (isEnabled) Modifier.clickable(onClick = onClick) else Modifier
+            )
+            .padding(horizontal = 20.dp, vertical = 18.dp)
+            .alpha(if (isEnabled) 1f else 0.4f),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
@@ -366,12 +444,12 @@ private fun PlanTile(
             Text(
                 text = title,
                 style = bangerStyle(22),
-                color = if (hasGradient) Color.White else MaterialTheme.colorScheme.onBackground
+                color = if (gradient != null) Color.White else MaterialTheme.colorScheme.onBackground
             )
             Text(
                 text = subtitle,
                 style = gameboyStyle(7),
-                color = if (hasGradient) Color.White.copy(alpha = 0.8f)
+                color = if (gradient != null) Color.White.copy(alpha = 0.8f)
                 else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
             )
         }
@@ -379,7 +457,7 @@ private fun PlanTile(
         Icon(
             Icons.AutoMirrored.Filled.KeyboardArrowRight,
             contentDescription = null,
-            tint = if (hasGradient) Color.White.copy(alpha = 0.8f)
+            tint = if (gradient != null) Color.White.copy(alpha = 0.8f)
             else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
         )
     }

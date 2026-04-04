@@ -36,6 +36,13 @@ object AppConstants {
     const val DEFAULT_RADIUS_INTERVAL = 5.0   // in minutes
     const val DEFAULT_NUMBER_OF_PLAYERS = 10
 
+    // Pricing (Admin-defined)
+    const val FLAT_PRICE_PER_PLAYER_CENTS = 300 // 3€ per player
+    const val FLAT_MIN_PLAYERS = 6
+    const val FLAT_MAX_PLAYERS = 50
+    const val DEPOSIT_AMOUNT_CENTS = 1000 // 10€ deposit
+    const val COMMISSION_PERCENT = 15.0
+
     // Location
     const val LOCATION_MIN_DISTANCE_METERS = 10f
 

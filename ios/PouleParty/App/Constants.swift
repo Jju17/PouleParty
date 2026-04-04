@@ -53,6 +53,13 @@ enum AppConstants {
     // MARK: - Confetti
     static let confettiParticleCount = 80
 
+    // MARK: - Pricing (Admin-defined)
+    static let flatPricePerPlayerCents = 300 // 3€ per player
+    static let flatMinPlayers = 6
+    static let flatMaxPlayers = 50
+    static let depositAmountCents = 1000 // 10€ deposit
+    static let commissionPercent: Double = 15.0
+
     // MARK: - Normal Mode Settings
     static let normalModeFixedInterval: Double = 5 // minutes
     static let normalModeMinimumRadius: Double = 100 // meters

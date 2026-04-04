@@ -12,7 +12,7 @@ import os
 import Sharing
 import SwiftUI
 
-struct PricingConfig: Equatable {
+struct PlanSelectionResult: Equatable {
     let model: Game.PricingModel
     let numberOfPlayers: Int
     let pricePerPlayerCents: Int
@@ -32,7 +32,7 @@ struct HomeFeature {
         var isJoiningGame = false
         var activeGame: Game? = nil
         var activeGameRole: GameRole? = nil
-        var pendingPricingConfig: PricingConfig? = nil
+        var pendingPlanResult: PlanSelectionResult? = nil
     }
 
     enum Action: BindableAction {
@@ -143,7 +143,7 @@ struct HomeFeature {
                 return .send(.chickenGameStarted(game))
             case let .destination(.presented(.planSelection(.planSelected(pricingModel, numberOfPlayers, pricePerPlayerCents, depositAmountCents)))):
                 state.destination = nil
-                state.pendingPricingConfig = PricingConfig(
+                state.pendingPlanResult = PlanSelectionResult(
                     model: pricingModel,
                     numberOfPlayers: numberOfPlayers,
                     pricePerPlayerCents: pricePerPlayerCents,
@@ -205,7 +205,7 @@ struct HomeFeature {
             case .completedGameFound:
                 return .none
             case let .initialLocationResolved(location):
-                guard let config = state.pendingPricingConfig else { return .none }
+                guard let config = state.pendingPlanResult else { return .none }
                 var game = Game(id: uuid().uuidString)
                 game.foundCode = Game.generateFoundCode()
                 game.chickenHeadStartMinutes = 5
@@ -220,7 +220,7 @@ struct HomeFeature {
                 if let location {
                     game.initialLocation = location
                 }
-                state.pendingPricingConfig = nil
+                state.pendingPlanResult = nil
                 state.destination = .chickenConfig(
                     ChickenConfigFeature.State(game: Shared(value: game))
                 )
