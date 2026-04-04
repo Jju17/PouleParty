@@ -32,7 +32,7 @@ import dev.rahier.pouleparty.ui.theme.*
 
 @Composable
 fun HomeScreen(
-    onNavigateToChickenConfig: (String) -> Unit,
+    onNavigateToPlanSelection: () -> Unit,
     onNavigateToChickenMap: (String) -> Unit,
     onNavigateToHunterMap: (String, String) -> Unit,
     onNavigateToVictory: (String) -> Unit,
@@ -260,13 +260,17 @@ fun HomeScreen(
                     )
                 }
                 TextButton(
-                    onClick = { viewModel.onIAmLaPouleTapped() },
+                    onClick = {
+                        if (viewModel.onCreatePartyTapped()) {
+                            onNavigateToPlanSelection()
+                        }
+                    },
                     modifier = Modifier
                         .padding(16.dp)
                         .border(2.dp, MaterialTheme.colorScheme.onBackground, RoundedCornerShape(12.dp))
                 ) {
                     Text(
-                        stringResource(R.string.i_am_la_poule),
+                        "Create Party",
                         fontFamily = GameBoyFont,
                         fontSize = 8.sp,
                         color = MaterialTheme.colorScheme.onBackground
@@ -277,24 +281,6 @@ fun HomeScreen(
     }
 
     // ── Dialogs ──
-
-    // Chicken confirmation dialog
-    if (state.isShowingChickenConfirm) {
-        AlertDialog(
-            onDismissRequest = { viewModel.onChickenConfirmDismissed() },
-            title = { Text(stringResource(R.string.create_game_title)) },
-            text = { Text(stringResource(R.string.create_game_message)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    val gameId = viewModel.confirmChicken()
-                    onNavigateToChickenConfig(gameId)
-                }) { Text(stringResource(R.string.continue_label)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { viewModel.onChickenConfirmDismissed() }) { Text(stringResource(R.string.cancel)) }
-            }
-        )
-    }
 
     // Join game dialog
     if (state.isShowingJoinDialog) {

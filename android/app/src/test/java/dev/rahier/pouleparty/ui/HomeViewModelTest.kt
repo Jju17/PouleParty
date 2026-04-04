@@ -9,7 +9,6 @@ class HomeViewModelTest {
     @Test
     fun `initial state has all dialogs hidden`() {
         val state = HomeUiState()
-        assertFalse(state.isShowingChickenConfirm)
         assertFalse(state.isShowingJoinDialog)
         assertFalse(state.isShowingGameRules)
         assertFalse(state.isShowingGameNotFound)

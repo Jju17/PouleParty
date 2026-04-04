@@ -43,8 +43,7 @@ struct PoulePartyLiveActivity: Widget {
                     switch context.state.gamePhase {
                     case .waitingToStart:
                         HStack {
-                            Text(context.attributes.gameName)
-                                .font(.banger(size: 14))
+                            BangerText(context.attributes.gameName, size: 14)
                                 .lineLimit(1)
                             Spacer()
                             HStack(spacing: 4) {
@@ -120,12 +119,10 @@ struct PoulePartyLiveActivity: Widget {
                 // ── Compact: Trailing ─────────────────────────
                 switch context.state.gamePhase {
                 case .waitingToStart:
-                    Text(context.attributes.gameCode)
-                        .font(.banger(size: 12))
+                    BangerText(context.attributes.gameCode, size: 12)
                         .foregroundStyle(crOrange)
                 case .chickenHeadStart, .hunting:
-                    Text("\(context.state.radiusMeters)m")
-                        .font(.banger(size: 14))
+                    BangerText("\(context.state.radiusMeters)m", size: 14)
                         .foregroundStyle(crOrange)
                 case .gameOver:
                     Text(context.state.winnersCount > 0 ? "🏆" : "🐔")

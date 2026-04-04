@@ -12,6 +12,13 @@ import os
 import Sharing
 import SwiftUI
 
+struct PricingConfig: Equatable {
+    let model: Game.PricingModel
+    let numberOfPlayers: Int
+    let pricePerPlayerCents: Int
+    let depositAmountCents: Int
+}
+
 @Reducer
 struct HomeFeature {
 
@@ -22,10 +29,10 @@ struct HomeFeature {
         @Shared(.appStorage(AppConstants.prefUserNickname)) var savedNickname = ""
         var gameCode: String = ""
         var musicMuted: Bool { isMusicMuted }
-        var isConfirmingChicken = false
         var isJoiningGame = false
         var activeGame: Game? = nil
         var activeGameRole: GameRole? = nil
+        var pendingPricingConfig: PricingConfig? = nil
     }
 
     enum Action: BindableAction {
@@ -36,7 +43,8 @@ struct HomeFeature {
         case chickenConfigLocationRequested
         case chickenGameStarted(Game)
         case completedGameFound(Game)
-        case confirmChickenTapped
+        case createPartyTapped
+        case dailyFreeLimitChecked(allowed: Bool)
         case destination(PresentationAction<Destination.Action>)
         case destinationDismissed
         case gameNotFound
@@ -61,12 +69,14 @@ struct HomeFeature {
             case alert(AlertState<Action.Alert>)
             case chickenConfig(ChickenConfigFeature.State)
             case gameRules
+            case planSelection(PlanSelectionFeature.State)
             case settings(SettingsFeature.State)
         }
 
         enum Action {
             case alert(Alert)
             case chickenConfig(ChickenConfigFeature.Action)
+            case planSelection(PlanSelectionFeature.Action)
             case settings(SettingsFeature.Action)
 
             enum Alert: Equatable {
@@ -78,6 +88,9 @@ struct HomeFeature {
             EmptyReducer()
                 .ifCaseLet(\.chickenConfig, action: \.chickenConfig) {
                     ChickenConfigFeature()
+                }
+                .ifCaseLet(\.planSelection, action: \.planSelection) {
+                    PlanSelectionFeature()
                 }
                 .ifCaseLet(\.settings, action: \.settings) {
                     SettingsFeature()
@@ -102,23 +115,52 @@ struct HomeFeature {
                 return .none
             case .binding:
                 return .none
-            case .confirmChickenTapped:
+            case let .dailyFreeLimitChecked(allowed):
+                if allowed {
+                    return .send(.chickenConfigLocationRequested)
+                }
+                state.destination = .alert(
+                    AlertState {
+                        TextState("Daily limit reached")
+                    } actions: {
+                        ButtonState(role: .cancel) {
+                            TextState("OK")
+                        }
+                    } message: {
+                        TextState("You can only create 1 free game per day. Upgrade to a paid plan for unlimited games.")
+                    }
+                )
+                return .none
+            case .createPartyTapped:
                 let chickenLocStatus = locationClient.authorizationStatus()
                 guard chickenLocStatus == .authorizedAlways || chickenLocStatus == .authorizedWhenInUse else {
-                    state.isConfirmingChicken = false
                     return .send(.locationPermissionDenied)
                 }
-                state.isConfirmingChicken = false
-                // Small delay so the alert dismissal animation completes
-                // before the sheet presents (SwiftUI won't present a sheet
-                // while an alert is still animating out).
+                state.destination = .planSelection(PlanSelectionFeature.State())
+                return .none
+            case let .destination(.presented(.chickenConfig(.gameCreated(game)))):
+                state.destination = nil
+                return .send(.chickenGameStarted(game))
+            case let .destination(.presented(.planSelection(.planSelected(pricingModel, numberOfPlayers, pricePerPlayerCents, depositAmountCents)))):
+                state.destination = nil
+                state.pendingPricingConfig = PricingConfig(
+                    model: pricingModel,
+                    numberOfPlayers: numberOfPlayers,
+                    pricePerPlayerCents: pricePerPlayerCents,
+                    depositAmountCents: depositAmountCents
+                )
+                if pricingModel == .free {
+                    return .run { [userClient] send in
+                        try? await Task.sleep(for: .milliseconds(150))
+                        let userId = userClient.currentUserId() ?? ""
+                        let count = (try? await apiClient.countFreeGamesToday(userId)) ?? 0
+                        await send(.dailyFreeLimitChecked(allowed: count < 1))
+                    }
+                }
                 return .run { send in
                     try? await Task.sleep(for: .milliseconds(150))
                     await send(.chickenConfigLocationRequested)
                 }
-            case let .destination(.presented(.chickenConfig(.gameCreated(game)))):
-                state.destination = nil
-                return .send(.chickenGameStarted(game))
             case .destination(.presented(.settings(.deleteSuccessAlertDismissed))):
                 state.destination = nil
                 return .send(.accountDeletionCompleted)
@@ -163,16 +205,22 @@ struct HomeFeature {
             case .completedGameFound:
                 return .none
             case let .initialLocationResolved(location):
+                guard let config = state.pendingPricingConfig else { return .none }
                 var game = Game(id: uuid().uuidString)
                 game.foundCode = Game.generateFoundCode()
                 game.chickenHeadStartMinutes = 5
                 game.creatorId = userClient.currentUserId() ?? ""
+                game.pricingModel = config.model
+                game.numberOfPlayers = config.numberOfPlayers
+                game.pricePerPlayer = config.pricePerPlayerCents
+                game.depositAmount = config.depositAmountCents
                 game.driftSeed = withRandomNumberGenerator { generator in
                     Int.random(in: 1...999_999, using: &generator)
                 }
                 if let location {
                     game.initialLocation = location
                 }
+                state.pendingPricingConfig = nil
                 state.destination = .chickenConfig(
                     ChickenConfigFeature.State(game: Shared(value: game))
                 )
@@ -403,9 +451,9 @@ struct HomeView: View {
                     Spacer()
 
                     Button {
-                        store.isConfirmingChicken = true
+                        store.send(.createPartyTapped)
                     } label: {
-                        Text("I am la poule")
+                        Text("Create Party")
                             .padding()
                             .foregroundColor(Color.onBackground)
                             .font(.gameboy(size: 8))
@@ -414,17 +462,9 @@ struct HomeView: View {
                                     .stroke(Color.onBackground, lineWidth: 2)
                             )
                     }
-                    .accessibilityLabel("I am the chicken")
+                    .accessibilityLabel("Create a party")
                     .padding()
                 }
-            }
-            .alert("Create a game", isPresented: $store.isConfirmingChicken) {
-                Button("Continue") {
-                    self.store.send(.confirmChickenTapped)
-                }
-                Button("Cancel", role: .cancel) { }
-            } message: {
-                Text("You will create a new game as the Chicken. Are you ready?")
             }
             .alert("Join Game", isPresented: $store.isJoiningGame) {
                 TextField("Game code", text: $store.gameCode)
@@ -470,6 +510,20 @@ struct HomeView: View {
 
                         }
                     }
+            }
+        }
+        .sheet(
+            isPresented: Binding(
+                get: { if case .planSelection = store.destination { true } else { false } },
+                set: { if !$0 { store.send(.destinationDismissed) } }
+            )
+        ) {
+            if let planStore = store.scope(
+                state: \.destination?.planSelection,
+                action: \.destination.planSelection
+            ) {
+                PlanSelectionView(store: planStore)
+                    .presentationDetents([.medium])
             }
         }
         .alert(

@@ -15,7 +15,7 @@ struct Game: Codable, Equatable {
     var numberOfPlayers: Int = 10
     var radiusIntervalUpdate: Double = 5 // In minutes
     var startTimestamp: Timestamp = {
-        let date = Date.now.addingTimeInterval(300)
+        let date = Date.now.addingTimeInterval(7200)
         let seconds = Calendar.current.component(.second, from: date)
         return .init(date: date.addingTimeInterval(Double(-seconds)))
     }()
@@ -33,6 +33,10 @@ struct Game: Codable, Equatable {
     var winners: [Winner] = []
     var creatorId: String = ""
     var driftSeed: Int = 0
+    var pricingModel: PricingModel = .free
+    var pricePerPlayer: Int = 0 // In cents
+    var depositAmount: Int = 0 // In cents
+    var commissionPercent: Double = 15.0
     var powerUpsEnabled: Bool = false
     var enabledPowerUpTypes: [String] = PowerUp.PowerUpType.allCases.map(\.rawValue)
     var activeInvisibilityUntil: Timestamp?
@@ -41,10 +45,26 @@ struct Game: Codable, Equatable {
     var activeDecoyUntil: Timestamp?
     var activeJammerUntil: Timestamp?
 
+    var isPaid: Bool { pricingModel != .free }
+
     enum GameStatus: String, CaseIterable, Equatable, Codable {
         case waiting
         case inProgress
         case done
+    }
+
+    enum PricingModel: String, CaseIterable, Equatable, Codable {
+        case free
+        case flat
+        case deposit
+
+        var title: String {
+            switch self {
+            case .free: return "Free"
+            case .flat: return "Forfait"
+            case .deposit: return "Caution + %"
+            }
+        }
     }
 
     enum GameMod: String, CaseIterable, Equatable, Codable {

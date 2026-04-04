@@ -37,19 +37,23 @@ import dev.rahier.pouleparty.ui.chickenmap.ChickenMapScreen
 import dev.rahier.pouleparty.ui.huntermap.HunterMapScreen
 import dev.rahier.pouleparty.ui.onboarding.OnboardingScreen
 import dev.rahier.pouleparty.ui.home.HomeScreen
+import dev.rahier.pouleparty.ui.planselection.PlanSelectionScreen
+import dev.rahier.pouleparty.ui.planselection.PricingParams
 import dev.rahier.pouleparty.ui.settings.SettingsScreen
 import dev.rahier.pouleparty.ui.victory.VictoryScreen
 
 object Routes {
     const val ONBOARDING = "onboarding"
     const val HOME = "home"
-    const val CHICKEN_CONFIG = "chicken_config/{gameId}"
+    const val PLAN_SELECTION = "plan_selection"
+    const val CHICKEN_CONFIG = "chicken_config/{gameId}/{pricingModel}/{numberOfPlayers}/{pricePerPlayerCents}/{depositAmountCents}"
     const val CHICKEN_MAP = "chicken_map/{gameId}"
     const val HUNTER_MAP = "hunter_map/{gameId}/{hunterName}"
     const val VICTORY = "victory/{gameId}/{hunterName}/{hunterId}"
     const val SETTINGS = "settings"
 
-    fun chickenConfig(gameId: String) = "chicken_config/$gameId"
+    fun chickenConfig(gameId: String, pricingModel: String = "free", numberOfPlayers: Int = 5, pricePerPlayerCents: Int = 0, depositAmountCents: Int = 0) =
+        "chicken_config/$gameId/$pricingModel/$numberOfPlayers/$pricePerPlayerCents/$depositAmountCents"
     fun chickenMap(gameId: String) = "chicken_map/$gameId"
     fun hunterMap(gameId: String, hunterName: String) = "hunter_map/$gameId/${Uri.encode(hunterName)}"
     fun victory(gameId: String, hunterName: String, hunterId: String) =
@@ -138,10 +142,30 @@ fun AppNavigation() {
             )
         }
 
+        composable(Routes.PLAN_SELECTION) {
+            PlanSelectionScreen(
+                onPlanSelected = { params ->
+                    val gameId = java.util.UUID.randomUUID().toString()
+                    navController.navigate(
+                        Routes.chickenConfig(
+                            gameId,
+                            params.pricingModel,
+                            params.numberOfPlayers,
+                            params.pricePerPlayerCents,
+                            params.depositAmountCents
+                        )
+                    ) {
+                        popUpTo(Routes.PLAN_SELECTION) { inclusive = true }
+                    }
+                },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
         composable(Routes.HOME) {
             HomeScreen(
-                onNavigateToChickenConfig = { gameId ->
-                    navController.navigate(Routes.chickenConfig(gameId))
+                onNavigateToPlanSelection = {
+                    navController.navigate(Routes.PLAN_SELECTION)
                 },
                 onNavigateToChickenMap = { gameId ->
                     navController.navigate(Routes.chickenMap(gameId)) {
@@ -172,7 +196,13 @@ fun AppNavigation() {
 
         composable(
             route = Routes.CHICKEN_CONFIG,
-            arguments = listOf(navArgument("gameId") { type = NavType.StringType })
+            arguments = listOf(
+                navArgument("gameId") { type = NavType.StringType },
+                navArgument("pricingModel") { type = NavType.StringType; defaultValue = "free" },
+                navArgument("numberOfPlayers") { type = NavType.IntType; defaultValue = 5 },
+                navArgument("pricePerPlayerCents") { type = NavType.IntType; defaultValue = 0 },
+                navArgument("depositAmountCents") { type = NavType.IntType; defaultValue = 0 }
+            )
         ) {
             ChickenConfigScreen(
                 onStartGame = { gameId ->

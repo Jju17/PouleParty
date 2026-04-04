@@ -305,7 +305,7 @@ struct ChickenConfigView: View {
             DatePicker(selection: Binding(
                 get: { store.currentGame.startDate },
                 set: { store.send(.startDateChanged($0)) }
-            ), in: .now.addingTimeInterval(120)...) {
+            ), in: .now.addingTimeInterval(7200)...) {
                 Text("Start at")
             }
             .datePickerStyle(.compact)

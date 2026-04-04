@@ -359,4 +359,28 @@ class FirestoreRepository @Inject constructor(
 
         awaitClose { listener.remove() }
     }
+
+    suspend fun countFreeGamesToday(userId: String): Int {
+        return try {
+            val calendar = java.util.Calendar.getInstance().apply {
+                set(java.util.Calendar.HOUR_OF_DAY, 0)
+                set(java.util.Calendar.MINUTE, 0)
+                set(java.util.Calendar.SECOND, 0)
+                set(java.util.Calendar.MILLISECOND, 0)
+            }
+            val startOfDay = Timestamp(calendar.time)
+
+            val snapshot = firestore.collection(AppConstants.COLLECTION_GAMES)
+                .whereEqualTo("creatorId", userId)
+                .whereEqualTo("pricingModel", "free")
+                .whereGreaterThanOrEqualTo("startTimestamp", startOfDay)
+                .get()
+                .await()
+
+            snapshot.documents.size
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to count free games today for $userId", e)
+            0
+        }
+    }
 }

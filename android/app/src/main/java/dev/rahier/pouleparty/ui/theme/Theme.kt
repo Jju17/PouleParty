@@ -46,6 +46,8 @@ private val DarkColorScheme = darkColorScheme(
 val GradientFire = Brush.linearGradient(listOf(CROrange, CRPink))
 val GradientChicken = Brush.linearGradient(listOf(ChickenYellow, CROrange))
 val GradientHunter = Brush.linearGradient(listOf(HunterRed, CRPink))
+val GradientFree = Brush.linearGradient(listOf(PlanFreeStart, PlanFreeEnd))
+val GradientDeposit = Brush.linearGradient(listOf(PlanDepositStart, PlanDepositEnd))
 val GradientBackgroundWarmth = Brush.radialGradient(listOf(CRBeige, CRBeigeWarm))
 
 @Composable

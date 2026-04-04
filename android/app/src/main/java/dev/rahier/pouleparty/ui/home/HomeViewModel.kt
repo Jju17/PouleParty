@@ -20,7 +20,6 @@ import java.util.UUID
 import javax.inject.Inject
 
 data class HomeUiState(
-    val isShowingChickenConfirm: Boolean = false,
     val isShowingJoinDialog: Boolean = false,
     val isShowingGameRules: Boolean = false,
     val isShowingGameNotFound: Boolean = false,
@@ -99,9 +98,6 @@ class HomeViewModel @Inject constructor(
         _uiState.update { it.copy(isShowingJoinDialog = true) }
     }
 
-    fun onChickenConfirmDismissed() {
-        _uiState.update { it.copy(isShowingChickenConfirm = false) }
-    }
 
     fun onJoinDialogDismissed() {
         _uiState.update { it.copy(isShowingJoinDialog = false, gameCode = "", hunterName = "") }
@@ -131,17 +127,12 @@ class HomeViewModel @Inject constructor(
         _uiState.update { it.copy(isShowingLocationRequired = false) }
     }
 
-    fun onIAmLaPouleTapped() {
+    fun onCreatePartyTapped(): Boolean {
         if (!locationRepository.hasFineLocationPermission()) {
             _uiState.update { it.copy(isShowingLocationRequired = true) }
-            return
+            return false
         }
-        _uiState.update { it.copy(isShowingChickenConfirm = true) }
-    }
-
-    fun confirmChicken(): String {
-        _uiState.update { it.copy(isShowingChickenConfirm = false) }
-        return UUID.randomUUID().toString()
+        return true
     }
 
     /**

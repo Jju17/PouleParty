@@ -347,4 +347,60 @@ struct GameTests {
             }
         }
     }
+
+    // MARK: - Pricing Model
+
+    @Test func defaultGameHasFreePricingModel() {
+        let game = Game(id: "test")
+        #expect(game.pricingModel == .free)
+    }
+
+    @Test func isPaidIsFalseForFreeGames() {
+        var game = Game(id: "test")
+        game.pricingModel = .free
+        #expect(game.isPaid == false)
+    }
+
+    @Test func isPaidIsTrueForFlatGames() {
+        var game = Game(id: "test")
+        game.pricingModel = .flat
+        #expect(game.isPaid == true)
+    }
+
+    @Test func isPaidIsTrueForDepositGames() {
+        var game = Game(id: "test")
+        game.pricingModel = .deposit
+        #expect(game.isPaid == true)
+    }
+
+    @Test func pricingFieldsHaveCorrectDefaults() {
+        let game = Game(id: "test")
+        #expect(game.pricePerPlayer == 0)
+        #expect(game.depositAmount == 0)
+        #expect(game.commissionPercent == 15.0)
+    }
+
+    @Test func flatGameStoresPricePerPlayer() {
+        var game = Game(id: "test")
+        game.pricingModel = .flat
+        game.pricePerPlayer = 300
+        game.numberOfPlayers = 15
+        #expect(game.pricePerPlayer == 300)
+        #expect(game.numberOfPlayers == 15)
+    }
+
+    @Test func depositGameStoresDepositAndPrice() {
+        var game = Game(id: "test")
+        game.pricingModel = .deposit
+        game.depositAmount = 1000
+        game.pricePerPlayer = 500
+        #expect(game.depositAmount == 1000)
+        #expect(game.pricePerPlayer == 500)
+    }
+
+    @Test func pricingModelRawValues() {
+        #expect(Game.PricingModel.free.rawValue == "free")
+        #expect(Game.PricingModel.flat.rawValue == "flat")
+        #expect(Game.PricingModel.deposit.rawValue == "deposit")
+    }
 }

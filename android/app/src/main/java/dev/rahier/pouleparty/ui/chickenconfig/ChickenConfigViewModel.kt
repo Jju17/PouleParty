@@ -53,13 +53,17 @@ class ChickenConfigViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val gameId: String = savedStateHandle["gameId"] ?: ""
+    private val pricingModel: String = savedStateHandle["pricingModel"] ?: "free"
+    private val numberOfPlayers: Int = savedStateHandle["numberOfPlayers"] ?: 5
+    private val pricePerPlayerCents: Int = savedStateHandle["pricePerPlayerCents"] ?: 0
+    private val depositAmountCents: Int = savedStateHandle["depositAmountCents"] ?: 0
 
     private val _uiState = MutableStateFlow(
         ChickenConfigUiState(
             game = Game(
                 id = gameId,
                 name = "",
-                numberOfPlayers = 10,
+                numberOfPlayers = numberOfPlayers,
                 radiusIntervalUpdate = 5.0,
                 initialRadius = 1500.0,
                 radiusDeclinePerUpdate = 100.0,
@@ -67,7 +71,10 @@ class ChickenConfigViewModel @Inject constructor(
                 gameMod = GameMod.STAY_IN_THE_ZONE.firestoreValue,
                 foundCode = Game.generateFoundCode(),
                 creatorId = auth.currentUser?.uid ?: "",
-                driftSeed = (1..999_999).random()
+                driftSeed = (1..999_999).random(),
+                pricingModel = pricingModel,
+                pricePerPlayer = pricePerPlayerCents,
+                depositAmount = depositAmountCents
             )
         )
     )

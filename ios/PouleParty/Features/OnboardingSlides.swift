@@ -240,8 +240,7 @@ struct OnboardingNotificationSlide: View {
             switch status {
             case .authorized, .provisional, .ephemeral:
                 Group {
-                    Text("Notifications enabled! You'll know when the game starts, the zone shrinks, and when hunters find the chicken.")
-                        .font(.banger(size: 18))
+                    BangerText("Notifications enabled! You'll know when the game starts, the zone shrinks, and when hunters find the chicken.", size: 18)
                         .multilineTextAlignment(.center)
                         .foregroundStyle(Color.onBackground.opacity(0.6))
                         .padding(.horizontal, 10)
@@ -250,8 +249,7 @@ struct OnboardingNotificationSlide: View {
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundStyle(Color.success)
                             .font(.system(size: 24))
-                        Text("Notifications enabled!")
-                            .font(.banger(size: 20))
+                        BangerText("Notifications enabled!", size: 20)
                             .foregroundStyle(Color.success)
                     }
                     .padding(.top, 8)
@@ -259,8 +257,7 @@ struct OnboardingNotificationSlide: View {
 
             case .denied:
                 Group {
-                    Text("Notifications were denied. You can enable them in Settings to get game alerts.")
-                        .font(.banger(size: 18))
+                    BangerText("Notifications were denied. You can enable them in Settings to get game alerts.", size: 18)
                         .multilineTextAlignment(.center)
                         .foregroundStyle(Color.onBackground.opacity(0.6))
                         .padding(.horizontal, 10)
@@ -270,8 +267,7 @@ struct OnboardingNotificationSlide: View {
                             UIApplication.shared.open(url)
                         }
                     } label: {
-                        Text("Open Settings")
-                            .font(.banger(size: 18))
+                        BangerText("Open Settings", size: 18)
                             .foregroundStyle(.black)
                             .padding(.horizontal, 24)
                             .padding(.vertical, 10)
@@ -286,8 +282,7 @@ struct OnboardingNotificationSlide: View {
 
             default:
                 Group {
-                    Text("Get notified when the game starts, the zone shrinks, and when a hunter finds the chicken!\n\nThis is optional but recommended.")
-                        .font(.banger(size: 18))
+                    BangerText("Get notified when the game starts, the zone shrinks, and when a hunter finds the chicken!\n\nThis is optional but recommended.", size: 18)
                         .multilineTextAlignment(.center)
                         .foregroundStyle(Color.onBackground.opacity(0.6))
                         .padding(.horizontal, 10)
@@ -295,8 +290,7 @@ struct OnboardingNotificationSlide: View {
                     Button {
                         onRequestPermission()
                     } label: {
-                        Text("Enable Notifications")
-                            .font(.banger(size: 20))
+                        BangerText("Enable Notifications", size: 20)
                             .foregroundStyle(.black)
                             .padding(.horizontal, 28)
                             .padding(.vertical, 14)

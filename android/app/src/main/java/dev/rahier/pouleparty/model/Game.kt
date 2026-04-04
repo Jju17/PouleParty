@@ -13,7 +13,7 @@ data class Game(
     val numberOfPlayers: Int = 10,
     val radiusIntervalUpdate: Double = 5.0, // in minutes
     val startTimestamp: Timestamp = Timestamp(Date(
-        ((System.currentTimeMillis() + 300_000) / 60_000) * 60_000
+        ((System.currentTimeMillis() + 7_200_000) / 60_000) * 60_000
     )),
     val endTimestamp: Timestamp = Timestamp(Date(System.currentTimeMillis() + 3_900_000)),
     val initialCoordinates: GeoPoint = GeoPoint(AppConstants.DEFAULT_LATITUDE, AppConstants.DEFAULT_LONGITUDE),
@@ -29,6 +29,10 @@ data class Game(
     val winners: List<Winner> = emptyList(),
     val creatorId: String = "",
     val driftSeed: Int = 0,
+    val pricingModel: String = PricingModel.FREE.firestoreValue,
+    val pricePerPlayer: Int = 0, // In cents
+    val depositAmount: Int = 0, // In cents
+    val commissionPercent: Double = 15.0,
     val powerUpsEnabled: Boolean = false,
     val enabledPowerUpTypes: List<String> = PowerUpType.entries.map { it.firestoreValue },
     val activeInvisibilityUntil: Timestamp? = null,
@@ -83,6 +87,14 @@ data class Game(
     @get:Exclude
     val gameStatusEnum: GameStatus
         get() = GameStatus.fromFirestore(status)
+
+    @get:Exclude
+    val pricingModelEnum: PricingModel
+        get() = PricingModel.fromFirestore(pricingModel)
+
+    @get:Exclude
+    val isPaid: Boolean
+        get() = pricingModelEnum != PricingModel.FREE
 
     // ── Game Logic ─────────────────────────────────────
 

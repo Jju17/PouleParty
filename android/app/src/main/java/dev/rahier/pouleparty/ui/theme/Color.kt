@@ -48,6 +48,12 @@ val CRSecondaryContainer = Color(0xFFFFE0B2)    // warm peach for selected segme
 val CROnSecondaryContainer = Color(0xFF3E2723)  // dark brown text on selected segments
 val CROutline = Color(0xFFD6C98E)               // warm outline for segmented buttons
 
+// Plan Selection
+val PlanFreeStart = Color(0xFF0EA5E9)
+val PlanFreeEnd = Color(0xFF0369A1)
+val PlanDepositStart = Color(0xFF8B5CF6)
+val PlanDepositEnd = Color(0xFF6D28D9)
+
 // Dark mode variants
 val CRDarkBackground = Color(0xFF1A1A2E)
 val CRDarkSurface = Color(0xFF16213E)

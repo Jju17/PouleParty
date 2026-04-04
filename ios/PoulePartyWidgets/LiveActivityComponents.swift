@@ -24,8 +24,7 @@ struct RadiusBadge: View {
         HStack(spacing: 1) {
             Image(systemName: "circle.dashed")
                 .font(.caption)
-            Text("\(radius)m")
-                .font(.banger(size: 16))
+            BangerText("\(radius)m", size: 16)
                 .lineLimit(1)
         }
         .padding(.horizontal, 8)
@@ -41,8 +40,7 @@ struct GameCodeBadge: View {
     let code: String
 
     var body: some View {
-        Text(code)
-            .font(.banger(size: 14))
+        BangerText(code, size: 14)
             .lineLimit(1)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)

@@ -100,6 +100,18 @@ extension Color {
         endPoint: .bottomTrailing
     )
 
+    static let gradientFree = LinearGradient(
+        colors: [Color(hex: 0x0EA5E9), Color(hex: 0x0369A1)],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+
+    static let gradientDeposit = LinearGradient(
+        colors: [Color(hex: 0x8B5CF6), Color(hex: 0x6D28D9)],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+
     static let gradientChicken = LinearGradient(
         colors: [.chickenYellow, .CROrange],
         startPoint: .topLeading,

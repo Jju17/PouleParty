@@ -121,7 +121,8 @@ See `firestore.rules`. Key principle: the creator has full control over their ga
 
 ## Conventions
 
-- Custom fonts: `Early GameBoy` (retro pixel) and `Bangers` (display/headings)
+- **Design assets**: All design work must use the assets from `/Assets` (fonts, images). A design direction (DA) reference page is available at `/Assets/index.html` — always consult it for visual guidelines.
+- Custom fonts: `Early GameBoy` (retro pixel) and `Bangers` (display/headings) — sourced from `/Assets`
 - Color palette: CRBeige, CROrange (#FE6A00), CRPink (#EF0778) — consistent hex values across platforms
 - Dark mode: fully supported everywhere
 - Profanity filter on nicknames (FR + EN, with leetspeak detection)
@@ -138,3 +139,11 @@ See `firestore.rules`. Key principle: the creator has full control over their ga
 4. **Cloud Functions** — if it needs server-side scheduling or validation
 5. **Tests** — both platforms have unit tests for models and game logic
 6. **README.md** — update the root `README.md` to reflect any new or changed functionality
+
+### 4. Zero Warnings Policy
+
+**The codebase must compile with zero warnings on both iOS and Android.** After every build:
+- If Xcode logs contain warnings → fix them immediately, even if unrelated to the current task.
+- If Gradle/Android Studio logs contain warnings → fix them immediately, even if unrelated to the current task.
+
+This includes deprecation warnings, unused variable warnings, type inference warnings, and any other compiler/linter warnings. No warning is acceptable.

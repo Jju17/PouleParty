@@ -48,8 +48,7 @@ private struct TopRow: View {
             Text(context.attributes.playerRole == .chicken ? "🐔" : "🔍")
                 .font(.title2)
 
-            Text(context.attributes.gameName)
-                .font(.banger(size: 17))
+            BangerText(context.attributes.gameName, size: 17)
                 .lineLimit(1)
 
             Spacer()

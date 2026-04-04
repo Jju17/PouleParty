@@ -29,6 +29,7 @@ struct ApiClient {
     var activatePowerUp: (String, String, Timestamp) async throws -> Void
     var updateGameActiveEffect: (String, String, Timestamp) async throws -> Void
     var powerUpsStream: (String) -> AsyncStream<[PowerUp]>
+    var countFreeGamesToday: (String) async throws -> Int
 }
 
 private let logger = Logger(subsystem: "dev.rahier.pouleparty", category: "ApiClient")
@@ -75,7 +76,8 @@ extension ApiClient: TestDependencyKey {
         collectPowerUp: { _, _, _ in },
         activatePowerUp: { _, _, _ in },
         updateGameActiveEffect: { _, _, _ in },
-        powerUpsStream: { _ in AsyncStream { _ in } }
+        powerUpsStream: { _ in AsyncStream { _ in } },
+        countFreeGamesToday: { _ in 0 }
     )
 }
 
@@ -384,6 +386,20 @@ extension ApiClient: DependencyKey {
                     listener.remove()
                 }
             }
+        },
+        countFreeGamesToday: { userId in
+            let db = Firestore.firestore()
+            let calendar = Calendar.current
+            let startOfDay = calendar.startOfDay(for: Date())
+            let startTimestamp = Timestamp(date: startOfDay)
+
+            let snapshot = try await db.collection(gamesCollection)
+                .whereField("creatorId", isEqualTo: userId)
+                .whereField("pricingModel", isEqualTo: Game.PricingModel.free.rawValue)
+                .whereField("startTimestamp", isGreaterThanOrEqualTo: startTimestamp)
+                .getDocuments()
+
+            return snapshot.documents.count
         }
     )
 }

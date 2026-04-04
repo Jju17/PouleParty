@@ -22,19 +22,14 @@ struct HomeFeatureTests {
         }
     }
 
-    @Test func confirmChickenWithoutLocationShowsAlert() async {
-        var state = HomeFeature.State()
-        state.isConfirmingChicken = true
-
-        let store = TestStore(initialState: state) {
+    @Test func createPartyWithoutLocationShowsAlert() async {
+        let store = TestStore(initialState: HomeFeature.State()) {
             HomeFeature()
         } withDependencies: {
             $0.locationClient.authorizationStatus = { .denied }
         }
 
-        await store.send(.confirmChickenTapped) {
-            $0.isConfirmingChicken = false
-        }
+        await store.send(.createPartyTapped)
         await store.receive(\.locationPermissionDenied) {
             $0.destination = .alert(
                 AlertState {
@@ -47,6 +42,18 @@ struct HomeFeatureTests {
                     TextState("Location is the core of PouleParty! Your position is anonymous and only used during the game. Please enable location access to continue.")
                 }
             )
+        }
+    }
+
+    @Test func createPartyWithLocationShowsPlanSelection() async {
+        let store = TestStore(initialState: HomeFeature.State()) {
+            HomeFeature()
+        } withDependencies: {
+            $0.locationClient.authorizationStatus = { .authorizedWhenInUse }
+        }
+
+        await store.send(.createPartyTapped) {
+            $0.destination = .planSelection(PlanSelectionFeature.State())
         }
     }
 
