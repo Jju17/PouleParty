@@ -129,6 +129,7 @@ See `firestore.rules`. Key principle: the creator has full control over their ga
 - Game codes: 6 chars, found codes: 4 digits
 - All Firestore write operations use retry logic (3 attempts, exponential backoff)
 - When adding a new feature, keep parity between iOS and Android implementations
+- **Language**: All code, comments, variable/function names, and string literals in the codebase must be in English. No French or other languages in the source code.
 - No CI/CD pipelines or linting tools configured
 
 ## Adding a new feature

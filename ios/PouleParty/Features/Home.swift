@@ -67,7 +67,7 @@ struct HomeFeature {
         @ObservableState
         enum State: Equatable {
             case alert(AlertState<Action.Alert>)
-            case chickenConfig(ChickenConfigFeature.State)
+            case gameCreation(GameCreationFeature.State)
             case gameRules
             case planSelection(PlanSelectionFeature.State)
             case settings(SettingsFeature.State)
@@ -75,7 +75,7 @@ struct HomeFeature {
 
         enum Action {
             case alert(Alert)
-            case chickenConfig(ChickenConfigFeature.Action)
+            case gameCreation(GameCreationFeature.Action)
             case planSelection(PlanSelectionFeature.Action)
             case settings(SettingsFeature.Action)
 
@@ -86,8 +86,8 @@ struct HomeFeature {
 
         var body: some ReducerOf<Self> {
             EmptyReducer()
-                .ifCaseLet(\.chickenConfig, action: \.chickenConfig) {
-                    ChickenConfigFeature()
+                .ifCaseLet(\.gameCreation, action: \.gameCreation) {
+                    GameCreationFeature()
                 }
                 .ifCaseLet(\.planSelection, action: \.planSelection) {
                     PlanSelectionFeature()
@@ -138,7 +138,7 @@ struct HomeFeature {
                 }
                 state.destination = .planSelection(PlanSelectionFeature.State())
                 return .none
-            case let .destination(.presented(.chickenConfig(.gameCreated(game)))):
+            case let .destination(.presented(.gameCreation(.gameCreated(game)))):
                 state.destination = nil
                 return .send(.chickenGameStarted(game))
             case let .destination(.presented(.planSelection(.planSelected(pricingModel, numberOfPlayers, pricePerPlayerCents, depositAmountCents)))):
@@ -221,8 +221,10 @@ struct HomeFeature {
                     game.initialLocation = location
                 }
                 state.pendingPlanResult = nil
-                state.destination = .chickenConfig(
-                    ChickenConfigFeature.State(game: Shared(value: game))
+                let sharedGame = Shared(value: game)
+                let mapConfig = ChickenMapConfigFeature.State(game: sharedGame)
+                state.destination = .gameCreation(
+                    GameCreationFeature.State(game: sharedGame, mapConfigState: mapConfig)
                 )
                 return .none
             case .joinGameButtonTapped:
@@ -494,23 +496,14 @@ struct HomeView: View {
         }
         .sheet(
             item: $store.scope(
-                state: \.destination?.chickenConfig,
-                action: \.destination.chickenConfig
+                state: \.destination?.gameCreation,
+                action: \.destination.gameCreation
             )
-        ) { store in
-            NavigationStack {
-                ChickenConfigView(store: store)
-                    .toolbar {
-                        ToolbarItem {
-                            Button {
-                                self.store.send(.destinationDismissed)
-                            } label: {
-                                Image(systemName: "xmark")
-                            }
-
-                        }
-                    }
-            }
+        ) { creationStore in
+            GameCreationView(
+                store: creationStore,
+                onDismiss: { self.store.send(.destinationDismissed) }
+            )
         }
         .sheet(
             isPresented: Binding(

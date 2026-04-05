@@ -9,7 +9,7 @@ import CoreLocation
 import Foundation
 import FirebaseFirestore
 
-struct Game: Codable, Equatable {
+struct Game: Codable, Equatable, Identifiable {
     let id: String
     var name: String = ""
     var numberOfPlayers: Int = 10

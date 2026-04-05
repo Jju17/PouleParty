@@ -21,6 +21,9 @@ struct SettingsFeature {
         var showingDeleteError = false
         var showingProfanityAlert = false
         var showingEmptyNicknameAlert = false
+        var myGames: [Game] = []
+        var isLoadingGames = false
+        var selectedGame: Game?
     }
 
     enum Action: BindableAction {
@@ -33,9 +36,14 @@ struct SettingsFeature {
         case emptyNicknameAlertDismissed
         case nicknameSubmitted(String)
         case profanityAlertDismissed
+        case onAppear
+        case myGamesLoaded([Game])
+        case gameTapped(Game)
+        case gameDetailDismissed
     }
 
     @Dependency(\.userClient) var userClient
+    @Dependency(\.apiClient) var apiClient
 
     var body: some ReducerOf<Self> {
         BindingReducer()
@@ -92,6 +100,23 @@ struct SettingsFeature {
             case .deleteErrorAlertDismissed:
                 state.showingDeleteError = false
                 return .none
+            case .onAppear:
+                state.isLoadingGames = true
+                return .run { [userClient, apiClient] send in
+                    guard let userId = userClient.currentUserId() else { return }
+                    let games = (try? await apiClient.fetchMyGames(userId)) ?? []
+                    await send(.myGamesLoaded(games))
+                }
+            case let .myGamesLoaded(games):
+                state.myGames = games
+                state.isLoadingGames = false
+                return .none
+            case let .gameTapped(game):
+                state.selectedGame = game
+                return .none
+            case .gameDetailDismissed:
+                state.selectedGame = nil
+                return .none
             }
         }
     }
@@ -107,6 +132,7 @@ struct SettingsView: View {
         ScrollView {
             VStack(spacing: 24) {
                 nicknameSection
+                myGamesSection
                 linksSection
                 dangerSection
                 versionSection
@@ -121,6 +147,10 @@ struct SettingsView: View {
         .toolbarBackground(.visible, for: .navigationBar)
         .onAppear {
             nicknameText = store.currentNickname
+            store.send(.onAppear)
+        }
+        .sheet(item: $store.selectedGame) { game in
+            GameDetailView(game: game)
         }
         .onChange(of: isNicknameFocused) { _, focused in
             if !focused {
@@ -202,6 +232,47 @@ struct SettingsView: View {
             BangerText("\(nicknameText.count)/\(AppConstants.nicknameMaxLength)", size: 14)
                 .foregroundStyle(Color.onBackground.opacity(0.4))
                 .frame(maxWidth: .infinity, alignment: .trailing)
+        }
+        .settingsCard()
+    }
+
+    // MARK: - My Games
+
+    private var myGamesSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("My Games", systemImage: "gamecontroller")
+                .font(.banger(size: 18))
+                .foregroundStyle(Color.onBackground)
+
+            if store.isLoadingGames {
+                HStack {
+                    Spacer()
+                    ProgressView()
+                        .tint(Color.CROrange)
+                    Spacer()
+                }
+                .padding(.vertical, 12)
+            } else if store.myGames.isEmpty {
+                Text("No games yet")
+                    .font(.gameboy(size: 8))
+                    .foregroundStyle(Color.onBackground.opacity(0.4))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(Array(store.myGames.enumerated()), id: \.element.id) { index, game in
+                        if index > 0 {
+                            Divider().padding(.horizontal, 14)
+                        }
+                        Button {
+                            store.send(.gameTapped(game))
+                        } label: {
+                            GameRowView(game: game)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
         }
         .settingsCard()
     }
@@ -296,6 +367,170 @@ struct SettingsView: View {
             }
             .foregroundStyle(Color.onBackground)
             .padding(14)
+        }
+    }
+}
+
+// MARK: - Game Row
+
+private struct GameRowView: View {
+    let game: Game
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Text(game.gameMod == .followTheChicken ? "🐔" : "📍")
+                .font(.system(size: 24))
+
+            VStack(alignment: .leading, spacing: 2) {
+                BangerText(game.name.isEmpty ? "Game \(game.gameCode)" : game.name, size: 16)
+                    .foregroundStyle(Color.onBackground)
+
+                Text(game.startDate.formatted(date: .abbreviated, time: .shortened))
+                    .font(.gameboy(size: 7))
+                    .foregroundStyle(Color.onBackground.opacity(0.5))
+            }
+
+            Spacer()
+
+            GameStatusBadge(status: game.status)
+
+            Image(systemName: "chevron.right")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Color.onBackground.opacity(0.3))
+        }
+        .padding(14)
+    }
+}
+
+private struct GameStatusBadge: View {
+    let status: Game.GameStatus
+
+    var body: some View {
+        Text(label)
+            .font(.gameboy(size: 6))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(color)
+            .clipShape(Capsule())
+    }
+
+    private var label: String {
+        switch status {
+        case .waiting: "Waiting"
+        case .inProgress: "Live"
+        case .done: "Done"
+        }
+    }
+
+    private var color: Color {
+        switch status {
+        case .waiting: .CROrange
+        case .inProgress: .success
+        case .done: .onBackground.opacity(0.3)
+        }
+    }
+}
+
+// MARK: - Game Detail
+
+struct GameDetailView: View {
+    let game: Game
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 20) {
+                    headerSection
+                    infoSection
+                    playersSection
+                    timingSection
+                    zoneSection
+                }
+                .padding(20)
+            }
+            .background(Color.gradientBackgroundWarmth)
+            .navigationTitle(game.name.isEmpty ? "Game \(game.gameCode)" : game.name)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+    }
+
+    private var headerSection: some View {
+        VStack(spacing: 8) {
+            Text(game.gameMod == .followTheChicken ? "🐔" : "📍")
+                .font(.system(size: 48))
+            BangerText(game.gameMod.title, size: 22)
+                .foregroundStyle(Color.onBackground)
+            GameStatusBadge(status: game.status)
+        }
+        .frame(maxWidth: .infinity)
+        .settingsCard()
+    }
+
+    private var infoSection: some View {
+        VStack(spacing: 8) {
+            detailRow("Game Code", value: game.gameCode)
+            detailRow("Found Code", value: game.foundCode)
+            detailRow("Pricing", value: game.pricingModel.title)
+            if game.isPaid {
+                if game.pricePerPlayer > 0 {
+                    detailRow("Price/Player", value: "\(game.pricePerPlayer / 100)€")
+                }
+                if game.depositAmount > 0 {
+                    detailRow("Deposit", value: "\(game.depositAmount / 100)€")
+                }
+            }
+        }
+        .settingsCard()
+    }
+
+    private var playersSection: some View {
+        VStack(spacing: 8) {
+            detailRow("Max Players", value: "\(game.numberOfPlayers)")
+            detailRow("Hunters Joined", value: "\(game.hunterIds.count)")
+            detailRow("Winners", value: "\(game.winners.count)")
+            if game.chickenCanSeeHunters {
+                detailRow("Chicken Sees Hunters", value: "Yes")
+            }
+        }
+        .settingsCard()
+    }
+
+    private var timingSection: some View {
+        VStack(spacing: 8) {
+            detailRow("Start", value: game.startDate.formatted(date: .abbreviated, time: .shortened))
+            detailRow("End", value: game.endDate.formatted(date: .abbreviated, time: .shortened))
+            if game.chickenHeadStartMinutes > 0 {
+                detailRow("Head Start", value: "\(Int(game.chickenHeadStartMinutes)) min")
+            }
+            detailRow("Power-ups", value: game.powerUpsEnabled ? "On" : "Off")
+        }
+        .settingsCard()
+    }
+
+    private var zoneSection: some View {
+        VStack(spacing: 8) {
+            detailRow("Initial Radius", value: "\(Int(game.initialRadius))m")
+            detailRow("Shrink Interval", value: "\(Int(game.radiusIntervalUpdate)) min")
+            detailRow("Shrink Amount", value: "\(Int(game.radiusDeclinePerUpdate))m")
+        }
+        .settingsCard()
+    }
+
+    private func detailRow(_ label: String, value: String) -> some View {
+        HStack {
+            Text(label)
+                .font(.gameboy(size: 8))
+                .foregroundStyle(Color.onBackground.opacity(0.6))
+            Spacer()
+            BangerText(value, size: 16)
+                .foregroundStyle(Color.onBackground)
         }
     }
 }

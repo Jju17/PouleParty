@@ -385,6 +385,19 @@ class FirestoreRepository @Inject constructor(
         }
     }
 
+    suspend fun fetchMyGames(userId: String): List<Game> {
+        val snapshot = firestore.collection(AppConstants.COLLECTION_GAMES)
+            .whereEqualTo("creatorId", userId)
+            .orderBy("startTimestamp", Query.Direction.DESCENDING)
+            .limit(20)
+            .get()
+            .await()
+
+        return snapshot.documents.mapNotNull { doc ->
+            doc.toObject(Game::class.java)?.copy(id = doc.id)
+        }
+    }
+
     suspend fun fetchPartyPlansConfig(): PartyPlansConfig {
         val doc = firestore.collection("config")
             .document("partyPlans")

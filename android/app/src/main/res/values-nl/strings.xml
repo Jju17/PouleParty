@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Selection -->
+    <string name="start">START</string>
+    <string name="press_start">Druk op start om te spelen</string>
+    <string name="rules">Regels</string>
+    <string name="i_am_la_poule">Ik ben de kip</string>
+    <string name="create_game_title">Spel aanmaken</string>
+    <string name="create_game_message">Je maakt een nieuw spel aan als de Kip. Ben je klaar?</string>
+    <string name="continue_label">Doorgaan</string>
+    <string name="join_game">Spel deelnemen</string>
+    <string name="join_game_message">Voer de spelcode in om deel te nemen.</string>
+    <string name="game_code">Spelcode</string>
+    <string name="join">Deelnemen</string>
+    <string name="cancel">Annuleren</string>
+    <string name="ok">OK</string>
+    <string name="close">Sluiten</string>
+    <string name="game_not_found">Spel niet gevonden</string>
+    <string name="game_not_found_message">Geen actief spel gevonden met deze code. Controleer de code en probeer opnieuw.</string>
+    <string name="game_in_progress">Spel bezig</string>
+    <string name="game_in_progress_message">Dit spel is al bezig. Je kunt niet meer deelnemen.</string>
+    <string name="rejoin_game_in_progress">Spel bezig</string>
+    <string name="rejoin">Hervatten</string>
+    <string name="location_required">Locatie vereist</string>
+    <string name="location_required_message">Locatie is de kern van PouleParty! Je positie is anoniem en wordt alleen tijdens het spel gebruikt. Schakel locatietoegang in om door te gaan.</string>
+
+    <!-- Chicken Config -->
+    <string name="game_settings">Spelinstellingen</string>
+    <string name="game_code_label">Spelcode</string>
+    <string name="schedule_label">Planning</string>
+    <string name="power_ups_label">Power-Ups</string>
+    <string name="advanced_label">Geavanceerd</string>
+    <string name="head_start_label">Voorsprong</string>
+    <string name="mode_label">Modus</string>
+    <string name="start_at">Start om</string>
+    <string name="end_at">Einde om</string>
+    <string name="game_mode">Spelmodus</string>
+    <string name="map_setup">Kaartinstellingen</string>
+    <string name="start_game">Spel starten</string>
+    <string name="set_start_zone">Stel een startzone in om te beginnen</string>
+    <string name="set_start_and_final_zone">Stel een start- en eindzone in om te beginnen</string>
+    <string name="radius_interval_update">Straalupdate elke</string>
+    <string name="radius_decline">Straalvermindering van</string>
+    <string name="chicken_head_start">Voorsprong kip</string>
+    <string name="minutes_format">%d minuten</string>
+    <string name="meters_format">%d meter</string>
+    <string name="error">Fout</string>
+    <string name="duration">Duur</string>
+    <string name="ends_at">Eindigt om</string>
+    <string name="zone_radius">Zonestraal</string>
+    <string name="zone">Zone</string>
+    <string name="start_zone">Startzone</string>
+    <string name="final_zone">Eindzone</string>
+    <string name="final_zone_hint">Tik in de startzone om het centrum van de eindzone te plaatsen</string>
+    <string name="settings_mode">Instellingsmodus</string>
+    <string name="normal">Normaal</string>
+    <string name="expert">Expert</string>
+
+    <!-- Chicken Map -->
+    <string name="you_are_chicken">Jij bent de 🐔</string>
+    <string name="radius_format">Straal: %dm</string>
+    <string name="found">GEVONDEN</string>
+    <string name="cancel_game">Spel annuleren</string>
+    <string name="cancel_game_message">Weet je zeker dat je het spel nu wilt annuleren?</string>
+    <string name="never_mind">Laat maar</string>
+    <string name="game_info">Spelinfo</string>
+
+    <!-- Hunter Map -->
+    <string name="you_are_hunter">Jij bent de Jager</string>
+    <string name="quit">Verlaten</string>
+    <string name="quit_game">Spel verlaten</string>
+    <string name="quit_game_message">Weet je zeker dat je het spel wilt verlaten?</string>
+    <string name="enter_found_code">Voer gevonden code in</string>
+    <string name="enter_code_message">Voer de 4-cijferige code in die de kip toont.</string>
+    <string name="four_digit_code">4-cijferige code</string>
+    <string name="submit">Verzenden</string>
+    <string name="wrong_code">Verkeerde code</string>
+    <string name="wrong_code_message">Die code is onjuist. Probeer opnieuw!</string>
+
+    <!-- Game Info Dialog -->
+    <string name="mode">Modus</string>
+    <string name="start_label">Start</string>
+    <string name="end_label">Einde</string>
+    <string name="game_over">Game Over</string>
+    <string name="copy_game_code">Spelcode kopiëren</string>
+
+    <!-- Victory -->
+    <string name="game_results">Spelresultaten</string>
+    <string name="you_found_chicken">Je hebt\nde kip gevonden!</string>
+    <string name="back_to_menu">TERUG NAAR MENU</string>
+    <string name="still_in_party">%d nog in het spel 🔍</string>
+
+    <!-- End Game Code -->
+    <string name="show_code_instruction">Toon deze code\naan de jager</string>
+    <string name="show_code_description">De jager moet deze code invoeren om te bewijzen dat hij je gevonden heeft!</string>
+
+    <!-- Countdown -->
+    <string name="you_start_in">Je begint over:</string>
+    <string name="chicken_starts_in">🐔 verstopt zich over:</string>
+    <string name="hunt_starts_in_chicken">🐔 Jacht begint over:</string>
+    <string name="hunt_starts_in_hunter">Jacht begint over:</string>
+    <string name="map_update_in">Kaartupdate over:</string>
+
+    <!-- Onboarding -->
+    <string name="welcome_title">Welkom bij\nPouleParty!</string>
+    <string name="welcome_subtitle">Het ultieme echte\nverstopspel</string>
+    <string name="nominate_chicken">Kies een Kip</string>
+    <string name="nominate_subtitle">Kies de bruidegom, het feestvarken of wie er echt een Kip wil zijn.\n\nZijn taak: zich verstoppen.</string>
+    <string name="hunt_them_down">Jaag ze op</string>
+    <string name="hunt_subtitle">Vorm teams. Gebruik de kaart om ze op te sporen.\n\nDe Kip kan overal verstopt zitten!</string>
+    <string name="need_location">We hebben je locatie nodig</string>
+    <string name="location_granted">Alles klaar! Het spel volgt je locatie ook op de achtergrond.\n\nMaximaal plezier gegarandeerd!</string>
+    <string name="location_partial">Bijna klaar! Het spel moet de Kip ook volgen als de app op de achtergrond draait.\n\nSta achtergrondlocatie toe.</string>
+    <string name="location_denied">Zonder locatie werkt het spel niet.\nGeen locatie = geen kaart = geen plezier.\n\nWe gebruiken het alleen tijdens het spel!</string>
+    <string name="always_allowed">Altijd toegestaan!</string>
+    <string name="allow_always">Altijd toestaan</string>
+    <string name="allow_location_access">Locatietoegang toestaan</string>
+    <string name="choose_nickname">Kies je bijnaam</string>
+    <string name="nickname_subtitle">Zo zien andere spelers\nje in het spel.</string>
+    <string name="your_nickname">Je bijnaam</string>
+    <string name="the_endgame">Klaar om te spelen?</string>
+    <string name="endgame_subtitle">Sluit de Kip in. De zone krimpt, de jacht wordt intenser.\n\nVind de Kip voor de tijd om is!</string>
+    <string name="back">Terug</string>
+    <string name="next">Volgende</string>
+    <string name="lets_go">Laten we gaan!</string>
+
+    <!-- Notifications (onboarding) -->
+    <string name="notif_stay_in_loop">Blijf op de hoogte</string>
+    <string name="notif_enabled_description">Meldingen ingeschakeld! Je weet wanneer het spel begint, de zone krimpt en wanneer jagers de kip vinden.</string>
+    <string name="notif_enabled">Meldingen ingeschakeld!</string>
+    <string name="notif_request_description">Ontvang een melding wanneer het spel begint, de zone krimpt en wanneer een jager de kip vindt!\n\nDit is optioneel maar aanbevolen.</string>
+    <string name="notif_enable_button">Meldingen inschakelen</string>
+
+    <!-- Notifications (FCM localization) -->
+    <string name="notif_chicken_start_title">Het spel is begonnen!</string>
+    <string name="notif_chicken_start_body">Jij bent de Kip! Verstop je snel!</string>
+    <string name="notif_hunter_start_title">De jacht begint!</string>
+    <string name="notif_hunter_start_body">De Kip verstopt zich. Ga ze zoeken!</string>
+    <string name="notif_zone_shrink_title">Zone krimpt!</string>
+    <string name="notif_zone_shrink_body">De zone is net kleiner geworden. Blijf erin!</string>
+    <string name="notif_hunter_found_title">Kip gevonden!</string>
+    <string name="notif_hunter_found_body">%1$s heeft de kip gevonden! %2$s jagers resterend</string>
+
+    <!-- Game Rules -->
+    <string name="how_to_play">Hoe te spelen</string>
+    <string name="game_modes">Spelmodi</string>
+    <string name="rule_one_chicken">Eén speler is de Kip, de anderen zijn Jagers.</string>
+    <string name="rule_circular_zone">Het spel speelt zich af in een cirkelvormige zone op de kaart.</string>
+    <string name="rule_zone_shrinks">De zone krimpt na verloop van tijd op basis van de spelinstellingen.</string>
+    <string name="rule_win_condition">Jagers winnen door de Kip te vinden. De Kip wint door te overleven tot het einde!</string>
+    <string name="mode_follow_desc">De Jagers zien een cirkel die de positie van de Kip in realtime volgt. De Kip moet rennen en zich verstoppen!</string>
+    <string name="mode_follow_detail1">De Kip stuurt haar positie naar alle Jagers</string>
+    <string name="mode_follow_detail2">Jagers zien de zone meebewegen met de Kip</string>
+    <string name="mode_follow_detail3">De Kip ziet de Jagers NIET</string>
+    <string name="mode_stay_desc">De zone krimpt en verschuift willekeurig rond het startpunt. Jagers moeten de Kip vinden zonder positie-aanwijzingen!</string>
+    <string name="mode_stay_detail1">Geen positie-uitwisseling tussen spelers</string>
+    <string name="mode_stay_detail2">De zone verschuift willekeurig maar bevat altijd de startlocatie</string>
+    <string name="mode_stay_detail3">Strategie: doorzoek de bewegende zone om de Kip te vinden!</string>
+    <string name="chicken_can_see_hunters">De kip kan de jagers zien</string>
+    <string name="chicken_can_see_hunters_title">De kip kan de jagers zien 👀</string>
+    <string name="chicken_can_see_hunters_desc">Een optie beschikbaar in elke spelmodus. De Kip kan alle Jagers op haar kaart zien!</string>
+    <string name="chicken_can_see_hunters_detail1">Jagers sturen hun positie naar de Kip</string>
+    <string name="chicken_can_see_hunters_detail2">Beide kanten volgen elkaar in realtime</string>
+    <string name="chicken_can_see_hunters_detail3">Schakel deze optie in bij de spelinstellingen</string>
+    <string name="setting_start_end_name">Start / Einde</string>
+    <string name="setting_start_end_desc">Wanneer het spel begint en eindigt. De Kip wint als de tijd om is!</string>
+    <string name="setting_radius_interval_desc">Hoe vaak de zone krimpt (in minuten).</string>
+    <string name="setting_radius_decline_desc">Hoeveel meter de zone krimpt bij elke update.</string>
+    <string name="setting_map_desc">Kies de startlocatie en de beginstraal van de zone.</string>
+
+    <!-- Game Modes (subtitles) -->
+    <string name="chicken_dont_be_seen">Laat je niet zien!</string>
+    <string name="chicken_stay_in_zone">Blijf in de zone 📍</string>
+    <string name="chicken_you_see_them">Je kunt ze zien 👀</string>
+    <string name="hunter_catch_chicken">Vang de 🐔!</string>
+    <string name="hunter_stay_in_zone">Blijf in de zone 📍</string>
+    <string name="hunter_chicken_sees_you">Vang de 🐔 (ze ziet je! 👀)</string>
+
+    <!-- Zone Warning -->
+    <string name="return_to_zone">Keer terug naar de zone!</string>
+
+    <!-- Map Config -->
+    <string name="search_address">Zoek adres</string>
+
+    <!-- Pre-Game Overlay -->
+    <string name="game_starting_in">Spel begint over</string>
+    <string name="connected">verbonden</string>
+    <string name="share_code">Deel deze code:</string>
+    <string name="tap_to_copy">Tik om te kopiëren:</string>
+    <string name="copied">Gekopieerd!</string>
+
+    <!-- Profanity -->
+    <string name="inappropriate_nickname">Ongepaste bijnaam</string>
+    <string name="inappropriate_nickname_message">Kies een andere bijnaam. Deze bevat ongepast taalgebruik.</string>
+
+    <!-- Settings -->
+    <string name="settings">Instellingen</string>
+    <string name="nickname">Bijnaam</string>
+    <string name="save">Opslaan</string>
+    <string name="nickname_saved">Bijnaam opgeslagen!</string>
+    <string name="privacy_policy">Privacybeleid</string>
+    <string name="terms_of_use">Gebruiksvoorwaarden</string>
+    <string name="contact_support">Contact opnemen</string>
+    <string name="delete_my_data">Mijn gegevens verwijderen</string>
+    <string name="delete_data_footer">Dit verwijdert je anonieme account en alle bijbehorende gegevens. Je kunt de app gewoon blijven gebruiken — er wordt automatisch een nieuw anoniem account aangemaakt.</string>
+    <string name="delete_data_title">Mijn gegevens verwijderen</string>
+    <string name="delete_data_message">Dit verwijdert je anonieme account permanent. Actieve spellen worden verlaten. Weet je het zeker?</string>
+    <string name="delete">Verwijderen</string>
+    <string name="data_deleted">Gegevens verwijderd</string>
+    <string name="data_deleted_message">Je account en gegevens zijn verwijderd.</string>
+    <string name="delete_error_message">Kon je account niet verwijderen. Probeer het later opnieuw.</string>
+    <string name="version">Versie</string>
+
+    <!-- Power-Ups -->
+    <string name="power_ups">Power-Ups</string>
+    <string name="enable_power_ups">Power-Ups inschakelen</string>
+    <string name="choose_power_ups">Power-Ups kiezen</string>
+    <string name="done">Klaar</string>
+    <string name="power_ups_count_format">%1$d/%2$d</string>
+</resources>

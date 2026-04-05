@@ -30,7 +30,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import dev.rahier.pouleparty.R
+import dev.rahier.pouleparty.model.Game
+import dev.rahier.pouleparty.model.GameMod
+import dev.rahier.pouleparty.model.GameStatus
+import dev.rahier.pouleparty.model.PricingModel
 import dev.rahier.pouleparty.ui.theme.*
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -134,6 +140,9 @@ fun SettingsScreen(
                     }
                 }
             }
+
+            // My Games section
+            MyGamesSection(state, viewModel)
 
             // Links section
             SettingsCard {
@@ -332,6 +341,179 @@ private fun SettingsCard(
             .background(MaterialTheme.colorScheme.surface)
     ) {
         content()
+    }
+}
+
+@Composable
+private fun MyGamesSection(state: SettingsUiState, viewModel: SettingsViewModel) {
+    val dateFormat = remember { SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault()) }
+
+    SettingsCard {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text("🎮", modifier = Modifier.size(20.dp))
+                Text("My Games", style = bangerStyle(18), color = MaterialTheme.colorScheme.onBackground)
+            }
+
+            when {
+                state.isLoadingGames -> {
+                    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = CROrange, modifier = Modifier.size(24.dp))
+                    }
+                }
+                state.myGames.isEmpty() -> {
+                    Text(
+                        "No games yet",
+                        style = gameboyStyle(8),
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                        textAlign = TextAlign.Center
+                    )
+                }
+                else -> {
+                    Column {
+                        state.myGames.forEachIndexed { index, game ->
+                            if (index > 0) {
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(horizontal = 14.dp),
+                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f)
+                                )
+                            }
+                            GameRow(game = game, dateFormat = dateFormat) {
+                                viewModel.selectGame(game)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    val selectedGame = state.selectedGame
+    if (selectedGame != null) {
+        GameDetailDialog(game = selectedGame, dateFormat = dateFormat, onDismiss = { viewModel.dismissGameDetail() })
+    }
+}
+
+@Composable
+private fun GameRow(game: Game, dateFormat: SimpleDateFormat, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            if (game.gameModEnum == GameMod.FOLLOW_THE_CHICKEN) "🐔" else "📍",
+            modifier = Modifier.padding(end = 12.dp)
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                game.name.ifEmpty { "Game ${game.gameCode}" },
+                style = bangerStyle(16),
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Text(
+                dateFormat.format(game.startDate),
+                style = gameboyStyle(7),
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+            )
+        }
+        GameStatusBadge(game.gameStatusEnum)
+        Spacer(Modifier.width(8.dp))
+        Icon(
+            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            modifier = Modifier.size(16.dp),
+            tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f)
+        )
+    }
+}
+
+@Composable
+private fun GameStatusBadge(status: GameStatus) {
+    val (label, color) = when (status) {
+        GameStatus.WAITING -> "Waiting" to CROrange
+        GameStatus.IN_PROGRESS -> "Live" to Success
+        GameStatus.DONE -> "Done" to MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f)
+    }
+    Text(
+        label,
+        style = gameboyStyle(6),
+        color = Color.White,
+        modifier = Modifier
+            .background(color, RoundedCornerShape(50))
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun GameDetailDialog(game: Game, dateFormat: SimpleDateFormat, onDismiss: () -> Unit) {
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = MaterialTheme.colorScheme.surface) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Header
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                Text(if (game.gameModEnum == GameMod.FOLLOW_THE_CHICKEN) "🐔" else "📍", style = bangerStyle(48))
+                Text(game.gameModEnum.title, style = bangerStyle(22), color = MaterialTheme.colorScheme.onBackground)
+                Spacer(Modifier.height(4.dp))
+                GameStatusBadge(game.gameStatusEnum)
+            }
+
+            HorizontalDivider()
+
+            // Info
+            DetailRow("Game Code", game.gameCode)
+            DetailRow("Found Code", game.foundCode)
+            DetailRow("Pricing", game.pricingModelEnum.title)
+            if (game.isPaid) {
+                if (game.pricePerPlayer > 0) DetailRow("Price/Player", "${game.pricePerPlayer / 100}€")
+                if (game.depositAmount > 0) DetailRow("Deposit", "${game.depositAmount / 100}€")
+            }
+
+            HorizontalDivider()
+
+            // Players
+            DetailRow("Max Players", "${game.numberOfPlayers}")
+            DetailRow("Hunters Joined", "${game.hunterIds.size}")
+            DetailRow("Winners", "${game.winners.size}")
+            if (game.chickenCanSeeHunters) DetailRow("Chicken Sees Hunters", "Yes")
+
+            HorizontalDivider()
+
+            // Timing
+            DetailRow("Start", dateFormat.format(game.startDate))
+            DetailRow("End", dateFormat.format(game.endDate))
+            if (game.chickenHeadStartMinutes > 0) DetailRow("Head Start", "${game.chickenHeadStartMinutes.toInt()} min")
+            DetailRow("Power-ups", if (game.powerUpsEnabled) "On" else "Off")
+
+            HorizontalDivider()
+
+            // Zone
+            DetailRow("Initial Radius", "${game.initialRadius.toInt()}m")
+            DetailRow("Shrink Interval", "${game.radiusIntervalUpdate.toInt()} min")
+            DetailRow("Shrink Amount", "${game.radiusDeclinePerUpdate.toInt()}m")
+
+            Spacer(Modifier.height(32.dp))
+        }
+    }
+}
+
+@Composable
+private fun DetailRow(label: String, value: String) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(label, style = gameboyStyle(8), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
+        Text(value, style = bangerStyle(16), color = MaterialTheme.colorScheme.onBackground)
     }
 }
 
