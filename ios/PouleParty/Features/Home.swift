@@ -99,6 +99,7 @@ struct HomeFeature {
     }
 
     @Dependency(\.apiClient) var apiClient
+    @Dependency(\.continuousClock) var clock
     @Dependency(\.locationClient) var locationClient
     @Dependency(\.userClient) var userClient
     @Dependency(\.uuid) var uuid
@@ -300,7 +301,7 @@ struct HomeFeature {
                         return
                     }
                     // Retry once after a short delay to allow auth token refresh
-                    try? await Task.sleep(for: .seconds(2))
+                    try? await clock.sleep(for: .seconds(2))
                     if let (game, role) = try? await apiClient.findActiveGame(userId) {
                         await send(.activeGameFound(game, role))
                     } else {

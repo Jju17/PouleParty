@@ -25,6 +25,8 @@
 		BB0000072F47000100000001 /* Dependencies in Frameworks */ = {isa = PBXBuildFile; productRef = BB0000082F47000100000001 /* Dependencies */; };
 		BB0000092F47000100000001 /* SwiftNavigation in Frameworks */ = {isa = PBXBuildFile; productRef = BB00000A2F47000100000001 /* SwiftNavigation */; };
 		F90899CC2F58B24D0006C8DF /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = F90899CB2F58B24D0006C8DF /* FirebaseMessaging */; };
+		F9A8B0382F828F36008B15E2 /* SnapshotTesting in Frameworks */ = {isa = PBXBuildFile; productRef = F9A8B0372F828F36008B15E2 /* SnapshotTesting */; };
+		F9A8B0472F829079008B15E2 /* SnapshotTesting in Frameworks */ = {isa = PBXBuildFile; productRef = F9A8B0462F829079008B15E2 /* SnapshotTesting */; };
 		F9B1BE232F58DCD200E066D6 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F9B1BE222F58DCD200E066D6 /* WidgetKit.framework */; };
 		F9B1BE252F58DCD200E066D6 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F9B1BE242F58DCD200E066D6 /* SwiftUI.framework */; };
 		F9B1BE322F58DCD300E066D6 /* PoulePartyWidgetsExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F9B1BE202F58DCD200E066D6 /* PoulePartyWidgetsExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -33,6 +35,13 @@
 
 /* Begin PBXContainerItemProxy section */
 		646D8E3D2F467E520068ABBF /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 647D9FB92BA3ABF2005B6566 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 647D9FC02BA3ABF2005B6566;
+			remoteInfo = PouleParty;
+		};
+		F9A8B0412F829054008B15E2 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 647D9FB92BA3ABF2005B6566 /* Project object */;
 			proxyType = 1;
@@ -74,6 +83,7 @@
 		647D9FCA2BA3ABF3005B6566 /* PouleParty.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PouleParty.entitlements; sourceTree = "<group>"; };
 		64CE0F832CEE8E8200762232 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		64FDBE382BC32AD60073DC85 /* La Rochelle.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = "La Rochelle.gpx"; sourceTree = "<group>"; };
+		F9A8B03D2F829054008B15E2 /* PoulePartySnapshotTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PoulePartySnapshotTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F9B1BE202F58DCD200E066D6 /* PoulePartyWidgetsExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PoulePartyWidgetsExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		F9B1BE222F58DCD200E066D6 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		F9B1BE242F58DCD200E066D6 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
@@ -120,6 +130,7 @@
 		F9961E1A2F58B872006C46AC /* Features */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Features; sourceTree = "<group>"; };
 		F9961E3E2F58B87B006C46AC /* Models */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (F9B1BE3B2F58DD5700E066D6 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = Models; sourceTree = "<group>"; };
 		F9961E482F58B87B006C46AC /* Resources */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (F9B1BE3E2F58DD8500E066D6 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = Resources; sourceTree = "<group>"; };
+		F9A8B03E2F829054008B15E2 /* PoulePartySnapshotTests */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = PoulePartySnapshotTests; sourceTree = "<group>"; };
 		F9B1BE262F58DCD200E066D6 /* PoulePartyWidgets */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (F9B1BE332F58DCD300E066D6 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = PoulePartyWidgets; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
@@ -128,6 +139,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F9A8B0382F828F36008B15E2 /* SnapshotTesting in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -151,6 +163,14 @@
 				6464E5202BA5C3ED0039C387 /* FirebaseAuth in Frameworks */,
 				6464E5242BA5C3ED0039C387 /* FirebaseFirestore in Frameworks */,
 				6464E5262BA5C3ED0039C387 /* FirebaseFirestoreCombine-Community in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F9A8B03A2F829054008B15E2 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F9A8B0472F829079008B15E2 /* SnapshotTesting in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -179,6 +199,7 @@
 				646D8E462F467EB70068ABBF /* PoulePartyTests */,
 				647D9FC32BA3ABF2005B6566 /* PouleParty */,
 				F9B1BE262F58DCD200E066D6 /* PoulePartyWidgets */,
+				F9A8B03E2F829054008B15E2 /* PoulePartySnapshotTests */,
 				F9B1BE212F58DCD200E066D6 /* Frameworks */,
 				647D9FC22BA3ABF2005B6566 /* Products */,
 			);
@@ -190,6 +211,7 @@
 				647D9FC12BA3ABF2005B6566 /* PouleParty.app */,
 				646D8E392F467E520068ABBF /* PoulePartyTests.xctest */,
 				F9B1BE202F58DCD200E066D6 /* PoulePartyWidgetsExtension.appex */,
+				F9A8B03D2F829054008B15E2 /* PoulePartySnapshotTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -291,6 +313,30 @@
 			productReference = 647D9FC12BA3ABF2005B6566 /* PouleParty.app */;
 			productType = "com.apple.product-type.application";
 		};
+		F9A8B03C2F829054008B15E2 /* PoulePartySnapshotTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F9A8B0432F829054008B15E2 /* Build configuration list for PBXNativeTarget "PoulePartySnapshotTests" */;
+			buildPhases = (
+				F9A8B0392F829054008B15E2 /* Sources */,
+				F9A8B03A2F829054008B15E2 /* Frameworks */,
+				F9A8B03B2F829054008B15E2 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				F9A8B0422F829054008B15E2 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				F9A8B03E2F829054008B15E2 /* PoulePartySnapshotTests */,
+			);
+			name = PoulePartySnapshotTests;
+			packageProductDependencies = (
+				F9A8B0462F829079008B15E2 /* SnapshotTesting */,
+			);
+			productName = PoulePartySnapshotTests;
+			productReference = F9A8B03D2F829054008B15E2 /* PoulePartySnapshotTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		F9B1BE1F2F58DCD200E066D6 /* PoulePartyWidgetsExtension */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = F9B1BE342F58DCD300E066D6 /* Build configuration list for PBXNativeTarget "PoulePartyWidgetsExtension" */;
@@ -320,7 +366,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2630;
+				LastSwiftUpdateCheck = 2640;
 				LastUpgradeCheck = 2620;
 				TargetAttributes = {
 					646D8E382F467E520068ABBF = {
@@ -329,6 +375,10 @@
 					};
 					647D9FC02BA3ABF2005B6566 = {
 						CreatedOnToolsVersion = 15.3;
+					};
+					F9A8B03C2F829054008B15E2 = {
+						CreatedOnToolsVersion = 26.4;
+						TestTargetID = 647D9FC02BA3ABF2005B6566;
 					};
 					F9B1BE1F2F58DCD200E066D6 = {
 						CreatedOnToolsVersion = 26.3;
@@ -349,6 +399,7 @@
 				6464E51A2BA5C3ED0039C387 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 				648F563E2CF3DC4900B1BC28 /* XCRemoteSwiftPackageReference "swift-composable-architecture" */,
 				F9B5A21F2F53A61C004EBFD7 /* XCRemoteSwiftPackageReference "mapbox-maps-ios" */,
+				F9A8B0362F828F36008B15E2 /* XCRemoteSwiftPackageReference "swift-snapshot-testing" */,
 			);
 			productRefGroup = 647D9FC22BA3ABF2005B6566 /* Products */;
 			projectDirPath = "";
@@ -357,6 +408,7 @@
 				647D9FC02BA3ABF2005B6566 /* PouleParty */,
 				646D8E382F467E520068ABBF /* PoulePartyTests */,
 				F9B1BE1F2F58DCD200E066D6 /* PoulePartyWidgetsExtension */,
+				F9A8B03C2F829054008B15E2 /* PoulePartySnapshotTests */,
 			);
 		};
 /* End PBXProject section */
@@ -376,6 +428,13 @@
 				645DF8282D306D0B005D8731 /* Lille.gpx in Resources */,
 				645DF82B2D306E5D005D8731 /* Stockholm.gpx in Resources */,
 				64CE0F842CEE8E8200762232 /* Localizable.xcstrings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F9A8B03B2F829054008B15E2 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -452,6 +511,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F9A8B0392F829054008B15E2 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		F9B1BE1C2F58DCD200E066D6 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -466,6 +532,11 @@
 			isa = PBXTargetDependency;
 			target = 647D9FC02BA3ABF2005B6566 /* PouleParty */;
 			targetProxy = 646D8E3D2F467E520068ABBF /* PBXContainerItemProxy */;
+		};
+		F9A8B0422F829054008B15E2 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 647D9FC02BA3ABF2005B6566 /* PouleParty */;
+			targetProxy = F9A8B0412F829054008B15E2 /* PBXContainerItemProxy */;
 		};
 		F9B1BE312F58DCD300E066D6 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -759,6 +830,54 @@
 			};
 			name = Release;
 		};
+		F9A8B0442F829054008B15E2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = YXXNH92P5F;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.rahier.PoulePartySnapshotTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PouleParty.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PouleParty";
+			};
+			name = Debug;
+		};
+		F9A8B0452F829054008B15E2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = YXXNH92P5F;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.rahier.PoulePartySnapshotTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PouleParty.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PouleParty";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 		F9B1BE352F58DCD300E066D6 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -853,6 +972,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		F9A8B0432F829054008B15E2 /* Build configuration list for PBXNativeTarget "PoulePartySnapshotTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F9A8B0442F829054008B15E2 /* Debug */,
+				F9A8B0452F829054008B15E2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		F9B1BE342F58DCD300E066D6 /* Build configuration list for PBXNativeTarget "PoulePartyWidgetsExtension" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -879,6 +1007,16 @@
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 1.23.2;
+			};
+			traits = (
+			);
+		};
+		F9A8B0362F828F36008B15E2 /* XCRemoteSwiftPackageReference "swift-snapshot-testing" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/pointfreeco/swift-snapshot-testing";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.19.2;
 			};
 		};
 		F9B5A21F2F53A61C004EBFD7 /* XCRemoteSwiftPackageReference "mapbox-maps-ios" */ = {
@@ -961,6 +1099,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 6464E51A2BA5C3ED0039C387 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseMessaging;
+		};
+		F9A8B0372F828F36008B15E2 /* SnapshotTesting */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F9A8B0362F828F36008B15E2 /* XCRemoteSwiftPackageReference "swift-snapshot-testing" */;
+			productName = SnapshotTesting;
+		};
+		F9A8B0462F829079008B15E2 /* SnapshotTesting */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F9A8B0362F828F36008B15E2 /* XCRemoteSwiftPackageReference "swift-snapshot-testing" */;
+			productName = SnapshotTesting;
 		};
 		F9B5A2212F53A73B004EBFD7 /* MapboxMaps */ = {
 			isa = XCSwiftPackageProductDependency;

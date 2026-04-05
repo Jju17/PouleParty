@@ -47,7 +47,10 @@ struct GameTests {
 
     @Test func startDateAndEndDateConversion() {
         var game = Game(id: "test")
-        let date = Date.now.addingTimeInterval(1000)
+        // Use a date with 0 seconds so the setter's second-stripping doesn't affect it
+        var components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: .now.addingTimeInterval(1000))
+        components.second = 0
+        let date = Calendar.current.date(from: components) ?? .now
         game.startDate = date
 
         #expect(abs(game.startDate.timeIntervalSince(date)) < 1)

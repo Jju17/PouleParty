@@ -448,15 +448,15 @@ struct GameCreationView: View {
         VStack(spacing: 24) {
             Spacer()
             stepHeader(
-                title: "Tu participes a la partie ?",
+                title: "Are you playing?",
                 subtitle: "Choose your role"
             )
 
             VStack(spacing: 16) {
                 selectionCard(
-                    title: "Je suis la Poule",
+                    title: "I am the Chicken",
                     emoji: "🐔",
-                    subtitle: "I am the Chicken",
+                    subtitle: "You run, you hide",
                     isSelected: store.isParticipating,
                     gradient: Color.gradientChicken
                 ) {
@@ -464,9 +464,9 @@ struct GameCreationView: View {
                 }
 
                 selectionCard(
-                    title: "J'organise",
+                    title: "I'm organizing",
                     emoji: "📋",
-                    subtitle: "I'm the organizer",
+                    subtitle: "You create the game for others",
                     isSelected: !store.isParticipating,
                     gradient: Color.gradientHunter
                 ) {
@@ -484,33 +484,33 @@ struct GameCreationView: View {
         VStack(spacing: 24) {
             Spacer()
             stepHeader(
-                title: "Qui sera la Poule ?",
+                title: "Who's the Chicken?",
                 subtitle: "How will the chicken be chosen?"
             )
 
             VStack(spacing: 16) {
                 selectionCard(
-                    title: "Au hasard",
+                    title: "Random",
                     emoji: "🎲",
-                    subtitle: "Random player becomes the chicken",
+                    subtitle: "A random player",
                     isSelected: true,
                     gradient: Color.gradientChicken
                 ) { }
 
                 selectionCard(
-                    title: "Premier arrive",
+                    title: "First to join",
                     emoji: "🏃",
-                    subtitle: "First player to join is the chicken",
+                    subtitle: "First player to join",
                     isSelected: false,
-                    gradient: Color.gradientChicken
+                    gradient: Color.gradientFire
                 ) { }
 
                 selectionCard(
-                    title: "Je designe",
+                    title: "I'll choose",
                     emoji: "👆",
-                    subtitle: "I'll choose the chicken later",
+                    subtitle: "I'll pick the chicken later",
                     isSelected: false,
-                    gradient: Color.gradientChicken
+                    gradient: Color.gradientHunter
                 ) { }
             }
             .padding(.horizontal, 24)
@@ -524,7 +524,7 @@ struct GameCreationView: View {
         VStack(spacing: 24) {
             Spacer()
             stepHeader(
-                title: "Quel mode de jeu ?",
+                title: "Game Mode",
                 subtitle: "Choose the game mode"
             )
 
@@ -532,7 +532,7 @@ struct GameCreationView: View {
                 selectionCard(
                     title: "Follow the Chicken",
                     emoji: "🐔",
-                    subtitle: "The zone follows the chicken's position",
+                    subtitle: "The zone follows the chicken",
                     isSelected: store.currentGame.gameMod == .followTheChicken,
                     gradient: Color.gradientChicken
                 ) {
@@ -542,7 +542,7 @@ struct GameCreationView: View {
                 selectionCard(
                     title: "Stay in the Zone",
                     emoji: "📍",
-                    subtitle: "Fixed zone that shrinks and drifts",
+                    subtitle: "Fixed zone that shrinks",
                     isSelected: store.currentGame.gameMod == .stayInTheZone,
                     gradient: Color.gradientHunter
                 ) {
@@ -652,7 +652,7 @@ struct GameCreationView: View {
             Spacer()
             stepHeader(
                 title: "Head Start",
-                subtitle: "How many minutes does the chicken get to hide?"
+                subtitle: "Time to hide before the hunt"
             )
 
             VStack(spacing: 12) {
@@ -670,7 +670,7 @@ struct GameCreationView: View {
                 .tint(Color.CROrange)
                 .padding(.horizontal, 40)
 
-                Text("The chicken gets a head start before hunters can begin hunting")
+                Text("The chicken gets a head start before hunters begin")
                     .font(.gameboy(size: 8))
                     .foregroundStyle(Color.onBackground.opacity(0.6))
                     .multilineTextAlignment(.center)
@@ -695,7 +695,7 @@ struct GameCreationView: View {
                 selectionCard(
                     title: "Power-Ups ON",
                     emoji: "⚡",
-                    subtitle: "Collect and use special abilities",
+                    subtitle: "Collect and use abilities",
                     isSelected: store.currentGame.powerUpsEnabled,
                     gradient: Color.gradientFire
                 ) {
@@ -759,14 +759,14 @@ struct GameCreationView: View {
             Spacer()
             stepHeader(
                 title: "Chicken Visibility",
-                subtitle: "Can the chicken see the hunters on the map?"
+                subtitle: "Can the chicken see the hunters?"
             )
 
             VStack(spacing: 16) {
                 selectionCard(
                     title: "Yes",
                     emoji: "👀",
-                    subtitle: "The chicken can see all hunters",
+                    subtitle: "The chicken sees all hunters",
                     isSelected: store.currentGame.chickenCanSeeHunters,
                     gradient: Color.gradientChicken
                 ) {
@@ -776,7 +776,7 @@ struct GameCreationView: View {
                 selectionCard(
                     title: "No",
                     emoji: "🙈",
-                    subtitle: "The chicken is blind to hunter positions",
+                    subtitle: "The chicken is blind",
                     isSelected: !store.currentGame.chickenCanSeeHunters,
                     gradient: Color.gradientHunter
                 ) {
@@ -797,7 +797,7 @@ struct GameCreationView: View {
                     title: "Ready to go!",
                     subtitle: "Review your game settings"
                 )
-                .padding(.top, 16)
+                .padding(.top, 60)
 
                 // Game Code
                 VStack(spacing: 8) {
@@ -889,8 +889,9 @@ struct GameCreationView: View {
                     BangerText(title, size: 22)
                         .foregroundStyle(isSelected ? .black : Color.onBackground)
                     Text(subtitle)
-                        .font(.gameboy(size: 8))
+                        .font(.gameboy(size: 7))
                         .foregroundStyle(isSelected ? .black.opacity(0.7) : Color.onBackground.opacity(0.6))
+                        .lineLimit(1)
                 }
 
                 Spacer()

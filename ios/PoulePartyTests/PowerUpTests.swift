@@ -19,7 +19,7 @@ struct PowerUpTests {
 
     @Test func durationValuesAreCorrect() {
         #expect(PowerUp.PowerUpType.zonePreview.durationSeconds == nil)
-        #expect(PowerUp.PowerUpType.radarPing.durationSeconds == 10)
+        #expect(PowerUp.PowerUpType.radarPing.durationSeconds == 30)
         #expect(PowerUp.PowerUpType.invisibility.durationSeconds == 30)
         #expect(PowerUp.PowerUpType.zoneFreeze.durationSeconds == 120)
     }

@@ -46,6 +46,17 @@
                ReferencedContainer = "container:PouleParty.xcodeproj">
             </BuildableReference>
          </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "F9A8B03C2F829054008B15E2"
+               BuildableName = "PoulePartySnapshotTests.xctest"
+               BlueprintName = "PoulePartySnapshotTests"
+               ReferencedContainer = "container:PouleParty.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction

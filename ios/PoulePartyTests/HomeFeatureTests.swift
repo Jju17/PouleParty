@@ -120,6 +120,7 @@ struct HomeFeatureTests {
         } withDependencies: {
             $0.userClient.currentUserId = { "user-123" }
             $0.apiClient.findActiveGame = { _ in nil }
+            $0.continuousClock = ImmediateClock()
         }
 
         await store.send(.onTask)

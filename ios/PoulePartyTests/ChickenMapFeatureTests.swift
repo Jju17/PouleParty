@@ -157,14 +157,17 @@ struct ChickenMapFeatureTests {
         ]
 
         let previousCount = state.previousWinnersCount
-        #expect(previousCount == 0)
-        #expect(updatedGame.winners.count > previousCount)
+        #expect(previousCount == -1)
 
-        // The reducer sets these fields:
+        // Simulate first config update setting the baseline
+        state.previousWinnersCount = game.winners.count // 0
+
+        // Now simulate a new winner arriving
         state.game = updatedGame
         state.previousWinnersCount = updatedGame.winners.count
-        let latest = updatedGame.winners.last!
-        state.winnerNotification = "\(latest.hunterName) found the chicken! 🐔"
+        if let latest = updatedGame.winners.last {
+            state.winnerNotification = "\(latest.hunterName) found the chicken! 🐔"
+        }
 
         #expect(state.winnerNotification == "Julien found the chicken! 🐔")
         #expect(state.previousWinnersCount == 1)
@@ -386,7 +389,9 @@ struct ChickenMapFeatureTests {
 
     @Test func gameUpdatedWithNewWinnerSchedulesAutoDismiss() async {
         let clock = TestClock()
-        let store = TestStore(initialState: ChickenMapFeature.State(game: .mock)) {
+        var initialState = ChickenMapFeature.State(game: .mock)
+        initialState.previousWinnersCount = 0
+        let store = TestStore(initialState: initialState) {
             ChickenMapFeature()
         } withDependencies: {
             $0.continuousClock = clock

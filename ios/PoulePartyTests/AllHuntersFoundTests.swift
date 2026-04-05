@@ -150,6 +150,7 @@ struct AllHuntersFoundTests {
         } withDependencies: {
             $0.apiClient.updateGameStatus = { _, _ in }
             $0.liveActivityClient.end = { _ in }
+            $0.continuousClock = ImmediateClock()
         }
 
         // Game update: the single hunter found the chicken

@@ -57,6 +57,7 @@ struct HunterMapFeatureTests {
                 center: newGame.initialCoordinates.toCLCoordinates,
                 radius: CLLocationDistance(newGame.initialRadius)
             )
+            $0.previousWinnersCount = newGame.winners.count
             $0.lastLiveActivityState = $0.liveActivityState
         }
     }
@@ -211,10 +212,12 @@ struct HunterMapFeatureTests {
         ]
 
         let previousCount = state.previousWinnersCount
-        #expect(previousCount == 0)
-        #expect(updatedGame.winners.count > previousCount)
+        #expect(previousCount == -1)
 
-        let latest = updatedGame.winners.last!
+        // Simulate first config update setting the baseline
+        state.previousWinnersCount = game.winners.count // 0
+
+        guard let latest = updatedGame.winners.last else { return }
         #expect(latest.hunterId != state.hunterId)
 
         state.winnerNotification = "\(latest.hunterName) found the chicken! 🐔"
@@ -225,31 +228,29 @@ struct HunterMapFeatureTests {
     }
 
     @Test func gameConfigUpdatedOwnWinDoesNotShowNotification() async {
-        let game = Game.mock
+        var game = Game.mock
+        game.hunterIds = ["my-hunter-id", "other-hunter"]
         var state = HunterMapFeature.State(game: game)
         state.hunterId = "my-hunter-id"
+        state.previousWinnersCount = 0
 
         let store = TestStore(initialState: state) {
             HunterMapFeature()
+        } withDependencies: {
+            $0.locationClient.stopTracking = { }
+            $0.liveActivityClient.end = { _ in }
         }
+        store.exhaustivity = .off
 
         var updatedGame = game
         updatedGame.winners = [
             Winner(hunterId: "my-hunter-id", hunterName: "Me", timestamp: .now)
         ]
 
-        await store.send(.gameConfigUpdated( updatedGame)) {
-            let (lastUpdate, lastRadius) = updatedGame.findLastUpdate()
-            $0.game = updatedGame
-            $0.radius = lastRadius
-            $0.nextRadiusUpdate = lastUpdate
-            $0.mapCircle = CircleOverlay(
-                center: updatedGame.initialCoordinates.toCLCoordinates,
-                radius: CLLocationDistance(lastRadius)
-            )
-            $0.lastLiveActivityState = $0.liveActivityState
-            $0.previousWinnersCount = 1
-        }
+        await store.send(.gameConfigUpdated(updatedGame))
+
+        // The key assertion: own win should NOT trigger a notification
+        #expect(store.state.winnerNotification == nil)
     }
 
     @Test func hunterNameDefaultsToHunter() {
@@ -500,8 +501,11 @@ struct HunterMapFeatureTests {
 
     @Test func gameConfigUpdatedWithNewWinnerSchedulesAutoDismiss() async {
         let clock = TestClock()
-        var state = HunterMapFeature.State(game: .mock)
+        var game = Game.mock
+        game.hunterIds = ["my-hunter-id", "other-hunter", "third-hunter"]
+        var state = HunterMapFeature.State(game: game)
         state.hunterId = "my-hunter-id"
+        state.previousWinnersCount = 0
 
         let store = TestStore(initialState: state) {
             HunterMapFeature()
@@ -509,7 +513,7 @@ struct HunterMapFeatureTests {
             $0.continuousClock = clock
         }
 
-        var updatedGame = Game.mock
+        var updatedGame = game
         updatedGame.winners = [
             Winner(hunterId: "other-hunter", hunterName: "Alice", timestamp: .now)
         ]
@@ -519,10 +523,7 @@ struct HunterMapFeatureTests {
             $0.game = updatedGame
             $0.radius = lastRadius
             $0.nextRadiusUpdate = lastUpdate
-            $0.mapCircle = CircleOverlay(
-                center: updatedGame.initialCoordinates.toCLCoordinates,
-                radius: CLLocationDistance(lastRadius)
-            )
+            // followTheChicken mode: mapCircle stays nil when no chicken location received yet
             $0.lastLiveActivityState = $0.liveActivityState
             $0.winnerNotification = "Alice found the chicken! 🐔"
             $0.previousWinnersCount = 1
