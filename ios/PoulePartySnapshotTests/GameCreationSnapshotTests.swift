@@ -65,6 +65,11 @@ struct GameCreationSnapshotTests {
         assertSnapshot(of: vc, as: .image(size: size))
     }
 
+    @Test func zoneSetupStep() {
+        let vc = makeVC(store: makeStore(step: 2))
+        assertSnapshot(of: vc, as: .image(size: size))
+    }
+
     @Test func chickenSelectionStep() {
         let vc = makeVC(store: makeStore(step: 1, isParticipating: false))
         assertSnapshot(of: vc, as: .image(size: size))

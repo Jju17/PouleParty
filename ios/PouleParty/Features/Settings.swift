@@ -409,8 +409,9 @@ private struct GameStatusBadge: View {
         Text(label)
             .font(.gameboy(size: 6))
             .foregroundStyle(.white)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
+            .frame(minWidth: 50)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
             .background(color)
             .clipShape(Capsule())
     }
@@ -426,7 +427,7 @@ private struct GameStatusBadge: View {
     private var color: Color {
         switch status {
         case .waiting: .CROrange
-        case .inProgress: .success
+        case .inProgress: Color(hex: 0x16A34A)
         case .done: .onBackground.opacity(0.3)
         }
     }

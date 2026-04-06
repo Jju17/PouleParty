@@ -280,26 +280,15 @@ struct GameCreationView: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            // Step content
-            if isMapStep {
-                stepContent(for: store.currentStep)
-                    .id(store.currentStep)
-                    .transition(.asymmetric(
-                        insertion: .move(edge: store.goingForward ? .trailing : .leading),
-                        removal: .move(edge: store.goingForward ? .leading : .trailing)
-                    ))
-                    .ignoresSafeArea(edges: .top)
-            } else {
-                ZStack {
-                    stepContent(for: store.currentStep)
-                        .id(store.currentStep)
-                        .transition(.asymmetric(
-                            insertion: .move(edge: store.goingForward ? .trailing : .leading),
-                            removal: .move(edge: store.goingForward ? .leading : .trailing)
-                        ))
-                }
+            // Step content — single container, no if/else branching
+            stepContent(for: store.currentStep)
+                .id(store.currentStep)
+                .transition(.asymmetric(
+                    insertion: .move(edge: store.goingForward ? .trailing : .leading),
+                    removal: .move(edge: store.goingForward ? .leading : .trailing)
+                ))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
+                .ignoresSafeArea(edges: isMapStep ? .top : [])
 
             // Progress bar — always on top, overlaps everything
             VStack {
@@ -310,7 +299,7 @@ struct GameCreationView: View {
                 Spacer()
             }
 
-            // Bottom navigation (always visible, overlaid on map step)
+            // Bottom navigation
             bottomBar
 
             // Dismiss button

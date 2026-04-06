@@ -909,7 +909,10 @@ struct ChickenMapView: View {
             }
         }
         .onCameraChanged { context in
-            mapBearing = context.cameraState.bearing
+            let newBearing = context.cameraState.bearing
+            Task { @MainActor in
+                mapBearing = newBearing
+            }
         }
         .ignoresSafeArea()
         .onChange(of: store.mapCircle) { _, newCircle in

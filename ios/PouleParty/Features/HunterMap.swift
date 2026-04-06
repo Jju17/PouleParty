@@ -301,8 +301,6 @@ struct HunterMapFeature {
             case .onTask:
                 let rawUid = userClient.currentUserId()
                 let gameId = state.game.id
-                let gameMod = state.game.gameMod
-                logger.info("HunterMap.onTask — currentUserId: \(rawUid ?? "nil"), gameId: \(gameId), gameMod: \(String(describing: gameMod))")
                 if let uid = rawUid, !uid.isEmpty {
                     state.hunterId = uid
                 }
@@ -313,7 +311,6 @@ struct HunterMapFeature {
                 }
                 let chickenCanSeeHunters = state.game.chickenCanSeeHunters
                 let powerUpsEnabled = state.game.powerUpsEnabled
-                logger.info("HunterMap.onTask — hunterId set to: \(hunterId), shouldWriteLocation: \(chickenCanSeeHunters)")
                 let hunterStartDate = state.game.hunterStartDate
                 let (lastUpdate, lastRadius) = state.game.findLastUpdate()
                 state.radius = lastRadius
@@ -860,7 +857,10 @@ struct HunterMapView: View {
             }
         }
         .onCameraChanged { context in
-            mapBearing = context.cameraState.bearing
+            let newBearing = context.cameraState.bearing
+            Task { @MainActor in
+                mapBearing = newBearing
+            }
         }
         .ignoresSafeArea()
         .onChange(of: store.mapCircle) { _, newCircle in

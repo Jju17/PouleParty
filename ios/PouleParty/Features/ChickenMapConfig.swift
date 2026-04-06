@@ -198,7 +198,7 @@ struct ChickenMapConfigView: View {
                 // Search bar at top
                 VStack {
                     searchOverlay
-                        .padding(.top, 56)
+                        .padding(.top, 72)
                     Spacer()
                 }
 
@@ -249,7 +249,7 @@ struct ChickenMapConfigView: View {
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
-                    .padding(.bottom, 56)
+                    .padding(.bottom, 72)
                     .background(.thinMaterial)
                 }
                 .ignoresSafeArea(.keyboard)
