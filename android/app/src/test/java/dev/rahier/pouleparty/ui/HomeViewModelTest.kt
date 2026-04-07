@@ -9,17 +9,17 @@ class HomeViewModelTest {
     @Test
     fun `initial state has all dialogs hidden`() {
         val state = HomeUiState()
-        assertFalse(state.isShowingJoinDialog)
+        assertFalse(state.isShowingJoinSheet)
         assertFalse(state.isShowingGameRules)
         assertFalse(state.isShowingGameNotFound)
         assertEquals("", state.gameCode)
     }
 
     @Test
-    fun `start button shows join dialog`() {
+    fun `start button shows join sheet`() {
         val state = HomeUiState()
-        val updated = state.copy(isShowingJoinDialog = true)
-        assertTrue(updated.isShowingJoinDialog)
+        val updated = state.copy(isShowingJoinSheet = true)
+        assertTrue(updated.isShowingJoinSheet)
     }
 
     @Test
@@ -37,16 +37,16 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun `initial state has empty hunterName`() {
+    fun `initial state has empty teamName`() {
         val state = HomeUiState()
-        assertEquals("", state.hunterName)
+        assertEquals("", state.teamName)
     }
 
     @Test
-    fun `hunterName can be updated`() {
+    fun `teamName can be updated`() {
         val state = HomeUiState()
-        val updated = state.copy(hunterName = "Julien")
-        assertEquals("Julien", updated.hunterName)
+        val updated = state.copy(teamName = "The Foxes")
+        assertEquals("The Foxes", updated.teamName)
     }
 
     @Test

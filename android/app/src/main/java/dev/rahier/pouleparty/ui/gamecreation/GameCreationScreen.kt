@@ -148,6 +148,11 @@ fun GameCreationScreen(
                         chickenCanSeeHunters = state.game.chickenCanSeeHunters,
                         onToggle = { viewModel.toggleChickenCanSeeHunters(it) }
                     )
+                    GameCreationStep.REGISTRATION -> RegistrationStep(
+                        requiresRegistration = state.game.requiresRegistration,
+                        isDepositPlan = state.game.pricingModel == "deposit",
+                        onToggle = { viewModel.toggleRequiresRegistration(it) }
+                    )
                     GameCreationStep.RECAP -> RecapStep(
                         state = state,
                         dateFormat = dateFormat,
@@ -786,6 +791,39 @@ private fun ChickenSeesHuntersStep(
             isSelected = !chickenCanSeeHunters,
             onClick = { onToggle(false) }
         )
+    }
+}
+
+@Composable
+private fun RegistrationStep(
+    requiresRegistration: Boolean,
+    isDepositPlan: Boolean,
+    onToggle: (Boolean) -> Unit
+) {
+    StepContainer(
+        title = stringResource(R.string.registration),
+        subtitle = stringResource(R.string.do_hunters_need_to_register_before_joining)
+    ) {
+        OptionCard(
+            text = stringResource(R.string.registration_required),
+            emoji = "\uD83D\uDCDD",
+            isSelected = requiresRegistration,
+            onClick = { if (!isDepositPlan) onToggle(true) }
+        )
+        OptionCard(
+            text = stringResource(R.string.open_join),
+            emoji = "\uD83D\uDEAA",
+            isSelected = !requiresRegistration,
+            onClick = { if (!isDepositPlan) onToggle(false) }
+        )
+        if (isDepositPlan) {
+            Text(
+                text = stringResource(R.string.registration_required_for_paid_deposit_games),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+            )
+        }
     }
 }
 

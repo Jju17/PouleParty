@@ -13,11 +13,17 @@ service cloud.firestore {
                     && request.resource.data.status == 'waiting';
 
       // Any player can update hunterIds and winners (join game, submit winner)
+      // If the game requires registration, the joining user must already have a registration doc.
       allow update: if request.auth != null
                     && request.resource.data.diff(resource.data).affectedKeys()
                         .hasOnly(['hunterIds', 'winners'])
                     && request.resource.data.hunterIds.size() <= resource.data.numberOfPlayers
-                    && request.resource.data.winners.size() <= resource.data.numberOfPlayers;
+                    && request.resource.data.winners.size() <= resource.data.numberOfPlayers
+                    && (
+                      resource.data.get('requiresRegistration', false) == false
+                      || !request.resource.data.hunterIds.hasAny([request.auth.uid])
+                      || exists(/databases/$(database)/documents/games/$(gameId)/registrations/$(request.auth.uid))
+                    );
 
       // Any authenticated player can update power-up active effect fields
       allow update: if request.auth != null
@@ -53,6 +59,23 @@ service cloud.firestore {
                       && visitorId == request.auth.uid
                       && request.resource.data.hunterId == request.auth.uid
                       && request.resource.data.keys().hasAll(['hunterId', 'location', 'timestamp']);
+        allow delete: if false;
+      }
+
+      // Registrations subcollection — hunters register before joining a game that requires it
+      match /registrations/{visitorId} {
+        allow read: if request.auth != null
+                    && (visitorId == request.auth.uid
+                        || get(/databases/$(database)/documents/games/$(gameId)).data.creatorId == request.auth.uid);
+        allow create: if request.auth != null
+                      && visitorId == request.auth.uid
+                      && request.resource.data.userId == request.auth.uid
+                      && request.resource.data.keys().hasAll(['userId', 'teamName', 'paid', 'joinedAt'])
+                      && request.resource.data.teamName is string
+                      && request.resource.data.teamName.size() > 0;
+        allow update: if request.auth != null
+                      && visitorId == request.auth.uid
+                      && request.resource.data.userId == request.auth.uid;
         allow delete: if false;
       }
 

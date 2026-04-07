@@ -32,6 +32,8 @@ struct ApiClient {
     var countFreeGamesToday: (String) async throws -> Int
     var fetchPartyPlansConfig: () async throws -> PartyPlansConfig
     var fetchMyGames: (String) async throws -> [Game]
+    var findRegistration: (String, String) async throws -> Registration?
+    var createRegistration: (String, Registration) async throws -> Void
 }
 
 private let logger = Logger(subsystem: "dev.rahier.pouleparty", category: "ApiClient")
@@ -39,6 +41,7 @@ private let gamesCollection = "games"
 private let chickenLocationsSubcollection = "chickenLocations"
 private let hunterLocationsSubcollection = "hunterLocations"
 private let powerUpsSubcollection = "powerUps"
+private let registrationsSubcollection = "registrations"
 private let maxRetries = 3
 private let initialDelayNs: UInt64 = 500_000_000
 
@@ -81,7 +84,9 @@ extension ApiClient: TestDependencyKey {
         powerUpsStream: { _ in AsyncStream { _ in } },
         countFreeGamesToday: { _ in 0 },
         fetchPartyPlansConfig: { PartyPlansConfig() },
-        fetchMyGames: { _ in [] }
+        fetchMyGames: { _ in [] },
+        findRegistration: { _, _ in nil },
+        createRegistration: { _, _ in }
     )
 }
 
@@ -421,6 +426,32 @@ extension ApiClient: DependencyKey {
 
             return snapshot.documents.compactMap { doc in
                 try? doc.data(as: Game.self)
+            }
+        },
+        findRegistration: { gameId, userId in
+            guard !gameId.isEmpty, !userId.isEmpty else { return nil }
+            let snapshot = try await Firestore.firestore()
+                .collection(gamesCollection).document(gameId)
+                .collection(registrationsSubcollection).document(userId)
+                .getDocument()
+            guard snapshot.exists else { return nil }
+            do {
+                return try snapshot.data(as: Registration.self)
+            } catch {
+                logger.error("Failed to decode registration \(gameId)/\(userId): \(error.localizedDescription)")
+                return nil
+            }
+        },
+        createRegistration: { gameId, registration in
+            guard !gameId.isEmpty, !registration.userId.isEmpty else {
+                logger.warning("createRegistration skipped — gameId: '\(gameId)', userId: '\(registration.userId)'")
+                return
+            }
+            try await withRetry("createRegistration(\(gameId), \(registration.userId))") {
+                let ref = Firestore.firestore()
+                    .collection(gamesCollection).document(gameId)
+                    .collection(registrationsSubcollection).document(registration.userId)
+                try ref.setData(from: registration)
             }
         }
     )

@@ -19,6 +19,22 @@ struct PlanSelectionResult: Equatable {
     let depositAmountCents: Int
 }
 
+struct PendingRegistration: Codable, Equatable {
+    let gameId: String
+    let gameCode: String
+    let teamName: String
+    let startDate: Date
+}
+
+extension SharedKey where Self == FileStorageKey<PendingRegistration?>.Default {
+    static var pendingRegistration: Self {
+        Self[
+            .fileStorage(.documentsDirectory.appending(component: "pending-registration.json")),
+            default: nil
+        ]
+    }
+}
+
 @Reducer
 struct HomeFeature {
 
@@ -27,9 +43,9 @@ struct HomeFeature {
         @Presents var destination: Destination.State?
         @Shared(.appStorage(AppConstants.prefIsMusicMuted)) var isMusicMuted = false
         @Shared(.appStorage(AppConstants.prefUserNickname)) var savedNickname = ""
+        @Shared(.pendingRegistration) var pendingRegistration: PendingRegistration?
         var gameCode: String = ""
         var musicMuted: Bool { isMusicMuted }
-        var isJoiningGame = false
         var activeGame: Game? = nil
         var activeGameRole: GameRole? = nil
         var pendingPlanResult: PlanSelectionResult? = nil
@@ -56,6 +72,8 @@ struct HomeFeature {
         case networkRequestFailed
         case noActiveGameFound
         case onTask
+        case pendingRegistrationDismissed
+        case pendingRegistrationRejoinTapped
         case rejoinGameTapped
         case rulesButtonTapped
         case settingsButtonTapped
@@ -69,6 +87,7 @@ struct HomeFeature {
             case alert(AlertState<Action.Alert>)
             case gameCreation(GameCreationFeature.State)
             case gameRules
+            case joinFlow(JoinFlowFeature.State)
             case planSelection(PlanSelectionFeature.State)
             case settings(SettingsFeature.State)
         }
@@ -76,6 +95,7 @@ struct HomeFeature {
         enum Action {
             case alert(Alert)
             case gameCreation(GameCreationFeature.Action)
+            case joinFlow(JoinFlowFeature.Action)
             case planSelection(PlanSelectionFeature.Action)
             case settings(SettingsFeature.Action)
 
@@ -88,6 +108,9 @@ struct HomeFeature {
             EmptyReducer()
                 .ifCaseLet(\.gameCreation, action: \.gameCreation) {
                     GameCreationFeature()
+                }
+                .ifCaseLet(\.joinFlow, action: \.joinFlow) {
+                    JoinFlowFeature()
                 }
                 .ifCaseLet(\.planSelection, action: \.planSelection) {
                     PlanSelectionFeature()
@@ -165,6 +188,25 @@ struct HomeFeature {
             case .destination(.presented(.settings(.deleteSuccessAlertDismissed))):
                 state.destination = nil
                 return .send(.accountDeletionCompleted)
+            case let .destination(.presented(.joinFlow(.delegate(.joinGame(game, hunterName))))):
+                state.destination = nil
+                switch game.status {
+                case .waiting, .inProgress:
+                    return .send(.hunterGameJoined(game, hunterName))
+                case .done:
+                    return .send(.completedGameFound(game))
+                }
+            case let .destination(.presented(.joinFlow(.delegate(.registered(game, teamName))))):
+                state.destination = nil
+                state.$pendingRegistration.withLock { value in
+                    value = PendingRegistration(
+                        gameId: game.id,
+                        gameCode: game.gameCode,
+                        teamName: teamName,
+                        startDate: game.startDate
+                    )
+                }
+                return .none
             case .destination:
                 return .none
             case .activeGameBannerDismissed:
@@ -200,6 +242,7 @@ struct HomeFeature {
             case .chickenGameStarted:
                 return .none
             case .hunterGameJoined:
+                state.$pendingRegistration.withLock { $0 = nil }
                 return .none
             case .accountDeletionCompleted:
                 return .none
@@ -215,6 +258,9 @@ struct HomeFeature {
                 game.numberOfPlayers = config.numberOfPlayers
                 game.pricePerPlayer = config.pricePerPlayerCents
                 game.depositAmount = config.depositAmountCents
+                if config.model == .deposit {
+                    game.requiresRegistration = true
+                }
                 game.driftSeed = withRandomNumberGenerator { generator in
                     Int.random(in: 1...999_999, using: &generator)
                 }
@@ -229,33 +275,8 @@ struct HomeFeature {
                 )
                 return .none
             case .joinGameButtonTapped:
-                let code = state.gameCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-                guard code.count == AppConstants.gameCodeLength,
-                      code.allSatisfy({ $0.isLetter || $0.isNumber })
-                else { return .none }
+                return .none
 
-                let savedNickname = state.savedNickname.trimmingCharacters(in: .whitespacesAndNewlines)
-                let finalName = savedNickname.isEmpty ? "Hunter" : savedNickname
-                state.isJoiningGame = false
-                return .run { send in
-                    let game: Game?
-                    do {
-                        game = try await apiClient.findGameByCode(code)
-                    } catch {
-                        await send(.networkRequestFailed)
-                        return
-                    }
-                    guard let game else {
-                        await send(.gameNotFound)
-                        return
-                    }
-                    switch game.status {
-                    case .waiting, .inProgress:
-                        await send(.hunterGameJoined(game, finalName))
-                    case .done:
-                        await send(.completedGameFound(game))
-                    }
-                }
             case .musicToggleTapped:
                 state.$isMusicMuted.withLock { $0.toggle() }
                 return .none
@@ -328,12 +349,38 @@ struct HomeFeature {
             case .settingsButtonTapped:
                 state.destination = .settings(SettingsFeature.State())
                 return .none
+            case .pendingRegistrationDismissed:
+                state.$pendingRegistration.withLock { $0 = nil }
+                return .none
+
+            case .pendingRegistrationRejoinTapped:
+                guard let pending = state.pendingRegistration else { return .none }
+                let savedNickname = state.savedNickname.trimmingCharacters(in: .whitespacesAndNewlines)
+                let finalName = savedNickname.isEmpty ? "Hunter" : savedNickname
+                let gameId = pending.gameId
+                return .run { send in
+                    do {
+                        guard let game = try await apiClient.getConfig(gameId) else {
+                            await send(.gameNotFound)
+                            return
+                        }
+                        switch game.status {
+                        case .waiting, .inProgress:
+                            await send(.hunterGameJoined(game, finalName))
+                        case .done:
+                            await send(.completedGameFound(game))
+                        }
+                    } catch {
+                        await send(.networkRequestFailed)
+                    }
+                }
+
             case .startButtonTapped:
                 let startLocStatus = locationClient.authorizationStatus()
                 guard startLocStatus == .authorizedAlways || startLocStatus == .authorizedWhenInUse else {
                     return .send(.locationPermissionDenied)
                 }
-                state.isJoiningGame = true
+                state.destination = .joinFlow(JoinFlowFeature.State())
                 return .none
             }
         }
@@ -348,6 +395,7 @@ struct HomeView: View {
     @State private var isVisible = true
     @State private var audioPlayer: AVAudioPlayer?
     @State private var musicButtonScale: CGFloat = 1.0
+    @State private var isPendingBannerCollapsed = false
 
     var body: some View {
         NavigationStack {
@@ -389,6 +437,7 @@ struct HomeView: View {
                         .font(.gameboy(size: 12))
                         .foregroundStyle(Color.onBackground)
                 }
+                .offset(y: -60)
                 Spacer()
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -433,6 +482,12 @@ struct HomeView: View {
 
                 if store.activeGame != nil {
                     rejoinBanner
+                } else if store.pendingRegistration != nil {
+                    if isPendingBannerCollapsed {
+                        collapsedPendingRegistrationTab
+                    } else {
+                        pendingRegistrationBanner
+                    }
                 }
 
                 HStack {
@@ -469,15 +524,7 @@ struct HomeView: View {
                     .padding()
                 }
             }
-            .alert("Join Game", isPresented: $store.isJoiningGame) {
-                TextField("Game code", text: $store.gameCode)
-                Button("Join") {
-                    self.store.send(.joinGameButtonTapped)
-                }
-                Button("Cancel", role: .cancel) { }
-            } message: {
-                Text("Enter the game code to join.")
-            }
+
         }
         .onDisappear {
             self.audioPlayer?.stop()
@@ -517,6 +564,20 @@ struct HomeView: View {
                 action: \.destination.planSelection
             ) {
                 PlanSelectionView(store: planStore)
+                    .presentationDetents([.medium])
+            }
+        }
+        .sheet(
+            isPresented: Binding(
+                get: { if case .joinFlow = store.destination { true } else { false } },
+                set: { if !$0 { store.send(.destinationDismissed) } }
+            )
+        ) {
+            if let joinStore = store.scope(
+                state: \.destination?.joinFlow,
+                action: \.destination.joinFlow
+            ) {
+                JoinFlowView(store: joinStore)
                     .presentationDetents([.medium])
             }
         }
@@ -561,6 +622,96 @@ struct HomeView: View {
         }
         .navigationBarHidden(true)
         }
+    }
+
+    private var pendingRegistrationBanner: some View {
+        ZStack(alignment: .topTrailing) {
+            VStack(spacing: 12) {
+                Text("Registered to game")
+                    .font(.gameboy(size: 12))
+                    .foregroundStyle(.white)
+
+                if let pending = store.pendingRegistration {
+                    Text(pending.gameCode)
+                        .font(.gameboy(size: 20))
+                        .foregroundStyle(.white)
+                    Text(pending.teamName)
+                        .font(.gameboy(size: 9))
+                        .foregroundStyle(.white.opacity(0.8))
+                    Text("Starting in \(pending.startDate, style: .relative)")
+                        .font(.gameboy(size: 9))
+                        .foregroundStyle(.white.opacity(0.8))
+                }
+
+                Button {
+                    store.send(.pendingRegistrationRejoinTapped)
+                } label: {
+                    Text("Join")
+                        .font(.gameboy(size: 16))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(.white, lineWidth: 3)
+                        )
+                }
+                .accessibilityLabel("Join registered game")
+            }
+            .padding(20)
+            .frame(maxWidth: .infinity)
+
+            Button {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                    isPendingBannerCollapsed = true
+                }
+            } label: {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(.white)
+                    .padding(8)
+            }
+            .accessibilityLabel("Collapse")
+            .padding(8)
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.gradientFire)
+                .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
+        )
+        .padding(.horizontal, 24)
+        .transition(.move(edge: .trailing).combined(with: .opacity))
+    }
+
+    private var collapsedPendingRegistrationTab: some View {
+        HStack(spacing: 0) {
+            Spacer(minLength: 0)
+            Button {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                    isPendingBannerCollapsed = false
+                }
+            } label: {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(.white)
+                    .padding(.vertical, 16)
+                    .padding(.leading, 14)
+                    .padding(.trailing, 10)
+                    .background(
+                        UnevenRoundedRectangle(
+                            topLeadingRadius: 16,
+                            bottomLeadingRadius: 16,
+                            bottomTrailingRadius: 0,
+                            topTrailingRadius: 0
+                        )
+                        .fill(Color.gradientFire)
+                        .shadow(color: .black.opacity(0.25), radius: 4, x: -2, y: 2)
+                    )
+            }
+            .accessibilityLabel("Expand registered game banner")
+        }
+        .frame(maxWidth: .infinity, minHeight: 190, alignment: .topTrailing)
+        .transition(.move(edge: .trailing))
     }
 
     private var rejoinBanner: some View {

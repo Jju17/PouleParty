@@ -110,13 +110,18 @@ struct GameCreationSnapshotTests {
         assertSnapshot(of: vc, as: .image(size: size))
     }
 
-    @Test func recapStepStayInZone() {
+    @Test func registrationStepStayInZone() {
         let vc = makeVC(store: makeStore(step: 7))
         assertSnapshot(of: vc, as: .image(size: size))
     }
 
+    @Test func recapStepStayInZone() {
+        let vc = makeVC(store: makeStore(step: 8))
+        assertSnapshot(of: vc, as: .image(size: size))
+    }
+
     @Test func recapStepFollowChicken() {
-        let vc = makeVC(store: makeStore(step: 8, gameMod: .followTheChicken))
+        let vc = makeVC(store: makeStore(step: 9, gameMod: .followTheChicken))
         assertSnapshot(of: vc, as: .image(size: size))
     }
 }

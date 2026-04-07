@@ -4,6 +4,7 @@
 //
 
 import ComposableArchitecture
+import FirebaseFirestore
 import SnapshotTesting
 import SwiftUI
 import XCTest
@@ -29,6 +30,8 @@ final class GameCreationSnapshotTests: XCTestCase {
     ) -> StoreOf<GameCreationFeature> {
         var game = Game(id: "snapshot-test")
         game.foundCode = "1234"
+        // Fixed date to avoid snapshot diffs from time changes
+        game.startTimestamp = .init(date: Date(timeIntervalSince1970: 1_800_000_000)) // 2027-01-15 08:00 UTC
         game.gameMod = gameMod
         game.powerUpsEnabled = powerUpsEnabled
         game.chickenCanSeeHunters = chickenCanSeeHunters
@@ -106,13 +109,18 @@ final class GameCreationSnapshotTests: XCTestCase {
         assertSnapshot(of: vc, as: .image(size: CGSize(width: 393, height: 852)))
     }
 
-    func testRecapStepStayInZone() {
+    func testRegistrationStepStayInZone() {
         let vc = makeVC(store: makeStore(step: 7))
         assertSnapshot(of: vc, as: .image(size: CGSize(width: 393, height: 852)))
     }
 
+    func testRecapStepStayInZone() {
+        let vc = makeVC(store: makeStore(step: 8))
+        assertSnapshot(of: vc, as: .image(size: CGSize(width: 393, height: 852)))
+    }
+
     func testRecapStepFollowChicken() {
-        let vc = makeVC(store: makeStore(step: 8, gameMod: .followTheChicken))
+        let vc = makeVC(store: makeStore(step: 9, gameMod: .followTheChicken))
         assertSnapshot(of: vc, as: .image(size: CGSize(width: 393, height: 852)))
     }
 }

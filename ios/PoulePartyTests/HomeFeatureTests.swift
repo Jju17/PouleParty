@@ -12,13 +12,15 @@ import Testing
 @MainActor
 struct HomeFeatureTests {
 
-    @Test func startButtonTappedShowsJoinDialog() async {
+    @Test func startButtonTappedShowsJoinFlow() async {
         let store = TestStore(initialState: HomeFeature.State()) {
             HomeFeature()
+        } withDependencies: {
+            $0.locationClient.authorizationStatus = { .authorizedWhenInUse }
         }
 
         await store.send(.startButtonTapped) {
-            $0.isJoiningGame = true
+            $0.destination = .joinFlow(JoinFlowFeature.State())
         }
     }
 
@@ -60,7 +62,6 @@ struct HomeFeatureTests {
     @Test func initialStateHasDefaultValues() {
         let state = HomeFeature.State()
         #expect(state.gameCode == "")
-        #expect(state.isJoiningGame == false)
         #expect(state.destination == nil)
     }
 

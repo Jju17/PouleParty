@@ -26,6 +26,26 @@
     <string name="location_required">Location Required</string>
     <string name="location_required_message">Location is the core of PouleParty! Your position is anonymous and only used during the game. Please enable location access to continue.</string>
 
+    <!-- Join / Register flow -->
+    <string name="enter_the_game_code">Enter the game code</string>
+    <string name="no_game_found_with_this_code">No game found with this code.</string>
+    <string name="network_error_please_try_again">Network error. Please try again.</string>
+    <string name="register">Register</string>
+    <string name="sign_up">Sign up</string>
+    <string name="pay">Pay</string>
+    <string name="team_name">Team name</string>
+    <string name="hunter_payment_will_be_available_soon">Hunter payment will be available soon.</string>
+    <string name="registered_to_game">Registered to game</string>
+    <string name="collapse">Collapse</string>
+    <string name="expand_registered_game_banner">Expand registered game banner</string>
+
+    <!-- Game creation registration step -->
+    <string name="registration">Registration</string>
+    <string name="do_hunters_need_to_register_before_joining">Do hunters need to register before joining?</string>
+    <string name="registration_required">Registration required</string>
+    <string name="open_join">Open join</string>
+    <string name="registration_required_for_paid_deposit_games">Registration is required for paid (deposit) games.</string>
+
     <!-- Chicken Config -->
     <string name="game_settings">Game Settings</string>
     <string name="game_code_label">Game Code</string>

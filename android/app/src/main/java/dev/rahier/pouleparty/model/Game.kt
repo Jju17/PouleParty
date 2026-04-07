@@ -33,6 +33,7 @@ data class Game(
     val pricePerPlayer: Int = 0, // In cents
     val depositAmount: Int = 0, // In cents
     val commissionPercent: Double = 15.0,
+    val requiresRegistration: Boolean = false,
     val powerUpsEnabled: Boolean = false,
     val enabledPowerUpTypes: List<String> = PowerUpType.entries.map { it.firestoreValue },
     val activeInvisibilityUntil: Timestamp? = null,

@@ -15,6 +15,7 @@ import dev.rahier.pouleparty.model.GameStatus
 import dev.rahier.pouleparty.model.PartyPlansConfig
 import dev.rahier.pouleparty.model.HunterLocation
 import dev.rahier.pouleparty.model.PowerUp
+import dev.rahier.pouleparty.model.Registration
 import dev.rahier.pouleparty.model.Winner
 import dev.rahier.pouleparty.ui.PlayerRole
 import kotlinx.coroutines.channels.awaitClose
@@ -152,6 +153,36 @@ class FirestoreRepository @Inject constructor(
             )
             firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
                 .update("winners", FieldValue.arrayUnion(winnerMap))
+                .await()
+        }
+    }
+
+    // ── Registrations ─────────────────────────────────────
+
+    suspend fun findRegistration(gameId: String, userId: String): Registration? {
+        if (gameId.isEmpty() || userId.isEmpty()) return null
+        return try {
+            val doc = firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
+                .collection(AppConstants.SUBCOLLECTION_REGISTRATIONS).document(userId)
+                .get()
+                .await()
+            if (!doc.exists()) return null
+            doc.toObject(Registration::class.java)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to find registration $gameId/$userId", e)
+            null
+        }
+    }
+
+    suspend fun createRegistration(gameId: String, registration: Registration) {
+        if (gameId.isEmpty() || registration.userId.isEmpty()) {
+            Log.w(TAG, "createRegistration skipped — gameId: '$gameId', userId: '${registration.userId}'")
+            return
+        }
+        withRetry("createRegistration($gameId, ${registration.userId})") {
+            firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
+                .collection(AppConstants.SUBCOLLECTION_REGISTRATIONS).document(registration.userId)
+                .set(registration)
                 .await()
         }
     }

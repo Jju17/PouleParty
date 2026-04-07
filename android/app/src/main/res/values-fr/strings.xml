@@ -24,6 +24,26 @@
     <string name="location_required">Localisation requise</string>
     <string name="location_required_message">La localisation est au cœur de PouleParty ! Ta position est anonyme et utilisée uniquement pendant la partie. Active la localisation pour continuer.</string>
 
+    <!-- Join / Register flow -->
+    <string name="enter_the_game_code">Entre le code de la partie</string>
+    <string name="no_game_found_with_this_code">Aucune partie trouvée avec ce code.</string>
+    <string name="network_error_please_try_again">Erreur réseau. Réessaie.</string>
+    <string name="register">S\'inscrire</string>
+    <string name="sign_up">S\'inscrire</string>
+    <string name="pay">Payer</string>
+    <string name="team_name">Nom d\'équipe</string>
+    <string name="hunter_payment_will_be_available_soon">Le paiement pour les chasseurs sera bientôt disponible.</string>
+    <string name="registered_to_game">Inscrit à la partie</string>
+    <string name="collapse">Réduire</string>
+    <string name="expand_registered_game_banner">Afficher la bannière d\'inscription</string>
+
+    <!-- Game creation registration step -->
+    <string name="registration">Inscription</string>
+    <string name="do_hunters_need_to_register_before_joining">Les chasseurs doivent-ils s\'inscrire avant de rejoindre ?</string>
+    <string name="registration_required">Inscription requise</string>
+    <string name="open_join">Accès libre</string>
+    <string name="registration_required_for_paid_deposit_games">L\'inscription est obligatoire pour les parties payantes (caution).</string>
+
     <!-- Chicken Config -->
     <string name="game_settings">Réglages du jeu</string>
     <string name="start_at">Départ à</string>

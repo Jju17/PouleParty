@@ -21,6 +21,7 @@ enum GameCreationStep: Equatable {
     case headStart
     case powerUps
     case chickenSeesHunters
+    case registration
     case recap
 }
 
@@ -56,6 +57,7 @@ struct GameCreationFeature {
             if game.gameMod == .followTheChicken {
                 result.append(.chickenSeesHunters)
             }
+            result.append(.registration)
             result.append(.recap)
             return result
         }
@@ -106,6 +108,7 @@ struct GameCreationFeature {
         case participationChanged(Bool)
         case powerUpsToggled(Bool)
         case powerUpTypeToggled(PowerUp.PowerUpType)
+        case requiresRegistrationChanged(Bool)
         case startDateChanged(Date)
         case startGameButtonTapped
     }
@@ -215,6 +218,10 @@ struct GameCreationFeature {
 
             case let .powerUpsToggled(enabled):
                 state.$game.withLock { $0.powerUpsEnabled = enabled }
+                return .none
+
+            case let .requiresRegistrationChanged(value):
+                state.$game.withLock { $0.requiresRegistration = value }
                 return .none
 
             case let .powerUpTypeToggled(type):
@@ -426,6 +433,8 @@ struct GameCreationView: View {
             powerUpsStep
         case .chickenSeesHunters:
             chickenSeesHuntersStep
+        case .registration:
+            registrationStep
         case .recap:
             recapStep
         }
@@ -777,6 +786,56 @@ struct GameCreationView: View {
         }
     }
 
+    // MARK: - Registration Step
+
+    private var registrationStep: some View {
+        let isDepositPlan = store.currentGame.pricingModel == .deposit
+        return VStack(spacing: 24) {
+            Spacer()
+            stepHeader(
+                title: String(localized: "Registration"),
+                subtitle: String(localized: "Do hunters need to register before joining?")
+            )
+
+            VStack(spacing: 16) {
+                selectionCard(
+                    title: String(localized: "Registration required"),
+                    emoji: "📝",
+                    subtitle: String(localized: "Hunters must register a team name before joining"),
+                    isSelected: store.currentGame.requiresRegistration,
+                    gradient: Color.gradientFire
+                ) {
+                    if !isDepositPlan {
+                        store.send(.requiresRegistrationChanged(true))
+                    }
+                }
+
+                selectionCard(
+                    title: String(localized: "Open join"),
+                    emoji: "🚪",
+                    subtitle: String(localized: "Anyone with the code can join directly"),
+                    isSelected: !store.currentGame.requiresRegistration,
+                    gradient: Color.gradientHunter
+                ) {
+                    if !isDepositPlan {
+                        store.send(.requiresRegistrationChanged(false))
+                    }
+                }
+                .opacity(isDepositPlan ? 0.4 : 1)
+
+                if isDepositPlan {
+                    Text("Registration is required for paid (deposit) games.")
+                        .font(.gameboy(size: 8))
+                        .foregroundStyle(Color.onBackground.opacity(0.6))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 24)
+                }
+            }
+            .padding(.horizontal, 24)
+            Spacer()
+        }
+    }
+
     // MARK: - Recap Step
 
     private var recapStep: some View {
@@ -823,6 +882,8 @@ struct GameCreationView: View {
                         Divider()
                         recapRow(label: "Chicken sees hunters", value: store.currentGame.chickenCanSeeHunters ? "Yes" : "No")
                     }
+                    Divider()
+                    recapRow(label: "Registration", value: store.currentGame.requiresRegistration ? "Required" : "Open")
                 }
                 .background(
                     RoundedRectangle(cornerRadius: 16)

@@ -37,6 +37,7 @@ struct Game: Codable, Equatable, Identifiable {
     var pricePerPlayer: Int = 0 // In cents
     var depositAmount: Int = 0 // In cents
     var commissionPercent: Double = 15.0
+    var requiresRegistration: Bool = false
     var powerUpsEnabled: Bool = false
     var enabledPowerUpTypes: [String] = PowerUp.PowerUpType.allCases.map(\.rawValue)
     var activeInvisibilityUntil: Timestamp?

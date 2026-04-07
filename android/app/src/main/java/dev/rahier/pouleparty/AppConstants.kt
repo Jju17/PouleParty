@@ -15,6 +15,13 @@ object AppConstants {
     const val SUBCOLLECTION_CHICKEN_LOCATIONS = "chickenLocations"
     const val SUBCOLLECTION_HUNTER_LOCATIONS = "hunterLocations"
     const val SUBCOLLECTION_POWER_UPS = "powerUps"
+    const val SUBCOLLECTION_REGISTRATIONS = "registrations"
+
+    // Pending registration banner
+    const val PREF_PENDING_REGISTRATION_GAME_ID = "pendingRegistrationGameId"
+    const val PREF_PENDING_REGISTRATION_GAME_CODE = "pendingRegistrationGameCode"
+    const val PREF_PENDING_REGISTRATION_TEAM_NAME = "pendingRegistrationTeamName"
+    const val PREF_PENDING_REGISTRATION_START_MS = "pendingRegistrationStartMs"
 
     // Time Intervals
     const val LOCATION_THROTTLE_MS = 5_000L

@@ -10,5 +10,6 @@ enum class GameCreationStep {
     HEAD_START,
     POWER_UPS,
     CHICKEN_SEES_HUNTERS,
+    REGISTRATION,
     RECAP
 }

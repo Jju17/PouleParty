@@ -53,6 +53,7 @@ data class GameCreationUiState(
             if (game.gameModEnum == GameMod.FOLLOW_THE_CHICKEN) {
                 base.add(GameCreationStep.CHICKEN_SEES_HUNTERS)
             }
+            base.add(GameCreationStep.REGISTRATION)
             base.add(GameCreationStep.RECAP)
             return base
         }
@@ -109,7 +110,8 @@ class GameCreationViewModel @Inject constructor(
                 driftSeed = (1..999_999).random(),
                 pricingModel = pricingModel,
                 pricePerPlayer = pricePerPlayerCents,
-                depositAmount = depositAmountCents
+                depositAmount = depositAmountCents,
+                requiresRegistration = pricingModel == "deposit"
             )
         )
     )
@@ -210,6 +212,14 @@ class GameCreationViewModel @Inject constructor(
 
     fun toggleChickenCanSeeHunters(value: Boolean) {
         _uiState.update { it.copy(game = it.game.withChickenCanSeeHunters(value)) }
+    }
+
+    fun toggleRequiresRegistration(value: Boolean) {
+        _uiState.update { state ->
+            // Deposit games always require registration
+            if (state.game.pricingModel == "deposit" && !value) return@update state
+            state.copy(game = state.game.copy(requiresRegistration = value))
+        }
     }
 
     fun onLocationSelected(point: Point) {

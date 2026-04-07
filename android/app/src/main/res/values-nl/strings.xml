@@ -24,6 +24,26 @@
     <string name="location_required">Locatie vereist</string>
     <string name="location_required_message">Locatie is de kern van PouleParty! Je positie is anoniem en wordt alleen tijdens het spel gebruikt. Schakel locatietoegang in om door te gaan.</string>
 
+    <!-- Join / Register flow -->
+    <string name="enter_the_game_code">Voer de spelcode in</string>
+    <string name="no_game_found_with_this_code">Geen spel gevonden met deze code.</string>
+    <string name="network_error_please_try_again">Netwerkfout. Probeer opnieuw.</string>
+    <string name="register">Inschrijven</string>
+    <string name="sign_up">Aanmelden</string>
+    <string name="pay">Betalen</string>
+    <string name="team_name">Teamnaam</string>
+    <string name="hunter_payment_will_be_available_soon">Betaling voor jagers komt binnenkort beschikbaar.</string>
+    <string name="registered_to_game">Ingeschreven voor het spel</string>
+    <string name="collapse">Inklappen</string>
+    <string name="expand_registered_game_banner">Toon registratiebanner</string>
+
+    <!-- Game creation registration step -->
+    <string name="registration">Inschrijving</string>
+    <string name="do_hunters_need_to_register_before_joining">Moeten jagers zich registreren voordat ze meedoen?</string>
+    <string name="registration_required">Inschrijving vereist</string>
+    <string name="open_join">Open toegang</string>
+    <string name="registration_required_for_paid_deposit_games">Inschrijving is verplicht voor betaalde spellen (borg).</string>
+
     <!-- Chicken Config -->
     <string name="game_settings">Spelinstellingen</string>
     <string name="game_code_label">Spelcode</string>
