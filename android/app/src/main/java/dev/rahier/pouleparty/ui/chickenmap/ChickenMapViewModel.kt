@@ -82,13 +82,15 @@ data class ChickenMapUiState(
 class ChickenMapViewModel @Inject constructor(
     firestoreRepository: FirestoreRepository,
     locationRepository: LocationRepository,
+    analyticsRepository: dev.rahier.pouleparty.data.AnalyticsRepository,
     auth: FirebaseAuth,
     @param:Named("mapboxAccessToken") private val mapboxAccessToken: String,
     savedStateHandle: SavedStateHandle
-) : BaseMapViewModel(firestoreRepository, locationRepository, auth) {
+) : BaseMapViewModel(firestoreRepository, locationRepository, analyticsRepository, auth) {
 
     override val gameId: String = savedStateHandle["gameId"] ?: ""
     override val playerId: String = auth.currentUser?.uid ?: ""
+    override val analyticsRole: String = "chicken"
 
     private val _uiState = MutableStateFlow(ChickenMapUiState())
     val uiState: StateFlow<ChickenMapUiState> = _uiState.asStateFlow()
@@ -121,6 +123,7 @@ class ChickenMapViewModel @Inject constructor(
             if (game.gameStatusEnum == GameStatus.WAITING) {
                 try {
                     firestoreRepository.updateGameStatus(gameId, GameStatus.IN_PROGRESS)
+                    analyticsRepository.gameStarted(gameMode = game.gameMode)
                 } catch (e: Exception) {
                     Log.e("ChickenMapVM", "Failed to update game status to inProgress", e)
                 }
@@ -183,7 +186,10 @@ class ChickenMapViewModel @Inject constructor(
                 // Game over by time
                 if (checkGameOverByTime(state.game.endDate)) {
                     // Update status BEFORE cancelling streams to avoid coroutine self-cancellation
-                    try { firestoreRepository.updateGameStatus(gameId, GameStatus.DONE) } catch (e: Exception) { Log.e("ChickenMapVM", "Failed to update game status", e) }
+                    try {
+                        firestoreRepository.updateGameStatus(gameId, GameStatus.DONE)
+                        analyticsRepository.gameEnded(reason = "time_expired", winnersCount = state.game.winners.size)
+                    } catch (e: Exception) { Log.e("ChickenMapVM", "Failed to update game status", e) }
                     cancelStreams()
                     _uiState.update {
                         it.copy(
@@ -211,7 +217,10 @@ class ChickenMapViewModel @Inject constructor(
                 if (radiusResult != null) {
                     if (radiusResult.isGameOver) {
                         // Update status BEFORE cancelling streams to avoid coroutine self-cancellation
-                        try { firestoreRepository.updateGameStatus(gameId, GameStatus.DONE) } catch (e: Exception) { Log.e("ChickenMapVM", "Failed to update game status", e) }
+                        try {
+                            firestoreRepository.updateGameStatus(gameId, GameStatus.DONE)
+                            analyticsRepository.gameEnded(reason = "zone_collapsed", winnersCount = state.game.winners.size)
+                        } catch (e: Exception) { Log.e("ChickenMapVM", "Failed to update game status", e) }
                         cancelStreams()
                         _uiState.update {
                             it.copy(
@@ -390,6 +399,7 @@ class ChickenMapViewModel @Inject constructor(
                     updatedGame.winners.size >= updatedGame.hunterIds.size) {
                     try {
                         firestoreRepository.updateGameStatus(gameId, GameStatus.DONE)
+                        analyticsRepository.gameEnded(reason = "all_hunters_found", winnersCount = updatedGame.winners.size)
                     } catch (e: Exception) {
                         android.util.Log.e("ChickenMapVM", "Failed to set game DONE when all hunters found", e)
                     }
@@ -536,6 +546,7 @@ class ChickenMapViewModel @Inject constructor(
                 val duration = powerUp.typeEnum.durationSeconds ?: 0
                 val expiresAt = Timestamp(Date(System.currentTimeMillis() + duration * 1000))
                 firestoreRepository.activatePowerUp(gameId, powerUp.id, expiresAt)
+                analyticsRepository.powerUpActivated(type = powerUp.type, role = "chicken")
 
                 when (powerUp.typeEnum) {
                     PowerUpType.INVISIBILITY -> {

@@ -123,6 +123,7 @@ struct HunterMapFeature {
     @Dependency(\.continuousClock) var clock
     @Dependency(\.liveActivityClient) var liveActivityClient
     @Dependency(\.locationClient) var locationClient
+    @Dependency(\.analyticsClient) var analyticsClient
 
     var body: some ReducerOf<Self> {
         BindingReducer()
@@ -209,9 +210,10 @@ struct HunterMapFeature {
             case let .powerUpCollected(powerUp):
                 let gameId = state.game.id
                 let hunterId = state.hunterId
-                return .run { send in
+                return .run { [analyticsClient] send in
                     do {
                         try await apiClient.collectPowerUp(gameId, powerUp.id, hunterId)
+                        analyticsClient.powerUpCollected(type: powerUp.type.rawValue, role: "hunter")
                     } catch {
                         logger.error("Failed to collect power-up: \(error)")
                     }
@@ -232,11 +234,12 @@ struct HunterMapFeature {
                     }
                 }
 
-                return .run { send in
+                return .run { [analyticsClient] send in
                     try? await apiClient.activatePowerUp(gameId, powerUp.id, expiresAt)
                     if powerUp.type == .radarPing {
                         try? await apiClient.updateGameActiveEffect(gameId, "powerUps.activeEffects.radarPing", expiresAt)
                     }
+                    analyticsClient.powerUpActivated(type: powerUp.type.rawValue, role: "hunter")
                     try await clock.sleep(for: .seconds(2))
                     await send(.powerUpNotificationDismissed)
                 }
@@ -263,6 +266,7 @@ struct HunterMapFeature {
 
                 guard code == state.game.foundCode else {
                     state.wrongCodeAttempts += 1
+                    analyticsClient.hunterWrongCode(attemptNumber: state.wrongCodeAttempts)
                     if state.wrongCodeAttempts >= AppConstants.codeMaxWrongAttempts {
                         state.codeCooldownUntil = .now.addingTimeInterval(AppConstants.codeCooldownSeconds)
                         state.wrongCodeAttempts = 0
@@ -287,9 +291,11 @@ struct HunterMapFeature {
                     timestamp: .now
                 )
                 let gameId = state.game.id
-                return .run { send in
+                let totalAttempts = state.wrongCodeAttempts + 1
+                return .run { [analyticsClient] send in
                     do {
                         try await apiClient.addWinner(gameId, winner)
+                        analyticsClient.hunterFoundChicken(attempts: totalAttempts)
                         locationClient.stopTracking()
                         await send(.winnerRegistered)
                     } catch {
@@ -355,11 +361,13 @@ struct HunterMapFeature {
                 state.lastLiveActivityState = initialLAState
 
                 let requiresRegistration = state.game.registration.required
+                let gameMode = state.game.gameMode.rawValue
+                let gameCode = state.game.gameCode
                 var effects: [Effect<Action>] = [
                     .run { _ in
                         await liveActivityClient.start(attributes, initialLAState)
                     },
-                    .run { send in
+                    .run { [analyticsClient] send in
                         // Defensive gate: if game requires registration, ensure user has one before
                         // calling registerHunter (which would fail the Firestore rule and silently
                         // break the rest of the screen).
@@ -373,6 +381,7 @@ struct HunterMapFeature {
                         }
                         do {
                             try await apiClient.registerHunter(gameId, hunterId)
+                            analyticsClient.gameJoined(gameMode: gameMode, gameCode: gameCode)
                         } catch {
                             logger.error("Failed to register hunter: \(error.localizedDescription)")
                         }

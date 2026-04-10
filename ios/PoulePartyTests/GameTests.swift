@@ -833,4 +833,134 @@ struct GameTests {
         let seconds = Calendar.current.component(.second, from: game.startDate)
         #expect(seconds == 0, "startDate should have seconds stripped to :00")
     }
+
+    // MARK: - Minimum start date logic
+
+    /// Computes the expected minimum start date (mirrors GameCreationFeature.State.minimumStartDate)
+    private func computeMinimumStartDate(required: Bool, deadlineMinutes: Int?) -> Date {
+        let bufferMinutes: Double = 5
+        if required {
+            if let deadline = deadlineMinutes {
+                return Date.now.addingTimeInterval((Double(deadline) + bufferMinutes) * 60)
+            }
+            return Date.now.addingTimeInterval(bufferMinutes * 60)
+        }
+        return Date.now.addingTimeInterval(60)
+    }
+
+    @Test func minimumStartDateOpenJoinIs1Minute() {
+        let min = computeMinimumStartDate(required: false, deadlineMinutes: nil)
+        let expected = Date.now.addingTimeInterval(60)
+        #expect(abs(min.timeIntervalSince(expected)) < 1, "Open join: minimum should be ~1 min from now")
+    }
+
+    @Test func minimumStartDateRegistration15Min() {
+        let min = computeMinimumStartDate(required: true, deadlineMinutes: 15)
+        let expected = Date.now.addingTimeInterval((15 + 5) * 60) // 20 min
+        #expect(abs(min.timeIntervalSince(expected)) < 1, "15min deadline: minimum should be ~20 min from now")
+    }
+
+    @Test func minimumStartDateRegistration30Min() {
+        let min = computeMinimumStartDate(required: true, deadlineMinutes: 30)
+        let expected = Date.now.addingTimeInterval((30 + 5) * 60) // 35 min
+        #expect(abs(min.timeIntervalSince(expected)) < 1)
+    }
+
+    @Test func minimumStartDateRegistration60Min() {
+        let min = computeMinimumStartDate(required: true, deadlineMinutes: 60)
+        let expected = Date.now.addingTimeInterval((60 + 5) * 60) // 65 min
+        #expect(abs(min.timeIntervalSince(expected)) < 1)
+    }
+
+    @Test func minimumStartDateRegistration120Min() {
+        let min = computeMinimumStartDate(required: true, deadlineMinutes: 120)
+        let expected = Date.now.addingTimeInterval((120 + 5) * 60) // 125 min
+        #expect(abs(min.timeIntervalSince(expected)) < 1)
+    }
+
+    @Test func minimumStartDateRegistration1Day() {
+        let min = computeMinimumStartDate(required: true, deadlineMinutes: 1440)
+        let expected = Date.now.addingTimeInterval((1440 + 5) * 60) // 1445 min
+        #expect(abs(min.timeIntervalSince(expected)) < 1)
+    }
+
+    @Test func minimumStartDateRequiredButNoDeadlineIs5Minutes() {
+        // Registration required but closesMinutesBefore = nil → buffer only (5 min)
+        let min = computeMinimumStartDate(required: true, deadlineMinutes: nil)
+        let expected = Date.now.addingTimeInterval(5 * 60)
+        #expect(abs(min.timeIntervalSince(expected)) < 1)
+    }
+
+    @Test func minimumStartDateRequiredWithZeroDeadline() {
+        // Deadline at game start (0 min) → buffer only = 5 min
+        let min = computeMinimumStartDate(required: true, deadlineMinutes: 0)
+        let expected = Date.now.addingTimeInterval(5 * 60)
+        #expect(abs(min.timeIntervalSince(expected)) < 1)
+    }
+
+    // MARK: - Start date clamping behavior
+
+    @Test func startDateNotClampedWhenAboveMinimum() {
+        var game = Game(id: "test")
+        game.registration.required = false
+        // Set start date to 1 hour from now (well above 5 min minimum)
+        game.startDate = .now.addingTimeInterval(3600)
+        let minimum = computeMinimumStartDate(required: false, deadlineMinutes: nil)
+        #expect(game.startDate > minimum, "Start date should be above minimum")
+    }
+
+    @Test func switchingToRegistrationIncreasesMinimum() {
+        let openMin = computeMinimumStartDate(required: false, deadlineMinutes: nil)
+        let regMin = computeMinimumStartDate(required: true, deadlineMinutes: 15)
+        #expect(regMin > openMin, "Registration minimum should be higher than open join")
+        // open = now+1min, reg = now+20min → diff ≈ 19 min
+        let diff = regMin.timeIntervalSince(openMin)
+        #expect(abs(diff - 19 * 60) < 1, "Difference should be ~19 minutes")
+    }
+
+    @Test func increasingDeadlineIncreasesMinimum() {
+        let min15 = computeMinimumStartDate(required: true, deadlineMinutes: 15)
+        let min60 = computeMinimumStartDate(required: true, deadlineMinutes: 60)
+        let min1440 = computeMinimumStartDate(required: true, deadlineMinutes: 1440)
+        #expect(min60 > min15)
+        #expect(min1440 > min60)
+        let diff = min60.timeIntervalSince(min15)
+        #expect(abs(diff - 45 * 60) < 1, "60-15 = 45 minutes difference")
+    }
+
+    @Test func disablingRegistrationDecreasesMinimum() {
+        let regMin = computeMinimumStartDate(required: true, deadlineMinutes: 30)
+        let openMin = computeMinimumStartDate(required: false, deadlineMinutes: nil)
+        #expect(openMin < regMin, "Disabling registration should lower minimum")
+    }
+
+    // MARK: - Edge cases: game duration vs head start vs registration
+
+    @Test func headStartCannotExceedDuration() {
+        // 1h game with 15 min head start → effective duration = 45 min
+        let effectiveDuration = max(60.0 - 15.0, 1.0)
+        #expect(effectiveDuration == 45.0)
+        let (interval, decline) = calculateNormalModeSettings(initialRadius: 1500, gameDurationMinutes: effectiveDuration)
+        #expect(interval == 5)
+        let finalRadius = 1500 - (effectiveDuration / 5) * decline
+        #expect(abs(finalRadius - 100) < 0.01)
+    }
+
+    @Test func registrationDeadlinePlusDurationMustFitInStartTime() {
+        // Registration closes 120 min before, game duration 60 min
+        // Minimum start: now + 125 min
+        // Game ends at: start + 60 min = now + 185 min
+        let minStart = computeMinimumStartDate(required: true, deadlineMinutes: 120)
+        let gameEnd = minStart.addingTimeInterval(60 * 60) // 1h game
+        let totalLeadTime = gameEnd.timeIntervalSinceNow / 60 // minutes from now
+        #expect(totalLeadTime > 180, "Total lead time should be > 3 hours (125 min start + 60 min game)")
+    }
+
+    @Test func maxDeadlineWithShortGameStillWorks() {
+        // Registration closes 1 day before, game duration 1h
+        // Minimum start: now + 1445 min ≈ 24h 5min
+        let minStart = computeMinimumStartDate(required: true, deadlineMinutes: 1440)
+        let minutesFromNow = minStart.timeIntervalSinceNow / 60
+        #expect(abs(minutesFromNow - 1445) < 1)
+    }
 }

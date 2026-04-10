@@ -78,9 +78,10 @@ data class HunterMapUiState(
 class HunterMapViewModel @Inject constructor(
     firestoreRepository: FirestoreRepository,
     locationRepository: LocationRepository,
+    analyticsRepository: dev.rahier.pouleparty.data.AnalyticsRepository,
     auth: FirebaseAuth,
     savedStateHandle: SavedStateHandle
-) : BaseMapViewModel(firestoreRepository, locationRepository, auth) {
+) : BaseMapViewModel(firestoreRepository, locationRepository, analyticsRepository, auth) {
 
     companion object {
         private const val TAG = "HunterMapViewModel"
@@ -89,6 +90,7 @@ class HunterMapViewModel @Inject constructor(
     override val gameId: String = savedStateHandle["gameId"] ?: ""
     val hunterName: String = savedStateHandle["hunterName"] ?: "Hunter"
     override val playerId: String = auth.currentUser?.uid ?: ""
+    override val analyticsRole: String = "hunter"
     /** Public alias kept for external callers (e.g. HunterMapScreen). */
     val hunterId: String get() = playerId
 
@@ -131,6 +133,7 @@ class HunterMapViewModel @Inject constructor(
 
             try {
                 firestoreRepository.registerHunter(gameId, hunterId)
+                analyticsRepository.gameJoined(gameMode = game.gameMode, gameCode = game.gameCode)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to register hunter $hunterId for game $gameId", e)
                 _uiState.update { it.copy(showRegistrationRequiredAlert = true) }
@@ -434,6 +437,7 @@ class HunterMapViewModel @Inject constructor(
                 val duration = powerUp.typeEnum.durationSeconds ?: 0
                 val expiresAt = Timestamp(Date(System.currentTimeMillis() + duration * 1000))
                 firestoreRepository.activatePowerUp(gameId, powerUp.id, expiresAt)
+                analyticsRepository.powerUpActivated(type = powerUp.type, role = "hunter")
 
                 when (powerUp.typeEnum) {
                     PowerUpType.ZONE_PREVIEW -> {
@@ -492,6 +496,7 @@ class HunterMapViewModel @Inject constructor(
 
         if (code != _uiState.value.game.foundCode) {
             val attempts = _uiState.value.wrongCodeAttempts + 1
+            analyticsRepository.hunterWrongCode(attemptNumber = attempts)
             val cooldown = if (attempts >= AppConstants.CODE_MAX_WRONG_ATTEMPTS) System.currentTimeMillis() + AppConstants.CODE_COOLDOWN_MS else 0L
             _uiState.update {
                 it.copy(
@@ -503,6 +508,7 @@ class HunterMapViewModel @Inject constructor(
             return
         }
 
+        val totalAttempts = _uiState.value.wrongCodeAttempts + 1
         viewModelScope.launch {
             val winner = Winner(
                 hunterId = hunterId,
@@ -510,6 +516,7 @@ class HunterMapViewModel @Inject constructor(
                 timestamp = Timestamp.now()
             )
             firestoreRepository.addWinner(gameId, winner)
+            analyticsRepository.hunterFoundChicken(attempts = totalAttempts)
             _uiState.update { it.copy(shouldNavigateToVictory = true) }
         }
     }

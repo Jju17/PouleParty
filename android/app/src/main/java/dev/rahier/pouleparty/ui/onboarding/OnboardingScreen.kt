@@ -180,6 +180,7 @@ fun OnboardingScreen(
                         .clickable(enabled = !isNextDisabled) {
                             if (viewModel.isLastPage) {
                                 if (viewModel.canCompleteOnboarding()) {
+                                    viewModel.logOnboardingCompleted()
                                     onOnboardingCompleted(state.nickname.trim())
                                 }
                             } else {

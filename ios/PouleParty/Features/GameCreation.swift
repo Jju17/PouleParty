@@ -49,13 +49,13 @@ struct GameCreationFeature {
             result.append(contentsOf: [
                 .gameMode,
                 .zoneSetup,
+                .registration,
                 .startTime,
                 .duration,
                 .headStart,
                 .powerUps,
             ])
             result.append(.chickenSeesHunters)
-            result.append(.registration)
             result.append(.recap)
             return result
         }
@@ -85,6 +85,20 @@ struct GameCreationFeature {
                 return game.zone.finalCenter != nil
             }
             return true
+        }
+
+        /// Minimum start time based on registration settings.
+        /// Open join: now + 1 minute.
+        /// Registration required: now + deadline + 5 minutes buffer.
+        var minimumStartDate: Date {
+            let bufferMinutes: Double = 5
+            if game.registration.required {
+                if let deadline = game.registration.closesMinutesBefore {
+                    return Date.now.addingTimeInterval((Double(deadline) + bufferMinutes) * 60)
+                }
+                return Date.now.addingTimeInterval(bufferMinutes * 60)
+            }
+            return Date.now.addingTimeInterval(60)
         }
 
         var currentGame: Game { game }
@@ -128,6 +142,15 @@ struct GameCreationFeature {
 
     @Dependency(\.apiClient) var apiClient
     @Dependency(\.locationClient) var locationClient
+    @Dependency(\.analyticsClient) var analyticsClient
+
+    /// Pushes the start date forward if it falls before the minimum allowed.
+    private func clampStartDateToMinimum(state: inout State) {
+        let minimum = state.minimumStartDate
+        if state.game.startDate < minimum {
+            state.$game.withLock { $0.startDate = minimum }
+        }
+    }
 
     private func recalculateNormalMode(state: inout State) {
         let effectiveDuration = max(state.gameDurationMinutes - state.game.timing.headStartMinutes, 1)
@@ -155,6 +178,7 @@ struct GameCreationFeature {
                     state.goingForward = false
                     state.currentStepIndex -= 1
                 }
+                clampStartDateToMinimum(state: &state)
                 return .none
 
             case .binding:
@@ -217,6 +241,7 @@ struct GameCreationFeature {
                     state.goingForward = true
                     state.currentStepIndex += 1
                 }
+                clampStartDateToMinimum(state: &state)
                 return .none
 
             case let .participationChanged(participating):
@@ -229,6 +254,7 @@ struct GameCreationFeature {
 
             case let .registrationClosesBeforeStartChanged(minutes):
                 state.$game.withLock { $0.registration.closesMinutesBefore = minutes }
+                clampStartDateToMinimum(state: &state)
                 return .none
 
             case let .requiresRegistrationChanged(value):
@@ -240,6 +266,7 @@ struct GameCreationFeature {
                         game.registration.closesMinutesBefore = nil
                     }
                 }
+                clampStartDateToMinimum(state: &state)
                 return .none
 
             case let .powerUpTypeToggled(type):
@@ -264,13 +291,20 @@ struct GameCreationFeature {
                 return .none
 
             case .startGameButtonTapped:
+                clampStartDateToMinimum(state: &state)
                 state.$game.withLock { game in
                     game.endDate = game.startDate.addingTimeInterval(state.gameDurationMinutes * 60)
                 }
                 recalculateNormalMode(state: &state)
-                return .run { [state = state] send in
+                return .run { [state = state, analyticsClient] send in
                     do {
                         try await apiClient.setConfig(state.game)
+                        analyticsClient.gameCreated(
+                            gameMode: state.game.gameMode.rawValue,
+                            maxPlayers: state.game.maxPlayers,
+                            pricingModel: state.game.pricing.model.rawValue,
+                            powerUpsEnabled: state.game.powerUps.enabled
+                        )
                         await send(.gameCreated(state.game))
                     } catch {
                         await send(.configSaveFailed)
@@ -603,7 +637,7 @@ struct GameCreationView: View {
                     get: { store.currentGame.startDate },
                     set: { store.send(.startDateChanged($0)) }
                 ),
-                in: .now.addingTimeInterval(7200)...
+                in: store.minimumStartDate...
             )
             .datePickerStyle(.graphical)
             .tint(Color.CROrange)

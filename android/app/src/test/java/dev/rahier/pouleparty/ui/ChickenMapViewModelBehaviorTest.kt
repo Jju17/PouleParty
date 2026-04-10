@@ -41,6 +41,7 @@ class ChickenMapViewModelBehaviorTest {
         return ChickenMapViewModel(
             firestoreRepository = firestoreRepository,
             locationRepository = locationRepository,
+            analyticsRepository = mockk<dev.rahier.pouleparty.data.AnalyticsRepository>(relaxed = true),
             auth = mockk<FirebaseAuth>(relaxed = true),
             mapboxAccessToken = "test-token",
             savedStateHandle = SavedStateHandle(mapOf("gameId" to gameId))

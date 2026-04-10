@@ -58,6 +58,7 @@ class HomeViewModelBehaviorTest {
         return HomeViewModel(
             firestoreRepository = firestoreRepository,
             locationRepository = locationRepository,
+            analyticsRepository = mockk<dev.rahier.pouleparty.data.AnalyticsRepository>(relaxed = true),
             prefs = prefs,
             auth = auth
         )

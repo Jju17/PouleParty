@@ -51,13 +51,13 @@ data class GameCreationUiState(
             base.addAll(listOf(
                 GameCreationStep.GAME_MODE,
                 GameCreationStep.ZONE_SETUP,
+                GameCreationStep.REGISTRATION,
                 GameCreationStep.START_TIME,
                 GameCreationStep.DURATION,
                 GameCreationStep.HEAD_START,
                 GameCreationStep.POWER_UPS
             ))
             base.add(GameCreationStep.CHICKEN_SEES_HUNTERS)
-            base.add(GameCreationStep.REGISTRATION)
             base.add(GameCreationStep.RECAP)
             return base
         }
@@ -82,12 +82,30 @@ data class GameCreationUiState(
             }
             return true
         }
+
+    /** Minimum start time based on registration settings.
+     *  Open join: now + 1 minute.
+     *  Registration required: now + deadline + 5 minutes buffer. */
+    val minimumStartDate: Date
+        get() {
+            val bufferMs = 5 * 60 * 1000L
+            if (game.registration.required) {
+                val deadline = game.registration.closesMinutesBefore
+                return if (deadline != null) {
+                    Date(System.currentTimeMillis() + deadline * 60 * 1000L + bufferMs)
+                } else {
+                    Date(System.currentTimeMillis() + bufferMs)
+                }
+            }
+            return Date(System.currentTimeMillis() + 60_000L)
+        }
 }
 
 @HiltViewModel
 class GameCreationViewModel @Inject constructor(
     private val firestoreRepository: FirestoreRepository,
     private val locationRepository: LocationRepository,
+    private val analyticsRepository: dev.rahier.pouleparty.data.AnalyticsRepository,
     private val auth: FirebaseAuth,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -148,6 +166,7 @@ class GameCreationViewModel @Inject constructor(
         if (nextIndex < state.steps.size) {
             _uiState.update { it.copy(currentStepIndex = nextIndex, goingForward = true) }
         }
+        clampStartDateToMinimum()
     }
 
     fun back() {
@@ -155,6 +174,7 @@ class GameCreationViewModel @Inject constructor(
         if (state.currentStepIndex > 0) {
             _uiState.update { it.copy(currentStepIndex = state.currentStepIndex - 1, goingForward = false) }
         }
+        clampStartDateToMinimum()
     }
 
     fun setParticipating(participating: Boolean) {
@@ -220,7 +240,7 @@ class GameCreationViewModel @Inject constructor(
                 set(java.util.Calendar.MINUTE, minute)
                 set(java.util.Calendar.SECOND, 0)
             }
-            val minDate = Date(System.currentTimeMillis() + 120_000)
+            val minDate = state.minimumStartDate
             if (cal.time.before(minDate)) {
                 cal.time = minDate
             }
@@ -280,11 +300,25 @@ class GameCreationViewModel @Inject constructor(
             )
             state.copy(game = updatedGame)
         }
+        clampStartDateToMinimum()
     }
 
     fun setRegistrationClosesBeforeStart(minutes: Int?) {
         _uiState.update { state ->
             state.copy(game = state.game.copy(registration = state.game.registration.copy(closesMinutesBefore = minutes)))
+        }
+        clampStartDateToMinimum()
+    }
+
+    /** Pushes the start date forward if it falls before the minimum allowed. */
+    private fun clampStartDateToMinimum() {
+        _uiState.update { state ->
+            val minimum = state.minimumStartDate
+            if (state.game.startDate.before(minimum)) {
+                state.copy(game = state.game.withStartDate(minimum))
+            } else {
+                state
+            }
         }
     }
 
@@ -334,6 +368,7 @@ class GameCreationViewModel @Inject constructor(
     }
 
     fun startGame(onSuccess: (String) -> Unit) {
+        clampStartDateToMinimum()
         viewModelScope.launch {
             try {
                 val game = _uiState.value.game
@@ -347,6 +382,12 @@ class GameCreationViewModel @Inject constructor(
                 }
                 val finalGame = game.withEndDate(endDate)
                 firestoreRepository.setConfig(finalGame)
+                analyticsRepository.gameCreated(
+                    gameMode = finalGame.gameMode,
+                    maxPlayers = finalGame.maxPlayers,
+                    pricingModel = finalGame.pricing.model,
+                    powerUpsEnabled = finalGame.powerUps.enabled
+                )
                 onSuccess(finalGame.id)
             } catch (e: Exception) {
                 _uiState.update {

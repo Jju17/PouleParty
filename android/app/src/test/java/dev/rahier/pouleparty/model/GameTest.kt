@@ -683,4 +683,110 @@ class GameTest {
         assertFalse(game.isDecoyActive)
         assertFalse(game.isJammerActive)
     }
+
+    // ── Minimum start date logic ──
+
+    /** Mirrors GameCreationUiState.minimumStartDate computation. */
+    private fun computeMinimumStartDate(required: Boolean, deadlineMinutes: Int?): Date {
+        val bufferMs = 5 * 60 * 1000L
+        if (required) {
+            return if (deadlineMinutes != null) {
+                Date(System.currentTimeMillis() + deadlineMinutes * 60 * 1000L + bufferMs)
+            } else {
+                Date(System.currentTimeMillis() + bufferMs)
+            }
+        }
+        return Date(System.currentTimeMillis() + 60_000L)
+    }
+
+    @Test
+    fun `minimumStartDate open join is 1 minute`() {
+        val min = computeMinimumStartDate(false, null)
+        val expected = System.currentTimeMillis() + 60_000L
+        assertTrue("Open join minimum should be ~1 min from now", Math.abs(min.time - expected) < 1000)
+    }
+
+    @Test
+    fun `minimumStartDate registration 15 min`() {
+        val min = computeMinimumStartDate(true, 15)
+        val expected = Date(System.currentTimeMillis() + (15 + 5) * 60 * 1000L)
+        assertTrue(Math.abs(min.time - expected.time) < 1000)
+    }
+
+    @Test
+    fun `minimumStartDate registration 30 min`() {
+        val min = computeMinimumStartDate(true, 30)
+        val expected = Date(System.currentTimeMillis() + (30 + 5) * 60 * 1000L)
+        assertTrue(Math.abs(min.time - expected.time) < 1000)
+    }
+
+    @Test
+    fun `minimumStartDate registration 60 min`() {
+        val min = computeMinimumStartDate(true, 60)
+        val expected = Date(System.currentTimeMillis() + (60 + 5) * 60 * 1000L)
+        assertTrue(Math.abs(min.time - expected.time) < 1000)
+    }
+
+    @Test
+    fun `minimumStartDate registration 120 min`() {
+        val min = computeMinimumStartDate(true, 120)
+        val expected = Date(System.currentTimeMillis() + (120 + 5) * 60 * 1000L)
+        assertTrue(Math.abs(min.time - expected.time) < 1000)
+    }
+
+    @Test
+    fun `minimumStartDate registration 1 day`() {
+        val min = computeMinimumStartDate(true, 1440)
+        val expected = Date(System.currentTimeMillis() + (1440 + 5) * 60 * 1000L)
+        assertTrue(Math.abs(min.time - expected.time) < 1000)
+    }
+
+    @Test
+    fun `minimumStartDate required but no deadline is 5 minutes`() {
+        val min = computeMinimumStartDate(true, null)
+        val expected = System.currentTimeMillis() + 5 * 60 * 1000L
+        assertTrue("Should be ~5 min from now", Math.abs(min.time - expected) < 1000)
+    }
+
+    @Test
+    fun `minimumStartDate required with zero deadline is 5 min`() {
+        val min = computeMinimumStartDate(true, 0)
+        val expected = Date(System.currentTimeMillis() + 5 * 60 * 1000L)
+        assertTrue(Math.abs(min.time - expected.time) < 1000)
+    }
+
+    @Test
+    fun `switching to registration increases minimum`() {
+        val openMin = computeMinimumStartDate(false, null)
+        val regMin = computeMinimumStartDate(true, 15)
+        assertTrue("Registration minimum should exceed open join", regMin.after(openMin))
+        // open = now+1min, reg = now+20min → diff ≈ 19 min
+        val diffMinutes = (regMin.time - openMin.time) / 60_000.0
+        assertTrue("Difference should be ~19 min, was $diffMinutes", Math.abs(diffMinutes - 19) < 1)
+    }
+
+    @Test
+    fun `increasing deadline increases minimum`() {
+        val min15 = computeMinimumStartDate(true, 15)
+        val min60 = computeMinimumStartDate(true, 60)
+        val min1440 = computeMinimumStartDate(true, 1440)
+        assertTrue(min60.after(min15))
+        assertTrue(min1440.after(min60))
+        val diff = (min60.time - min15.time) / 60_000.0
+        assertTrue("60-15 = 45 min difference, was $diff", Math.abs(diff - 45) < 1)
+    }
+
+    @Test
+    fun `disabling registration decreases minimum`() {
+        val regMin = computeMinimumStartDate(true, 30)
+        val openMin = computeMinimumStartDate(false, null)
+        assertTrue("Open minimum should be less than reg minimum", openMin.before(regMin))
+    }
+
+    @Test
+    fun `max deadline with short game still works`() {
+        val minStart = computeMinimumStartDate(true, 1440)
+        val minutesFromNow = (minStart.time - System.currentTimeMillis()) / 60_000.0
+        assertTrue("Should be ~1445 min, was $minutesFromNow", Math.abs(minutesFromNow - 1445) < 1)
+    }
 }

@@ -29,8 +29,13 @@ data class OnboardingUiState(
 @HiltViewModel
 class OnboardingViewModel @Inject constructor(
     private val locationRepository: LocationRepository,
+    private val analyticsRepository: dev.rahier.pouleparty.data.AnalyticsRepository,
     @param:ApplicationContext private val context: Context
 ) : ViewModel() {
+
+    fun logOnboardingCompleted() {
+        analyticsRepository.onboardingCompleted()
+    }
 
     private val _uiState = MutableStateFlow(OnboardingUiState())
     val uiState: StateFlow<OnboardingUiState> = _uiState.asStateFlow()

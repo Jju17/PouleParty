@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mapbox.geojson.Point
 import dev.rahier.pouleparty.AppConstants
+import dev.rahier.pouleparty.data.AnalyticsRepository
 import dev.rahier.pouleparty.data.FirestoreRepository
 import dev.rahier.pouleparty.data.LocationRepository
 import dev.rahier.pouleparty.model.Game
@@ -28,6 +29,7 @@ import kotlinx.coroutines.launch
 abstract class BaseMapViewModel(
     protected val firestoreRepository: FirestoreRepository,
     protected val locationRepository: LocationRepository,
+    protected val analyticsRepository: AnalyticsRepository,
     protected val auth: FirebaseAuth
 ) : ViewModel() {
 
@@ -40,6 +42,9 @@ abstract class BaseMapViewModel(
 
     /** The current player's ID (userId for chicken, hunterId for hunter). */
     protected abstract val playerId: String
+
+    /** The current player's role as a string ("chicken" or "hunter") for analytics. */
+    protected abstract val analyticsRole: String
 
     // ── Shared helpers ───────────────────────────────────
 
@@ -101,6 +106,7 @@ abstract class BaseMapViewModel(
                 viewModelScope.launch {
                     try {
                         firestoreRepository.collectPowerUp(gameId, powerUp.id, playerId)
+                        analyticsRepository.powerUpCollected(powerUp.type, analyticsRole)
                         onNotification("Collected: ${powerUp.typeEnum.title}!", powerUp.typeEnum)
                     } catch (e: Exception) {
                         Log.e(tag, "Failed to collect power-up", e)

@@ -47,6 +47,7 @@ data class HomeUiState(
 class HomeViewModel @Inject constructor(
     private val firestoreRepository: FirestoreRepository,
     private val locationRepository: LocationRepository,
+    private val analyticsRepository: dev.rahier.pouleparty.data.AnalyticsRepository,
     private val prefs: SharedPreferences,
     private val auth: FirebaseAuth
 ) : ViewModel() {
@@ -222,6 +223,7 @@ class HomeViewModel @Inject constructor(
             try {
                 val registration = Registration(userId = userId, teamName = teamName, paid = false)
                 firestoreRepository.createRegistration(game.id, registration)
+                analyticsRepository.registrationCompleted(pricingModel = game.pricing.model)
                 val pending = PendingRegistration(
                     gameId = game.id,
                     gameCode = game.gameCode,

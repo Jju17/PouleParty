@@ -115,6 +115,7 @@ struct ChickenMapFeature {
     @Dependency(\.liveActivityClient) var liveActivityClient
     @Dependency(\.locationClient) var locationClient
     @Dependency(\.userClient) var userClient
+    @Dependency(\.analyticsClient) var analyticsClient
 
     var body: some ReducerOf<Self> {
         BindingReducer()
@@ -126,10 +127,12 @@ struct ChickenMapFeature {
             case .destination(.presented(.alert(.cancelGame))):
                 locationClient.stopTracking()
                 let gameId = state.game.id
-                return .run { send in
+                let winnersCount = state.game.winners.count
+                return .run { [analyticsClient] send in
                     await liveActivityClient.end(nil)
                     do {
                         try await apiClient.updateGameStatus(gameId, .done)
+                        analyticsClient.gameEnded(reason: "chicken_cancelled", winnersCount: winnersCount)
                     } catch {
                         Logger(subsystem: "dev.rahier.pouleparty", category: "ChickenMapFeature")
                             .error("Failed to update game status to done: \(error.localizedDescription)")
@@ -171,9 +174,10 @@ struct ChickenMapFeature {
             case let .powerUpCollected(powerUp):
                 let gameId = state.game.id
                 let userId = userClient.currentUserId() ?? ""
-                return .run { send in
+                return .run { [analyticsClient] send in
                     do {
                         try await apiClient.collectPowerUp(gameId, powerUp.id, userId)
+                        analyticsClient.powerUpCollected(type: powerUp.type.rawValue, role: "chicken")
                     } catch {
                         logger.error("Failed to collect power-up: \(error)")
                     }
@@ -185,7 +189,7 @@ struct ChickenMapFeature {
                 state.showPowerUpInventory = false
                 state.powerUpNotification = "Activated: \(powerUp.type.displayName)!"
                 state.lastActivatedPowerUpType = powerUp.type
-                return .run { send in
+                return .run { [analyticsClient] send in
                     try? await apiClient.activatePowerUp(gameId, powerUp.id, expiresAt)
                     switch powerUp.type {
                     case .invisibility:
@@ -199,6 +203,7 @@ struct ChickenMapFeature {
                     default:
                         break
                     }
+                    analyticsClient.powerUpActivated(type: powerUp.type.rawValue, role: "chicken")
                     try await clock.sleep(for: .seconds(2))
                     await send(.powerUpNotificationDismissed)
                 }
@@ -267,9 +272,11 @@ struct ChickenMapFeature {
                    game.winners.count >= game.hunterIds.count {
                     locationClient.stopTracking()
                     let gameId = game.id
-                    effects.append(.run { send in
+                    let winnersCount = game.winners.count
+                    effects.append(.run { [analyticsClient] send in
                         do {
                             try await apiClient.updateGameStatus(gameId, .done)
+                            analyticsClient.gameEnded(reason: "all_hunters_found", winnersCount: winnersCount)
                         } catch {
                             Logger(subsystem: "dev.rahier.pouleparty", category: "ChickenMapFeature")
                                 .error("Failed to set game DONE when all hunters found: \(error.localizedDescription)")
@@ -520,10 +527,12 @@ struct ChickenMapFeature {
                     }
                 }
                 let gameId = state.game.id
-                return .run { _ in
+                let gameMode = state.game.gameMode.rawValue
+                return .run { [analyticsClient] _ in
                     await liveActivityClient.start(attributes, initialLAState)
                     do {
                         try await apiClient.updateGameStatus(gameId, .inProgress)
+                        analyticsClient.gameStarted(gameMode: gameMode)
                     } catch {
                         logger.error("Failed to update game status to inProgress: \(error)")
                     }
@@ -580,6 +589,7 @@ struct ChickenMapFeature {
                         gamePhase: .gameOver
                     )
                     let gameId = state.game.id
+                    let winnersCount = state.game.winners.count
                     state.destination = .alert(
                         AlertState {
                             TextState("Game Over")
@@ -591,10 +601,11 @@ struct ChickenMapFeature {
                             TextState("Time's up! The Chicken survived!")
                         }
                     )
-                    return .run { _ in
+                    return .run { [analyticsClient] _ in
                         await liveActivityClient.end(endState)
                         do {
                             try await apiClient.updateGameStatus(gameId, .done)
+                            analyticsClient.gameEnded(reason: "time_expired", winnersCount: winnersCount)
                         } catch {
                             logger.error("Failed to update game status: \(error)")
                         }
@@ -626,6 +637,7 @@ struct ChickenMapFeature {
                             gamePhase: .gameOver
                         )
                         let gameId = state.game.id
+                        let winnersCount = state.game.winners.count
                         state.destination = .alert(
                             AlertState {
                                 TextState("Game Over")
@@ -637,10 +649,11 @@ struct ChickenMapFeature {
                                 TextState(result.gameOverMessage ?? "Game over")
                             }
                         )
-                        return .run { _ in
+                        return .run { [analyticsClient] _ in
                             await liveActivityClient.end(endState)
                             do {
                                 try await apiClient.updateGameStatus(gameId, .done)
+                                analyticsClient.gameEnded(reason: "zone_collapsed", winnersCount: winnersCount)
                             } catch {
                                 logger.error("Failed to update game status to done: \(error.localizedDescription)")
                             }

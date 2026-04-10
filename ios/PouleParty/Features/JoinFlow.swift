@@ -59,6 +59,7 @@ struct JoinFlowFeature {
 
     @Dependency(\.apiClient) var apiClient
     @Dependency(\.userClient) var userClient
+    @Dependency(\.analyticsClient) var analyticsClient
 
     var body: some ReducerOf<Self> {
         BindingReducer()
@@ -156,9 +157,11 @@ struct JoinFlowFeature {
                 guard !userId.isEmpty else { return .none }
                 state.step = .submittingRegistration(game)
                 let registration = Registration(userId: userId, teamName: teamName, paid: false)
-                return .run { send in
+                let pricingModel = game.pricing.model.rawValue
+                return .run { [analyticsClient] send in
                     do {
                         try await apiClient.createRegistration(game.id, registration)
+                        analyticsClient.registrationCompleted(pricingModel: pricingModel)
                         await send(.registrationSubmitted(game, teamName: teamName))
                     } catch {
                         await send(.networkErrorOccurred)
