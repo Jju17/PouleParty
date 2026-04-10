@@ -378,7 +378,7 @@ private struct GameRowView: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Text(game.gameMod == .followTheChicken ? "🐔" : "📍")
+            Text(game.gameMode == .followTheChicken ? "🐔" : "📍")
                 .font(.system(size: 24))
 
             VStack(alignment: .leading, spacing: 2) {
@@ -464,9 +464,9 @@ struct GameDetailView: View {
 
     private var headerSection: some View {
         VStack(spacing: 8) {
-            Text(game.gameMod == .followTheChicken ? "🐔" : "📍")
+            Text(game.gameMode == .followTheChicken ? "🐔" : "📍")
                 .font(.system(size: 48))
-            BangerText(game.gameMod.title, size: 22)
+            BangerText(game.gameMode.title, size: 22)
                 .foregroundStyle(Color.onBackground)
             GameStatusBadge(status: game.status)
         }
@@ -478,13 +478,13 @@ struct GameDetailView: View {
         VStack(spacing: 8) {
             detailRow("Game Code", value: game.gameCode)
             detailRow("Found Code", value: game.foundCode)
-            detailRow("Pricing", value: game.pricingModel.title)
+            detailRow("Pricing", value: game.pricing.model.title)
             if game.isPaid {
-                if game.pricePerPlayer > 0 {
-                    detailRow("Price/Player", value: "\(game.pricePerPlayer / 100)€")
+                if game.pricing.pricePerPlayer > 0 {
+                    detailRow("Price/Player", value: "\(game.pricing.pricePerPlayer / 100)€")
                 }
-                if game.depositAmount > 0 {
-                    detailRow("Deposit", value: "\(game.depositAmount / 100)€")
+                if game.pricing.deposit > 0 {
+                    detailRow("Deposit", value: "\(game.pricing.deposit / 100)€")
                 }
             }
         }
@@ -493,7 +493,7 @@ struct GameDetailView: View {
 
     private var playersSection: some View {
         VStack(spacing: 8) {
-            detailRow("Max Players", value: "\(game.numberOfPlayers)")
+            detailRow("Max Players", value: "\(game.maxPlayers)")
             detailRow("Hunters Joined", value: "\(game.hunterIds.count)")
             detailRow("Winners", value: "\(game.winners.count)")
             if game.chickenCanSeeHunters {
@@ -507,19 +507,19 @@ struct GameDetailView: View {
         VStack(spacing: 8) {
             detailRow("Start", value: game.startDate.formatted(date: .abbreviated, time: .shortened))
             detailRow("End", value: game.endDate.formatted(date: .abbreviated, time: .shortened))
-            if game.chickenHeadStartMinutes > 0 {
-                detailRow("Head Start", value: "\(Int(game.chickenHeadStartMinutes)) min")
+            if game.timing.headStartMinutes > 0 {
+                detailRow("Head Start", value: "\(Int(game.timing.headStartMinutes)) min")
             }
-            detailRow("Power-ups", value: game.powerUpsEnabled ? "On" : "Off")
+            detailRow("Power-ups", value: game.powerUps.enabled ? "On" : "Off")
         }
         .settingsCard()
     }
 
     private var zoneSection: some View {
         VStack(spacing: 8) {
-            detailRow("Initial Radius", value: "\(Int(game.initialRadius))m")
-            detailRow("Shrink Interval", value: "\(Int(game.radiusIntervalUpdate)) min")
-            detailRow("Shrink Amount", value: "\(Int(game.radiusDeclinePerUpdate))m")
+            detailRow("Initial Radius", value: "\(Int(game.zone.radius))m")
+            detailRow("Shrink Interval", value: "\(Int(game.zone.shrinkIntervalMinutes)) min")
+            detailRow("Shrink Amount", value: "\(Int(game.zone.shrinkMetersPerUpdate))m")
         }
         .settingsCard()
     }

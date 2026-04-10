@@ -23,10 +23,14 @@ struct GameTests {
     @Test func findLastUpdateReturnsInitialRadiusBeforeStart() {
         let game = Game(
             id: "test",
-            startTimestamp: Timestamp(date: .now.addingTimeInterval(600)),
-            endTimestamp: Timestamp(date: .now.addingTimeInterval(3600)),
-            initialRadius: 1500,
-            radiusDeclinePerUpdate: 100
+            timing: .init(
+                start: Timestamp(date: .now.addingTimeInterval(600)),
+                end: Timestamp(date: .now.addingTimeInterval(3600))
+            ),
+            zone: .init(
+                radius: 1500,
+                shrinkMetersPerUpdate: 100
+            )
         )
         let (_, radius) = game.findLastUpdate()
         #expect(radius == 1500)
@@ -35,11 +39,15 @@ struct GameTests {
     @Test func findLastUpdateShrinksRadius() {
         let game = Game(
             id: "test",
-            radiusIntervalUpdate: 5,
-            startTimestamp: Timestamp(date: .now.addingTimeInterval(-600)),
-            endTimestamp: Timestamp(date: .now.addingTimeInterval(3600)),
-            initialRadius: 1500,
-            radiusDeclinePerUpdate: 100
+            timing: .init(
+                start: Timestamp(date: .now.addingTimeInterval(-600)),
+                end: Timestamp(date: .now.addingTimeInterval(3600))
+            ),
+            zone: .init(
+                radius: 1500,
+                shrinkIntervalMinutes: 5,
+                shrinkMetersPerUpdate: 100
+            )
         )
         let (_, radius) = game.findLastUpdate()
         #expect(radius < 1500)
@@ -65,30 +73,30 @@ struct GameTests {
         #expect(abs(game.initialLocation.longitude - 2.3522) < 0.0001)
     }
 
-    // MARK: - GameMod tests
+    // MARK: - GameMode tests
 
-    @Test func gameModDefaultIsStayInTheZone() {
+    @Test func gameModeDefaultIsStayInTheZone() {
         let game = Game(id: "test")
-        #expect(game.gameMod == .stayInTheZone)
+        #expect(game.gameMode == .stayInTheZone)
     }
 
-    @Test func gameModTitlesAreCorrect() {
-        #expect(Game.GameMod.followTheChicken.title == "Follow the chicken 🐔")
-        #expect(Game.GameMod.stayInTheZone.title == "Stay in the zone 📍")
+    @Test func gameModeTitlesAreCorrect() {
+        #expect(Game.GameMode.followTheChicken.title == "Follow the chicken 🐔")
+        #expect(Game.GameMode.stayInTheZone.title == "Stay in the zone 📍")
     }
 
-    @Test func gameModAllCasesContainsTwoModes() {
-        #expect(Game.GameMod.allCases.count == 2)
+    @Test func gameModeAllCasesContainsTwoModes() {
+        #expect(Game.GameMode.allCases.count == 2)
     }
 
-    @Test func gameModCodableRoundTrip() throws {
+    @Test func gameModeCodableRoundTrip() throws {
         let encoder = JSONEncoder()
         let decoder = JSONDecoder()
 
-        for mod in Game.GameMod.allCases {
-            let data = try encoder.encode(mod)
-            let decoded = try decoder.decode(Game.GameMod.self, from: data)
-            #expect(decoded == mod)
+        for mode in Game.GameMode.allCases {
+            let data = try encoder.encode(mode)
+            let decoded = try decoder.decode(Game.GameMode.self, from: data)
+            #expect(decoded == mode)
         }
     }
 
@@ -307,11 +315,15 @@ struct GameTests {
         // Game started 30.5 minutes ago (extra buffer to avoid boundary issues)
         let game = Game(
             id: "test",
-            radiusIntervalUpdate: interval,
-            startTimestamp: Timestamp(date: .now.addingTimeInterval(-1830)),
-            endTimestamp: Timestamp(date: .now.addingTimeInterval(TimeInterval((duration - 30) * 60))),
-            initialRadius: radius,
-            radiusDeclinePerUpdate: decline
+            timing: .init(
+                start: Timestamp(date: .now.addingTimeInterval(-1830)),
+                end: Timestamp(date: .now.addingTimeInterval(TimeInterval((duration - 30) * 60)))
+            ),
+            zone: .init(
+                radius: radius,
+                shrinkIntervalMinutes: interval,
+                shrinkMetersPerUpdate: decline
+            )
         )
         let (_, currentRadius) = game.findLastUpdate()
         // findLastUpdate truncates decline to Int on each step:
@@ -328,11 +340,15 @@ struct GameTests {
         // Game started way longer ago than duration — all shrinks have happened
         let game = Game(
             id: "test",
-            radiusIntervalUpdate: interval,
-            startTimestamp: Timestamp(date: .now.addingTimeInterval(-7200)),
-            endTimestamp: Timestamp(date: .now.addingTimeInterval(-3600)),
-            initialRadius: radius,
-            radiusDeclinePerUpdate: decline
+            timing: .init(
+                start: Timestamp(date: .now.addingTimeInterval(-7200)),
+                end: Timestamp(date: .now.addingTimeInterval(-3600))
+            ),
+            zone: .init(
+                radius: radius,
+                shrinkIntervalMinutes: interval,
+                shrinkMetersPerUpdate: decline
+            )
         )
         let (_, currentRadius) = game.findLastUpdate()
         #expect(currentRadius >= 0)
@@ -355,50 +371,50 @@ struct GameTests {
 
     @Test func defaultGameHasFreePricingModel() {
         let game = Game(id: "test")
-        #expect(game.pricingModel == .free)
+        #expect(game.pricing.model == .free)
     }
 
     @Test func isPaidIsFalseForFreeGames() {
         var game = Game(id: "test")
-        game.pricingModel = .free
+        game.pricing.model = .free
         #expect(game.isPaid == false)
     }
 
     @Test func isPaidIsTrueForFlatGames() {
         var game = Game(id: "test")
-        game.pricingModel = .flat
+        game.pricing.model = .flat
         #expect(game.isPaid == true)
     }
 
     @Test func isPaidIsTrueForDepositGames() {
         var game = Game(id: "test")
-        game.pricingModel = .deposit
+        game.pricing.model = .deposit
         #expect(game.isPaid == true)
     }
 
     @Test func pricingFieldsHaveCorrectDefaults() {
         let game = Game(id: "test")
-        #expect(game.pricePerPlayer == 0)
-        #expect(game.depositAmount == 0)
-        #expect(game.commissionPercent == 15.0)
+        #expect(game.pricing.pricePerPlayer == 0)
+        #expect(game.pricing.deposit == 0)
+        #expect(game.pricing.commission == 15.0)
     }
 
     @Test func flatGameStoresPricePerPlayer() {
         var game = Game(id: "test")
-        game.pricingModel = .flat
-        game.pricePerPlayer = 300
-        game.numberOfPlayers = 15
-        #expect(game.pricePerPlayer == 300)
-        #expect(game.numberOfPlayers == 15)
+        game.pricing.model = .flat
+        game.pricing.pricePerPlayer = 300
+        game.maxPlayers = 15
+        #expect(game.pricing.pricePerPlayer == 300)
+        #expect(game.maxPlayers == 15)
     }
 
     @Test func depositGameStoresDepositAndPrice() {
         var game = Game(id: "test")
-        game.pricingModel = .deposit
-        game.depositAmount = 1000
-        game.pricePerPlayer = 500
-        #expect(game.depositAmount == 1000)
-        #expect(game.pricePerPlayer == 500)
+        game.pricing.model = .deposit
+        game.pricing.deposit = 1000
+        game.pricing.pricePerPlayer = 500
+        #expect(game.pricing.deposit == 1000)
+        #expect(game.pricing.pricePerPlayer == 500)
     }
 
     @Test func pricingModelRawValues() {

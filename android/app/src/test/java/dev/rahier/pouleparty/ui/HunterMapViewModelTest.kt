@@ -20,7 +20,7 @@ class HunterMapViewModelTest {
 
     @Test
     fun `circle center follows chicken location in followTheChicken`() {
-        val game = Game(id = "test", gameMod = GameMod.FOLLOW_THE_CHICKEN.firestoreValue)
+        val game = Game(id = "test", gameMode = GameMod.FOLLOW_THE_CHICKEN.firestoreValue)
         val chickenPos = Point.fromLngLat(4.0, 50.0)
         val state = HunterMapUiState(game = game, circleCenter = chickenPos)
 
@@ -29,7 +29,7 @@ class HunterMapViewModelTest {
 
     @Test
     fun `circle center stays fixed in stayInTheZone`() {
-        val game = Game(id = "test", gameMod = GameMod.STAY_IN_THE_ZONE.firestoreValue)
+        val game = Game(id = "test", gameMode = GameMod.STAY_IN_THE_ZONE.firestoreValue)
         val state = HunterMapUiState(game = game, circleCenter = game.initialLocation)
 
         assertEquals(game.initialLocation.latitude(), state.circleCenter!!.latitude(), 0.0001)
@@ -38,33 +38,33 @@ class HunterMapViewModelTest {
 
     @Test
     fun `radius update reduces radius`() {
-        val game = Game(id = "test", radiusDeclinePerUpdate = 100.0)
+        val game = Game(id = "test", zone = dev.rahier.pouleparty.model.Zone(shrinkMetersPerUpdate = 100.0))
         var state = HunterMapUiState(game = game, radius = 500)
 
-        val newRadius = state.radius - game.radiusDeclinePerUpdate.toInt()
+        val newRadius = state.radius - game.zone.shrinkMetersPerUpdate.toInt()
         state = state.copy(radius = newRadius)
         assertEquals(400, state.radius)
     }
 
     @Test
     fun `radius does not go below zero`() {
-        val game = Game(id = "test", radiusDeclinePerUpdate = 100.0)
+        val game = Game(id = "test", zone = dev.rahier.pouleparty.model.Zone(shrinkMetersPerUpdate = 100.0))
         val state = HunterMapUiState(game = game, radius = 50)
 
-        val newRadius = state.radius - game.radiusDeclinePerUpdate.toInt()
+        val newRadius = state.radius - game.zone.shrinkMetersPerUpdate.toInt()
         // Guard in ViewModel: should not apply
         assertTrue("Radius should not go below 0", newRadius <= 0)
     }
 
     @Test
     fun `hunter subtitle for followTheChicken`() {
-        val game = Game(id = "test", gameMod = GameMod.FOLLOW_THE_CHICKEN.firestoreValue)
+        val game = Game(id = "test", gameMode = GameMod.FOLLOW_THE_CHICKEN.firestoreValue)
         assertEquals(GameMod.FOLLOW_THE_CHICKEN, game.gameModEnum)
     }
 
     @Test
     fun `hunter subtitle for stayInTheZone`() {
-        val game = Game(id = "test", gameMod = GameMod.STAY_IN_THE_ZONE.firestoreValue)
+        val game = Game(id = "test", gameMode = GameMod.STAY_IN_THE_ZONE.firestoreValue)
         assertEquals(GameMod.STAY_IN_THE_ZONE, game.gameModEnum)
     }
 
@@ -76,11 +76,11 @@ class HunterMapViewModelTest {
 
     @Test
     fun `game config update refreshes state`() {
-        val oldGame = Game(id = "test", initialRadius = 1500.0)
-        val newGame = oldGame.copy(initialRadius = 2000.0)
+        val oldGame = Game(id = "test", zone = dev.rahier.pouleparty.model.Zone(radius = 1500.0))
+        val newGame = oldGame.copy(zone = dev.rahier.pouleparty.model.Zone(radius = 2000.0))
 
         val state = HunterMapUiState(game = newGame, circleCenter = newGame.initialLocation)
-        assertEquals(2000.0, state.game.initialRadius, 0.01)
+        assertEquals(2000.0, state.game.zone.radius, 0.01)
     }
 
     // MARK: - Found code state

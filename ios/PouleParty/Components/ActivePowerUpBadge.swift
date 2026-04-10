@@ -17,19 +17,19 @@ struct ActivePowerUpBadge: View {
 
     private var activeEffects: [(type: PowerUp.PowerUpType, until: Date)] {
         var effects: [(PowerUp.PowerUpType, Date)] = []
-        if let ts = game.activeInvisibilityUntil, now < ts.dateValue() {
+        if let ts = game.powerUps.activeEffects.invisibility, now < ts.dateValue() {
             effects.append((.invisibility, ts.dateValue()))
         }
-        if let ts = game.activeZoneFreezeUntil, now < ts.dateValue() {
+        if let ts = game.powerUps.activeEffects.zoneFreeze, now < ts.dateValue() {
             effects.append((.zoneFreeze, ts.dateValue()))
         }
-        if let ts = game.activeRadarPingUntil, now < ts.dateValue() {
+        if let ts = game.powerUps.activeEffects.radarPing, now < ts.dateValue() {
             effects.append((.radarPing, ts.dateValue()))
         }
-        if let ts = game.activeDecoyUntil, now < ts.dateValue() {
+        if let ts = game.powerUps.activeEffects.decoy, now < ts.dateValue() {
             effects.append((.decoy, ts.dateValue()))
         }
-        if let ts = game.activeJammerUntil, now < ts.dateValue() {
+        if let ts = game.powerUps.activeEffects.jammer, now < ts.dateValue() {
             effects.append((.jammer, ts.dateValue()))
         }
         return effects

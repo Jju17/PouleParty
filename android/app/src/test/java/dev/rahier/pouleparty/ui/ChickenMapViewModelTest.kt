@@ -65,13 +65,13 @@ class ChickenMapViewModelTest {
 
     @Test
     fun `chicken subtitle for followTheChicken mode`() {
-        val game = Game(id = "test", gameMod = GameMod.FOLLOW_THE_CHICKEN.firestoreValue)
+        val game = Game(id = "test", gameMode = GameMod.FOLLOW_THE_CHICKEN.firestoreValue)
         assertEquals(GameMod.FOLLOW_THE_CHICKEN, game.gameModEnum)
     }
 
     @Test
     fun `chicken subtitle for stayInTheZone mode`() {
-        val game = Game(id = "test", gameMod = GameMod.STAY_IN_THE_ZONE.firestoreValue)
+        val game = Game(id = "test", gameMode = GameMod.STAY_IN_THE_ZONE.firestoreValue)
         assertEquals(GameMod.STAY_IN_THE_ZONE, game.gameModEnum)
     }
 
@@ -84,8 +84,8 @@ class ChickenMapViewModelTest {
     @Test
     fun `radius update reduces radius`() {
         var state = ChickenMapUiState(radius = 500)
-        val game = Game(id = "test", radiusDeclinePerUpdate = 100.0)
-        val newRadius = state.radius - game.radiusDeclinePerUpdate.toInt()
+        val game = Game(id = "test", zone = dev.rahier.pouleparty.model.Zone(shrinkMetersPerUpdate = 100.0))
+        val newRadius = state.radius - game.zone.shrinkMetersPerUpdate.toInt()
 
         state = state.copy(radius = newRadius)
         assertEquals(400, state.radius)
@@ -94,8 +94,8 @@ class ChickenMapViewModelTest {
     @Test
     fun `radius does not go below zero check`() {
         val state = ChickenMapUiState(radius = 50)
-        val game = Game(id = "test", radiusDeclinePerUpdate = 100.0)
-        val newRadius = state.radius - game.radiusDeclinePerUpdate.toInt()
+        val game = Game(id = "test", zone = dev.rahier.pouleparty.model.Zone(shrinkMetersPerUpdate = 100.0))
+        val newRadius = state.radius - game.zone.shrinkMetersPerUpdate.toInt()
 
         // The ViewModel should guard against this
         assertTrue(newRadius <= 0)

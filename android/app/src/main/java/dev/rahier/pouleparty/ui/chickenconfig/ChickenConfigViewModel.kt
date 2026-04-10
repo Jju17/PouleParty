@@ -9,7 +9,12 @@ import dev.rahier.pouleparty.data.FirestoreRepository
 import dev.rahier.pouleparty.data.LocationRepository
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameMod
+import dev.rahier.pouleparty.model.GamePowerUps
+import dev.rahier.pouleparty.model.GameRegistration
+import dev.rahier.pouleparty.model.Pricing
 import dev.rahier.pouleparty.model.PowerUpType
+import dev.rahier.pouleparty.model.Timing
+import dev.rahier.pouleparty.model.Zone
 import dev.rahier.pouleparty.model.calculateNormalModeSettings
 import kotlin.math.ceil
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -63,18 +68,24 @@ class ChickenConfigViewModel @Inject constructor(
             game = Game(
                 id = gameId,
                 name = "",
-                numberOfPlayers = numberOfPlayers,
-                radiusIntervalUpdate = 5.0,
-                initialRadius = 1500.0,
-                radiusDeclinePerUpdate = 100.0,
-                chickenHeadStartMinutes = 5.0,
-                gameMod = GameMod.STAY_IN_THE_ZONE.firestoreValue,
+                maxPlayers = numberOfPlayers,
+                zone = Zone(
+                    radius = 1500.0,
+                    shrinkIntervalMinutes = 5.0,
+                    shrinkMetersPerUpdate = 100.0,
+                    driftSeed = (1..999_999).random()
+                ),
+                timing = Timing(
+                    headStartMinutes = 5.0
+                ),
+                gameMode = GameMod.STAY_IN_THE_ZONE.firestoreValue,
                 foundCode = Game.generateFoundCode(),
                 creatorId = auth.currentUser?.uid ?: "",
-                driftSeed = (1..999_999).random(),
-                pricingModel = pricingModel,
-                pricePerPlayer = pricePerPlayerCents,
-                depositAmount = depositAmountCents
+                pricing = Pricing(
+                    model = pricingModel,
+                    pricePerPlayer = pricePerPlayerCents,
+                    deposit = depositAmountCents
+                )
             )
         )
     )
@@ -116,7 +127,7 @@ class ChickenConfigViewModel @Inject constructor(
     }
 
     fun updateGameMod(mod: GameMod) {
-        _uiState.update { it.copy(game = it.game.copy(gameMod = mod.firestoreValue)) }
+        _uiState.update { it.copy(game = it.game.copy(gameMode = mod.firestoreValue)) }
     }
 
     fun toggleChickenCanSeeHunters(value: Boolean) {
@@ -124,20 +135,20 @@ class ChickenConfigViewModel @Inject constructor(
     }
 
     fun updateRadiusIntervalUpdate(value: Double) {
-        _uiState.update { it.copy(game = it.game.copy(radiusIntervalUpdate = value)) }
+        _uiState.update { it.copy(game = it.game.copy(zone = it.game.zone.copy(shrinkIntervalMinutes = value))) }
     }
 
     fun updateRadiusDecline(value: Double) {
-        _uiState.update { it.copy(game = it.game.copy(radiusDeclinePerUpdate = value)) }
+        _uiState.update { it.copy(game = it.game.copy(zone = it.game.zone.copy(shrinkMetersPerUpdate = value))) }
     }
 
     fun updateChickenHeadStart(value: Double) {
-        _uiState.update { it.copy(game = it.game.copy(chickenHeadStartMinutes = value)) }
+        _uiState.update { it.copy(game = it.game.copy(timing = it.game.timing.copy(headStartMinutes = value))) }
         recalculateIfNormalMode()
     }
 
     fun updateInitialRadius(value: Double) {
-        _uiState.update { it.copy(game = it.game.copy(initialRadius = value)) }
+        _uiState.update { it.copy(game = it.game.copy(zone = it.game.zone.copy(radius = value))) }
         recalculateIfNormalMode()
     }
 
@@ -156,14 +167,16 @@ class ChickenConfigViewModel @Inject constructor(
     private fun recalculateIfNormalMode() {
         val state = _uiState.value
         if (state.isExpertMode) return
-        val effectiveDuration = maxOf(state.gameDurationMinutes - state.game.chickenHeadStartMinutes, 1.0)
+        val effectiveDuration = maxOf(state.gameDurationMinutes - state.game.timing.headStartMinutes, 1.0)
         val (interval, decline) = calculateNormalModeSettings(
-            state.game.initialRadius, effectiveDuration
+            state.game.zone.radius, effectiveDuration
         )
         _uiState.update {
             it.copy(game = it.game.copy(
-                radiusIntervalUpdate = interval,
-                radiusDeclinePerUpdate = decline
+                zone = it.game.zone.copy(
+                    shrinkIntervalMinutes = interval,
+                    shrinkMetersPerUpdate = decline
+                )
             ))
         }
     }
@@ -201,12 +214,12 @@ class ChickenConfigViewModel @Inject constructor(
     }
 
     fun togglePowerUps(enabled: Boolean) {
-        _uiState.update { it.copy(game = it.game.copy(powerUpsEnabled = enabled)) }
+        _uiState.update { it.copy(game = it.game.copy(powerUps = it.game.powerUps.copy(enabled = enabled))) }
     }
 
     fun togglePowerUpType(type: dev.rahier.pouleparty.model.PowerUpType) {
         _uiState.update { state ->
-            val current = state.game.enabledPowerUpTypes
+            val current = state.game.powerUps.enabledTypes
             val unavailable = if (state.game.gameModEnum == GameMod.STAY_IN_THE_ZONE) {
                 setOf(PowerUpType.INVISIBILITY.firestoreValue, PowerUpType.DECOY.firestoreValue, PowerUpType.JAMMER.firestoreValue)
             } else emptySet()
@@ -219,7 +232,7 @@ class ChickenConfigViewModel @Inject constructor(
             } else {
                 current + type.firestoreValue
             }
-            state.copy(game = state.game.copy(enabledPowerUpTypes = newList))
+            state.copy(game = state.game.copy(powerUps = state.game.powerUps.copy(enabledTypes = newList)))
         }
     }
 
@@ -239,8 +252,8 @@ class ChickenConfigViewModel @Inject constructor(
                 val state = _uiState.value
                 val endDate = if (state.isExpertMode) {
                     // Expert mode: endDate from radius parameters
-                    val shrinks = ceil(game.initialRadius / game.radiusDeclinePerUpdate)
-                    val durationMs = (shrinks * game.radiusIntervalUpdate * 60 * 1000).toLong()
+                    val shrinks = ceil(game.zone.radius / game.zone.shrinkMetersPerUpdate)
+                    val durationMs = (shrinks * game.zone.shrinkIntervalMinutes * 60 * 1000).toLong()
                     Date(game.hunterStartDate.time + durationMs)
                 } else {
                     // Normal mode: endDate = startDate + total game duration

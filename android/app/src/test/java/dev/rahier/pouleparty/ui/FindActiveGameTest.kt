@@ -3,6 +3,7 @@ package dev.rahier.pouleparty.ui
 import com.google.firebase.Timestamp
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameStatus
+import dev.rahier.pouleparty.model.Timing
 import org.junit.Assert.*
 import org.junit.Test
 import java.util.Date
@@ -17,12 +18,12 @@ class FindActiveGameTest {
     fun `most recent game selected from candidates`() {
         val olderGame = Game(
             id = "game-old",
-            startTimestamp = Timestamp(Date(1000000)),
+            timing = Timing(start = Timestamp(Date(1000000))),
             status = GameStatus.IN_PROGRESS.firestoreValue
         )
         val newerGame = Game(
             id = "game-new",
-            startTimestamp = Timestamp(Date(2000000)),
+            timing = Timing(start = Timestamp(Date(2000000))),
             status = GameStatus.IN_PROGRESS.firestoreValue
         )
 
@@ -41,7 +42,7 @@ class FindActiveGameTest {
     fun `single candidate is returned`() {
         val game = Game(
             id = "only-game",
-            startTimestamp = Timestamp(Date(1000000)),
+            timing = Timing(start = Timestamp(Date(1000000))),
             status = GameStatus.IN_PROGRESS.firestoreValue
         )
         val candidates = listOf(Pair(game, PlayerRole.HUNTER))
@@ -61,8 +62,8 @@ class FindActiveGameTest {
     @Test
     fun `games with same startDate returns one`() {
         val sameTime = Timestamp(Date(1000000))
-        val game1 = Game(id = "game-1", startTimestamp = sameTime)
-        val game2 = Game(id = "game-2", startTimestamp = sameTime)
+        val game1 = Game(id = "game-1", timing = Timing(start = sameTime))
+        val game2 = Game(id = "game-2", timing = Timing(start = sameTime))
 
         val candidates = listOf(
             Pair(game1, PlayerRole.HUNTER),
@@ -79,12 +80,12 @@ class FindActiveGameTest {
     fun `hunter and chicken games sorted correctly`() {
         val hunterGame = Game(
             id = "hunter-game",
-            startTimestamp = Timestamp(Date(3000000)), // Most recent
+            timing = Timing(start = Timestamp(Date(3000000))),
             status = GameStatus.IN_PROGRESS.firestoreValue
         )
         val chickenGame = Game(
             id = "chicken-game",
-            startTimestamp = Timestamp(Date(1000000)), // Older
+            timing = Timing(start = Timestamp(Date(1000000))),
             status = GameStatus.WAITING.firestoreValue
         )
 
@@ -100,9 +101,9 @@ class FindActiveGameTest {
 
     @Test
     fun `three games returns most recent`() {
-        val game1 = Game(id = "g1", startTimestamp = Timestamp(Date(1000)))
-        val game2 = Game(id = "g2", startTimestamp = Timestamp(Date(3000)))
-        val game3 = Game(id = "g3", startTimestamp = Timestamp(Date(2000)))
+        val game1 = Game(id = "g1", timing = Timing(start = Timestamp(Date(1000))))
+        val game2 = Game(id = "g2", timing = Timing(start = Timestamp(Date(3000))))
+        val game3 = Game(id = "g3", timing = Timing(start = Timestamp(Date(2000))))
 
         val candidates = listOf(
             Pair(game1, PlayerRole.HUNTER),

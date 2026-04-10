@@ -229,24 +229,25 @@ export const onGameCreated = onDocumentCreated(
     const data = snap.data();
     const gameId = event.params.gameId;
 
-    const startTimestamp = data.startTimestamp?.toDate() as Date | undefined;
-    const endTimestamp = data.endTimestamp?.toDate() as Date | undefined;
-    const chickenHeadStartMinutes =
-      (data.chickenHeadStartMinutes as number) ?? 0;
-    const radiusIntervalUpdate =
-      (data.radiusIntervalUpdate as number) ?? 5;
+    const timing = data.timing as { start?: FirebaseFirestore.Timestamp; end?: FirebaseFirestore.Timestamp; headStartMinutes?: number } | undefined;
+    const zone = data.zone as { shrinkIntervalMinutes?: number } | undefined;
+
+    const startTimestamp = timing?.start?.toDate() as Date | undefined;
+    const endTimestamp = timing?.end?.toDate() as Date | undefined;
+    const headStartMinutes = (timing?.headStartMinutes as number) ?? 0;
+    const shrinkIntervalMinutes = (zone?.shrinkIntervalMinutes as number) ?? 5;
 
     // Validate inputs to prevent infinite loops or invalid scheduling
-    if (radiusIntervalUpdate <= 0) {
-      console.error(`Invalid radiusIntervalUpdate (${radiusIntervalUpdate}) for game ${gameId}`);
+    if (shrinkIntervalMinutes <= 0) {
+      console.error(`Invalid shrinkIntervalMinutes (${shrinkIntervalMinutes}) for game ${gameId}`);
       return;
     }
     if (startTimestamp && endTimestamp && startTimestamp >= endTimestamp) {
       console.error(`startTimestamp >= endTimestamp for game ${gameId}`);
       return;
     }
-    if (chickenHeadStartMinutes < 0) {
-      console.error(`Negative chickenHeadStartMinutes (${chickenHeadStartMinutes}) for game ${gameId}`);
+    if (headStartMinutes < 0) {
+      console.error(`Negative headStartMinutes (${headStartMinutes}) for game ${gameId}`);
       return;
     }
 
@@ -290,7 +291,7 @@ export const onGameCreated = onDocumentCreated(
     // Compute hunterStartDate = startTimestamp + chickenHeadStartMinutes
     if (startTimestamp && endTimestamp) {
       const hunterStartDate = new Date(
-        startTimestamp.getTime() + chickenHeadStartMinutes * 60 * 1000
+        startTimestamp.getTime() + headStartMinutes * 60 * 1000
       );
 
       // Schedule hunter_start notification
@@ -300,7 +301,7 @@ export const onGameCreated = onDocumentCreated(
       );
 
       // Schedule zone_shrink notifications at each interval after hunterStartDate
-      const intervalMs = radiusIntervalUpdate * 60 * 1000;
+      const intervalMs = shrinkIntervalMinutes * 60 * 1000;
       let shrinkTime = new Date(hunterStartDate.getTime() + intervalMs);
 
       while (shrinkTime < endTimestamp) {

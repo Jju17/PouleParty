@@ -17,6 +17,7 @@ struct JoinFlowFeature {
         case submittingRegistration(Game)
         case codeNotFound
         case networkError
+        case registrationClosed(Game)
     }
 
     @ObservableState
@@ -45,6 +46,7 @@ struct JoinFlowFeature {
         case delegate(Delegate)
         case joinTapped
         case networkErrorOccurred
+        case registrationDeadlinePassed(Game)
         case registerTapped
         case registrationSubmitted(Game, teamName: String)
         case submitRegistrationTapped
@@ -86,9 +88,18 @@ struct JoinFlowFeature {
                                 await send(.codeValidationFailed)
                                 return
                             }
-                            if game.requiresRegistration {
-                                let registration = try await apiClient.findRegistration(game.id, userId)
-                                await send(.codeValidationSucceeded(game, alreadyRegistered: registration != nil))
+                            if game.registration.required {
+                                if game.isRegistrationClosed {
+                                    let registration = try await apiClient.findRegistration(game.id, userId)
+                                    if registration != nil {
+                                        await send(.codeValidationSucceeded(game, alreadyRegistered: true))
+                                    } else {
+                                        await send(.registrationDeadlinePassed(game))
+                                    }
+                                } else {
+                                    let registration = try await apiClient.findRegistration(game.id, userId)
+                                    await send(.codeValidationSucceeded(game, alreadyRegistered: registration != nil))
+                                }
                             } else {
                                 await send(.codeValidationSucceeded(game, alreadyRegistered: true))
                             }
@@ -114,7 +125,7 @@ struct JoinFlowFeature {
 
             case .joinTapped:
                 guard case let .codeValidated(game, alreadyRegistered) = state.step,
-                      alreadyRegistered || !game.requiresRegistration
+                      alreadyRegistered || !game.registration.required
                 else { return .none }
                 let nickname = state.savedNickname.trimmingCharacters(in: .whitespacesAndNewlines)
                 let finalName = nickname.isEmpty ? "Hunter" : nickname
@@ -122,6 +133,10 @@ struct JoinFlowFeature {
 
             case .networkErrorOccurred:
                 state.step = .networkError
+                return .none
+
+            case let .registrationDeadlinePassed(game):
+                state.step = .registrationClosed(game)
                 return .none
 
             case .registerTapped:
@@ -187,7 +202,7 @@ struct JoinFlowView: View {
 
     private func stepId(_ step: JoinFlowFeature.Step) -> String {
         switch step {
-        case .enteringCode, .validating, .codeNotFound, .networkError, .codeValidated:
+        case .enteringCode, .validating, .codeNotFound, .networkError, .codeValidated, .registrationClosed:
             return "code"
         case .registering, .submittingRegistration:
             return "register"
@@ -197,7 +212,7 @@ struct JoinFlowView: View {
     @ViewBuilder
     private func content(for step: JoinFlowFeature.Step) -> some View {
         switch step {
-        case .enteringCode, .validating, .codeNotFound, .networkError, .codeValidated:
+        case .enteringCode, .validating, .codeNotFound, .networkError, .codeValidated, .registrationClosed:
             codeEntry(step: step)
         case let .registering(game), let .submittingRegistration(game):
             registrationForm(game: game, isSubmitting: { if case .submittingRegistration = step { return true } else { return false } }())
@@ -260,6 +275,12 @@ struct JoinFlowView: View {
                 .foregroundStyle(Color.CROrange)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 24)
+        case .registrationClosed:
+            Text(String(localized: "Registration is closed for this game."))
+                .font(.gameboy(size: 9))
+                .foregroundStyle(Color.CROrange)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
         default:
             Color.clear.frame(height: 1)
         }
@@ -268,7 +289,7 @@ struct JoinFlowView: View {
     private func actionButton(for step: JoinFlowFeature.Step) -> some View {
         let needsRegister: Bool = {
             if case let .codeValidated(game, alreadyRegistered) = step {
-                return game.requiresRegistration && !alreadyRegistered
+                return game.registration.required && !alreadyRegistered
             }
             return false
         }()
@@ -302,7 +323,7 @@ struct JoinFlowView: View {
     // MARK: - Registration Form
 
     private func registrationForm(game: Game, isSubmitting: Bool) -> some View {
-        let isDeposit = game.pricingModel == .deposit
+        let isDeposit = game.pricing.model == .deposit
         return VStack(spacing: 20) {
             Spacer().frame(height: 8)
             BangerText(String(localized: "Register"), size: 28)

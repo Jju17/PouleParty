@@ -67,20 +67,21 @@ fun ActivePowerUpBadge(game: Game, modifier: Modifier = Modifier) {
     data class ActiveEffect(val type: PowerUpType, val until: Date)
 
     val now = Date(nowMs)
-    val activeEffects = buildList {
-        game.activeInvisibilityUntil?.let {
+    val effects = game.powerUps.activeEffects
+    val activeEffects = buildList<ActiveEffect> {
+        effects.invisibility?.let {
             if (now.before(it.toDate())) add(ActiveEffect(PowerUpType.INVISIBILITY, it.toDate()))
         }
-        game.activeZoneFreezeUntil?.let {
+        effects.zoneFreeze?.let {
             if (now.before(it.toDate())) add(ActiveEffect(PowerUpType.ZONE_FREEZE, it.toDate()))
         }
-        game.activeRadarPingUntil?.let {
+        effects.radarPing?.let {
             if (now.before(it.toDate())) add(ActiveEffect(PowerUpType.RADAR_PING, it.toDate()))
         }
-        game.activeDecoyUntil?.let {
+        effects.decoy?.let {
             if (now.before(it.toDate())) add(ActiveEffect(PowerUpType.DECOY, it.toDate()))
         }
-        game.activeJammerUntil?.let {
+        effects.jammer?.let {
             if (now.before(it.toDate())) add(ActiveEffect(PowerUpType.JAMMER, it.toDate()))
         }
     }

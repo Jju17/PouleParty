@@ -406,8 +406,8 @@ extension ApiClient: DependencyKey {
 
             let snapshot = try await db.collection(gamesCollection)
                 .whereField("creatorId", isEqualTo: userId)
-                .whereField("pricingModel", isEqualTo: Game.PricingModel.free.rawValue)
-                .whereField("startTimestamp", isGreaterThanOrEqualTo: startTimestamp)
+                .whereField("pricing.model", isEqualTo: Game.PricingModel.free.rawValue)
+                .whereField("timing.start", isGreaterThanOrEqualTo: startTimestamp)
                 .getDocuments()
 
             return snapshot.documents.count
@@ -422,7 +422,7 @@ extension ApiClient: DependencyKey {
             let snapshot = try await Firestore.firestore()
                 .collection(gamesCollection)
                 .whereField("creatorId", isEqualTo: userId)
-                .order(by: "startTimestamp", descending: true)
+                .order(by: "timing.start", descending: true)
                 .limit(to: 20)
                 .getDocuments()
 

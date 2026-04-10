@@ -8,6 +8,7 @@ sealed class JoinFlowStep {
     data class CodeValidated(val game: Game, val alreadyRegistered: Boolean) : JoinFlowStep()
     object CodeNotFound : JoinFlowStep()
     object NetworkError : JoinFlowStep()
+    data class RegistrationClosed(val game: Game) : JoinFlowStep()
     data class Registering(val game: Game) : JoinFlowStep()
     data class SubmittingRegistration(val game: Game) : JoinFlowStep()
 }

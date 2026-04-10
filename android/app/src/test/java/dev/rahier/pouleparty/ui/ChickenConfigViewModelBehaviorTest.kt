@@ -72,28 +72,28 @@ class ChickenConfigViewModelBehaviorTest {
     fun `updateInitialRadius updates game radius`() {
         val vm = createViewModel()
         vm.updateInitialRadius(2000.0)
-        assertEquals(2000.0, vm.uiState.value.game.initialRadius, 0.01)
+        assertEquals(2000.0, vm.uiState.value.game.zone.radius, 0.01)
     }
 
     @Test
     fun `updateRadiusDecline updates decline value`() {
         val vm = createViewModel()
         vm.updateRadiusDecline(200.0)
-        assertEquals(200.0, vm.uiState.value.game.radiusDeclinePerUpdate, 0.01)
+        assertEquals(200.0, vm.uiState.value.game.zone.shrinkMetersPerUpdate, 0.01)
     }
 
     @Test
     fun `updateRadiusIntervalUpdate updates interval`() {
         val vm = createViewModel()
         vm.updateRadiusIntervalUpdate(10.0)
-        assertEquals(10.0, vm.uiState.value.game.radiusIntervalUpdate, 0.01)
+        assertEquals(10.0, vm.uiState.value.game.zone.shrinkIntervalMinutes, 0.01)
     }
 
     @Test
     fun `updateChickenHeadStart updates head start`() {
         val vm = createViewModel()
         vm.updateChickenHeadStart(10.0)
-        assertEquals(10.0, vm.uiState.value.game.chickenHeadStartMinutes, 0.01)
+        assertEquals(10.0, vm.uiState.value.game.timing.headStartMinutes, 0.01)
     }
 
     @Test

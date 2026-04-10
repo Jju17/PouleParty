@@ -35,7 +35,7 @@ struct ChickenConfigFeature {
         case expertModeToggled(Bool)
         case gameCreated(Game)
         case gameDurationChanged(Double)
-        case gameModChanged(Game.GameMod)
+        case gameModChanged(Game.GameMode)
         case initialRadiusChanged(Double)
         case mapPreviewTapped
         case path(StackAction<ChickenMapConfigFeature.State, ChickenMapConfigFeature.Action>)
@@ -65,14 +65,14 @@ struct ChickenConfigFeature {
     @Dependency(\.apiClient) var apiClient
 
     private func recalculateNormalMode(state: inout State) {
-        let effectiveDuration = max(state.gameDurationMinutes - state.game.chickenHeadStartMinutes, 1)
+        let effectiveDuration = max(state.gameDurationMinutes - state.game.timing.headStartMinutes, 1)
         let (interval, decline) = calculateNormalModeSettings(
-            initialRadius: state.game.initialRadius,
+            initialRadius: state.game.zone.radius,
             gameDurationMinutes: effectiveDuration
         )
         state.$game.withLock { game in
-            game.radiusIntervalUpdate = interval
-            game.radiusDeclinePerUpdate = decline
+            game.zone.shrinkIntervalMinutes = interval
+            game.zone.shrinkMetersPerUpdate = decline
         }
     }
 
@@ -114,18 +114,18 @@ struct ChickenConfigFeature {
                 }
                 return .none
             case let .gameModChanged(mode):
-                state.$game.withLock { $0.gameMod = mode }
+                state.$game.withLock { $0.gameMode = mode }
                 return .none
             case .backButtonTapped:
                 return .none
             case let .chickenHeadStartChanged(minutes):
-                state.$game.withLock { $0.chickenHeadStartMinutes = minutes }
+                state.$game.withLock { $0.timing.headStartMinutes = minutes }
                 if !state.isExpertMode {
                     self.recalculateNormalMode(state: &state)
                 }
                 return .none
             case let .initialRadiusChanged(radius):
-                state.$game.withLock { $0.initialRadius = radius }
+                state.$game.withLock { $0.zone.radius = radius }
                 if !state.isExpertMode {
                     self.recalculateNormalMode(state: &state)
                 }
@@ -135,23 +135,23 @@ struct ChickenConfigFeature {
                 state.path.append(ChickenMapConfigFeature.State(game: state.$game, finalMarker: finalMarker))
                 return .none
             case let .powerUpsToggled(enabled):
-                state.$game.withLock { $0.powerUpsEnabled = enabled }
+                state.$game.withLock { $0.powerUps.enabled = enabled }
                 return .none
             case let .powerUpTypeToggled(type):
                 state.$game.withLock { game in
-                    if let index = game.enabledPowerUpTypes.firstIndex(of: type.rawValue) {
+                    if let index = game.powerUps.enabledTypes.firstIndex(of: type.rawValue) {
                         // Count available (non-unavailable) enabled types
-                        let unavailableRaw: Set<String> = game.gameMod == .stayInTheZone
+                        let unavailableRaw: Set<String> = game.gameMode == .stayInTheZone
                             ? [PowerUp.PowerUpType.invisibility.rawValue, PowerUp.PowerUpType.decoy.rawValue, PowerUp.PowerUpType.jammer.rawValue]
                             : []
-                        let availableEnabledCount = game.enabledPowerUpTypes.filter { !unavailableRaw.contains($0) }.count
+                        let availableEnabledCount = game.powerUps.enabledTypes.filter { !unavailableRaw.contains($0) }.count
                         let isAvailable = !unavailableRaw.contains(type.rawValue)
                         // Don't allow deselecting the last available one
                         if !isAvailable || availableEnabledCount > 1 {
-                            game.enabledPowerUpTypes.remove(at: index)
+                            game.powerUps.enabledTypes.remove(at: index)
                         }
                     } else {
-                        game.enabledPowerUpTypes.append(type.rawValue)
+                        game.powerUps.enabledTypes.append(type.rawValue)
                     }
                 }
                 return .none
@@ -159,10 +159,10 @@ struct ChickenConfigFeature {
                 state.showPowerUpSelection = true
                 return .none
             case let .radiusDeclinePerUpdateChanged(value):
-                state.$game.withLock { $0.radiusDeclinePerUpdate = value }
+                state.$game.withLock { $0.zone.shrinkMetersPerUpdate = value }
                 return .none
             case let .radiusIntervalUpdateChanged(value):
-                state.$game.withLock { $0.radiusIntervalUpdate = value }
+                state.$game.withLock { $0.zone.shrinkIntervalMinutes = value }
                 return .none
             case let .startDateChanged(date):
                 state.$game.withLock { $0.startDate = date }
@@ -180,8 +180,8 @@ struct ChickenConfigFeature {
                 state.$game.withLock { game in
                     if state.isExpertMode {
                         // Expert mode: endDate from radius parameters
-                        let shrinks = ceil(game.initialRadius / game.radiusDeclinePerUpdate)
-                        let duration = shrinks * game.radiusIntervalUpdate * 60
+                        let shrinks = ceil(game.zone.radius / game.zone.shrinkMetersPerUpdate)
+                        let duration = shrinks * game.zone.shrinkIntervalMinutes * 60
                         game.endDate = game.hunterStartDate.addingTimeInterval(duration)
                     } else {
                         // Normal mode: endDate = startDate + total game duration
@@ -226,7 +226,7 @@ struct ChickenConfigView: View {
         let isDefault = abs(loc.latitude - AppConstants.defaultLatitude) < 0.001
             && abs(loc.longitude - AppConstants.defaultLongitude) < 0.001
         guard !isDefault else { return false }
-        if store.currentGame.gameMod == .stayInTheZone {
+        if store.currentGame.gameMode == .stayInTheZone {
             return store.currentGame.finalLocation != nil
         }
         return true
@@ -248,15 +248,15 @@ struct ChickenConfigView: View {
             }
             .sheet(isPresented: $store.showPowerUpSelection) {
                 PowerUpSelectionView(
-                    enabledTypes: store.currentGame.enabledPowerUpTypes,
-                    gameMod: store.currentGame.gameMod,
+                    enabledTypes: store.currentGame.powerUps.enabledTypes,
+                    gameMode: store.currentGame.gameMode,
                     onToggle: { type in store.send(.powerUpTypeToggled(type)) }
                 )
             }
             .safeAreaInset(edge: .bottom) {
                 VStack(spacing: 10) {
                     if !isZoneConfigured {
-                        Text(store.currentGame.gameMod == .stayInTheZone
+                        Text(store.currentGame.gameMode == .stayInTheZone
                              ? "Set a start zone and final zone to start"
                              : "Set a start zone to start")
                             .font(.gameboy(size: 8))
@@ -338,10 +338,10 @@ struct ChickenConfigView: View {
     private var gameModeSection: some View {
         Section("Game Mode") {
             Picker("Game Mode", selection: Binding(
-                get: { store.currentGame.gameMod },
+                get: { store.currentGame.gameMode },
                 set: { store.send(.gameModChanged($0)) }
             )) {
-                ForEach(Game.GameMod.allCases, id: \.self) { mode in
+                ForEach(Game.GameMode.allCases, id: \.self) { mode in
                     Text(mode.title).tag(mode)
                 }
             }
@@ -355,15 +355,15 @@ struct ChickenConfigView: View {
     private var powerUpsSection: some View {
         Section("Power-Ups") {
             Toggle("Enable Power-Ups", isOn: Binding(
-                get: { store.currentGame.powerUpsEnabled },
+                get: { store.currentGame.powerUps.enabled },
                 set: { store.send(.powerUpsToggled($0)) }
             ))
 
-            if store.currentGame.powerUpsEnabled {
-                let unavailableRaw: Set<String> = store.currentGame.gameMod == .stayInTheZone
+            if store.currentGame.powerUps.enabled {
+                let unavailableRaw: Set<String> = store.currentGame.gameMode == .stayInTheZone
                     ? [PowerUp.PowerUpType.invisibility.rawValue, PowerUp.PowerUpType.decoy.rawValue, PowerUp.PowerUpType.jammer.rawValue]
                     : []
-                let enabledCount = store.currentGame.enabledPowerUpTypes.filter { !unavailableRaw.contains($0) }.count
+                let enabledCount = store.currentGame.powerUps.enabledTypes.filter { !unavailableRaw.contains($0) }.count
                 let totalCount = PowerUp.PowerUpType.allCases.filter { !unavailableRaw.contains($0.rawValue) }.count
                 Button {
                     store.send(.powerUpSelectionTapped)
@@ -411,10 +411,10 @@ struct ChickenConfigView: View {
                 HStack {
                     Text("Radius interval update")
                     Spacer()
-                    Text("\(Int(self.store.currentGame.radiusIntervalUpdate)) minutes")
+                    Text("\(Int(self.store.currentGame.zone.shrinkIntervalMinutes)) minutes")
                 }
                 Slider(value: Binding(
-                    get: { store.currentGame.radiusIntervalUpdate },
+                    get: { store.currentGame.zone.shrinkIntervalMinutes },
                     set: { store.send(.radiusIntervalUpdateChanged($0)) }
                 ), in: 1...60, step: 1)
             }
@@ -422,10 +422,10 @@ struct ChickenConfigView: View {
                 HStack {
                     Text("Radius decline")
                     Spacer()
-                    Text("\(Int(self.store.currentGame.radiusDeclinePerUpdate)) meters")
+                    Text("\(Int(self.store.currentGame.zone.shrinkMetersPerUpdate)) meters")
                 }
                 Slider(value: Binding(
-                    get: { store.currentGame.radiusDeclinePerUpdate },
+                    get: { store.currentGame.zone.shrinkMetersPerUpdate },
                     set: { store.send(.radiusDeclinePerUpdateChanged($0)) }
                 ), in: 50...1000, step: 10)
             }
@@ -438,11 +438,11 @@ struct ChickenConfigView: View {
                 HStack {
                     Text("Chicken head start")
                     Spacer()
-                    Text("\(Int(self.store.currentGame.chickenHeadStartMinutes)) minutes")
+                    Text("\(Int(self.store.currentGame.timing.headStartMinutes)) minutes")
                 }
                 Slider(
                     value: Binding(
-                        get: { store.currentGame.chickenHeadStartMinutes },
+                        get: { store.currentGame.timing.headStartMinutes },
                         set: { store.send(.chickenHeadStartChanged($0)) }
                     ),
                     in: 0...45,
@@ -473,12 +473,12 @@ struct MapPreviewView: View {
 
     private var zoom: CGFloat {
         // Extra -1 to account for the short height (180pt) of the inline preview
-        zoomForRadius(CLLocationDistance(game.initialRadius), latitude: game.initialLocation.latitude) - 1.0
+        zoomForRadius(CLLocationDistance(game.zone.radius), latitude: game.initialLocation.latitude) - 1.0
     }
 
     var body: some View {
         Map(viewport: .constant(.camera(center: game.initialLocation, zoom: zoom))) {
-            let circlePolygon = Polygon(center: game.initialLocation, radius: CLLocationDistance(game.initialRadius), vertices: 72)
+            let circlePolygon = Polygon(center: game.initialLocation, radius: CLLocationDistance(game.zone.radius), vertices: 72)
             // Neon glow on start zone circle
             PolylineAnnotation(lineCoordinates: circlePolygon.outerRing.coordinates)
                 .lineColor(StyleColor(UIColor(Color.CROrange).withAlphaComponent(0.1)))

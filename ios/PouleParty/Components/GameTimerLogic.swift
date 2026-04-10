@@ -23,7 +23,7 @@ struct ZoneCheckResult: Equatable {
 }
 
 /// Whether this role should be zone-checked under the given game mode.
-func shouldCheckZone(role: GameRole, gameMod: Game.GameMod) -> Bool {
+func shouldCheckZone(role: GameRole, gameMod: Game.GameMode) -> Bool {
     switch gameMod {
     case .stayInTheZone:
         return true // both chicken and hunters are checked
@@ -179,7 +179,7 @@ func processRadiusUpdate(
     currentRadius: Int,
     radiusDeclinePerUpdate: Double,
     radiusIntervalUpdate: Double,
-    gameMod: Game.GameMod,
+    gameMod: Game.GameMode,
     initialCoordinates: CLLocationCoordinate2D,
     currentCircle: CircleOverlay?,
     driftSeed: Int = 0,
@@ -258,11 +258,11 @@ func detectActivatedPowerUp(
     now: Date = .now
 ) -> (text: String, type: PowerUp.PowerUpType)? {
     let checks: [(KeyPath<Game, Timestamp?>, PowerUp.PowerUpType)] = [
-        (\.activeInvisibilityUntil, .invisibility),
-        (\.activeZoneFreezeUntil, .zoneFreeze),
-        (\.activeRadarPingUntil, .radarPing),
-        (\.activeDecoyUntil, .decoy),
-        (\.activeJammerUntil, .jammer),
+        (\.powerUps.activeEffects.invisibility, .invisibility),
+        (\.powerUps.activeEffects.zoneFreeze, .zoneFreeze),
+        (\.powerUps.activeEffects.radarPing, .radarPing),
+        (\.powerUps.activeEffects.decoy, .decoy),
+        (\.powerUps.activeEffects.jammer, .jammer),
     ]
 
     for (keyPath, type) in checks {

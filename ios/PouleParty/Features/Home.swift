@@ -254,16 +254,16 @@ struct HomeFeature {
                 guard let config = state.pendingPlanResult else { return .none }
                 var game = Game(id: uuid().uuidString)
                 game.foundCode = Game.generateFoundCode()
-                game.chickenHeadStartMinutes = 5
+                game.timing.headStartMinutes = 5
                 game.creatorId = userClient.currentUserId() ?? ""
-                game.pricingModel = config.model
-                game.numberOfPlayers = config.numberOfPlayers
-                game.pricePerPlayer = config.pricePerPlayerCents
-                game.depositAmount = config.depositAmountCents
+                game.pricing.model = config.model
+                game.maxPlayers = config.numberOfPlayers
+                game.pricing.pricePerPlayer = config.pricePerPlayerCents
+                game.pricing.deposit = config.depositAmountCents
                 if config.model == .deposit {
-                    game.requiresRegistration = true
+                    game.registration.required = true
                 }
-                game.driftSeed = withRandomNumberGenerator { generator in
+                game.zone.driftSeed = withRandomNumberGenerator { generator in
                     Int.random(in: 1...999_999, using: &generator)
                 }
                 if let location {

@@ -109,7 +109,7 @@ class HunterMapViewModel @Inject constructor(
             // Defensive gate: refuse entry if game requires registration and user isn't registered.
             // This catches client-side bypasses and prevents the Firestore rule from rejecting
             // the hunterIds update (which would otherwise crash the screen).
-            if (game.requiresRegistration) {
+            if (game.registration.required) {
                 val registration = firestoreRepository.findRegistration(gameId, hunterId)
                 if (registration == null) {
                     Log.w(TAG, "Hunter $hunterId not registered for game $gameId — bouncing back")
@@ -163,7 +163,7 @@ class HunterMapViewModel @Inject constructor(
                             targetDate = state.game.startDate,
                             completionText = "\uD83D\uDC14 is hiding!",
                             showNumericCountdown = true,
-                            isEnabled = state.game.chickenHeadStartMinutes > 0
+                            isEnabled = state.game.timing.headStartMinutes > 0
                         ),
                         CountdownPhase(
                             targetDate = state.game.hunterStartDate,
@@ -209,15 +209,15 @@ class HunterMapViewModel @Inject constructor(
                 val radiusResult = processRadiusUpdate(
                     nextRadiusUpdate = state.nextRadiusUpdate,
                     currentRadius = state.radius,
-                    radiusDeclinePerUpdate = state.game.radiusDeclinePerUpdate,
-                    radiusIntervalUpdate = state.game.radiusIntervalUpdate,
+                    radiusDeclinePerUpdate = state.game.zone.shrinkMetersPerUpdate,
+                    radiusIntervalUpdate = state.game.zone.shrinkIntervalMinutes,
                     gameMod = state.game.gameModEnum,
                     initialLocation = state.game.initialLocation,
                     currentCircleCenter = state.circleCenter,
-                    driftSeed = state.game.driftSeed,
+                    driftSeed = state.game.zone.driftSeed,
                     isZoneFrozen = state.game.isZoneFrozen,
                     finalLocation = state.game.finalLocation,
-                    initialRadius = state.game.initialRadius
+                    initialRadius = state.game.zone.radius
                 )
                 if (radiusResult != null) {
                     if (radiusResult.isGameOver) {
@@ -298,7 +298,7 @@ class HunterMapViewModel @Inject constructor(
                     val interpolatedCenter = interpolateZoneCenter(
                         initialCenter = updatedGame.initialLocation,
                         finalCenter = updatedGame.finalLocation,
-                        initialRadius = updatedGame.initialRadius,
+                        initialRadius = updatedGame.zone.radius,
                         currentRadius = lastRadius.toDouble()
                     )
                     _uiState.update { it.copy(circleCenter = interpolatedCenter) }
@@ -308,8 +308,8 @@ class HunterMapViewModel @Inject constructor(
                 if (updatedGame.isDecoyActive) {
                     if (_uiState.value.decoyLocation == null) {
                         val center = _uiState.value.circleCenter ?: updatedGame.initialLocation
-                        val decoyTimestamp = (updatedGame.activeDecoyUntil?.toDate()?.time ?: 0L) / 1000 // seconds, matching iOS
-                        val seed = updatedGame.driftSeed.toLong() xor decoyTimestamp
+                        val decoyTimestamp = (updatedGame.powerUps.activeEffects.decoy?.toDate()?.time ?: 0L) / 1000 // seconds, matching iOS
+                        val seed = updatedGame.zone.driftSeed.toLong() xor decoyTimestamp
                         val angle = seededRandom(seed, 0) * 2 * Math.PI
                         val distance = (200 + seededRandom(seed, 1) * 300) / 111_320.0 // 200-500m in degrees
                         val decoy = Point.fromLngLat(
@@ -438,7 +438,7 @@ class HunterMapViewModel @Inject constructor(
                     PowerUpType.ZONE_PREVIEW -> {
                         // Compute next zone preview (client-side only)
                         val state = _uiState.value
-                        val nextRadius = state.radius - state.game.radiusDeclinePerUpdate.toInt()
+                        val nextRadius = state.radius - state.game.zone.shrinkMetersPerUpdate.toInt()
                         if (nextRadius > 0) {
                             val center = state.circleCenter ?: state.game.initialLocation
                             _uiState.update {
@@ -448,7 +448,7 @@ class HunterMapViewModel @Inject constructor(
                     }
                     PowerUpType.RADAR_PING -> {
                         firestoreRepository.updateGameActiveEffect(
-                            gameId, "activeRadarPingUntil", expiresAt
+                            gameId, "powerUps.activeEffects.radarPing", expiresAt
                         )
                     }
                     else -> {}

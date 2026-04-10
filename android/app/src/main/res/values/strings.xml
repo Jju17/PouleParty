@@ -57,6 +57,14 @@
     <string name="registration_required">Registration required</string>
     <string name="open_join">Open join</string>
     <string name="registration_required_for_paid_deposit_games">Registration is required for paid (deposit) games.</string>
+    <string name="registration_closes">Registration closes</string>
+    <string name="at_game_start">At game start</string>
+    <string name="fifteen_min_before">15 min before</string>
+    <string name="thirty_min_before">30 min before</string>
+    <string name="one_hour_before">1 hour before</string>
+    <string name="two_hours_before">2 hours before</string>
+    <string name="one_day_before">1 day before</string>
+    <string name="registration_closed_for_this_game">Registration is closed for this game.</string>
 
     <!-- Chicken Config -->
     <string name="game_settings">Game Settings</string>

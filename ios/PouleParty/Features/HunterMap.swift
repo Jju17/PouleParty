@@ -226,7 +226,7 @@ struct HunterMapFeature {
 
                 // Zone Preview: compute next zone boundary client-side
                 if powerUp.type == .zonePreview {
-                    let nextRadius = state.radius - Int(state.game.radiusDeclinePerUpdate)
+                    let nextRadius = state.radius - Int(state.game.zone.shrinkMetersPerUpdate)
                     if nextRadius > 0, let center = state.mapCircle?.center {
                         state.previewCircle = CircleOverlay(center: center, radius: CLLocationDistance(nextRadius))
                     }
@@ -235,7 +235,7 @@ struct HunterMapFeature {
                 return .run { send in
                     try? await apiClient.activatePowerUp(gameId, powerUp.id, expiresAt)
                     if powerUp.type == .radarPing {
-                        try? await apiClient.updateGameActiveEffect(gameId, "activeRadarPingUntil", expiresAt)
+                        try? await apiClient.updateGameActiveEffect(gameId, "powerUps.activeEffects.radarPing", expiresAt)
                     }
                     try await clock.sleep(for: .seconds(2))
                     await send(.powerUpNotificationDismissed)
@@ -335,7 +335,7 @@ struct HunterMapFeature {
                     return .none
                 }
                 let chickenCanSeeHunters = state.game.chickenCanSeeHunters
-                let powerUpsEnabled = state.game.powerUpsEnabled
+                let powerUpsEnabled = state.game.powerUps.enabled
                 let hunterStartDate = state.game.hunterStartDate
                 let (lastUpdate, lastRadius) = state.game.findLastUpdate()
                 state.radius = lastRadius
@@ -346,15 +346,15 @@ struct HunterMapFeature {
                     gameName: state.game.name,
                     gameCode: state.game.gameCode,
                     playerRole: .hunter,
-                    gameModeName: state.game.gameMod.title,
+                    gameModeName: state.game.gameMode.title,
                     gameStartDate: state.game.startDate,
                     gameEndDate: state.game.endDate,
-                    totalHunters: max(0, state.game.numberOfPlayers - 1)
+                    totalHunters: max(0, state.game.maxPlayers - 1)
                 )
                 let initialLAState = state.liveActivityState
                 state.lastLiveActivityState = initialLAState
 
-                let requiresRegistration = state.game.requiresRegistration
+                let requiresRegistration = state.game.registration.required
                 var effects: [Effect<Action>] = [
                     .run { _ in
                         await liveActivityClient.start(attributes, initialLAState)
@@ -491,7 +491,7 @@ struct HunterMapFeature {
                 state.radius = lastRadius
                 state.nextRadiusUpdate = lastUpdate
 
-                if game.gameMod != .stayInTheZone {
+                if game.gameMode != .stayInTheZone {
                     if let currentCircle = state.mapCircle {
                         state.mapCircle = CircleOverlay(
                             center: currentCircle.center,
@@ -501,9 +501,9 @@ struct HunterMapFeature {
                     // else: no chicken location yet, leave mapCircle nil
                 } else {
                     let interpolatedCenter = interpolateZoneCenter(
-                        initialCenter: game.initialCoordinates.toCLCoordinates,
+                        initialCenter: game.zone.center.toCLCoordinates,
                         finalCenter: game.finalLocation,
-                        initialRadius: game.initialRadius,
+                        initialRadius: game.zone.radius,
                         currentRadius: Double(lastRadius)
                     )
                     state.mapCircle = CircleOverlay(
@@ -516,8 +516,8 @@ struct HunterMapFeature {
                 if game.isDecoyActive {
                     if state.decoyLocation == nil, let center = state.mapCircle?.center {
                         // Deterministic fake location so all hunters see the same decoy
-                        let decoyTimestamp = Int(game.activeDecoyUntil?.dateValue().timeIntervalSince1970 ?? 0)
-                        let seed = game.driftSeed ^ decoyTimestamp
+                        let decoyTimestamp = Int(game.powerUps.activeEffects.decoy?.dateValue().timeIntervalSince1970 ?? 0)
+                        let seed = game.zone.driftSeed ^ decoyTimestamp
                         let angle = seededRandom(seed: seed, index: 0) * 2 * .pi
                         let distance = (200 + seededRandom(seed: seed, index: 1) * 300) / 111_320.0
                         state.decoyLocation = CLLocationCoordinate2D(
@@ -595,7 +595,7 @@ struct HunterMapFeature {
                             targetDate: state.game.startDate,
                             completionText: "🐔 is hiding!",
                             showNumericCountdown: true,
-                            isEnabled: state.game.chickenHeadStartMinutes > 0
+                            isEnabled: state.game.timing.headStartMinutes > 0
                         ),
                         CountdownPhase(
                             targetDate: state.game.hunterStartDate,
@@ -656,15 +656,15 @@ struct HunterMapFeature {
                 if let result = processRadiusUpdate(
                     nextRadiusUpdate: state.nextRadiusUpdate,
                     currentRadius: state.radius,
-                    radiusDeclinePerUpdate: state.game.radiusDeclinePerUpdate,
-                    radiusIntervalUpdate: state.game.radiusIntervalUpdate,
-                    gameMod: state.game.gameMod,
-                    initialCoordinates: state.game.initialCoordinates.toCLCoordinates,
+                    radiusDeclinePerUpdate: state.game.zone.shrinkMetersPerUpdate,
+                    radiusIntervalUpdate: state.game.zone.shrinkIntervalMinutes,
+                    gameMod: state.game.gameMode,
+                    initialCoordinates: state.game.zone.center.toCLCoordinates,
                     currentCircle: state.mapCircle,
-                    driftSeed: state.game.driftSeed,
+                    driftSeed: state.game.zone.driftSeed,
                     isZoneFrozen: state.game.isZoneFrozen,
                     finalCoordinates: state.game.finalLocation,
-                    initialRadius: state.game.initialRadius
+                    initialRadius: state.game.zone.radius
                 ) {
                     if result.isGameOver {
                         locationClient.stopTracking()
@@ -708,7 +708,7 @@ struct HunterMapFeature {
                 }
 
                 // Zone check (visual warning only — no elimination)
-                if shouldCheckZone(role: .hunter, gameMod: state.game.gameMod),
+                if shouldCheckZone(role: .hunter, gameMod: state.game.gameMode),
                    let userLoc = state.userLocation,
                    let circle = state.mapCircle {
                     let zoneResult = checkZoneStatus(
@@ -754,7 +754,7 @@ struct HunterMapView: View {
         if store.game.chickenCanSeeHunters {
             return "Catch the 🐔 (she sees you! 👀)"
         }
-        switch store.game.gameMod {
+        switch store.game.gameMode {
         case .followTheChicken:
             return "Catch the 🐔 !"
         case .stayInTheZone:
@@ -914,7 +914,7 @@ struct HunterMapView: View {
         .overlay(alignment: .topTrailing) {
             VStack(spacing: 0) {
                 MapCompassButton(mapCircle: store.mapCircle, mapBearing: mapBearing, viewport: $viewport)
-                if store.game.powerUpsEnabled {
+                if store.game.powerUps.enabled {
                     ActivePowerUpBadge(game: store.game, now: store.nowDate)
                 }
             }
@@ -972,7 +972,7 @@ struct HunterMapView: View {
                 if !store.hasGameStarted {
                     PreGameOverlay(
                         role: .hunter,
-                        gameModTitle: store.game.gameMod.title,
+                        gameModTitle: store.game.gameMode.title,
                         gameCode: nil,
                         targetDate: store.game.hunterStartDate,
                         nowDate: store.nowDate,

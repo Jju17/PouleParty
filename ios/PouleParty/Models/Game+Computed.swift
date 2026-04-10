@@ -12,50 +12,50 @@ import FirebaseFirestore
 extension Game {
     var initialLocation: CLLocationCoordinate2D {
         get {
-            self.initialCoordinates.toCLCoordinates
+            self.zone.center.toCLCoordinates
         }
         set {
             let newCoordinates = newValue
-            self.initialCoordinates = GeoPoint(latitude: newCoordinates.latitude, longitude: newCoordinates.longitude)
+            self.zone.center = GeoPoint(latitude: newCoordinates.latitude, longitude: newCoordinates.longitude)
         }
     }
 
     var finalLocation: CLLocationCoordinate2D? {
         get {
-            self.finalCoordinates?.toCLCoordinates
+            self.zone.finalCenter?.toCLCoordinates
         }
         set {
             if let newValue {
-                self.finalCoordinates = GeoPoint(latitude: newValue.latitude, longitude: newValue.longitude)
+                self.zone.finalCenter = GeoPoint(latitude: newValue.latitude, longitude: newValue.longitude)
             } else {
-                self.finalCoordinates = nil
+                self.zone.finalCenter = nil
             }
         }
     }
 
     var startDate: Date {
         get {
-            self.startTimestamp.dateValue()
+            self.timing.start.dateValue()
         }
         set {
             // Strip seconds so the start time is always at :00
             let seconds = Calendar.current.component(.second, from: newValue)
             let stripped = newValue.addingTimeInterval(Double(-seconds))
-            self.startTimestamp = Timestamp(date: stripped)
+            self.timing.start = Timestamp(date: stripped)
         }
     }
 
     var endDate: Date {
         get {
-            self.endTimestamp.dateValue()
+            self.timing.end.dateValue()
         }
         set {
-            self.endTimestamp = Timestamp(date: newValue)
+            self.timing.end = Timestamp(date: newValue)
         }
     }
 
     var hunterStartDate: Date {
-        startDate.addingTimeInterval(chickenHeadStartMinutes * 60)
+        startDate.addingTimeInterval(timing.headStartMinutes * 60)
     }
 
     var gameCode: String {
@@ -67,26 +67,26 @@ extension Game {
 
 extension Game {
     var isChickenInvisible: Bool {
-        guard let until = activeInvisibilityUntil else { return false }
+        guard let until = powerUps.activeEffects.invisibility else { return false }
         return .now < until.dateValue()
     }
 
     var isZoneFrozen: Bool {
-        guard let until = activeZoneFreezeUntil else { return false }
+        guard let until = powerUps.activeEffects.zoneFreeze else { return false }
         return .now < until.dateValue()
     }
 
     var isRadarPingActive: Bool {
-        guard let until = activeRadarPingUntil else { return false }
+        guard let until = powerUps.activeEffects.radarPing else { return false }
         return .now < until.dateValue()
     }
 
     var isDecoyActive: Bool {
-        activeDecoyUntil.map { Date.now < $0.dateValue() } ?? false
+        powerUps.activeEffects.decoy.map { Date.now < $0.dateValue() } ?? false
     }
 
     var isJammerActive: Bool {
-        activeJammerUntil.map { Date.now < $0.dateValue() } ?? false
+        powerUps.activeEffects.jammer.map { Date.now < $0.dateValue() } ?? false
     }
 }
 
@@ -99,19 +99,19 @@ extension Game {
 
     func findLastUpdate() -> (Date, Int) {
         var lastUpdate: Date = self.hunterStartDate
-        var lastRadius: Int = Int(self.initialRadius)
+        var lastRadius: Int = Int(self.zone.radius)
 
-        guard radiusIntervalUpdate > 0 else {
+        guard zone.shrinkIntervalMinutes > 0 else {
             return (lastUpdate, lastRadius)
         }
 
         // Zone freeze window: skip radius reductions for shrinks inside [freezeStart, freezeEnd)
-        let freezeEnd = activeZoneFreezeUntil?.dateValue()
+        let freezeEnd = powerUps.activeEffects.zoneFreeze?.dateValue()
         let freezeDuration = PowerUp.PowerUpType.zoneFreeze.durationSeconds ?? 0
         let freezeStart = freezeEnd?.addingTimeInterval(-freezeDuration)
 
-        while lastUpdate.addingTimeInterval(TimeInterval(self.radiusIntervalUpdate * 60)) < .now {
-            lastUpdate.addTimeInterval(TimeInterval(self.radiusIntervalUpdate * 60))
+        while lastUpdate.addingTimeInterval(TimeInterval(self.zone.shrinkIntervalMinutes * 60)) < .now {
+            lastUpdate.addTimeInterval(TimeInterval(self.zone.shrinkIntervalMinutes * 60))
             let isFrozen: Bool
             if let fs = freezeStart, let fe = freezeEnd {
                 isFrozen = lastUpdate >= fs && lastUpdate < fe
@@ -119,12 +119,12 @@ extension Game {
                 isFrozen = false
             }
             if !isFrozen {
-                lastRadius -= Int(self.radiusDeclinePerUpdate)
+                lastRadius -= Int(self.zone.shrinkMetersPerUpdate)
             }
         }
 
         lastRadius = max(0, lastRadius)
-        let nextUpdate = lastUpdate.addingTimeInterval(TimeInterval(self.radiusIntervalUpdate * 60))
+        let nextUpdate = lastUpdate.addingTimeInterval(TimeInterval(self.zone.shrinkIntervalMinutes * 60))
         return (nextUpdate, lastRadius)
     }
 }
@@ -136,25 +136,27 @@ extension Game {
         Game(
             id: "mock-game-id",
             name: "Mock",
-            numberOfPlayers: 10,
-            radiusIntervalUpdate: 5,
-            startTimestamp: Timestamp(date: .now.addingTimeInterval(300)),
-            endTimestamp: Timestamp(date: .now.addingTimeInterval(3900)),
-            initialCoordinates: GeoPoint(latitude: AppConstants.defaultLatitude, longitude: AppConstants.defaultLongitude),
-            initialRadius: 1500,
-            radiusDeclinePerUpdate: 100,
-            chickenHeadStartMinutes: 0,
-            gameMod: .followTheChicken,
+            maxPlayers: 10,
+            gameMode: .followTheChicken,
             chickenCanSeeHunters: false,
             foundCode: "1234",
-            driftSeed: 42,
-            powerUpsEnabled: false,
-            enabledPowerUpTypes: PowerUp.PowerUpType.allCases.map(\.rawValue),
-            activeInvisibilityUntil: nil,
-            activeZoneFreezeUntil: nil,
-            activeRadarPingUntil: nil,
-            activeDecoyUntil: nil,
-            activeJammerUntil: nil
+            timing: Timing(
+                start: Timestamp(date: .now.addingTimeInterval(300)),
+                end: Timestamp(date: .now.addingTimeInterval(3900)),
+                headStartMinutes: 0
+            ),
+            zone: Zone(
+                center: GeoPoint(latitude: AppConstants.defaultLatitude, longitude: AppConstants.defaultLongitude),
+                radius: 1500,
+                shrinkIntervalMinutes: 5,
+                shrinkMetersPerUpdate: 100,
+                driftSeed: 42
+            ),
+            powerUps: GamePowerUps(
+                enabled: false,
+                enabledTypes: PowerUp.PowerUpType.allCases.map(\.rawValue),
+                activeEffects: ActiveEffects()
+            )
         )
     }
 }

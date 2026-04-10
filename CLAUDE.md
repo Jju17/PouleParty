@@ -22,13 +22,13 @@ There's also a **web** landing page (React/Vite) and **Cloud Functions** backend
 The zone is a circle that shrinks periodically. The shrink interval and amount are configurable. In "Stay in the Zone" mode, the center drifts deterministically using a seed stored in the game document — every client computes the same drift. There's also a "final zone" point: as the radius shrinks, the center interpolates linearly from start to final position.
 
 ### Power-Ups
-6 types, split between chicken and hunter. They spawn deterministically on the map (using the game's `driftSeed`), get snapped to nearest roads via Mapbox API, and are collected by proximity (30m). Some have timed effects tracked as `active{Type}Until` timestamps on the game document. In `stayInTheZone` mode, position-dependent chicken power-ups (invisibility, decoy, jammer) are automatically disabled.
+6 types, split between chicken and hunter. They spawn deterministically on the map (using the game's `zone.driftSeed`), get snapped to nearest roads via Mapbox API, and are collected by proximity (30m). Some have timed effects tracked as timestamps in `powerUps.activeEffects` on the game document. In `stayInTheZone` mode, position-dependent chicken power-ups (invisibility, decoy, jammer) are automatically disabled.
 
 ### Game Lifecycle
 1. Chicken creates game → Firestore document created → Cloud Functions schedule status transitions and notifications via Cloud Tasks
-2. Game starts at `startTimestamp` (status: waiting → inProgress)
-3. Hunters get a head start delay (`chickenHeadStartMinutes`) before the hunt begins
-4. Zone shrinks periodically until collapse or `endTimestamp`
+2. Game starts at `timing.start` (status: waiting → inProgress)
+3. Hunters get a head start delay (`timing.headStartMinutes`) before the hunt begins
+4. Zone shrinks periodically until collapse or `timing.end`
 5. Hunters who find the chicken enter the found code → added to `winners` array
 6. Game ends when time runs out, zone collapses, chicken cancels, or all hunters find the chicken
 
@@ -80,16 +80,24 @@ cd web && npm run dev
 ## Firestore data model
 
 ```
-/games/{gameId}                    → Game config + live state (status, winners, active effects)
-  /chickenLocations/latest         → Single doc, overwritten each position update
-  /hunterLocations/{hunterId}      → One doc per hunter, overwritten
-  /powerUps/{powerUpId}            → One doc per spawned power-up (collected/activated state)
+/games/{gameId}
+  ├── id, name, maxPlayers, gameMode, chickenCanSeeHunters
+  ├── foundCode, hunterIds, status, winners, creatorId
+  ├── timing: { start, end, headStartMinutes }
+  ├── zone: { center, finalCenter, radius, shrinkIntervalMinutes, shrinkMetersPerUpdate, driftSeed }
+  ├── pricing: { model, pricePerPlayer, deposit, commission }
+  ├── registration: { required, closesMinutesBefore }
+  ├── powerUps: { enabled, enabledTypes, activeEffects: { invisibility, zoneFreeze, radarPing, decoy, jammer } }
+  ├── /chickenLocations/latest     → Single doc, overwritten each position update
+  ├── /hunterLocations/{hunterId}  → One doc per hunter, overwritten
+  ├── /powerUps/{powerUpId}        → One doc per spawned power-up (collected/activated state)
+  └── /registrations/{userId}      → One doc per registered hunter (teamName, paid, joinedAt)
 
 /fcmTokens/{userId}                → FCM token for push notifications
 /registrations/{docId}             → Event registration (admin-only, used by web)
 ```
 
-The `gameCode` field is stored separately (first 6 chars of ID, uppercased) to enable Firestore queries by code.
+The `gameCode` is derived from the document ID (first 6 chars, uppercased).
 
 ## Cross-platform parity
 
@@ -117,7 +125,7 @@ Anonymous Firebase Auth. Users don't create accounts — a UID is generated on f
 
 ## Security rules
 
-See `firestore.rules`. Key principle: the creator has full control over their game, hunters can only update `hunterIds`, `winners`, and `active*Until` fields. Subcollection writes are restricted by role. Power-up collection uses transactions to prevent double-collection.
+See `firestore.rules`. Key principle: the creator has full control over their game, hunters can only update `hunterIds`, `winners`, and `powerUps` (active effects) fields. Subcollection writes are restricted by role. Power-up collection uses transactions to prevent double-collection. Registration creation enforces the `registration.closesMinutesBefore` deadline if set.
 
 ## Conventions
 
@@ -139,7 +147,7 @@ See `firestore.rules`. Key principle: the creator has full control over their ga
 3. **Firestore rules** — if it touches new fields, update `firestore.rules`
 4. **Cloud Functions** — if it needs server-side scheduling or validation
 5. **Tests** — both platforms have unit tests for models and game logic
-6. **README.md** — update the root `README.md` to reflect any new or changed functionality
+6. **Documentation** — update `README.md`, `CLAUDE.md` (Firestore model, game concepts, conventions), and `.claude/rules/*.md` (iOS/Android/Functions guides) to reflect any new or changed functionality, field names, or architecture
 
 ### 4. Zero Warnings Policy
 

@@ -17,10 +17,10 @@ service cloud.firestore {
       allow update: if request.auth != null
                     && request.resource.data.diff(resource.data).affectedKeys()
                         .hasOnly(['hunterIds', 'winners'])
-                    && request.resource.data.hunterIds.size() <= resource.data.numberOfPlayers
-                    && request.resource.data.winners.size() <= resource.data.numberOfPlayers
+                    && request.resource.data.hunterIds.size() <= resource.data.maxPlayers
+                    && request.resource.data.winners.size() <= resource.data.maxPlayers
                     && (
-                      resource.data.get('requiresRegistration', false) == false
+                      resource.data.get('registration', {}).get('required', false) == false
                       || !request.resource.data.hunterIds.hasAny([request.auth.uid])
                       || exists(/databases/$(database)/documents/games/$(gameId)/registrations/$(request.auth.uid))
                     );
@@ -28,7 +28,7 @@ service cloud.firestore {
       // Any authenticated player can update power-up active effect fields
       allow update: if request.auth != null
                     && request.resource.data.diff(resource.data).affectedKeys()
-                        .hasOnly(['activeInvisibilityUntil', 'activeZoneFreezeUntil', 'activeRadarPingUntil', 'activeDecoyUntil', 'activeJammerUntil']);
+                        .hasOnly(['powerUps']);
 
       // Only the creator can update status, gameCode, or other game settings
       allow update: if request.auth != null
@@ -74,7 +74,13 @@ service cloud.firestore {
                       && request.resource.data.userId == request.auth.uid
                       && request.resource.data.keys().hasAll(['userId', 'teamName', 'paid', 'joinedAt'])
                       && request.resource.data.teamName is string
-                      && request.resource.data.teamName.size() > 0;
+                      && request.resource.data.teamName.size() > 0
+                      // Enforce registration deadline if set
+                      && (
+                        get(/databases/$(database)/documents/games/$(gameId)).data.get('registration', {}).get('closesMinutesBefore', null) == null
+                        || request.time < get(/databases/$(database)/documents/games/$(gameId)).data.timing.start
+                            - duration.value(get(/databases/$(database)/documents/games/$(gameId)).data.registration.closesMinutesBefore * 60, 's')
+                      );
         allow update: if request.auth != null
                       && visitorId == request.auth.uid
                       && request.resource.data.userId == request.auth.uid;

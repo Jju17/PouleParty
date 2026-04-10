@@ -10,7 +10,12 @@ import dev.rahier.pouleparty.data.FirestoreRepository
 import dev.rahier.pouleparty.data.LocationRepository
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameMod
+import dev.rahier.pouleparty.model.GamePowerUps
+import dev.rahier.pouleparty.model.GameRegistration
+import dev.rahier.pouleparty.model.Pricing
 import dev.rahier.pouleparty.model.PowerUpType
+import dev.rahier.pouleparty.model.Timing
+import dev.rahier.pouleparty.model.Zone
 import dev.rahier.pouleparty.model.calculateNormalModeSettings
 import kotlin.math.ceil
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -98,19 +103,27 @@ class GameCreationViewModel @Inject constructor(
             game = Game(
                 id = gameId,
                 name = "",
-                numberOfPlayers = numberOfPlayers,
-                radiusIntervalUpdate = 5.0,
-                initialRadius = 1500.0,
-                radiusDeclinePerUpdate = 100.0,
-                chickenHeadStartMinutes = 5.0,
-                gameMod = GameMod.STAY_IN_THE_ZONE.firestoreValue,
+                maxPlayers = numberOfPlayers,
+                zone = Zone(
+                    radius = 1500.0,
+                    shrinkIntervalMinutes = 5.0,
+                    shrinkMetersPerUpdate = 100.0,
+                    driftSeed = (1..999_999).random()
+                ),
+                timing = Timing(
+                    headStartMinutes = 5.0
+                ),
+                gameMode = GameMod.STAY_IN_THE_ZONE.firestoreValue,
                 foundCode = Game.generateFoundCode(),
                 creatorId = auth.currentUser?.uid ?: "",
-                driftSeed = (1..999_999).random(),
-                pricingModel = pricingModel,
-                pricePerPlayer = pricePerPlayerCents,
-                depositAmount = depositAmountCents,
-                requiresRegistration = pricingModel == "deposit"
+                pricing = Pricing(
+                    model = pricingModel,
+                    pricePerPlayer = pricePerPlayerCents,
+                    deposit = depositAmountCents
+                ),
+                registration = GameRegistration(
+                    required = pricingModel == "deposit"
+                )
             )
         )
     )
@@ -153,9 +166,9 @@ class GameCreationViewModel @Inject constructor(
             // Switching to Follow the Chicken: the final zone is dynamically the
             // chicken's live position, so clear any manually-placed final zone.
             val updatedGame = if (mod == GameMod.FOLLOW_THE_CHICKEN) {
-                state.game.copy(gameMod = mod.firestoreValue, finalCoordinates = null)
+                state.game.copy(gameMode = mod.firestoreValue, zone = state.game.zone.copy(finalCenter = null))
             } else {
-                state.game.copy(gameMod = mod.firestoreValue)
+                state.game.copy(gameMode = mod.firestoreValue)
             }
             state.copy(game = updatedGame)
         }
@@ -221,22 +234,22 @@ class GameCreationViewModel @Inject constructor(
     }
 
     fun updateHeadStart(value: Double) {
-        _uiState.update { it.copy(game = it.game.copy(chickenHeadStartMinutes = value)) }
+        _uiState.update { it.copy(game = it.game.copy(timing = it.game.timing.copy(headStartMinutes = value))) }
         recalculateIfNormalMode()
     }
 
     fun updateInitialRadius(value: Double) {
-        _uiState.update { it.copy(game = it.game.copy(initialRadius = value)) }
+        _uiState.update { it.copy(game = it.game.copy(zone = it.game.zone.copy(radius = value))) }
         recalculateIfNormalMode()
     }
 
     fun togglePowerUps(enabled: Boolean) {
-        _uiState.update { it.copy(game = it.game.copy(powerUpsEnabled = enabled)) }
+        _uiState.update { it.copy(game = it.game.copy(powerUps = it.game.powerUps.copy(enabled = enabled))) }
     }
 
     fun togglePowerUpType(type: PowerUpType) {
         _uiState.update { state ->
-            val current = state.game.enabledPowerUpTypes
+            val current = state.game.powerUps.enabledTypes
             val unavailable = if (state.game.gameModEnum == GameMod.STAY_IN_THE_ZONE) {
                 setOf(PowerUpType.INVISIBILITY.firestoreValue, PowerUpType.DECOY.firestoreValue, PowerUpType.JAMMER.firestoreValue)
             } else emptySet()
@@ -247,7 +260,7 @@ class GameCreationViewModel @Inject constructor(
             } else {
                 current + type.firestoreValue
             }
-            state.copy(game = state.game.copy(enabledPowerUpTypes = newList))
+            state.copy(game = state.game.copy(powerUps = state.game.powerUps.copy(enabledTypes = newList)))
         }
     }
 
@@ -258,8 +271,20 @@ class GameCreationViewModel @Inject constructor(
     fun toggleRequiresRegistration(value: Boolean) {
         _uiState.update { state ->
             // Deposit games always require registration
-            if (state.game.pricingModel == "deposit" && !value) return@update state
-            state.copy(game = state.game.copy(requiresRegistration = value))
+            if (state.game.pricing.model == "deposit" && !value) return@update state
+            val updatedGame = state.game.copy(
+                registration = state.game.registration.copy(
+                    required = value,
+                    closesMinutesBefore = if (!value) null else (state.game.registration.closesMinutesBefore ?: 15)
+                )
+            )
+            state.copy(game = updatedGame)
+        }
+    }
+
+    fun setRegistrationClosesBeforeStart(minutes: Int?) {
+        _uiState.update { state ->
+            state.copy(game = state.game.copy(registration = state.game.registration.copy(closesMinutesBefore = minutes)))
         }
     }
 
@@ -294,14 +319,16 @@ class GameCreationViewModel @Inject constructor(
     private fun recalculateIfNormalMode() {
         val state = _uiState.value
         if (state.isExpertMode) return
-        val effectiveDuration = maxOf(state.gameDurationMinutes - state.game.chickenHeadStartMinutes, 1.0)
+        val effectiveDuration = maxOf(state.gameDurationMinutes - state.game.timing.headStartMinutes, 1.0)
         val (interval, decline) = calculateNormalModeSettings(
-            state.game.initialRadius, effectiveDuration
+            state.game.zone.radius, effectiveDuration
         )
         _uiState.update {
             it.copy(game = it.game.copy(
-                radiusIntervalUpdate = interval,
-                radiusDeclinePerUpdate = decline
+                zone = it.game.zone.copy(
+                    shrinkIntervalMinutes = interval,
+                    shrinkMetersPerUpdate = decline
+                )
             ))
         }
     }
@@ -312,8 +339,8 @@ class GameCreationViewModel @Inject constructor(
                 val game = _uiState.value.game
                 val state = _uiState.value
                 val endDate = if (state.isExpertMode) {
-                    val shrinks = ceil(game.initialRadius / game.radiusDeclinePerUpdate)
-                    val durationMs = (shrinks * game.radiusIntervalUpdate * 60 * 1000).toLong()
+                    val shrinks = ceil(game.zone.radius / game.zone.shrinkMetersPerUpdate)
+                    val durationMs = (shrinks * game.zone.shrinkIntervalMinutes * 60 * 1000).toLong()
                     Date(game.hunterStartDate.time + durationMs)
                 } else {
                     Date(game.startDate.time + (state.gameDurationMinutes * 60 * 1000).toLong())

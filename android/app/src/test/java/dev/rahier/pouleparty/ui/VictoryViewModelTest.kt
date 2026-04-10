@@ -70,16 +70,16 @@ class VictoryViewModelTest {
 
     @Test
     fun `game config update replaces game in state`() {
-        val oldGame = Game(id = "game-1", name = "Old Game", initialRadius = 1500.0)
-        val newGame = oldGame.copy(name = "Updated Game", initialRadius = 2000.0)
+        val oldGame = Game(id = "game-1", name = "Old Game", zone = dev.rahier.pouleparty.model.Zone(radius = 1500.0))
+        val newGame = oldGame.copy(name = "Updated Game", zone = dev.rahier.pouleparty.model.Zone(radius = 2000.0))
 
         var state = VictoryUiState(game = oldGame)
         assertEquals("Old Game", state.game.name)
-        assertEquals(1500.0, state.game.initialRadius, 0.01)
+        assertEquals(1500.0, state.game.zone.radius, 0.01)
 
         state = state.copy(game = newGame)
         assertEquals("Updated Game", state.game.name)
-        assertEquals(2000.0, state.game.initialRadius, 0.01)
+        assertEquals(2000.0, state.game.zone.radius, 0.01)
     }
 
     @Test
@@ -193,7 +193,7 @@ class VictoryViewModelTest {
 
     @Test
     fun `game mode is preserved in victory state`() {
-        val game = Game(id = "test", gameMod = GameMod.STAY_IN_THE_ZONE.firestoreValue)
+        val game = Game(id = "test", gameMode = GameMod.STAY_IN_THE_ZONE.firestoreValue)
         val state = VictoryUiState(game = game)
         assertEquals(GameMod.STAY_IN_THE_ZONE, state.game.gameModEnum)
     }

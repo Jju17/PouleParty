@@ -6,6 +6,7 @@ import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameMod
 import dev.rahier.pouleparty.model.NORMAL_MODE_FIXED_INTERVAL
 import dev.rahier.pouleparty.model.NORMAL_MODE_MINIMUM_RADIUS
+import dev.rahier.pouleparty.model.Zone
 import dev.rahier.pouleparty.model.calculateNormalModeSettings
 import dev.rahier.pouleparty.ui.chickenconfig.ChickenConfigUiState
 import org.junit.Assert.*
@@ -17,7 +18,7 @@ class ChickenConfigViewModelTest {
     @Test
     fun `initial state has game with correct defaults`() {
         val state = ChickenConfigUiState()
-        assertEquals(Game.mock.initialRadius, state.game.initialRadius, 0.01)
+        assertEquals(Game.mock.zone.radius, state.game.zone.radius, 0.01)
         assertFalse(state.codeCopied)
         assertFalse(state.showAlert)
     }
@@ -30,23 +31,23 @@ class ChickenConfigViewModelTest {
 
     @Test
     fun `updating game mod changes state`() {
-        val game = Game(id = "test", gameMod = GameMod.FOLLOW_THE_CHICKEN.firestoreValue)
-        val updated = game.copy(gameMod = GameMod.STAY_IN_THE_ZONE.firestoreValue)
+        val game = Game(id = "test", gameMode = GameMod.FOLLOW_THE_CHICKEN.firestoreValue)
+        val updated = game.copy(gameMode = GameMod.STAY_IN_THE_ZONE.firestoreValue)
         assertEquals(GameMod.STAY_IN_THE_ZONE, updated.gameModEnum)
     }
 
     @Test
     fun `updating radius interval changes state`() {
-        val game = Game(id = "test", radiusIntervalUpdate = 5.0)
-        val updated = game.copy(radiusIntervalUpdate = 10.0)
-        assertEquals(10.0, updated.radiusIntervalUpdate, 0.01)
+        val game = Game(id = "test", zone = Zone(shrinkIntervalMinutes = 5.0))
+        val updated = game.copy(zone = game.zone.copy(shrinkIntervalMinutes = 10.0))
+        assertEquals(10.0, updated.zone.shrinkIntervalMinutes, 0.01)
     }
 
     @Test
     fun `updating radius decline changes state`() {
-        val game = Game(id = "test", radiusDeclinePerUpdate = 100.0)
-        val updated = game.copy(radiusDeclinePerUpdate = 200.0)
-        assertEquals(200.0, updated.radiusDeclinePerUpdate, 0.01)
+        val game = Game(id = "test", zone = Zone(shrinkMetersPerUpdate = 100.0))
+        val updated = game.copy(zone = game.zone.copy(shrinkMetersPerUpdate = 200.0))
+        assertEquals(200.0, updated.zone.shrinkMetersPerUpdate, 0.01)
     }
 
     @Test
@@ -261,11 +262,17 @@ class ChickenConfigViewModelTest {
         val now = System.currentTimeMillis()
         val game = Game(
             id = "test",
-            radiusIntervalUpdate = interval,
-            startTimestamp = com.google.firebase.Timestamp(Date(now - 1_830_000)),
-            endTimestamp = com.google.firebase.Timestamp(Date(now + ((duration - 30) * 60_000).toLong())),
-            initialRadius = radius,
-            radiusDeclinePerUpdate = decline
+            timing = com.google.firebase.Timestamp(Date(now - 1_830_000)).let { start ->
+                dev.rahier.pouleparty.model.Timing(
+                    start = start,
+                    end = com.google.firebase.Timestamp(Date(now + ((duration - 30) * 60_000).toLong()))
+                )
+            },
+            zone = Zone(
+                shrinkIntervalMinutes = interval,
+                radius = radius,
+                shrinkMetersPerUpdate = decline
+            )
         )
         val (_, currentRadius) = game.findLastUpdate()
         // findLastUpdate truncates decline to Int on each step:
@@ -284,11 +291,15 @@ class ChickenConfigViewModelTest {
         val now = System.currentTimeMillis()
         val game = Game(
             id = "test",
-            radiusIntervalUpdate = interval,
-            startTimestamp = com.google.firebase.Timestamp(Date(now - 7_200_000)),
-            endTimestamp = com.google.firebase.Timestamp(Date(now - 3_600_000)),
-            initialRadius = radius,
-            radiusDeclinePerUpdate = decline
+            timing = dev.rahier.pouleparty.model.Timing(
+                start = com.google.firebase.Timestamp(Date(now - 7_200_000)),
+                end = com.google.firebase.Timestamp(Date(now - 3_600_000))
+            ),
+            zone = Zone(
+                shrinkIntervalMinutes = interval,
+                radius = radius,
+                shrinkMetersPerUpdate = decline
+            )
         )
         val (_, currentRadius) = game.findLastUpdate()
         assertTrue("currentRadius should be >= 0, got $currentRadius", currentRadius >= 0)
@@ -305,24 +316,24 @@ class ChickenConfigViewModelTest {
 
     @Test
     fun `toggling to expert mode preserves current game values`() {
-        val game = Game(id = "test", radiusIntervalUpdate = 7.0, radiusDeclinePerUpdate = 150.0)
+        val game = Game(id = "test", zone = Zone(shrinkIntervalMinutes = 7.0, shrinkMetersPerUpdate = 150.0))
         val state = ChickenConfigUiState(game = game, isExpertMode = false)
         val expertState = state.copy(isExpertMode = true)
 
         // Values should be preserved, not recalculated
-        assertEquals(7.0, expertState.game.radiusIntervalUpdate, 0.01)
-        assertEquals(150.0, expertState.game.radiusDeclinePerUpdate, 0.01)
+        assertEquals(7.0, expertState.game.zone.shrinkIntervalMinutes, 0.01)
+        assertEquals(150.0, expertState.game.zone.shrinkMetersPerUpdate, 0.01)
     }
 
     @Test
     fun `switching from expert to normal would need recalculation`() {
         // When switching back to normal, the ViewModel recalculates
         // Here we verify the calculation produces different values than expert
-        val game = Game(id = "test", initialRadius = 1500.0, radiusIntervalUpdate = 10.0, radiusDeclinePerUpdate = 200.0)
+        val game = Game(id = "test", zone = Zone(radius = 1500.0, shrinkIntervalMinutes = 10.0, shrinkMetersPerUpdate = 200.0))
         val state = ChickenConfigUiState(game = game, isExpertMode = true, gameDurationMinutes = 120.0)
 
         // Simulate what recalculation would produce
-        val (interval, decline) = calculateNormalModeSettings(state.game.initialRadius, state.gameDurationMinutes)
+        val (interval, decline) = calculateNormalModeSettings(state.game.zone.radius, state.gameDurationMinutes)
         // Expert had interval=10, decline=200; normal should have interval=5, different decline
         assertEquals(5.0, interval, 0.01)
         assertNotEquals(200.0, decline, 0.01)
@@ -330,24 +341,24 @@ class ChickenConfigViewModelTest {
 
     @Test
     fun `changing duration in expert mode does not affect game parameters`() {
-        val game = Game(id = "test", radiusIntervalUpdate = 10.0, radiusDeclinePerUpdate = 200.0)
+        val game = Game(id = "test", zone = Zone(shrinkIntervalMinutes = 10.0, shrinkMetersPerUpdate = 200.0))
         val state = ChickenConfigUiState(game = game, isExpertMode = true, gameDurationMinutes = 120.0)
         val newState = state.copy(gameDurationMinutes = 60.0)
 
         // Game parameters unchanged
-        assertEquals(10.0, newState.game.radiusIntervalUpdate, 0.01)
-        assertEquals(200.0, newState.game.radiusDeclinePerUpdate, 0.01)
+        assertEquals(10.0, newState.game.zone.shrinkIntervalMinutes, 0.01)
+        assertEquals(200.0, newState.game.zone.shrinkMetersPerUpdate, 0.01)
     }
 
     @Test
     fun `changing radius in expert mode does not recalculate interval or decline`() {
-        val game = Game(id = "test", initialRadius = 1500.0, radiusIntervalUpdate = 10.0, radiusDeclinePerUpdate = 200.0)
+        val game = Game(id = "test", zone = Zone(radius = 1500.0, shrinkIntervalMinutes = 10.0, shrinkMetersPerUpdate = 200.0))
         val state = ChickenConfigUiState(game = game, isExpertMode = true)
-        val newState = state.copy(game = state.game.copy(initialRadius = 800.0))
+        val newState = state.copy(game = state.game.copy(zone = state.game.zone.copy(radius = 800.0)))
 
         // interval and decline unchanged
-        assertEquals(10.0, newState.game.radiusIntervalUpdate, 0.01)
-        assertEquals(200.0, newState.game.radiusDeclinePerUpdate, 0.01)
+        assertEquals(10.0, newState.game.zone.shrinkIntervalMinutes, 0.01)
+        assertEquals(200.0, newState.game.zone.shrinkMetersPerUpdate, 0.01)
     }
 
     // MARK: Zone configuration — isZoneConfigured
@@ -357,7 +368,7 @@ class ChickenConfigViewModelTest {
         val state = ChickenConfigUiState(
             game = Game(
                 id = "test",
-                initialCoordinates = GeoPoint(AppConstants.DEFAULT_LATITUDE, AppConstants.DEFAULT_LONGITUDE)
+                zone = Zone(center = GeoPoint(AppConstants.DEFAULT_LATITUDE, AppConstants.DEFAULT_LONGITUDE))
             )
         )
         assertFalse(state.isZoneConfigured)
@@ -368,8 +379,8 @@ class ChickenConfigViewModelTest {
         val state = ChickenConfigUiState(
             game = Game(
                 id = "test",
-                initialCoordinates = GeoPoint(48.8566, 2.3522), // Paris
-                gameMod = GameMod.FOLLOW_THE_CHICKEN.firestoreValue
+                zone = Zone(center = GeoPoint(48.8566, 2.3522)),
+                gameMode = GameMod.FOLLOW_THE_CHICKEN.firestoreValue
             )
         )
         assertTrue(state.isZoneConfigured)
@@ -380,9 +391,8 @@ class ChickenConfigViewModelTest {
         val state = ChickenConfigUiState(
             game = Game(
                 id = "test",
-                initialCoordinates = GeoPoint(48.8566, 2.3522), // Paris
-                finalCoordinates = null,
-                gameMod = GameMod.STAY_IN_THE_ZONE.firestoreValue
+                zone = Zone(center = GeoPoint(48.8566, 2.3522), finalCenter = null),
+                gameMode = GameMod.STAY_IN_THE_ZONE.firestoreValue
             )
         )
         assertFalse(state.isZoneConfigured)
@@ -393,9 +403,8 @@ class ChickenConfigViewModelTest {
         val state = ChickenConfigUiState(
             game = Game(
                 id = "test",
-                initialCoordinates = GeoPoint(48.8566, 2.3522), // Paris
-                finalCoordinates = GeoPoint(48.8600, 2.3500),
-                gameMod = GameMod.STAY_IN_THE_ZONE.firestoreValue
+                zone = Zone(center = GeoPoint(48.8566, 2.3522), finalCenter = GeoPoint(48.8600, 2.3500)),
+                gameMode = GameMod.STAY_IN_THE_ZONE.firestoreValue
             )
         )
         assertTrue(state.isZoneConfigured)
@@ -406,9 +415,11 @@ class ChickenConfigViewModelTest {
         val state = ChickenConfigUiState(
             game = Game(
                 id = "test",
-                initialCoordinates = GeoPoint(AppConstants.DEFAULT_LATITUDE, AppConstants.DEFAULT_LONGITUDE),
-                finalCoordinates = GeoPoint(48.8600, 2.3500),
-                gameMod = GameMod.STAY_IN_THE_ZONE.firestoreValue
+                zone = Zone(
+                    center = GeoPoint(AppConstants.DEFAULT_LATITUDE, AppConstants.DEFAULT_LONGITUDE),
+                    finalCenter = GeoPoint(48.8600, 2.3500)
+                ),
+                gameMode = GameMod.STAY_IN_THE_ZONE.firestoreValue
             )
         )
         assertFalse(state.isZoneConfigured)
@@ -420,8 +431,8 @@ class ChickenConfigViewModelTest {
         val state = ChickenConfigUiState(
             game = Game(
                 id = "test",
-                initialCoordinates = GeoPoint(AppConstants.DEFAULT_LATITUDE + 0.0005, AppConstants.DEFAULT_LONGITUDE - 0.0003),
-                gameMod = GameMod.FOLLOW_THE_CHICKEN.firestoreValue
+                zone = Zone(center = GeoPoint(AppConstants.DEFAULT_LATITUDE + 0.0005, AppConstants.DEFAULT_LONGITUDE - 0.0003)),
+                gameMode = GameMod.FOLLOW_THE_CHICKEN.firestoreValue
             )
         )
         assertFalse(state.isZoneConfigured)
@@ -432,8 +443,8 @@ class ChickenConfigViewModelTest {
         val state = ChickenConfigUiState(
             game = Game(
                 id = "test",
-                initialCoordinates = GeoPoint(AppConstants.DEFAULT_LATITUDE + 0.002, AppConstants.DEFAULT_LONGITUDE),
-                gameMod = GameMod.FOLLOW_THE_CHICKEN.firestoreValue
+                zone = Zone(center = GeoPoint(AppConstants.DEFAULT_LATITUDE + 0.002, AppConstants.DEFAULT_LONGITUDE)),
+                gameMode = GameMod.FOLLOW_THE_CHICKEN.firestoreValue
             )
         )
         assertTrue(state.isZoneConfigured)

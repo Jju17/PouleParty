@@ -54,11 +54,15 @@ class GameFlowTest {
     fun `radius shrinks correctly over time`() {
         val game = Game(
             id = "test",
-            radiusIntervalUpdate = 5.0,
-            startTimestamp = Timestamp(Date(System.currentTimeMillis() - 600_000)),
-            endTimestamp = Timestamp(Date(System.currentTimeMillis() + 3_600_000)),
-            initialRadius = 1500.0,
-            radiusDeclinePerUpdate = 100.0
+            timing = Timing(
+                start = Timestamp(Date(System.currentTimeMillis() - 600_000)),
+                end = Timestamp(Date(System.currentTimeMillis() + 3_600_000))
+            ),
+            zone = Zone(
+                shrinkIntervalMinutes = 5.0,
+                radius = 1500.0,
+                shrinkMetersPerUpdate = 100.0
+            )
         )
 
         val (_, radius) = game.findLastUpdate()
@@ -69,11 +73,15 @@ class GameFlowTest {
     fun `radius stays at initial when game not started`() {
         val game = Game(
             id = "test",
-            radiusIntervalUpdate = 5.0,
-            startTimestamp = Timestamp(Date(System.currentTimeMillis() + 600_000)),
-            endTimestamp = Timestamp(Date(System.currentTimeMillis() + 3_600_000)),
-            initialRadius = 1500.0,
-            radiusDeclinePerUpdate = 100.0
+            timing = Timing(
+                start = Timestamp(Date(System.currentTimeMillis() + 600_000)),
+                end = Timestamp(Date(System.currentTimeMillis() + 3_600_000))
+            ),
+            zone = Zone(
+                shrinkIntervalMinutes = 5.0,
+                radius = 1500.0,
+                shrinkMetersPerUpdate = 100.0
+            )
         )
 
         val (_, radius) = game.findLastUpdate()
@@ -84,9 +92,13 @@ class GameFlowTest {
     fun `zero radius interval does not cause infinite loop`() {
         val game = Game(
             id = "test",
-            radiusIntervalUpdate = 0.0,
-            startTimestamp = Timestamp(Date(System.currentTimeMillis() - 600_000)),
-            initialRadius = 1500.0
+            timing = Timing(
+                start = Timestamp(Date(System.currentTimeMillis() - 600_000))
+            ),
+            zone = Zone(
+                shrinkIntervalMinutes = 0.0,
+                radius = 1500.0
+            )
         )
 
         val (_, radius) = game.findLastUpdate()
@@ -97,9 +109,13 @@ class GameFlowTest {
     fun `negative radius interval does not cause infinite loop`() {
         val game = Game(
             id = "test",
-            radiusIntervalUpdate = -5.0,
-            startTimestamp = Timestamp(Date(System.currentTimeMillis() - 600_000)),
-            initialRadius = 1500.0
+            timing = Timing(
+                start = Timestamp(Date(System.currentTimeMillis() - 600_000))
+            ),
+            zone = Zone(
+                shrinkIntervalMinutes = -5.0,
+                radius = 1500.0
+            )
         )
 
         val (_, radius) = game.findLastUpdate()
@@ -123,7 +139,7 @@ class GameFlowTest {
     @Test
     fun `all game modes serialize correctly`() {
         for (mod in GameMod.entries) {
-            val game = Game(id = "test", gameMod = mod.firestoreValue)
+            val game = Game(id = "test", gameMode = mod.firestoreValue)
             assertEquals(mod, game.gameModEnum)
         }
     }
@@ -140,8 +156,10 @@ class GameFlowTest {
     fun `chicken head start offsets hunter start date`() {
         val game = Game(
             id = "test",
-            chickenHeadStartMinutes = 5.0,
-            startTimestamp = Timestamp(Date(1000000))
+            timing = Timing(
+                headStartMinutes = 5.0,
+                start = Timestamp(Date(1000000))
+            )
         )
         val expectedHunterStart = 1000000L + (5 * 60 * 1000)
         assertEquals(expectedHunterStart, game.hunterStartDate.time)

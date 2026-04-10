@@ -183,12 +183,16 @@ class HomeViewModel @Inject constructor(
                     _uiState.update { it.copy(joinStep = JoinFlowStep.CodeNotFound) }
                     return@launch
                 }
-                val alreadyRegistered = if (game.requiresRegistration) {
-                    firestoreRepository.findRegistration(game.id, userId) != null
+                if (game.registration.required) {
+                    val registration = firestoreRepository.findRegistration(game.id, userId)
+                    if (game.isRegistrationClosed && registration == null) {
+                        _uiState.update { it.copy(joinStep = JoinFlowStep.RegistrationClosed(game)) }
+                        return@launch
+                    }
+                    _uiState.update { it.copy(joinStep = JoinFlowStep.CodeValidated(game, registration != null)) }
                 } else {
-                    true
+                    _uiState.update { it.copy(joinStep = JoinFlowStep.CodeValidated(game, true)) }
                 }
-                _uiState.update { it.copy(joinStep = JoinFlowStep.CodeValidated(game, alreadyRegistered)) }
             } catch (e: Exception) {
                 _uiState.update { it.copy(joinStep = JoinFlowStep.NetworkError) }
             }
@@ -243,7 +247,7 @@ class HomeViewModel @Inject constructor(
     fun onJoinTapped(onGameFound: (String, String) -> Unit, onGameDone: (String) -> Unit) {
         val step = _uiState.value.joinStep
         if (step !is JoinFlowStep.CodeValidated) return
-        if (step.game.requiresRegistration && !step.alreadyRegistered) return
+        if (step.game.registration.required && !step.alreadyRegistered) return
         val savedNickname = (prefs.getString(AppConstants.PREF_USER_NICKNAME, "") ?: "").trim()
         val hunterName = savedNickname.ifEmpty { "Hunter" }
         clearPendingRegistration()

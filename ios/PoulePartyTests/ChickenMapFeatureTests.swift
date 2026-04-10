@@ -23,8 +23,8 @@ struct ChickenMapFeatureTests {
             $0.radius = lastRadius
             $0.nextRadiusUpdate = lastUpdate
             $0.mapCircle = CircleOverlay(
-                center: game.initialCoordinates.toCLCoordinates,
-                radius: CLLocationDistance(game.initialRadius)
+                center: game.zone.center.toCLCoordinates,
+                radius: CLLocationDistance(game.zone.radius)
             )
             $0.lastLiveActivityState = $0.liveActivityState
         }
@@ -208,7 +208,7 @@ struct ChickenMapFeatureTests {
 
     @Test func newLocationFetchedDoesNotMoveCircleInStayInTheZone() async {
         var game = Game.mock
-        game.gameMod = .stayInTheZone
+        game.gameMode = .stayInTheZone
         var state = ChickenMapFeature.State(game: game)
         let initialCenter = CLLocationCoordinate2D(latitude: 50.8466, longitude: 4.3528)
         state.mapCircle = CircleOverlay(center: initialCenter, radius: 1500)
@@ -270,7 +270,7 @@ struct ChickenMapFeatureTests {
 
     @Test func timerTickedUpdatesCircleInStayInTheZone() async {
         var game = Game.mock
-        game.gameMod = .stayInTheZone
+        game.gameMode = .stayInTheZone
         game.startDate = .now.addingTimeInterval(-600)   // started 10 min ago
         game.endDate = .now.addingTimeInterval(3000)      // ends in 50 min
         var state = ChickenMapFeature.State(game: game)
@@ -282,12 +282,12 @@ struct ChickenMapFeatureTests {
         }
         store.exhaustivity = .off
 
-        let newRadius = 500 - Int(game.radiusDeclinePerUpdate)
+        let newRadius = 500 - Int(game.zone.shrinkMetersPerUpdate)
         let expectedCenter = deterministicDriftCenter(
-            basePoint: game.initialCoordinates.toCLCoordinates,
+            basePoint: game.zone.center.toCLCoordinates,
             oldRadius: 500,
             newRadius: Double(newRadius),
-            driftSeed: game.driftSeed
+            driftSeed: game.zone.driftSeed
         )
         await store.send(.timerTicked) {
             $0.radius = newRadius

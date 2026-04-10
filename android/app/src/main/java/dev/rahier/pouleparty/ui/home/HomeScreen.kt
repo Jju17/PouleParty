@@ -589,7 +589,7 @@ private fun CodeEntryContent(
 ) {
     val step = state.joinStep
     val needsRegister: Boolean = (step as? JoinFlowStep.CodeValidated)
-        ?.let { it.game.requiresRegistration && !it.alreadyRegistered } ?: false
+        ?.let { it.game.registration.required && !it.alreadyRegistered } ?: false
     val isEnabled = step is JoinFlowStep.CodeValidated
     val buttonLabel = if (needsRegister) stringResource(R.string.register) else stringResource(R.string.join)
 
@@ -641,6 +641,14 @@ private fun CodeEntryContent(
                     color = MaterialTheme.colorScheme.error
                 )
             }
+            is JoinFlowStep.RegistrationClosed -> {
+                Text(
+                    stringResource(R.string.registration_closed_for_this_game),
+                    fontFamily = GameBoyFont,
+                    fontSize = 9.sp,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
             else -> Spacer(Modifier.height(1.dp))
         }
         TextButton(
@@ -675,7 +683,7 @@ private fun RegisterFormContent(
     onTeamNameChanged: (String) -> Unit,
     onSubmit: () -> Unit
 ) {
-    val isDeposit = game.pricingModel == "deposit"
+    val isDeposit = game.pricing.model == "deposit"
     val buttonLabel = if (isDeposit) stringResource(R.string.pay) else stringResource(R.string.sign_up)
 
     Column(

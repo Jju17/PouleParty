@@ -12,41 +12,79 @@ import FirebaseFirestore
 struct Game: Codable, Equatable, Identifiable {
     let id: String
     var name: String = ""
-    var numberOfPlayers: Int = 10
-    var radiusIntervalUpdate: Double = 5 // In minutes
-    var startTimestamp: Timestamp = {
-        let date = Date.now.addingTimeInterval(7200)
-        let seconds = Calendar.current.component(.second, from: date)
-        return .init(date: date.addingTimeInterval(Double(-seconds)))
-    }()
-    var endTimestamp: Timestamp = .init(date: Date.now.addingTimeInterval(3900))
-    var initialCoordinates: GeoPoint = .init(latitude: AppConstants.defaultLatitude, longitude: AppConstants.defaultLongitude)
-    var finalCoordinates: GeoPoint?
-    var initialRadius: Double = 1500
-    var radiusDeclinePerUpdate: Double = 100
-    var chickenHeadStartMinutes: Double = 0 // In minutes, 0 = no head start
-    var gameMod: GameMod = .stayInTheZone
+    var maxPlayers: Int = 10
+    var gameMode: GameMode = .stayInTheZone
     var chickenCanSeeHunters: Bool = false
     var foundCode: String = ""
     var hunterIds: [String] = []
     var status: GameStatus = .waiting
     var winners: [Winner] = []
     var creatorId: String = ""
-    var driftSeed: Int = 0
-    var pricingModel: PricingModel = .free
-    var pricePerPlayer: Int = 0 // In cents
-    var depositAmount: Int = 0 // In cents
-    var commissionPercent: Double = 15.0
-    var requiresRegistration: Bool = false
-    var powerUpsEnabled: Bool = false
-    var enabledPowerUpTypes: [String] = PowerUp.PowerUpType.allCases.map(\.rawValue)
-    var activeInvisibilityUntil: Timestamp?
-    var activeZoneFreezeUntil: Timestamp?
-    var activeRadarPingUntil: Timestamp?
-    var activeDecoyUntil: Timestamp?
-    var activeJammerUntil: Timestamp?
 
-    var isPaid: Bool { pricingModel != .free }
+    var timing: Timing = Timing()
+    var zone: Zone = Zone()
+    var pricing: Pricing = Pricing()
+    var registration: GameRegistration = GameRegistration()
+    var powerUps: GamePowerUps = GamePowerUps()
+
+    var isPaid: Bool { pricing.model != .free }
+
+    var registrationDeadline: Date? {
+        guard let minutes = registration.closesMinutesBefore else { return nil }
+        return timing.start.dateValue().addingTimeInterval(TimeInterval(-minutes * 60))
+    }
+
+    var isRegistrationClosed: Bool {
+        guard registration.required, let deadline = registrationDeadline else { return false }
+        return Date.now >= deadline
+    }
+
+    // MARK: - Nested Types
+
+    struct Timing: Codable, Equatable {
+        var start: Timestamp = {
+            let date = Date.now.addingTimeInterval(7200)
+            let seconds = Calendar.current.component(.second, from: date)
+            return .init(date: date.addingTimeInterval(Double(-seconds)))
+        }()
+        var end: Timestamp = .init(date: Date.now.addingTimeInterval(3900))
+        var headStartMinutes: Double = 0
+    }
+
+    struct Zone: Codable, Equatable {
+        var center: GeoPoint = .init(latitude: AppConstants.defaultLatitude, longitude: AppConstants.defaultLongitude)
+        var finalCenter: GeoPoint?
+        var radius: Double = 1500
+        var shrinkIntervalMinutes: Double = 5
+        var shrinkMetersPerUpdate: Double = 100
+        var driftSeed: Int = 0
+    }
+
+    struct Pricing: Codable, Equatable {
+        var model: PricingModel = .free
+        var pricePerPlayer: Int = 0
+        var deposit: Int = 0
+        var commission: Double = 15.0
+    }
+
+    struct GameRegistration: Codable, Equatable {
+        var required: Bool = false
+        var closesMinutesBefore: Int? = 15
+    }
+
+    struct GamePowerUps: Codable, Equatable {
+        var enabled: Bool = false
+        var enabledTypes: [String] = PowerUp.PowerUpType.allCases.map(\.rawValue)
+        var activeEffects: ActiveEffects = ActiveEffects()
+    }
+
+    struct ActiveEffects: Codable, Equatable {
+        var invisibility: Timestamp?
+        var zoneFreeze: Timestamp?
+        var radarPing: Timestamp?
+        var decoy: Timestamp?
+        var jammer: Timestamp?
+    }
 
     enum GameStatus: String, CaseIterable, Equatable, Codable {
         case waiting
@@ -68,7 +106,7 @@ struct Game: Codable, Equatable, Identifiable {
         }
     }
 
-    enum GameMod: String, CaseIterable, Equatable, Codable {
+    enum GameMode: String, CaseIterable, Equatable, Codable {
         case followTheChicken
         case stayInTheZone
 

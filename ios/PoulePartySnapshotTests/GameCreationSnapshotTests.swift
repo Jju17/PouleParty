@@ -17,7 +17,7 @@ struct GameCreationSnapshotTests {
     private func makeStore(
         step: Int = 0,
         isParticipating: Bool = true,
-        gameMod: Game.GameMod = .stayInTheZone,
+        gameMod: Game.GameMode = .stayInTheZone,
         powerUpsEnabled: Bool = false,
         chickenCanSeeHunters: Bool = false,
         duration: Double = 120
@@ -25,11 +25,11 @@ struct GameCreationSnapshotTests {
         var game = Game(id: "snapshot-test")
         game.foundCode = "1234"
         // Fixed date to avoid snapshot diffs from time changes
-        game.startTimestamp = .init(date: Date(timeIntervalSince1970: 1_800_000_000)) // 2027-01-15 08:00 UTC
-        game.gameMod = gameMod
-        game.powerUpsEnabled = powerUpsEnabled
+        game.timing.start = .init(date: Date(timeIntervalSince1970: 1_800_000_000)) // 2027-01-15 08:00 UTC
+        game.gameMode = gameMod
+        game.powerUps.enabled = powerUpsEnabled
         game.chickenCanSeeHunters = chickenCanSeeHunters
-        game.chickenHeadStartMinutes = 5
+        game.timing.headStartMinutes = 5
 
         let shared = Shared(value: game)
         let mapConfig = ChickenMapConfigFeature.State(game: shared)

@@ -31,10 +31,14 @@ class GameTest {
     fun `findLastUpdate returns initial radius before game starts`() {
         val game = Game(
             id = "test",
-            startTimestamp = Timestamp(Date(System.currentTimeMillis() + 600_000)),
-            endTimestamp = Timestamp(Date(System.currentTimeMillis() + 3_600_000)),
-            initialRadius = 1500.0,
-            radiusDeclinePerUpdate = 100.0
+            timing = Timing(
+                start = Timestamp(Date(System.currentTimeMillis() + 600_000)),
+                end = Timestamp(Date(System.currentTimeMillis() + 3_600_000))
+            ),
+            zone = Zone(
+                radius = 1500.0,
+                shrinkMetersPerUpdate = 100.0
+            )
         )
         val (_, radius) = game.findLastUpdate()
         assertEquals(1500, radius)
@@ -44,11 +48,15 @@ class GameTest {
     fun `findLastUpdate shrinks radius after game started`() {
         val game = Game(
             id = "test",
-            radiusIntervalUpdate = 5.0,
-            startTimestamp = Timestamp(Date(System.currentTimeMillis() - 600_000)), // started 10 min ago
-            endTimestamp = Timestamp(Date(System.currentTimeMillis() + 3_600_000)),
-            initialRadius = 1500.0,
-            radiusDeclinePerUpdate = 100.0
+            timing = Timing(
+                start = Timestamp(Date(System.currentTimeMillis() - 600_000)),
+                end = Timestamp(Date(System.currentTimeMillis() + 3_600_000))
+            ),
+            zone = Zone(
+                shrinkIntervalMinutes = 5.0,
+                radius = 1500.0,
+                shrinkMetersPerUpdate = 100.0
+            )
         )
         val (_, radius) = game.findLastUpdate()
         assertTrue("Radius should have shrunk", radius < 1500)
@@ -59,8 +67,10 @@ class GameTest {
         val now = Date()
         val game = Game(
             id = "test",
-            startTimestamp = Timestamp(now),
-            endTimestamp = Timestamp(Date(now.time + 3_600_000))
+            timing = Timing(
+                start = Timestamp(now),
+                end = Timestamp(Date(now.time + 3_600_000))
+            )
         )
         assertTrue(Math.abs(game.startDate.time - now.time) < 1000)
     }
@@ -69,7 +79,7 @@ class GameTest {
     fun `initialLocation returns correct Point`() {
         val game = Game(
             id = "test",
-            initialCoordinates = GeoPoint(48.8566, 2.3522)
+            zone = Zone(center = GeoPoint(48.8566, 2.3522))
         )
         assertEquals(48.8566, game.initialLocation.latitude(), 0.0001)
         assertEquals(2.3522, game.initialLocation.longitude(), 0.0001)
@@ -145,8 +155,8 @@ class GameTest {
     fun `mock game is valid`() {
         val mock = Game.mock
         assertTrue(mock.id.isNotEmpty())
-        assertEquals(10, mock.numberOfPlayers)
-        assertEquals(1500.0, mock.initialRadius, 0.01)
+        assertEquals(10, mock.maxPlayers)
+        assertEquals(1500.0, mock.zone.radius, 0.01)
     }
 
     // MARK: - Found code tests
@@ -214,19 +224,23 @@ class GameTest {
         val now = Date()
         val game = Game(
             id = "test",
-            startTimestamp = Timestamp(now),
-            chickenHeadStartMinutes = 0.0
+            timing = Timing(
+                start = Timestamp(now),
+                headStartMinutes = 0.0
+            )
         )
         assertEquals(now.time.toDouble(), game.hunterStartDate.time.toDouble(), 1000.0)
     }
 
     @Test
-    fun `hunterStartDate offset by chickenHeadStartMinutes`() {
+    fun `hunterStartDate offset by headStartMinutes`() {
         val now = Date()
         val game = Game(
             id = "test",
-            startTimestamp = Timestamp(now),
-            chickenHeadStartMinutes = 5.0
+            timing = Timing(
+                start = Timestamp(now),
+                headStartMinutes = 5.0
+            )
         )
         val expectedOffset = 5 * 60 * 1000L
         assertEquals((now.time + expectedOffset).toDouble(), game.hunterStartDate.time.toDouble(), 1000.0)
@@ -234,9 +248,9 @@ class GameTest {
 
     @Test
     fun `withChickenHeadStart creates copy with correct value`() {
-        val game = Game(id = "test", chickenHeadStartMinutes = 0.0)
+        val game = Game(id = "test", timing = Timing(headStartMinutes = 0.0))
         val updated = game.withChickenHeadStart(10.0)
-        assertEquals(10.0, updated.chickenHeadStartMinutes, 0.01)
+        assertEquals(10.0, updated.timing.headStartMinutes, 0.01)
         assertEquals(game.id, updated.id)
     }
 
@@ -278,47 +292,47 @@ class GameTest {
     @Test
     fun `default game has free pricing model`() {
         val game = Game(id = "test")
-        assertEquals("free", game.pricingModel)
+        assertEquals("free", game.pricing.model)
         assertEquals(PricingModel.FREE, game.pricingModelEnum)
     }
 
     @Test
     fun `isPaid is false for free games`() {
-        val game = Game(id = "test", pricingModel = "free")
+        val game = Game(id = "test", pricing = Pricing(model = "free"))
         assertFalse(game.isPaid)
     }
 
     @Test
     fun `isPaid is true for flat games`() {
-        val game = Game(id = "test", pricingModel = "flat")
+        val game = Game(id = "test", pricing = Pricing(model = "flat"))
         assertTrue(game.isPaid)
     }
 
     @Test
     fun `isPaid is true for deposit games`() {
-        val game = Game(id = "test", pricingModel = "deposit")
+        val game = Game(id = "test", pricing = Pricing(model = "deposit"))
         assertTrue(game.isPaid)
     }
 
     @Test
     fun `pricing fields have correct defaults`() {
         val game = Game(id = "test")
-        assertEquals(0, game.pricePerPlayer)
-        assertEquals(0, game.depositAmount)
-        assertEquals(15.0, game.commissionPercent, 0.001)
+        assertEquals(0, game.pricing.pricePerPlayer)
+        assertEquals(0, game.pricing.deposit)
+        assertEquals(15.0, game.pricing.commission, 0.001)
     }
 
     @Test
     fun `flat game stores price per player`() {
-        val game = Game(id = "test", pricingModel = "flat", pricePerPlayer = 300, numberOfPlayers = 15)
-        assertEquals(300, game.pricePerPlayer)
-        assertEquals(15, game.numberOfPlayers)
+        val game = Game(id = "test", pricing = Pricing(model = "flat", pricePerPlayer = 300), maxPlayers = 15)
+        assertEquals(300, game.pricing.pricePerPlayer)
+        assertEquals(15, game.maxPlayers)
     }
 
     @Test
     fun `deposit game stores deposit and price`() {
-        val game = Game(id = "test", pricingModel = "deposit", depositAmount = 1000, pricePerPlayer = 500)
-        assertEquals(1000, game.depositAmount)
-        assertEquals(500, game.pricePerPlayer)
+        val game = Game(id = "test", pricing = Pricing(model = "deposit", deposit = 1000, pricePerPlayer = 500))
+        assertEquals(1000, game.pricing.deposit)
+        assertEquals(500, game.pricing.pricePerPlayer)
     }
 }

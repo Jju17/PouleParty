@@ -150,19 +150,19 @@ struct GameFlowIntegrationTests {
 
     @Test func zeroRadiusIntervalDoesNotCrash() {
         var game = Game.mock
-        game.radiusIntervalUpdate = 0
+        game.zone.shrinkIntervalMinutes = 0
         game.startDate = .now.addingTimeInterval(-600)
 
         let (_, radius) = game.findLastUpdate()
-        #expect(radius == Int(game.initialRadius))
+        #expect(radius == Int(game.zone.radius))
     }
 
     @Test func negativeRadiusIntervalDoesNotCrash() {
         var game = Game.mock
-        game.radiusIntervalUpdate = -5
+        game.zone.shrinkIntervalMinutes = -5
         game.startDate = .now.addingTimeInterval(-600)
 
         let (_, radius) = game.findLastUpdate()
-        #expect(radius == Int(game.initialRadius))
+        #expect(radius == Int(game.zone.radius))
     }
 }

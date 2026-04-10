@@ -7,7 +7,7 @@ import SwiftUI
 
 struct PowerUpSelectionView: View {
     let enabledTypes: [String]
-    let gameMod: Game.GameMod
+    let gameMode: Game.GameMode
     let onToggle: (PowerUp.PowerUpType) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -23,7 +23,7 @@ struct PowerUpSelectionView: View {
     ]
 
     private func isUnavailable(_ type: PowerUp.PowerUpType) -> Bool {
-        gameMod == .stayInTheZone && Self.unavailableInZone.contains(type)
+        gameMode == .stayInTheZone && Self.unavailableInZone.contains(type)
     }
 
     private var chickenPowerUps: [PowerUp.PowerUpType] {

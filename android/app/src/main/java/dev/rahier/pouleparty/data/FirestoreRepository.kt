@@ -418,8 +418,8 @@ class FirestoreRepository @Inject constructor(
 
             val snapshot = firestore.collection(AppConstants.COLLECTION_GAMES)
                 .whereEqualTo("creatorId", userId)
-                .whereEqualTo("pricingModel", "free")
-                .whereGreaterThanOrEqualTo("startTimestamp", startOfDay)
+                .whereEqualTo("pricing.model", "free")
+                .whereGreaterThanOrEqualTo("timing.start", startOfDay)
                 .get()
                 .await()
 
@@ -433,7 +433,7 @@ class FirestoreRepository @Inject constructor(
     suspend fun fetchMyGames(userId: String): List<Game> {
         val snapshot = firestore.collection(AppConstants.COLLECTION_GAMES)
             .whereEqualTo("creatorId", userId)
-            .orderBy("startTimestamp", Query.Direction.DESCENDING)
+            .orderBy("timing.start", Query.Direction.DESCENDING)
             .limit(20)
             .get()
             .await()

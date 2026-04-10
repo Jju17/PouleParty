@@ -4,11 +4,10 @@ A cross-platform (iOS + Android) location-based mobile game. One player is the *
 
 ## Game modes
 
-| Mode | Description |
-|---|---|
-| **Follow the Chicken** | Hunters see a circle following the Chicken; Chicken doesn't see Hunters |
-| **Stay in the Zone** | Fixed zone that shrinks over time, no position sharing |
-| **Mutual Tracking** | Both sides see each other in real-time |
+| Mode | Firestore value | Description |
+|---|---|---|
+| **Follow the Chicken** | `followTheChicken` | Hunters see a circle following the Chicken; Chicken doesn't see Hunters (unless `chickenCanSeeHunters` enabled) |
+| **Stay in the Zone** | `stayInTheZone` | Fixed zone that shrinks and drifts over time, no position sharing (except via Radar Ping power-up) |
 
 ---
 
@@ -260,13 +259,33 @@ The game has two distinct roles. The UI subtly shifts to immerse the player:
 
 ---
 
+## Firestore data model
+
+```
+/games/{gameId}
+├── id, name, maxPlayers, gameMode, chickenCanSeeHunters
+├── foundCode, hunterIds, status, winners, creatorId
+├── timing: { start, end, headStartMinutes }
+├── zone: { center, finalCenter, radius, shrinkIntervalMinutes, shrinkMetersPerUpdate, driftSeed }
+├── pricing: { model, pricePerPlayer, deposit, commission }
+├── registration: { required, closesMinutesBefore }
+├── powerUps: { enabled, enabledTypes, activeEffects: { invisibility, zoneFreeze, radarPing, decoy, jammer } }
+├── /chickenLocations/latest
+├── /hunterLocations/{hunterId}
+├── /powerUps/{powerUpId}
+└── /registrations/{userId}
+
+/fcmTokens/{userId}
+/registrations/{docId}              (event registrations, admin-only)
+```
+
 ## Tech stack
 
 | Concern | iOS | Android |
 |---|---|---|
 | UI | SwiftUI | Jetpack Compose + Material 3 |
 | Architecture | TCA (Composable Architecture) | MVVM + Hilt DI |
-| Maps | MapKit | Google Maps Compose |
-| Location | CoreLocation | FusedLocationProvider |
+| Maps | Mapbox Maps SDK | Mapbox Maps Compose SDK |
+| Location | CoreLocation | FusedLocationProvider (Play Services) |
 | Async | AsyncStream / async-await | Kotlin Coroutines + Flow |
-| Backend | Firebase Firestore, Auth, Analytics | Firebase Firestore, Auth, Analytics |
+| Backend | Firebase Firestore, Auth, Analytics, Messaging | Firebase Firestore, Auth, Analytics, Messaging |

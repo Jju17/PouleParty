@@ -141,11 +141,11 @@ abstract class BaseMapViewModel(
     ) {
         data class Check(val old: Timestamp?, val new: Timestamp?, val type: PowerUpType)
         val checks = listOf(
-            Check(oldGame.activeInvisibilityUntil, newGame.activeInvisibilityUntil, PowerUpType.INVISIBILITY),
-            Check(oldGame.activeZoneFreezeUntil, newGame.activeZoneFreezeUntil, PowerUpType.ZONE_FREEZE),
-            Check(oldGame.activeRadarPingUntil, newGame.activeRadarPingUntil, PowerUpType.RADAR_PING),
-            Check(oldGame.activeDecoyUntil, newGame.activeDecoyUntil, PowerUpType.DECOY),
-            Check(oldGame.activeJammerUntil, newGame.activeJammerUntil, PowerUpType.JAMMER),
+            Check(oldGame.powerUps.activeEffects.invisibility, newGame.powerUps.activeEffects.invisibility, PowerUpType.INVISIBILITY),
+            Check(oldGame.powerUps.activeEffects.zoneFreeze, newGame.powerUps.activeEffects.zoneFreeze, PowerUpType.ZONE_FREEZE),
+            Check(oldGame.powerUps.activeEffects.radarPing, newGame.powerUps.activeEffects.radarPing, PowerUpType.RADAR_PING),
+            Check(oldGame.powerUps.activeEffects.decoy, newGame.powerUps.activeEffects.decoy, PowerUpType.DECOY),
+            Check(oldGame.powerUps.activeEffects.jammer, newGame.powerUps.activeEffects.jammer, PowerUpType.JAMMER),
         )
         val now = java.util.Date()
         for (check in checks) {

@@ -55,6 +55,14 @@
     <string name="registration_required">Inschrijving vereist</string>
     <string name="open_join">Open toegang</string>
     <string name="registration_required_for_paid_deposit_games">Inschrijving is verplicht voor betaalde spellen (borg).</string>
+    <string name="registration_closes">Inschrijving sluit</string>
+    <string name="at_game_start">Bij aanvang van het spel</string>
+    <string name="fifteen_min_before">15 min voor</string>
+    <string name="thirty_min_before">30 min voor</string>
+    <string name="one_hour_before">1 uur voor</string>
+    <string name="two_hours_before">2 uur voor</string>
+    <string name="one_day_before">1 dag voor</string>
+    <string name="registration_closed_for_this_game">De inschrijvingen voor dit spel zijn gesloten.</string>
 
     <!-- Chicken Config -->
     <string name="game_settings">Spelinstellingen</string>

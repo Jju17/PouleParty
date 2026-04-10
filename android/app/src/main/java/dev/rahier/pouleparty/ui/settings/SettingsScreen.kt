@@ -477,14 +477,14 @@ private fun GameDetailDialog(game: Game, dateFormat: SimpleDateFormat, onDismiss
             DetailRow("Found Code", game.foundCode)
             DetailRow("Pricing", game.pricingModelEnum.title)
             if (game.isPaid) {
-                if (game.pricePerPlayer > 0) DetailRow("Price/Player", "${game.pricePerPlayer / 100}€")
-                if (game.depositAmount > 0) DetailRow("Deposit", "${game.depositAmount / 100}€")
+                if (game.pricing.pricePerPlayer > 0) DetailRow("Price/Player", "${game.pricing.pricePerPlayer / 100}€")
+                if (game.pricing.deposit > 0) DetailRow("Deposit", "${game.pricing.deposit / 100}€")
             }
 
             HorizontalDivider()
 
             // Players
-            DetailRow("Max Players", "${game.numberOfPlayers}")
+            DetailRow("Max Players", "${game.maxPlayers}")
             DetailRow("Hunters Joined", "${game.hunterIds.size}")
             DetailRow("Winners", "${game.winners.size}")
             if (game.chickenCanSeeHunters) DetailRow("Chicken Sees Hunters", "Yes")
@@ -494,15 +494,15 @@ private fun GameDetailDialog(game: Game, dateFormat: SimpleDateFormat, onDismiss
             // Timing
             DetailRow("Start", dateFormat.format(game.startDate))
             DetailRow("End", dateFormat.format(game.endDate))
-            if (game.chickenHeadStartMinutes > 0) DetailRow("Head Start", "${game.chickenHeadStartMinutes.toInt()} min")
-            DetailRow("Power-ups", if (game.powerUpsEnabled) "On" else "Off")
+            if (game.timing.headStartMinutes > 0) DetailRow("Head Start", "${game.timing.headStartMinutes.toInt()} min")
+            DetailRow("Power-ups", if (game.powerUps.enabled) "On" else "Off")
 
             HorizontalDivider()
 
             // Zone
-            DetailRow("Initial Radius", "${game.initialRadius.toInt()}m")
-            DetailRow("Shrink Interval", "${game.radiusIntervalUpdate.toInt()} min")
-            DetailRow("Shrink Amount", "${game.radiusDeclinePerUpdate.toInt()}m")
+            DetailRow("Initial Radius", "${game.zone.radius.toInt()}m")
+            DetailRow("Shrink Interval", "${game.zone.shrinkIntervalMinutes.toInt()} min")
+            DetailRow("Shrink Amount", "${game.zone.shrinkMetersPerUpdate.toInt()}m")
 
             Spacer(Modifier.height(32.dp))
         }

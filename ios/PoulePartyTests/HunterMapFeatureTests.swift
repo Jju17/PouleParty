@@ -41,11 +41,15 @@ struct HunterMapFeatureTests {
 
         let newGame = Game(
             id: "updated",
-            radiusIntervalUpdate: 10,
-            startTimestamp: Timestamp(date: .now.addingTimeInterval(300)),
-            endTimestamp: Timestamp(date: .now.addingTimeInterval(3900)),
-            initialRadius: 2000,
-            radiusDeclinePerUpdate: 200
+            timing: .init(
+                start: Timestamp(date: .now.addingTimeInterval(300)),
+                end: Timestamp(date: .now.addingTimeInterval(3900))
+            ),
+            zone: .init(
+                radius: 2000,
+                shrinkIntervalMinutes: 10,
+                shrinkMetersPerUpdate: 200
+            )
         )
 
         await store.send(.gameConfigUpdated( newGame)) {
@@ -54,8 +58,8 @@ struct HunterMapFeatureTests {
             $0.radius = lastRadius
             $0.nextRadiusUpdate = lastUpdate
             $0.mapCircle = CircleOverlay(
-                center: newGame.initialCoordinates.toCLCoordinates,
-                radius: CLLocationDistance(newGame.initialRadius)
+                center: newGame.zone.center.toCLCoordinates,
+                radius: CLLocationDistance(newGame.zone.radius)
             )
             $0.previousWinnersCount = newGame.winners.count
             $0.lastLiveActivityState = $0.liveActivityState
@@ -64,7 +68,7 @@ struct HunterMapFeatureTests {
 
     @Test func timerTickedDoesNotShrinkBelowZero() async {
         var game = startedGameMock
-        game.radiusDeclinePerUpdate = 100
+        game.zone.shrinkMetersPerUpdate = 100
         var state = HunterMapFeature.State(game: game)
         state.radius = 50
         state.nextRadiusUpdate = .now.addingTimeInterval(-1)
@@ -93,7 +97,7 @@ struct HunterMapFeatureTests {
 
     @Test func timerTickedUpdatesCircleInStayInTheZone() async {
         var game = startedGameMock
-        game.gameMod = .stayInTheZone
+        game.gameMode = .stayInTheZone
         var state = HunterMapFeature.State(game: game)
         state.radius = 500
         state.nextRadiusUpdate = .now.addingTimeInterval(-1)
@@ -103,12 +107,12 @@ struct HunterMapFeatureTests {
         }
         store.exhaustivity = .off
 
-        let newRadius = 500 - Int(game.radiusDeclinePerUpdate)
+        let newRadius = 500 - Int(game.zone.shrinkMetersPerUpdate)
         let expectedCenter = deterministicDriftCenter(
-            basePoint: game.initialCoordinates.toCLCoordinates,
+            basePoint: game.zone.center.toCLCoordinates,
             oldRadius: 500,
             newRadius: Double(newRadius),
-            driftSeed: game.driftSeed
+            driftSeed: game.zone.driftSeed
         )
         await store.send(.timerTicked) {
             $0.radius = newRadius
@@ -121,7 +125,7 @@ struct HunterMapFeatureTests {
 
     @Test func timerTickedDoesNotUpdateCircleInFollowTheChicken() async {
         var game = startedGameMock
-        game.gameMod = .followTheChicken
+        game.gameMode = .followTheChicken
         var state = HunterMapFeature.State(game: game)
         state.radius = 500
         state.nextRadiusUpdate = .now.addingTimeInterval(-1)
@@ -132,7 +136,7 @@ struct HunterMapFeatureTests {
         store.exhaustivity = .off
 
         await store.send(.timerTicked) {
-            $0.radius = 500 - Int(game.radiusDeclinePerUpdate)
+            $0.radius = 500 - Int(game.zone.shrinkMetersPerUpdate)
         }
     }
 

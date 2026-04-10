@@ -81,7 +81,7 @@ struct GameCreationFeature {
             let isDefault = abs(loc.latitude - AppConstants.defaultLatitude) < 0.001
                 && abs(loc.longitude - AppConstants.defaultLongitude) < 0.001
             guard !isDefault else { return false }
-            if game.gameMod == .stayInTheZone {
+            if game.gameMode == .stayInTheZone {
                 return game.finalLocation != nil
             }
             return true
@@ -99,13 +99,14 @@ struct GameCreationFeature {
         case destination(PresentationAction<Destination.Action>)
         case gameCreated(Game)
         case gameDurationChanged(Double)
-        case gameModChanged(Game.GameMod)
+        case gameModChanged(Game.GameMode)
         case initialRadiusChanged(Double)
         case mapConfig(ChickenMapConfigFeature.Action)
         case nextTapped
         case participationChanged(Bool)
         case powerUpsToggled(Bool)
         case powerUpTypeToggled(PowerUp.PowerUpType)
+        case registrationClosesBeforeStartChanged(Int?)
         case requiresRegistrationChanged(Bool)
         case startDateChanged(Date)
         case startGameButtonTapped
@@ -129,14 +130,14 @@ struct GameCreationFeature {
     @Dependency(\.locationClient) var locationClient
 
     private func recalculateNormalMode(state: inout State) {
-        let effectiveDuration = max(state.gameDurationMinutes - state.game.chickenHeadStartMinutes, 1)
+        let effectiveDuration = max(state.gameDurationMinutes - state.game.timing.headStartMinutes, 1)
         let (interval, decline) = calculateNormalModeSettings(
-            initialRadius: state.game.initialRadius,
+            initialRadius: state.game.zone.radius,
             gameDurationMinutes: effectiveDuration
         )
         state.$game.withLock { game in
-            game.radiusIntervalUpdate = interval
-            game.radiusDeclinePerUpdate = decline
+            game.zone.shrinkIntervalMinutes = interval
+            game.zone.shrinkMetersPerUpdate = decline
         }
     }
 
@@ -164,7 +165,7 @@ struct GameCreationFeature {
                 return .none
 
             case let .chickenHeadStartChanged(minutes):
-                state.$game.withLock { $0.chickenHeadStartMinutes = minutes }
+                state.$game.withLock { $0.timing.headStartMinutes = minutes }
                 recalculateNormalMode(state: &state)
                 return .none
 
@@ -191,7 +192,7 @@ struct GameCreationFeature {
                 return .none
 
             case let .gameModChanged(mode):
-                state.$game.withLock { $0.gameMod = mode }
+                state.$game.withLock { $0.gameMode = mode }
                 // Switching to Follow the Chicken: the final zone is dynamically the
                 // chicken's live position, so clear any manually-placed final zone
                 // and reset the pin mode to start.
@@ -203,7 +204,7 @@ struct GameCreationFeature {
                 return .none
 
             case let .initialRadiusChanged(radius):
-                state.$game.withLock { $0.initialRadius = radius }
+                state.$game.withLock { $0.zone.radius = radius }
                 recalculateNormalMode(state: &state)
                 return .none
 
@@ -223,26 +224,37 @@ struct GameCreationFeature {
                 return .none
 
             case let .powerUpsToggled(enabled):
-                state.$game.withLock { $0.powerUpsEnabled = enabled }
+                state.$game.withLock { $0.powerUps.enabled = enabled }
+                return .none
+
+            case let .registrationClosesBeforeStartChanged(minutes):
+                state.$game.withLock { $0.registration.closesMinutesBefore = minutes }
                 return .none
 
             case let .requiresRegistrationChanged(value):
-                state.$game.withLock { $0.requiresRegistration = value }
+                state.$game.withLock { game in
+                    game.registration.required = value
+                    if value {
+                        game.registration.closesMinutesBefore = game.registration.closesMinutesBefore ?? 15
+                    } else {
+                        game.registration.closesMinutesBefore = nil
+                    }
+                }
                 return .none
 
             case let .powerUpTypeToggled(type):
                 state.$game.withLock { game in
-                    if let index = game.enabledPowerUpTypes.firstIndex(of: type.rawValue) {
-                        let unavailableRaw: Set<String> = game.gameMod == .stayInTheZone
+                    if let index = game.powerUps.enabledTypes.firstIndex(of: type.rawValue) {
+                        let unavailableRaw: Set<String> = game.gameMode == .stayInTheZone
                             ? [PowerUp.PowerUpType.invisibility.rawValue, PowerUp.PowerUpType.decoy.rawValue, PowerUp.PowerUpType.jammer.rawValue]
                             : []
-                        let availableEnabledCount = game.enabledPowerUpTypes.filter { !unavailableRaw.contains($0) }.count
+                        let availableEnabledCount = game.powerUps.enabledTypes.filter { !unavailableRaw.contains($0) }.count
                         let isAvailable = !unavailableRaw.contains(type.rawValue)
                         if !isAvailable || availableEnabledCount > 1 {
-                            game.enabledPowerUpTypes.remove(at: index)
+                            game.powerUps.enabledTypes.remove(at: index)
                         }
                     } else {
-                        game.enabledPowerUpTypes.append(type.rawValue)
+                        game.powerUps.enabledTypes.append(type.rawValue)
                     }
                 }
                 return .none
@@ -340,8 +352,8 @@ struct GameCreationView: View {
         .background(Color.background)
         .sheet(isPresented: $store.showPowerUpSelection) {
             PowerUpSelectionView(
-                enabledTypes: store.currentGame.enabledPowerUpTypes,
-                gameMod: store.currentGame.gameMod,
+                enabledTypes: store.currentGame.powerUps.enabledTypes,
+                gameMode: store.currentGame.gameMode,
                 onToggle: { type in store.send(.powerUpTypeToggled(type)) }
             )
         }
@@ -537,7 +549,7 @@ struct GameCreationView: View {
                     title: "Follow the Chicken",
                     emoji: "🐔",
                     subtitle: "The zone shrinks toward the chicken",
-                    isSelected: store.currentGame.gameMod == .followTheChicken,
+                    isSelected: store.currentGame.gameMode == .followTheChicken,
                     gradient: Color.gradientChicken
                 ) {
                     store.send(.gameModChanged(.followTheChicken))
@@ -547,7 +559,7 @@ struct GameCreationView: View {
                     title: "Stay in the Zone",
                     emoji: "📍",
                     subtitle: "Fixed zone that shrinks",
-                    isSelected: store.currentGame.gameMod == .stayInTheZone,
+                    isSelected: store.currentGame.gameMode == .stayInTheZone,
                     gradient: Color.gradientHunter
                 ) {
                     store.send(.gameModChanged(.stayInTheZone))
@@ -660,12 +672,12 @@ struct GameCreationView: View {
             )
 
             VStack(spacing: 12) {
-                BangerText("\(Int(store.currentGame.chickenHeadStartMinutes)) min", size: 48)
+                BangerText("\(Int(store.currentGame.timing.headStartMinutes)) min", size: 48)
                     .foregroundStyle(Color.CROrange)
 
                 Slider(
                     value: Binding(
-                        get: { store.currentGame.chickenHeadStartMinutes },
+                        get: { store.currentGame.timing.headStartMinutes },
                         set: { store.send(.chickenHeadStartChanged($0)) }
                     ),
                     in: 0...15,
@@ -700,7 +712,7 @@ struct GameCreationView: View {
                     title: "Power-Ups ON",
                     emoji: "⚡",
                     subtitle: "Collect and use abilities",
-                    isSelected: store.currentGame.powerUpsEnabled,
+                    isSelected: store.currentGame.powerUps.enabled,
                     gradient: Color.gradientFire
                 ) {
                     store.send(.powerUpsToggled(true))
@@ -710,17 +722,17 @@ struct GameCreationView: View {
                     title: "Power-Ups OFF",
                     emoji: "🚫",
                     subtitle: "Classic mode, no power-ups",
-                    isSelected: !store.currentGame.powerUpsEnabled,
+                    isSelected: !store.currentGame.powerUps.enabled,
                     gradient: LinearGradient(colors: [.gray, .gray.opacity(0.7)], startPoint: .topLeading, endPoint: .bottomTrailing)
                 ) {
                     store.send(.powerUpsToggled(false))
                 }
 
-                if store.currentGame.powerUpsEnabled {
-                    let unavailableRaw: Set<String> = store.currentGame.gameMod == .stayInTheZone
+                if store.currentGame.powerUps.enabled {
+                    let unavailableRaw: Set<String> = store.currentGame.gameMode == .stayInTheZone
                         ? [PowerUp.PowerUpType.invisibility.rawValue, PowerUp.PowerUpType.decoy.rawValue, PowerUp.PowerUpType.jammer.rawValue]
                         : []
-                    let enabledCount = store.currentGame.enabledPowerUpTypes.filter { !unavailableRaw.contains($0) }.count
+                    let enabledCount = store.currentGame.powerUps.enabledTypes.filter { !unavailableRaw.contains($0) }.count
                     let totalCount = PowerUp.PowerUpType.allCases.filter { !unavailableRaw.contains($0.rawValue) }.count
 
                     Button {
@@ -795,39 +807,48 @@ struct GameCreationView: View {
     // MARK: - Registration Step
 
     private var registrationStep: some View {
-        let isDepositPlan = store.currentGame.pricingModel == .deposit
-        return VStack(spacing: 24) {
+        let isDepositPlan = store.currentGame.pricing.model == .deposit
+        let showDeadline = store.currentGame.registration.required
+        return VStack(spacing: 0) {
             Spacer()
             stepHeader(
                 title: String(localized: "Registration"),
                 subtitle: String(localized: "Do hunters need to register before joining?")
             )
+            .padding(.bottom, 20)
 
-            VStack(spacing: 16) {
-                selectionCard(
-                    title: String(localized: "Registration required"),
-                    emoji: "📝",
-                    subtitle: String(localized: "Hunters must register a team name before joining"),
-                    isSelected: store.currentGame.requiresRegistration,
-                    gradient: Color.gradientFire
-                ) {
-                    if !isDepositPlan {
-                        store.send(.requiresRegistrationChanged(true))
-                    }
-                }
-
+            // Cards block — moves up/down as a unit
+            VStack(spacing: 12) {
                 selectionCard(
                     title: String(localized: "Open join"),
                     emoji: "🚪",
                     subtitle: String(localized: "Anyone with the code can join directly"),
-                    isSelected: !store.currentGame.requiresRegistration,
+                    isSelected: !store.currentGame.registration.required,
                     gradient: Color.gradientHunter
                 ) {
                     if !isDepositPlan {
-                        store.send(.requiresRegistrationChanged(false))
+                        withAnimation(.easeOut(duration: 0.3)) {
+                            store.send(.requiresRegistrationChanged(false))
+                        }
                     }
                 }
                 .opacity(isDepositPlan ? 0.4 : 1)
+                .compositingGroup()
+
+                selectionCard(
+                    title: String(localized: "Registration required"),
+                    emoji: "📝",
+                    subtitle: String(localized: "Hunters must register a team name before joining"),
+                    isSelected: store.currentGame.registration.required,
+                    gradient: Color.gradientFire
+                ) {
+                    if !isDepositPlan {
+                        withAnimation(.easeOut(duration: 0.3)) {
+                            store.send(.requiresRegistrationChanged(true))
+                        }
+                    }
+                }
+                .compositingGroup()
 
                 if isDepositPlan {
                     Text("Registration is required for paid (deposit) games.")
@@ -838,7 +859,58 @@ struct GameCreationView: View {
                 }
             }
             .padding(.horizontal, 24)
+            .zIndex(1) // cards stay on top
+
+            // Deadline picker — slides out from behind the cards
+            if showDeadline {
+                registrationDeadlinePicker
+                    .padding(.horizontal, 24)
+                    .padding(.top, 12)
+                    .transition(.offset(y: -40).combined(with: .opacity))
+            }
+
             Spacer()
+        }
+    }
+
+    private var registrationDeadlinePicker: some View {
+        VStack(spacing: 12) {
+            Text(String(localized: "Registration closes"))
+                .font(.gameboy(size: 9))
+                .foregroundStyle(Color.onBackground.opacity(0.7))
+
+            let options: [(label: String, minutes: Int?)] = [
+                (String(localized: "At game start"), nil),
+                (String(localized: "15 min before"), 15),
+                (String(localized: "30 min before"), 30),
+                (String(localized: "1 hour before"), 60),
+                (String(localized: "2 hours before"), 120),
+                (String(localized: "1 day before"), 1440),
+            ]
+            let current = store.currentGame.registration.closesMinutesBefore
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+                ForEach(Array(options.enumerated()), id: \.offset) { _, option in
+                    let isSelected = current == option.minutes
+                    Button {
+                        store.send(.registrationClosesBeforeStartChanged(option.minutes))
+                    } label: {
+                        Text(option.label)
+                            .font(.gameboy(size: 9))
+                            .frame(maxWidth: .infinity, minHeight: 38)
+                            .foregroundStyle(isSelected ? .white : Color.onBackground)
+                            .background(
+                                isSelected
+                                    ? AnyShapeStyle(Color.gradientFire)
+                                    : AnyShapeStyle(Color.surface)
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.onBackground.opacity(isSelected ? 0 : 0.15), lineWidth: 1)
+                            )
+                    }
+                }
+            }
         }
     }
 
@@ -873,23 +945,27 @@ struct GameCreationView: View {
                 VStack(spacing: 0) {
                     recapRow(label: "Role", value: store.isParticipating ? "Chicken 🐔" : "Organizer 📋")
                     Divider()
-                    recapRow(label: "Mode", value: store.currentGame.gameMod.title)
+                    recapRow(label: "Mode", value: store.currentGame.gameMode.title)
                     Divider()
                     recapRow(label: "Start", value: formattedDate(store.currentGame.startDate))
                     Divider()
                     recapRow(label: "Duration", value: formattedDuration(store.gameDurationMinutes))
                     Divider()
-                    recapRow(label: "Head Start", value: "\(Int(store.currentGame.chickenHeadStartMinutes)) min")
+                    recapRow(label: "Head Start", value: "\(Int(store.currentGame.timing.headStartMinutes)) min")
                     Divider()
-                    recapRow(label: "Zone Radius", value: "\(Int(store.currentGame.initialRadius)) m")
+                    recapRow(label: "Zone Radius", value: "\(Int(store.currentGame.zone.radius)) m")
                     Divider()
-                    recapRow(label: "Power-Ups", value: store.currentGame.powerUpsEnabled ? "Enabled" : "Disabled")
-                    if store.currentGame.gameMod == .followTheChicken {
+                    recapRow(label: "Power-Ups", value: store.currentGame.powerUps.enabled ? "Enabled" : "Disabled")
+                    if store.currentGame.gameMode == .followTheChicken {
                         Divider()
                         recapRow(label: "Chicken sees hunters", value: store.currentGame.chickenCanSeeHunters ? "Yes" : "No")
                     }
                     Divider()
-                    recapRow(label: "Registration", value: store.currentGame.requiresRegistration ? "Required" : "Open")
+                    recapRow(label: "Registration", value: store.currentGame.registration.required ? "Required" : "Open")
+                    if let minutes = store.currentGame.registration.closesMinutesBefore {
+                        Divider()
+                        recapRow(label: "Registration closes", value: registrationDeadlineLabel(minutes))
+                    }
                 }
                 .background(
                     RoundedRectangle(cornerRadius: 16)
@@ -899,7 +975,7 @@ struct GameCreationView: View {
                 .padding(.horizontal, 24)
 
                 if !store.isZoneConfigured {
-                    Text(store.currentGame.gameMod == .stayInTheZone
+                    Text(store.currentGame.gameMode == .stayInTheZone
                          ? "Set a start zone and final zone to start"
                          : "Set a start zone to start")
                         .font(.gameboy(size: 8))
@@ -999,6 +1075,15 @@ struct GameCreationView: View {
             return "\(hours)h"
         }
         return "\(hours)h\(String(format: "%02d", mins))"
+    }
+
+    private func registrationDeadlineLabel(_ minutes: Int) -> String {
+        switch minutes {
+        case ..<60: return "\(minutes) min before"
+        case 60: return "1 hour before"
+        case 1440: return "1 day before"
+        default: return "\(minutes / 60) hours before"
+        }
     }
 }
 

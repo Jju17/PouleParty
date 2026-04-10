@@ -2,6 +2,12 @@ package dev.rahier.pouleparty.ui.gamecreation
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
@@ -55,7 +61,7 @@ fun GameCreationScreen(
     if (state.showPowerUpSelection) {
         BackHandler { viewModel.dismissPowerUpSelection() }
         PowerUpSelectionScreen(
-            enabledTypes = state.game.enabledPowerUpTypes,
+            enabledTypes = state.game.powerUps.enabledTypes,
             gameMod = state.game.gameModEnum,
             onToggle = { viewModel.togglePowerUpType(it) },
             onDismiss = { viewModel.dismissPowerUpSelection() }
@@ -137,12 +143,12 @@ fun GameCreationScreen(
                         onDurationChanged = { viewModel.updateDuration(it) }
                     )
                     GameCreationStep.HEAD_START -> HeadStartStep(
-                        headStartMinutes = state.game.chickenHeadStartMinutes,
+                        headStartMinutes = state.game.timing.headStartMinutes,
                         onHeadStartChanged = { viewModel.updateHeadStart(it) }
                     )
                     GameCreationStep.POWER_UPS -> PowerUpsStep(
-                        powerUpsEnabled = state.game.powerUpsEnabled,
-                        enabledPowerUpTypes = state.game.enabledPowerUpTypes,
+                        powerUpsEnabled = state.game.powerUps.enabled,
+                        enabledPowerUpTypes = state.game.powerUps.enabledTypes,
                         gameMod = state.game.gameModEnum,
                         onTogglePowerUps = { viewModel.togglePowerUps(it) },
                         onPowerUpSelectionTapped = { viewModel.onPowerUpSelectionTapped() }
@@ -152,9 +158,11 @@ fun GameCreationScreen(
                         onToggle = { viewModel.toggleChickenCanSeeHunters(it) }
                     )
                     GameCreationStep.REGISTRATION -> RegistrationStep(
-                        requiresRegistration = state.game.requiresRegistration,
-                        isDepositPlan = state.game.pricingModel == "deposit",
-                        onToggle = { viewModel.toggleRequiresRegistration(it) }
+                        requiresRegistration = state.game.registration.required,
+                        isDepositPlan = state.game.pricing.model == "deposit",
+                        registrationClosesBeforeStartMinutes = state.game.registration.closesMinutesBefore,
+                        onToggle = { viewModel.toggleRequiresRegistration(it) },
+                        onDeadlineChanged = { viewModel.setRegistrationClosesBeforeStart(it) }
                     )
                     GameCreationStep.RECAP -> RecapStep(
                         state = state,
@@ -525,7 +533,7 @@ private fun ZoneSetupStep(
                 .weight(1f)
         ) {
             ChickenMapConfigScreen(
-                initialRadius = game.initialRadius,
+                initialRadius = game.zone.radius,
                 finalMarker = game.finalLocation,
                 onLocationSelected = onLocationSelected,
                 onFinalLocationSelected = onFinalLocationSelected,
@@ -858,23 +866,25 @@ private fun ChickenSeesHuntersStep(
 private fun RegistrationStep(
     requiresRegistration: Boolean,
     isDepositPlan: Boolean,
-    onToggle: (Boolean) -> Unit
+    registrationClosesBeforeStartMinutes: Int?,
+    onToggle: (Boolean) -> Unit,
+    onDeadlineChanged: (Int?) -> Unit
 ) {
     StepContainer(
         title = stringResource(R.string.registration),
         subtitle = stringResource(R.string.do_hunters_need_to_register_before_joining)
     ) {
         OptionCard(
-            text = stringResource(R.string.registration_required),
-            emoji = "\uD83D\uDCDD",
-            isSelected = requiresRegistration,
-            onClick = { if (!isDepositPlan) onToggle(true) }
-        )
-        OptionCard(
             text = stringResource(R.string.open_join),
             emoji = "\uD83D\uDEAA",
             isSelected = !requiresRegistration,
             onClick = { if (!isDepositPlan) onToggle(false) }
+        )
+        OptionCard(
+            text = stringResource(R.string.registration_required),
+            emoji = "\uD83D\uDCDD",
+            isSelected = requiresRegistration,
+            onClick = { if (!isDepositPlan) onToggle(true) }
         )
         if (isDepositPlan) {
             Text(
@@ -883,6 +893,61 @@ private fun RegistrationStep(
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
             )
+        }
+
+        AnimatedVisibility(
+            visible = requiresRegistration,
+            enter = fadeIn(animationSpec = tween(300)) + expandVertically(animationSpec = tween(300)),
+            exit = fadeOut(animationSpec = tween(300)) + shrinkVertically(animationSpec = tween(300))
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = stringResource(R.string.registration_closes),
+                    style = gameboyStyle(9),
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                )
+                val options = listOf(
+                    R.string.at_game_start to null,
+                    R.string.fifteen_min_before to 15,
+                    R.string.thirty_min_before to 30,
+                    R.string.one_hour_before to 60,
+                    R.string.two_hours_before to 120,
+                    R.string.one_day_before to 1440,
+                )
+                options.chunked(2).forEach { row ->
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        row.forEach { (labelRes, minutes) ->
+                            val isSelected = registrationClosesBeforeStartMinutes == minutes
+                            val bgColor = if (isSelected) CROrange else MaterialTheme.colorScheme.surface
+                            val textColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onBackground
+                            Button(
+                                onClick = { onDeadlineChanged(minutes) },
+                                colors = ButtonDefaults.buttonColors(containerColor = bgColor),
+                                shape = RoundedCornerShape(50),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(
+                                    text = stringResource(labelRes),
+                                    style = gameboyStyle(8),
+                                    color = textColor,
+                                    maxLines = 1
+                                )
+                            }
+                        }
+                        if (row.size == 1) {
+                            Spacer(Modifier.weight(1f))
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -947,19 +1012,19 @@ private fun RecapStep(
 
                 RecapRow(
                     label = stringResource(R.string.chicken_head_start),
-                    value = "${game.chickenHeadStartMinutes.toInt()} min"
+                    value = "${game.timing.headStartMinutes.toInt()} min"
                 )
                 HorizontalDivider()
 
                 RecapRow(
                     label = stringResource(R.string.zone_radius),
-                    value = "${game.initialRadius.toInt()} m"
+                    value = "${game.zone.radius.toInt()} m"
                 )
                 HorizontalDivider()
 
                 RecapRow(
                     label = stringResource(R.string.power_ups),
-                    value = if (game.powerUpsEnabled) "ON" else "OFF"
+                    value = if (game.powerUps.enabled) "ON" else "OFF"
                 )
 
                 if (game.gameModEnum == GameMod.FOLLOW_THE_CHICKEN) {
@@ -967,6 +1032,19 @@ private fun RecapStep(
                     RecapRow(
                         label = stringResource(R.string.chicken_can_see_hunters),
                         value = if (game.chickenCanSeeHunters) "Oui" else "Non"
+                    )
+                }
+
+                HorizontalDivider()
+                RecapRow(
+                    label = stringResource(R.string.registration),
+                    value = if (game.registration.required) stringResource(R.string.registration_required) else stringResource(R.string.open_join)
+                )
+                if (game.registration.closesMinutesBefore != null) {
+                    HorizontalDivider()
+                    RecapRow(
+                        label = stringResource(R.string.registration_closes),
+                        value = registrationDeadlineLabel(game.registration.closesMinutesBefore)
                     )
                 }
 
@@ -1014,4 +1092,11 @@ private fun formatDuration(minutes: Double): String {
     val hours = minutes.toInt() / 60
     val mins = minutes.toInt() % 60
     return if (mins == 0) "${hours}h" else "${hours}h${mins}"
+}
+
+private fun registrationDeadlineLabel(minutes: Int): String = when {
+    minutes < 60 -> "$minutes min before"
+    minutes == 60 -> "1 hour before"
+    minutes == 1440 -> "1 day before"
+    else -> "${minutes / 60} hours before"
 }

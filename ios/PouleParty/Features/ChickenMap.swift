@@ -189,13 +189,13 @@ struct ChickenMapFeature {
                     try? await apiClient.activatePowerUp(gameId, powerUp.id, expiresAt)
                     switch powerUp.type {
                     case .invisibility:
-                        try? await apiClient.updateGameActiveEffect(gameId, "activeInvisibilityUntil", expiresAt)
+                        try? await apiClient.updateGameActiveEffect(gameId, "powerUps.activeEffects.invisibility", expiresAt)
                     case .zoneFreeze:
-                        try? await apiClient.updateGameActiveEffect(gameId, "activeZoneFreezeUntil", expiresAt)
+                        try? await apiClient.updateGameActiveEffect(gameId, "powerUps.activeEffects.zoneFreeze", expiresAt)
                     case .decoy:
-                        try? await apiClient.updateGameActiveEffect(gameId, "activeDecoyUntil", expiresAt)
+                        try? await apiClient.updateGameActiveEffect(gameId, "powerUps.activeEffects.decoy", expiresAt)
                     case .jammer:
-                        try? await apiClient.updateGameActiveEffect(gameId, "activeJammerUntil", expiresAt)
+                        try? await apiClient.updateGameActiveEffect(gameId, "powerUps.activeEffects.jammer", expiresAt)
                     default:
                         break
                     }
@@ -325,7 +325,7 @@ struct ChickenMapFeature {
             case let .newLocationFetched(location):
                 state.userLocation = location
                 // Only move the circle center when the chicken defines the zone
-                if state.game.gameMod != .stayInTheZone {
+                if state.game.gameMode != .stayInTheZone {
                     state.mapCircle = CircleOverlay(
                         center: location,
                         radius: CLLocationDistance(state.radius)
@@ -334,15 +334,15 @@ struct ChickenMapFeature {
                 return .none
             case .onTask:
                 let gameId = state.game.id
-                let gameMod = state.game.gameMod
+                let gameMod = state.game.gameMode
                 let startDate = state.game.startDate
-                let initialCenter = state.game.initialCoordinates.toCLCoordinates
-                let initialRadius = state.game.initialRadius
-                let driftSeed = state.game.driftSeed
-                let powerUpsEnabled = state.game.powerUpsEnabled
+                let initialCenter = state.game.zone.center.toCLCoordinates
+                let initialRadius = state.game.zone.radius
+                let driftSeed = state.game.zone.driftSeed
+                let powerUpsEnabled = state.game.powerUps.enabled
                 // Filter out position-dependent power-ups in stayInTheZone (no position sharing in that mode)
                 let enabledPowerUpTypes: [String] = {
-                    var types = state.game.enabledPowerUpTypes
+                    var types = state.game.powerUps.enabledTypes
                     if gameMod == .stayInTheZone {
                         let uselessInZone: Set<String> = [
                             PowerUp.PowerUpType.invisibility.rawValue,
@@ -368,9 +368,9 @@ struct ChickenMapFeature {
                     .run { send in
                         for await game in apiClient.gameConfigStream(gameId) {
                             if let game {
-                                invisibilityUntil.setValue(game.activeInvisibilityUntil?.dateValue())
-                                jammerUntil.setValue(game.activeJammerUntil?.dateValue())
-                                radarPingUntil.setValue(game.activeRadarPingUntil?.dateValue())
+                                invisibilityUntil.setValue(game.powerUps.activeEffects.invisibility?.dateValue())
+                                jammerUntil.setValue(game.powerUps.activeEffects.jammer?.dateValue())
+                                radarPingUntil.setValue(game.powerUps.activeEffects.radarPing?.dateValue())
                                 await send(.gameUpdated(game))
                             }
                         }
@@ -491,9 +491,9 @@ struct ChickenMapFeature {
                 state.radius = lastRadius
                 state.nextRadiusUpdate = lastUpdate
                 let circleCenter = interpolateZoneCenter(
-                    initialCenter: state.game.initialCoordinates.toCLCoordinates,
+                    initialCenter: state.game.zone.center.toCLCoordinates,
                     finalCenter: state.game.finalLocation,
-                    initialRadius: state.game.initialRadius,
+                    initialRadius: state.game.zone.radius,
                     currentRadius: Double(lastRadius)
                 )
                 state.mapCircle = CircleOverlay(
@@ -506,10 +506,10 @@ struct ChickenMapFeature {
                     gameName: state.game.name,
                     gameCode: state.game.gameCode,
                     playerRole: .chicken,
-                    gameModeName: state.game.gameMod.title,
+                    gameModeName: state.game.gameMode.title,
                     gameStartDate: state.game.startDate,
                     gameEndDate: state.game.endDate,
-                    totalHunters: max(0, state.game.numberOfPlayers - 1)
+                    totalHunters: max(0, state.game.maxPlayers - 1)
                 )
                 let initialLAState = state.liveActivityState
                 state.lastLiveActivityState = initialLAState
@@ -544,7 +544,7 @@ struct ChickenMapFeature {
                             targetDate: state.game.hunterStartDate,
                             completionText: "🔍 Hunters incoming!",
                             showNumericCountdown: false,
-                            isEnabled: state.game.chickenHeadStartMinutes > 0
+                            isEnabled: state.game.timing.headStartMinutes > 0
                         )
                     ],
                     currentCountdownNumber: state.countdownNumber,
@@ -605,15 +605,15 @@ struct ChickenMapFeature {
                 if let result = processRadiusUpdate(
                     nextRadiusUpdate: state.nextRadiusUpdate,
                     currentRadius: state.radius,
-                    radiusDeclinePerUpdate: state.game.radiusDeclinePerUpdate,
-                    radiusIntervalUpdate: state.game.radiusIntervalUpdate,
-                    gameMod: state.game.gameMod,
-                    initialCoordinates: state.game.initialCoordinates.toCLCoordinates,
+                    radiusDeclinePerUpdate: state.game.zone.shrinkMetersPerUpdate,
+                    radiusIntervalUpdate: state.game.zone.shrinkIntervalMinutes,
+                    gameMod: state.game.gameMode,
+                    initialCoordinates: state.game.zone.center.toCLCoordinates,
                     currentCircle: state.mapCircle,
-                    driftSeed: state.game.driftSeed,
+                    driftSeed: state.game.zone.driftSeed,
                     isZoneFrozen: state.game.isZoneFrozen,
                     finalCoordinates: state.game.finalLocation,
-                    initialRadius: state.game.initialRadius
+                    initialRadius: state.game.zone.radius
                 ) {
                     if result.isGameOver {
                         locationClient.stopTracking()
@@ -652,23 +652,23 @@ struct ChickenMapFeature {
 
                     // Spawn periodic power-ups on zone shrink
                     var spawnEffect: Effect<Action>? = nil
-                    if !result.isGameOver, state.game.powerUpsEnabled {
+                    if !result.isGameOver, state.game.powerUps.enabled {
                         let nextBatch = state.lastSpawnBatchIndex + 1
                         state.lastSpawnBatchIndex = nextBatch
-                        let center = state.mapCircle?.center ?? state.game.initialCoordinates.toCLCoordinates
+                        let center = state.mapCircle?.center ?? state.game.zone.center.toCLCoordinates
                         let currentRadius = Double(state.radius)
-                        let seed = state.game.driftSeed
+                        let seed = state.game.zone.driftSeed
                         let gId = state.game.id
                         let spawnTypes: [String]
-                        if state.game.gameMod == .stayInTheZone {
+                        if state.game.gameMode == .stayInTheZone {
                             let uselessInZone: Set<String> = [
                                 PowerUp.PowerUpType.invisibility.rawValue,
                                 PowerUp.PowerUpType.decoy.rawValue,
                                 PowerUp.PowerUpType.jammer.rawValue
                             ]
-                            spawnTypes = state.game.enabledPowerUpTypes.filter { !uselessInZone.contains($0) }
+                            spawnTypes = state.game.powerUps.enabledTypes.filter { !uselessInZone.contains($0) }
                         } else {
-                            spawnTypes = state.game.enabledPowerUpTypes
+                            spawnTypes = state.game.powerUps.enabledTypes
                         }
                         spawnEffect = .run { _ in
                             let generated = generatePowerUps(
@@ -698,7 +698,7 @@ struct ChickenMapFeature {
                         }
 
                         // Zone check (visual warning only — no elimination)
-                        if shouldCheckZone(role: .chicken, gameMod: state.game.gameMod),
+                        if shouldCheckZone(role: .chicken, gameMod: state.game.gameMode),
                            let userLoc = state.userLocation,
                            let circle = state.mapCircle {
                             let zoneResult = checkZoneStatus(
@@ -733,7 +733,7 @@ struct ChickenMapFeature {
                 }
 
                 // Zone check (visual warning only — no elimination)
-                if shouldCheckZone(role: .chicken, gameMod: state.game.gameMod),
+                if shouldCheckZone(role: .chicken, gameMod: state.game.gameMode),
                    let userLoc = state.userLocation,
                    let circle = state.mapCircle {
                     let zoneResult = checkZoneStatus(
@@ -776,7 +776,7 @@ struct ChickenMapView: View {
         if store.game.chickenCanSeeHunters {
             return "You can see them 👀"
         }
-        switch store.game.gameMod {
+        switch store.game.gameMode {
         case .followTheChicken:
             return "Don't be seen !"
         case .stayInTheZone:
@@ -933,7 +933,7 @@ struct ChickenMapView: View {
         .overlay(alignment: .topTrailing) {
             VStack(spacing: 0) {
                 MapCompassButton(mapCircle: store.mapCircle, mapBearing: mapBearing, viewport: $viewport)
-                if store.game.powerUpsEnabled {
+                if store.game.powerUps.enabled {
                     ActivePowerUpBadge(game: store.game, now: store.nowDate)
                 }
             }
@@ -999,7 +999,7 @@ struct ChickenMapView: View {
             if !store.hasGameStarted {
                 PreGameOverlay(
                     role: .chicken,
-                    gameModTitle: store.game.gameMod.title,
+                    gameModTitle: store.game.gameMode.title,
                     gameCode: store.game.gameCode,
                     targetDate: store.game.startDate,
                     nowDate: store.nowDate,

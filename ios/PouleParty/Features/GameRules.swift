@@ -50,7 +50,7 @@ struct GameRulesView: View {
                 .foregroundStyle(Color.onBackground)
 
             gameModeCard(
-                title: Game.GameMod.followTheChicken.title,
+                title: Game.GameMode.followTheChicken.title,
                 description: "The zone shrinks periodically toward the Chicken's position. Hunters don't see the Chicken's exact location — only the zone moving!",
                 details: [
                     "The zone center follows the Chicken's live position",
@@ -60,7 +60,7 @@ struct GameRulesView: View {
             )
 
             gameModeCard(
-                title: Game.GameMod.stayInTheZone.title,
+                title: Game.GameMode.stayInTheZone.title,
                 description: "The zone shrinks and drifts randomly around the starting point. Hunters must find the Chicken with no position clues!",
                 details: [
                     "No position sharing between players",

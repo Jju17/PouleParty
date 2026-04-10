@@ -83,7 +83,7 @@ struct ChickenMapConfigFeature {
                     let initialLoc = CLLocation(latitude: state.game.initialLocation.latitude, longitude: state.game.initialLocation.longitude)
                     let tappedLoc = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
                     let distance = initialLoc.distance(from: tappedLoc)
-                    if distance > state.game.initialRadius {
+                    if distance > state.game.zone.radius {
                         return .none // Outside initial zone, ignore
                     }
                     state.$game.withLock { $0.finalLocation = coordinate }
@@ -97,7 +97,7 @@ struct ChickenMapConfigFeature {
                     if let finalCoord = state.game.finalLocation {
                         let newStart = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
                         let finalLoc = CLLocation(latitude: finalCoord.latitude, longitude: finalCoord.longitude)
-                        if newStart.distance(from: finalLoc) > state.game.initialRadius {
+                        if newStart.distance(from: finalLoc) > state.game.zone.radius {
                             state.$game.withLock { $0.finalLocation = nil }
                             state.finalMarker = nil
                         }
@@ -105,13 +105,13 @@ struct ChickenMapConfigFeature {
 
                     // Auto-switch to final zone mode after placing start, but only in
                     // Stay in the Zone mode. Follow the Chicken doesn't use a manual final zone.
-                    if state.game.gameMod == .stayInTheZone {
+                    if state.game.gameMode == .stayInTheZone {
                         state.pinMode = .finalZone
                     }
                 }
                 return .none
             case let .initialRadiusChanged(radius):
-                state.$game.withLock { $0.initialRadius = radius }
+                state.$game.withLock { $0.zone.radius = radius }
                 self.updateMapComponents(state: &state)
                 // Validate final zone against new radius
                 if let finalCoord = state.game.finalLocation {
@@ -134,7 +134,7 @@ struct ChickenMapConfigFeature {
         state.marker = MarkerOverlay(title: "Start", coordinate: state.game.initialLocation)
         state.mapCircle = CircleOverlay(
             center: state.game.initialLocation,
-            radius: CLLocationDistance(state.game.initialRadius)
+            radius: CLLocationDistance(state.game.zone.radius)
         )
     }
 }
@@ -190,7 +190,7 @@ struct ChickenMapConfigView: View {
     @FocusState private var isSearchFieldFocused: Bool
 
     private var radiusZoom: CGFloat {
-        zoomForRadius(CLLocationDistance(store.currentGame.initialRadius), latitude: store.currentGame.initialLocation.latitude)
+        zoomForRadius(CLLocationDistance(store.currentGame.zone.radius), latitude: store.currentGame.initialLocation.latitude)
     }
 
     var body: some View {
@@ -226,13 +226,13 @@ struct ChickenMapConfigView: View {
                                     .font(.gameboy(size: 9))
                                     .foregroundStyle(.primary)
                                 Spacer()
-                                Text("\(Int(store.currentGame.initialRadius)) m")
+                                Text("\(Int(store.currentGame.zone.radius)) m")
                                     .font(.gameboy(size: 9))
                                     .foregroundStyle(Color.CROrange)
                             }
                             Slider(
                                 value: Binding(
-                                    get: { store.currentGame.initialRadius },
+                                    get: { store.currentGame.zone.radius },
                                     set: { store.send(.initialRadiusChanged($0)) }
                                 ),
                                 in: 500...2000,
@@ -243,7 +243,7 @@ struct ChickenMapConfigView: View {
 
                         // Final zone picker is only relevant for Stay in the Zone mode.
                         // In Follow the Chicken, the final zone is the chicken's live position.
-                        if store.currentGame.gameMod == .stayInTheZone {
+                        if store.currentGame.gameMode == .stayInTheZone {
                             Picker("Pin Mode", selection: Binding(
                                 get: { store.pinMode },
                                 set: { store.send(.pinModeChanged($0)) }
@@ -365,7 +365,7 @@ struct ChickenMapConfigView: View {
         .task {
             store.send(.onTask)
         }
-        .onChange(of: store.currentGame.initialRadius) { _, newRadius in
+        .onChange(of: store.currentGame.zone.radius) { _, newRadius in
             store.send(.initialRadiusChanged(newRadius))
         }
     }

@@ -227,7 +227,7 @@ fun HunterMapScreen(
                         modifier = Modifier.rotate(-currentBearing)
                     )
                 }
-                if (state.game.powerUpsEnabled) {
+                if (state.game.powerUps.enabled) {
                     ActivePowerUpBadge(game = state.game)
                 }
             }

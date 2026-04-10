@@ -52,7 +52,7 @@ fun ChickenConfigScreen(
     if (state.showPowerUpSelection) {
         BackHandler { viewModel.dismissPowerUpSelection() }
         PowerUpSelectionScreen(
-            enabledTypes = state.game.enabledPowerUpTypes,
+            enabledTypes = state.game.powerUps.enabledTypes,
             gameMod = state.game.gameModEnum,
             onToggle = { viewModel.togglePowerUpType(it) },
             onDismiss = { viewModel.dismissPowerUpSelection() }
@@ -77,7 +77,7 @@ fun ChickenConfigScreen(
         ) { padding ->
             Box(modifier = Modifier.padding(padding)) {
                 ChickenMapConfigScreen(
-                    initialRadius = state.game.initialRadius,
+                    initialRadius = state.game.zone.radius,
                     finalMarker = state.game.finalLocation,
                     onLocationSelected = { point ->
                         viewModel.onLocationSelected(point)
@@ -261,11 +261,11 @@ fun ChickenConfigScreen(
                         ) {
                             Text(stringResource(R.string.enable_power_ups))
                             Switch(
-                                checked = state.game.powerUpsEnabled,
+                                checked = state.game.powerUps.enabled,
                                 onCheckedChange = { viewModel.togglePowerUps(it) }
                             )
                         }
-                        if (state.game.powerUpsEnabled) {
+                        if (state.game.powerUps.enabled) {
                             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
                             val unavailable = if (state.game.gameModEnum == dev.rahier.pouleparty.model.GameMod.STAY_IN_THE_ZONE) {
                                 setOf(
@@ -274,7 +274,7 @@ fun ChickenConfigScreen(
                                     dev.rahier.pouleparty.model.PowerUpType.JAMMER.firestoreValue
                                 )
                             } else emptySet()
-                            val enabledCount = state.game.enabledPowerUpTypes.count { it !in unavailable }
+                            val enabledCount = state.game.powerUps.enabledTypes.count { it !in unavailable }
                             val totalCount = dev.rahier.pouleparty.model.PowerUpType.entries.count { it.firestoreValue !in unavailable }
                             Row(
                                 modifier = Modifier
@@ -321,7 +321,7 @@ fun ChickenConfigScreen(
                         ) {
                             MapPreviewContent(
                                 center = state.game.initialLocation,
-                                radius = state.game.initialRadius,
+                                radius = state.game.zone.radius,
                                 finalCenter = state.game.finalLocation
                             )
                         }
@@ -338,10 +338,10 @@ fun ChickenConfigScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Text(stringResource(R.string.radius_interval_update))
-                                Text(stringResource(R.string.minutes_format, state.game.radiusIntervalUpdate.toInt()))
+                                Text(stringResource(R.string.minutes_format, state.game.zone.shrinkIntervalMinutes.toInt()))
                             }
                             Slider(
-                                value = state.game.radiusIntervalUpdate.toFloat(),
+                                value = state.game.zone.shrinkIntervalMinutes.toFloat(),
                                 onValueChange = { viewModel.updateRadiusIntervalUpdate(it.toDouble()) },
                                 valueRange = 1f..60f,
                                 steps = 58
@@ -354,10 +354,10 @@ fun ChickenConfigScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Text(stringResource(R.string.radius_decline))
-                                Text(stringResource(R.string.meters_format, state.game.radiusDeclinePerUpdate.toInt()))
+                                Text(stringResource(R.string.meters_format, state.game.zone.shrinkMetersPerUpdate.toInt()))
                             }
                             Slider(
-                                value = state.game.radiusDeclinePerUpdate.toFloat(),
+                                value = state.game.zone.shrinkMetersPerUpdate.toFloat(),
                                 onValueChange = { viewModel.updateRadiusDecline(it.toDouble()) },
                                 valueRange = 50f..1000f,
                                 steps = 94
@@ -375,10 +375,10 @@ fun ChickenConfigScreen(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(stringResource(R.string.chicken_head_start))
-                            Text(stringResource(R.string.minutes_format, state.game.chickenHeadStartMinutes.toInt()))
+                            Text(stringResource(R.string.minutes_format, state.game.timing.headStartMinutes.toInt()))
                         }
                         Slider(
-                            value = state.game.chickenHeadStartMinutes.toFloat(),
+                            value = state.game.timing.headStartMinutes.toFloat(),
                             onValueChange = { viewModel.updateChickenHeadStart(it.toDouble()) },
                             valueRange = 0f..45f,
                             steps = 44

@@ -19,7 +19,7 @@ struct GameInfoSheet: View {
                 }
 
                 Section("Game Mode") {
-                    Text(game.gameMod.title)
+                    Text(game.gameMode.title)
                 }
 
                 Section("Schedule") {

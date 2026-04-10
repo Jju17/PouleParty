@@ -106,7 +106,7 @@ class ChickenMapViewModel @Inject constructor(
             val interpolatedCenter = interpolateZoneCenter(
                 initialCenter = game.initialLocation,
                 finalCenter = game.finalLocation,
-                initialRadius = game.initialRadius,
+                initialRadius = game.zone.radius,
                 currentRadius = lastRadius.toDouble()
             )
             _uiState.update {
@@ -154,7 +154,7 @@ class ChickenMapViewModel @Inject constructor(
                             targetDate = state.game.hunterStartDate,
                             completionText = "\uD83D\uDD0D Hunters incoming!",
                             showNumericCountdown = false,
-                            isEnabled = state.game.chickenHeadStartMinutes > 0
+                            isEnabled = state.game.timing.headStartMinutes > 0
                         )
                     ),
                     now = now,
@@ -194,15 +194,15 @@ class ChickenMapViewModel @Inject constructor(
                 val radiusResult = processRadiusUpdate(
                     nextRadiusUpdate = state.nextRadiusUpdate,
                     currentRadius = state.radius,
-                    radiusDeclinePerUpdate = state.game.radiusDeclinePerUpdate,
-                    radiusIntervalUpdate = state.game.radiusIntervalUpdate,
+                    radiusDeclinePerUpdate = state.game.zone.shrinkMetersPerUpdate,
+                    radiusIntervalUpdate = state.game.zone.shrinkIntervalMinutes,
                     gameMod = state.game.gameModEnum,
                     initialLocation = state.game.initialLocation,
                     currentCircleCenter = state.circleCenter,
-                    driftSeed = state.game.driftSeed,
+                    driftSeed = state.game.zone.driftSeed,
                     isZoneFrozen = state.game.isZoneFrozen,
                     finalLocation = state.game.finalLocation,
-                    initialRadius = state.game.initialRadius
+                    initialRadius = state.game.zone.radius
                 )
                 if (radiusResult != null) {
                     if (radiusResult.isGameOver) {
@@ -441,7 +441,7 @@ class ChickenMapViewModel @Inject constructor(
     // ── Power-ups ──────────────────────────────────────
 
     private fun filterEnabledTypes(game: Game): List<String> {
-        val types = game.enabledPowerUpTypes.toMutableList()
+        val types = game.powerUps.enabledTypes.toMutableList()
         if (game.gameModEnum == GameMod.STAY_IN_THE_ZONE) {
             // These power-ups have no effect in stayInTheZone (no position sharing)
             types.removeAll {
@@ -456,13 +456,13 @@ class ChickenMapViewModel @Inject constructor(
     private suspend fun spawnInitialPowerUps(game: Game) {
         if (hasSpawnedInitialPowerUps) return
         hasSpawnedInitialPowerUps = true
-        if (!game.powerUpsEnabled) return
+        if (!game.powerUps.enabled) return
         val center = game.initialLocation
         var powerUps = generatePowerUps(
             center = center,
-            radius = game.initialRadius,
+            radius = game.zone.radius,
             count = AppConstants.POWER_UP_INITIAL_BATCH_SIZE,
-            driftSeed = game.driftSeed,
+            driftSeed = game.zone.driftSeed,
             batchIndex = 0,
             enabledTypes = filterEnabledTypes(game)
         )
@@ -476,13 +476,13 @@ class ChickenMapViewModel @Inject constructor(
 
     fun spawnPeriodicPowerUps(batchIndex: Int) {
         val state = _uiState.value
-        if (!state.game.powerUpsEnabled) return
+        if (!state.game.powerUps.enabled) return
         val center = state.circleCenter ?: state.game.initialLocation
         var powerUps = generatePowerUps(
             center = center,
             radius = state.radius.toDouble(),
             count = AppConstants.POWER_UP_PERIODIC_BATCH_SIZE,
-            driftSeed = state.game.driftSeed,
+            driftSeed = state.game.zone.driftSeed,
             batchIndex = batchIndex,
             enabledTypes = filterEnabledTypes(state.game)
         )
@@ -536,22 +536,22 @@ class ChickenMapViewModel @Inject constructor(
                 when (powerUp.typeEnum) {
                     PowerUpType.INVISIBILITY -> {
                         firestoreRepository.updateGameActiveEffect(
-                            gameId, "activeInvisibilityUntil", expiresAt
+                            gameId, "powerUps.activeEffects.invisibility", expiresAt
                         )
                     }
                     PowerUpType.ZONE_FREEZE -> {
                         firestoreRepository.updateGameActiveEffect(
-                            gameId, "activeZoneFreezeUntil", expiresAt
+                            gameId, "powerUps.activeEffects.zoneFreeze", expiresAt
                         )
                     }
                     PowerUpType.DECOY -> {
                         firestoreRepository.updateGameActiveEffect(
-                            gameId, "activeDecoyUntil", expiresAt
+                            gameId, "powerUps.activeEffects.decoy", expiresAt
                         )
                     }
                     PowerUpType.JAMMER -> {
                         firestoreRepository.updateGameActiveEffect(
-                            gameId, "activeJammerUntil", expiresAt
+                            gameId, "powerUps.activeEffects.jammer", expiresAt
                         )
                     }
                     else -> {}
