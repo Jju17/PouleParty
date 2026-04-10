@@ -162,6 +162,7 @@ struct HomeFeature {
                 guard chickenLocStatus == .authorizedAlways || chickenLocStatus == .authorizedWhenInUse else {
                     return .send(.locationPermissionDenied)
                 }
+                MapWarmUp.warmUpIfNeeded()
                 state.destination = .planSelection(PlanSelectionFeature.State())
                 return .none
             case let .destination(.presented(.gameCreation(.gameCreated(game)))):
@@ -405,6 +406,7 @@ struct HomeFeature {
                 guard startLocStatus == .authorizedAlways || startLocStatus == .authorizedWhenInUse else {
                     return .send(.locationPermissionDenied)
                 }
+                MapWarmUp.warmUpIfNeeded()
                 state.destination = .joinFlow(JoinFlowFeature.State())
                 return .none
             }

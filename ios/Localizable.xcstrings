@@ -2375,7 +2375,68 @@
       }
     },
     "Set a start zone to start" : {
-
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Place une zone de départ pour commencer"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plaats een startzone om te beginnen"
+          }
+        }
+      }
+    },
+    "Set a start zone and final zone to start" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Place la zone de départ et la zone finale pour commencer"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plaats een start- en eindzone om te beginnen"
+          }
+        }
+      }
+    },
+    "Configure the zone" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Configure la zone"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Configureer de zone"
+          }
+        }
+      }
+    },
+    "Tap the map to adjust your zones" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Appuie sur la carte pour ajuster tes zones"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tik op de kaart om je zones aan te passen"
+          }
+        }
+      }
     },
     "Settings" : {
       "comment" : "The title of a picker that lets the user choose between \"Normal\" and \"Expert\" settings.",

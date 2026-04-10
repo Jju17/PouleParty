@@ -6,7 +6,6 @@
 //
 
 import ComposableArchitecture
-import Firebase
 import Sharing
 import SwiftUI
 import Foundation
@@ -15,10 +14,6 @@ import Foundation
 struct PoulePartyApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
     @Shared(.appStorage(AppConstants.prefOnboardingCompleted)) var hasCompletedOnboarding = false
-
-    init() {
-        FirebaseApp.configure()
-    }
 
     var body: some Scene {
         WindowGroup {

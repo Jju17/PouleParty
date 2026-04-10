@@ -94,6 +94,7 @@ fun GameCreationScreen(
                     .height(4.dp),
                 color = CROrange,
                 trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                drawStopIndicator = {},
             )
 
             // Step content
@@ -484,10 +485,11 @@ private fun ZoneSetupStep(
     isZoneConfigured: Boolean,
     onLocationSelected: (com.mapbox.geojson.Point) -> Unit,
     onFinalLocationSelected: (com.mapbox.geojson.Point?) -> Unit,
-    onRadiusChanged: (Double) -> Unit
+    onRadiusChanged: (Double) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = Modifier.fillMaxSize()
+        modifier = modifier.fillMaxSize()
     ) {
         // Title area
         Column(
@@ -987,8 +989,20 @@ private fun RecapStep(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 RecapRow(
+                    label = stringResource(R.string.role),
+                    value = if (state.isParticipating) "Chicken \uD83D\uDC14" else "Organizer \uD83D\uDCCB"
+                )
+                HorizontalDivider()
+
+                RecapRow(
                     label = stringResource(R.string.game_mode),
                     value = game.gameModEnum.title
+                )
+                HorizontalDivider()
+
+                RecapRow(
+                    label = stringResource(R.string.max_players),
+                    value = "${game.maxPlayers}"
                 )
                 HorizontalDivider()
 
@@ -1026,13 +1040,44 @@ private fun RecapStep(
                     label = stringResource(R.string.power_ups),
                     value = if (game.powerUps.enabled) "ON" else "OFF"
                 )
+                if (game.powerUps.enabled) {
+                    HorizontalDivider()
+                    val enabledNames = PowerUpType.entries
+                        .filter { it.firestoreValue in game.powerUps.enabledTypes }
+                        .joinToString(", ") { it.title }
+                    RecapRow(
+                        label = stringResource(R.string.active_types),
+                        value = enabledNames
+                    )
+                }
 
                 if (game.gameModEnum == GameMod.FOLLOW_THE_CHICKEN) {
                     HorizontalDivider()
                     RecapRow(
                         label = stringResource(R.string.chicken_can_see_hunters),
-                        value = if (game.chickenCanSeeHunters) "Oui" else "Non"
+                        value = if (game.chickenCanSeeHunters) "Yes" else "No"
                     )
+                }
+
+                if (game.isPaid) {
+                    HorizontalDivider()
+                    RecapRow(
+                        label = stringResource(R.string.pricing),
+                        value = game.pricingModelEnum.title
+                    )
+                    HorizontalDivider()
+                    val totalCents = game.pricing.pricePerPlayer * game.maxPlayers
+                    RecapRow(
+                        label = stringResource(R.string.total_price),
+                        value = String.format("%.2f€", totalCents / 100.0)
+                    )
+                    if (game.pricing.deposit > 0) {
+                        HorizontalDivider()
+                        RecapRow(
+                            label = stringResource(R.string.deposit),
+                            value = String.format("%.2f€", game.pricing.deposit / 100.0)
+                        )
+                    }
                 }
 
                 HorizontalDivider()
@@ -1040,7 +1085,7 @@ private fun RecapStep(
                     label = stringResource(R.string.registration),
                     value = if (game.registration.required) stringResource(R.string.registration_required) else stringResource(R.string.open_join)
                 )
-                if (game.registration.closesMinutesBefore != null) {
+                if (game.registration.required && game.registration.closesMinutesBefore != null) {
                     HorizontalDivider()
                     RecapRow(
                         label = stringResource(R.string.registration_closes),
@@ -1082,7 +1127,7 @@ private fun RecapRow(label: String, value: String) {
         )
         Text(
             text = value,
-            style = bangerStyle(18),
+            style = gameboyStyle(9),
             color = MaterialTheme.colorScheme.onBackground
         )
     }

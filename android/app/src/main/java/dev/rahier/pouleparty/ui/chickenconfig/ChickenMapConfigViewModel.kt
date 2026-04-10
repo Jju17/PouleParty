@@ -116,7 +116,20 @@ class ChickenMapConfigViewModel @Inject constructor(
                 point.latitude(), point.longitude(),
                 results
             )
-            if (results[0] > state.radius) return // Outside initial zone, ignore
+            if (results[0] > state.radius) {
+                // Outside zone: treat as new start zone placement
+                val zoom = zoomForRadius(state.radius, point.latitude()).toFloat()
+                _uiState.update {
+                    it.copy(
+                        markerPosition = point,
+                        cameraCenter = point,
+                        cameraZoom = zoom,
+                        finalMarkerPosition = null,
+                        pinMode = if (state.isFollowMode) MapConfigPinMode.START else MapConfigPinMode.FINAL
+                    )
+                }
+                return
+            }
 
             _uiState.update { it.copy(finalMarkerPosition = point) }
         } else {

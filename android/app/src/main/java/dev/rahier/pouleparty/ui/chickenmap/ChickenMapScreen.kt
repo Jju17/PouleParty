@@ -155,6 +155,23 @@ fun ChickenMapScreen(
                 }
             }
 
+            // Final zone glow (always visible for chicken)
+            state.game.finalLocation?.let { finalPos ->
+                val finalCirclePoints = circlePolygonPoints(finalPos, 50.0)
+                PolylineAnnotation(points = finalCirclePoints + listOf(finalCirclePoints.first())) {
+                    lineColor = ZoneGreen.copy(alpha = 0.15f)
+                    lineWidth = 8.0
+                }
+                PolylineAnnotation(points = finalCirclePoints + listOf(finalCirclePoints.first())) {
+                    lineColor = ZoneGreen.copy(alpha = 0.5f)
+                    lineWidth = 3.0
+                }
+                PolylineAnnotation(points = finalCirclePoints + listOf(finalCirclePoints.first())) {
+                    lineColor = ZoneGreen.copy(alpha = 0.9f)
+                    lineWidth = 1.5
+                }
+            }
+
             // Power-up markers (chicken power-ups only)
             if (state.hasGameStarted) state.availablePowerUps.forEach { powerUp ->
                 PointAnnotation(

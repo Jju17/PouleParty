@@ -878,6 +878,20 @@ struct ChickenMapView: View {
                     .lineWidth(2.5)
             }
 
+            // Final zone glow (always visible for chicken)
+            if let finalLocation = store.game.finalLocation {
+                let finalCircle = Polygon(center: finalLocation, radius: 50, vertices: 36)
+                PolylineAnnotation(lineCoordinates: finalCircle.outerRing.coordinates)
+                    .lineColor(StyleColor(UIColor(Color.zoneGreen).withAlphaComponent(0.15)))
+                    .lineWidth(8)
+                PolylineAnnotation(lineCoordinates: finalCircle.outerRing.coordinates)
+                    .lineColor(StyleColor(UIColor(Color.zoneGreen).withAlphaComponent(0.5)))
+                    .lineWidth(3)
+                PolylineAnnotation(lineCoordinates: finalCircle.outerRing.coordinates)
+                    .lineColor(StyleColor(UIColor(Color.zoneGreen).withAlphaComponent(0.9)))
+                    .lineWidth(1.5)
+            }
+
             // Power-up markers (chicken power-ups only)
             if store.hasGameStarted {
                 ForEvery(store.availablePowerUps) { powerUp in

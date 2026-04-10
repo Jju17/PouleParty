@@ -21,7 +21,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.mapbox.geojson.Point
 import com.mapbox.maps.CameraOptions
 import com.mapbox.maps.MapboxExperimental
+import com.mapbox.maps.Style
 import com.mapbox.maps.extension.compose.MapboxMap
+import com.mapbox.maps.extension.compose.style.MapStyle
 import com.mapbox.maps.extension.compose.MapEffect
 import com.mapbox.maps.extension.compose.animation.viewport.rememberMapViewportState
 import com.mapbox.maps.extension.compose.annotation.IconImage
@@ -76,7 +78,8 @@ fun ChickenMapConfigScreen(
     Box(modifier = Modifier.fillMaxSize()) {
         MapboxMap(
             modifier = Modifier.fillMaxSize(),
-            mapViewportState = mapViewportState
+            mapViewportState = mapViewportState,
+            style = { MapStyle(style = Style.MAPBOX_STREETS) }
         ) {
             // Enable location puck + map tap listener
             MapEffect(Unit) { mapView ->

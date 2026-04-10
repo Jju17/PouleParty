@@ -77,6 +77,8 @@
     <string name="game_mode">Spelmodus</string>
     <string name="map_setup">Kaartinstellingen</string>
     <string name="start_game">Spel starten</string>
+    <string name="configure_the_zone">Configureer de zone</string>
+    <string name="tap_map_to_adjust">Tik op de kaart om je zones aan te passen</string>
     <string name="set_start_zone">Stel een startzone in om te beginnen</string>
     <string name="set_start_and_final_zone">Stel een start- en eindzone in om te beginnen</string>
     <string name="radius_interval_update">Straalupdate elke</string>
@@ -87,6 +89,12 @@
     <string name="error">Fout</string>
     <string name="duration">Duur</string>
     <string name="ends_at">Eindigt om</string>
+    <string name="role">Rol</string>
+    <string name="max_players">Max spelers</string>
+    <string name="active_types">Actieve types</string>
+    <string name="pricing">Prijsmodel</string>
+    <string name="total_price">Totaalprijs</string>
+    <string name="deposit">Borg</string>
     <string name="zone_radius">Zonestraal</string>
     <string name="zone">Zone</string>
     <string name="start_zone">Startzone</string>

@@ -77,12 +77,12 @@ struct GameCreationFeature {
         }
 
         var isZoneConfigured: Bool {
-            let loc = game.initialLocation
-            let isDefault = abs(loc.latitude - AppConstants.defaultLatitude) < 0.001
-                && abs(loc.longitude - AppConstants.defaultLongitude) < 0.001
+            let center = game.zone.center
+            let isDefault = abs(center.latitude - AppConstants.defaultLatitude) < 0.001
+                && abs(center.longitude - AppConstants.defaultLongitude) < 0.001
             guard !isDefault else { return false }
             if game.gameMode == .stayInTheZone {
-                return game.finalLocation != nil
+                return game.zone.finalCenter != nil
             }
             return true
         }
@@ -304,51 +304,58 @@ struct GameCreationView: View {
     private var isMapStep: Bool { store.currentStep == .zoneSetup }
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            // Step content — single container, no if/else branching
-            stepContent(for: store.currentStep)
-                .id(store.currentStep)
-                .transition(.asymmetric(
-                    insertion: .move(edge: store.goingForward ? .trailing : .leading),
-                    removal: .move(edge: store.goingForward ? .leading : .trailing)
-                ))
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .ignoresSafeArea(edges: isMapStep ? .top : [])
-
-            // Progress bar — always on top, overlaps everything
-            VStack {
+        VStack(spacing: 0) {
+            // Fixed header: progress bar + dismiss button
+            HStack {
                 ProgressView(value: store.progress)
                     .tint(Color.CROrange)
-                    .padding(.horizontal, 20)
-                    .padding(.top, 54)
-                Spacer()
-            }
-
-            // Bottom navigation
-            bottomBar
-
-            // Dismiss button
-            if let onDismiss {
-                VStack {
-                    HStack {
-                        Spacer()
-                        Button(action: onDismiss) {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 14, weight: .bold))
-                                .foregroundStyle(Color.onBackground.opacity(0.6))
-                                .padding(10)
-                                .background(Color.surface)
-                                .clipShape(Circle())
-                                .shadow(color: .black.opacity(0.1), radius: 2, y: 1)
-                        }
-                        .padding(.trailing, 20)
-                        .padding(.top, 12)
+                if let onDismiss {
+                    Button(action: onDismiss) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(Color.onBackground.opacity(0.6))
+                            .padding(10)
+                            .background(Color.surface)
+                            .clipShape(Circle())
+                            .shadow(color: .black.opacity(0.1), radius: 2, y: 1)
                     }
-                    Spacer()
                 }
             }
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
+            .padding(.bottom, 4)
+
+            // Step description bar (for map step)
+            if isMapStep {
+                VStack(spacing: 2) {
+                    BangerText(String(localized: "Configure the zone"), size: 20)
+                        .foregroundStyle(Color.onBackground)
+                    Text(store.isZoneConfigured
+                         ? String(localized: "Tap the map to adjust your zones")
+                         : store.currentGame.gameMode == .stayInTheZone
+                            ? String(localized: "Set a start zone and final zone to start")
+                            : String(localized: "Set a start zone to start"))
+                        .font(.gameboy(size: 8))
+                        .foregroundStyle(Color.onBackground.opacity(0.6))
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity)
+                .background(Color.background)
+            }
+
+            // Step content
+            stepContent(for: store.currentStep)
+                .id(store.currentStep)
+                .transition(.push(from: store.goingForward ? .trailing : .leading))
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .ignoresSafeArea(edges: isMapStep ? .top : [])
+                .clipped()
+
+            // Fixed bottom bar
+            bottomBar
         }
-        .animation(.easeInOut(duration: 0.3), value: store.currentStep)
+        .animation(.linear(duration: 0.15), value: store.currentStep)
         .background(Color.background)
         .sheet(isPresented: $store.showPowerUpSelection) {
             PowerUpSelectionView(
@@ -407,6 +414,7 @@ struct GameCreationView: View {
                 }
                 .disabled(!store.isZoneConfigured)
             } else {
+                let nextDisabled = isMapStep && !store.isZoneConfigured
                 Button {
                     store.send(.nextTapped)
                 } label: {
@@ -415,17 +423,18 @@ struct GameCreationView: View {
                             .font(.gameboy(size: 10))
                         Image(systemName: "chevron.right")
                     }
-                    .foregroundStyle(.black)
+                    .foregroundStyle(nextDisabled ? .black.opacity(0.4) : .black)
                     .padding(.horizontal, 20)
                     .padding(.vertical, 12)
-                    .background(Color.gradientFire)
+                    .background(nextDisabled ? AnyShapeStyle(Color.gray.opacity(0.3)) : AnyShapeStyle(Color.gradientFire))
                     .clipShape(Capsule())
-                    .shadow(color: .black.opacity(0.25), radius: 6, y: 3)
+                    .shadow(color: .black.opacity(nextDisabled ? 0 : 0.25), radius: 6, y: 3)
                 }
+                .disabled(nextDisabled)
             }
         }
         .padding(.horizontal, 20)
-        .padding(.bottom, 16)
+        .padding(.vertical, 16)
     }
 
     // MARK: - Step Content
@@ -917,13 +926,13 @@ struct GameCreationView: View {
     // MARK: - Recap Step
 
     private var recapStep: some View {
+        GeometryReader { geo in
         ScrollView {
             VStack(spacing: 20) {
                 stepHeader(
                     title: "Ready to go!",
                     subtitle: "Review your game settings"
                 )
-                .padding(.top, 60)
 
                 // Game Code
                 VStack(spacing: 8) {
@@ -947,22 +956,46 @@ struct GameCreationView: View {
                     Divider()
                     recapRow(label: "Mode", value: store.currentGame.gameMode.title)
                     Divider()
+                    recapRow(label: "Max Players", value: "\(store.currentGame.maxPlayers)")
+                    Divider()
                     recapRow(label: "Start", value: formattedDate(store.currentGame.startDate))
                     Divider()
                     recapRow(label: "Duration", value: formattedDuration(store.gameDurationMinutes))
+                    Divider()
+                    let endDate = store.currentGame.startDate.addingTimeInterval(store.gameDurationMinutes * 60)
+                    recapRow(label: "End", value: formattedDate(endDate))
                     Divider()
                     recapRow(label: "Head Start", value: "\(Int(store.currentGame.timing.headStartMinutes)) min")
                     Divider()
                     recapRow(label: "Zone Radius", value: "\(Int(store.currentGame.zone.radius)) m")
                     Divider()
                     recapRow(label: "Power-Ups", value: store.currentGame.powerUps.enabled ? "Enabled" : "Disabled")
+                    if store.currentGame.powerUps.enabled {
+                        Divider()
+                        let enabledNames = PowerUp.PowerUpType.allCases
+                            .filter { store.currentGame.powerUps.enabledTypes.contains($0.rawValue) }
+                            .map(\.displayName)
+                            .joined(separator: ", ")
+                        recapRow(label: "Active Types", value: enabledNames)
+                    }
                     if store.currentGame.gameMode == .followTheChicken {
                         Divider()
                         recapRow(label: "Chicken sees hunters", value: store.currentGame.chickenCanSeeHunters ? "Yes" : "No")
                     }
+                    if store.currentGame.isPaid {
+                        Divider()
+                        recapRow(label: "Pricing", value: store.currentGame.pricing.model.title)
+                        Divider()
+                        let totalCents = store.currentGame.pricing.pricePerPlayer * store.currentGame.maxPlayers
+                        recapRow(label: "Total price", value: String(format: "%.2f€", Double(totalCents) / 100.0))
+                        if store.currentGame.pricing.deposit > 0 {
+                            Divider()
+                            recapRow(label: "Deposit", value: String(format: "%.2f€", Double(store.currentGame.pricing.deposit) / 100.0))
+                        }
+                    }
                     Divider()
                     recapRow(label: "Registration", value: store.currentGame.registration.required ? "Required" : "Open")
-                    if let minutes = store.currentGame.registration.closesMinutesBefore {
+                    if store.currentGame.registration.required, let minutes = store.currentGame.registration.closesMinutesBefore {
                         Divider()
                         recapRow(label: "Registration closes", value: registrationDeadlineLabel(minutes))
                     }
@@ -986,6 +1019,8 @@ struct GameCreationView: View {
 
                 Spacer().frame(height: 20)
             }
+            .frame(minHeight: geo.size.height)
+        }
         }
     }
 

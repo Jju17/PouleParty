@@ -149,7 +149,17 @@ See `firestore.rules`. Key principle: the creator has full control over their ga
 5. **Tests** — both platforms have unit tests for models and game logic
 6. **Documentation** — update `README.md`, `CLAUDE.md` (Firestore model, game concepts, conventions), and `.claude/rules/*.md` (iOS/Android/Functions guides) to reflect any new or changed functionality, field names, or architecture
 
-### 4. Zero Warnings Policy
+### Preparing a release
+
+When asked to prepare a release or create a build:
+
+1. **Bump versions** — increment `versionCode`/`versionName` in `android/app/build.gradle.kts` and `CURRENT_PROJECT_VERSION`/`MARKETING_VERSION` in the Xcode project
+2. **Update CHANGELOG.md** — add a new section at the top with the version number, date, and all changes grouped by Added/Changed/Fixed. Include iOS and Android version info. Review git log since last release to capture everything.
+3. **Build release artifacts** — iOS archive (`xcodebuild archive`) and Android production release AAB (`./gradlew bundleProductionRelease`)
+4. **Write store descriptions** — prepare What's New text in EN/FR/NL for both App Store and Google Play. Put them in `RELEASE_NOTES.md`.
+5. **List next steps** — remind which manual steps remain (upload to stores, deploy Cloud Functions + Firestore rules to production)
+
+### Zero Warnings Policy
 
 **The codebase must compile with zero warnings on both iOS and Android.** After every build:
 - If Xcode logs contain warnings → fix them immediately, even if unrelated to the current task.

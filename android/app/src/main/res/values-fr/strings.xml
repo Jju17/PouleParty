@@ -232,8 +232,18 @@
     <!-- Chicken Config extras -->
     <string name="duration">Durée</string>
     <string name="ends_at">Fin à</string>
+    <string name="role">Rôle</string>
+    <string name="max_players">Joueurs max</string>
+    <string name="active_types">Types actifs</string>
+    <string name="pricing">Tarification</string>
+    <string name="total_price">Prix total</string>
+    <string name="deposit">Caution</string>
     <string name="zone_radius">Rayon de la zone</string>
     <string name="zone">Zone</string>
+    <string name="configure_the_zone">Configure la zone</string>
+    <string name="tap_map_to_adjust">Appuie sur la carte pour ajuster tes zones</string>
+    <string name="set_start_zone">Place une zone de départ pour commencer</string>
+    <string name="set_start_and_final_zone">Place la zone de départ et la zone finale pour commencer</string>
     <string name="start_zone">Zone de départ</string>
     <string name="final_zone">Zone finale</string>
     <string name="final_zone_hint">Appuie dans la zone de départ pour placer le centre de la zone finale</string>

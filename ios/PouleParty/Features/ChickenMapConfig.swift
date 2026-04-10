@@ -84,7 +84,19 @@ struct ChickenMapConfigFeature {
                     let tappedLoc = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
                     let distance = initialLoc.distance(from: tappedLoc)
                     if distance > state.game.zone.radius {
-                        return .none // Outside initial zone, ignore
+                        // Outside zone: treat as new start zone placement
+                        state.pinMode = .start
+                        state.$game.withLock {
+                            $0.initialLocation = coordinate
+                            $0.finalLocation = nil
+                        }
+                        state.finalMarker = nil
+                        state.cameraRegion = CameraRegion(center: coordinate)
+                        self.updateMapComponents(state: &state)
+                        if state.game.gameMode == .stayInTheZone {
+                            state.pinMode = .finalZone
+                        }
+                        return .none
                     }
                     state.$game.withLock { $0.finalLocation = coordinate }
                     state.finalMarker = MarkerOverlay(title: "Final", coordinate: coordinate)
@@ -181,10 +193,17 @@ class AddressSearchHelper: NSObject, ObservableObject, MKLocalSearchCompleterDel
 
 struct ChickenMapConfigView: View {
     @Bindable var store: StoreOf<ChickenMapConfigFeature>
-    @State private var viewport: Viewport = .camera(
-        center: CLLocationCoordinate2D(latitude: AppConstants.defaultLatitude, longitude: AppConstants.defaultLongitude),
-        zoom: 14
-    )
+    @State private var viewport: Viewport
+
+    init(store: StoreOf<ChickenMapConfigFeature>) {
+        self.store = store
+        let center = store.currentGame.initialLocation
+        let zoom = zoomForRadius(
+            CLLocationDistance(store.currentGame.zone.radius),
+            latitude: center.latitude
+        )
+        _viewport = State(initialValue: .camera(center: center, zoom: zoom))
+    }
     @State private var searchText = ""
     @StateObject private var searchHelper = AddressSearchHelper()
     @FocusState private var isSearchFieldFocused: Bool
@@ -201,7 +220,7 @@ struct ChickenMapConfigView: View {
                 // Search bar at top
                 VStack {
                     searchOverlay
-                        .padding(.top, 72)
+                        .padding(.top, 32)
                     Spacer()
                 }
 
@@ -256,8 +275,8 @@ struct ChickenMapConfigView: View {
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
-                    .padding(.bottom, 72)
-                    .background(.thinMaterial)
+                    .background(Color.background.opacity(0.85))
+                    .background(.ultraThinMaterial)
                 }
                 .ignoresSafeArea(.keyboard)
             }
@@ -305,6 +324,9 @@ struct ChickenMapConfigView: View {
                     }
                 }
                 .allowOverlap(true)
+                .allowOverlapWithPuck(true)
+                .ignoreCameraPadding(true)
+                .selected(true)
             }
 
             // Final zone marker
@@ -328,6 +350,9 @@ struct ChickenMapConfigView: View {
                     }
                 }
                 .allowOverlap(true)
+                .allowOverlapWithPuck(true)
+                .ignoreCameraPadding(true)
+                .selected(true)
 
                 // Neon glow circle at final position
                 let finalCircle = Polygon(center: finalMarker.coordinate, radius: 50, vertices: 36)
@@ -356,6 +381,7 @@ struct ChickenMapConfigView: View {
                 return true
             }
         }
+        .mapStyle(.streets)
         .ignoresSafeArea()
         .onChange(of: store.cameraRegion) { _, newRegion in
             withViewportAnimation(.default(maxDuration: 1)) {
