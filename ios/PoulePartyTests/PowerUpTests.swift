@@ -61,6 +61,26 @@ struct PowerUpTests {
         #expect(!mock.isActivated)
     }
 
+    @Test func powerUpTypeDecodesUnknownToZonePreview() throws {
+        let decoded = try JSONDecoder().decode(PowerUp.PowerUpType.self, from: #""futureType""#.data(using: .utf8)!)
+        #expect(decoded == .zonePreview)
+    }
+
+    @Test func powerUpTypeDecodesKnownValues() throws {
+        let types: [(String, PowerUp.PowerUpType)] = [
+            ("zonePreview", .zonePreview),
+            ("radarPing", .radarPing),
+            ("invisibility", .invisibility),
+            ("zoneFreeze", .zoneFreeze),
+            ("decoy", .decoy),
+            ("jammer", .jammer),
+        ]
+        for (raw, expected) in types {
+            let decoded = try JSONDecoder().decode(PowerUp.PowerUpType.self, from: "\"\(raw)\"".data(using: .utf8)!)
+            #expect(decoded == expected, "Expected \(expected) for raw value \(raw)")
+        }
+    }
+
     @Test func coordinateIsCorrect() {
         let powerUp = PowerUp(
             id: "test",

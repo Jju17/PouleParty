@@ -110,7 +110,8 @@ extension Game {
         let freezeDuration = PowerUp.PowerUpType.zoneFreeze.durationSeconds ?? 0
         let freezeStart = freezeEnd?.addingTimeInterval(-freezeDuration)
 
-        while lastUpdate.addingTimeInterval(TimeInterval(self.zone.shrinkIntervalMinutes * 60)) < .now {
+        let now = Date.now
+        while lastUpdate.addingTimeInterval(TimeInterval(self.zone.shrinkIntervalMinutes * 60)) < now {
             lastUpdate.addTimeInterval(TimeInterval(self.zone.shrinkIntervalMinutes * 60))
             let isFrozen: Bool
             if let fs = freezeStart, let fe = freezeEnd {

@@ -103,13 +103,17 @@ async function sendNotificationToTokens(
   });
 
   if (tokensToRemove.length > 0) {
-    const batch = db.batch();
-    const snap = await db
-      .collection("fcmTokens")
-      .where("token", "in", tokensToRemove.slice(0, 30))
-      .get();
-    snap.docs.forEach((doc) => batch.delete(doc.ref));
-    await batch.commit();
+    // Firestore `in` queries limited to 30, so batch the cleanup
+    for (let i = 0; i < tokensToRemove.length; i += 30) {
+      const tokenBatch = tokensToRemove.slice(i, i + 30);
+      const batch = db.batch();
+      const snap = await db
+        .collection("fcmTokens")
+        .where("token", "in", tokenBatch)
+        .get();
+      snap.docs.forEach((doc) => batch.delete(doc.ref));
+      await batch.commit();
+    }
   }
 }
 
@@ -238,7 +242,7 @@ export const onGameCreated = onDocumentCreated(
     const shrinkIntervalMinutes = (zone?.shrinkIntervalMinutes as number) ?? 5;
 
     // Validate inputs to prevent infinite loops or invalid scheduling
-    if (shrinkIntervalMinutes <= 0) {
+    if (shrinkIntervalMinutes < 1) {
       console.error(`Invalid shrinkIntervalMinutes (${shrinkIntervalMinutes}) for game ${gameId}`);
       return;
     }
@@ -258,59 +262,64 @@ export const onGameCreated = onDocumentCreated(
       `locations/${REGION}/functions/sendGameNotification`
     );
 
-    // Schedule waiting → inProgress at startTimestamp
-    if (startTimestamp) {
-      await statusQueue.enqueue(
-        {
-          gameId,
-          targetStatus: "inProgress",
-          expectedCurrentStatus: "waiting",
-        },
-        { scheduleTime: startTimestamp }
-      );
-
-      // Schedule chicken_start notification
-      await notifQueue.enqueue(
-        { gameId, notificationType: "chicken_start" },
-        { scheduleTime: startTimestamp }
-      );
-    }
-
-    // Schedule inProgress → done at endTimestamp
-    if (endTimestamp) {
-      await statusQueue.enqueue(
-        {
-          gameId,
-          targetStatus: "done",
-          expectedCurrentStatus: "inProgress",
-        },
-        { scheduleTime: endTimestamp }
-      );
-    }
-
-    // Compute hunterStartDate = startTimestamp + chickenHeadStartMinutes
-    if (startTimestamp && endTimestamp) {
-      const hunterStartDate = new Date(
-        startTimestamp.getTime() + headStartMinutes * 60 * 1000
-      );
-
-      // Schedule hunter_start notification
-      await notifQueue.enqueue(
-        { gameId, notificationType: "hunter_start" },
-        { scheduleTime: hunterStartDate }
-      );
-
-      // Schedule zone_shrink notifications at each interval after hunterStartDate
-      const intervalMs = shrinkIntervalMinutes * 60 * 1000;
-      let shrinkTime = new Date(hunterStartDate.getTime() + intervalMs);
-
-      while (shrinkTime < endTimestamp) {
-        await notifQueue.enqueue(
-          { gameId, notificationType: "zone_shrink" },
-          { scheduleTime: shrinkTime }
+    try {
+      // Schedule waiting → inProgress at startTimestamp
+      if (startTimestamp) {
+        await statusQueue.enqueue(
+          {
+            gameId,
+            targetStatus: "inProgress",
+            expectedCurrentStatus: "waiting",
+          },
+          { scheduleTime: startTimestamp }
         );
-        shrinkTime = new Date(shrinkTime.getTime() + intervalMs);
+
+        // Schedule chicken_start notification
+        await notifQueue.enqueue(
+          { gameId, notificationType: "chicken_start" },
+          { scheduleTime: startTimestamp }
+        );
       }
+
+      // Schedule inProgress → done at endTimestamp
+      if (endTimestamp) {
+        await statusQueue.enqueue(
+          {
+            gameId,
+            targetStatus: "done",
+            expectedCurrentStatus: "inProgress",
+          },
+          { scheduleTime: endTimestamp }
+        );
+      }
+
+      // Compute hunterStartDate = startTimestamp + chickenHeadStartMinutes
+      if (startTimestamp && endTimestamp) {
+        const hunterStartDate = new Date(
+          startTimestamp.getTime() + headStartMinutes * 60 * 1000
+        );
+
+        // Schedule hunter_start notification
+        await notifQueue.enqueue(
+          { gameId, notificationType: "hunter_start" },
+          { scheduleTime: hunterStartDate }
+        );
+
+        // Schedule zone_shrink notifications at each interval after hunterStartDate
+        const intervalMs = shrinkIntervalMinutes * 60 * 1000;
+        let shrinkTime = new Date(hunterStartDate.getTime() + intervalMs);
+
+        while (shrinkTime < endTimestamp) {
+          await notifQueue.enqueue(
+            { gameId, notificationType: "zone_shrink" },
+            { scheduleTime: shrinkTime }
+          );
+          shrinkTime = new Date(shrinkTime.getTime() + intervalMs);
+        }
+      }
+    } catch (error) {
+      console.error(`Failed to schedule tasks for game ${gameId}:`, error);
+      throw error;
     }
   }
 );
@@ -334,6 +343,9 @@ export const onGameUpdated = onDocumentUpdated(
     const winnersAfter = (after.winners as Array<{ name?: string }>) ?? [];
 
     if (winnersAfter.length <= winnersBefore.length) return;
+
+    // Don't send notifications for finished games
+    if (after.status === "done") return;
 
     // A new winner was added
     const newWinner = winnersAfter[winnersAfter.length - 1];
@@ -386,7 +398,7 @@ export const registerForEvent = onCall(
       throw new HttpsError("invalid-argument", "All fields are required.");
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!emailRegex.test(email.trim())) {
       throw new HttpsError("invalid-argument", "Invalid email format.");
     }
@@ -417,8 +429,9 @@ export const registerForEvent = onCall(
         throw new HttpsError("already-exists", "This email is already registered.");
       }
 
-      const countSnap = await db.collection("registrations").count().get();
-      if (countSnap.data().count >= MAX_REGISTRATIONS) {
+      // Use transactional read to prevent race conditions on capacity
+      const allRegs = await transaction.get(db.collection("registrations"));
+      if (allRegs.docs.length >= MAX_REGISTRATIONS) {
         throw new HttpsError("resource-exhausted", "Event is full.");
       }
 

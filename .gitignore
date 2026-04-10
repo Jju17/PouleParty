@@ -23,6 +23,7 @@ android/*.keystore
 functions/lib/
 functions/node_modules/
 functions/.env
+functions/.env.*
 
 # === IDE ===
 .idea/

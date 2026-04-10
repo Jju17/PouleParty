@@ -33,6 +33,11 @@ struct PowerUp: Codable, Equatable, Identifiable {
         case decoy
         case jammer
 
+        init(from decoder: Decoder) throws {
+            let rawValue = try decoder.singleValueContainer().decode(String.self)
+            self = PowerUpType(rawValue: rawValue) ?? .zonePreview
+        }
+
         var isHunterPowerUp: Bool {
             self == .zonePreview || self == .radarPing
         }

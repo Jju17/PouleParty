@@ -22,14 +22,14 @@ func generatePowerUps(
     guard !powerUpTypes.isEmpty else { return [] }
 
     var result: [PowerUp] = []
-    let baseSeed = driftSeed ^ (batchIndex &* 7919)
+    let baseSeed = driftSeed ^ (batchIndex * 7919)
 
     for i in 0..<count {
-        let itemSeed = abs(baseSeed &* 31 &+ i &* 127)
+        let itemSeed = abs(baseSeed * 31 + i * 127)
 
         // Position within the zone circle using polar coordinates
-        let angleSeed = abs(itemSeed &* 53 ^ (i &* 97))
-        let distSeed = abs(itemSeed &* 79 ^ (i &* 151))
+        let angleSeed = abs(Int64(itemSeed) * 53 ^ (Int64(i) * 97))
+        let distSeed = abs(Int64(itemSeed) * 79 ^ (Int64(i) * 151))
 
         let angle = Double(angleSeed % 36000) / 36000.0 * 2.0 * .pi
         let distFraction = Double(distSeed % 10000) / 10000.0

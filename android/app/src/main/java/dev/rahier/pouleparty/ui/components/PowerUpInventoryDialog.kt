@@ -16,7 +16,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
+import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.model.PowerUp
 
 @Composable
@@ -29,11 +31,11 @@ fun PowerUpInventoryDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Power-Ups") },
+        title = { Text(stringResource(R.string.power_ups)) },
         text = {
             Column {
                 if (collectedPowerUps.isEmpty()) {
-                    Text("No power-ups collected yet")
+                    Text(stringResource(R.string.no_power_ups_collected))
                 } else {
                     collectedPowerUps.forEach { powerUp ->
                         Row(
@@ -44,7 +46,7 @@ fun PowerUpInventoryDialog(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(powerUp.typeEnum.title, fontWeight = FontWeight.Bold)
-                                val durationText = powerUp.typeEnum.durationSeconds?.let { "${it}s" } ?: "Instant"
+                                val durationText = powerUp.typeEnum.durationSeconds?.let { "${it}s" } ?: stringResource(R.string.instant)
                                 Text(durationText, fontSize = 12.sp, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f))
                             }
                             Button(
@@ -52,7 +54,7 @@ fun PowerUpInventoryDialog(
                                 enabled = activatingPowerUpId == null,
                                 colors = ButtonDefaults.buttonColors(containerColor = activateButtonColor)
                             ) {
-                                Text("Activate")
+                                Text(stringResource(R.string.activate))
                             }
                         }
                     }
@@ -61,7 +63,7 @@ fun PowerUpInventoryDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Close")
+                Text(stringResource(R.string.close))
             }
         }
     )

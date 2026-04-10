@@ -16,8 +16,10 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import dev.rahier.pouleparty.R
 import androidx.compose.ui.unit.sp
 import dev.rahier.pouleparty.model.GameMod
 import dev.rahier.pouleparty.model.PowerUpType
@@ -78,9 +80,9 @@ fun PowerUpSelectionScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Power-Ups", style = bangerStyle(28), color = MaterialTheme.colorScheme.onBackground)
+            Text(stringResource(R.string.power_ups), style = bangerStyle(28), color = MaterialTheme.colorScheme.onBackground)
             TextButton(onClick = onDismiss) {
-                Text("Done", style = bangerStyle(18))
+                Text(stringResource(R.string.done), style = bangerStyle(18))
             }
         }
 
@@ -207,7 +209,7 @@ private fun PowerUpCard(
                 )
                 if (unavailable) {
                     Text(
-                        "Not available in this mode",
+                        stringResource(R.string.not_available_in_this_mode),
                         fontSize = 8.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                         textAlign = TextAlign.Center

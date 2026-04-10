@@ -111,7 +111,7 @@ class GameCreationViewModel @Inject constructor(
                     driftSeed = (1..999_999).random()
                 ),
                 timing = Timing(
-                    headStartMinutes = 5.0
+                    headStartMinutes = 0.0
                 ),
                 gameMode = GameMod.STAY_IN_THE_ZONE.firestoreValue,
                 foundCode = Game.generateFoundCode(),

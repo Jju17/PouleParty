@@ -25,6 +25,7 @@ import dev.rahier.pouleparty.ui.evaluateCountdown
 import dev.rahier.pouleparty.ui.BaseMapViewModel
 import dev.rahier.pouleparty.ui.interpolateZoneCenter
 import dev.rahier.pouleparty.ui.processRadiusUpdate
+import dev.rahier.pouleparty.ui.seededRandom
 import dev.rahier.pouleparty.ui.shouldCheckZone
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -561,12 +562,5 @@ class HunterMapViewModel @Inject constructor(
         handleCodeCopied { copied -> _uiState.update { it.copy(codeCopied = copied) } }
     }
 
-    private fun seededRandom(seed: Long, index: Int): Double {
-        @Suppress("INTEGER_OVERFLOW")
-        var z = seed + index * 0x9e3779b97f4a7c15uL.toLong()
-        z = (z xor (z ushr 30)) * 0xbf58476d1ce4e5b9uL.toLong()
-        z = (z xor (z ushr 27)) * 0x94d049bb133111ebuL.toLong()
-        z = z xor (z ushr 31)
-        return (z ushr 1).toDouble() / Long.MAX_VALUE.toDouble()
-    }
+    // seededRandom is in GameTimerHelper.kt (shared pure logic)
 }

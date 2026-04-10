@@ -66,6 +66,12 @@
 
     <!-- Chicken Config -->
     <string name="game_settings">Réglages du jeu</string>
+    <string name="game_code_label">Code de la partie</string>
+    <string name="schedule_label">Horaire</string>
+    <string name="power_ups_label">Power-Ups</string>
+    <string name="advanced_label">Avancé</string>
+    <string name="head_start_label">Avance</string>
+    <string name="mode_label">Mode</string>
     <string name="start_at">Départ à</string>
     <string name="end_at">Fin à</string>
     <string name="game_mode">Mode de jeu</string>
@@ -260,4 +266,30 @@
     <string name="share_code">Partage ce code :</string>
     <string name="tap_to_copy">Appuie pour copier :</string>
     <string name="copied">Copié !</string>
+
+    <!-- Format -->
+    <string name="power_ups_count_format">%1$d/%2$d</string>
+
+    <!-- Plan Selection -->
+    <string name="create_party">Créer une partie</string>
+    <string name="choose_your_plan">Choisis ton plan</string>
+    <string name="daily_limit_reached">Limite quotidienne atteinte</string>
+    <string name="daily_limit_message">Tu ne peux créer qu\'une seule partie gratuite par jour. Passe à un plan payant pour des parties illimitées.</string>
+    <string name="failed_to_load_pricing">Échec du chargement des prix</string>
+    <string name="retry">Réessayer</string>
+
+    <!-- Power-Up Dialogs -->
+    <string name="no_power_ups_collected">Aucun power-up collecté</string>
+    <string name="activate">Activer</string>
+    <string name="not_available_in_this_mode">Indisponible dans ce mode</string>
+    <string name="duration_format">%1$ds</string>
+    <string name="instant">Instantané</string>
+
+    <!-- Auth -->
+    <string name="connection_failed">Connexion échouée. Vérifie ta connexion internet et réessaie.</string>
+
+    <!-- My Games -->
+    <string name="my_games">Mes parties</string>
+    <string name="no_games_yet">Aucune partie pour l\'instant</string>
+    <string name="build">Build</string>
 </resources>

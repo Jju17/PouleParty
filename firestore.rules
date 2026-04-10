@@ -10,7 +10,14 @@ service cloud.firestore {
       // Any authenticated user can create a game (must include creatorId matching their uid)
       allow create: if request.auth != null
                     && request.resource.data.creatorId == request.auth.uid
-                    && request.resource.data.status == 'waiting';
+                    && request.resource.data.status == 'waiting'
+                    && request.resource.data.zone.radius > 0
+                    && request.resource.data.zone.radius <= 50000
+                    && request.resource.data.maxPlayers >= 1
+                    && request.resource.data.maxPlayers <= 50
+                    && request.resource.data.timing.start < request.resource.data.timing.end
+                    && request.resource.data.timing.headStartMinutes >= 0
+                    && request.resource.data.zone.shrinkIntervalMinutes >= 1;
 
       // Any player can update hunterIds and winners (join game, submit winner)
       // If the game requires registration, the joining user must already have a registration doc.
@@ -25,8 +32,10 @@ service cloud.firestore {
                       || exists(/databases/$(database)/documents/games/$(gameId)/registrations/$(request.auth.uid))
                     );
 
-      // Any authenticated player can update power-up active effect fields
+      // Only game participants can update power-up active effect fields
       allow update: if request.auth != null
+                    && (request.auth.uid == resource.data.creatorId
+                        || request.auth.uid in resource.data.hunterIds)
                     && request.resource.data.diff(resource.data).affectedKeys()
                         .hasOnly(['powerUps']);
 
@@ -41,7 +50,9 @@ service cloud.firestore {
 
       // Chicken locations subcollection (only the creator can write)
       match /chickenLocations/{docId} {
-        allow read: if request.auth != null;
+        allow read: if request.auth != null
+                    && (request.auth.uid == get(/databases/$(database)/documents/games/$(gameId)).data.creatorId
+                        || request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.hunterIds);
         allow create, update: if request.auth != null
                       && get(/databases/$(database)/documents/games/$(gameId)).data.creatorId == request.auth.uid
                       && request.resource.data.keys().hasAll(['location', 'timestamp']);
@@ -50,7 +61,9 @@ service cloud.firestore {
 
       // Hunter locations subcollection
       match /hunterLocations/{visitorId} {
-        allow read: if request.auth != null;
+        allow read: if request.auth != null
+                    && (request.auth.uid == get(/databases/$(database)/documents/games/$(gameId)).data.creatorId
+                        || request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.hunterIds);
         allow create: if request.auth != null
                       && visitorId == request.auth.uid
                       && request.resource.data.hunterId == request.auth.uid
@@ -89,7 +102,9 @@ service cloud.firestore {
 
       // Power-ups subcollection
       match /powerUps/{powerUpId} {
-        allow read: if request.auth != null;
+        allow read: if request.auth != null
+                    && (request.auth.uid == get(/databases/$(database)/documents/games/$(gameId)).data.creatorId
+                        || request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.hunterIds);
         // Only the creator can spawn power-ups (merge-safe)
         allow create: if request.auth != null
                       && get(/databases/$(database)/documents/games/$(gameId)).data.creatorId == request.auth.uid;

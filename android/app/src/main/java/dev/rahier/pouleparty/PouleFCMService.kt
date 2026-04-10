@@ -27,7 +27,7 @@ class PouleFCMService : FirebaseMessagingService() {
                 mapOf(
                     "token" to token,
                     "platform" to "android",
-                    "updatedAt" to com.google.firebase.Timestamp.now()
+                    "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
                 )
             )
             .addOnFailureListener { e ->

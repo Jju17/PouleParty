@@ -119,7 +119,11 @@ class ChickenMapViewModel @Inject constructor(
             }
 
             if (game.gameStatusEnum == GameStatus.WAITING) {
-                try { firestoreRepository.updateGameStatus(gameId, GameStatus.IN_PROGRESS) } catch (_: Exception) {}
+                try {
+                    firestoreRepository.updateGameStatus(gameId, GameStatus.IN_PROGRESS)
+                } catch (e: Exception) {
+                    Log.e("ChickenMapVM", "Failed to update game status to inProgress", e)
+                }
             }
 
             streamJobs += startTimer()

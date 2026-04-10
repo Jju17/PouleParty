@@ -14,8 +14,8 @@ object ProfanityFilter {
         "wanker", "twat", "bollocks", "prick", "motherfucker",
         // French
         "merde", "putain", "salope", "pute", "connard", "connasse", "enculer",
-        "encule", "encule", "nique", "ntm", "fdp", "pd", "tapette", "gouine",
-        "batard", "batard", "bordel", "bite", "couille", "branleur",
+        "encule", "nique", "ntm", "fdp", "pd", "tapette", "gouine",
+        "batard", "bordel", "bite", "couille", "branleur",
         "branleuse", "tg", "negro", "negre", "pede", "pedale",
     )
 

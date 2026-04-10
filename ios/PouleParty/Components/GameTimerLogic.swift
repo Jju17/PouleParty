@@ -64,11 +64,12 @@ enum CountdownResult: Equatable {
 /// Evaluates countdown phases in order, returning the first match.
 func evaluateCountdown(
     phases: [CountdownPhase],
+    now: Date = .now,
     currentCountdownNumber: Int?,
     currentCountdownText: String?
 ) -> CountdownResult {
     for phase in phases where phase.isEnabled {
-        let timeToTarget = phase.targetDate.timeIntervalSinceNow
+        let timeToTarget = phase.targetDate.timeIntervalSince(now)
 
         if phase.showNumericCountdown,
            timeToTarget > 0,
@@ -93,7 +94,7 @@ func evaluateCountdown(
 
 /// Returns true if the game has ended by time.
 func checkGameOverByTime(endDate: Date) -> Bool {
-    .now >= endDate
+    Date.now >= endDate
 }
 
 // MARK: - Center Interpolation
@@ -144,8 +145,8 @@ func deterministicDriftCenter(
 
     guard safeDrift > 0 else { return basePoint }
 
-    let angleSeed = abs(driftSeed &* 31 ^ Int(newRadius))
-    let distSeed = abs(driftSeed &* 127 ^ (Int(newRadius) &* 37))
+    let angleSeed = abs(Int(truncatingIfNeeded: Int64(driftSeed) &* 31) ^ Int(newRadius))
+    let distSeed = abs(Int(truncatingIfNeeded: Int64(driftSeed) &* 127) ^ Int(truncatingIfNeeded: Int64(Int(newRadius)) &* 37))
 
     let angle = Double(angleSeed % 36000) / 36000.0 * 2.0 * .pi
     let distFraction = Double(distSeed % 10000) / 10000.0
@@ -187,7 +188,8 @@ func processRadiusUpdate(
     finalCoordinates: CLLocationCoordinate2D? = nil,
     initialRadius: Double = 0
 ) -> RadiusUpdateResult? {
-    guard let nextUpdate = nextRadiusUpdate, .now >= nextUpdate else { return nil }
+    let now = Date.now
+    guard let nextUpdate = nextRadiusUpdate, now >= nextUpdate else { return nil }
     if isZoneFrozen { return nil }
 
     let newRadius = currentRadius - Int(radiusDeclinePerUpdate)

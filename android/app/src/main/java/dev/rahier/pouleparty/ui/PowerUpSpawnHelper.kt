@@ -31,7 +31,7 @@ fun generatePowerUps(
     for (i in 0 until count) {
         val itemSeed = abs(baseSeed * 31 + i * 127)
 
-        // Position within the zone circle using polar coordinates
+        // Position within the zone circle using polar coordinates (Long to match iOS Int64)
         val angleSeed = abs(itemSeed.toLong() * 53 xor (i.toLong() * 97))
         val distSeed = abs(itemSeed.toLong() * 79 xor (i.toLong() * 151))
 

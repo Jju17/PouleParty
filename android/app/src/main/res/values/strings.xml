@@ -268,6 +268,29 @@
     <string name="done">Done</string>
     <string name="power_ups_count_format">%1$d/%2$d</string>
 
+    <!-- Plan Selection -->
+    <string name="create_party">Create Party</string>
+    <string name="choose_your_plan">Choose your plan</string>
+    <string name="daily_limit_reached">Daily limit reached</string>
+    <string name="daily_limit_message">You can only create 1 free game per day. Upgrade to a paid plan for unlimited games.</string>
+    <string name="failed_to_load_pricing">Failed to load pricing</string>
+    <string name="retry">Retry</string>
+
+    <!-- Power-Up Dialogs -->
+    <string name="no_power_ups_collected">No power-ups collected yet</string>
+    <string name="activate">Activate</string>
+    <string name="not_available_in_this_mode">Not available in this mode</string>
+    <string name="duration_format">%1$ds</string>
+    <string name="instant">Instant</string>
+
+    <!-- Auth -->
+    <string name="connection_failed">Connection failed. Please check your internet and try again.</string>
+
+    <!-- My Games -->
+    <string name="my_games">My Games</string>
+    <string name="no_games_yet">No games yet</string>
+    <string name="build">Build</string>
+
     <!-- Mapbox -->
     <string name="mapbox_access_token" translatable="false">pk.eyJ1Ijoiamp1MTciLCJhIjoiY20yaGpwaG53MGI2YzJsc2NxOTNzMWJ2bCJ9.D6NMFnmGF7pA2LN64vmqcA</string>
 </resources>

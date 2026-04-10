@@ -16,9 +16,9 @@ enum ProfanityFilter {
         "wanker", "twat", "bollocks", "prick", "motherfucker",
         // French
         "merde", "putain", "salope", "pute", "connard", "connasse", "enculer",
-        "encule", "enculé", "nique", "ntm", "fdp", "pd", "tapette", "gouine",
-        "batard", "bâtard", "bordel", "bite", "couille", "branleur",
-        "branleuse", "tg", "negro", "nègre", "pédé", "pédale",
+        "encule", "nique", "ntm", "fdp", "pd", "tapette", "gouine",
+        "batard", "bordel", "bite", "couille", "branleur",
+        "branleuse", "tg", "negro", "negre", "pede", "pedale",
     ]
 
     /// Returns `true` when the nickname contains a blocked word.

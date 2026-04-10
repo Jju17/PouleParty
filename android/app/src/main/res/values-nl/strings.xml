@@ -265,4 +265,27 @@
     <string name="choose_power_ups">Power-Ups kiezen</string>
     <string name="done">Klaar</string>
     <string name="power_ups_count_format">%1$d/%2$d</string>
+
+    <!-- Plan Selection -->
+    <string name="create_party">Spel aanmaken</string>
+    <string name="choose_your_plan">Kies je plan</string>
+    <string name="daily_limit_reached">Dagelijkse limiet bereikt</string>
+    <string name="daily_limit_message">Je kunt maar 1 gratis spel per dag maken. Upgrade naar een betaald plan voor onbeperkte spellen.</string>
+    <string name="failed_to_load_pricing">Laden van prijzen mislukt</string>
+    <string name="retry">Opnieuw</string>
+
+    <!-- Power-Up Dialogs -->
+    <string name="no_power_ups_collected">Nog geen power-ups verzameld</string>
+    <string name="activate">Activeren</string>
+    <string name="not_available_in_this_mode">Niet beschikbaar in deze modus</string>
+    <string name="duration_format">%1$ds</string>
+    <string name="instant">Direct</string>
+
+    <!-- Auth -->
+    <string name="connection_failed">Verbinding mislukt. Controleer je internet en probeer opnieuw.</string>
+
+    <!-- My Games -->
+    <string name="my_games">Mijn spellen</string>
+    <string name="no_games_yet">Nog geen spellen</string>
+    <string name="build">Build</string>
 </resources>

@@ -355,7 +355,7 @@ private fun MyGamesSection(state: SettingsUiState, viewModel: SettingsViewModel)
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Text("🎮", modifier = Modifier.size(20.dp))
-                Text("My Games", style = bangerStyle(18), color = MaterialTheme.colorScheme.onBackground)
+                Text(stringResource(R.string.my_games), style = bangerStyle(18), color = MaterialTheme.colorScheme.onBackground)
             }
 
             when {
@@ -366,7 +366,7 @@ private fun MyGamesSection(state: SettingsUiState, viewModel: SettingsViewModel)
                 }
                 state.myGames.isEmpty() -> {
                     Text(
-                        "No games yet",
+                        stringResource(R.string.no_games_yet),
                         style = gameboyStyle(8),
                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
                         modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),

@@ -75,7 +75,7 @@ fun evaluateCountdown(
         val timeToTargetSec = timeToTargetMs / 1000.0
 
         if (phase.showNumericCountdown &&
-            timeToTargetSec in 0.0..AppConstants.COUNTDOWN_THRESHOLD_SECONDS
+            timeToTargetSec > 0 && timeToTargetSec <= AppConstants.COUNTDOWN_THRESHOLD_SECONDS
         ) {
             val number = kotlin.math.ceil(timeToTargetSec).toInt()
             if (number > 0 && currentCountdownNumber != number) {
@@ -149,8 +149,8 @@ fun deterministicDriftCenter(
 
     if (safeDrift <= 0) return basePoint
 
-    val angleSeed = kotlin.math.abs(driftSeed * 31 xor newRadius.toInt())
-    val distSeed = kotlin.math.abs(driftSeed * 127 xor (newRadius.toInt() * 37))
+    val angleSeed = kotlin.math.abs((driftSeed.toLong() * 31).toInt() xor newRadius.toInt())
+    val distSeed = kotlin.math.abs((driftSeed.toLong() * 127).toInt() xor (newRadius.toInt().toLong() * 37).toInt())
 
     val angle = (angleSeed % 36000) / 36000.0 * 2.0 * kotlin.math.PI
     val distFraction = (distSeed % 10000) / 10000.0
@@ -196,7 +196,8 @@ fun processRadiusUpdate(
     initialRadius: Double = 0.0
 ): RadiusUpdateResult? {
     val nextUpdate = nextRadiusUpdate ?: return null
-    if (!Date().after(nextUpdate)) return null
+    val now = Date()
+    if (!now.after(nextUpdate)) return null
     if (isZoneFrozen) return null
 
     val newRadius = currentRadius - radiusDeclinePerUpdate.toInt()
@@ -254,4 +255,19 @@ fun detectNewWinners(
     val latest = winners.last()
     if (ownHunterId != null && latest.hunterId == ownHunterId) return null
     return "${latest.hunterName} found the chicken! 🐔"
+}
+
+// ── Seeded Random (splitmix64) ──────────────────────
+
+/**
+ * Deterministic pseudo-random number from [seed] and [index].
+ * Uses splitmix64 — must match iOS GameTimerLogic.seededRandom exactly.
+ */
+@Suppress("INTEGER_OVERFLOW")
+fun seededRandom(seed: Long, index: Int): Double {
+    var z = seed + index.toLong() * -0x61c8864680b583ebL // 0x9e3779b97f4a7c15 as signed Long
+    z = (z xor (z ushr 30)) * -0x40a7b892e31b1a47L // 0xbf58476d1ce4e5b9
+    z = (z xor (z ushr 27)) * -0x6b2fb644ecceee15L // 0x94d049bb133111eb
+    z = z xor (z ushr 31)
+    return (z ushr 1).toDouble() / Long.MAX_VALUE.toDouble()
 }

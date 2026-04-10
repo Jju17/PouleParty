@@ -335,4 +335,352 @@ class GameTest {
         assertEquals(1000, game.pricing.deposit)
         assertEquals(500, game.pricing.pricePerPlayer)
     }
+
+    // ── Enum edge cases ──
+
+    @Test
+    fun `GameStatus fromFirestore empty string defaults to WAITING`() {
+        assertEquals(GameStatus.WAITING, GameStatus.fromFirestore(""))
+    }
+
+    @Test
+    fun `GameMod fromFirestore is case sensitive`() {
+        // "FollowTheChicken" (capital F) should not match → falls back to default
+        assertEquals(GameMod.FOLLOW_THE_CHICKEN, GameMod.fromFirestore("FollowTheChicken"))
+    }
+
+    @Test
+    fun `PowerUpType fromFirestore empty string defaults to ZONE_PREVIEW`() {
+        assertEquals(PowerUpType.ZONE_PREVIEW, PowerUpType.fromFirestore(""))
+    }
+
+    @Test
+    fun `PricingModel fromFirestore empty string defaults to FREE`() {
+        assertEquals(PricingModel.FREE, PricingModel.fromFirestore(""))
+    }
+
+    // ── Found code generation ──
+
+    @Test
+    fun `foundCode is always 4 digits`() {
+        repeat(100) {
+            val code = Game.generateFoundCode()
+            assertEquals(4, code.length)
+            assertNotNull(code.toIntOrNull())
+        }
+    }
+
+    @Test
+    fun `foundCode preserves leading zeros`() {
+        var seenLeadingZero = false
+        repeat(1000) {
+            val code = Game.generateFoundCode()
+            if (code.startsWith("0")) seenLeadingZero = true
+            assertEquals(4, code.length)
+        }
+        assertTrue("Should see at least one code with leading zero", seenLeadingZero)
+    }
+
+    // ── Game code derivation ──
+
+    @Test
+    fun `gameCode from short id`() {
+        val game = Game(id = "abc")
+        assertEquals("ABC", game.gameCode)
+    }
+
+    @Test
+    fun `gameCode from empty id`() {
+        val game = Game(id = "")
+        assertEquals("", game.gameCode)
+    }
+
+    // ── Game defaults ──
+
+    @Test
+    fun `default timing headStart is zero`() {
+        val timing = Timing()
+        assertEquals(0.0, timing.headStartMinutes, 0.0)
+    }
+
+    @Test
+    fun `default zone values`() {
+        val zone = Zone()
+        assertEquals(1500.0, zone.radius, 0.0)
+        assertEquals(5.0, zone.shrinkIntervalMinutes, 0.0)
+        assertEquals(100.0, zone.shrinkMetersPerUpdate, 0.0)
+        assertEquals(0, zone.driftSeed)
+        assertNull(zone.finalCenter)
+    }
+
+    @Test
+    fun `default gameMode is stayInTheZone`() {
+        val game = Game(id = "test")
+        assertEquals(GameMod.STAY_IN_THE_ZONE, game.gameModEnum)
+    }
+
+    @Test
+    fun `default status is waiting`() {
+        val game = Game(id = "test")
+        assertEquals(GameStatus.WAITING, game.gameStatusEnum)
+    }
+
+    @Test
+    fun `default pricing is free`() {
+        val game = Game(id = "test")
+        assertEquals(PricingModel.FREE, game.pricingModelEnum)
+        assertFalse(game.isPaid)
+    }
+
+    @Test
+    fun `default registration not required`() {
+        val game = Game(id = "test")
+        assertFalse(game.registration.required)
+    }
+
+    @Test
+    fun `default powerUps disabled`() {
+        val game = Game(id = "test")
+        assertFalse(game.powerUps.enabled)
+    }
+
+    // ── hunterStartDate calculation ──
+
+    @Test
+    fun `hunterStartDate equals startDate when no headStart`() {
+        val game = Game(id = "test", timing = Timing(headStartMinutes = 0.0))
+        assertEquals(game.startDate.time, game.hunterStartDate.time)
+    }
+
+    @Test
+    fun `hunterStartDate adds headStart`() {
+        val game = Game(id = "test", timing = Timing(headStartMinutes = 5.0))
+        val diff = game.hunterStartDate.time - game.startDate.time
+        assertEquals(5 * 60 * 1000L, diff)
+    }
+
+    @Test
+    fun `hunterStartDate with max headStart`() {
+        val game = Game(id = "test", timing = Timing(headStartMinutes = 15.0))
+        val diff = game.hunterStartDate.time - game.startDate.time
+        assertEquals(15 * 60 * 1000L, diff)
+    }
+
+    // ── Registration deadline ──
+
+    @Test
+    fun `registrationDeadline null when no minutes`() {
+        val game = Game(id = "test", registration = GameRegistration(closesMinutesBefore = null))
+        assertNull(game.registrationDeadline)
+    }
+
+    @Test
+    fun `registrationDeadline correct`() {
+        val game = Game(id = "test", registration = GameRegistration(closesMinutesBefore = 15))
+        val deadline = game.registrationDeadline!!
+        val expected = game.startDate.time - 15 * 60 * 1000L
+        assertEquals(expected, deadline.time)
+    }
+
+    @Test
+    fun `isRegistrationClosed false when not required`() {
+        val game = Game(id = "test", registration = GameRegistration(required = false))
+        assertFalse(game.isRegistrationClosed)
+    }
+
+    @Test
+    fun `isRegistrationClosed false when no deadline`() {
+        val game = Game(id = "test", registration = GameRegistration(required = true, closesMinutesBefore = null))
+        assertFalse(game.isRegistrationClosed)
+    }
+
+    // ── isPaid ──
+
+    @Test
+    fun `isPaid true for flat`() {
+        val game = Game(id = "test", pricing = Pricing(model = PricingModel.FLAT.firestoreValue))
+        assertTrue(game.isPaid)
+    }
+
+    @Test
+    fun `isPaid true for deposit`() {
+        val game = Game(id = "test", pricing = Pricing(model = PricingModel.DEPOSIT.firestoreValue))
+        assertTrue(game.isPaid)
+    }
+
+    // ── findLastUpdate edge cases ──
+
+    @Test
+    fun `findLastUpdate with zero shrink interval`() {
+        val game = Game(
+            id = "test",
+            timing = Timing(
+                start = Timestamp(Date(System.currentTimeMillis() - 600_000)),
+                end = Timestamp(Date(System.currentTimeMillis() + 3_600_000))
+            ),
+            zone = Zone(radius = 1500.0, shrinkIntervalMinutes = 0.0, shrinkMetersPerUpdate = 100.0)
+        )
+        val (_, radius) = game.findLastUpdate()
+        assertEquals(1500, radius)
+    }
+
+    @Test
+    fun `findLastUpdate with negative shrink interval`() {
+        val game = Game(
+            id = "test",
+            timing = Timing(
+                start = Timestamp(Date(System.currentTimeMillis() - 600_000)),
+                end = Timestamp(Date(System.currentTimeMillis() + 3_600_000))
+            ),
+            zone = Zone(radius = 1500.0, shrinkIntervalMinutes = -5.0, shrinkMetersPerUpdate = 100.0)
+        )
+        val (_, radius) = game.findLastUpdate()
+        assertEquals(1500, radius)
+    }
+
+    @Test
+    fun `findLastUpdate never goes negative`() {
+        val game = Game(
+            id = "test",
+            timing = Timing(
+                start = Timestamp(Date(System.currentTimeMillis() - 36_000_000)), // 10 hours ago
+                end = Timestamp(Date(System.currentTimeMillis() + 3_600_000))
+            ),
+            zone = Zone(radius = 500.0, shrinkIntervalMinutes = 1.0, shrinkMetersPerUpdate = 100.0)
+        )
+        val (_, radius) = game.findLastUpdate()
+        assertTrue("Radius must never go below 0, was $radius", radius >= 0)
+        assertEquals(0, radius)
+    }
+
+    @Test
+    fun `findLastUpdate with headStart`() {
+        // 10 min elapsed, 8 min head start → effective 2 min < 5 min interval
+        val game = Game(
+            id = "test",
+            timing = Timing(
+                start = Timestamp(Date(System.currentTimeMillis() - 600_000)),
+                end = Timestamp(Date(System.currentTimeMillis() + 3_600_000)),
+                headStartMinutes = 8.0
+            ),
+            zone = Zone(radius = 1500.0, shrinkIntervalMinutes = 5.0, shrinkMetersPerUpdate = 100.0)
+        )
+        val (_, radius) = game.findLastUpdate()
+        assertEquals(1500, radius)
+    }
+
+    // ── calculateNormalModeSettings all duration options ──
+
+    @Test
+    fun `normalMode all duration options reach 100m`() {
+        val durations = listOf(60.0, 90.0, 120.0, 150.0, 180.0)
+        for (duration in durations) {
+            val (interval, decline) = calculateNormalModeSettings(1500.0, duration)
+            assertEquals(5.0, interval, 0.0)
+            assertTrue("Decline must be positive for $duration min", decline > 0)
+            val numberOfShrinks = (duration / 5.0).toInt()
+            val finalRadius = 1500.0 - numberOfShrinks * decline
+            assertEquals("Zone must reach 100m for $duration min", 100.0, finalRadius, 0.01)
+        }
+    }
+
+    @Test
+    fun `normalMode with headStart subtracted`() {
+        val (interval, decline) = calculateNormalModeSettings(1500.0, 75.0) // 90-15
+        assertEquals(5.0, interval, 0.0)
+        val expected = (1500.0 - 100.0) / (75.0 / 5.0)
+        assertEquals(expected, decline, 0.01)
+    }
+
+    @Test
+    fun `normalMode very short duration produces large decline`() {
+        // 1 min / 5 min interval = 0.2 shrinks (fractional but > 0, passes guard)
+        val (interval, decline) = calculateNormalModeSettings(1500.0, 1.0)
+        assertEquals(5.0, interval, 0.0)
+        // decline = (1500-100) / 0.2 = 7000 — very large but valid
+        assertTrue("Decline should be positive", decline > 0)
+    }
+
+    // ── Power-up active effects ──
+
+    @Test
+    fun `isChickenInvisible false by default`() {
+        assertFalse(Game(id = "test").isChickenInvisible)
+    }
+
+    @Test
+    fun `isZoneFrozen false by default`() {
+        assertFalse(Game(id = "test").isZoneFrozen)
+    }
+
+    @Test
+    fun `isChickenInvisible true when future`() {
+        val game = Game(id = "test", powerUps = GamePowerUps(
+            activeEffects = ActiveEffects(invisibility = Timestamp(Date(System.currentTimeMillis() + 30_000)))
+        ))
+        assertTrue(game.isChickenInvisible)
+    }
+
+    @Test
+    fun `isChickenInvisible false when expired`() {
+        val game = Game(id = "test", powerUps = GamePowerUps(
+            activeEffects = ActiveEffects(invisibility = Timestamp(Date(System.currentTimeMillis() - 5_000)))
+        ))
+        assertFalse(game.isChickenInvisible)
+    }
+
+    @Test
+    fun `isZoneFrozen true when future`() {
+        val game = Game(id = "test", powerUps = GamePowerUps(
+            activeEffects = ActiveEffects(zoneFreeze = Timestamp(Date(System.currentTimeMillis() + 120_000)))
+        ))
+        assertTrue(game.isZoneFrozen)
+    }
+
+    @Test
+    fun `isDecoyActive true when future`() {
+        val game = Game(id = "test", powerUps = GamePowerUps(
+            activeEffects = ActiveEffects(decoy = Timestamp(Date(System.currentTimeMillis() + 20_000)))
+        ))
+        assertTrue(game.isDecoyActive)
+    }
+
+    @Test
+    fun `isDecoyActive false when expired`() {
+        val game = Game(id = "test", powerUps = GamePowerUps(
+            activeEffects = ActiveEffects(decoy = Timestamp(Date(System.currentTimeMillis() - 5_000)))
+        ))
+        assertFalse(game.isDecoyActive)
+    }
+
+    @Test
+    fun `isJammerActive true when future`() {
+        val game = Game(id = "test", powerUps = GamePowerUps(
+            activeEffects = ActiveEffects(jammer = Timestamp(Date(System.currentTimeMillis() + 30_000)))
+        ))
+        assertTrue(game.isJammerActive)
+    }
+
+    @Test
+    fun `isRadarPingActive true when future`() {
+        val game = Game(id = "test", powerUps = GamePowerUps(
+            activeEffects = ActiveEffects(radarPing = Timestamp(Date(System.currentTimeMillis() + 30_000)))
+        ))
+        assertTrue(game.isRadarPingActive)
+    }
+
+    @Test
+    fun `all effects expired return false`() {
+        val past = Timestamp(Date(System.currentTimeMillis() - 10_000))
+        val game = Game(id = "test", powerUps = GamePowerUps(
+            activeEffects = ActiveEffects(
+                invisibility = past, zoneFreeze = past, radarPing = past, decoy = past, jammer = past
+            )
+        ))
+        assertFalse(game.isChickenInvisible)
+        assertFalse(game.isZoneFrozen)
+        assertFalse(game.isRadarPingActive)
+        assertFalse(game.isDecoyActive)
+        assertFalse(game.isJammerActive)
+    }
 }

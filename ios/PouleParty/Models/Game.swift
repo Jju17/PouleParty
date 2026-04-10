@@ -90,6 +90,11 @@ struct Game: Codable, Equatable, Identifiable {
         case waiting
         case inProgress
         case done
+
+        init(from decoder: Decoder) throws {
+            let rawValue = try decoder.singleValueContainer().decode(String.self)
+            self = GameStatus(rawValue: rawValue) ?? .waiting
+        }
     }
 
     enum PricingModel: String, CaseIterable, Equatable, Codable {
@@ -104,6 +109,11 @@ struct Game: Codable, Equatable, Identifiable {
             case .deposit: return "Caution + %"
             }
         }
+
+        init(from decoder: Decoder) throws {
+            let rawValue = try decoder.singleValueContainer().decode(String.self)
+            self = PricingModel(rawValue: rawValue) ?? .free
+        }
     }
 
     enum GameMode: String, CaseIterable, Equatable, Codable {
@@ -117,6 +127,11 @@ struct Game: Codable, Equatable, Identifiable {
             case .stayInTheZone:
                 return "Stay in the zone 📍"
             }
+        }
+
+        init(from decoder: Decoder) throws {
+            let rawValue = try decoder.singleValueContainer().decode(String.self)
+            self = GameMode(rawValue: rawValue) ?? .followTheChicken
         }
     }
 }

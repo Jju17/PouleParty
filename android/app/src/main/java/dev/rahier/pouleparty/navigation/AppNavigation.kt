@@ -19,7 +19,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import dev.rahier.pouleparty.R
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -117,9 +119,9 @@ fun AppNavigation() {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Text("Connection failed. Please check your internet and try again.")
+                Text(stringResource(R.string.connection_failed))
                 Button(onClick = { authRetryTrigger++ }) {
-                    Text("Retry")
+                    Text(stringResource(R.string.retry))
                 }
             }
         }

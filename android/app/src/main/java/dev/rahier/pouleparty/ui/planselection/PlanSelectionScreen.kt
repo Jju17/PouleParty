@@ -24,8 +24,10 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.model.PartyPlansConfig
 import dev.rahier.pouleparty.model.PricingModel
 import dev.rahier.pouleparty.ui.theme.*
@@ -44,11 +46,11 @@ fun PlanSelectionScreen(
     if (uiState.showDailyLimitAlert) {
         AlertDialog(
             onDismissRequest = { viewModel.dismissDailyLimitAlert() },
-            title = { Text("Daily limit reached", style = bangerStyle(22)) },
-            text = { Text("You can only create 1 free game per day. Upgrade to a paid plan for unlimited games.") },
+            title = { Text(stringResource(R.string.daily_limit_reached), style = bangerStyle(22)) },
+            text = { Text(stringResource(R.string.daily_limit_message)) },
             confirmButton = {
                 TextButton(onClick = { viewModel.dismissDailyLimitAlert() }) {
-                    Text("OK")
+                    Text(stringResource(R.string.ok))
                 }
             }
         )
@@ -65,14 +67,14 @@ fun PlanSelectionScreen(
                 onClick = { viewModel.backToPlans() },
                 modifier = Modifier.align(Alignment.Start)
             ) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", modifier = Modifier.size(18.dp))
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back), modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(4.dp))
-                Text("Back", style = gameboyStyle(9))
+                Text(stringResource(R.string.back), style = gameboyStyle(9))
             }
         }
 
         Text(
-            text = "Create Party",
+            text = stringResource(R.string.create_party),
             style = bangerStyle(32),
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
@@ -87,7 +89,7 @@ fun PlanSelectionScreen(
                 uiState.loadFailed -> {
                     Spacer(modifier = Modifier.weight(1f))
                     Text(
-                        "Failed to load pricing",
+                        stringResource(R.string.failed_to_load_pricing),
                         style = gameboyStyle(9),
                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
                     )
@@ -97,13 +99,13 @@ fun PlanSelectionScreen(
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = CROrange)
                     ) {
-                        Text("Retry", style = bangerStyle(20), color = Color.White)
+                        Text(stringResource(R.string.retry), style = bangerStyle(20), color = Color.White)
                     }
                     Spacer(modifier = Modifier.weight(1f))
                 }
                 else -> {
                     Text(
-                        text = if (uiState.step == PlanSelectionUiState.Step.CHOOSE_PLAN) "Choose your plan"
+                        text = if (uiState.step == PlanSelectionUiState.Step.CHOOSE_PLAN) stringResource(R.string.choose_your_plan)
                                else uiState.selectedPlan?.title ?: "",
                         style = gameboyStyle(10),
                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
@@ -207,7 +209,7 @@ private fun PricingConfigContent(
                     .padding(vertical = 16.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text("Continue", style = bangerStyle(22), color = Color.White)
+                Text(stringResource(R.string.continue_label), style = bangerStyle(22), color = Color.White)
             }
         }
 
@@ -216,7 +218,7 @@ private fun PricingConfigContent(
             modifier = Modifier.align(Alignment.CenterHorizontally)
         ) {
             Text(
-                "Back",
+                stringResource(R.string.back),
                 style = gameboyStyle(9),
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
             )
