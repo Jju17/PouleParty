@@ -26,6 +26,7 @@ final class GameCreationSnapshotTests: XCTestCase {
         gameMod: Game.GameMode = .stayInTheZone,
         powerUpsEnabled: Bool = false,
         chickenCanSeeHunters: Bool = false,
+        requiresRegistration: Bool = false,
         duration: Double = 120
     ) -> StoreOf<GameCreationFeature> {
         var game = Game(id: "snapshot-test")
@@ -35,6 +36,10 @@ final class GameCreationSnapshotTests: XCTestCase {
         game.gameMode = gameMod
         game.powerUps.enabled = powerUpsEnabled
         game.chickenCanSeeHunters = chickenCanSeeHunters
+        game.registration.required = requiresRegistration
+        if requiresRegistration {
+            game.registration.closesMinutesBefore = 15
+        }
         game.timing.headStartMinutes = 5
 
         let shared = Shared(value: game)
@@ -109,18 +114,28 @@ final class GameCreationSnapshotTests: XCTestCase {
         assertSnapshot(of: vc, as: .image(size: CGSize(width: 393, height: 852)))
     }
 
-    func testRegistrationStepStayInZone() {
-        let vc = makeVC(store: makeStore(step: 7))
+    func testRegistrationStepOpenJoin() {
+        let vc = makeVC(store: makeStore(step: 8))
+        assertSnapshot(of: vc, as: .image(size: CGSize(width: 393, height: 852)))
+    }
+
+    func testRegistrationStepRequired() {
+        let vc = makeVC(store: makeStore(step: 8, requiresRegistration: true))
         assertSnapshot(of: vc, as: .image(size: CGSize(width: 393, height: 852)))
     }
 
     func testRecapStepStayInZone() {
-        let vc = makeVC(store: makeStore(step: 8))
+        let vc = makeVC(store: makeStore(step: 9))
         assertSnapshot(of: vc, as: .image(size: CGSize(width: 393, height: 852)))
     }
 
     func testRecapStepFollowChicken() {
         let vc = makeVC(store: makeStore(step: 9, gameMod: .followTheChicken))
+        assertSnapshot(of: vc, as: .image(size: CGSize(width: 393, height: 852)))
+    }
+
+    func testRecapStepWithRegistration() {
+        let vc = makeVC(store: makeStore(step: 9, requiresRegistration: true))
         assertSnapshot(of: vc, as: .image(size: CGSize(width: 393, height: 852)))
     }
 }
