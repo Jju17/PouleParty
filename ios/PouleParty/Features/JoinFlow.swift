@@ -208,7 +208,7 @@ struct JoinFlowView: View {
 
     private func codeEntry(step: JoinFlowFeature.Step) -> some View {
         VStack(spacing: 24) {
-            Spacer().frame(height: 8)
+            Spacer()
             BangerText(String(localized: "Join Game"), size: 28)
                 .foregroundStyle(Color.onBackground)
 

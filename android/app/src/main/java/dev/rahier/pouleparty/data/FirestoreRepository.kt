@@ -50,7 +50,7 @@ class FirestoreRepository @Inject constructor(
                 }
             }
         }
-        throw lastException!!
+        throw lastException ?: IllegalStateException("Retry exhausted with no exception")
     }
 
     // ── CRUD ──────────────────────────────────────────────
@@ -171,6 +171,20 @@ class FirestoreRepository @Inject constructor(
         } catch (e: Exception) {
             Log.e(TAG, "Failed to find registration $gameId/$userId", e)
             null
+        }
+    }
+
+    suspend fun fetchAllRegistrations(gameId: String): List<Registration> {
+        if (gameId.isEmpty()) return emptyList()
+        return try {
+            val snapshot = firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
+                .collection(AppConstants.SUBCOLLECTION_REGISTRATIONS)
+                .get()
+                .await()
+            snapshot.documents.mapNotNull { it.toObject(Registration::class.java) }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to fetch registrations for game $gameId", e)
+            emptyList()
         }
     }
 

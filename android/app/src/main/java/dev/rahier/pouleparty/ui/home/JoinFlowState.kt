@@ -16,5 +16,6 @@ data class PendingRegistration(
     val gameId: String,
     val gameCode: String,
     val teamName: String,
-    val startMs: Long
+    val startMs: Long,
+    val isFinished: Boolean = false
 )

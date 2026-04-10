@@ -21,7 +21,7 @@ class PouleFCMService : FirebaseMessagingService() {
     private fun saveTokenToFirestore(token: String) {
         val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
         FirebaseFirestore.getInstance()
-            .collection("fcmTokens")
+            .collection(AppConstants.COLLECTION_FCM_TOKENS)
             .document(userId)
             .set(
                 mapOf(

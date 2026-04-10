@@ -16,12 +16,15 @@ struct VictoryFeature {
         var game: Game
         var hunterId: String
         var hunterName: String
+        var isChicken: Bool = false
+        var registrations: [Registration] = []
     }
 
     enum Action {
         case gameUpdated(Game)
         case menuButtonTapped
         case onTask
+        case registrationsLoaded([Registration])
     }
 
     @Dependency(\.apiClient) var apiClient
@@ -33,18 +36,65 @@ struct VictoryFeature {
                 return .none
             case .onTask:
                 let gameId = state.game.id
-                return .run { send in
-                    for await game in apiClient.gameConfigStream(gameId) {
-                        if let game {
-                            await send(.gameUpdated(game))
+                return .merge(
+                    .run { send in
+                        for await game in apiClient.gameConfigStream(gameId) {
+                            if let game {
+                                await send(.gameUpdated(game))
+                            }
                         }
+                    },
+                    .run { send in
+                        let registrations = (try? await apiClient.fetchAllRegistrations(gameId)) ?? []
+                        await send(.registrationsLoaded(registrations))
                     }
-                }
+                )
             case let .gameUpdated(game):
                 state.game = game
                 return .none
+            case let .registrationsLoaded(registrations):
+                state.registrations = registrations
+                return .none
             }
         }
+    }
+}
+
+// MARK: - Leaderboard Models
+
+struct LeaderboardEntry: Equatable, Identifiable {
+    let id: String // hunterId
+    let displayName: String
+    let teamName: String?
+    let foundTimestamp: Date?
+    let isCurrentUser: Bool
+
+    var hasFound: Bool { foundTimestamp != nil }
+}
+
+func buildLeaderboardEntries(
+    game: Game,
+    registrations: [Registration],
+    currentUserId: String
+) -> [LeaderboardEntry] {
+    let registrationByUserId = Dictionary(uniqueKeysWithValues: registrations.map { ($0.userId, $0) })
+    let winnerById = Dictionary(uniqueKeysWithValues: game.winners.map { ($0.hunterId, $0) })
+    let allHunterIds = Set(game.hunterIds)
+        .union(game.winners.map(\.hunterId))
+        .union(registrations.map(\.userId))
+
+    return allHunterIds.map { hunterId in
+        let registration = registrationByUserId[hunterId]
+        let winner = winnerById[hunterId]
+        let teamName = registration?.teamName
+        let displayName = teamName ?? winner?.hunterName ?? "Hunter"
+        return LeaderboardEntry(
+            id: hunterId,
+            displayName: displayName,
+            teamName: teamName,
+            foundTimestamp: winner?.timestamp,
+            isCurrentUser: hunterId == currentUserId
+        )
     }
 }
 
@@ -53,33 +103,71 @@ struct VictoryFeature {
 struct VictoryView: View {
     let store: StoreOf<VictoryFeature>
 
-    private var isSpectator: Bool { store.hunterId.isEmpty }
+    private var isSpectator: Bool { store.hunterId.isEmpty && !store.isChicken }
+    private var isCurrentUserAWinner: Bool {
+        store.game.winners.contains { $0.hunterId == store.hunterId }
+    }
+
+    private var entries: [LeaderboardEntry] {
+        let currentUserId = store.isChicken ? "" : store.hunterId
+        return buildLeaderboardEntries(
+            game: store.game,
+            registrations: store.registrations,
+            currentUserId: currentUserId
+        )
+    }
+
+    private var sortedFinders: [LeaderboardEntry] {
+        entries.filter { $0.hasFound }.sorted { (a, b) in
+            (a.foundTimestamp ?? .distantFuture) < (b.foundTimestamp ?? .distantFuture)
+        }
+    }
+
+    private var nonFinders: [LeaderboardEntry] {
+        entries.filter { !$0.hasFound }.sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
+    }
+
+    private var headerTitle: String {
+        if store.isChicken { return "Game Over" }
+        if isCurrentUserAWinner { return "You found\nthe chicken!" }
+        return "Game Results"
+    }
 
     var body: some View {
         ZStack {
             Color.gradientBackgroundWarmth.ignoresSafeArea()
 
-            if !isSpectator {
+            if isCurrentUserAWinner && !store.isChicken {
                 ConfettiView()
                     .ignoresSafeArea()
                     .allowsHitTesting(false)
             }
 
-            VStack(spacing: 24) {
+            VStack(spacing: 16) {
                 Spacer()
                     .frame(height: 20)
 
-                Text("🏆")
+                Text(store.isChicken ? "🐔" : "🏆")
                     .font(.system(size: 60))
 
-                Text(isSpectator ? "Game Results" : "You found\nthe chicken!")
+                Text(headerTitle)
                     .font(.gameboy(size: 16))
                     .multilineTextAlignment(.center)
                     .foregroundStyle(Color.onBackground)
 
-                leaderboardSection
-
-                Spacer()
+                ScrollView {
+                    VStack(spacing: 16) {
+                        if entries.isEmpty {
+                            emptyStateSection
+                        } else {
+                            podiumSection
+                            otherFindersSection
+                            nonFindersSection
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 16)
+                }
 
                 SelectionButton("BACK TO MENU", color: .onBackground) {
                     store.send(.menuButtonTapped)
@@ -94,68 +182,109 @@ struct VictoryView: View {
         }
     }
 
-    private var leaderboardSection: some View {
-        let sortedWinners = store.game.winners.sorted {
-            $0.timestamp < $1.timestamp
+    private var emptyStateSection: some View {
+        VStack(spacing: 12) {
+            Spacer().frame(height: 60)
+            Text("🤷")
+                .font(.system(size: 60))
+            BangerText("No participants", size: 22)
+                .foregroundStyle(Color.onBackground.opacity(0.6))
+            Text("This game ended without any hunters joining.")
+                .font(.gameboy(size: 9))
+                .foregroundStyle(Color.onBackground.opacity(0.5))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
         }
-        let remaining = max(0, store.game.hunterIds.count - store.game.winners.count)
+    }
 
-        return VStack(spacing: 0) {
-            ForEach(Array(sortedWinners.enumerated()), id: \.element.hunterId) { index, winner in
-                leaderboardRow(rank: index + 1, winner: winner, isCurrentHunter: winner.hunterId == store.hunterId)
-            }
-
-            if remaining > 0 {
-                Divider()
-                    .padding(.vertical, 12)
-                    .padding(.horizontal, 24)
-
-                BangerText("\(remaining) still in the party 🔍", size: 18)
-                    .foregroundStyle(Color.onBackground.opacity(0.5))
-                    .padding(.vertical, 4)
+    @ViewBuilder
+    private var podiumSection: some View {
+        let podium = Array(sortedFinders.prefix(3))
+        if !podium.isEmpty {
+            VStack(spacing: 8) {
+                BangerText("Podium", size: 20)
+                    .foregroundStyle(Color.CROrange)
+                ForEach(Array(podium.enumerated()), id: \.element.id) { index, entry in
+                    leaderboardRow(rank: index + 1, entry: entry)
+                }
             }
         }
     }
 
-    private func leaderboardRow(rank: Int, winner: Winner, isCurrentHunter: Bool) -> some View {
-        let medal: String = switch rank {
-        case 1: "🥇"
-        case 2: "🥈"
-        case 3: "🥉"
-        default: "#\(rank)"
+    @ViewBuilder
+    private var otherFindersSection: some View {
+        let others = Array(sortedFinders.dropFirst(3))
+        if !others.isEmpty {
+            VStack(spacing: 8) {
+                BangerText("Other hunters", size: 18)
+                    .foregroundStyle(Color.onBackground.opacity(0.7))
+                ForEach(Array(others.enumerated()), id: \.element.id) { index, entry in
+                    leaderboardRow(rank: index + 4, entry: entry)
+                }
+            }
         }
+    }
 
-        let timeDelta = winner.timestamp.timeIntervalSince(store.game.hunterStartDate)
-        let minutes = Int(timeDelta) / 60
-        let seconds = Int(timeDelta) % 60
-        let timeString = "+\(minutes)m \(String(format: "%02d", seconds))s"
+    @ViewBuilder
+    private var nonFindersSection: some View {
+        if !nonFinders.isEmpty {
+            VStack(spacing: 8) {
+                BangerText("Did not find the chicken", size: 16)
+                    .foregroundStyle(Color.onBackground.opacity(0.5))
+                ForEach(nonFinders) { entry in
+                    leaderboardRow(rank: nil, entry: entry)
+                }
+            }
+        }
+    }
+
+    private func leaderboardRow(rank: Int?, entry: LeaderboardEntry) -> some View {
+        let rankLabel: String = {
+            guard let rank else { return "—" }
+            switch rank {
+            case 1: return "🥇"
+            case 2: return "🥈"
+            case 3: return "🥉"
+            default: return "#\(rank)"
+            }
+        }()
+
+        let timeString: String? = {
+            guard let foundTimestamp = entry.foundTimestamp else { return nil }
+            let timeDelta = foundTimestamp.timeIntervalSince(store.game.hunterStartDate)
+            let totalSeconds = max(0, Int(timeDelta))
+            let minutes = totalSeconds / 60
+            let seconds = totalSeconds % 60
+            return "+\(minutes)m \(String(format: "%02d", seconds))s"
+        }()
 
         return HStack {
-            Text(medal)
-                .font(.system(size: rank <= 3 ? 24 : 16))
-                .frame(width: 40)
+            Text(rankLabel)
+                .font(.system(size: (rank ?? 99) <= 3 ? 24 : 16))
+                .frame(width: 44)
 
-            BangerText(winner.hunterName, size: 20)
+            BangerText(entry.displayName, size: 18)
                 .foregroundStyle(Color.onBackground)
                 .lineLimit(1)
 
             Spacer()
 
-            Text(timeString)
-                .font(.gameboy(size: 10))
-                .foregroundStyle(Color.onBackground.opacity(0.5))
+            if let timeString {
+                Text(timeString)
+                    .font(.gameboy(size: 10))
+                    .foregroundStyle(Color.onBackground.opacity(0.5))
+            }
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(medal) \(winner.hunterName), \(timeString)")
-        .padding(.horizontal, 24)
+        .accessibilityLabel("\(rankLabel) \(entry.displayName)\(timeString.map { ", \($0)" } ?? "")")
+        .padding(.horizontal, 16)
         .padding(.vertical, 10)
         .background(
-            isCurrentHunter
+            entry.isCurrentUser
                 ? Color.CROrange.opacity(0.2)
-                : Color.clear
+                : Color.surface.opacity(0.4)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 8))
-        .padding(.horizontal, 16)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 }
 

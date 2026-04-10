@@ -382,7 +382,7 @@ struct ChickenMapFeatureTests {
         await store.send(.destination(.presented(.alert(.gameOver)))) {
             $0.destination = nil
         }
-        await store.receive(\.returnedToMenu)
+        await store.receive(\.allHuntersFound)
     }
 
     // MARK: - Winner auto-dismiss effect

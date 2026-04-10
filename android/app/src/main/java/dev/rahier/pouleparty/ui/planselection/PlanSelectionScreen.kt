@@ -54,44 +54,29 @@ fun PlanSelectionScreen(
         )
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {},
-                navigationIcon = {
-                    IconButton(onClick = {
-                        if (uiState.step == PlanSelectionUiState.Step.CONFIGURE_PRICING) {
-                            viewModel.backToPlans()
-                        } else {
-                            onBack()
-                        }
-                    }) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent
-                )
-            )
-        },
-        containerColor = MaterialTheme.colorScheme.background
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = "Create Party",
-                style = bangerStyle(32),
-                color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
-            )
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        if (uiState.step == PlanSelectionUiState.Step.CONFIGURE_PRICING) {
+            TextButton(
+                onClick = { viewModel.backToPlans() },
+                modifier = Modifier.align(Alignment.Start)
+            ) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(4.dp))
+                Text("Back", style = gameboyStyle(9))
+            }
+        }
+
+        Text(
+            text = "Create Party",
+            style = bangerStyle(32),
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+        )
 
             when {
                 uiState.isLoading -> {
@@ -159,7 +144,6 @@ fun PlanSelectionScreen(
             }
         }
     }
-}
 
 @Composable
 private fun PlanTilesContent(

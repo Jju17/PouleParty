@@ -23,7 +23,8 @@ struct PendingRegistration: Codable, Equatable {
     let gameId: String
     let gameCode: String
     let teamName: String
-    let startDate: Date
+    var startDate: Date
+    var isFinished: Bool = false
 }
 
 extension SharedKey where Self == FileStorageKey<PendingRegistration?>.Default {
@@ -73,6 +74,7 @@ struct HomeFeature {
         case noActiveGameFound
         case onTask
         case pendingRegistrationDismissed
+        case pendingRegistrationRefreshed(PendingRegistration?)
         case pendingRegistrationRejoinTapped
         case rejoinGameTapped
         case rulesButtonTapped
@@ -176,7 +178,7 @@ struct HomeFeature {
                 if pricingModel == .free {
                     return .run { [userClient] send in
                         try? await Task.sleep(for: .milliseconds(150))
-                        let userId = userClient.currentUserId() ?? ""
+                        guard let userId = userClient.currentUserId() else { return }
                         let count = (try? await apiClient.countFreeGamesToday(userId)) ?? 0
                         await send(.dailyFreeLimitChecked(allowed: count < 1))
                     }
@@ -315,7 +317,25 @@ struct HomeFeature {
                 guard let userId, !userId.isEmpty else {
                     return .none
                 }
-                return .run { [apiClient] send in
+                let pending = state.pendingRegistration
+                return .merge(
+                    .run { [apiClient] send in
+                        guard let pending else { return }
+                        guard let game = try? await apiClient.getConfig(pending.gameId) else {
+                            // Game no longer exists — clear the banner
+                            await send(.pendingRegistrationRefreshed(nil))
+                            return
+                        }
+                        let updated = PendingRegistration(
+                            gameId: pending.gameId,
+                            gameCode: game.gameCode,
+                            teamName: pending.teamName,
+                            startDate: game.startDate,
+                            isFinished: game.status == .done
+                        )
+                        await send(.pendingRegistrationRefreshed(updated))
+                    },
+                    .run { [apiClient] send in
                     // First attempt may fail on cold start while auth token refreshes
                     if let (game, role) = try? await apiClient.findActiveGame(userId) {
                         await send(.activeGameFound(game, role))
@@ -328,7 +348,8 @@ struct HomeFeature {
                     } else {
                         await send(.noActiveGameFound)
                     }
-                }
+                    }
+                )
             case .rejoinGameTapped:
                 guard let game = state.activeGame, let role = state.activeGameRole else {
                     return .none
@@ -351,6 +372,10 @@ struct HomeFeature {
                 return .none
             case .pendingRegistrationDismissed:
                 state.$pendingRegistration.withLock { $0 = nil }
+                return .none
+
+            case let .pendingRegistrationRefreshed(updated):
+                state.$pendingRegistration.withLock { $0 = updated }
                 return .none
 
             case .pendingRegistrationRejoinTapped:
@@ -578,7 +603,6 @@ struct HomeView: View {
                 action: \.destination.joinFlow
             ) {
                 JoinFlowView(store: joinStore)
-                    .presentationDetents([.medium])
             }
         }
         .alert(
@@ -627,7 +651,7 @@ struct HomeView: View {
     private var pendingRegistrationBanner: some View {
         ZStack(alignment: .topTrailing) {
             VStack(spacing: 12) {
-                Text("Registered to game")
+                Text(store.pendingRegistration?.isFinished == true ? "Game ended" : "Registered to game")
                     .font(.gameboy(size: 12))
                     .foregroundStyle(.white)
 
@@ -638,15 +662,17 @@ struct HomeView: View {
                     Text(pending.teamName)
                         .font(.gameboy(size: 9))
                         .foregroundStyle(.white.opacity(0.8))
-                    Text("Starting in \(pending.startDate, style: .relative)")
-                        .font(.gameboy(size: 9))
-                        .foregroundStyle(.white.opacity(0.8))
+                    if !pending.isFinished {
+                        Text("Starting in \(pending.startDate, style: .relative)")
+                            .font(.gameboy(size: 9))
+                            .foregroundStyle(.white.opacity(0.8))
+                    }
                 }
 
                 Button {
                     store.send(.pendingRegistrationRejoinTapped)
                 } label: {
-                    Text("Join")
+                    Text(store.pendingRegistration?.isFinished == true ? "View results" : "Join")
                         .font(.gameboy(size: 16))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 24)
@@ -656,7 +682,7 @@ struct HomeView: View {
                                 .stroke(.white, lineWidth: 3)
                         )
                 }
-                .accessibilityLabel("Join registered game")
+                .accessibilityLabel("Open registered game")
             }
             .padding(20)
             .frame(maxWidth: .infinity)

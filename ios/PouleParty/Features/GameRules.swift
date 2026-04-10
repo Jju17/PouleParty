@@ -51,11 +51,11 @@ struct GameRulesView: View {
 
             gameModeCard(
                 title: Game.GameMod.followTheChicken.title,
-                description: "The Hunters see a circle that follows the Chicken's position in real time. The Chicken must run and hide!",
+                description: "The zone shrinks periodically toward the Chicken's position. Hunters don't see the Chicken's exact location — only the zone moving!",
                 details: [
-                    "Chicken sends its position to all Hunters",
-                    "Hunters see the zone move with the Chicken",
-                    "Chicken does NOT see the Hunters"
+                    "The zone center follows the Chicken's live position",
+                    "Hunters see the zone move but not where the Chicken is",
+                    "The Chicken must stay inside the zone to survive"
                 ]
             )
 
@@ -64,7 +64,7 @@ struct GameRulesView: View {
                 description: "The zone shrinks and drifts randomly around the starting point. Hunters must find the Chicken with no position clues!",
                 details: [
                     "No position sharing between players",
-                    "The zone drifts randomly but always contains the starting location",
+                    "The zone drifts toward the final zone point set by the creator",
                     "Strategy: search the moving zone to find the Chicken!"
                 ]
             )
@@ -74,8 +74,8 @@ struct GameRulesView: View {
                 description: "An option available in any game mode. The Chicken can see all Hunters on her map!",
                 details: [
                     "Hunters send their position to the Chicken",
-                    "Both sides can track each other in real time",
-                    "Enable this toggle in the game settings"
+                    "The Chicken sees all Hunter positions in real time",
+                    "Choose this option when creating the game"
                 ]
             )
         }

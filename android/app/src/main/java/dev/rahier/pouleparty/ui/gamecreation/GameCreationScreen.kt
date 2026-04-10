@@ -15,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -121,11 +122,13 @@ fun GameCreationScreen(
                     )
                     GameCreationStep.START_TIME -> StartTimeStep(
                         startDate = state.game.startDate,
-                        dateFormat = dateFormat,
+                        showDatePicker = state.showDatePicker,
                         showTimePicker = state.showTimePicker,
                         onTapTime = { viewModel.onStartTimeTapped() },
+                        onDismissDatePicker = { viewModel.dismissDatePicker() },
                         onDismissTimePicker = { viewModel.dismissTimePicker() },
-                        onTimeSelected = { hour, minute -> viewModel.updateStartDate(hour, minute) }
+                        onDateSelected = { y, m, d -> viewModel.updateStartDateOnly(y, m, d) },
+                        onTimeSelected = { h, m -> viewModel.updateStartTime(h, m) }
                     )
                     GameCreationStep.DURATION -> DurationStep(
                         gameDurationMinutes = state.gameDurationMinutes,
@@ -285,12 +288,15 @@ private fun StepContainer(
     subtitle: String? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
     Column(
         modifier = Modifier
-            .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp)
-            .padding(top = 48.dp),
+            .padding(vertical = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
@@ -310,6 +316,7 @@ private fun StepContainer(
         }
         content()
     }
+    }
 }
 
 @Composable
@@ -318,7 +325,8 @@ private fun OptionCard(
     emoji: String,
     isSelected: Boolean,
     onClick: () -> Unit,
-    gradient: Brush? = null
+    gradient: Brush? = null,
+    subtitle: String? = null
 ) {
     val shape = RoundedCornerShape(16.dp)
     Box(
@@ -338,20 +346,38 @@ private fun OptionCard(
                 }
             )
             .clickable { onClick() }
-            .padding(horizontal = 20.dp, vertical = 20.dp),
-        contentAlignment = Alignment.Center
+            .padding(horizontal = 20.dp, vertical = 16.dp)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Text(emoji, fontSize = 28.sp)
-            Spacer(Modifier.width(12.dp))
-            Text(
-                text,
-                style = bangerStyle(22),
-                color = if (isSelected) Color.White else MaterialTheme.colorScheme.onBackground
-            )
+            Text(emoji, fontSize = 36.sp)
+            Spacer(Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text,
+                    style = bangerStyle(22),
+                    color = if (isSelected) Color.Black else MaterialTheme.colorScheme.onBackground
+                )
+                if (subtitle != null) {
+                    Text(
+                        subtitle,
+                        style = gameboyStyle(7),
+                        color = if (isSelected) Color.Black.copy(alpha = 0.7f)
+                        else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                    )
+                }
+            }
+            if (isSelected) {
+                Spacer(Modifier.width(8.dp))
+                Icon(
+                    imageVector = Icons.Filled.CheckCircle,
+                    contentDescription = null,
+                    tint = Color.Black,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
         }
     }
 }
@@ -427,29 +453,17 @@ private fun GameModeStep(
             emoji = "\uD83D\uDC14",
             isSelected = selectedMode == GameMod.FOLLOW_THE_CHICKEN,
             onClick = { onSelect(GameMod.FOLLOW_THE_CHICKEN) },
-            gradient = GradientChicken
+            gradient = GradientChicken,
+            subtitle = "The zone shrinks toward the chicken"
         )
-        Text(
-            text = "Les chasseurs voient la position de la poule en temps reel",
-            style = gameboyStyle(8),
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-            textAlign = TextAlign.Center
-        )
-
-        Spacer(Modifier.height(8.dp))
 
         OptionCard(
             text = "Stay in the Zone",
             emoji = "\uD83D\uDCCD",
             isSelected = selectedMode == GameMod.STAY_IN_THE_ZONE,
             onClick = { onSelect(GameMod.STAY_IN_THE_ZONE) },
-            gradient = GradientHunter
-        )
-        Text(
-            text = "La zone bouge et retrecit, personne ne voit personne",
-            style = gameboyStyle(8),
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-            textAlign = TextAlign.Center
+            gradient = GradientHunter,
+            subtitle = "Fixed zone that shrinks"
         )
     }
 }
@@ -515,7 +529,8 @@ private fun ZoneSetupStep(
                 finalMarker = game.finalLocation,
                 onLocationSelected = onLocationSelected,
                 onFinalLocationSelected = onFinalLocationSelected,
-                onRadiusChanged = onRadiusChanged
+                onRadiusChanged = onRadiusChanged,
+                isFollowMode = game.gameModEnum == GameMod.FOLLOW_THE_CHICKEN
             )
         }
     }
@@ -527,17 +542,20 @@ private fun ZoneSetupStep(
 @Composable
 private fun StartTimeStep(
     startDate: Date,
-    dateFormat: SimpleDateFormat,
+    showDatePicker: Boolean,
     showTimePicker: Boolean,
     onTapTime: () -> Unit,
+    onDismissDatePicker: () -> Unit,
     onDismissTimePicker: () -> Unit,
-    onTimeSelected: (Int, Int) -> Unit
+    onDateSelected: (year: Int, month: Int, day: Int) -> Unit,
+    onTimeSelected: (hour: Int, minute: Int) -> Unit
 ) {
+    val displayFormat = remember { SimpleDateFormat("EEE d MMM, HH:mm", Locale.getDefault()) }
     StepContainer(
-        title = "A quelle heure ?",
-        subtitle = "Choisis l'heure de depart"
+        title = "Quand ?",
+        subtitle = "Choisis la date et l'heure de depart"
     ) {
-        // Time display card
+        // Combined date+time display card
         val shape = RoundedCornerShape(16.dp)
         Box(
             modifier = Modifier
@@ -549,9 +567,10 @@ private fun StartTimeStep(
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = dateFormat.format(startDate),
-                style = bangerStyle(64),
-                color = CROrange
+                text = displayFormat.format(startDate),
+                style = bangerStyle(28),
+                color = CROrange,
+                textAlign = TextAlign.Center
             )
         }
 
@@ -562,12 +581,53 @@ private fun StartTimeStep(
         )
     }
 
-    // Time picker dialog
+    // Date picker dialog (shown first)
+    if (showDatePicker) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = startDate.time,
+            // Disallow picking dates in the past (from today onwards)
+            selectableDates = object : SelectableDates {
+                override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+                    val todayStart = Calendar.getInstance().apply {
+                        set(Calendar.HOUR_OF_DAY, 0)
+                        set(Calendar.MINUTE, 0)
+                        set(Calendar.SECOND, 0)
+                        set(Calendar.MILLISECOND, 0)
+                    }.timeInMillis
+                    return utcTimeMillis >= todayStart - 24L * 60 * 60 * 1000
+                }
+            }
+        )
+        DatePickerDialog(
+            onDismissRequest = onDismissDatePicker,
+            confirmButton = {
+                TextButton(onClick = {
+                    val millis = datePickerState.selectedDateMillis
+                    if (millis != null) {
+                        val cal = Calendar.getInstance().apply { timeInMillis = millis }
+                        onDateSelected(
+                            cal.get(Calendar.YEAR),
+                            cal.get(Calendar.MONTH),
+                            cal.get(Calendar.DAY_OF_MONTH)
+                        )
+                    }
+                }) { Text(stringResource(R.string.ok)) }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismissDatePicker) { Text(stringResource(R.string.cancel)) }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
+
+    // Time picker dialog (shown after date is picked)
     if (showTimePicker) {
-        val cal = remember { Calendar.getInstance().apply { time = startDate } }
+        val cal = remember(startDate) { Calendar.getInstance().apply { time = startDate } }
         val timePickerState = rememberTimePickerState(
             initialHour = cal.get(Calendar.HOUR_OF_DAY),
-            initialMinute = cal.get(Calendar.MINUTE)
+            initialMinute = cal.get(Calendar.MINUTE),
+            is24Hour = true
         )
         AlertDialog(
             onDismissRequest = onDismissTimePicker,
@@ -777,7 +837,7 @@ private fun ChickenSeesHuntersStep(
 ) {
     StepContainer(
         title = "La poule voit les chasseurs ?",
-        subtitle = "Option speciale pour Follow the Chicken"
+        subtitle = "Can the chicken see where the hunters are?"
     ) {
         OptionCard(
             text = "Oui, elle les voit",

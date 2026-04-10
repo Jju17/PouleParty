@@ -103,8 +103,11 @@ struct ChickenMapConfigFeature {
                         }
                     }
 
-                    // Auto-switch to final zone mode after placing start
-                    state.pinMode = .finalZone
+                    // Auto-switch to final zone mode after placing start, but only in
+                    // Stay in the Zone mode. Follow the Chicken doesn't use a manual final zone.
+                    if state.game.gameMod == .stayInTheZone {
+                        state.pinMode = .finalZone
+                    }
                 }
                 return .none
             case let .initialRadiusChanged(radius):
@@ -238,14 +241,18 @@ struct ChickenMapConfigView: View {
                             .tint(.CROrange)
                         }
 
-                        Picker("Pin Mode", selection: Binding(
-                            get: { store.pinMode },
-                            set: { store.send(.pinModeChanged($0)) }
-                        )) {
-                            Text("Start zone").tag(MapConfigPinMode.start)
-                            Text("Final zone").tag(MapConfigPinMode.finalZone)
+                        // Final zone picker is only relevant for Stay in the Zone mode.
+                        // In Follow the Chicken, the final zone is the chicken's live position.
+                        if store.currentGame.gameMod == .stayInTheZone {
+                            Picker("Pin Mode", selection: Binding(
+                                get: { store.pinMode },
+                                set: { store.send(.pinModeChanged($0)) }
+                            )) {
+                                Text("Start zone").tag(MapConfigPinMode.start)
+                                Text("Final zone").tag(MapConfigPinMode.finalZone)
+                            }
+                            .pickerStyle(.segmented)
                         }
-                        .pickerStyle(.segmented)
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)

@@ -6,9 +6,9 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -18,7 +18,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.rotate
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
@@ -26,7 +25,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import dev.rahier.pouleparty.AppConstants
 import dev.rahier.pouleparty.R
-import dev.rahier.pouleparty.model.Winner
+import dev.rahier.pouleparty.model.Game
+import dev.rahier.pouleparty.model.Registration
 import dev.rahier.pouleparty.ui.components.SelectionButton
 import dev.rahier.pouleparty.ui.theme.*
 import kotlin.math.sin
@@ -38,21 +38,41 @@ fun VictoryScreen(
     viewModel: VictoryViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
-    val isSpectator = state.hunterId.isEmpty()
+    val isCurrentUserAWinner = state.game.winners.any { it.hunterId == state.hunterId }
+    val showConfetti = isCurrentUserAWinner && !state.isChicken
+
+    val entries = remember(state.game, state.registrations, state.hunterId, state.isChicken) {
+        buildLeaderboardEntries(
+            game = state.game,
+            registrations = state.registrations,
+            currentUserId = if (state.isChicken) "" else state.hunterId
+        )
+    }
+    val sortedFinders = remember(entries) {
+        entries.filter { it.hasFound }.sortedBy { it.foundTimestampMs ?: Long.MAX_VALUE }
+    }
+    val nonFinders = remember(entries) {
+        entries.filter { !it.hasFound }.sortedBy { it.displayName.lowercase() }
+    }
+    val podium = remember(sortedFinders) { sortedFinders.take(3) }
+    val others = remember(sortedFinders) { sortedFinders.drop(3) }
+
+    val headerEmoji = if (state.isChicken) "\uD83D\uDC14" else "\uD83C\uDFC6"
+    val headerText = when {
+        state.isChicken -> stringResource(R.string.game_over)
+        isCurrentUserAWinner -> stringResource(R.string.you_found_chicken)
+        else -> stringResource(R.string.game_results)
+    }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        // Confetti overlay (only for participants)
-        if (!isSpectator) {
-            ConfettiOverlay(
-                modifier = Modifier.fillMaxSize()
-            )
+        if (showConfetti) {
+            ConfettiOverlay(modifier = Modifier.fillMaxSize())
         }
 
-        // Main content
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -63,32 +83,102 @@ fun VictoryScreen(
         ) {
             Spacer(Modifier.height(20.dp))
 
-            Text(
-                text = "\uD83C\uDFC6",
-                fontSize = 60.sp
-            )
+            Text(text = headerEmoji, fontSize = 60.sp)
 
             Spacer(Modifier.height(16.dp))
 
             Text(
-                text = if (isSpectator) stringResource(R.string.game_results) else stringResource(R.string.you_found_chicken),
+                text = headerText,
                 style = gameboyStyle(16),
                 color = MaterialTheme.colorScheme.onBackground,
                 textAlign = TextAlign.Center
             )
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(16.dp))
 
-            // Leaderboard
-            LeaderboardSection(
-                game = state.game,
-                hunterId = state.hunterId,
-                modifier = Modifier.weight(1f)
-            )
+            if (entries.isEmpty()) {
+                Column(
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(text = "\uD83E\uDD37", fontSize = 60.sp)
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        text = stringResource(R.string.no_participants),
+                        style = bangerStyle(22),
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(R.string.this_game_ended_without_any_hunters_joining),
+                        style = gameboyStyle(9),
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 24.dp)
+                    )
+                }
+            } else {
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                if (podium.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = stringResource(R.string.podium),
+                            style = bangerStyle(20),
+                            color = CROrange,
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                    }
+                    itemsIndexed(podium, key = { _, e -> e.id }) { index, entry ->
+                        LeaderboardEntryRow(
+                            rank = index + 1,
+                            entry = entry,
+                            gameHunterStartMs = state.game.hunterStartDate.time
+                        )
+                    }
+                }
+                if (others.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = stringResource(R.string.other_hunters),
+                            style = bangerStyle(18),
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                    }
+                    itemsIndexed(others, key = { _, e -> e.id }) { index, entry ->
+                        LeaderboardEntryRow(
+                            rank = index + 4,
+                            entry = entry,
+                            gameHunterStartMs = state.game.hunterStartDate.time
+                        )
+                    }
+                }
+                if (nonFinders.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = stringResource(R.string.did_not_find_the_chicken),
+                            style = bangerStyle(16),
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                    }
+                    items(nonFinders, key = { it.id }) { entry ->
+                        LeaderboardEntryRow(
+                            rank = null,
+                            entry = entry,
+                            gameHunterStartMs = state.game.hunterStartDate.time
+                        )
+                    }
+                }
+            }
+            }
 
             Spacer(Modifier.height(16.dp))
 
-            // Back to menu button
             SelectionButton(
                 text = stringResource(R.string.back_to_menu),
                 color = MaterialTheme.colorScheme.onBackground,
@@ -101,96 +191,59 @@ fun VictoryScreen(
 }
 
 @Composable
-private fun LeaderboardSection(
-    game: dev.rahier.pouleparty.model.Game,
-    hunterId: String,
-    modifier: Modifier = Modifier
+private fun LeaderboardEntryRow(
+    rank: Int?,
+    entry: LeaderboardEntry,
+    gameHunterStartMs: Long
 ) {
-    val sortedWinners = remember(game.winners) {
-        game.winners.sortedBy { it.timestamp.toDate().time }
-    }
-    val remaining = maxOf(0, game.hunterIds.size - game.winners.size)
-
-    LazyColumn(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        itemsIndexed(sortedWinners, key = { _, w -> w.hunterId }) { index, winner ->
-            LeaderboardRow(
-                rank = index + 1,
-                winner = winner,
-                isCurrentHunter = winner.hunterId == hunterId,
-                gameStartDate = game.hunterStartDate
-            )
-        }
-
-        if (remaining > 0) {
-            item {
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 12.dp, horizontal = 24.dp)
-                )
-                Text(
-                    text = stringResource(R.string.still_in_party, remaining),
-                    style = bangerStyle(18),
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-                    modifier = Modifier.padding(vertical = 4.dp)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun LeaderboardRow(
-    rank: Int,
-    winner: Winner,
-    isCurrentHunter: Boolean,
-    gameStartDate: java.util.Date
-) {
-    val medal = when (rank) {
+    val rankLabel = when (rank) {
+        null -> "—"
         1 -> "\uD83E\uDD47"
         2 -> "\uD83E\uDD48"
         3 -> "\uD83E\uDD49"
         else -> "#$rank"
     }
 
-    val timeDelta = winner.timestamp.toDate().time - gameStartDate.time
-    val totalSeconds = (timeDelta / 1000).toInt()
-    val minutes = totalSeconds / 60
-    val seconds = totalSeconds % 60
-    val timeString = "+${minutes}m %02ds".format(seconds)
+    val timeString: String? = entry.foundTimestampMs?.let { ms ->
+        val totalSeconds = maxOf(0, ((ms - gameHunterStartMs) / 1000).toInt())
+        val minutes = totalSeconds / 60
+        val seconds = totalSeconds % 60
+        "+${minutes}m %02ds".format(seconds)
+    }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = 16.dp, vertical = 4.dp)
             .background(
-                color = if (isCurrentHunter) CROrange.copy(alpha = 0.2f) else Color.Transparent,
-                shape = RoundedCornerShape(8.dp)
+                color = if (entry.isCurrentUser) CROrange.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface.copy(alpha = 0.4f),
+                shape = RoundedCornerShape(10.dp)
             )
-            .padding(horizontal = 24.dp, vertical = 10.dp),
+            .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = medal,
-            fontSize = if (rank <= 3) 24.sp else 16.sp,
+            text = rankLabel,
+            fontSize = if ((rank ?: 99) <= 3) 24.sp else 16.sp,
             color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.width(40.dp)
+            modifier = Modifier.width(44.dp)
         )
 
         Text(
-            text = winner.hunterName,
-            style = bangerStyle(20),
+            text = entry.displayName,
+            style = bangerStyle(18),
             color = MaterialTheme.colorScheme.onBackground,
             maxLines = 1,
             modifier = Modifier.weight(1f)
         )
 
-        Text(
-            text = timeString,
-            style = gameboyStyle(10),
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
-        )
+        if (timeString != null) {
+            Text(
+                text = timeString,
+                style = gameboyStyle(10),
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+            )
+        }
     }
 }
 

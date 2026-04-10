@@ -36,7 +36,7 @@ struct GameCreationFeature {
         @Shared var game: Game
         var currentStepIndex: Int = 0
         var isParticipating: Bool = true
-        var gameDurationMinutes: Double = 120
+        var gameDurationMinutes: Double = 90
         var showPowerUpSelection: Bool = false
         var mapConfigState: ChickenMapConfigFeature.State
         var goingForward: Bool = true
@@ -54,9 +54,7 @@ struct GameCreationFeature {
                 .headStart,
                 .powerUps,
             ])
-            if game.gameMod == .followTheChicken {
-                result.append(.chickenSeesHunters)
-            }
+            result.append(.chickenSeesHunters)
             result.append(.registration)
             result.append(.recap)
             return result
@@ -70,7 +68,7 @@ struct GameCreationFeature {
 
         var progress: Double {
             let allSteps = steps
-            guard allSteps.count > 0 else { return 0 }
+            guard !allSteps.isEmpty else { return 0 }
             return Double(currentStepIndex + 1) / Double(allSteps.count)
         }
 
@@ -194,6 +192,14 @@ struct GameCreationFeature {
 
             case let .gameModChanged(mode):
                 state.$game.withLock { $0.gameMod = mode }
+                // Switching to Follow the Chicken: the final zone is dynamically the
+                // chicken's live position, so clear any manually-placed final zone
+                // and reset the pin mode to start.
+                if mode == .followTheChicken {
+                    state.$game.withLock { $0.finalLocation = nil }
+                    state.mapConfigState.finalMarker = nil
+                    state.mapConfigState.pinMode = .start
+                }
                 return .none
 
             case let .initialRadiusChanged(radius):
@@ -530,7 +536,7 @@ struct GameCreationView: View {
                 selectionCard(
                     title: "Follow the Chicken",
                     emoji: "🐔",
-                    subtitle: "The zone follows the chicken",
+                    subtitle: "The zone shrinks toward the chicken",
                     isSelected: store.currentGame.gameMod == .followTheChicken,
                     gradient: Color.gradientChicken
                 ) {
@@ -941,16 +947,14 @@ struct GameCreationView: View {
                     Text(subtitle)
                         .font(.gameboy(size: 7))
                         .foregroundStyle(isSelected ? .black.opacity(0.7) : Color.onBackground.opacity(0.6))
-                        .lineLimit(1)
                 }
 
                 Spacer()
 
-                if isSelected {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.title2)
-                        .foregroundStyle(.black)
-                }
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.title2)
+                    .foregroundStyle(.black)
+                    .opacity(isSelected ? 1 : 0)
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 16)

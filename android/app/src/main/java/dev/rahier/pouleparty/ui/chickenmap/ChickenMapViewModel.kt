@@ -270,7 +270,7 @@ class ChickenMapViewModel @Inject constructor(
                     var sendLatLng = latLng
                     // Jammer: add +/-200m random noise
                     if (currentGame.isJammerActive) {
-                        val latNoise = (Math.random() - 0.5) * 0.0036 // ~200m
+                        val latNoise = (Math.random() - 0.5) * AppConstants.JAMMER_NOISE_DEGREES
                         val lonNoise = (Math.random() - 0.5) * 0.0036
                         sendLatLng = Point.fromLngLat(
                             latLng.longitude() + lonNoise,
@@ -300,7 +300,7 @@ class ChickenMapViewModel @Inject constructor(
                 var sendLatLng = latLng
                 // Jammer: add +/-200m random noise to position
                 if (_uiState.value.game.isJammerActive) {
-                    val latNoise = (Math.random() - 0.5) * 0.0036 // ~200m
+                    val latNoise = (Math.random() - 0.5) * AppConstants.JAMMER_NOISE_DEGREES
                     val lonNoise = (Math.random() - 0.5) * 0.0036
                     sendLatLng = Point.fromLngLat(
                         latLng.longitude() + lonNoise,

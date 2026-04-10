@@ -329,11 +329,13 @@ fun ChickenMapScreen(
         )
     }
 
-    // Game over alert
+    // Game over alert — dismiss navigates to leaderboard (Victory)
     if (state.showGameOverAlert) {
         GameOverAlertDialog(
             message = state.gameOverMessage,
-            onConfirm = { viewModel.confirmGameOver(onGoToMenu) }
+            onConfirm = {
+                viewModel.confirmGameOver { onVictory(state.game.id) }
+            }
         )
     }
 

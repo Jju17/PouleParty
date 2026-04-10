@@ -51,7 +51,7 @@ object Routes {
     const val CHICKEN_CONFIG = "chicken_config/{gameId}/{pricingModel}/{numberOfPlayers}/{pricePerPlayerCents}/{depositAmountCents}"
     const val CHICKEN_MAP = "chicken_map/{gameId}"
     const val HUNTER_MAP = "hunter_map/{gameId}/{hunterName}"
-    const val VICTORY = "victory/{gameId}/{hunterName}/{hunterId}"
+    const val VICTORY = "victory/{gameId}/{hunterName}/{hunterId}/{isChicken}"
     const val SETTINGS = "settings"
 
     fun gameCreation(gameId: String, pricingModel: String = "free", numberOfPlayers: Int = 5, pricePerPlayerCents: Int = 0, depositAmountCents: Int = 0) =
@@ -60,8 +60,8 @@ object Routes {
         "chicken_config/$gameId/$pricingModel/$numberOfPlayers/$pricePerPlayerCents/$depositAmountCents"
     fun chickenMap(gameId: String) = "chicken_map/$gameId"
     fun hunterMap(gameId: String, hunterName: String) = "hunter_map/$gameId/${Uri.encode(hunterName)}"
-    fun victory(gameId: String, hunterName: String, hunterId: String) =
-        "victory/$gameId/${Uri.encode(hunterName)}/${Uri.encode(hunterId)}"
+    fun victory(gameId: String, hunterName: String, hunterId: String, isChicken: Boolean = false) =
+        "victory/$gameId/${Uri.encode(hunterName)}/${Uri.encode(hunterId)}/$isChicken"
 }
 
 @Composable
@@ -93,7 +93,7 @@ fun AppNavigation() {
             try {
                 val token = FirebaseMessaging.getInstance().token.await()
                 FirebaseFirestore.getInstance()
-                    .collection("fcmTokens")
+                    .collection(AppConstants.COLLECTION_FCM_TOKENS)
                     .document(userId)
                     .set(
                         mapOf(
@@ -171,6 +171,13 @@ fun AppNavigation() {
                 onNavigateToPlanSelection = {
                     navController.navigate(Routes.PLAN_SELECTION)
                 },
+                onNavigateToGameCreation = { gameId, pricingModel, numberOfPlayers, pricePerPlayerCents, depositAmountCents ->
+                    navController.navigate(
+                        Routes.gameCreation(gameId, pricingModel, numberOfPlayers, pricePerPlayerCents, depositAmountCents)
+                    ) {
+                        popUpTo(Routes.HOME) { inclusive = false }
+                    }
+                },
                 onNavigateToChickenMap = { gameId ->
                     navController.navigate(Routes.chickenMap(gameId)) {
                         popUpTo(Routes.HOME) { inclusive = false }
@@ -182,7 +189,7 @@ fun AppNavigation() {
                     }
                 },
                 onNavigateToVictory = { gameId ->
-                    navController.navigate(Routes.victory(gameId, "", "")) {
+                    navController.navigate(Routes.victory(gameId, "", "", isChicken = false)) {
                         popUpTo(Routes.HOME) { inclusive = false }
                     }
                 },
@@ -253,7 +260,7 @@ fun AppNavigation() {
                     }
                 },
                 onVictory = { gameId ->
-                    navController.navigate(Routes.victory(gameId, "", "")) {
+                    navController.navigate(Routes.victory(gameId, "", "", isChicken = true)) {
                         popUpTo(Routes.HOME) { inclusive = false }
                     }
                 }
@@ -274,7 +281,7 @@ fun AppNavigation() {
                     }
                 },
                 onVictory = { gameId, hunterName, hunterId ->
-                    navController.navigate(Routes.victory(gameId, hunterName, hunterId)) {
+                    navController.navigate(Routes.victory(gameId, hunterName, hunterId, isChicken = false)) {
                         popUpTo(Routes.HOME) { inclusive = false }
                     }
                 }
@@ -286,7 +293,8 @@ fun AppNavigation() {
             arguments = listOf(
                 navArgument("gameId") { type = NavType.StringType },
                 navArgument("hunterName") { type = NavType.StringType },
-                navArgument("hunterId") { type = NavType.StringType }
+                navArgument("hunterId") { type = NavType.StringType },
+                navArgument("isChicken") { type = NavType.BoolType }
             )
         ) {
             VictoryScreen(

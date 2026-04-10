@@ -18,8 +18,8 @@ fun CountdownView(
     val isHeadStart = !isPreChickenStart && hunterStartDate != null && nowDate.before(hunterStartDate)
 
     val target = when {
-        isPreChickenStart -> chickenStartDate!!
-        isHeadStart -> hunterStartDate!!
+        isPreChickenStart -> chickenStartDate ?: Date()
+        isHeadStart -> hunterStartDate ?: Date()
         else -> nextUpdateDate ?: Date()
     }
 

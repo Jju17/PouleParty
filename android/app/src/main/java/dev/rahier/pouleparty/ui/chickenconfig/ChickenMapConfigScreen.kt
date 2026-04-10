@@ -43,12 +43,17 @@ fun ChickenMapConfigScreen(
     onLocationSelected: (Point) -> Unit,
     onFinalLocationSelected: (Point?) -> Unit,
     onRadiusChanged: (Double) -> Unit,
+    isFollowMode: Boolean = false,
     viewModel: ChickenMapConfigViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
 
     LaunchedEffect(Unit) {
         viewModel.initialize(initialRadius, finalMarker)
+    }
+
+    LaunchedEffect(isFollowMode) {
+        viewModel.setFollowMode(isFollowMode)
     }
 
     val mapViewportState = rememberMapViewportState {
@@ -80,9 +85,11 @@ fun ChickenMapConfigScreen(
                     pulsingEnabled = true
                 }
                 mapView.gestures.addOnMapClickListener { point ->
+                    // Read pin mode BEFORE onMapTapped auto-switches it
+                    val previousMode = viewModel.uiState.value.pinMode
                     viewModel.onMapTapped(point)
                     val updatedState = viewModel.uiState.value
-                    if (updatedState.pinMode == MapConfigPinMode.START) {
+                    if (previousMode == MapConfigPinMode.START) {
                         onLocationSelected(point)
                     } else {
                         onFinalLocationSelected(updatedState.finalMarkerPosition)
@@ -186,9 +193,10 @@ fun ChickenMapConfigScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable {
+                                        val previousMode = viewModel.uiState.value.pinMode
                                         viewModel.onSearchResultSelected(result)
                                         val updatedState = viewModel.uiState.value
-                                        if (updatedState.pinMode == MapConfigPinMode.START) {
+                                        if (previousMode == MapConfigPinMode.START) {
                                             onLocationSelected(
                                                 Point.fromLngLat(result.longitude, result.latitude)
                                             )
@@ -253,21 +261,24 @@ fun ChickenMapConfigScreen(
                 colors = SliderDefaults.colors(thumbColor = CROrange, activeTrackColor = CROrange)
             )
 
-            // Pin mode segmented control
-            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                SegmentedButton(
-                    selected = state.pinMode == MapConfigPinMode.START,
-                    onClick = { viewModel.setPinMode(MapConfigPinMode.START) },
-                    shape = SegmentedButtonDefaults.itemShape(0, 2)
-                ) {
-                    Text(stringResource(R.string.start_zone))
-                }
-                SegmentedButton(
-                    selected = state.pinMode == MapConfigPinMode.FINAL,
-                    onClick = { viewModel.setPinMode(MapConfigPinMode.FINAL) },
-                    shape = SegmentedButtonDefaults.itemShape(1, 2)
-                ) {
-                    Text(stringResource(R.string.final_zone))
+            // Pin mode segmented control — only relevant for Stay in the Zone mode.
+            // In Follow the Chicken, the final zone is the chicken's live position.
+            if (!isFollowMode) {
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    SegmentedButton(
+                        selected = state.pinMode == MapConfigPinMode.START,
+                        onClick = { viewModel.setPinMode(MapConfigPinMode.START) },
+                        shape = SegmentedButtonDefaults.itemShape(0, 2)
+                    ) {
+                        Text(stringResource(R.string.start_zone))
+                    }
+                    SegmentedButton(
+                        selected = state.pinMode == MapConfigPinMode.FINAL,
+                        onClick = { viewModel.setPinMode(MapConfigPinMode.FINAL) },
+                        shape = SegmentedButtonDefaults.itemShape(1, 2)
+                    ) {
+                        Text(stringResource(R.string.final_zone))
+                    }
                 }
             }
         }

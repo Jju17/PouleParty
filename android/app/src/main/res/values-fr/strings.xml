@@ -37,6 +37,18 @@
     <string name="collapse">Réduire</string>
     <string name="expand_registered_game_banner">Afficher la bannière d\'inscription</string>
 
+    <!-- Leaderboard -->
+    <string name="podium">Podium</string>
+    <string name="other_hunters">Autres chasseurs</string>
+    <string name="did_not_find_the_chicken">N\'ont pas trouvé la poule</string>
+    <string name="no_participants">Aucun participant</string>
+    <string name="this_game_ended_without_any_hunters_joining">Cette partie s\'est terminée sans qu\'aucun chasseur ne rejoigne.</string>
+    <string name="game_ended">Partie terminée</string>
+    <string name="view_results">Voir les résultats</string>
+
+    <!-- Hunter map registration gate -->
+    <string name="you_must_register_before_joining_this_game">Tu dois t\'inscrire à cette partie avant de la rejoindre. Demande le lien d\'inscription à la poule.</string>
+
     <!-- Game creation registration step -->
     <string name="registration">Inscription</string>
     <string name="do_hunters_need_to_register_before_joining">Les chasseurs doivent-ils s\'inscrire avant de rejoindre ?</string>
@@ -150,20 +162,20 @@
     <string name="rule_circular_zone">Le jeu se déroule dans une zone circulaire sur la carte.</string>
     <string name="rule_zone_shrinks">La zone rétrécit avec le temps selon les paramètres.</string>
     <string name="rule_win_condition">Les Chasseurs gagnent en trouvant la Poule. La Poule gagne en survivant jusqu\'à la fin !</string>
-    <string name="mode_follow_desc">Les Chasseurs voient un cercle qui suit la position de la Poule en temps réel. La Poule doit courir et se cacher !</string>
-    <string name="mode_follow_detail1">La Poule envoie sa position à tous les Chasseurs</string>
-    <string name="mode_follow_detail2">Les Chasseurs voient la zone bouger avec la Poule</string>
-    <string name="mode_follow_detail3">La Poule ne voit PAS les Chasseurs</string>
-    <string name="mode_stay_desc">La zone rétrécit et se déplace aléatoirement autour du point de départ. Les Chasseurs doivent trouver la Poule sans aucun indice de position !</string>
+    <string name="mode_follow_desc">La zone rétrécit périodiquement vers la position de la Poule. Les Chasseurs ne voient pas sa position exacte — juste la zone qui bouge !</string>
+    <string name="mode_follow_detail1">Le centre de la zone suit la position en direct de la Poule</string>
+    <string name="mode_follow_detail2">Les Chasseurs voient la zone bouger mais pas où se trouve la Poule</string>
+    <string name="mode_follow_detail3">La Poule doit rester dans la zone pour survivre</string>
+    <string name="mode_stay_desc">La zone rétrécit et se déplace autour du point de départ. Les Chasseurs doivent trouver la Poule sans aucun indice de position !</string>
     <string name="mode_stay_detail1">Pas de partage de position entre joueurs</string>
-    <string name="mode_stay_detail2">La zone se déplace aléatoirement mais contient toujours le lieu de départ</string>
+    <string name="mode_stay_detail2">La zone se déplace vers le point final défini par le créateur</string>
     <string name="mode_stay_detail3">Stratégie : fouillez la zone mouvante pour trouver la Poule !</string>
     <string name="chicken_can_see_hunters">La poule voit les chasseurs</string>
     <string name="chicken_can_see_hunters_title">La poule voit les chasseurs 👀</string>
     <string name="chicken_can_see_hunters_desc">Une option disponible dans tous les modes de jeu. La Poule peut voir tous les Chasseurs sur sa carte !</string>
     <string name="chicken_can_see_hunters_detail1">Les Chasseurs envoient leur position à la Poule</string>
-    <string name="chicken_can_see_hunters_detail2">Les deux côtés se traquent en temps réel</string>
-    <string name="chicken_can_see_hunters_detail3">Activez cette option dans les réglages du jeu</string>
+    <string name="chicken_can_see_hunters_detail2">La Poule voit toutes les positions des Chasseurs en temps réel</string>
+    <string name="chicken_can_see_hunters_detail3">Choisis cette option à la création de la partie</string>
     <string name="setting_start_end_name">Début / Fin</string>
     <string name="setting_start_end_desc">Quand la partie commence et se termine. La Poule gagne si le temps est écoulé !</string>
     <string name="setting_radius_interval_desc">La fréquence de rétrécissement de la zone (en minutes).</string>

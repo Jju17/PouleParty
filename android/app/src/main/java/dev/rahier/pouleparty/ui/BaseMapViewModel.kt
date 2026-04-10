@@ -33,7 +33,7 @@ abstract class BaseMapViewModel(
 
     protected val streamJobs = mutableListOf<Job>()
     protected var notificationJob: Job? = null
-    private val collectingPowerUpIds = mutableSetOf<String>()
+    private val collectingPowerUpIds = java.util.Collections.synchronizedSet(mutableSetOf<String>())
 
     /** The game document ID — provided by SavedStateHandle in each subclass. */
     abstract val gameId: String
@@ -88,8 +88,7 @@ abstract class BaseMapViewModel(
         onNotification: (message: String, type: PowerUpType?) -> Unit
     ) {
         val userLoc = userLocation ?: return
-        val powerUps = availablePowerUps.toList()
-        for (powerUp in powerUps) {
+        for (powerUp in availablePowerUps) {
             if (powerUp.id in collectingPowerUpIds) continue
             val results = FloatArray(1)
             Location.distanceBetween(

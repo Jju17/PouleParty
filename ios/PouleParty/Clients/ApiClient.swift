@@ -34,6 +34,7 @@ struct ApiClient {
     var fetchMyGames: (String) async throws -> [Game]
     var findRegistration: (String, String) async throws -> Registration?
     var createRegistration: (String, Registration) async throws -> Void
+    var fetchAllRegistrations: (String) async throws -> [Registration]
 }
 
 private let logger = Logger(subsystem: "dev.rahier.pouleparty", category: "ApiClient")
@@ -86,7 +87,8 @@ extension ApiClient: TestDependencyKey {
         fetchPartyPlansConfig: { PartyPlansConfig() },
         fetchMyGames: { _ in [] },
         findRegistration: { _, _ in nil },
-        createRegistration: { _, _ in }
+        createRegistration: { _, _ in },
+        fetchAllRegistrations: { _ in [] }
     )
 }
 
@@ -452,6 +454,16 @@ extension ApiClient: DependencyKey {
                     .collection(gamesCollection).document(gameId)
                     .collection(registrationsSubcollection).document(registration.userId)
                 try ref.setData(from: registration)
+            }
+        },
+        fetchAllRegistrations: { gameId in
+            guard !gameId.isEmpty else { return [] }
+            let snapshot = try await Firestore.firestore()
+                .collection(gamesCollection).document(gameId)
+                .collection(registrationsSubcollection)
+                .getDocuments()
+            return snapshot.documents.compactMap { doc in
+                try? doc.data(as: Registration.self)
             }
         }
     )

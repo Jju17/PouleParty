@@ -69,7 +69,8 @@ data class HunterMapUiState(
     val lastActivatedPowerUpType: PowerUpType? = null,
     val previewCircle: Pair<Point, Double>? = null,
     val activatingPowerUpId: String? = null,
-    val decoyLocation: Point? = null
+    val decoyLocation: Point? = null,
+    val showRegistrationRequiredAlert: Boolean = false
 )
 
 @HiltViewModel
@@ -104,6 +105,19 @@ class HunterMapViewModel @Inject constructor(
                 return@launch
             }
             val game = firestoreRepository.getConfig(gameId) ?: return@launch
+
+            // Defensive gate: refuse entry if game requires registration and user isn't registered.
+            // This catches client-side bypasses and prevents the Firestore rule from rejecting
+            // the hunterIds update (which would otherwise crash the screen).
+            if (game.requiresRegistration) {
+                val registration = firestoreRepository.findRegistration(gameId, hunterId)
+                if (registration == null) {
+                    Log.w(TAG, "Hunter $hunterId not registered for game $gameId — bouncing back")
+                    _uiState.update { it.copy(showRegistrationRequiredAlert = true) }
+                    return@launch
+                }
+            }
+
             val (lastUpdate, lastRadius) = game.findLastUpdate()
 
             _uiState.update {
@@ -114,13 +128,23 @@ class HunterMapViewModel @Inject constructor(
                 )
             }
 
-            firestoreRepository.registerHunter(gameId, hunterId)
+            try {
+                firestoreRepository.registerHunter(gameId, hunterId)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to register hunter $hunterId for game $gameId", e)
+                _uiState.update { it.copy(showRegistrationRequiredAlert = true) }
+                return@launch
+            }
             streamJobs += startTimer()
             streamJobs += viewModelScope.launch { streamGameConfig(game) }
             streamJobs += viewModelScope.launch { streamChickenLocation(game) }
             streamJobs += viewModelScope.launch { trackHunterSelfLocation(game) }
             streamJobs += viewModelScope.launch { streamPowerUps() }
         }
+    }
+
+    fun dismissRegistrationRequiredAlert() {
+        _uiState.update { it.copy(showRegistrationRequiredAlert = false) }
     }
 
     private fun startTimer(): Job {

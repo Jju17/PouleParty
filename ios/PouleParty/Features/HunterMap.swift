@@ -92,6 +92,7 @@ struct HunterMapFeature {
         case powerUpInventoryTapped
         case powerUpInventoryDismissed
         case allHuntersFound
+        case registrationRequiredDetected
     }
 
     @Reducer
@@ -108,6 +109,7 @@ struct HunterMapFeature {
                 case leaveGame
                 case gameOver
                 case wrongCode
+                case registrationRequired
             }
         }
     }
@@ -161,9 +163,32 @@ struct HunterMapFeature {
                 return .run { send in
                     await liveActivityClient.end(nil)
                     // Fallback: also update status from hunter side in case chicken didn't
-                    try? await apiClient.updateGameStatus(gameId, .done)
+                    do {
+                        try await apiClient.updateGameStatus(gameId, .done)
+                    } catch {
+                        logger.error("Failed to update game status to done: \(error)")
+                    }
+                    // Show leaderboard instead of returning to menu directly
+                    await send(.allHuntersFound)
+                }
+            case .destination(.presented(.alert(.registrationRequired))):
+                return .run { send in
+                    await liveActivityClient.end(nil)
                     await send(.returnedToMenu)
                 }
+            case .registrationRequiredDetected:
+                state.destination = .alert(
+                    AlertState {
+                        TextState("Registration required")
+                    } actions: {
+                        ButtonState(action: .registrationRequired) {
+                            TextState("OK")
+                        }
+                    } message: {
+                        TextState("You must register for this game before joining. Ask the chicken for the registration link.")
+                    }
+                )
+                return .none
             case .destination:
                 return .none
             case .countdownDismissed:
@@ -329,12 +354,28 @@ struct HunterMapFeature {
                 let initialLAState = state.liveActivityState
                 state.lastLiveActivityState = initialLAState
 
+                let requiresRegistration = state.game.requiresRegistration
                 var effects: [Effect<Action>] = [
                     .run { _ in
                         await liveActivityClient.start(attributes, initialLAState)
                     },
-                    .run { _ in
-                        try await apiClient.registerHunter(gameId, hunterId)
+                    .run { send in
+                        // Defensive gate: if game requires registration, ensure user has one before
+                        // calling registerHunter (which would fail the Firestore rule and silently
+                        // break the rest of the screen).
+                        if requiresRegistration {
+                            let registration = try? await apiClient.findRegistration(gameId, hunterId)
+                            if registration == nil {
+                                logger.warning("Hunter \(hunterId) not registered for game \(gameId) — bouncing back")
+                                await send(.registrationRequiredDetected)
+                                return
+                            }
+                        }
+                        do {
+                            try await apiClient.registerHunter(gameId, hunterId)
+                        } catch {
+                            logger.error("Failed to register hunter: \(error.localizedDescription)")
+                        }
                     },
                     .run { send in
                         for await game in apiClient.gameConfigStream(gameId) {
@@ -475,7 +516,8 @@ struct HunterMapFeature {
                 if game.isDecoyActive {
                     if state.decoyLocation == nil, let center = state.mapCircle?.center {
                         // Deterministic fake location so all hunters see the same decoy
-                        let seed = game.driftSeed ^ Int(game.activeDecoyUntil!.dateValue().timeIntervalSince1970)
+                        let decoyTimestamp = Int(game.activeDecoyUntil?.dateValue().timeIntervalSince1970 ?? 0)
+                        let seed = game.driftSeed ^ decoyTimestamp
                         let angle = seededRandom(seed: seed, index: 0) * 2 * .pi
                         let distance = (200 + seededRandom(seed: seed, index: 1) * 300) / 111_320.0
                         state.decoyLocation = CLLocationCoordinate2D(

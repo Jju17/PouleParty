@@ -148,7 +148,8 @@ struct ChickenMapFeature {
                         Logger(subsystem: "dev.rahier.pouleparty", category: "ChickenMapFeature")
                             .error("Failed to update game status to done: \(error.localizedDescription)")
                     }
-                    await send(.returnedToMenu)
+                    // Show leaderboard instead of returning to menu directly
+                    await send(.allHuntersFound)
                 }
             case .destination:
                 return .none
@@ -391,7 +392,11 @@ struct ChickenMapFeature {
                             enabledTypes: enabledPowerUpTypes
                         )
                         let powerUps = await snapPowerUpsToRoads(generated)
-                        try? await apiClient.spawnPowerUps(gameId, powerUps)
+                        do {
+                            try await apiClient.spawnPowerUps(gameId, powerUps)
+                        } catch {
+                            logger.error("Failed to spawn power-ups: \(error)")
+                        }
                     }
                 ]
 
@@ -517,7 +522,11 @@ struct ChickenMapFeature {
                 let gameId = state.game.id
                 return .run { _ in
                     await liveActivityClient.start(attributes, initialLAState)
-                    try? await apiClient.updateGameStatus(gameId, .inProgress)
+                    do {
+                        try await apiClient.updateGameStatus(gameId, .inProgress)
+                    } catch {
+                        logger.error("Failed to update game status to inProgress: \(error)")
+                    }
                 }
             case .timerTicked:
                 state.nowDate = .now

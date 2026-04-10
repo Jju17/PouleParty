@@ -71,7 +71,7 @@ fun PowerUpSelectionScreen(
     val chickenPowerUps = PowerUpType.entries.filter { !it.isHunterPowerUp }
     val hunterPowerUps = PowerUpType.entries.filter { it.isHunterPowerUp }
 
-    Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).statusBarsPadding()) {
+    Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).statusBarsPadding().navigationBarsPadding()) {
         // Top bar
         Row(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -86,7 +86,7 @@ fun PowerUpSelectionScreen(
 
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -169,7 +169,7 @@ private fun PowerUpCard(
         enabled = !unavailable,
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 180.dp)
+            .height(200.dp)
             // Neon glow (DA: box-shadow 0 0 7px rgba(color,0.5), 0 4px 12px rgba(0,0,0,0.2))
             .then(
                 if (isEnabled) Modifier.shadow(

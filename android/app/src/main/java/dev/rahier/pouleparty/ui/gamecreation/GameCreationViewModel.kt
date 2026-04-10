@@ -25,9 +25,10 @@ data class GameCreationUiState(
     val game: Game = Game.mock,
     val currentStepIndex: Int = 0,
     val isParticipating: Boolean = true,
-    val gameDurationMinutes: Double = 120.0,
+    val gameDurationMinutes: Double = 90.0,
     val isExpertMode: Boolean = false,
     val showPowerUpSelection: Boolean = false,
+    val showDatePicker: Boolean = false,
     val showTimePicker: Boolean = false,
     val showAlert: Boolean = false,
     val alertMessage: String = "",
@@ -50,9 +51,7 @@ data class GameCreationUiState(
                 GameCreationStep.HEAD_START,
                 GameCreationStep.POWER_UPS
             ))
-            if (game.gameModEnum == GameMod.FOLLOW_THE_CHICKEN) {
-                base.add(GameCreationStep.CHICKEN_SEES_HUNTERS)
-            }
+            base.add(GameCreationStep.CHICKEN_SEES_HUNTERS)
             base.add(GameCreationStep.REGISTRATION)
             base.add(GameCreationStep.RECAP)
             return base
@@ -150,28 +149,70 @@ class GameCreationViewModel @Inject constructor(
     }
 
     fun updateGameMod(mod: GameMod) {
-        _uiState.update { it.copy(game = it.game.copy(gameMod = mod.firestoreValue)) }
+        _uiState.update { state ->
+            // Switching to Follow the Chicken: the final zone is dynamically the
+            // chicken's live position, so clear any manually-placed final zone.
+            val updatedGame = if (mod == GameMod.FOLLOW_THE_CHICKEN) {
+                state.game.copy(gameMod = mod.firestoreValue, finalCoordinates = null)
+            } else {
+                state.game.copy(gameMod = mod.firestoreValue)
+            }
+            state.copy(game = updatedGame)
+        }
     }
 
     fun onStartTimeTapped() {
-        _uiState.update { it.copy(showTimePicker = true) }
+        _uiState.update { it.copy(showDatePicker = true) }
+    }
+
+    fun dismissDatePicker() {
+        _uiState.update { it.copy(showDatePicker = false) }
     }
 
     fun dismissTimePicker() {
         _uiState.update { it.copy(showTimePicker = false) }
     }
 
-    fun updateStartDate(hour: Int, minute: Int) {
-        val cal = java.util.Calendar.getInstance().apply {
-            set(java.util.Calendar.HOUR_OF_DAY, hour)
-            set(java.util.Calendar.MINUTE, minute)
-            set(java.util.Calendar.SECOND, 0)
+    /**
+     * Apply a new date (year/month/day) to the start date, keeping the existing
+     * hour/minute. Then advances to the time picker so the user can pick the time.
+     */
+    fun updateStartDateOnly(year: Int, month: Int, day: Int) {
+        _uiState.update { state ->
+            val cal = java.util.Calendar.getInstance().apply {
+                time = state.game.startDate
+                set(java.util.Calendar.YEAR, year)
+                set(java.util.Calendar.MONTH, month)
+                set(java.util.Calendar.DAY_OF_MONTH, day)
+                set(java.util.Calendar.SECOND, 0)
+            }
+            state.copy(
+                game = state.game.withStartDate(cal.time),
+                showDatePicker = false,
+                showTimePicker = true
+            )
         }
-        val minDate = Date(System.currentTimeMillis() + 120_000)
-        if (cal.time.before(minDate)) {
-            cal.time = minDate
+    }
+
+    /**
+     * Apply a new time (hour/minute) to the start date, keeping the existing
+     * year/month/day. If the resulting datetime is in the past (less than 2 minutes
+     * from now), clamp it forward.
+     */
+    fun updateStartTime(hour: Int, minute: Int) {
+        _uiState.update { state ->
+            val cal = java.util.Calendar.getInstance().apply {
+                time = state.game.startDate
+                set(java.util.Calendar.HOUR_OF_DAY, hour)
+                set(java.util.Calendar.MINUTE, minute)
+                set(java.util.Calendar.SECOND, 0)
+            }
+            val minDate = Date(System.currentTimeMillis() + 120_000)
+            if (cal.time.before(minDate)) {
+                cal.time = minDate
+            }
+            state.copy(game = state.game.withStartDate(cal.time), showTimePicker = false)
         }
-        _uiState.update { it.copy(game = it.game.withStartDate(cal.time), showTimePicker = false) }
     }
 
     fun updateDuration(minutes: Double) {

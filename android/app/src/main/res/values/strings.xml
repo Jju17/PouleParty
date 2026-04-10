@@ -39,6 +39,18 @@
     <string name="collapse">Collapse</string>
     <string name="expand_registered_game_banner">Expand registered game banner</string>
 
+    <!-- Leaderboard -->
+    <string name="podium">Podium</string>
+    <string name="other_hunters">Other hunters</string>
+    <string name="did_not_find_the_chicken">Did not find the chicken</string>
+    <string name="no_participants">No participants</string>
+    <string name="this_game_ended_without_any_hunters_joining">This game ended without any hunters joining.</string>
+    <string name="game_ended">Game ended</string>
+    <string name="view_results">View results</string>
+
+    <!-- Hunter map registration gate -->
+    <string name="you_must_register_before_joining_this_game">You must register for this game before joining. Ask the chicken for the registration link.</string>
+
     <!-- Game creation registration step -->
     <string name="registration">Registration</string>
     <string name="do_hunters_need_to_register_before_joining">Do hunters need to register before joining?</string>
@@ -170,20 +182,20 @@
     <string name="rule_circular_zone">The game takes place in a circular zone on the map.</string>
     <string name="rule_zone_shrinks">The zone shrinks over time based on game settings.</string>
     <string name="rule_win_condition">Hunters win by finding the Chicken. The Chicken wins by surviving until the end!</string>
-    <string name="mode_follow_desc">The Hunters see a circle that follows the Chicken\'s position in real time. The Chicken must run and hide!</string>
-    <string name="mode_follow_detail1">Chicken sends its position to all Hunters</string>
-    <string name="mode_follow_detail2">Hunters see the zone move with the Chicken</string>
-    <string name="mode_follow_detail3">Chicken does NOT see the Hunters</string>
+    <string name="mode_follow_desc">The zone shrinks periodically toward the Chicken\'s position. Hunters don\'t see the Chicken\'s exact location — only the zone moving!</string>
+    <string name="mode_follow_detail1">The zone center follows the Chicken\'s live position</string>
+    <string name="mode_follow_detail2">Hunters see the zone move but not where the Chicken is</string>
+    <string name="mode_follow_detail3">The Chicken must stay inside the zone to survive</string>
     <string name="mode_stay_desc">The zone shrinks and drifts randomly around the starting point. Hunters must find the Chicken with no position clues!</string>
     <string name="mode_stay_detail1">No position sharing between players</string>
-    <string name="mode_stay_detail2">The zone drifts randomly but always contains the starting location</string>
+    <string name="mode_stay_detail2">The zone drifts toward the final zone point set by the creator</string>
     <string name="mode_stay_detail3">Strategy: search the moving zone to find the Chicken!</string>
     <string name="chicken_can_see_hunters">Chicken can see hunters</string>
     <string name="chicken_can_see_hunters_title">Chicken can see hunters 👀</string>
     <string name="chicken_can_see_hunters_desc">An option available in any game mode. The Chicken can see all Hunters on her map!</string>
     <string name="chicken_can_see_hunters_detail1">Hunters send their position to the Chicken</string>
-    <string name="chicken_can_see_hunters_detail2">Both sides can track each other in real time</string>
-    <string name="chicken_can_see_hunters_detail3">Enable this toggle in the game settings</string>
+    <string name="chicken_can_see_hunters_detail2">The Chicken sees all Hunter positions in real time</string>
+    <string name="chicken_can_see_hunters_detail3">Choose this option when creating the game</string>
     <string name="setting_start_end_name">Start / End time</string>
     <string name="setting_start_end_desc">When the game starts and ends. The Chicken wins if the time runs out!</string>
     <string name="setting_radius_interval_desc">How often the zone shrinks (in minutes).</string>

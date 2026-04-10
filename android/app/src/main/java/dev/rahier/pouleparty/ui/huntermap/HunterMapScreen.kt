@@ -385,11 +385,30 @@ fun HunterMapScreen(
         )
     }
 
-    // Game over alert
+    // Game over alert — dismiss navigates to leaderboard (Victory)
     if (state.showGameOverAlert) {
         GameOverAlertDialog(
             message = state.gameOverMessage,
-            onConfirm = { viewModel.confirmGameOver(onGoToMenu) }
+            onConfirm = {
+                viewModel.confirmGameOver {
+                    onVictory(viewModel.gameId, viewModel.hunterName, viewModel.hunterId)
+                }
+            }
+        )
+    }
+
+    // Registration required alert — game requires registration but user isn't registered
+    if (state.showRegistrationRequiredAlert) {
+        AlertDialog(
+            onDismissRequest = { },
+            title = { Text(stringResource(R.string.registration_required)) },
+            text = { Text(stringResource(R.string.you_must_register_before_joining_this_game)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.dismissRegistrationRequiredAlert()
+                    onGoToMenu()
+                }) { Text(stringResource(R.string.back_to_menu)) }
+            }
         )
     }
 

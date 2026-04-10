@@ -16,12 +16,14 @@ object AppConstants {
     const val SUBCOLLECTION_HUNTER_LOCATIONS = "hunterLocations"
     const val SUBCOLLECTION_POWER_UPS = "powerUps"
     const val SUBCOLLECTION_REGISTRATIONS = "registrations"
+    const val COLLECTION_FCM_TOKENS = "fcmTokens"
 
     // Pending registration banner
     const val PREF_PENDING_REGISTRATION_GAME_ID = "pendingRegistrationGameId"
     const val PREF_PENDING_REGISTRATION_GAME_CODE = "pendingRegistrationGameCode"
     const val PREF_PENDING_REGISTRATION_TEAM_NAME = "pendingRegistrationTeamName"
     const val PREF_PENDING_REGISTRATION_START_MS = "pendingRegistrationStartMs"
+    const val PREF_PENDING_REGISTRATION_IS_FINISHED = "pendingRegistrationIsFinished"
 
     // Time Intervals
     const val LOCATION_THROTTLE_MS = 5_000L
@@ -66,6 +68,7 @@ object AppConstants {
     // const val OUTSIDE_ZONE_GRACE_PERIOD_SECONDS = 30
 
     // Power-Ups
+    const val JAMMER_NOISE_DEGREES = 0.0036 // ~200m noise for jammer power-up
     const val POWER_UP_COLLECTION_RADIUS_METERS = 30.0
     const val POWER_UP_INITIAL_BATCH_SIZE = 5
     const val POWER_UP_PERIODIC_BATCH_SIZE = 2

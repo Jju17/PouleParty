@@ -1,6 +1,9 @@
 package dev.rahier.pouleparty.ui.home
 
+import android.Manifest
 import android.media.MediaPlayer
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.lifecycle.Lifecycle
@@ -34,9 +37,13 @@ import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.ui.rules.GameRulesScreen
 import dev.rahier.pouleparty.ui.theme.*
 
+private enum class PendingPermissionAction { None, Start, CreateParty }
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     onNavigateToPlanSelection: () -> Unit,
+    onNavigateToGameCreation: (gameId: String, pricingModel: String, numberOfPlayers: Int, pricePerPlayerCents: Int, depositAmountCents: Int) -> Unit,
     onNavigateToChickenMap: (String) -> Unit,
     onNavigateToHunterMap: (String, String) -> Unit,
     onNavigateToVictory: (String) -> Unit,
@@ -68,6 +75,28 @@ fun HomeScreen(
     }
 
     var isPendingBannerCollapsed by remember { mutableStateOf(false) }
+    var isShowingPlanSelection by remember { mutableStateOf(false) }
+    var pendingPermissionAction by remember { mutableStateOf<PendingPermissionAction>(PendingPermissionAction.None) }
+
+    // Location permission launcher — triggered when Start or Create Party is tapped without
+    // permission. If user grants in the system dialog, we re-attempt the original action.
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        val action = pendingPermissionAction
+        pendingPermissionAction = PendingPermissionAction.None
+        if (granted) {
+            when (action) {
+                PendingPermissionAction.Start -> viewModel.onStartButtonTapped()
+                PendingPermissionAction.CreateParty -> {
+                    isShowingPlanSelection = true
+                }
+                PendingPermissionAction.None -> {}
+            }
+        } else {
+            viewModel.onLocationPermissionDenied()
+        }
+    }
 
     // Mute button bounce animation
     var musicButtonScale by remember { mutableFloatStateOf(1f) }
@@ -127,7 +156,14 @@ fun HomeScreen(
             )
 
             TextButton(
-                onClick = { viewModel.onStartButtonTapped() },
+                onClick = {
+                    if (viewModel.hasLocationPermission()) {
+                        viewModel.onStartButtonTapped()
+                    } else {
+                        pendingPermissionAction = PendingPermissionAction.Start
+                        locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                    }
+                },
                 modifier = Modifier
                     .width(200.dp)
                     .height(50.dp)
@@ -191,7 +227,8 @@ fun HomeScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Rejoin banner
-            if (state.activeGame != null) {
+            val activeGame = state.activeGame
+            if (activeGame != null) {
                 Box(
                     modifier = Modifier
                         .padding(horizontal = 24.dp)
@@ -211,7 +248,7 @@ fun HomeScreen(
                             color = Color.White
                         )
                         Text(
-                            state.activeGame!!.gameCode,
+                            activeGame.gameCode,
                             fontFamily = GameBoyFont,
                             fontSize = 20.sp,
                             color = Color.White
@@ -247,9 +284,11 @@ fun HomeScreen(
                         )
                     }
                 }
-            } else if (state.pendingRegistration != null) {
+            } else {
+                val pending = state.pendingRegistration
+                if (pending != null) {
                 PendingRegistrationBannerSlot(
-                    pending = state.pendingRegistration!!,
+                    pending = pending,
                     isCollapsed = isPendingBannerCollapsed,
                     onCollapse = { isPendingBannerCollapsed = true },
                     onExpand = { isPendingBannerCollapsed = false },
@@ -260,6 +299,7 @@ fun HomeScreen(
                         )
                     }
                 )
+                }
             }
 
             // Bottom row: Rules (left) + I am la poule (right)
@@ -282,8 +322,11 @@ fun HomeScreen(
                 }
                 TextButton(
                     onClick = {
-                        if (viewModel.onCreatePartyTapped()) {
-                            onNavigateToPlanSelection()
+                        if (viewModel.hasLocationPermission()) {
+                            isShowingPlanSelection = true
+                        } else {
+                            pendingPermissionAction = PendingPermissionAction.CreateParty
+                            locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
                         }
                     },
                     modifier = Modifier
@@ -345,9 +388,36 @@ fun HomeScreen(
         )
     }
 
-    // Game Rules bottom sheet
+    // Game Rules fullscreen overlay
     if (state.isShowingGameRules) {
-        GameRulesDialog(onDismiss = { viewModel.onRulesDismissed() })
+        GameRulesOverlay(onDismiss = { viewModel.onRulesDismissed() })
+    }
+
+    // Plan selection bottom sheet
+    if (isShowingPlanSelection) {
+        val planSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(
+            onDismissRequest = { isShowingPlanSelection = false },
+            sheetState = planSheetState,
+            containerColor = MaterialTheme.colorScheme.background
+        ) {
+            Box(modifier = Modifier.fillMaxHeight(0.65f)) {
+            dev.rahier.pouleparty.ui.planselection.PlanSelectionScreen(
+                onPlanSelected = { params ->
+                    isShowingPlanSelection = false
+                    val gameId = java.util.UUID.randomUUID().toString()
+                    onNavigateToGameCreation(
+                        gameId,
+                        params.pricingModel,
+                        params.numberOfPlayers,
+                        params.pricePerPlayerCents,
+                        params.depositAmountCents
+                    )
+                },
+                onBack = { isShowingPlanSelection = false }
+            )
+            }
+        }
     }
 }
 
@@ -398,7 +468,8 @@ private fun PendingRegistrationBannerSlot(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        stringResource(R.string.registered_to_game),
+                        if (pending.isFinished) stringResource(R.string.game_ended)
+                        else stringResource(R.string.registered_to_game),
                         fontFamily = GameBoyFont,
                         fontSize = 12.sp,
                         color = Color.White
@@ -415,19 +486,22 @@ private fun PendingRegistrationBannerSlot(
                         fontSize = 9.sp,
                         color = Color.White.copy(alpha = 0.8f)
                     )
-                    Text(
-                        relativeStartingIn(pending.startMs),
-                        fontFamily = GameBoyFont,
-                        fontSize = 9.sp,
-                        color = Color.White.copy(alpha = 0.8f)
-                    )
+                    if (!pending.isFinished) {
+                        Text(
+                            relativeStartingIn(pending.startMs),
+                            fontFamily = GameBoyFont,
+                            fontSize = 9.sp,
+                            color = Color.White.copy(alpha = 0.8f)
+                        )
+                    }
                     TextButton(
                         onClick = onJoin,
                         modifier = Modifier
                             .border(3.dp, Color.White, RoundedCornerShape(10.dp))
                     ) {
                         Text(
-                            stringResource(R.string.join),
+                            if (pending.isFinished) stringResource(R.string.view_results)
+                            else stringResource(R.string.join),
                             fontFamily = GameBoyFont,
                             fontSize = 16.sp,
                             color = Color.White
@@ -473,7 +547,7 @@ private fun JoinFlowBottomSheet(
     onRegisterTapped: () -> Unit,
     onSubmitRegistrationTapped: () -> Unit
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -669,30 +743,41 @@ private fun RegisterFormContent(
 }
 
 @Composable
-private fun GameRulesDialog(onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
+private fun GameRulesOverlay(onDismiss: () -> Unit) {
+    androidx.activity.compose.BackHandler { onDismiss() }
+    Column(
         modifier = Modifier
-            .fillMaxWidth()
-            .fillMaxHeight(0.85f),
-        title = {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(stringResource(R.string.rules), style = bangerStyle(28), color = MaterialTheme.colorScheme.onSurface)
-                IconButton(onClick = onDismiss) {
-                    Icon(
-                        painter = painterResource(android.R.drawable.ic_menu_close_clear_cancel),
-                        contentDescription = stringResource(R.string.close),
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
-                }
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .statusBarsPadding()
+            .navigationBarsPadding()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                stringResource(R.string.rules),
+                style = bangerStyle(28),
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            IconButton(onClick = onDismiss) {
+                Icon(
+                    painter = painterResource(android.R.drawable.ic_menu_close_clear_cancel),
+                    contentDescription = stringResource(R.string.close),
+                    tint = MaterialTheme.colorScheme.onBackground
+                )
             }
-        },
-        text = { GameRulesScreen() },
-        confirmButton = {},
-        containerColor = MaterialTheme.colorScheme.background
-    )
+        }
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = 16.dp)
+        ) {
+            GameRulesScreen()
+        }
+    }
 }

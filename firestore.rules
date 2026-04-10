@@ -54,11 +54,13 @@ service cloud.firestore {
         allow create: if request.auth != null
                       && visitorId == request.auth.uid
                       && request.resource.data.hunterId == request.auth.uid
-                      && request.resource.data.keys().hasAll(['hunterId', 'location', 'timestamp']);
+                      && request.resource.data.keys().hasAll(['hunterId', 'location', 'timestamp'])
+                      && request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.hunterIds;
         allow update: if request.auth != null
                       && visitorId == request.auth.uid
                       && request.resource.data.hunterId == request.auth.uid
-                      && request.resource.data.keys().hasAll(['hunterId', 'location', 'timestamp']);
+                      && request.resource.data.keys().hasAll(['hunterId', 'location', 'timestamp'])
+                      && request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.hunterIds;
         allow delete: if false;
       }
 
@@ -90,11 +92,12 @@ service cloud.firestore {
                       && (
                         // Collecting: set collectedBy to own UID (only if not already collected)
                         (request.resource.data.diff(resource.data).affectedKeys().hasAny(['collectedBy'])
-                         && request.resource.data.collectedBy == request.auth.uid)
+                         && request.resource.data.collectedBy == request.auth.uid
+                         && resource.data.get('collectedBy', null) == null)
                         ||
                         // Activating: set activatedAt/expiresAt (only by the collector)
                         (request.resource.data.diff(resource.data).affectedKeys().hasAny(['activatedAt', 'expiresAt'])
-                         && resource.data.collectedBy == request.auth.uid)
+                         && resource.data.get('collectedBy', null) == request.auth.uid)
                       );
         allow delete: if false;
       }

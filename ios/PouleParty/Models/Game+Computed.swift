@@ -112,8 +112,12 @@ extension Game {
 
         while lastUpdate.addingTimeInterval(TimeInterval(self.radiusIntervalUpdate * 60)) < .now {
             lastUpdate.addTimeInterval(TimeInterval(self.radiusIntervalUpdate * 60))
-            let isFrozen = freezeStart != nil && freezeEnd != nil
-                && lastUpdate >= freezeStart! && lastUpdate < freezeEnd!
+            let isFrozen: Bool
+            if let fs = freezeStart, let fe = freezeEnd {
+                isFrozen = lastUpdate >= fs && lastUpdate < fe
+            } else {
+                isFrozen = false
+            }
             if !isFrozen {
                 lastRadius -= Int(self.radiusDeclinePerUpdate)
             }

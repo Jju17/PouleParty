@@ -94,7 +94,9 @@ async function sendNotificationToTokens(
       !resp.success &&
       resp.error &&
       (resp.error.code === "messaging/registration-token-not-registered" ||
-        resp.error.code === "messaging/invalid-registration-token")
+        resp.error.code === "messaging/invalid-registration-token" ||
+        resp.error.code === "messaging/mismatched-credential" ||
+        resp.error.code === "messaging/third-party-auth-error")
     ) {
       tokensToRemove.push(tokens[idx]);
     }
@@ -234,6 +236,20 @@ export const onGameCreated = onDocumentCreated(
     const radiusIntervalUpdate =
       (data.radiusIntervalUpdate as number) ?? 5;
 
+    // Validate inputs to prevent infinite loops or invalid scheduling
+    if (radiusIntervalUpdate <= 0) {
+      console.error(`Invalid radiusIntervalUpdate (${radiusIntervalUpdate}) for game ${gameId}`);
+      return;
+    }
+    if (startTimestamp && endTimestamp && startTimestamp >= endTimestamp) {
+      console.error(`startTimestamp >= endTimestamp for game ${gameId}`);
+      return;
+    }
+    if (chickenHeadStartMinutes < 0) {
+      console.error(`Negative chickenHeadStartMinutes (${chickenHeadStartMinutes}) for game ${gameId}`);
+      return;
+    }
+
     const statusQueue = getFunctions().taskQueue(
       `locations/${REGION}/functions/transitionGameStatus`
     );
@@ -320,7 +336,7 @@ export const onGameUpdated = onDocumentUpdated(
 
     // A new winner was added
     const newWinner = winnersAfter[winnersAfter.length - 1];
-    const hunterName = newWinner.name ?? "A hunter";
+    const hunterName = ((newWinner.name as string) ?? "A hunter").slice(0, 50);
     const totalHunters = ((after.hunterIds as string[]) ?? []).length;
     const remainingCount = totalHunters - winnersAfter.length;
 
@@ -389,31 +405,32 @@ export const registerForEvent = onCall(
     const cleanWTP = willingToPay.trim();
     const cleanComment = (comment ?? "").trim();
 
-    // --- Duplicate check (by email hash) ---
+    // --- Atomic duplicate + capacity check ---
     const docId = createHash("sha256").update(cleanEmail.toLowerCase()).digest("hex");
     const ref = db.collection("registrations").doc(docId);
-    const existing = await ref.get();
-    if (existing.exists) {
-      throw new HttpsError("already-exists", "This email is already registered.");
-    }
-
-    // --- Capacity check (anti-spam + real limit) ---
-    const countSnap = await db.collection("registrations").count().get();
-    if (countSnap.data().count >= MAX_REGISTRATIONS) {
-      throw new HttpsError("resource-exhausted", "Event is full.");
-    }
-
-    // --- Write to Firestore ---
     const now = new Date();
-    await ref.set({
-      firstName: cleanFirst,
-      lastName: cleanLast,
-      email: cleanEmail,
-      gsm: cleanGsm,
-      willingToPay: cleanWTP,
-      comment: cleanComment,
-      event: "2026-04-23",
-      createdAt: now,
+
+    await db.runTransaction(async (transaction) => {
+      const existingDoc = await transaction.get(ref);
+      if (existingDoc.exists) {
+        throw new HttpsError("already-exists", "This email is already registered.");
+      }
+
+      const countSnap = await db.collection("registrations").count().get();
+      if (countSnap.data().count >= MAX_REGISTRATIONS) {
+        throw new HttpsError("resource-exhausted", "Event is full.");
+      }
+
+      transaction.set(ref, {
+        firstName: cleanFirst,
+        lastName: cleanLast,
+        email: cleanEmail,
+        gsm: cleanGsm,
+        willingToPay: cleanWTP,
+        comment: cleanComment,
+        event: "2026-04-23",
+        createdAt: now,
+      });
     });
 
     // --- Append to Google Sheet ---
@@ -422,14 +439,19 @@ export const registerForEvent = onCall(
     });
     const sheets = google.sheets({ version: "v4", auth });
 
-    await sheets.spreadsheets.values.append({
-      spreadsheetId: REGISTRATION_SHEET_ID.value(),
-      range: "A:H",
-      valueInputOption: "USER_ENTERED",
-      requestBody: {
-        values: [[cleanFirst, cleanLast, cleanEmail, cleanGsm, cleanWTP, cleanComment, "2026-04-23", now.toISOString()]],
-      },
-    });
+    try {
+      await sheets.spreadsheets.values.append({
+        spreadsheetId: REGISTRATION_SHEET_ID.value(),
+        range: "A:H",
+        valueInputOption: "USER_ENTERED",
+        requestBody: {
+          values: [[cleanFirst, cleanLast, cleanEmail, cleanGsm, cleanWTP, cleanComment, "2026-04-23", now.toISOString()]],
+        },
+      });
+    } catch (error) {
+      console.error("Failed to append registration to Google Sheet:", error);
+      // Firestore write succeeded, so don't throw — but log for manual reconciliation
+    }
 
     return { success: true };
   }

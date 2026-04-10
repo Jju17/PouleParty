@@ -37,6 +37,18 @@
     <string name="collapse">Inklappen</string>
     <string name="expand_registered_game_banner">Toon registratiebanner</string>
 
+    <!-- Leaderboard -->
+    <string name="podium">Podium</string>
+    <string name="other_hunters">Andere jagers</string>
+    <string name="did_not_find_the_chicken">Hebben de kip niet gevonden</string>
+    <string name="no_participants">Geen deelnemers</string>
+    <string name="this_game_ended_without_any_hunters_joining">Dit spel eindigde zonder dat er jagers meededen.</string>
+    <string name="game_ended">Spel beëindigd</string>
+    <string name="view_results">Resultaten bekijken</string>
+
+    <!-- Hunter map registration gate -->
+    <string name="you_must_register_before_joining_this_game">Je moet je inschrijven voor dit spel voordat je kunt meedoen. Vraag de kip om de inschrijflink.</string>
+
     <!-- Game creation registration step -->
     <string name="registration">Inschrijving</string>
     <string name="do_hunters_need_to_register_before_joining">Moeten jagers zich registreren voordat ze meedoen?</string>
@@ -168,20 +180,20 @@
     <string name="rule_circular_zone">Het spel speelt zich af in een cirkelvormige zone op de kaart.</string>
     <string name="rule_zone_shrinks">De zone krimpt na verloop van tijd op basis van de spelinstellingen.</string>
     <string name="rule_win_condition">Jagers winnen door de Kip te vinden. De Kip wint door te overleven tot het einde!</string>
-    <string name="mode_follow_desc">De Jagers zien een cirkel die de positie van de Kip in realtime volgt. De Kip moet rennen en zich verstoppen!</string>
-    <string name="mode_follow_detail1">De Kip stuurt haar positie naar alle Jagers</string>
-    <string name="mode_follow_detail2">Jagers zien de zone meebewegen met de Kip</string>
-    <string name="mode_follow_detail3">De Kip ziet de Jagers NIET</string>
-    <string name="mode_stay_desc">De zone krimpt en verschuift willekeurig rond het startpunt. Jagers moeten de Kip vinden zonder positie-aanwijzingen!</string>
+    <string name="mode_follow_desc">De zone krimpt periodiek richting de positie van de Kip. Jagers zien de exacte locatie van de Kip niet — alleen de zone die beweegt!</string>
+    <string name="mode_follow_detail1">Het zonecentrum volgt de live positie van de Kip</string>
+    <string name="mode_follow_detail2">Jagers zien de zone bewegen maar niet waar de Kip is</string>
+    <string name="mode_follow_detail3">De Kip moet in de zone blijven om te overleven</string>
+    <string name="mode_stay_desc">De zone krimpt en verschuift rond het startpunt. Jagers moeten de Kip vinden zonder positie-aanwijzingen!</string>
     <string name="mode_stay_detail1">Geen positie-uitwisseling tussen spelers</string>
-    <string name="mode_stay_detail2">De zone verschuift willekeurig maar bevat altijd de startlocatie</string>
+    <string name="mode_stay_detail2">De zone verschuift naar het eindpunt dat door de maker is ingesteld</string>
     <string name="mode_stay_detail3">Strategie: doorzoek de bewegende zone om de Kip te vinden!</string>
     <string name="chicken_can_see_hunters">De kip kan de jagers zien</string>
     <string name="chicken_can_see_hunters_title">De kip kan de jagers zien 👀</string>
     <string name="chicken_can_see_hunters_desc">Een optie beschikbaar in elke spelmodus. De Kip kan alle Jagers op haar kaart zien!</string>
     <string name="chicken_can_see_hunters_detail1">Jagers sturen hun positie naar de Kip</string>
-    <string name="chicken_can_see_hunters_detail2">Beide kanten volgen elkaar in realtime</string>
-    <string name="chicken_can_see_hunters_detail3">Schakel deze optie in bij de spelinstellingen</string>
+    <string name="chicken_can_see_hunters_detail2">De Kip ziet alle posities van de Jagers in realtime</string>
+    <string name="chicken_can_see_hunters_detail3">Kies deze optie bij het aanmaken van het spel</string>
     <string name="setting_start_end_name">Start / Einde</string>
     <string name="setting_start_end_desc">Wanneer het spel begint en eindigt. De Kip wint als de tijd om is!</string>
     <string name="setting_radius_interval_desc">Hoe vaak de zone krimpt (in minuten).</string>

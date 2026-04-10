@@ -63,7 +63,8 @@ struct AppFeature {
                     state = .victory(VictoryFeature.State(
                         game: chickenState.game,
                         hunterId: "",
-                        hunterName: ""
+                        hunterName: "",
+                        isChicken: true
                     ))
                 }
                 return .none

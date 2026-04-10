@@ -199,4 +199,96 @@ class HomeViewModelBehaviorTest {
 
         assertFalse(called)
     }
+
+    // ── Location permission ──
+
+    @Test
+    fun `hasLocationPermission delegates to location repository when granted`() {
+        every { locationRepository.hasFineLocationPermission() } returns true
+        val vm = createViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue(vm.hasLocationPermission())
+    }
+
+    @Test
+    fun `hasLocationPermission delegates to location repository when denied`() {
+        every { locationRepository.hasFineLocationPermission() } returns false
+        val vm = createViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertFalse(vm.hasLocationPermission())
+    }
+
+    @Test
+    fun `onLocationPermissionDenied shows location required alert`() {
+        every { locationRepository.hasFineLocationPermission() } returns false
+        val vm = createViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        vm.onLocationPermissionDenied()
+
+        assertTrue(vm.uiState.value.isShowingLocationRequired)
+    }
+
+    @Test
+    fun `onStartButtonTapped with permission opens join sheet`() {
+        every { locationRepository.hasFineLocationPermission() } returns true
+        val vm = createViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        vm.onStartButtonTapped()
+
+        assertTrue(vm.uiState.value.isShowingJoinSheet)
+        assertFalse(vm.uiState.value.isShowingLocationRequired)
+    }
+
+    @Test
+    fun `onStartButtonTapped without permission shows location alert and not join sheet`() {
+        every { locationRepository.hasFineLocationPermission() } returns false
+        val vm = createViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        vm.onStartButtonTapped()
+
+        assertTrue(vm.uiState.value.isShowingLocationRequired)
+        assertFalse(vm.uiState.value.isShowingJoinSheet)
+    }
+
+    @Test
+    fun `onCreatePartyTapped without permission returns false and shows alert`() {
+        every { locationRepository.hasFineLocationPermission() } returns false
+        val vm = createViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val result = vm.onCreatePartyTapped()
+
+        assertFalse(result)
+        assertTrue(vm.uiState.value.isShowingLocationRequired)
+    }
+
+    @Test
+    fun `onCreatePartyTapped with permission returns true and does not show alert`() {
+        every { locationRepository.hasFineLocationPermission() } returns true
+        val vm = createViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val result = vm.onCreatePartyTapped()
+
+        assertTrue(result)
+        assertFalse(vm.uiState.value.isShowingLocationRequired)
+    }
+
+    @Test
+    fun `onLocationRequiredDismissed clears the alert`() {
+        every { locationRepository.hasFineLocationPermission() } returns false
+        val vm = createViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        vm.onLocationPermissionDenied()
+        assertTrue(vm.uiState.value.isShowingLocationRequired)
+
+        vm.onLocationRequiredDismissed()
+        assertFalse(vm.uiState.value.isShowingLocationRequired)
+    }
 }

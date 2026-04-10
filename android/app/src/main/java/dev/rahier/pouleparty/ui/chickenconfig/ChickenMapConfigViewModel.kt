@@ -36,6 +36,7 @@ data class MapConfigUiState(
     val finalMarkerPosition: Point? = null,
     val radius: Double = AppConstants.DEFAULT_INITIAL_RADIUS,
     val pinMode: MapConfigPinMode = MapConfigPinMode.START,
+    val isFollowMode: Boolean = false,
     val searchQuery: String = "",
     val searchResults: List<SearchResult> = emptyList()
 )
@@ -70,6 +71,21 @@ class ChickenMapConfigViewModel @Inject constructor(
 
     fun setPinMode(mode: MapConfigPinMode) {
         _uiState.update { it.copy(pinMode = mode) }
+    }
+
+    /**
+     * Set follow mode flag. When true, final zone setup is skipped (the chicken's
+     * live position acts as the dynamic final zone). Forces pin mode back to START
+     * and clears any previously placed final marker.
+     */
+    fun setFollowMode(isFollowMode: Boolean) {
+        _uiState.update {
+            it.copy(
+                isFollowMode = isFollowMode,
+                pinMode = if (isFollowMode) MapConfigPinMode.START else it.pinMode,
+                finalMarkerPosition = if (isFollowMode) null else it.finalMarkerPosition
+            )
+        }
     }
 
     fun updateRadius(radius: Double) {
@@ -110,7 +126,9 @@ class ChickenMapConfigViewModel @Inject constructor(
                     markerPosition = point,
                     cameraCenter = point,
                     cameraZoom = zoom,
-                    pinMode = MapConfigPinMode.FINAL // Auto-switch to final mode after placing start
+                    // Auto-switch to final mode after placing start, but only in
+                    // Stay in the Zone mode. Follow the Chicken doesn't use a manual final zone.
+                    pinMode = if (state.isFollowMode) MapConfigPinMode.START else MapConfigPinMode.FINAL
                 )
             }
 

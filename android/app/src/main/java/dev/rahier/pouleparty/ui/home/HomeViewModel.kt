@@ -62,6 +62,26 @@ class HomeViewModel @Inject constructor(
             )
         }
         checkForActiveGame()
+        refreshPendingRegistration()
+    }
+
+    private fun refreshPendingRegistration() {
+        val pending = _uiState.value.pendingRegistration ?: return
+        viewModelScope.launch {
+            val game = firestoreRepository.getConfig(pending.gameId)
+            if (game == null) {
+                clearPendingRegistration()
+                _uiState.update { it.copy(pendingRegistration = null) }
+                return@launch
+            }
+            val updated = pending.copy(
+                gameCode = game.gameCode,
+                startMs = game.startDate.time,
+                isFinished = game.gameStatusEnum == GameStatus.DONE
+            )
+            savePendingRegistration(updated)
+            _uiState.update { it.copy(pendingRegistration = updated) }
+        }
     }
 
     fun refreshActiveGame() {
@@ -103,6 +123,12 @@ class HomeViewModel @Inject constructor(
             PlayerRole.CHICKEN -> onRejoinAsChicken(game.id)
             PlayerRole.HUNTER -> onRejoinAsHunter(game.id, hunterName)
         }
+    }
+
+    fun hasLocationPermission(): Boolean = locationRepository.hasFineLocationPermission()
+
+    fun onLocationPermissionDenied() {
+        _uiState.update { it.copy(isShowingLocationRequired = true) }
     }
 
     fun onStartButtonTapped() {
@@ -289,8 +315,9 @@ class HomeViewModel @Inject constructor(
         val gameCode = prefs.getString(AppConstants.PREF_PENDING_REGISTRATION_GAME_CODE, null) ?: return null
         val teamName = prefs.getString(AppConstants.PREF_PENDING_REGISTRATION_TEAM_NAME, null) ?: return null
         val startMs = prefs.getLong(AppConstants.PREF_PENDING_REGISTRATION_START_MS, 0L)
+        val isFinished = prefs.getBoolean(AppConstants.PREF_PENDING_REGISTRATION_IS_FINISHED, false)
         if (gameId.isEmpty() || gameCode.isEmpty()) return null
-        return PendingRegistration(gameId, gameCode, teamName, startMs)
+        return PendingRegistration(gameId, gameCode, teamName, startMs, isFinished)
     }
 
     private fun savePendingRegistration(pending: PendingRegistration) {
@@ -299,6 +326,7 @@ class HomeViewModel @Inject constructor(
             .putString(AppConstants.PREF_PENDING_REGISTRATION_GAME_CODE, pending.gameCode)
             .putString(AppConstants.PREF_PENDING_REGISTRATION_TEAM_NAME, pending.teamName)
             .putLong(AppConstants.PREF_PENDING_REGISTRATION_START_MS, pending.startMs)
+            .putBoolean(AppConstants.PREF_PENDING_REGISTRATION_IS_FINISHED, pending.isFinished)
             .apply()
     }
 
@@ -308,6 +336,7 @@ class HomeViewModel @Inject constructor(
             .remove(AppConstants.PREF_PENDING_REGISTRATION_GAME_CODE)
             .remove(AppConstants.PREF_PENDING_REGISTRATION_TEAM_NAME)
             .remove(AppConstants.PREF_PENDING_REGISTRATION_START_MS)
+            .remove(AppConstants.PREF_PENDING_REGISTRATION_IS_FINISHED)
             .apply()
     }
 }

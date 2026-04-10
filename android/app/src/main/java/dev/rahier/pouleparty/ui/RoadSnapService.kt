@@ -54,36 +54,40 @@ object RoadSnapService {
                     "&steps=false"
 
                 val connection = URL(urlString).openConnection() as HttpURLConnection
-                connection.requestMethod = "GET"
-                connection.connectTimeout = 5_000
-                connection.readTimeout = 5_000
+                try {
+                    connection.requestMethod = "GET"
+                    connection.connectTimeout = 5_000
+                    connection.readTimeout = 5_000
 
-                if (connection.responseCode != 200) {
-                    Log.w(TAG, "Directions API returned ${connection.responseCode}")
-                    return@withContext point
+                    if (connection.responseCode != 200) {
+                        Log.w(TAG, "Directions API returned ${connection.responseCode}")
+                        return@withContext point
+                    }
+
+                    val body = connection.inputStream.bufferedReader().use { it.readText() }
+                    val json = JSONObject(body)
+                    val waypoints = json.getJSONArray("waypoints")
+
+                    if (waypoints.length() == 0) return@withContext point
+
+                    val firstWaypoint = waypoints.getJSONObject(0)
+                    val location = firstWaypoint.getJSONArray("location")
+                    val snapped = Point.fromLngLat(location.getDouble(0), location.getDouble(1))
+
+                    // Reject snaps that moved the point too far (> 200m)
+                    val distance = haversineDistance(
+                        point.latitude(), point.longitude(),
+                        snapped.latitude(), snapped.longitude()
+                    )
+                    if (distance > MAX_SNAP_DISTANCE_METERS) {
+                        Log.i(TAG, "Snap moved point > 200m, keeping original")
+                        return@withContext point
+                    }
+
+                    snapped
+                } finally {
+                    connection.disconnect()
                 }
-
-                val body = connection.inputStream.bufferedReader().use { it.readText() }
-                val json = JSONObject(body)
-                val waypoints = json.getJSONArray("waypoints")
-
-                if (waypoints.length() == 0) return@withContext point
-
-                val firstWaypoint = waypoints.getJSONObject(0)
-                val location = firstWaypoint.getJSONArray("location")
-                val snapped = Point.fromLngLat(location.getDouble(0), location.getDouble(1))
-
-                // Reject snaps that moved the point too far (> 200m)
-                val distance = haversineDistance(
-                    point.latitude(), point.longitude(),
-                    snapped.latitude(), snapped.longitude()
-                )
-                if (distance > MAX_SNAP_DISTANCE_METERS) {
-                    Log.i(TAG, "Snap moved point > 200m, keeping original")
-                    return@withContext point
-                }
-
-                snapped
             } catch (e: Exception) {
                 Log.w(TAG, "Road snap failed, using original position", e)
                 point
