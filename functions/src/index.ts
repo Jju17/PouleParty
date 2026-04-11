@@ -57,7 +57,10 @@ async function sendNotificationToTokens(
   bodyLocArgs?: string[],
   data?: Record<string, string>
 ): Promise<void> {
-  if (tokens.length === 0) return;
+  if (tokens.length === 0) {
+    console.log(`[FCM] No tokens to notify for "${titleLocKey}"`);
+    return;
+  }
 
   const messaging = getMessaging();
 
@@ -87,18 +90,27 @@ async function sendNotificationToTokens(
     data: data ?? {},
   });
 
+  console.log(
+    `[FCM] "${titleLocKey}" → ${tokens.length} tokens: ` +
+    `${response.successCount} succeeded, ${response.failureCount} failed`
+  );
+
   // Clean up stale / invalid tokens
   const tokensToRemove: string[] = [];
   response.responses.forEach((resp, idx) => {
-    if (
-      !resp.success &&
-      resp.error &&
-      (resp.error.code === "messaging/registration-token-not-registered" ||
+    if (!resp.success && resp.error) {
+      console.warn(
+        `[FCM] send failed for token ${tokens[idx].slice(0, 12)}...: ` +
+        `${resp.error.code} — ${resp.error.message}`
+      );
+      if (
+        resp.error.code === "messaging/registration-token-not-registered" ||
         resp.error.code === "messaging/invalid-registration-token" ||
         resp.error.code === "messaging/mismatched-credential" ||
-        resp.error.code === "messaging/third-party-auth-error")
-    ) {
-      tokensToRemove.push(tokens[idx]);
+        resp.error.code === "messaging/third-party-auth-error"
+      ) {
+        tokensToRemove.push(tokens[idx]);
+      }
     }
   });
 
