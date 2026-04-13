@@ -16,6 +16,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -26,6 +27,9 @@ import com.mapbox.maps.extension.compose.MapboxMap
 import com.mapbox.maps.extension.compose.MapEffect
 import com.mapbox.maps.extension.compose.animation.viewport.rememberMapViewportState
 import com.mapbox.maps.extension.compose.annotation.IconImage
+import com.mapbox.maps.extension.compose.annotation.ViewAnnotation
+import com.mapbox.maps.viewannotation.viewAnnotationOptions
+import com.mapbox.maps.viewannotation.geometry
 import com.mapbox.maps.extension.compose.annotation.generated.PointAnnotation
 import com.mapbox.maps.extension.compose.annotation.generated.PolygonAnnotation
 import com.mapbox.maps.extension.compose.annotation.generated.PolylineAnnotation
@@ -36,16 +40,19 @@ import dev.rahier.pouleparty.ui.components.outerBoundsPoints
 import dev.rahier.pouleparty.ui.components.zoomForRadius
 import dev.rahier.pouleparty.ui.components.CountdownView
 import dev.rahier.pouleparty.ui.components.GameInfoDialog
+import dev.rahier.pouleparty.ui.components.HapticManager
+import dev.rahier.pouleparty.ui.components.KeepScreenOn
 import dev.rahier.pouleparty.ui.components.GameOverAlertDialog
 import dev.rahier.pouleparty.model.PowerUpType
 import dev.rahier.pouleparty.ui.components.ActivePowerUpBadge
 import dev.rahier.pouleparty.ui.components.MapTopBar
 import dev.rahier.pouleparty.ui.components.PowerUpDetailDialog
+import dev.rahier.pouleparty.ui.components.PowerUpMapMarker
 import dev.rahier.pouleparty.ui.components.PowerUpInventoryDialog
 import dev.rahier.pouleparty.ui.components.PowerUpNotificationOverlay
 import dev.rahier.pouleparty.ui.components.GameStartCountdownOverlay
 import dev.rahier.pouleparty.ui.components.PreGameOverlay
-import dev.rahier.pouleparty.ui.chickenconfig.powerUpEmoji
+
 import dev.rahier.pouleparty.ui.endgamecode.EndGameCodeContent
 import dev.rahier.pouleparty.ui.theme.*
 
@@ -59,9 +66,14 @@ fun ChickenMapScreen(
     val state by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    KeepScreenOn()
+
+    val view = LocalView.current
+
     // Navigate to victory when all hunters found
     LaunchedEffect(state.shouldNavigateToVictory) {
         if (state.shouldNavigateToVictory) {
+            HapticManager.success(view)
             onVictory(state.game.id)
         }
     }
@@ -69,8 +81,26 @@ fun ChickenMapScreen(
     // Show winner notification as snackbar
     LaunchedEffect(state.winnerNotification) {
         state.winnerNotification?.let { message ->
+            HapticManager.success(view)
             snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Short)
         }
+    }
+
+    // Haptic feedback for game events
+    LaunchedEffect(state.countdownNumber) {
+        if (state.countdownNumber != null) HapticManager.heavyImpact(view)
+    }
+    LaunchedEffect(state.countdownText) {
+        if (state.countdownText != null) HapticManager.heavyImpact(view)
+    }
+    LaunchedEffect(state.isOutsideZone) {
+        if (state.isOutsideZone) HapticManager.warning(view)
+    }
+    LaunchedEffect(state.powerUpNotification) {
+        if (state.powerUpNotification != null) HapticManager.success(view)
+    }
+    LaunchedEffect(state.showGameOverAlert) {
+        if (state.showGameOverAlert) HapticManager.warning(view)
     }
 
     var selectedPowerUpType by remember { mutableStateOf<PowerUpType?>(null) }
@@ -174,15 +204,17 @@ fun ChickenMapScreen(
 
             // Power-up markers (chicken power-ups only)
             if (state.hasGameStarted) state.availablePowerUps.forEach { powerUp ->
-                PointAnnotation(
-                    point = powerUp.locationPoint,
-                    onClick = {
-                        selectedPowerUpType = powerUp.typeEnum
-                        true
+                ViewAnnotation(
+                    options = viewAnnotationOptions {
+                        geometry(powerUp.locationPoint)
+                        allowOverlap(true)
+                        allowOverlapWithPuck(true)
                     }
                 ) {
-                    textField = powerUpEmoji(powerUp.typeEnum)
-                    textSize = 28.0
+                    PowerUpMapMarker(
+                        type = powerUp.typeEnum,
+                        onClick = { selectedPowerUpType = powerUp.typeEnum }
+                    )
                 }
             }
 

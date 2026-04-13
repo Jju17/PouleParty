@@ -18,7 +18,7 @@ actor FCMTokenManager {
             return
         }
 
-        let ref = Firestore.firestore().collection("fcmTokens").document(userId)
+        let ref = Firestore.firestore().collection("users").document(userId)
         ref.setData([
             "token": token,
             "platform": "ios",
@@ -29,4 +29,5 @@ actor FCMTokenManager {
             }
         }
     }
+
 }

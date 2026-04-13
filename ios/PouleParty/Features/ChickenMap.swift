@@ -407,6 +407,24 @@ struct ChickenMapFeature {
                     }
                 ]
 
+                // Heartbeat: periodically write a timestamp so hunters can detect disconnect
+                effects.append(
+                    .run { _ in
+                        let delay = startDate.timeIntervalSinceNow
+                        if delay > 0 {
+                            try await clock.sleep(for: .seconds(delay))
+                        }
+                        while true {
+                            do {
+                                try apiClient.updateHeartbeat(gameId)
+                            } catch {
+                                logger.error("Failed to update heartbeat: \(error)")
+                            }
+                            try await clock.sleep(for: .seconds(30))
+                        }
+                    }
+                )
+
                 // followTheChicken: chicken sends position to hunters
                 // stayInTheZone: track location for zone check only (no Firestore writes)
                 // Gated behind startDate to avoid leaking position early
@@ -579,6 +597,7 @@ struct ChickenMapFeature {
 
                 // Game over by time
                 if checkGameOverByTime(endDate: state.game.endDate) {
+                    HapticManager.notification(.warning)
                     locationClient.stopTracking()
                     let endState = PoulePartyAttributes.ContentState(
                         radiusMeters: state.radius,
@@ -627,6 +646,7 @@ struct ChickenMapFeature {
                     initialRadius: state.game.zone.radius
                 ) {
                     if result.isGameOver {
+                        HapticManager.notification(.warning)
                         locationClient.stopTracking()
                         let endState = PoulePartyAttributes.ContentState(
                             radiusMeters: 0,
@@ -860,7 +880,7 @@ struct ChickenMapView: View {
         .background(Color.darkBackground.opacity(0.85))
     }
 
-    var body: some View {
+    private var mapContent: some View {
         Map(viewport: $viewport) {
             Puck2D(bearing: .heading)
 
@@ -971,7 +991,28 @@ struct ChickenMapView: View {
             self.store.send(.gameInitialized)
             self.store.send(.onTask)
         }
-        .alert(
+        .onAppear { UIApplication.shared.isIdleTimerDisabled = true }
+        .onDisappear { UIApplication.shared.isIdleTimerDisabled = false }
+        .onChange(of: store.countdownNumber) { _, new in
+            if new != nil { HapticManager.impact(.heavy) }
+        }
+        .onChange(of: store.countdownText) { _, new in
+            if new != nil { HapticManager.impact(.heavy) }
+        }
+        .onChange(of: store.isOutsideZone) { old, new in
+            if !old && new { HapticManager.notification(.warning) }
+        }
+        .onChange(of: store.game.winners.count) { old, new in
+            if new > old { HapticManager.notification(.success) }
+        }
+        .onChange(of: store.powerUpNotification) { _, new in
+            if new != nil { HapticManager.notification(.success) }
+        }
+    }
+
+    var body: some View {
+        mapContent
+            .alert(
             $store.scope(
                 state: \.destination?.alert,
                 action: \.destination.alert

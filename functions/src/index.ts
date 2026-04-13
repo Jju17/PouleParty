@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { getFunctions } from "firebase-admin/functions";
 import { getMessaging } from "firebase-admin/messaging";
 import { onDocumentCreated, onDocumentUpdated } from "firebase-functions/v2/firestore";
@@ -21,7 +21,7 @@ const REGISTRATION_SHEET_ID = defineString("REGISTRATION_SHEET_ID");
 // ---------------------------------------------------------------------------
 
 /**
- * Fetch FCM tokens for a list of user IDs from /fcmTokens/{userId}.
+ * Fetch FCM tokens for a list of user IDs from /users/{userId}.
  * Firestore `in` queries are limited to 30 items, so we batch.
  */
 async function getTokensForUserIds(userIds: string[]): Promise<string[]> {
@@ -33,7 +33,7 @@ async function getTokensForUserIds(userIds: string[]): Promise<string[]> {
   for (let i = 0; i < userIds.length; i += batchSize) {
     const batch = userIds.slice(i, i + batchSize);
     const snap = await db
-      .collection("fcmTokens")
+      .collection("users")
       .where("__name__", "in", batch)
       .get();
 
@@ -120,10 +120,10 @@ async function sendNotificationToTokens(
       const tokenBatch = tokensToRemove.slice(i, i + 30);
       const batch = db.batch();
       const snap = await db
-        .collection("fcmTokens")
+        .collection("users")
         .where("token", "in", tokenBatch)
         .get();
-      snap.docs.forEach((doc) => batch.delete(doc.ref));
+      snap.docs.forEach((doc) => batch.update(doc.ref, { token: FieldValue.delete() }));
       await batch.commit();
     }
   }
@@ -318,15 +318,19 @@ export const onGameCreated = onDocumentCreated(
         );
 
         // Schedule zone_shrink notifications at each interval after hunterStartDate
+        // Cap at 100 to prevent scheduling an unreasonable number of tasks
+        const MAX_SHRINK_NOTIFICATIONS = 100;
         const intervalMs = shrinkIntervalMinutes * 60 * 1000;
         let shrinkTime = new Date(hunterStartDate.getTime() + intervalMs);
+        let shrinkCount = 0;
 
-        while (shrinkTime < endTimestamp) {
+        while (shrinkTime < endTimestamp && shrinkCount < MAX_SHRINK_NOTIFICATIONS) {
           await notifQueue.enqueue(
             { gameId, notificationType: "zone_shrink" },
             { scheduleTime: shrinkTime }
           );
           shrinkTime = new Date(shrinkTime.getTime() + intervalMs);
+          shrinkCount++;
         }
       }
     } catch (error) {

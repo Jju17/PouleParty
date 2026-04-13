@@ -7,6 +7,13 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AcUnit
+import androidx.compose.material.icons.filled.CellTower
+import androidx.compose.material.icons.filled.DirectionsWalk
+import androidx.compose.material.icons.filled.SignalCellularConnectedNoInternet0Bar
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -16,6 +23,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -48,6 +56,15 @@ fun powerUpColorDark(type: PowerUpType): Color = when (type) {
 fun powerUpTextColor(type: PowerUpType): Color = when (type) {
     PowerUpType.ZONE_FREEZE, PowerUpType.DECOY, PowerUpType.JAMMER -> Color.Black
     PowerUpType.INVISIBILITY, PowerUpType.RADAR_PING, PowerUpType.ZONE_PREVIEW -> Color.White
+}
+
+fun powerUpIcon(type: PowerUpType): ImageVector = when (type) {
+    PowerUpType.ZONE_PREVIEW -> Icons.Filled.Visibility
+    PowerUpType.RADAR_PING -> Icons.Filled.CellTower
+    PowerUpType.INVISIBILITY -> Icons.Filled.VisibilityOff
+    PowerUpType.ZONE_FREEZE -> Icons.Filled.AcUnit
+    PowerUpType.DECOY -> Icons.Filled.DirectionsWalk
+    PowerUpType.JAMMER -> Icons.Filled.SignalCellularConnectedNoInternet0Bar
 }
 
 fun powerUpEmoji(type: PowerUpType): String = when (type) {

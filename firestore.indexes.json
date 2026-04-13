@@ -1,12 +1,4 @@
 {
-  "indexes": [
-    {
-      "collectionGroup": "games",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "creatorId", "order": "ASCENDING" },
-        { "fieldPath": "startTimestamp", "order": "DESCENDING" }
-      ]
-    }
-  ]
+  "indexes": [],
+  "fieldOverrides": []
 }

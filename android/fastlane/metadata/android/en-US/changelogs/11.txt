@@ -1,0 +1,9 @@
+Notifications finally work! Get alerts for game start, zone shrink and when a hunter finds the chicken.
+
+• Smarter start time: open games can start in 1 min, registered games require the deadline + 5 min buffer
+• Registration step moved before start time
+• Firebase Crashlytics + analytics added
+• Stronger security: locations only visible to game participants
+• PRNG aligned between iOS & Android
+• Missing French strings added
+• 360+ new unit tests

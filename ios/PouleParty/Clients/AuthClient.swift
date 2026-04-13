@@ -5,12 +5,14 @@
 
 import ComposableArchitecture
 import FirebaseAuth
+import FirebaseFirestore
 import FirebaseMessaging
 
 struct UserClient {
     var currentUserId: () -> String?
     var deleteAccount: () async throws -> Void
     var fcmToken: () -> String?
+    var saveNickname: (String) async -> Void
     var signInAnonymously: () async throws -> String
 }
 
@@ -19,6 +21,7 @@ extension UserClient: TestDependencyKey {
         currentUserId: { "test-auth-uid" },
         deleteAccount: { },
         fcmToken: { "test-fcm-token" },
+        saveNickname: { _ in },
         signInAnonymously: { "test-auth-uid" }
     )
 }
@@ -34,6 +37,12 @@ extension UserClient: DependencyKey {
         },
         fcmToken: {
             Messaging.messaging().fcmToken
+        },
+        saveNickname: { nickname in
+            guard let userId = Auth.auth().currentUser?.uid else { return }
+            try? await Firestore.firestore()
+                .collection("users").document(userId)
+                .setData(["nickname": nickname, "updatedAt": FieldValue.serverTimestamp()], merge: true)
         },
         signInAnonymously: {
             if let uid = Auth.auth().currentUser?.uid {

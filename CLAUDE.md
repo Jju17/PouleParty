@@ -82,7 +82,7 @@ cd web && npm run dev
 ```
 /games/{gameId}
   ├── id, name, maxPlayers, gameMode, chickenCanSeeHunters
-  ├── foundCode, hunterIds, status, winners, creatorId
+  ├── foundCode, hunterIds, status, winners, creatorId, lastHeartbeat
   ├── timing: { start, end, headStartMinutes }
   ├── zone: { center, finalCenter, radius, shrinkIntervalMinutes, shrinkMetersPerUpdate, driftSeed }
   ├── pricing: { model, pricePerPlayer, deposit, commission }
@@ -93,7 +93,7 @@ cd web && npm run dev
   ├── /powerUps/{powerUpId}        → One doc per spawned power-up (collected/activated state)
   └── /registrations/{userId}      → One doc per registered hunter (teamName, paid, joinedAt)
 
-/fcmTokens/{userId}                → FCM token for push notifications
+/users/{userId}                    → User profile (nickname, FCM token, platform, updatedAt)
 /registrations/{docId}             → Event registration (admin-only, used by web)
 ```
 
@@ -113,7 +113,7 @@ When modifying any of these, **always update both platforms** and verify with un
 
 ## Authentication
 
-Anonymous Firebase Auth. Users don't create accounts — a UID is generated on first launch and persists. The chicken's UID is stored as `creatorId`, hunters are identified by their UID in `hunterIds`. FCM tokens are saved to `/fcmTokens/{userId}`.
+Anonymous Firebase Auth. Users don't create accounts — a UID is generated on first launch and persists. The chicken's UID is stored as `creatorId`, hunters are identified by their UID in `hunterIds`. User profiles (nickname, FCM token, platform) are saved to `/users/{userId}`.
 
 ## Location tracking
 
@@ -157,7 +157,8 @@ When asked to prepare a release or create a build:
 2. **Update CHANGELOG.md** — add a new section at the top with the version number, date, and all changes grouped by Added/Changed/Fixed. Include iOS and Android version info. Review git log since last release to capture everything.
 3. **Build release artifacts** — iOS archive (`xcodebuild archive`) and Android production release AAB (`./gradlew bundleProductionRelease`)
 4. **Write store descriptions** — prepare What's New text in EN/FR/NL for both App Store and Google Play. Put them in `RELEASE_NOTES.md`.
-5. **List next steps** — remind which manual steps remain (upload to stores, deploy Cloud Functions + Firestore rules to production)
+5. **Android release notes** — provide Google Play release notes in the `<en-US>`, `<fr-FR>`, `<nl-NL>` tag format ready to paste into the Play Console.
+6. **List next steps** — remind which manual steps remain (upload to stores, deploy Cloud Functions + Firestore rules to production)
 
 ### Zero Warnings Policy
 

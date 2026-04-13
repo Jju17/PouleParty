@@ -1,0 +1,8 @@
+Les notifications fonctionnent enfin ! Alertes de début de partie, rétrécissement de zone et poule trouvée.
+
+• Heure de départ plus intelligente : parties open join dès 1 min, parties avec inscription = délai + 5 min de marge
+• Étape d'inscription placée avant l'heure de départ
+• Firebase Crashlytics + analytics ajoutés
+• Sécurité renforcée : positions visibles uniquement aux participants
+• PRNG aligné entre iOS et Android
+• 360+ nouveaux tests unitaires

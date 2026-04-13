@@ -29,9 +29,10 @@ struct ApiClient {
     var activatePowerUp: (String, String, Timestamp) async throws -> Void
     var updateGameActiveEffect: (String, String, Timestamp) async throws -> Void
     var powerUpsStream: (String) -> AsyncStream<[PowerUp]>
+    var updateHeartbeat: (String) throws -> Void
     var countFreeGamesToday: (String) async throws -> Int
     var fetchPartyPlansConfig: () async throws -> PartyPlansConfig
-    var fetchMyGames: (String) async throws -> [Game]
+    var fetchMyGames: (String) async throws -> [MyGame]
     var findRegistration: (String, String) async throws -> Registration?
     var createRegistration: (String, Registration) async throws -> Void
     var fetchAllRegistrations: (String) async throws -> [Registration]
@@ -83,6 +84,7 @@ extension ApiClient: TestDependencyKey {
         activatePowerUp: { _, _, _ in },
         updateGameActiveEffect: { _, _, _ in },
         powerUpsStream: { _ in AsyncStream { _ in } },
+        updateHeartbeat: { _ in },
         countFreeGamesToday: { _ in 0 },
         fetchPartyPlansConfig: { PartyPlansConfig() },
         fetchMyGames: { _ in [] },
@@ -398,6 +400,11 @@ extension ApiClient: DependencyKey {
                 }
             }
         },
+        updateHeartbeat: { gameId in
+            try Firestore.firestore().collection(gamesCollection).document(gameId).updateData([
+                "lastHeartbeat": Timestamp(date: .now)
+            ])
+        },
         countFreeGamesToday: { userId in
             let db = Firestore.firestore()
             let calendar = Calendar.current
@@ -419,16 +426,43 @@ extension ApiClient: DependencyKey {
                 .getDocument(as: PartyPlansConfig.self)
         },
         fetchMyGames: { userId in
-            let snapshot = try await Firestore.firestore()
+            // Run two queries in parallel: games I created + games I joined as a hunter.
+            // We don't use .order here to avoid needing a composite index — we sort client-side.
+            async let createdSnapshot = Firestore.firestore()
                 .collection(gamesCollection)
                 .whereField("creatorId", isEqualTo: userId)
-                .order(by: "timing.start", descending: true)
-                .limit(to: 20)
+                .limit(to: 30)
                 .getDocuments()
 
-            return snapshot.documents.compactMap { doc in
-                try? doc.data(as: Game.self)
+            async let joinedSnapshot = Firestore.firestore()
+                .collection(gamesCollection)
+                .whereField("hunterIds", arrayContains: userId)
+                .limit(to: 30)
+                .getDocuments()
+
+            let (created, joined) = try await (createdSnapshot, joinedSnapshot)
+
+            var result: [MyGame] = []
+            var seenIds = Set<String>()
+
+            for doc in created.documents {
+                guard let game = try? doc.data(as: Game.self) else { continue }
+                if seenIds.insert(game.id).inserted {
+                    result.append(MyGame(game: game, role: .chicken))
+                }
             }
+
+            for doc in joined.documents {
+                guard let game = try? doc.data(as: Game.self) else { continue }
+                // Creator takes precedence if the same user is both creator and hunter.
+                if seenIds.insert(game.id).inserted {
+                    result.append(MyGame(game: game, role: .hunter))
+                }
+            }
+
+            // Sort by start date (most recent first) and limit to 20.
+            result.sort { $0.game.startDate > $1.game.startDate }
+            return Array(result.prefix(20))
         },
         findRegistration: { gameId, userId in
             guard !gameId.isEmpty, !userId.isEmpty else { return nil }

@@ -47,6 +47,7 @@ struct HomeFeature {
         @Shared(.pendingRegistration) var pendingRegistration: PendingRegistration?
         var gameCode: String = ""
         var musicMuted: Bool { isMusicMuted }
+        var currentPendingRegistration: PendingRegistration? { pendingRegistration }
         var activeGame: Game? = nil
         var activeGameRole: GameRole? = nil
         var pendingPlanResult: PlanSelectionResult? = nil
@@ -509,7 +510,7 @@ struct HomeView: View {
 
                 if store.activeGame != nil {
                     rejoinBanner
-                } else if store.pendingRegistration != nil {
+                } else if store.currentPendingRegistration != nil {
                     if isPendingBannerCollapsed {
                         collapsedPendingRegistrationTab
                     } else {
@@ -653,11 +654,11 @@ struct HomeView: View {
     private var pendingRegistrationBanner: some View {
         ZStack(alignment: .topTrailing) {
             VStack(spacing: 12) {
-                Text(store.pendingRegistration?.isFinished == true ? "Game ended" : "Registered to game")
+                Text(store.currentPendingRegistration?.isFinished == true ? "Game ended" : "Registered to game")
                     .font(.gameboy(size: 12))
                     .foregroundStyle(.white)
 
-                if let pending = store.pendingRegistration {
+                if let pending = store.currentPendingRegistration {
                     Text(pending.gameCode)
                         .font(.gameboy(size: 20))
                         .foregroundStyle(.white)
@@ -674,7 +675,7 @@ struct HomeView: View {
                 Button {
                     store.send(.pendingRegistrationRejoinTapped)
                 } label: {
-                    Text(store.pendingRegistration?.isFinished == true ? "View results" : "Join")
+                    Text(store.currentPendingRegistration?.isFinished == true ? "View results" : "Join")
                         .font(.gameboy(size: 16))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 24)

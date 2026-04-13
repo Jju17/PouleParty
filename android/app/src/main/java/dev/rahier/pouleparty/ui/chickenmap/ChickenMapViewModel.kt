@@ -135,6 +135,7 @@ class ChickenMapViewModel @Inject constructor(
             streamJobs += viewModelScope.launch { streamGameConfig() }
             streamJobs += viewModelScope.launch { streamPowerUps() }
             streamJobs += viewModelScope.launch { spawnInitialPowerUps(game) }
+            streamJobs += viewModelScope.launch { sendHeartbeat(game) }
         }
     }
 
@@ -284,7 +285,7 @@ class ChickenMapViewModel @Inject constructor(
                     // Jammer: add +/-200m random noise
                     if (currentGame.isJammerActive) {
                         val latNoise = (Math.random() - 0.5) * AppConstants.JAMMER_NOISE_DEGREES
-                        val lonNoise = (Math.random() - 0.5) * 0.0036
+                        val lonNoise = (Math.random() - 0.5) * AppConstants.JAMMER_NOISE_DEGREES
                         sendLatLng = Point.fromLngLat(
                             latLng.longitude() + lonNoise,
                             latLng.latitude() + latNoise
@@ -314,7 +315,7 @@ class ChickenMapViewModel @Inject constructor(
                 // Jammer: add +/-200m random noise to position
                 if (_uiState.value.game.isJammerActive) {
                     val latNoise = (Math.random() - 0.5) * AppConstants.JAMMER_NOISE_DEGREES
-                    val lonNoise = (Math.random() - 0.5) * 0.0036
+                    val lonNoise = (Math.random() - 0.5) * AppConstants.JAMMER_NOISE_DEGREES
                     sendLatLng = Point.fromLngLat(
                         latLng.longitude() + lonNoise,
                         latLng.latitude() + latNoise
@@ -465,6 +466,16 @@ class ChickenMapViewModel @Inject constructor(
             }
         }
         return types
+    }
+
+    /** Periodically write a heartbeat so hunters can detect chicken disconnect. */
+    private suspend fun sendHeartbeat(game: Game) {
+        val delayMs = game.startDate.time - System.currentTimeMillis()
+        if (delayMs > 0) delay(delayMs)
+        while (true) {
+            firestoreRepository.updateHeartbeat(gameId)
+            delay(30_000)
+        }
     }
 
     private suspend fun spawnInitialPowerUps(game: Game) {

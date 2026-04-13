@@ -251,7 +251,7 @@ struct PlanSelectionView: View {
         let pricePerPlayer = config.flat.pricePerPlayerCents / 100
         let total = Int(store.numberOfPlayers) * pricePerPlayer
 
-        return VStack(spacing: 16) {
+        VStack(spacing: 16) {
             Text("Number of players")
                 .font(.gameboy(size: 9))
                 .foregroundStyle(Color.onBackground.opacity(0.7))
@@ -285,7 +285,7 @@ struct PlanSelectionView: View {
         let depositEuros = config.deposit.depositAmountCents / 100
         let commissionPct = Int(config.deposit.commissionPercent)
 
-        return VStack(spacing: 16) {
+        VStack(spacing: 16) {
             // Admin-defined info
             PriceSummaryRow(label: "Deposit", value: "\(depositEuros)€")
             PriceSummaryRow(label: "Commission", value: "\(commissionPct)%")

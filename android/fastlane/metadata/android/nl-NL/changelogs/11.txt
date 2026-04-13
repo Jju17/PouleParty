@@ -1,0 +1,8 @@
+Meldingen werken eindelijk! Waarschuwingen voor spelstart, zonekrimp en wanneer een jager de kip vindt.
+
+• Slimmere starttijd: open spellen vanaf 1 min, geregistreerde spellen vereisen deadline + 5 min buffer
+• Registratiestap staat nu vóór de starttijd
+• Firebase Crashlytics + analytics toegevoegd
+• Sterkere beveiliging: locaties alleen zichtbaar voor deelnemers
+• PRNG uitgelijnd tussen iOS en Android
+• 360+ nieuwe unit tests

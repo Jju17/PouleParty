@@ -313,8 +313,9 @@ func checkLiveActivityUpdate(
 // MARK: - Jammer Noise
 
 func applyJammerNoise(to coordinate: CLLocationCoordinate2D) -> CLLocationCoordinate2D {
-    let latNoise = Double.random(in: -0.0018...0.0018) // ~200m
-    let lonNoise = Double.random(in: -0.0018...0.0018)
+    let halfNoise = AppConstants.jammerNoiseDegrees / 2.0
+    let latNoise = Double.random(in: -halfNoise...halfNoise)
+    let lonNoise = Double.random(in: -halfNoise...halfNoise)
     return CLLocationCoordinate2D(
         latitude: coordinate.latitude + latNoise,
         longitude: coordinate.longitude + lonNoise

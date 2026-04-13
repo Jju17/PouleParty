@@ -27,6 +27,7 @@ import dev.rahier.pouleparty.AppConstants
 import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.Registration
+import dev.rahier.pouleparty.ui.components.LeaderboardContent
 import dev.rahier.pouleparty.ui.components.SelectionButton
 import dev.rahier.pouleparty.ui.theme.*
 import kotlin.math.sin
@@ -48,14 +49,6 @@ fun VictoryScreen(
             currentUserId = if (state.isChicken) "" else state.hunterId
         )
     }
-    val sortedFinders = remember(entries) {
-        entries.filter { it.hasFound }.sortedBy { it.foundTimestampMs ?: Long.MAX_VALUE }
-    }
-    val nonFinders = remember(entries) {
-        entries.filter { !it.hasFound }.sortedBy { it.displayName.lowercase() }
-    }
-    val podium = remember(sortedFinders) { sortedFinders.take(3) }
-    val others = remember(sortedFinders) { sortedFinders.drop(3) }
 
     val headerEmoji = if (state.isChicken) "\uD83D\uDC14" else "\uD83C\uDFC6"
     val headerText = when {
@@ -119,62 +112,11 @@ fun VictoryScreen(
                     )
                 }
             } else {
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                if (podium.isNotEmpty()) {
-                    item {
-                        Text(
-                            text = stringResource(R.string.podium),
-                            style = bangerStyle(20),
-                            color = CROrange,
-                            modifier = Modifier.padding(vertical = 8.dp)
-                        )
-                    }
-                    itemsIndexed(podium, key = { _, e -> e.id }) { index, entry ->
-                        LeaderboardEntryRow(
-                            rank = index + 1,
-                            entry = entry,
-                            gameHunterStartMs = state.game.hunterStartDate.time
-                        )
-                    }
-                }
-                if (others.isNotEmpty()) {
-                    item {
-                        Text(
-                            text = stringResource(R.string.other_hunters),
-                            style = bangerStyle(18),
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-                            modifier = Modifier.padding(vertical = 8.dp)
-                        )
-                    }
-                    itemsIndexed(others, key = { _, e -> e.id }) { index, entry ->
-                        LeaderboardEntryRow(
-                            rank = index + 4,
-                            entry = entry,
-                            gameHunterStartMs = state.game.hunterStartDate.time
-                        )
-                    }
-                }
-                if (nonFinders.isNotEmpty()) {
-                    item {
-                        Text(
-                            text = stringResource(R.string.did_not_find_the_chicken),
-                            style = bangerStyle(16),
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-                            modifier = Modifier.padding(vertical = 8.dp)
-                        )
-                    }
-                    items(nonFinders, key = { it.id }) { entry ->
-                        LeaderboardEntryRow(
-                            rank = null,
-                            entry = entry,
-                            gameHunterStartMs = state.game.hunterStartDate.time
-                        )
-                    }
-                }
-            }
+                LeaderboardContent(
+                    entries = entries,
+                    hunterStartMs = state.game.hunterStartDate.time,
+                    modifier = Modifier.weight(1f).fillMaxWidth()
+                )
             }
 
             Spacer(Modifier.height(16.dp))
@@ -186,63 +128,6 @@ fun VictoryScreen(
             )
 
             Spacer(Modifier.height(32.dp))
-        }
-    }
-}
-
-@Composable
-private fun LeaderboardEntryRow(
-    rank: Int?,
-    entry: LeaderboardEntry,
-    gameHunterStartMs: Long
-) {
-    val rankLabel = when (rank) {
-        null -> "—"
-        1 -> "\uD83E\uDD47"
-        2 -> "\uD83E\uDD48"
-        3 -> "\uD83E\uDD49"
-        else -> "#$rank"
-    }
-
-    val timeString: String? = entry.foundTimestampMs?.let { ms ->
-        val totalSeconds = maxOf(0, ((ms - gameHunterStartMs) / 1000).toInt())
-        val minutes = totalSeconds / 60
-        val seconds = totalSeconds % 60
-        "+${minutes}m %02ds".format(seconds)
-    }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
-            .background(
-                color = if (entry.isCurrentUser) CROrange.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface.copy(alpha = 0.4f),
-                shape = RoundedCornerShape(10.dp)
-            )
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = rankLabel,
-            fontSize = if ((rank ?: 99) <= 3) 24.sp else 16.sp,
-            color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.width(44.dp)
-        )
-
-        Text(
-            text = entry.displayName,
-            style = bangerStyle(18),
-            color = MaterialTheme.colorScheme.onBackground,
-            maxLines = 1,
-            modifier = Modifier.weight(1f)
-        )
-
-        if (timeString != null) {
-            Text(
-                text = timeString,
-                style = gameboyStyle(10),
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
-            )
         }
     }
 }

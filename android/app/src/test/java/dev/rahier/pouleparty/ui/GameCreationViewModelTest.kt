@@ -969,6 +969,11 @@ class GameCreationViewModelTest {
     @Test
     fun `updateStartTime strips seconds`() {
         val vm = createViewModel()
+        // Use a date far in the future so minimumStartDate clamp doesn't override seconds
+        val futureCal = java.util.Calendar.getInstance().apply {
+            add(java.util.Calendar.DAY_OF_YEAR, 1)
+        }
+        vm.updateStartDateOnly(futureCal.get(java.util.Calendar.YEAR), futureCal.get(java.util.Calendar.MONTH), futureCal.get(java.util.Calendar.DAY_OF_MONTH))
         vm.updateStartTime(15, 45)
         val cal = java.util.Calendar.getInstance().apply { time = vm.uiState.value.game.startDate }
         assertEquals(0, cal.get(java.util.Calendar.SECOND))

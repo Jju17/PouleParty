@@ -111,21 +111,21 @@ service cloud.firestore {
         // Collection: only if not already collected, and collectedBy must match the user
         allow update: if request.auth != null
                       && (
-                        // Collecting: set collectedBy to own UID (only if not already collected)
-                        (request.resource.data.diff(resource.data).affectedKeys().hasAny(['collectedBy'])
+                        // Collecting: set collectedBy + collectedAt (only if not already collected)
+                        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['collectedBy', 'collectedAt'])
                          && request.resource.data.collectedBy == request.auth.uid
                          && resource.data.get('collectedBy', null) == null)
                         ||
                         // Activating: set activatedAt/expiresAt (only by the collector)
-                        (request.resource.data.diff(resource.data).affectedKeys().hasAny(['activatedAt', 'expiresAt'])
+                        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['activatedAt', 'expiresAt'])
                          && resource.data.get('collectedBy', null) == request.auth.uid)
                       );
         allow delete: if false;
       }
     }
 
-    // FCM tokens — each user can only read/write their own token document
-    match /fcmTokens/{userId} {
+    // User profiles (nickname, FCM token, platform) — each user can only read/write their own document
+    match /users/{userId} {
       allow read, write: if request.auth != null
                          && request.auth.uid == userId;
     }

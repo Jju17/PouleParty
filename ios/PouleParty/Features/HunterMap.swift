@@ -265,6 +265,7 @@ struct HunterMapFeature {
                 state.isEnteringFoundCode = false
 
                 guard code == state.game.foundCode else {
+                    HapticManager.notification(.error)
                     state.wrongCodeAttempts += 1
                     analyticsClient.hunterWrongCode(attemptNumber: state.wrongCodeAttempts)
                     if state.wrongCodeAttempts >= AppConstants.codeMaxWrongAttempts {
@@ -284,6 +285,8 @@ struct HunterMapFeature {
                     )
                     return .none
                 }
+
+                HapticManager.notification(.success)
 
                 let winner = Winner(
                     hunterId: state.hunterId,
@@ -340,7 +343,6 @@ struct HunterMapFeature {
                     logger.error("hunterId is empty — cannot register hunter or write location. rawUid was: \(rawUid ?? "nil")")
                     return .none
                 }
-                let chickenCanSeeHunters = state.game.chickenCanSeeHunters
                 let powerUpsEnabled = state.game.powerUps.enabled
                 let hunterStartDate = state.game.hunterStartDate
                 let (lastUpdate, lastRadius) = state.game.findLastUpdate()
@@ -636,6 +638,7 @@ struct HunterMapFeature {
 
                 // Game over by time
                 if checkGameOverByTime(endDate: state.game.endDate) {
+                    HapticManager.notification(.warning)
                     locationClient.stopTracking()
                     let endState = PoulePartyAttributes.ContentState(
                         radiusMeters: state.radius,
@@ -676,6 +679,7 @@ struct HunterMapFeature {
                     initialRadius: state.game.zone.radius
                 ) {
                     if result.isGameOver {
+                        HapticManager.notification(.warning)
                         locationClient.stopTracking()
                         let endState = PoulePartyAttributes.ContentState(
                             radiusMeters: 0,
@@ -932,11 +936,32 @@ struct HunterMapView: View {
         .safeAreaInset(edge: .bottom) { bottomBar }
     }
 
-    var body: some View {
+    private var mapViewWithHaptics: some View {
         mapView
+            .onChange(of: store.countdownNumber) { _, new in
+                if new != nil { HapticManager.impact(.heavy) }
+            }
+            .onChange(of: store.countdownText) { _, new in
+                if new != nil { HapticManager.impact(.heavy) }
+            }
+            .onChange(of: store.isOutsideZone) { old, new in
+                if !old && new { HapticManager.notification(.warning) }
+            }
+            .onChange(of: store.game.winners.count) { old, new in
+                if new > old { HapticManager.notification(.success) }
+            }
+            .onChange(of: store.powerUpNotification) { _, new in
+                if new != nil { HapticManager.notification(.success) }
+            }
+    }
+
+    var body: some View {
+        mapViewWithHaptics
             .task {
                 self.store.send(.onTask)
             }
+            .onAppear { UIApplication.shared.isIdleTimerDisabled = true }
+            .onDisappear { UIApplication.shared.isIdleTimerDisabled = false }
             .alert(
                 $store.scope(
                     state: \.destination?.alert,

@@ -8,7 +8,7 @@ import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.rahier.pouleparty.AppConstants
 import dev.rahier.pouleparty.data.FirestoreRepository
-import dev.rahier.pouleparty.model.Game
+import dev.rahier.pouleparty.model.MyGame
 import dev.rahier.pouleparty.util.ProfanityFilter
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,9 +25,10 @@ data class SettingsUiState(
     val isShowingDeleteError: Boolean = false,
     val isShowingProfanityAlert: Boolean = false,
     val isShowingNicknameSaved: Boolean = false,
-    val myGames: List<Game> = emptyList(),
+    val myGames: List<MyGame> = emptyList(),
     val isLoadingGames: Boolean = false,
-    val selectedGame: Game? = null
+    val selectedGame: MyGame? = null,
+    val isShowingLeaderboard: Boolean = false
 )
 
 @HiltViewModel
@@ -50,18 +51,33 @@ class SettingsViewModel @Inject constructor(
         val userId = auth.currentUser?.uid ?: return
         _uiState.update { it.copy(isLoadingGames = true) }
         viewModelScope.launch {
-            val games = try { firestoreRepository.fetchMyGames(userId) } catch (_: Exception) { emptyList() }
+            val games = try {
+                firestoreRepository.fetchMyGames(userId)
+            } catch (e: Exception) {
+                Log.e("SettingsViewModel", "Failed to fetch my games", e)
+                emptyList()
+            }
             _uiState.update { it.copy(myGames = games, isLoadingGames = false) }
         }
     }
 
-    fun selectGame(game: Game) {
-        _uiState.update { it.copy(selectedGame = game) }
+    fun selectGame(myGame: MyGame) {
+        _uiState.update { it.copy(selectedGame = myGame) }
     }
 
     fun dismissGameDetail() {
-        _uiState.update { it.copy(selectedGame = null) }
+        _uiState.update { it.copy(selectedGame = null, isShowingLeaderboard = false) }
     }
+
+    fun showLeaderboard() {
+        _uiState.update { it.copy(isShowingLeaderboard = true) }
+    }
+
+    fun dismissLeaderboard() {
+        _uiState.update { it.copy(isShowingLeaderboard = false) }
+    }
+
+    fun currentUserId(): String = auth.currentUser?.uid ?: ""
 
     fun onNicknameChanged(name: String) {
         _uiState.update { it.copy(nickname = name.take(NICKNAME_MAX_LENGTH)) }
@@ -76,6 +92,11 @@ class SettingsViewModel @Inject constructor(
         }
         prefs.edit().putString(AppConstants.PREF_USER_NICKNAME, trimmed).apply()
         _uiState.update { it.copy(nickname = trimmed, isShowingNicknameSaved = true) }
+        viewModelScope.launch {
+            auth.currentUser?.uid?.let { userId ->
+                firestoreRepository.saveNickname(userId, trimmed)
+            }
+        }
     }
 
     fun dismissNicknameSaved() {

@@ -33,6 +33,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import dev.rahier.pouleparty.AppConstants
+import dev.rahier.pouleparty.MigrationManager
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.ui.chickenconfig.ChickenConfigScreen
 import dev.rahier.pouleparty.ui.gamecreation.GameCreationScreen
@@ -89,23 +90,33 @@ fun AppNavigation() {
                 return@LaunchedEffect
             }
         }
-        // Save FCM token after auth
+        // Save FCM token + run migration after auth is ready
         val userId = FirebaseAuth.getInstance().currentUser?.uid
         if (userId != null) {
             try {
                 val token = FirebaseMessaging.getInstance().token.await()
+                val data = mutableMapOf<String, Any>(
+                    "token" to token,
+                    "platform" to "android",
+                    "updatedAt" to Timestamp.now()
+                )
+                // Migration: include nickname from local prefs if not yet in Firestore
+                val packageVersion = context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "0.0.0"
+                val lastMigrated = prefs.getString(AppConstants.PREF_LAST_MIGRATED_VERSION, "0.0.0") ?: "0.0.0"
+                if (MigrationManager.compareVersions(lastMigrated, "1.4.0") < 0) {
+                    val nickname = (prefs.getString(AppConstants.PREF_USER_NICKNAME, "") ?: "").trim()
+                    if (nickname.isNotEmpty()) {
+                        data["nickname"] = nickname
+                    }
+                    prefs.edit().putString(AppConstants.PREF_LAST_MIGRATED_VERSION, packageVersion).apply()
+                }
                 FirebaseFirestore.getInstance()
-                    .collection(AppConstants.COLLECTION_FCM_TOKENS)
+                    .collection(AppConstants.COLLECTION_USERS)
                     .document(userId)
-                    .set(
-                        mapOf(
-                            "token" to token,
-                            "platform" to "android",
-                            "updatedAt" to Timestamp.now()
-                        )
-                    )
+                    .set(data, com.google.firebase.firestore.SetOptions.merge())
+                    .await()
             } catch (e: Exception) {
-                Log.e("AppNavigation", "Failed to save FCM token", e)
+                Log.e("AppNavigation", "Failed to save user profile", e)
             }
         }
     }
@@ -141,6 +152,15 @@ fun AppNavigation() {
                         .putBoolean(AppConstants.PREF_ONBOARDING_COMPLETED, true)
                         .putString(AppConstants.PREF_USER_NICKNAME, nickname)
                         .apply()
+                    FirebaseAuth.getInstance().currentUser?.uid?.let { userId ->
+                        FirebaseFirestore.getInstance()
+                            .collection("users")
+                            .document(userId)
+                            .set(
+                                mapOf("nickname" to nickname, "updatedAt" to Timestamp.now()),
+                                com.google.firebase.firestore.SetOptions.merge()
+                            )
+                    }
                     navController.navigate(Routes.HOME) {
                         popUpTo(Routes.ONBOARDING) { inclusive = true }
                     }

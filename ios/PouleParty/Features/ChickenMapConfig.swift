@@ -326,7 +326,7 @@ struct ChickenMapConfigView: View {
                 .allowOverlap(true)
                 .allowOverlapWithPuck(true)
                 .ignoreCameraPadding(true)
-                .selected(true)
+                .priority(1)
             }
 
             // Final zone marker
@@ -352,7 +352,7 @@ struct ChickenMapConfigView: View {
                 .allowOverlap(true)
                 .allowOverlapWithPuck(true)
                 .ignoreCameraPadding(true)
-                .selected(true)
+                .priority(1)
 
                 // Neon glow circle at final position
                 let finalCircle = Polygon(center: finalMarker.coordinate, radius: 50, vertices: 36)

@@ -870,7 +870,7 @@ struct GameCreationView: View {
                     gradient: Color.gradientHunter
                 ) {
                     if !isDepositPlan {
-                        withAnimation(.easeOut(duration: 0.3)) {
+                        _ = withAnimation(.easeOut(duration: 0.3)) {
                             store.send(.requiresRegistrationChanged(false))
                         }
                     }
@@ -886,7 +886,7 @@ struct GameCreationView: View {
                     gradient: Color.gradientFire
                 ) {
                     if !isDepositPlan {
-                        withAnimation(.easeOut(duration: 0.3)) {
+                        _ = withAnimation(.easeOut(duration: 0.3)) {
                             store.send(.requiresRegistrationChanged(true))
                         }
                     }

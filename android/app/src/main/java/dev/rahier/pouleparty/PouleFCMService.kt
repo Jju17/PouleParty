@@ -96,14 +96,15 @@ class PouleFCMService : FirebaseMessagingService() {
     private fun saveTokenToFirestore(token: String) {
         val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
         FirebaseFirestore.getInstance()
-            .collection(AppConstants.COLLECTION_FCM_TOKENS)
+            .collection(AppConstants.COLLECTION_USERS)
             .document(userId)
             .set(
                 mapOf(
                     "token" to token,
                     "platform" to "android",
                     "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
-                )
+                ),
+                com.google.firebase.firestore.SetOptions.merge()
             )
             .addOnFailureListener { e ->
                 Log.e(TAG, "Failed to save FCM token", e)

@@ -117,16 +117,6 @@ struct VictoryView: View {
         )
     }
 
-    private var sortedFinders: [LeaderboardEntry] {
-        entries.filter { $0.hasFound }.sorted { (a, b) in
-            (a.foundTimestamp ?? .distantFuture) < (b.foundTimestamp ?? .distantFuture)
-        }
-    }
-
-    private var nonFinders: [LeaderboardEntry] {
-        entries.filter { !$0.hasFound }.sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
-    }
-
     private var headerTitle: String {
         if store.isChicken { return "Game Over" }
         if isCurrentUserAWinner { return "You found\nthe chicken!" }
@@ -160,9 +150,7 @@ struct VictoryView: View {
                         if entries.isEmpty {
                             emptyStateSection
                         } else {
-                            podiumSection
-                            otherFindersSection
-                            nonFindersSection
+                            LeaderboardContentView(entries: entries, hunterStartDate: store.game.hunterStartDate)
                         }
                     }
                     .padding(.horizontal, 16)
@@ -197,95 +185,6 @@ struct VictoryView: View {
         }
     }
 
-    @ViewBuilder
-    private var podiumSection: some View {
-        let podium = Array(sortedFinders.prefix(3))
-        if !podium.isEmpty {
-            VStack(spacing: 8) {
-                BangerText("Podium", size: 20)
-                    .foregroundStyle(Color.CROrange)
-                ForEach(Array(podium.enumerated()), id: \.element.id) { index, entry in
-                    leaderboardRow(rank: index + 1, entry: entry)
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var otherFindersSection: some View {
-        let others = Array(sortedFinders.dropFirst(3))
-        if !others.isEmpty {
-            VStack(spacing: 8) {
-                BangerText("Other hunters", size: 18)
-                    .foregroundStyle(Color.onBackground.opacity(0.7))
-                ForEach(Array(others.enumerated()), id: \.element.id) { index, entry in
-                    leaderboardRow(rank: index + 4, entry: entry)
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var nonFindersSection: some View {
-        if !nonFinders.isEmpty {
-            VStack(spacing: 8) {
-                BangerText("Did not find the chicken", size: 16)
-                    .foregroundStyle(Color.onBackground.opacity(0.5))
-                ForEach(nonFinders) { entry in
-                    leaderboardRow(rank: nil, entry: entry)
-                }
-            }
-        }
-    }
-
-    private func leaderboardRow(rank: Int?, entry: LeaderboardEntry) -> some View {
-        let rankLabel: String = {
-            guard let rank else { return "—" }
-            switch rank {
-            case 1: return "🥇"
-            case 2: return "🥈"
-            case 3: return "🥉"
-            default: return "#\(rank)"
-            }
-        }()
-
-        let timeString: String? = {
-            guard let foundTimestamp = entry.foundTimestamp else { return nil }
-            let timeDelta = foundTimestamp.timeIntervalSince(store.game.hunterStartDate)
-            let totalSeconds = max(0, Int(timeDelta))
-            let minutes = totalSeconds / 60
-            let seconds = totalSeconds % 60
-            return "+\(minutes)m \(String(format: "%02d", seconds))s"
-        }()
-
-        return HStack {
-            Text(rankLabel)
-                .font(.system(size: (rank ?? 99) <= 3 ? 24 : 16))
-                .frame(width: 44)
-
-            BangerText(entry.displayName, size: 18)
-                .foregroundStyle(Color.onBackground)
-                .lineLimit(1)
-
-            Spacer()
-
-            if let timeString {
-                Text(timeString)
-                    .font(.gameboy(size: 10))
-                    .foregroundStyle(Color.onBackground.opacity(0.5))
-            }
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(rankLabel) \(entry.displayName)\(timeString.map { ", \($0)" } ?? "")")
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(
-            entry.isCurrentUser
-                ? Color.CROrange.opacity(0.2)
-                : Color.surface.opacity(0.4)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-    }
 }
 
 // MARK: - Confetti

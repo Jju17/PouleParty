@@ -26,6 +26,7 @@ struct Game: Codable, Equatable, Identifiable {
     var pricing: Pricing = Pricing()
     var registration: GameRegistration = GameRegistration()
     var powerUps: GamePowerUps = GamePowerUps()
+    var lastHeartbeat: Timestamp?
 
     var isPaid: Bool { pricing.model != .free }
 

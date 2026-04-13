@@ -221,6 +221,13 @@ class FirestoreRepository @Inject constructor(
         }
     }
 
+    /** Fire-and-forget heartbeat update so hunters can detect chicken disconnect. */
+    fun updateHeartbeat(gameId: String) {
+        firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
+            .update("lastHeartbeat", Timestamp.now())
+            .addOnFailureListener { e -> Log.w(TAG, "Failed to update heartbeat: $e") }
+    }
+
     // ── Chicken location ──────────────────────────────────
 
     fun setChickenLocation(gameId: String, point: Point) {
@@ -430,17 +437,46 @@ class FirestoreRepository @Inject constructor(
         }
     }
 
-    suspend fun fetchMyGames(userId: String): List<Game> {
-        val snapshot = firestore.collection(AppConstants.COLLECTION_GAMES)
+    /**
+     * Fetches the user's games: games they created AND games they joined as a hunter.
+     * We run two separate queries (no orderBy to avoid needing composite indexes) and sort
+     * client-side by start date descending. Limit to 20 after merging.
+     */
+    suspend fun fetchMyGames(userId: String): List<dev.rahier.pouleparty.model.MyGame> {
+        val createdTask = firestore.collection(AppConstants.COLLECTION_GAMES)
             .whereEqualTo("creatorId", userId)
-            .orderBy("timing.start", Query.Direction.DESCENDING)
-            .limit(20)
+            .limit(30)
             .get()
-            .await()
 
-        return snapshot.documents.mapNotNull { doc ->
-            doc.toObject(Game::class.java)?.copy(id = doc.id)
+        val joinedTask = firestore.collection(AppConstants.COLLECTION_GAMES)
+            .whereArrayContains("hunterIds", userId)
+            .limit(30)
+            .get()
+
+        val createdSnap = createdTask.await()
+        val joinedSnap = joinedTask.await()
+
+        val result = mutableListOf<dev.rahier.pouleparty.model.MyGame>()
+        val seenIds = mutableSetOf<String>()
+
+        for (doc in createdSnap.documents) {
+            val game = doc.toObject(Game::class.java)?.copy(id = doc.id) ?: continue
+            if (seenIds.add(game.id)) {
+                result.add(dev.rahier.pouleparty.model.MyGame(game, dev.rahier.pouleparty.model.MyGameRole.CREATOR))
+            }
         }
+
+        for (doc in joinedSnap.documents) {
+            val game = doc.toObject(Game::class.java)?.copy(id = doc.id) ?: continue
+            // Creator takes precedence if the user is both creator and hunter on the same game.
+            if (seenIds.add(game.id)) {
+                result.add(dev.rahier.pouleparty.model.MyGame(game, dev.rahier.pouleparty.model.MyGameRole.HUNTER))
+            }
+        }
+
+        return result
+            .sortedByDescending { it.game.startDate.time }
+            .take(20)
     }
 
     suspend fun fetchPartyPlansConfig(): PartyPlansConfig {
@@ -450,5 +486,22 @@ class FirestoreRepository @Inject constructor(
             .await()
         return doc.toObject(PartyPlansConfig::class.java)
             ?: throw IllegalStateException("Party plans config document is missing or malformed")
+    }
+
+    suspend fun saveNickname(userId: String, nickname: String) {
+        try {
+            firestore.collection("users")
+                .document(userId)
+                .set(
+                    mapOf(
+                        "nickname" to nickname,
+                        "updatedAt" to Timestamp.now()
+                    ),
+                    com.google.firebase.firestore.SetOptions.merge()
+                )
+                .await()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to save nickname", e)
+        }
     }
 }

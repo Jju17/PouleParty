@@ -28,9 +28,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import dev.rahier.pouleparty.R
-import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameMod
 import dev.rahier.pouleparty.model.GameStatus
 import dev.rahier.pouleparty.model.PricingModel
@@ -375,15 +375,15 @@ private fun MyGamesSection(state: SettingsUiState, viewModel: SettingsViewModel)
                 }
                 else -> {
                     Column {
-                        state.myGames.forEachIndexed { index, game ->
+                        state.myGames.forEachIndexed { index, myGame ->
                             if (index > 0) {
                                 HorizontalDivider(
                                     modifier = Modifier.padding(horizontal = 14.dp),
                                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f)
                                 )
                             }
-                            GameRow(game = game, dateFormat = dateFormat) {
-                                viewModel.selectGame(game)
+                            GameRow(myGame = myGame, dateFormat = dateFormat) {
+                                viewModel.selectGame(myGame)
                             }
                         }
                     }
@@ -394,12 +394,48 @@ private fun MyGamesSection(state: SettingsUiState, viewModel: SettingsViewModel)
 
     val selectedGame = state.selectedGame
     if (selectedGame != null) {
-        GameDetailDialog(game = selectedGame, dateFormat = dateFormat, onDismiss = { viewModel.dismissGameDetail() })
+        GameDetailDialog(
+            myGame = selectedGame,
+            dateFormat = dateFormat,
+            onDismiss = { viewModel.dismissGameDetail() },
+            onViewLeaderboard = { viewModel.showLeaderboard() }
+        )
+        if (state.isShowingLeaderboard) {
+            LeaderboardDialog(
+                game = selectedGame.game,
+                currentUserId = viewModel.currentUserId(),
+                onDismiss = { viewModel.dismissLeaderboard() }
+            )
+        }
     }
 }
 
 @Composable
-private fun GameRow(game: Game, dateFormat: SimpleDateFormat, onClick: () -> Unit) {
+private fun RoleBadge(role: dev.rahier.pouleparty.model.MyGameRole) {
+    val (emoji, label, bg) = when (role) {
+        dev.rahier.pouleparty.model.MyGameRole.CREATOR -> Triple("🐔", "CREATED", CROrange)
+        dev.rahier.pouleparty.model.MyGameRole.HUNTER -> Triple("🎯", "JOINED", CRPink)
+    }
+    Row(
+        modifier = Modifier
+            .background(bg, shape = androidx.compose.foundation.shape.RoundedCornerShape(50))
+            .padding(horizontal = 6.dp, vertical = 3.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(emoji, fontSize = 9.sp)
+        Spacer(Modifier.width(3.dp))
+        Text(label, style = gameboyStyle(6), color = Color.White)
+    }
+}
+
+@Composable
+private fun GameRow(
+    myGame: dev.rahier.pouleparty.model.MyGame,
+    dateFormat: SimpleDateFormat,
+    onClick: () -> Unit
+) {
+    val game = myGame.game
+    val title = game.name.ifEmpty { "Game ${game.gameCode}" }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -409,21 +445,40 @@ private fun GameRow(game: Game, dateFormat: SimpleDateFormat, onClick: () -> Uni
     ) {
         Text(
             if (game.gameModEnum == GameMod.FOLLOW_THE_CHICKEN) "🐔" else "📍",
+            fontSize = 28.sp,
             modifier = Modifier.padding(end = 12.dp)
         )
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                game.name.ifEmpty { "Game ${game.gameCode}" },
-                style = bangerStyle(16),
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            Text(
-                dateFormat.format(game.startDate),
-                style = gameboyStyle(7),
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
-            )
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            // Top row: title + status badge
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    title,
+                    style = bangerStyle(16),
+                    color = MaterialTheme.colorScheme.onBackground,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+                Spacer(Modifier.width(8.dp))
+                GameStatusBadge(game.gameStatusEnum)
+            }
+
+            // Bottom row: role badge + start date
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                RoleBadge(role = myGame.role)
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    dateFormat.format(game.startDate),
+                    style = gameboyStyle(7),
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                )
+            }
         }
-        GameStatusBadge(game.gameStatusEnum)
         Spacer(Modifier.width(8.dp))
         Icon(
             Icons.AutoMirrored.Filled.KeyboardArrowRight,
@@ -453,7 +508,13 @@ private fun GameStatusBadge(status: GameStatus) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun GameDetailDialog(game: Game, dateFormat: SimpleDateFormat, onDismiss: () -> Unit) {
+private fun GameDetailDialog(
+    myGame: dev.rahier.pouleparty.model.MyGame,
+    dateFormat: SimpleDateFormat,
+    onDismiss: () -> Unit,
+    onViewLeaderboard: () -> Unit
+) {
+    val game = myGame.game
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = MaterialTheme.colorScheme.surface) {
         Column(
             modifier = Modifier
@@ -467,7 +528,32 @@ private fun GameDetailDialog(game: Game, dateFormat: SimpleDateFormat, onDismiss
                 Text(if (game.gameModEnum == GameMod.FOLLOW_THE_CHICKEN) "🐔" else "📍", style = bangerStyle(48))
                 Text(game.gameModEnum.title, style = bangerStyle(22), color = MaterialTheme.colorScheme.onBackground)
                 Spacer(Modifier.height(4.dp))
-                GameStatusBadge(game.gameStatusEnum)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    RoleBadge(role = myGame.role)
+                    Spacer(Modifier.width(8.dp))
+                    GameStatusBadge(game.gameStatusEnum)
+                }
+
+                if (game.gameStatusEnum == dev.rahier.pouleparty.model.GameStatus.DONE) {
+                    Spacer(Modifier.height(12.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                            .background(
+                                androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(CROrange, CRPink))
+                            )
+                            .clickable { onViewLeaderboard() }
+                            .padding(vertical = 12.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("🏆", fontSize = 18.sp)
+                            Spacer(Modifier.width(6.dp))
+                            Text("View Leaderboard", style = bangerStyle(18), color = Color.White)
+                        }
+                    }
+                }
             }
 
             HorizontalDivider()
@@ -514,6 +600,71 @@ private fun DetailRow(label: String, value: String) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         Text(label, style = gameboyStyle(8), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
         Text(value, style = bangerStyle(16), color = MaterialTheme.colorScheme.onBackground)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LeaderboardDialog(
+    game: dev.rahier.pouleparty.model.Game,
+    currentUserId: String,
+    onDismiss: () -> Unit
+) {
+    // Build entries from winners only — no network fetch needed for a basic leaderboard.
+    // Uses the same shared helper as VictoryScreen for consistency.
+    val entries = remember(game.winners, currentUserId) {
+        dev.rahier.pouleparty.ui.victory.buildLeaderboardEntries(
+            game = game,
+            registrations = emptyList(),
+            currentUserId = currentUserId
+        )
+    }
+    val hasWinners = game.winners.isNotEmpty()
+
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = MaterialTheme.colorScheme.surface) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text("🏆", fontSize = 56.sp)
+            Text(
+                game.name.ifEmpty { "Game ${game.gameCode}" },
+                style = bangerStyle(22),
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Text(
+                "Final results",
+                style = gameboyStyle(10),
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+            )
+
+            if (!hasWinners) {
+                Spacer(Modifier.height(16.dp))
+                Text("🐔", fontSize = 48.sp)
+                Text(
+                    "The Chicken survived!",
+                    style = bangerStyle(22),
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                )
+                Text(
+                    "No hunter found the chicken in this game",
+                    style = gameboyStyle(9),
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+            } else {
+                dev.rahier.pouleparty.ui.components.LeaderboardContent(
+                    entries = entries,
+                    hunterStartMs = game.hunterStartDate.time,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            Spacer(Modifier.height(32.dp))
+        }
     }
 }
 

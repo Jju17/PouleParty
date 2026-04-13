@@ -90,6 +90,17 @@ extension Game {
     }
 }
 
+// MARK: - Heartbeat
+
+extension Game {
+    /// Returns true if the chicken's heartbeat is stale (>60s old),
+    /// indicating the chicken may have disconnected.
+    var isChickenDisconnected: Bool {
+        guard let heartbeat = lastHeartbeat else { return false }
+        return Date.now.timeIntervalSince(heartbeat.dateValue()) > 60
+    }
+}
+
 // MARK: - Game Logic
 
 extension Game {

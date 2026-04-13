@@ -13,6 +13,7 @@ enum AppConstants {
     static let prefOnboardingCompleted = "hasCompletedOnboarding"
     static let prefUserNickname = "userNickname"
     static let prefIsMusicMuted = "isMusicMuted"
+    static let prefLastMigratedVersion = "lastMigratedVersion"
 
     // MARK: - Time Intervals
     static let locationThrottleSeconds: TimeInterval = 5
@@ -39,6 +40,7 @@ enum AppConstants {
     static let codeCooldownSeconds: TimeInterval = 10
 
     // MARK: - Power-Ups
+    static let jammerNoiseDegrees: Double = 0.0036 // ~200m noise for jammer power-up
     static let powerUpCollectionRadiusMeters: Double = 30
     static let powerUpInitialBatchSize = 5
     static let powerUpPeriodicBatchSize = 2

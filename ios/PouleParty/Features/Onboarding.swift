@@ -52,6 +52,7 @@ struct OnboardingFeature {
     @Dependency(\.locationClient) var locationClient
     @Dependency(\.notificationClient) var notificationClient
     @Dependency(\.analyticsClient) var analyticsClient
+    @Dependency(\.userClient) var userClient
 
     var body: some ReducerOf<Self> {
         Reduce { state, action in
@@ -162,7 +163,12 @@ struct OnboardingFeature {
                 state.$savedNickname.withLock { $0 = trimmedNickname }
                 state.$hasCompletedOnboarding.withLock { $0 = true }
                 analyticsClient.onboardingCompleted()
-                return .cancel(id: CancelID.snapBack)
+                return .merge(
+                    .cancel(id: CancelID.snapBack),
+                    .run { [userClient] _ in
+                        await userClient.saveNickname(trimmedNickname)
+                    }
+                )
             }
         }
     }

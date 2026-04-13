@@ -9,6 +9,7 @@ object AppConstants {
     const val PREF_ONBOARDING_COMPLETED = "hasCompletedOnboarding"
     const val PREF_USER_NICKNAME = "userNickname"
     const val PREF_IS_MUSIC_MUTED = "isMusicMuted"
+    const val PREF_LAST_MIGRATED_VERSION = "lastMigratedVersion"
 
     // Firestore Collections
     const val COLLECTION_GAMES = "games"
@@ -16,7 +17,7 @@ object AppConstants {
     const val SUBCOLLECTION_HUNTER_LOCATIONS = "hunterLocations"
     const val SUBCOLLECTION_POWER_UPS = "powerUps"
     const val SUBCOLLECTION_REGISTRATIONS = "registrations"
-    const val COLLECTION_FCM_TOKENS = "fcmTokens"
+    const val COLLECTION_USERS = "users"
 
     // Pending registration banner
     const val PREF_PENDING_REGISTRATION_GAME_ID = "pendingRegistrationGameId"

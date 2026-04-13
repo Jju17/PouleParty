@@ -21,9 +21,9 @@ struct SettingsFeature {
         var showingDeleteError = false
         var showingProfanityAlert = false
         var showingEmptyNicknameAlert = false
-        var myGames: [Game] = []
+        var myGames: [MyGame] = []
         var isLoadingGames = false
-        var selectedGame: Game?
+        var selectedGame: MyGame?
     }
 
     enum Action: BindableAction {
@@ -37,8 +37,8 @@ struct SettingsFeature {
         case nicknameSubmitted(String)
         case profanityAlertDismissed
         case onAppear
-        case myGamesLoaded([Game])
-        case gameTapped(Game)
+        case myGamesLoaded([MyGame])
+        case gameTapped(MyGame)
         case gameDetailDismissed
     }
 
@@ -63,7 +63,9 @@ struct SettingsFeature {
                     return .none
                 }
                 state.$savedNickname.withLock { $0 = trimmed }
-                return .none
+                return .run { [userClient] _ in
+                    await userClient.saveNickname(trimmed)
+                }
             case .profanityAlertDismissed:
                 state.showingProfanityAlert = false
                 return .none
@@ -107,12 +109,12 @@ struct SettingsFeature {
                     let games = (try? await apiClient.fetchMyGames(userId)) ?? []
                     await send(.myGamesLoaded(games))
                 }
-            case let .myGamesLoaded(games):
-                state.myGames = games
+            case let .myGamesLoaded(myGames):
+                state.myGames = myGames
                 state.isLoadingGames = false
                 return .none
-            case let .gameTapped(game):
-                state.selectedGame = game
+            case let .gameTapped(myGame):
+                state.selectedGame = myGame
                 return .none
             case .gameDetailDismissed:
                 state.selectedGame = nil
@@ -149,8 +151,8 @@ struct SettingsView: View {
             nicknameText = store.currentNickname
             store.send(.onAppear)
         }
-        .sheet(item: $store.selectedGame) { game in
-            GameDetailView(game: game)
+        .sheet(item: $store.selectedGame) { myGame in
+            GameDetailView(myGame: myGame)
         }
         .onChange(of: isNicknameFocused) { _, focused in
             if !focused {
@@ -260,14 +262,14 @@ struct SettingsView: View {
                     .padding(.vertical, 12)
             } else {
                 VStack(spacing: 0) {
-                    ForEach(Array(store.myGames.enumerated()), id: \.element.id) { index, game in
+                    ForEach(Array(store.myGames.enumerated()), id: \.element.id) { index, myGame in
                         if index > 0 {
                             Divider().padding(.horizontal, 14)
                         }
                         Button {
-                            store.send(.gameTapped(game))
+                            store.send(.gameTapped(myGame))
                         } label: {
-                            GameRowView(game: game)
+                            GameRowView(myGame: myGame)
                         }
                         .buttonStyle(.plain)
                     }
@@ -374,31 +376,68 @@ struct SettingsView: View {
 // MARK: - Game Row
 
 private struct GameRowView: View {
-    let game: Game
+    let myGame: MyGame
+
+    private var game: Game { myGame.game }
+
+    private var title: String {
+        game.name.isEmpty ? "Game \(game.gameCode)" : game.name
+    }
 
     var body: some View {
         HStack(spacing: 12) {
             Text(game.gameMode == .followTheChicken ? "🐔" : "📍")
-                .font(.system(size: 24))
+                .font(.system(size: 28))
 
-            VStack(alignment: .leading, spacing: 2) {
-                BangerText(game.name.isEmpty ? "Game \(game.gameCode)" : game.name, size: 16)
-                    .foregroundStyle(Color.onBackground)
+            VStack(alignment: .leading, spacing: 6) {
+                // Top row: name + status badge on the right
+                HStack(spacing: 8) {
+                    BangerText(title, size: 16)
+                        .foregroundStyle(Color.onBackground)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                    Spacer(minLength: 4)
+                    GameStatusBadge(status: game.status)
+                }
 
-                Text(game.startDate.formatted(date: .abbreviated, time: .shortened))
-                    .font(.gameboy(size: 7))
-                    .foregroundStyle(Color.onBackground.opacity(0.5))
+                // Bottom row: role badge + start date
+                HStack(spacing: 8) {
+                    RoleBadge(role: myGame.role)
+                    Text(game.startDate.formatted(date: .abbreviated, time: .shortened))
+                        .font(.gameboy(size: 7))
+                        .foregroundStyle(Color.onBackground.opacity(0.5))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                    Spacer(minLength: 0)
+                }
             }
-
-            Spacer()
-
-            GameStatusBadge(status: game.status)
 
             Image(systemName: "chevron.right")
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(Color.onBackground.opacity(0.3))
         }
         .padding(14)
+    }
+}
+
+private struct RoleBadge: View {
+    let role: GameRole
+
+    var body: some View {
+        HStack(spacing: 3) {
+            Text(role == .chicken ? "🐔" : "🎯")
+                .font(.system(size: 9))
+            Text(role == .chicken ? "CREATED" : "JOINED")
+                .font(.gameboy(size: 6))
+                .foregroundStyle(.white)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 3)
+        .background(role == .chicken ? Color.CROrange : Color.CRPink)
+        .clipShape(Capsule())
+        .fixedSize(horizontal: true, vertical: false)
     }
 }
 
@@ -436,8 +475,11 @@ private struct GameStatusBadge: View {
 // MARK: - Game Detail
 
 struct GameDetailView: View {
-    let game: Game
+    let myGame: MyGame
     @Environment(\.dismiss) private var dismiss
+    @State private var showingLeaderboard = false
+
+    private var game: Game { myGame.game }
 
     var body: some View {
         NavigationStack {
@@ -459,16 +501,46 @@ struct GameDetailView: View {
                     Button("Done") { dismiss() }
                 }
             }
+            .sheet(isPresented: $showingLeaderboard) {
+                GameLeaderboardSheet(game: game)
+            }
         }
     }
 
     private var headerSection: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 12) {
             Text(game.gameMode == .followTheChicken ? "🐔" : "📍")
                 .font(.system(size: 48))
             BangerText(game.gameMode.title, size: 22)
                 .foregroundStyle(Color.onBackground)
-            GameStatusBadge(status: game.status)
+            HStack(spacing: 8) {
+                RoleBadge(role: myGame.role)
+                GameStatusBadge(status: game.status)
+            }
+
+            if game.status == .done {
+                Button {
+                    showingLeaderboard = true
+                } label: {
+                    HStack(spacing: 6) {
+                        Text("🏆")
+                            .font(.system(size: 18))
+                        BangerText("View Leaderboard", size: 18)
+                            .foregroundStyle(.white)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(LinearGradient(
+                                colors: [.CROrange, .CRPink],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            ))
+                    )
+                }
+                .padding(.top, 4)
+            }
         }
         .frame(maxWidth: .infinity)
         .settingsCard()
@@ -532,6 +604,73 @@ struct GameDetailView: View {
             Spacer()
             BangerText(value, size: 16)
                 .foregroundStyle(Color.onBackground)
+        }
+    }
+}
+
+// MARK: - Game Leaderboard Sheet (opened from GameDetailView for finished games)
+
+struct GameLeaderboardSheet: View {
+    let game: Game
+
+    @Environment(\.dismiss) private var dismiss
+    @Dependency(\.userClient) var userClient
+
+    /// Builds entries from winners only (no registrations → no network fetch).
+    /// Uses the same `LeaderboardEntry` model as VictoryView for a shared rendering path.
+    private var entries: [LeaderboardEntry] {
+        buildLeaderboardEntries(
+            game: game,
+            registrations: [],
+            currentUserId: userClient.currentUserId() ?? ""
+        )
+    }
+
+    private var hasWinners: Bool { !game.winners.isEmpty }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.gradientBackgroundWarmth.ignoresSafeArea()
+
+                ScrollView {
+                    VStack(spacing: 16) {
+                        Text("🏆")
+                            .font(.system(size: 56))
+                            .padding(.top, 8)
+
+                        BangerText(game.name.isEmpty ? "Game \(game.gameCode)" : game.name, size: 22)
+                            .foregroundStyle(Color.onBackground)
+
+                        Text("Final results")
+                            .font(.gameboy(size: 10))
+                            .foregroundStyle(Color.onBackground.opacity(0.5))
+
+                        if !hasWinners {
+                            VStack(spacing: 8) {
+                                Text("🐔").font(.system(size: 48))
+                                BangerText("The Chicken survived!", size: 22)
+                                    .foregroundStyle(Color.onBackground.opacity(0.7))
+                                Text("No hunter found the chicken in this game")
+                                    .font(.gameboy(size: 9))
+                                    .foregroundStyle(Color.onBackground.opacity(0.5))
+                                    .multilineTextAlignment(.center)
+                            }
+                            .padding(.vertical, 40)
+                        } else {
+                            LeaderboardContentView(entries: entries, hunterStartDate: game.hunterStartDate)
+                        }
+                    }
+                    .padding(20)
+                }
+            }
+            .navigationTitle("Leaderboard")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                }
+            }
         }
     }
 }

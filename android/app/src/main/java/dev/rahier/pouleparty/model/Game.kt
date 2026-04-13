@@ -65,7 +65,8 @@ data class Game(
     val zone: Zone = Zone(),
     val pricing: Pricing = Pricing(),
     val registration: GameRegistration = GameRegistration(),
-    val powerUps: GamePowerUps = GamePowerUps()
+    val powerUps: GamePowerUps = GamePowerUps(),
+    val lastHeartbeat: Timestamp? = null
 ) {
     // ── Power-Up Active Effects ────────────────────────
 
@@ -88,6 +89,14 @@ data class Game(
     @get:Exclude
     val isJammerActive: Boolean
         get() = powerUps.activeEffects.jammer != null && Date().before(powerUps.activeEffects.jammer.toDate())
+
+    /** Returns true if the chicken's heartbeat is stale (>60s old), indicating disconnect. */
+    @get:Exclude
+    val isChickenDisconnected: Boolean
+        get() {
+            val heartbeat = lastHeartbeat ?: return false
+            return Date().time - heartbeat.toDate().time > 60_000
+        }
 
     // ── Computed Properties ────────────────────────────
 
