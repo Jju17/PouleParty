@@ -1789,7 +1789,7 @@
     },
     "notif_chicken_start_body" : {
       "comment" : "Push notification body shown to the chicken when the game starts.",
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1813,7 +1813,7 @@
     },
     "notif_chicken_start_title" : {
       "comment" : "Push notification title shown to the chicken when the game starts.",
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1837,7 +1837,7 @@
     },
     "notif_hunter_found_body" : {
       "comment" : "Push notification body shown when a hunter finds the chicken. %1$@ = hunter name, %2$@ = remaining count.",
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1861,7 +1861,7 @@
     },
     "notif_hunter_found_title" : {
       "comment" : "Push notification title shown when a hunter finds the chicken.",
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1885,7 +1885,7 @@
     },
     "notif_hunter_start_body" : {
       "comment" : "Push notification body shown to hunters when the hunt begins.",
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1909,7 +1909,7 @@
     },
     "notif_hunter_start_title" : {
       "comment" : "Push notification title shown to hunters when the hunt begins.",
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1933,7 +1933,7 @@
     },
     "notif_zone_shrink_body" : {
       "comment" : "Push notification body shown to all players when the zone shrinks.",
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1957,7 +1957,7 @@
     },
     "notif_zone_shrink_title" : {
       "comment" : "Push notification title shown to all players when the zone shrinks.",
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {

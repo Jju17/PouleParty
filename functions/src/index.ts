@@ -1,4 +1,4 @@
-import { initializeApp } from "firebase-admin/app";
+import { cert, initializeApp } from "firebase-admin/app";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { getFunctions } from "firebase-admin/functions";
 import { getMessaging } from "firebase-admin/messaging";
@@ -9,7 +9,9 @@ import { defineString } from "firebase-functions/params";
 import { createHash } from "crypto";
 import { google } from "googleapis";
 
-initializeApp();
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const serviceAccount = require("../service-account.json");
+initializeApp({ credential: cert(serviceAccount) });
 
 const REGION = "europe-west1";
 const db = getFirestore();
@@ -58,7 +60,7 @@ async function sendNotificationToTokens(
   data?: Record<string, string>
 ): Promise<void> {
   if (tokens.length === 0) {
-    console.log(`[FCM] No tokens to notify for "${titleLocKey}"`);
+    console.log(`[FCM] No tokens to notify for "${titleLocKey}" — skipping`);
     return;
   }
 
@@ -72,7 +74,7 @@ async function sendNotificationToTokens(
           alert: {
             titleLocKey,
             locKey: bodyLocKey,
-            locArgs: bodyLocArgs ?? [],
+            ...(bodyLocArgs && bodyLocArgs.length > 0 ? { locArgs: bodyLocArgs } : {}),
           },
           sound: "default",
         },
@@ -84,10 +86,10 @@ async function sendNotificationToTokens(
         sound: "default",
         titleLocKey,
         bodyLocKey,
-        bodyLocArgs: bodyLocArgs ?? [],
+        ...(bodyLocArgs && bodyLocArgs.length > 0 ? { bodyLocArgs } : {}),
       },
     },
-    data: data ?? {},
+    ...(data && Object.keys(data).length > 0 ? { data } : {}),
   });
 
   console.log(
@@ -99,15 +101,14 @@ async function sendNotificationToTokens(
   const tokensToRemove: string[] = [];
   response.responses.forEach((resp, idx) => {
     if (!resp.success && resp.error) {
-      console.warn(
+      console.error(
         `[FCM] send failed for token ${tokens[idx].slice(0, 12)}...: ` +
-        `${resp.error.code} — ${resp.error.message}`
+        `code=${resp.error.code} message=${resp.error.message} ` +
+        `stack=${resp.error.stack ?? "none"}`
       );
       if (
         resp.error.code === "messaging/registration-token-not-registered" ||
-        resp.error.code === "messaging/invalid-registration-token" ||
-        resp.error.code === "messaging/mismatched-credential" ||
-        resp.error.code === "messaging/third-party-auth-error"
+        resp.error.code === "messaging/invalid-registration-token"
       ) {
         tokensToRemove.push(tokens[idx]);
       }
@@ -136,6 +137,7 @@ async function sendNotificationToTokens(
 export const sendGameNotification = onTaskDispatched(
   {
     region: REGION,
+
     retryConfig: { maxAttempts: 3, minBackoffSeconds: 10 },
     rateLimits: { maxConcurrentDispatches: 100 },
   },
@@ -169,7 +171,15 @@ export const sendGameNotification = onTaskDispatched(
         break;
     }
 
+    console.log(
+      `[Notif] Game ${gameId}: sending "${notificationType}" to ${userIds.length} users: [${userIds.join(", ")}]`
+    );
+
     const tokens = await getTokensForUserIds(userIds);
+
+    console.log(
+      `[Notif] Game ${gameId}: found ${tokens.length} tokens for ${userIds.length} users`
+    );
 
     const keyMap: Record<string, { title: string; body: string }> = {
       chicken_start: {
@@ -202,6 +212,7 @@ export const sendGameNotification = onTaskDispatched(
 export const transitionGameStatus = onTaskDispatched(
   {
     region: REGION,
+
     retryConfig: { maxAttempts: 3, minBackoffSeconds: 10 },
     rateLimits: { maxConcurrentDispatches: 100 },
   },

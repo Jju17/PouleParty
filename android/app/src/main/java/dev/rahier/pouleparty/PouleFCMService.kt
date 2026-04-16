@@ -95,17 +95,21 @@ class PouleFCMService : FirebaseMessagingService() {
 
     private fun saveTokenToFirestore(token: String) {
         val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val data = mutableMapOf<String, Any>(
+            "token" to token,
+            "platform" to "android",
+            "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
+        )
+        // Always include the nickname so it's restored if the document was recreated
+        val prefs = getSharedPreferences(AppConstants.PREFS_NAME, MODE_PRIVATE)
+        val nickname = (prefs.getString(AppConstants.PREF_USER_NICKNAME, "") ?: "").trim()
+        if (nickname.isNotEmpty()) {
+            data["nickname"] = nickname
+        }
         FirebaseFirestore.getInstance()
             .collection(AppConstants.COLLECTION_USERS)
             .document(userId)
-            .set(
-                mapOf(
-                    "token" to token,
-                    "platform" to "android",
-                    "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
-                ),
-                com.google.firebase.firestore.SetOptions.merge()
-            )
+            .set(data, com.google.firebase.firestore.SetOptions.merge())
             .addOnFailureListener { e ->
                 Log.e(TAG, "Failed to save FCM token", e)
             }

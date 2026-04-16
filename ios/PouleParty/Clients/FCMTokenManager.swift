@@ -18,12 +18,20 @@ actor FCMTokenManager {
             return
         }
 
-        let ref = Firestore.firestore().collection("users").document(userId)
-        ref.setData([
+        var data: [String: Any] = [
             "token": token,
             "platform": "ios",
             "updatedAt": FieldValue.serverTimestamp()
-        ], merge: true) { [logger] error in
+        ]
+
+        // Always include the nickname so it's restored if the document was recreated
+        let nickname = UserDefaults.standard.string(forKey: AppConstants.prefUserNickname)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !nickname.isEmpty {
+            data["nickname"] = nickname
+        }
+
+        let ref = Firestore.firestore().collection("users").document(userId)
+        ref.setData(data, merge: true) { [logger] error in
             if let error {
                 logger.error("Failed to save FCM token: \(error.localizedDescription)")
             }

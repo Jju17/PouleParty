@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 70;
+	objectVersion = 100;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -60,14 +60,12 @@
 /* Begin PBXCopyFilesBuildPhase section */
 		F9B1BE372F58DCD300E066D6 /* Embed Foundation Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
 			dstPath = "";
-			dstSubfolderSpec = 13;
+			dstSubfolder = PlugIns;
 			files = (
 				F9B1BE322F58DCD300E066D6 /* PoulePartyWidgetsExtension.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
 
@@ -90,21 +88,21 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		F9B1BE332F58DCD300E066D6 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+		F9B1BE332F58DCD300E066D6 /* Exceptions for "PoulePartyWidgets" folder in "PoulePartyWidgetsExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
 			target = F9B1BE1F2F58DCD200E066D6 /* PoulePartyWidgetsExtension */;
 		};
-		F9B1BE3B2F58DD5700E066D6 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+		F9B1BE3B2F58DD5700E066D6 /* Exceptions for "Models" folder in "PoulePartyWidgetsExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				LiveActivityModels.swift,
 			);
 			target = F9B1BE1F2F58DCD200E066D6 /* PoulePartyWidgetsExtension */;
 		};
-		F9B1BE3E2F58DD8500E066D6 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+		F9B1BE3E2F58DD8500E066D6 /* Exceptions for "Resources" folder in "PoulePartyWidgetsExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				"Bangers/Bangers-Regular.ttf",
@@ -112,7 +110,7 @@
 			);
 			target = F9B1BE1F2F58DCD200E066D6 /* PoulePartyWidgetsExtension */;
 		};
-		F9B1BE402F58EC1500E066D6 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+		F9B1BE402F58EC1500E066D6 /* Exceptions for "Extensions" folder in "PoulePartyWidgetsExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				"Font+Utils.swift",
@@ -122,30 +120,79 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		646D8E462F467EB70068ABBF /* PoulePartyTests */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = PoulePartyTests; sourceTree = "<group>"; };
-		F9961DF92F58B872006C46AC /* App */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = App; sourceTree = "<group>"; };
-		F9961DFF2F58B872006C46AC /* Clients */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Clients; sourceTree = "<group>"; };
-		F9961E052F58B872006C46AC /* Components */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Components; sourceTree = "<group>"; };
-		F9961E0D2F58B872006C46AC /* Extensions */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (F9B1BE402F58EC1500E066D6 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = Extensions; sourceTree = "<group>"; };
-		F9961E1A2F58B872006C46AC /* Features */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Features; sourceTree = "<group>"; };
-		F9961E3E2F58B87B006C46AC /* Models */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (F9B1BE3B2F58DD5700E066D6 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = Models; sourceTree = "<group>"; };
-		F9961E482F58B87B006C46AC /* Resources */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (F9B1BE3E2F58DD8500E066D6 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = Resources; sourceTree = "<group>"; };
-		F9A8B03E2F829054008B15E2 /* PoulePartySnapshotTests */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = PoulePartySnapshotTests; sourceTree = "<group>"; };
-		F9B1BE262F58DCD200E066D6 /* PoulePartyWidgets */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (F9B1BE332F58DCD300E066D6 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = PoulePartyWidgets; sourceTree = "<group>"; };
+		646D8E462F467EB70068ABBF /* PoulePartyTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = PoulePartyTests;
+			sourceTree = "<group>";
+		};
+		F9961DF92F58B872006C46AC /* App */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = App;
+			sourceTree = "<group>";
+		};
+		F9961DFF2F58B872006C46AC /* Clients */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Clients;
+			sourceTree = "<group>";
+		};
+		F9961E052F58B872006C46AC /* Components */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Components;
+			sourceTree = "<group>";
+		};
+		F9961E0D2F58B872006C46AC /* Extensions */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				F9B1BE402F58EC1500E066D6 /* Exceptions for "Extensions" folder in "PoulePartyWidgetsExtension" target */,
+			);
+			path = Extensions;
+			sourceTree = "<group>";
+		};
+		F9961E1A2F58B872006C46AC /* Features */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Features;
+			sourceTree = "<group>";
+		};
+		F9961E3E2F58B87B006C46AC /* Models */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				F9B1BE3B2F58DD5700E066D6 /* Exceptions for "Models" folder in "PoulePartyWidgetsExtension" target */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		F9961E482F58B87B006C46AC /* Resources */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				F9B1BE3E2F58DD8500E066D6 /* Exceptions for "Resources" folder in "PoulePartyWidgetsExtension" target */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		F9A8B03E2F829054008B15E2 /* PoulePartySnapshotTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = PoulePartySnapshotTests;
+			sourceTree = "<group>";
+		};
+		F9B1BE262F58DCD200E066D6 /* PoulePartyWidgets */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				F9B1BE332F58DCD300E066D6 /* Exceptions for "PoulePartyWidgets" folder in "PoulePartyWidgetsExtension" target */,
+			);
+			path = PoulePartyWidgets;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		646D8E362F467E520068ABBF /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 				F9A8B0382F828F36008B15E2 /* SnapshotTesting in Frameworks */,
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 		647D9FBE2BA3ABF2005B6566 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 				F90899CC2F58B24D0006C8DF /* FirebaseMessaging in Frameworks */,
 				6464E51C2BA5C3ED0039C387 /* FirebaseAnalytics in Frameworks */,
@@ -164,24 +211,19 @@
 				6464E5242BA5C3ED0039C387 /* FirebaseFirestore in Frameworks */,
 				6464E5262BA5C3ED0039C387 /* FirebaseFirestoreCombine-Community in Frameworks */,
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 		F9A8B03A2F829054008B15E2 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 				F9A8B0472F829079008B15E2 /* SnapshotTesting in Frameworks */,
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 		F9B1BE1D2F58DCD200E066D6 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 				F9B1BE252F58DCD200E066D6 /* SwiftUI.framework in Frameworks */,
 				F9B1BE232F58DCD200E066D6 /* WidgetKit.framework in Frameworks */,
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
@@ -347,14 +389,10 @@
 			);
 			buildRules = (
 			);
-			dependencies = (
-			);
 			fileSystemSynchronizedGroups = (
 				F9B1BE262F58DCD200E066D6 /* PoulePartyWidgets */,
 			);
 			name = PoulePartyWidgetsExtension;
-			packageProductDependencies = (
-			);
 			productName = PoulePartyWidgetsExtension;
 			productReference = F9B1BE202F58DCD200E066D6 /* PoulePartyWidgetsExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
@@ -368,6 +406,7 @@
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 2640;
 				LastUpgradeCheck = 2620;
+				ORGANIZATIONNAME = rahier.dev;
 				TargetAttributes = {
 					646D8E382F467E520068ABBF = {
 						CreatedOnToolsVersion = 26.2;
@@ -386,7 +425,6 @@
 				};
 			};
 			buildConfigurationList = 647D9FBC2BA3ABF2005B6566 /* Build configuration list for PBXProject "PouleParty" */;
-			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -401,6 +439,7 @@
 				F9B5A21F2F53A61C004EBFD7 /* XCRemoteSwiftPackageReference "mapbox-maps-ios" */,
 				F9A8B0362F828F36008B15E2 /* XCRemoteSwiftPackageReference "swift-snapshot-testing" */,
 			);
+			preferredProjectObjectVersion = 100;
 			productRefGroup = 647D9FC22BA3ABF2005B6566 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -416,34 +455,26 @@
 /* Begin PBXResourcesBuildPhase section */
 		646D8E372F467E520068ABBF /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 		647D9FBF2BA3ABF2005B6566 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 				645DF8282D306D0B005D8731 /* Lille.gpx in Resources */,
 				645DF82B2D306E5D005D8731 /* Stockholm.gpx in Resources */,
 				64CE0F842CEE8E8200762232 /* Localizable.xcstrings in Resources */,
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 		F9A8B03B2F829054008B15E2 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 		F9B1BE1E2F58DCD200E066D6 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
@@ -451,11 +482,6 @@
 		6464E52F2BA5C54D0039C387 /* Crashlytics */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
 			inputPaths = (
 				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}",
 				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF/${PRODUCT_NAME}",
@@ -464,66 +490,67 @@
 				"$(TARGET_BUILD_DIR)/$(EXECUTABLE_PATH)",
 			);
 			name = Crashlytics;
-			outputFileListPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# ⚠️ Have to be the last build phase, otherwise Crashlytics won't properly process dSYMs\n\n\"${BUILD_DIR%/Build/*}/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run\"\n";
+			shellScript = (
+				"# ⚠️ Have to be the last build phase, otherwise Crashlytics won't properly process dSYMs",
+				"",
+				"\"${BUILD_DIR%/Build/*}/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run\"",
+				"",
+			);
 		};
 		F986A3802F48AB000086DF16 /* Copy Firebase Config */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
 			inputPaths = (
 				"${SRCROOT}/Firebase/Staging/GoogleService-Info.plist",
 				"${SRCROOT}/Firebase/Production/GoogleService-Info.plist",
 			);
 			name = "Copy Firebase Config";
-			outputFileListPaths = (
-			);
 			outputPaths = (
 				"${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app/GoogleService-Info.plist",
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "FIREBASE_DIR=\"${SRCROOT}/Firebase\"\n\nif [ \"${CONFIGURATION}\" == \"Debug\" ]; then\n    PLIST_PATH=\"${FIREBASE_DIR}/Staging/GoogleService-Info.plist\"\nelse\n    PLIST_PATH=\"${FIREBASE_DIR}/Production/GoogleService-Info.plist\"\nfi\n\nif [ ! -f \"${PLIST_PATH}\" ]; then\n    echo \"error: GoogleService-Info.plist not found at ${PLIST_PATH}\"\n    exit 1\nfi\n\ncp \"${PLIST_PATH}\" \"${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app/GoogleService-Info.plist\"\necho \"Copied Firebase config for ${CONFIGURATION} to app bundle\"\n";
+			shellScript = (
+				"FIREBASE_DIR=\"${SRCROOT}/Firebase\"",
+				"",
+				"if [ \"${CONFIGURATION}\" == \"Debug\" ]; then",
+				"    PLIST_PATH=\"${FIREBASE_DIR}/Staging/GoogleService-Info.plist\"",
+				"else",
+				"    PLIST_PATH=\"${FIREBASE_DIR}/Production/GoogleService-Info.plist\"",
+				"fi",
+				"",
+				"if [ ! -f \"${PLIST_PATH}\" ]; then",
+				"    echo \"error: GoogleService-Info.plist not found at ${PLIST_PATH}\"",
+				"    exit 1",
+				"fi",
+				"",
+				"cp \"${PLIST_PATH}\" \"${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app/GoogleService-Info.plist\"",
+				"echo \"Copied Firebase config for ${CONFIGURATION} to app bundle\"",
+				"",
+			);
 		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		646D8E352F467E520068ABBF /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 		647D9FBD2BA3ABF2005B6566 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 		F9A8B0392F829054008B15E2 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 		F9B1BE1C2F58DCD200E066D6 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
@@ -546,7 +573,7 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
-		646D8E3F2F467E520068ABBF /* Debug */ = {
+		646D8E3F2F467E520068ABBF /* Debug configuration for PBXNativeTarget "PoulePartyTests" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
@@ -569,7 +596,7 @@
 			};
 			name = Debug;
 		};
-		646D8E402F467E520068ABBF /* Release */ = {
+		646D8E402F467E520068ABBF /* Release configuration for PBXNativeTarget "PoulePartyTests" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
@@ -592,7 +619,7 @@
 			};
 			name = Release;
 		};
-		647D9FCE2BA3ABF3005B6566 /* Debug */ = {
+		647D9FCE2BA3ABF3005B6566 /* Debug configuration for PBXProject "PouleParty" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -659,7 +686,7 @@
 			};
 			name = Debug;
 		};
-		647D9FCF2BA3ABF3005B6566 /* Release */ = {
+		647D9FCF2BA3ABF3005B6566 /* Release configuration for PBXProject "PouleParty" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -718,7 +745,7 @@
 			};
 			name = Release;
 		};
-		647D9FD12BA3ABF3005B6566 /* Debug */ = {
+		647D9FD12BA3ABF3005B6566 /* Debug configuration for PBXNativeTarget "PouleParty" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APS_ENVIRONMENT = development;
@@ -775,7 +802,7 @@
 			};
 			name = Debug;
 		};
-		647D9FD22BA3ABF3005B6566 /* Release */ = {
+		647D9FD22BA3ABF3005B6566 /* Release configuration for PBXNativeTarget "PouleParty" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APS_ENVIRONMENT = production;
@@ -832,7 +859,7 @@
 			};
 			name = Release;
 		};
-		F9A8B0442F829054008B15E2 /* Debug */ = {
+		F9A8B0442F829054008B15E2 /* Debug configuration for PBXNativeTarget "PoulePartySnapshotTests" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
@@ -856,7 +883,7 @@
 			};
 			name = Debug;
 		};
-		F9A8B0452F829054008B15E2 /* Release */ = {
+		F9A8B0452F829054008B15E2 /* Release configuration for PBXNativeTarget "PoulePartySnapshotTests" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
@@ -880,7 +907,7 @@
 			};
 			name = Release;
 		};
-		F9B1BE352F58DCD300E066D6 /* Debug */ = {
+		F9B1BE352F58DCD300E066D6 /* Debug configuration for PBXNativeTarget "PoulePartyWidgetsExtension" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -912,7 +939,7 @@
 			};
 			name = Debug;
 		};
-		F9B1BE362F58DCD300E066D6 /* Release */ = {
+		F9B1BE362F58DCD300E066D6 /* Release configuration for PBXNativeTarget "PoulePartyWidgetsExtension" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -950,46 +977,41 @@
 		646D8E412F467E520068ABBF /* Build configuration list for PBXNativeTarget "PoulePartyTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				646D8E3F2F467E520068ABBF /* Debug */,
-				646D8E402F467E520068ABBF /* Release */,
+				646D8E3F2F467E520068ABBF /* Debug configuration for PBXNativeTarget "PoulePartyTests" */,
+				646D8E402F467E520068ABBF /* Release configuration for PBXNativeTarget "PoulePartyTests" */,
 			);
-			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 		647D9FBC2BA3ABF2005B6566 /* Build configuration list for PBXProject "PouleParty" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				647D9FCE2BA3ABF3005B6566 /* Debug */,
-				647D9FCF2BA3ABF3005B6566 /* Release */,
+				647D9FCE2BA3ABF3005B6566 /* Debug configuration for PBXProject "PouleParty" */,
+				647D9FCF2BA3ABF3005B6566 /* Release configuration for PBXProject "PouleParty" */,
 			);
-			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 		647D9FD02BA3ABF3005B6566 /* Build configuration list for PBXNativeTarget "PouleParty" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				647D9FD12BA3ABF3005B6566 /* Debug */,
-				647D9FD22BA3ABF3005B6566 /* Release */,
+				647D9FD12BA3ABF3005B6566 /* Debug configuration for PBXNativeTarget "PouleParty" */,
+				647D9FD22BA3ABF3005B6566 /* Release configuration for PBXNativeTarget "PouleParty" */,
 			);
-			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 		F9A8B0432F829054008B15E2 /* Build configuration list for PBXNativeTarget "PoulePartySnapshotTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				F9A8B0442F829054008B15E2 /* Debug */,
-				F9A8B0452F829054008B15E2 /* Release */,
+				F9A8B0442F829054008B15E2 /* Debug configuration for PBXNativeTarget "PoulePartySnapshotTests" */,
+				F9A8B0452F829054008B15E2 /* Release configuration for PBXNativeTarget "PoulePartySnapshotTests" */,
 			);
-			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 		F9B1BE342F58DCD300E066D6 /* Build configuration list for PBXNativeTarget "PoulePartyWidgetsExtension" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				F9B1BE352F58DCD300E066D6 /* Debug */,
-				F9B1BE362F58DCD300E066D6 /* Release */,
+				F9B1BE352F58DCD300E066D6 /* Debug configuration for PBXNativeTarget "PoulePartyWidgetsExtension" */,
+				F9B1BE362F58DCD300E066D6 /* Release configuration for PBXNativeTarget "PoulePartyWidgetsExtension" */,
 			);
-			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */

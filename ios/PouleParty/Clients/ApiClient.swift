@@ -401,7 +401,7 @@ extension ApiClient: DependencyKey {
             }
         },
         updateHeartbeat: { gameId in
-            try Firestore.firestore().collection(gamesCollection).document(gameId).updateData([
+            Firestore.firestore().collection(gamesCollection).document(gameId).updateData([
                 "lastHeartbeat": Timestamp(date: .now)
             ])
         },
