@@ -11,6 +11,7 @@ import CoreLocation
 import os
 import Sharing
 import SwiftUI
+import UIKit
 
 struct PlanSelectionResult: Equatable {
     let model: Game.PricingModel
@@ -104,6 +105,7 @@ struct HomeFeature {
 
             enum Alert: Equatable {
                 case ok
+                case openSettings
             }
         }
 
@@ -188,6 +190,15 @@ struct HomeFeature {
                 return .run { send in
                     try? await Task.sleep(for: .milliseconds(150))
                     await send(.chickenConfigLocationRequested)
+                }
+            case .destination(.presented(.alert(.openSettings))):
+                state.destination = nil
+                return .run { _ in
+                    await MainActor.run {
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            UIApplication.shared.open(url)
+                        }
+                    }
                 }
             case .destination(.presented(.settings(.deleteSuccessAlertDismissed))):
                 state.destination = nil
@@ -289,6 +300,9 @@ struct HomeFeature {
                     AlertState {
                         TextState("Location Required")
                     } actions: {
+                        ButtonState(action: .openSettings) {
+                            TextState("Open Settings")
+                        }
                         ButtonState(role: .cancel) {
                             TextState("OK")
                         }

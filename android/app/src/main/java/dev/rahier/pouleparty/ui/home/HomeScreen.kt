@@ -1,7 +1,10 @@
 package dev.rahier.pouleparty.ui.home
 
 import android.Manifest
+import android.content.Intent
 import android.media.MediaPlayer
+import android.net.Uri
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.*
@@ -381,6 +384,16 @@ fun HomeScreen(
             title = { Text(stringResource(R.string.location_required)) },
             text = { Text(stringResource(R.string.location_required_message)) },
             confirmButton = {
+                TextButton(onClick = {
+                    viewModel.onIntent(HomeIntent.LocationRequiredDismissed)
+                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                        data = Uri.fromParts("package", context.packageName, null)
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(intent)
+                }) { Text(stringResource(R.string.open_settings)) }
+            },
+            dismissButton = {
                 TextButton(onClick = { viewModel.onIntent(HomeIntent.LocationRequiredDismissed) }) { Text(stringResource(R.string.ok)) }
             }
         )

@@ -41,6 +41,7 @@ fun OnboardingScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val pagerState = rememberPagerState(pageCount = { OnboardingViewModel.TOTAL_PAGES })
+    val context = LocalContext.current
 
     // Sync pager with viewmodel
     LaunchedEffect(state.currentPage) {
@@ -207,6 +208,16 @@ fun OnboardingScreen(
             title = { Text(stringResource(R.string.location_required)) },
             text = { Text(stringResource(R.string.location_required_message)) },
             confirmButton = {
+                TextButton(onClick = {
+                    viewModel.onIntent(OnboardingIntent.DismissLocationAlert)
+                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                        data = Uri.fromParts("package", context.packageName, null)
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(intent)
+                }) { Text(stringResource(R.string.open_settings)) }
+            },
+            dismissButton = {
                 TextButton(onClick = { viewModel.onIntent(OnboardingIntent.DismissLocationAlert) }) { Text(stringResource(R.string.ok)) }
             }
         )

@@ -45,88 +45,35 @@
 
 ---
 
-## 2. Notifications push
+## 2. Notifications push — ✅ DONE
 
-### Problème
-
-Aucune notification ne semble arriver. Le backend (Cloud Functions) est en place et envoie déjà des notifications localisées via FCM pour 4 événements :
-- `chicken_start` — La partie commence (envoyée à la Poule)
-- `hunter_start` — La chasse commence (envoyée aux Hunters, après le head start)
-- `zone_shrink` — La zone rétrécit (envoyée à tous)
-- `hunter_found` — Un hunter a trouvé la Poule (envoyée à tous, via `onGameUpdated`)
-
-### Diagnostic préliminaire (issu de l'audit)
-
-1. **iOS : clés de localisation manquantes** — Les Cloud Functions envoient des `titleLocKey` / `bodyLocKey` (ex: `notif_chicken_start_title`). Côté Android, ces clés existent dans `strings.xml`. Côté **iOS, elles sont absentes** du `Localizable.xcstrings`. Résultat : les notifs arrivent peut-être mais avec un contenu vide.
-
-2. **Enregistrement FCM token** — Le flow est en place sur les 2 plateformes :
-   - iOS : `AppDelegate` → `MessagingDelegate` → `FCMTokenManager.saveToken()` + sauvegarde au `signIn` dans `AppFeature`
-   - Android : `PouleFCMService.onNewToken()` → `saveTokenToFirestore()`
-   - Les tokens sont stockés dans `/fcmTokens/{userId}` avec `token`, `platform`, `updatedAt`
-
-3. **Android : channel `game_events` OK** — Le `NotificationChannel` est créé dans `PoulePartyApp.onCreate()`.
-
-4. **Timing potentiel** — Le FCM token est sauvé quand il est reçu par le SDK, mais si l'auth anonyme n'est pas encore faite à ce moment (`currentUser == null`), le token est perdu silencieusement (les deux plateformes ont un `guard/?: return`).
-
-### Actions à mener
-
-- [ ] **iOS** : Ajouter les clés `notif_chicken_start_title`, `notif_chicken_start_body`, `notif_hunter_start_title`, `notif_hunter_start_body`, `notif_zone_shrink_title`, `notif_zone_shrink_body`, `notif_hunter_found_title`, `notif_hunter_found_body` dans `Localizable.xcstrings`
-- [ ] **iOS + Android** : Vérifier dans la console Firebase que les Cloud Tasks sont bien enqueued quand une partie est créée (logs `onGameCreated`)
-- [ ] **iOS + Android** : Ajouter un re-save du FCM token après l'auth anonyme (pour couvrir le cas où `onNewToken` est appelé avant `signIn`)
-- [ ] **Tester** : Créer une partie, vérifier dans Firestore que le document `fcmTokens/{userId}` existe avec un token valide, puis vérifier les logs Cloud Functions
+Le flow est complet :
+- **iOS** : les 8 clés `notif_*_title` / `notif_*_body` sont dans `Localizable.xcstrings`. `MessagingDelegate` → `FCMTokenManager.saveToken()` + re-save après `signInAnonymously()` dans `AppFeature.appStarted`
+- **Android** : `PouleFCMService.onMessageReceived` résout les clés via `resolveString` avec fallback. `onNewToken` → `saveTokenToFirestore()`. Channel `game_events` créé dans `PoulePartyApp.onCreate()`. Re-save du token après auth anonyme déjà géré dans `AppNavigation.kt:78-118` (`FirebaseMessaging.token.await()` après `signInAnonymously().await()`, couvre la race `onNewToken` avant `currentUser`)
+- **Backend** : `onGameCreated` (`functions/src/index.ts`) enqueue les Cloud Tasks pour `chicken_start`, `hunter_start`, `zone_shrink`. `onGameUpdated` gère `hunter_found`
 
 ---
 
-## 3. Réservation de partie payante
+## 3. Réservation de partie payante — ✅ MOSTLY DONE (manque Stripe)
 
-### Contexte actuel
+### Fait
 
-- Le bouton "I am la Poule" crée une partie immédiatement (ChickenConfig → ChickenMap)
-- Aucune limite de parties par jour ni de joueurs (champ `numberOfPlayers` existe mais default à 10, non enforced)
-- Aucune notion de paiement dans le code actuel
-- Un système d'événements/inscriptions existe déjà (`registerForEvent` Cloud Function + Google Sheets) mais c'est pour un événement ponctuel, pas pour des parties
+- Modèle `Game.pricing: { model, pricePerPlayer, deposit, commission }` sur les 2 plateformes
+- Limite **1 partie gratuite par jour** : `apiClient.countFreeGamesToday(userId)` côté iOS (`Home.swift`), `PlanSelectionViewModel.canCreateFreeGame()` côté Android
+- Limite **max 5 joueurs** en partie gratuite : soft-enforced via `PricingConfig.FreeGameConfig.maxPlayers = 5`
+- **Feature `PlanSelection`** complète sur les 2 plateformes (screen + VM + wiring dans le flow de création)
+- Formules `free` / `flat` / `deposit` disponibles dans l'UI, `GameRegistration.required` et `closesMinutesBefore` gérés
+- Flow hunter : `JoinFlow` avec paiement/caution, `registration` subcollection
 
-### Changements sur le mode gratuit
+### Reste à faire
 
-- Limiter à **1 partie gratuite par jour** par utilisateur (vérifier côté Firestore rules ou Cloud Function)
-- Limiter à **max 5 joueurs** par partie gratuite (enforcer dans `hunterIds` rules)
-
-### Nouveau flow "Partie payante"
-
-Deux formules au choix pour le créateur :
-
-#### Formule A — Forfait
-
-Le créateur paie un montant basé sur le nombre de joueurs sélectionné.
-
-- UI : Slider ou picker pour choisir le nombre de joueurs → prix affiché dynamiquement
-- Variante "Teambuilding" : Le manager/entreprise paie pour tout le monde → les hunters rejoignent gratuitement
-- Les hunters utilisent le code de partie classique pour rejoindre
-
-#### Formule B — Caution + commission
-
-Le créateur paie une caution (~10 €) et définit un prix par joueur.
-
-- Le créateur fixe le tarif par hunter
-- PouleParty prend un pourcentage (à définir) sur chaque inscription payante
-- Les hunters paient pour rejoindre la partie
-
-### Questions d'implémentation
-
-- **Paiement** : Intégrer Stripe (ou RevenueCat pour simplifier l'in-app). Stripe est plus flexible pour les paiements custom (montants variables, commissions). Un MCP Stripe est disponible dans les outils.
-- **Modèle Firestore** : Ajouter au document `Game` :
-  - `pricingModel`: `"free"` | `"flat"` | `"deposit"`
-  - `pricePerPlayer`: number (centimes)
-  - `depositAmount`: number (centimes)
-  - `commissionPercent`: number
-  - `maxPlayers`: number (enforced)
-  - `isPaid`: boolean
-- **Cloud Function** : Créer un endpoint `createPaidGame` qui valide le paiement Stripe avant de créer le document Game
-- **Firestore rules** : Empêcher la création de parties payantes directement depuis le client (forcer le passage par la Cloud Function)
-- **Limite quotidienne (gratuit)** : Query `games` par `creatorId` + `startTimestamp > today 00:00` + `pricingModel == "free"`. Si count >= 1, bloquer.
-- **Remboursement** : Que se passe-t-il si la Poule annule ? Si pas assez de hunters rejoignent ? Prévoir une politique de remboursement.
-- **UI** : Nouveau screen entre Selection et ChickenConfig, ou bien un mode dans ChickenConfig avec un toggle "Partie payante"
-- **Deep link** : Permettre de partager un lien de partie payante pour que les hunters puissent payer et rejoindre directement
+- [ ] **Intégration Stripe** (sera faite plus tard) :
+  - [ ] Cloud Function `createPaidGame` qui valide le paiement Stripe avant de créer le document Game
+  - [ ] Firestore rules : forcer le passage par la Cloud Function pour les parties payantes (bloquer création client direct si `pricing.model != "free"`)
+  - [ ] Hard-enforcer `hunterIds.size() <= 5` dans les rules quand `pricing.model == "free"`
+  - [ ] Politique de remboursement (annulation Poule, pas assez de hunters)
+  - [ ] Deep link pour rejoindre une partie payante directement
+  - MCP Stripe disponible dans les outils si besoin
 
 ---
 
@@ -227,9 +174,10 @@ Inspiré du design ci-dessous (2 sections sur un même écran) :
 
 ---
 
-## 5. Better handling no location allowed
+## 5. Better handling no location allowed — ✅ DONE
 
-Améliorer le flow quand l'utilisateur n'a pas autorisé la localisation. Actuellement une simple alerte s'affiche — proposer un meilleur UX (redirection vers les Settings, explication claire, re-check au retour).
+- **iOS** : `OnboardingSlides.swift` gère `.denied` / `.restricted` avec un bouton "Open Settings" qui ouvre `UIApplication.openSettingsURLString`
+- **Android** : `OnboardingScreen` affiche l'alerte avec un bouton "Ouvrir les Réglages" qui lance `Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)` avec l'URI du package, et un bouton "OK" pour fermer. Re-check via `fineLocationLauncher` + `OnboardingIntent.RefreshPermissions` au retour.
 
 ---
 

@@ -257,4 +257,5 @@
     <string name="podium">Podium</string>
     <string name="other_hunters">Andere jagers</string>
     <string name="view_leaderboard">Bekijk ranglijst</string>
+    <string name="open_settings">Open Instellingen</string>
 </resources>

@@ -262,4 +262,5 @@
     <string name="podium">Podium</string>
     <string name="other_hunters">Other hunters</string>
     <string name="view_leaderboard">View Leaderboard</string>
+    <string name="open_settings">Open Settings</string>
 </resources>
