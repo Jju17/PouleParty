@@ -12,6 +12,7 @@ import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameStatus
 import dev.rahier.pouleparty.model.Registration
 import dev.rahier.pouleparty.ui.PlayerRole
+import dev.rahier.pouleparty.util.getTrimmedString
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -118,7 +119,7 @@ class HomeViewModel @Inject constructor(
         val game = _uiState.value.activeGame ?: return
         val role = _uiState.value.activeGameRole ?: return
         _uiState.update { it.copy(activeGame = null, activeGameRole = null) }
-        val savedNickname = (prefs.getString(AppConstants.PREF_USER_NICKNAME, "") ?: "").trim()
+        val savedNickname = prefs.getTrimmedString(AppConstants.PREF_USER_NICKNAME)
         val hunterName = savedNickname.ifEmpty { "Hunter" }
         when (role) {
             PlayerRole.CHICKEN -> onRejoinAsChicken(game.id)
@@ -250,7 +251,7 @@ class HomeViewModel @Inject constructor(
         val step = _uiState.value.joinStep
         if (step !is JoinFlowStep.CodeValidated) return
         if (step.game.registration.required && !step.alreadyRegistered) return
-        val savedNickname = (prefs.getString(AppConstants.PREF_USER_NICKNAME, "") ?: "").trim()
+        val savedNickname = prefs.getTrimmedString(AppConstants.PREF_USER_NICKNAME)
         val hunterName = savedNickname.ifEmpty { "Hunter" }
         clearPendingRegistration()
         _uiState.update {
@@ -273,7 +274,7 @@ class HomeViewModel @Inject constructor(
         onGameDone: (String) -> Unit
     ) {
         val pending = _uiState.value.pendingRegistration ?: return
-        val savedNickname = (prefs.getString(AppConstants.PREF_USER_NICKNAME, "") ?: "").trim()
+        val savedNickname = prefs.getTrimmedString(AppConstants.PREF_USER_NICKNAME)
         val hunterName = savedNickname.ifEmpty { "Hunter" }
         viewModelScope.launch {
             val game = firestoreRepository.getConfig(pending.gameId)

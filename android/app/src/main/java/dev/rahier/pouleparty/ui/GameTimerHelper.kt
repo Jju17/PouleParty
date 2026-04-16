@@ -10,6 +10,10 @@ import java.util.Date
 /**
  * Pure helper functions shared between ChickenMapViewModel and HunterMapViewModel.
  * Extracts duplicated countdown / radius / game-over / winner-detection logic.
+ *
+ * Cross-platform parity: mirrors `ios/PouleParty/Components/GameTimerLogic.swift`.
+ * Any change here must be reflected on the iOS side (and vice versa) — both platforms
+ * must produce identical outputs for the same inputs. See `CLAUDE.md` → "Cross-platform parity".
  */
 
 // ── Zone Check ───────────────────────────────────────

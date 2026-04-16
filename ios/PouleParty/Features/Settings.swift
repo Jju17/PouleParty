@@ -82,7 +82,7 @@ struct SettingsFeature {
                         try await userClient.deleteAccount()
                         await send(.deleteCompleted(success: true))
                     } catch {
-                        Logger(subsystem: "dev.rahier.pouleparty", category: "Settings")
+                        Logger(category: "Settings")
                             .error("Failed to delete account: \(error.localizedDescription)")
                         await send(.deleteCompleted(success: false))
                     }

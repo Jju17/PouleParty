@@ -10,6 +10,7 @@ import dev.rahier.pouleparty.AppConstants
 import dev.rahier.pouleparty.data.FirestoreRepository
 import dev.rahier.pouleparty.model.MyGame
 import dev.rahier.pouleparty.util.ProfanityFilter
+import dev.rahier.pouleparty.util.getTrimmedString
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -42,7 +43,7 @@ class SettingsViewModel @Inject constructor(
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
     init {
-        val saved = (prefs.getString(AppConstants.PREF_USER_NICKNAME, "") ?: "").trim()
+        val saved = prefs.getTrimmedString(AppConstants.PREF_USER_NICKNAME)
         _uiState.update { it.copy(nickname = saved) }
         loadMyGames()
     }

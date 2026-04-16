@@ -5,6 +5,11 @@
 //  Deterministic power-up spawn logic. Uses the game's driftSeed to produce
 //  identical spawn positions on all clients.
 //
+//  Cross-platform parity: mirrors `android/.../ui/PowerUpSpawnHelper.kt`.
+//  Any change here must be reflected on the Android side (and vice versa) —
+//  both platforms must generate identical spawn positions for the same seed.
+//  See `CLAUDE.md`.
+//
 
 import CoreLocation
 import Foundation

@@ -11,7 +11,7 @@ import MapboxMaps
 import os
 import SwiftUI
 
-private let logger = Logger(subsystem: "dev.rahier.pouleparty", category: "ChickenMap")
+private let logger = Logger(category: "ChickenMap")
 
 @Reducer
 struct ChickenMapFeature {
@@ -134,7 +134,7 @@ struct ChickenMapFeature {
                         try await apiClient.updateGameStatus(gameId, .done)
                         analyticsClient.gameEnded(reason: "chicken_cancelled", winnersCount: winnersCount)
                     } catch {
-                        Logger(subsystem: "dev.rahier.pouleparty", category: "ChickenMapFeature")
+                        Logger(category: "ChickenMapFeature")
                             .error("Failed to update game status to done: \(error.localizedDescription)")
                     }
                     await send(.returnedToMenu)
@@ -148,7 +148,7 @@ struct ChickenMapFeature {
                     do {
                         try await apiClient.updateGameStatus(gameId, .done)
                     } catch {
-                        Logger(subsystem: "dev.rahier.pouleparty", category: "ChickenMapFeature")
+                        Logger(category: "ChickenMapFeature")
                             .error("Failed to update game status to done: \(error.localizedDescription)")
                     }
                     // Show leaderboard instead of returning to menu directly
@@ -192,14 +192,8 @@ struct ChickenMapFeature {
                 return .run { [analyticsClient] send in
                     try? await apiClient.activatePowerUp(gameId, powerUp.id, expiresAt)
                     switch powerUp.type {
-                    case .invisibility:
-                        try? await apiClient.updateGameActiveEffect(gameId, "powerUps.activeEffects.invisibility", expiresAt)
-                    case .zoneFreeze:
-                        try? await apiClient.updateGameActiveEffect(gameId, "powerUps.activeEffects.zoneFreeze", expiresAt)
-                    case .decoy:
-                        try? await apiClient.updateGameActiveEffect(gameId, "powerUps.activeEffects.decoy", expiresAt)
-                    case .jammer:
-                        try? await apiClient.updateGameActiveEffect(gameId, "powerUps.activeEffects.jammer", expiresAt)
+                    case .invisibility, .zoneFreeze, .decoy, .jammer:
+                        try? await apiClient.updateGameActiveEffect(gameId, powerUp.type.firestoreEffectField, expiresAt)
                     default:
                         break
                     }
@@ -278,7 +272,7 @@ struct ChickenMapFeature {
                             try await apiClient.updateGameStatus(gameId, .done)
                             analyticsClient.gameEnded(reason: "all_hunters_found", winnersCount: winnersCount)
                         } catch {
-                            Logger(subsystem: "dev.rahier.pouleparty", category: "ChickenMapFeature")
+                            Logger(category: "ChickenMapFeature")
                                 .error("Failed to set game DONE when all hunters found: \(error.localizedDescription)")
                         }
                         await liveActivityClient.end(nil)
@@ -885,30 +879,7 @@ struct ChickenMapView: View {
             Puck2D(bearing: .heading)
 
             if let circle = self.store.mapCircle {
-                // Inverted zone overlay: grey outside, transparent inside
-                let circlePolygon = Polygon(center: circle.center, radius: circle.radius, vertices: 72)
-                let outerCoords = outerBoundsCoordinates(center: circle.center)
-                let invertedPolygon = Polygon(
-                    outerRing: Ring(coordinates: outerCoords + [outerCoords[0]]),
-                    innerRings: [circlePolygon.outerRing]
-                )
-                PolygonAnnotation(polygon: invertedPolygon)
-                    .fillColor(StyleColor(overlayColor))
-                    .fillOpacity(1.0)
-
-                // Zone border circle — neon glow effect (layered polylines)
-                PolylineAnnotation(lineCoordinates: circlePolygon.outerRing.coordinates)
-                    .lineColor(StyleColor(UIColor(Color.zoneGreen).withAlphaComponent(0.08)))
-                    .lineWidth(16)
-                PolylineAnnotation(lineCoordinates: circlePolygon.outerRing.coordinates)
-                    .lineColor(StyleColor(UIColor(Color.zoneGreen).withAlphaComponent(0.15)))
-                    .lineWidth(8)
-                PolylineAnnotation(lineCoordinates: circlePolygon.outerRing.coordinates)
-                    .lineColor(StyleColor(UIColor(Color.zoneGreen).withAlphaComponent(0.35)))
-                    .lineWidth(4)
-                PolylineAnnotation(lineCoordinates: circlePolygon.outerRing.coordinates)
-                    .lineColor(StyleColor(UIColor(Color.zoneGreen).withAlphaComponent(0.9)))
-                    .lineWidth(2.5)
+                zoneOverlayContent(circle: circle, overlayColor: overlayColor)
             }
 
             // Final zone glow (always visible for chicken)
@@ -991,8 +962,7 @@ struct ChickenMapView: View {
             self.store.send(.gameInitialized)
             self.store.send(.onTask)
         }
-        .onAppear { UIApplication.shared.isIdleTimerDisabled = true }
-        .onDisappear { UIApplication.shared.isIdleTimerDisabled = false }
+        .idleTimerDisabled()
         .onChange(of: store.countdownNumber) { _, new in
             if new != nil { HapticManager.impact(.heavy) }
         }

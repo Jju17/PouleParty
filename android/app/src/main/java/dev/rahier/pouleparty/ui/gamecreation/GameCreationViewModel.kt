@@ -17,6 +17,7 @@ import dev.rahier.pouleparty.model.PowerUpType
 import dev.rahier.pouleparty.model.Timing
 import dev.rahier.pouleparty.model.Zone
 import dev.rahier.pouleparty.model.calculateNormalModeSettings
+import dev.rahier.pouleparty.util.calendarAt
 import kotlin.math.ceil
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -234,12 +235,7 @@ class GameCreationViewModel @Inject constructor(
      */
     fun updateStartTime(hour: Int, minute: Int) {
         _uiState.update { state ->
-            val cal = java.util.Calendar.getInstance().apply {
-                time = state.game.startDate
-                set(java.util.Calendar.HOUR_OF_DAY, hour)
-                set(java.util.Calendar.MINUTE, minute)
-                set(java.util.Calendar.SECOND, 0)
-            }
+            val cal = calendarAt(state.game.startDate, hour, minute)
             val minDate = state.minimumStartDate
             if (cal.time.before(minDate)) {
                 cal.time = minDate

@@ -9,6 +9,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+import dev.rahier.pouleparty.util.getTrimmedString
 
 class PouleFCMService : FirebaseMessagingService() {
 
@@ -102,7 +103,7 @@ class PouleFCMService : FirebaseMessagingService() {
         )
         // Always include the nickname so it's restored if the document was recreated
         val prefs = getSharedPreferences(AppConstants.PREFS_NAME, MODE_PRIVATE)
-        val nickname = (prefs.getString(AppConstants.PREF_USER_NICKNAME, "") ?: "").trim()
+        val nickname = prefs.getTrimmedString(AppConstants.PREF_USER_NICKNAME)
         if (nickname.isNotEmpty()) {
             data["nickname"] = nickname
         }

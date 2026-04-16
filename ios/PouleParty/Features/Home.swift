@@ -818,7 +818,7 @@ struct HomeView: View {
                 self.audioPlayer?.play()
             }
         } catch {
-            Logger(subsystem: "dev.rahier.pouleparty", category: "Selection").error("Failed to play sound: \(error.localizedDescription)")
+            Logger(category: "Selection").error("Failed to play sound: \(error.localizedDescription)")
         }
     }
 }

@@ -10,7 +10,7 @@ import os
 actor FCMTokenManager {
     static let shared = FCMTokenManager()
 
-    private let logger = Logger(subsystem: "dev.rahier.pouleparty", category: "FCMTokenManager")
+    private let logger = Logger(category: "FCMTokenManager")
 
     func saveToken(_ token: String) {
         guard let userId = Auth.auth().currentUser?.uid else {

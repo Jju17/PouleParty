@@ -11,7 +11,7 @@ import MapboxMaps
 import os
 import SwiftUI
 
-private let logger = Logger(subsystem: "dev.rahier.pouleparty", category: "HunterMap")
+private let logger = Logger(category: "HunterMap")
 
 @Reducer
 struct HunterMapFeature {
@@ -237,7 +237,7 @@ struct HunterMapFeature {
                 return .run { [analyticsClient] send in
                     try? await apiClient.activatePowerUp(gameId, powerUp.id, expiresAt)
                     if powerUp.type == .radarPing {
-                        try? await apiClient.updateGameActiveEffect(gameId, "powerUps.activeEffects.radarPing", expiresAt)
+                        try? await apiClient.updateGameActiveEffect(gameId, powerUp.type.firestoreEffectField, expiresAt)
                     }
                     analyticsClient.powerUpActivated(type: powerUp.type.rawValue, role: "hunter")
                     try await clock.sleep(for: .seconds(2))
@@ -846,29 +846,7 @@ struct HunterMapView: View {
 
             // Inverted zone overlay (only visible after game starts)
             if store.hasGameStarted, let circle = self.store.mapCircle {
-                let circlePolygon = Polygon(center: circle.center, radius: circle.radius, vertices: 72)
-                let outerCoords = outerBoundsCoordinates(center: circle.center)
-                let invertedPolygon = Polygon(
-                    outerRing: Ring(coordinates: outerCoords + [outerCoords[0]]),
-                    innerRings: [circlePolygon.outerRing]
-                )
-                PolygonAnnotation(polygon: invertedPolygon)
-                    .fillColor(StyleColor(overlayColor))
-                    .fillOpacity(1.0)
-
-                // Zone border circle — neon glow effect (layered polylines)
-                PolylineAnnotation(lineCoordinates: circlePolygon.outerRing.coordinates)
-                    .lineColor(StyleColor(UIColor(Color.zoneGreen).withAlphaComponent(0.08)))
-                    .lineWidth(16)
-                PolylineAnnotation(lineCoordinates: circlePolygon.outerRing.coordinates)
-                    .lineColor(StyleColor(UIColor(Color.zoneGreen).withAlphaComponent(0.15)))
-                    .lineWidth(8)
-                PolylineAnnotation(lineCoordinates: circlePolygon.outerRing.coordinates)
-                    .lineColor(StyleColor(UIColor(Color.zoneGreen).withAlphaComponent(0.35)))
-                    .lineWidth(4)
-                PolylineAnnotation(lineCoordinates: circlePolygon.outerRing.coordinates)
-                    .lineColor(StyleColor(UIColor(Color.zoneGreen).withAlphaComponent(0.9)))
-                    .lineWidth(2.5)
+                zoneOverlayContent(circle: circle, overlayColor: overlayColor)
             }
 
             // Zone Preview power-up effect (dashed preview of next zone)
@@ -960,8 +938,7 @@ struct HunterMapView: View {
             .task {
                 self.store.send(.onTask)
             }
-            .onAppear { UIApplication.shared.isIdleTimerDisabled = true }
-            .onDisappear { UIApplication.shared.isIdleTimerDisabled = false }
+            .idleTimerDisabled()
             .alert(
                 $store.scope(
                     state: \.destination?.alert,

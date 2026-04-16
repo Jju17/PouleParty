@@ -18,6 +18,7 @@ import dev.rahier.pouleparty.model.PowerUp
 import dev.rahier.pouleparty.model.Registration
 import dev.rahier.pouleparty.model.Winner
 import dev.rahier.pouleparty.ui.PlayerRole
+import dev.rahier.pouleparty.util.startOfToday
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -415,13 +416,7 @@ class FirestoreRepository @Inject constructor(
 
     suspend fun countFreeGamesToday(userId: String): Int {
         return try {
-            val calendar = java.util.Calendar.getInstance().apply {
-                set(java.util.Calendar.HOUR_OF_DAY, 0)
-                set(java.util.Calendar.MINUTE, 0)
-                set(java.util.Calendar.SECOND, 0)
-                set(java.util.Calendar.MILLISECOND, 0)
-            }
-            val startOfDay = Timestamp(calendar.time)
+            val startOfDay = Timestamp(startOfToday().time)
 
             val snapshot = firestore.collection(AppConstants.COLLECTION_GAMES)
                 .whereEqualTo("creatorId", userId)

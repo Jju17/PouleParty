@@ -12,7 +12,7 @@ import CoreLocation
 import Foundation
 import os
 
-private let logger = Logger(subsystem: "dev.rahier.pouleparty", category: "RoadSnapService")
+private let logger = Logger(category: "RoadSnapService")
 
 enum RoadSnapService {
 

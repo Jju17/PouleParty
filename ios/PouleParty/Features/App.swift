@@ -46,7 +46,7 @@ struct AppFeature {
                             await FCMTokenManager.shared.saveToken(token)
                         }
                     } catch {
-                        Logger(subsystem: "dev.rahier.pouleparty", category: "AppFeature")
+                        Logger(category: "AppFeature")
                             .error("Anonymous sign-in failed: \(error.localizedDescription)")
                     }
                 }

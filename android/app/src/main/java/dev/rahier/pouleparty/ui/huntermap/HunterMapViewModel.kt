@@ -91,11 +91,22 @@ class HunterMapViewModel @Inject constructor(
     val hunterName: String = savedStateHandle["hunterName"] ?: "Hunter"
     override val playerId: String = auth.currentUser?.uid ?: ""
     override val analyticsRole: String = "hunter"
+    override val logTag: String = TAG
     /** Public alias kept for external callers (e.g. HunterMapScreen). */
     val hunterId: String get() = playerId
 
     private val _uiState = MutableStateFlow(HunterMapUiState())
     val uiState: StateFlow<HunterMapUiState> = _uiState.asStateFlow()
+
+    override val currentUserLocation: Point?
+        get() = _uiState.value.userLocation
+
+    override val currentAvailablePowerUps: List<PowerUp>
+        get() = _uiState.value.availablePowerUps
+
+    override fun notifyPowerUp(message: String, type: PowerUpType?) {
+        showNotification(message, type)
+    }
 
     init {
         loadGame()
@@ -418,15 +429,6 @@ class HunterMapViewModel @Inject constructor(
         showPowerUpNotification(message, type) { msg, pwrType ->
             _uiState.update { it.copy(powerUpNotification = msg, lastActivatedPowerUpType = pwrType) }
         }
-    }
-
-    private fun checkPowerUpProximity() {
-        val state = _uiState.value
-        checkPowerUpProximity(
-            userLocation = state.userLocation,
-            availablePowerUps = state.availablePowerUps,
-            tag = TAG
-        ) { message, type -> showNotification(message, type) }
     }
 
     fun activatePowerUp(powerUp: PowerUp) {

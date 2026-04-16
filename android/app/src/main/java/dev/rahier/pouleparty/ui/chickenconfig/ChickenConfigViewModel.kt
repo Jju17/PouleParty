@@ -16,6 +16,7 @@ import dev.rahier.pouleparty.model.PowerUpType
 import dev.rahier.pouleparty.model.Timing
 import dev.rahier.pouleparty.model.Zone
 import dev.rahier.pouleparty.model.calculateNormalModeSettings
+import dev.rahier.pouleparty.util.calendarAt
 import kotlin.math.ceil
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -113,11 +114,7 @@ class ChickenConfigViewModel @Inject constructor(
     }
 
     fun updateStartDate(hour: Int, minute: Int) {
-        val cal = java.util.Calendar.getInstance().apply {
-            set(java.util.Calendar.HOUR_OF_DAY, hour)
-            set(java.util.Calendar.MINUTE, minute)
-            set(java.util.Calendar.SECOND, 0)
-        }
+        val cal = calendarAt(hour = hour, minute = minute)
         // Ensure at least 2 min from now
         val minDate = Date(System.currentTimeMillis() + 120_000)
         if (cal.time.before(minDate)) {

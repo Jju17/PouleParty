@@ -123,6 +123,11 @@ struct PowerUp: Codable, Equatable, Identifiable {
         var targetEmoji: String {
             isHunterPowerUp ? "🎯" : "🐔"
         }
+
+        /// Firestore dotted path for the active-effect timestamp of this power-up.
+        var firestoreEffectField: String {
+            "powerUps.activeEffects.\(rawValue)"
+        }
     }
 
     static var mock: PowerUp {

@@ -5,6 +5,11 @@
 //  Shared pure functions for timer, countdown, radius, and winner logic
 //  used by both ChickenMapFeature and HunterMapFeature.
 //
+//  Cross-platform parity: mirrors `android/.../ui/GameTimerHelper.kt`.
+//  Any change here must be reflected on the Android side (and vice versa) —
+//  both platforms must produce identical outputs for the same inputs.
+//  See `CLAUDE.md` → "Cross-platform parity".
+//
 
 import CoreLocation
 import FirebaseFirestore

@@ -42,6 +42,7 @@ import dev.rahier.pouleparty.ui.chickenconfig.ChickenMapConfigScreen
 import dev.rahier.pouleparty.ui.chickenconfig.PowerUpSelectionScreen
 import dev.rahier.pouleparty.ui.components.GameCodeCard
 import dev.rahier.pouleparty.ui.theme.*
+import dev.rahier.pouleparty.util.startOfToday
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -598,13 +599,8 @@ private fun StartTimeStep(
             // Disallow picking dates in the past (from today onwards)
             selectableDates = object : SelectableDates {
                 override fun isSelectableDate(utcTimeMillis: Long): Boolean {
-                    val todayStart = Calendar.getInstance().apply {
-                        set(Calendar.HOUR_OF_DAY, 0)
-                        set(Calendar.MINUTE, 0)
-                        set(Calendar.SECOND, 0)
-                        set(Calendar.MILLISECOND, 0)
-                    }.timeInMillis
-                    return utcTimeMillis >= todayStart - 24L * 60 * 60 * 1000
+                    val todayStartMs = startOfToday().timeInMillis
+                    return utcTimeMillis >= todayStartMs - 24L * 60 * 60 * 1000
                 }
             }
         )

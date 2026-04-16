@@ -91,10 +91,21 @@ class ChickenMapViewModel @Inject constructor(
     override val gameId: String = savedStateHandle["gameId"] ?: ""
     override val playerId: String = auth.currentUser?.uid ?: ""
     override val analyticsRole: String = "chicken"
+    override val logTag: String = "ChickenMapVM"
 
     private val _uiState = MutableStateFlow(ChickenMapUiState())
     val uiState: StateFlow<ChickenMapUiState> = _uiState.asStateFlow()
     private var hasSpawnedInitialPowerUps = false
+
+    override val currentUserLocation: Point?
+        get() = _uiState.value.userLocation
+
+    override val currentAvailablePowerUps: List<PowerUp>
+        get() = _uiState.value.availablePowerUps
+
+    override fun notifyPowerUp(message: String, type: PowerUpType?) {
+        showNotification(message, type)
+    }
 
     init {
         loadGame()
@@ -538,15 +549,6 @@ class ChickenMapViewModel @Inject constructor(
         showPowerUpNotification(message, type) { msg, pwrType ->
             _uiState.update { it.copy(powerUpNotification = msg, lastActivatedPowerUpType = pwrType) }
         }
-    }
-
-    private fun checkPowerUpProximity() {
-        val state = _uiState.value
-        checkPowerUpProximity(
-            userLocation = state.userLocation,
-            availablePowerUps = state.availablePowerUps,
-            tag = "ChickenMapVM"
-        ) { message, type -> showNotification(message, type) }
     }
 
     fun activatePowerUp(powerUp: PowerUp) {

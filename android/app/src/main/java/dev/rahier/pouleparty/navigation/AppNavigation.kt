@@ -45,6 +45,7 @@ import dev.rahier.pouleparty.ui.planselection.PlanSelectionScreen
 import dev.rahier.pouleparty.ui.planselection.PricingParams
 import dev.rahier.pouleparty.ui.settings.SettingsScreen
 import dev.rahier.pouleparty.ui.victory.VictoryScreen
+import dev.rahier.pouleparty.util.getTrimmedString
 
 object Routes {
     const val ONBOARDING = "onboarding"
@@ -104,7 +105,7 @@ fun AppNavigation() {
                 val packageVersion = context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "0.0.0"
                 val lastMigrated = prefs.getString(AppConstants.PREF_LAST_MIGRATED_VERSION, "0.0.0") ?: "0.0.0"
                 if (MigrationManager.compareVersions(lastMigrated, "1.4.0") < 0) {
-                    val nickname = (prefs.getString(AppConstants.PREF_USER_NICKNAME, "") ?: "").trim()
+                    val nickname = prefs.getTrimmedString(AppConstants.PREF_USER_NICKNAME)
                     if (nickname.isNotEmpty()) {
                         data["nickname"] = nickname
                     }

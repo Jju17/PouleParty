@@ -16,6 +16,7 @@ import dev.rahier.pouleparty.AppConstants
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -81,5 +82,5 @@ class LocationRepository @Inject constructor(
         awaitClose {
             fusedLocationClient.removeLocationUpdates(callback)
         }
-    }
+    }.distinctUntilChanged()
 }

@@ -7,8 +7,12 @@
 
 import CoreLocation
 import Foundation
+import os
 
 enum AppConstants {
+    // MARK: - Logging
+    static let logSubsystem = "dev.rahier.pouleparty"
+
     // MARK: - Preferences Keys
     static let prefOnboardingCompleted = "hasCompletedOnboarding"
     static let prefUserNickname = "userNickname"
@@ -65,4 +69,10 @@ enum AppConstants {
     // MARK: - Normal Mode Settings
     static let normalModeFixedInterval: Double = 5 // minutes
     static let normalModeMinimumRadius: Double = 100 // meters
+}
+
+extension Logger {
+    init(category: String) {
+        self.init(subsystem: AppConstants.logSubsystem, category: category)
+    }
 }

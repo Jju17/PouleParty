@@ -38,7 +38,7 @@ struct ApiClient {
     var fetchAllRegistrations: (String) async throws -> [Registration]
 }
 
-private let logger = Logger(subsystem: "dev.rahier.pouleparty", category: "ApiClient")
+private let logger = Logger(category: "ApiClient")
 private let gamesCollection = "games"
 private let chickenLocationsSubcollection = "chickenLocations"
 private let hunterLocationsSubcollection = "hunterLocations"

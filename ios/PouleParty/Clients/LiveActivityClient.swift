@@ -7,7 +7,7 @@ import ActivityKit
 import ComposableArchitecture
 import os
 
-private let logger = Logger(subsystem: "dev.rahier.pouleparty", category: "LiveActivity")
+private let logger = Logger(category: "LiveActivity")
 
 struct LiveActivityClient {
     var start: @Sendable (PoulePartyAttributes, PoulePartyAttributes.ContentState) async -> Void

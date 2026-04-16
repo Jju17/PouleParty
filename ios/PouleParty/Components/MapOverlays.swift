@@ -8,6 +8,7 @@
 
 import CoreLocation
 import Foundation
+import MapboxMaps
 import SwiftUI
 
 // MARK: - Zone Warning Overlay
@@ -94,4 +95,36 @@ func outerBoundsCoordinates(center: CLLocationCoordinate2D, padding: Double = 20
         CLLocationCoordinate2D(latitude: south, longitude: east),
         CLLocationCoordinate2D(latitude: south, longitude: west)
     ]
+}
+
+// MARK: - Zone Overlay Map Content
+
+/// Shared Mapbox map content that renders:
+/// 1. An inverted polygon (dims everything outside the zone with `overlayColor`).
+/// 2. A layered neon green border around the zone.
+@MapContentBuilder
+func zoneOverlayContent(circle: CircleOverlay, overlayColor: UIColor) -> some MapContent {
+    let circlePolygon = Polygon(center: circle.center, radius: circle.radius, vertices: 72)
+    let outerCoords = outerBoundsCoordinates(center: circle.center)
+    let invertedPolygon = Polygon(
+        outerRing: Ring(coordinates: outerCoords + [outerCoords[0]]),
+        innerRings: [circlePolygon.outerRing]
+    )
+    PolygonAnnotation(polygon: invertedPolygon)
+        .fillColor(StyleColor(overlayColor))
+        .fillOpacity(1.0)
+
+    // Zone border circle — neon glow effect (layered polylines)
+    PolylineAnnotation(lineCoordinates: circlePolygon.outerRing.coordinates)
+        .lineColor(StyleColor(UIColor(Color.zoneGreen).withAlphaComponent(0.08)))
+        .lineWidth(16)
+    PolylineAnnotation(lineCoordinates: circlePolygon.outerRing.coordinates)
+        .lineColor(StyleColor(UIColor(Color.zoneGreen).withAlphaComponent(0.15)))
+        .lineWidth(8)
+    PolylineAnnotation(lineCoordinates: circlePolygon.outerRing.coordinates)
+        .lineColor(StyleColor(UIColor(Color.zoneGreen).withAlphaComponent(0.35)))
+        .lineWidth(4)
+    PolylineAnnotation(lineCoordinates: circlePolygon.outerRing.coordinates)
+        .lineColor(StyleColor(UIColor(Color.zoneGreen).withAlphaComponent(0.9)))
+        .lineWidth(2.5)
 }

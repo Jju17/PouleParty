@@ -46,6 +46,18 @@ abstract class BaseMapViewModel(
     /** The current player's role as a string ("chicken" or "hunter") for analytics. */
     protected abstract val analyticsRole: String
 
+    /** Log tag for power-up collection errors. */
+    protected abstract val logTag: String
+
+    /** Current player location, or null if unknown. Read by [checkPowerUpProximity]. */
+    protected abstract val currentUserLocation: Point?
+
+    /** Power-ups currently visible to this player. Read by [checkPowerUpProximity]. */
+    protected abstract val currentAvailablePowerUps: List<PowerUp>
+
+    /** Shows a power-up notification in this VM's UiState. */
+    protected abstract fun notifyPowerUp(message: String, type: PowerUpType?)
+
     // ── Shared helpers ───────────────────────────────────
 
     /**
@@ -79,21 +91,12 @@ abstract class BaseMapViewModel(
 
     /**
      * Checks whether the player is within collection radius of any available power-up
-     * and collects it if so.
-     *
-     * @param userLocation     The player's current location (or null if unknown).
-     * @param availablePowerUps The list of uncollected power-ups visible to this player.
-     * @param tag              Log tag for error messages.
-     * @param onNotification   Callback to show a notification after collection.
+     * and collects it if so. Reads state through the abstract accessors defined on
+     * this class so subclasses never need to re-wire the arguments.
      */
-    protected fun checkPowerUpProximity(
-        userLocation: Point?,
-        availablePowerUps: List<PowerUp>,
-        tag: String,
-        onNotification: (message: String, type: PowerUpType?) -> Unit
-    ) {
-        val userLoc = userLocation ?: return
-        for (powerUp in availablePowerUps) {
+    protected fun checkPowerUpProximity() {
+        val userLoc = currentUserLocation ?: return
+        for (powerUp in currentAvailablePowerUps) {
             if (powerUp.id in collectingPowerUpIds) continue
             val results = FloatArray(1)
             Location.distanceBetween(
@@ -107,10 +110,10 @@ abstract class BaseMapViewModel(
                     try {
                         firestoreRepository.collectPowerUp(gameId, powerUp.id, playerId)
                         analyticsRepository.powerUpCollected(powerUp.type, analyticsRole)
-                        onNotification("Collected: ${powerUp.typeEnum.title}!", powerUp.typeEnum)
+                        notifyPowerUp("Collected: ${powerUp.typeEnum.title}!", powerUp.typeEnum)
                     } catch (e: Exception) {
-                        Log.e(tag, "Failed to collect power-up", e)
-                        onNotification("Failed to collect power-up", null)
+                        Log.e(logTag, "Failed to collect power-up", e)
+                        notifyPowerUp("Failed to collect power-up", null)
                     } finally {
                         collectingPowerUpIds.remove(powerUp.id)
                     }
