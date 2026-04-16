@@ -27,7 +27,7 @@ struct HunterMapView: View {
                     title: "You are the Hunter",
                     subtitle: subtitle,
                     gradient: LinearGradient(colors: [.hunterRed, .CRPink], startPoint: .leading, endPoint: .trailing),
-                    onInfoTapped: { store.send(.infoButtonTapped) }
+                    onInfoTapped: { store.send(.view(.infoButtonTapped)) }
                 )
             }
             .safeAreaInset(edge: .bottom) {
@@ -35,13 +35,13 @@ struct HunterMapView: View {
                     state: store.state,
                     isActionButtonVisible: store.hasGameStarted,
                     actionAccessibilityLabel: "I found the chicken",
-                    onActionTapped: { store.send(.foundButtonTapped) },
-                    onInventoryTapped: { store.send(.powerUpInventoryTapped) },
+                    onActionTapped: { store.send(.view(.foundButtonTapped)) },
+                    onInventoryTapped: { store.send(.powerUps(.inventoryTapped)) },
                     isChicken: false
                 )
             }
             .task {
-                store.send(.onTask)
+                store.send(.view(.onTask))
             }
             .idleTimerDisabled()
             .mapHaptics(store.state)
@@ -55,7 +55,7 @@ struct HunterMapView: View {
                 TextField("4-digit code", text: $store.enteredCode)
                     .keyboardType(.numberPad)
                 Button("Submit") {
-                    store.send(.submitCodeButtonTapped)
+                    store.send(.view(.submitCodeButtonTapped))
                 }
                 Button("Cancel", role: .cancel) { }
             } message: {
@@ -78,10 +78,10 @@ struct HunterMapView: View {
                 state: store.state,
                 selectedPowerUp: $selectedPowerUp,
                 leaveGameLabel: "Leave game",
-                onCancelGame: { store.send(.cancelGameButtonTapped) },
-                onGameInfoDismiss: { store.send(.gameInfoDismissed) },
-                onInventoryDismiss: { store.send(.powerUpInventoryDismissed) },
-                onActivatePowerUp: { store.send(.powerUpActivated($0)) }
+                onCancelGame: { store.send(.view(.cancelGameButtonTapped)) },
+                onGameInfoDismiss: { store.send(.view(.gameInfoDismissed)) },
+                onInventoryDismiss: { store.send(.powerUps(.inventoryDismissed)) },
+                onActivatePowerUp: { store.send(.powerUps(.activateTapped($0))) }
             )
     }
 }

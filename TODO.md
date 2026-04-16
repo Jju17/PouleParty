@@ -230,3 +230,91 @@ Inspiré du design ci-dessous (2 sections sur un même écran) :
 ## 5. Better handling no location allowed
 
 Améliorer le flow quand l'utilisateur n'a pas autorisé la localisation. Actuellement une simple alerte s'affiche — proposer un meilleur UX (redirection vers les Settings, explication claire, re-check au retour).
+
+---
+
+## 6. Role Spectator — `SpectatorMapFeature`
+
+### Concept
+
+Ajouter un troisième rôle "spectateur" qui permet de regarder une partie en cours sans y participer. Valide au passage le choix d'architecture actuelle (composition over generic unification) : un nouveau rôle doit pouvoir se brancher sur les composants partagés sans rework.
+
+### Structure cible
+
+Calquée sur `ChickenMap/` et `HunterMap/` :
+
+```
+Features/SpectatorMap.swift            (reducer + Destination)
+Features/SpectatorMap/
+  SpectatorMapView.swift
+  SpectatorMapContent.swift
+```
+
+### Composants réutilisables (déjà en place)
+
+- `MapFeatureState` — protocole commun que le State du spectateur doit adopter
+- `MapPowerUpsFeature` — Scope'é si le spectateur voit les power-ups actifs
+- `MapBottomBar`, `MapCommonOverlays`, `MapCommonSheets`, `MapHapticsModifier`, `zoneOverlayContent`, `PowerUpMapMarker` — UI partagée
+
+### Intégration `AppFeature`
+
+- Ajouter un case `.spectatorMap(SpectatorMapFeature.State)` à l'enum `AppFeature.State`
+- Même shape de delegate actions que les deux autres rôles (`.delegate(.returnedToMenu)`, etc.)
+
+### Questions ouvertes à trancher avant implémentation
+
+- Le spectateur voit-il la position de la Poule ? Des hunters ? Les deux ?
+- Nouveau rôle dans les Firestore rules, ou lecture seule suffit ?
+- Compte-t-il dans le cap de joueurs / affecte-t-il le pricing ?
+- Comment rejoint-on une partie en tant que spectateur ? Code partagé, lien, invitation ?
+- Le spectateur peut-il voir les power-ups collectés / activés par les joueurs ?
+
+---
+
+## 7. Modularisation iOS (priorité : low)
+
+### Objectif possible
+
+Extraire au moins `GameDomain` en Swift Package pour isoler la logique pure (Models, `GameTimerLogic`, `PowerUpSpawnLogic`, `ProfanityFilter`) — tests CLI ultra-rapides, rebuild incrémental plus léger, pas de fight avec Firebase (le package reste pure Swift).
+
+### Split recommandé (si on se lance)
+
+```
+Packages/
+├── GameDomain/       # Models/, GameTimerLogic, PowerUpSpawnLogic, ProfanityFilter
+│                     # Pure Swift — zéro dépendance UI/Firebase/Mapbox
+└── DesignSystem/     # Color+Utils, Font+Utils, BangerText, neonGlow, composants partagés
+                      # SwiftUI uniquement
+ios/PouleParty/       # features + clients + app — reste en place
+```
+
+**À ne PAS extraire** : `Clients/` (Firebase veut vivre au niveau app — plist + Crashlytics build script), les features TCA (couplage fort par design).
+
+### Pourquoi c'est en low
+
+- Solo dev → pas besoin de frontières pour isoler des équipes
+- Build clean actuel < 1 min → pas un vrai problème
+- Architecture déjà propre via protocoles + `Scope` + helpers partagés
+- 469 tests passent en ~20s — acceptable
+
+### Signaux pour reprioriser
+
+Attaquer quand **un** de ces déclencheurs apparaît :
+
+- Build clean > 2-3 min de manière régulière
+- Collaboration à plusieurs sur iOS
+- Besoin de partager `GameDomain` avec un autre projet (watchOS companion, serveur Swift, etc.)
+- Dépassement de ~20 features
+
+### Tests préalables avant de se lancer
+
+- Xcode → Product → Perform Action → Build With Timing Summary — vérifier que `SwiftCompile` domine
+- Si `SwiftCompile` ne domine pas (cas actuel probable), le gain sera marginal
+
+### Pièges documentés
+
+- **Firebase + SPM** : Crashlytics build script fragile, plist qui veut vivre au niveau app
+- **Mapbox access token** : actuellement lu depuis Info.plist → injection via init nécessaire dans un package
+- **Localizable.xcstrings** : fichier unique, perd l'intégration Xcode si split
+- **Assets (Bangers, Early GameBoy, chicken.imageset)** : `.bundle(for: Bundle.module)` nécessaire partout
+- **Widget target** : ne peut pas linker FirebaseMessaging — watch the transitive deps

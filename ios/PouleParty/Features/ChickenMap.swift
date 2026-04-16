@@ -33,12 +33,15 @@ struct ChickenMapFeature {
         var userLocation: CLLocationCoordinate2D?
         var isOutsideZone: Bool = false
         var lastLiveActivityState: PoulePartyAttributes.ContentState?
-        var availablePowerUps: [PowerUp] = []
-        var collectedPowerUps: [PowerUp] = []
-        var showPowerUpInventory: Bool = false
-        var powerUpNotification: String? = nil
-        var lastActivatedPowerUpType: PowerUp.PowerUpType? = nil
+        var powerUps: MapPowerUpsFeature.State = .init()
         var lastSpawnBatchIndex: Int = 0
+
+        // MARK: - MapFeatureState passthroughs (child → parent surface)
+        var availablePowerUps: [PowerUp] { powerUps.available }
+        var collectedPowerUps: [PowerUp] { powerUps.collected }
+        var showPowerUpInventory: Bool { powerUps.showInventory }
+        var powerUpNotification: String? { powerUps.notification }
+        var lastActivatedPowerUpType: PowerUp.PowerUpType? { powerUps.lastActivatedType }
 
         var hasGameStarted: Bool { nowDate >= game.startDate }
         var hasHuntStarted: Bool { nowDate >= game.hunterStartDate }
@@ -62,29 +65,41 @@ struct ChickenMapFeature {
     }
 
     enum Action: BindableAction {
-        case beenFoundButtonTapped
         case binding(BindingAction<State>)
-        case cancelGameButtonTapped
-        case countdownDismissed
+        case delegate(Delegate)
         case destination(PresentationAction<Destination.Action>)
-        case endGameCodeDismissed
-        case gameInfoDismissed
-        case gameInitialized
-        case gameUpdated(Game)
-        case hunterLocationsUpdated([HunterLocation])
-        case infoButtonTapped
-        case newLocationFetched(CLLocationCoordinate2D)
-        case onTask
-        case returnedToMenu
-        case timerTicked
-        case winnerNotificationDismissed
-        case powerUpsUpdated([PowerUp])
-        case powerUpCollected(PowerUp)
-        case powerUpActivated(PowerUp)
-        case powerUpNotificationDismissed
-        case powerUpInventoryTapped
-        case powerUpInventoryDismissed
-        case allHuntersFound
+        case `internal`(Internal)
+        case powerUps(MapPowerUpsFeature.Action)
+        case view(View)
+
+        @CasePathable
+        enum View {
+            case beenFoundButtonTapped
+            case cancelGameButtonTapped
+            case endGameCodeDismissed
+            case gameInfoDismissed
+            case gameInitialized
+            case infoButtonTapped
+            case onTask
+        }
+
+        @CasePathable
+        enum Internal {
+            case countdownDismissed
+            case gameUpdated(Game)
+            case hunterLocationsUpdated([HunterLocation])
+            case newLocationFetched(CLLocationCoordinate2D)
+            case powerUpCollected(PowerUp)
+            case powerUpsUpdated([PowerUp])
+            case timerTicked
+            case winnerNotificationDismissed
+        }
+
+        @CasePathable
+        enum Delegate {
+            case allHuntersFound
+            case returnedToMenu
+        }
     }
 
     @Reducer
@@ -120,9 +135,13 @@ struct ChickenMapFeature {
     var body: some ReducerOf<Self> {
         BindingReducer()
 
+        Scope(state: \.powerUps, action: \.powerUps) {
+            MapPowerUpsFeature()
+        }
+
         Reduce { state, action in
             switch action {
-            case .binding:
+            case .binding, .delegate:
                 return .none
             case .destination(.presented(.alert(.cancelGame))):
                 locationClient.stopTracking()
@@ -137,7 +156,7 @@ struct ChickenMapFeature {
                         Logger(category: "ChickenMapFeature")
                             .error("Failed to update game status to done: \(error.localizedDescription)")
                     }
-                    await send(.returnedToMenu)
+                    await send(.delegate(.returnedToMenu))
                 }
             case .destination(.presented(.alert(.gameOver))):
                 let gameId = state.game.id
@@ -152,29 +171,29 @@ struct ChickenMapFeature {
                             .error("Failed to update game status to done: \(error.localizedDescription)")
                     }
                     // Show leaderboard instead of returning to menu directly
-                    await send(.allHuntersFound)
+                    await send(.delegate(.allHuntersFound))
                 }
             case .destination:
                 return .none
-            case .countdownDismissed:
+            case .internal(.countdownDismissed):
                 state.countdownNumber = nil
                 state.countdownText = nil
                 return .none
-            case .endGameCodeDismissed:
+            case .view(.endGameCodeDismissed):
                 state.destination = nil
                 return .none
-            case .winnerNotificationDismissed:
+            case .internal(.winnerNotificationDismissed):
                 state.winnerNotification = nil
                 return .none
-            case let .powerUpsUpdated(allPowerUps):
+            case let .internal(.powerUpsUpdated(all)):
                 let userId = userClient.currentUserId() ?? ""
-                state.availablePowerUps = allPowerUps.filter { !$0.type.isHunterPowerUp && !$0.isCollected }
-                state.collectedPowerUps = allPowerUps.filter { $0.collectedBy == userId && $0.activatedAt == nil }
-                return .none
-            case let .powerUpCollected(powerUp):
+                let available = all.filter { !$0.type.isHunterPowerUp && !$0.isCollected }
+                let collected = all.filter { $0.collectedBy == userId && $0.activatedAt == nil }
+                return .send(.powerUps(.dataUpdated(available: available, collected: collected)))
+            case let .internal(.powerUpCollected(powerUp)):
                 let gameId = state.game.id
                 let userId = userClient.currentUserId() ?? ""
-                return .run { [analyticsClient] send in
+                return .run { [analyticsClient] _ in
                     do {
                         try await apiClient.collectPowerUp(gameId, powerUp.id, userId)
                         analyticsClient.powerUpCollected(type: powerUp.type.rawValue, role: "chicken")
@@ -182,13 +201,10 @@ struct ChickenMapFeature {
                         logger.error("Failed to collect power-up: \(error)")
                     }
                 }
-            case let .powerUpActivated(powerUp):
+            case let .powerUps(.delegate(.activated(powerUp))):
                 let gameId = state.game.id
                 let duration = powerUp.type.durationSeconds ?? 0
                 let expiresAt = Timestamp(date: .now.addingTimeInterval(duration))
-                state.showPowerUpInventory = false
-                state.powerUpNotification = "Activated: \(powerUp.type.displayName)!"
-                state.lastActivatedPowerUpType = powerUp.type
                 return .run { [analyticsClient] send in
                     try? await apiClient.activatePowerUp(gameId, powerUp.id, expiresAt)
                     switch powerUp.type {
@@ -199,19 +215,12 @@ struct ChickenMapFeature {
                     }
                     analyticsClient.powerUpActivated(type: powerUp.type.rawValue, role: "chicken")
                     try await clock.sleep(for: .seconds(2))
-                    await send(.powerUpNotificationDismissed)
+                    await send(.powerUps(.notificationCleared))
                 }
                 .cancellable(id: CancelID.powerUpNotificationDismiss, cancelInFlight: true)
-            case .powerUpNotificationDismissed:
-                state.powerUpNotification = nil
+            case .powerUps:
                 return .none
-            case .powerUpInventoryTapped:
-                state.showPowerUpInventory = true
-                return .none
-            case .powerUpInventoryDismissed:
-                state.showPowerUpInventory = false
-                return .none
-            case let .gameUpdated(game):
+            case let .internal(.gameUpdated(game)):
                 // Detect newly activated power-ups (compare old vs new)
                     _ = Date.now
                 let activatedPowerUp = detectActivatedPowerUp(oldGame: state.game, newGame: game)
@@ -232,12 +241,11 @@ struct ChickenMapFeature {
 
                 // Show global power-up notification
                 if let activated = activatedPowerUp {
-                    state.powerUpNotification = activated.text
-                    state.lastActivatedPowerUpType = activated.type
+                    effects.append(.send(.powerUps(.notificationShown(text: activated.text, type: activated.type))))
                     effects.append(
                         .run { send in
                             try await clock.sleep(for: .seconds(2))
-                            await send(.powerUpNotificationDismissed)
+                            await send(.powerUps(.notificationCleared))
                         }
                         .cancellable(id: CancelID.powerUpNotificationDismiss, cancelInFlight: true)
                     )
@@ -252,7 +260,7 @@ struct ChickenMapFeature {
                         state.previousWinnersCount = game.winners.count
                         effects.append(.run { send in
                             try await clock.sleep(for: .seconds(AppConstants.winnerNotificationSeconds))
-                            await send(.winnerNotificationDismissed)
+                            await send(.internal(.winnerNotificationDismissed))
                         })
                     }
                 } else {
@@ -276,12 +284,12 @@ struct ChickenMapFeature {
                                 .error("Failed to set game DONE when all hunters found: \(error.localizedDescription)")
                         }
                         await liveActivityClient.end(nil)
-                        await send(.allHuntersFound)
+                        await send(.delegate(.allHuntersFound))
                     })
                 }
 
                 return effects.isEmpty ? .none : .merge(effects)
-            case .cancelGameButtonTapped:
+            case .view(.cancelGameButtonTapped):
                 state.destination = .alert(
                     AlertState {
                         TextState("Cancel game")
@@ -297,20 +305,16 @@ struct ChickenMapFeature {
                     }
                 )
                 return .none
-            case .beenFoundButtonTapped:
+            case .view(.beenFoundButtonTapped):
                 state.destination = .endGameCode(state.game.foundCode)
                 return .none
-            case .returnedToMenu:
-                return .none
-            case .allHuntersFound:
-                return .none
-            case .infoButtonTapped:
+            case .view(.infoButtonTapped):
                 state.showGameInfo = true
                 return .none
-            case .gameInfoDismissed:
+            case .view(.gameInfoDismissed):
                 state.showGameInfo = false
                 return .none
-            case let .hunterLocationsUpdated(hunters):
+            case let .internal(.hunterLocationsUpdated(hunters)):
                 let sorted = hunters.sorted { $0.hunterId < $1.hunterId }
                 state.hunterAnnotations = sorted.enumerated().map { index, hunter in
                     HunterAnnotation(
@@ -323,7 +327,7 @@ struct ChickenMapFeature {
                     )
                 }
                 return .none
-            case let .newLocationFetched(location):
+            case let .internal(.newLocationFetched(location)):
                 state.userLocation = location
                 // Only move the circle center when the chicken defines the zone
                 if state.game.gameMode != .stayInTheZone {
@@ -333,7 +337,7 @@ struct ChickenMapFeature {
                     )
                 }
                 return .none
-            case .onTask:
+            case .view(.onTask):
                 let gameId = state.game.id
                 let gameMod = state.game.gameMode
                 let startDate = state.game.startDate
@@ -363,7 +367,7 @@ struct ChickenMapFeature {
                 var effects: [Effect<Action>] = [
                     .run { send in
                         for await _ in self.clock.timer(interval: .seconds(1)) {
-                            await send(.timerTicked)
+                            await send(.internal(.timerTicked))
                         }
                     },
                     .run { send in
@@ -372,14 +376,14 @@ struct ChickenMapFeature {
                                 invisibilityUntil.setValue(game.powerUps.activeEffects.invisibility?.dateValue())
                                 jammerUntil.setValue(game.powerUps.activeEffects.jammer?.dateValue())
                                 radarPingUntil.setValue(game.powerUps.activeEffects.radarPing?.dateValue())
-                                await send(.gameUpdated(game))
+                                await send(.internal(.gameUpdated(game)))
                             }
                         }
                     },
                     .run { send in
                         guard powerUpsEnabled else { return }
                         for await powerUps in apiClient.powerUpsStream(gameId) {
-                            await send(.powerUpsUpdated(powerUps))
+                            await send(.internal(.powerUpsUpdated(powerUps)))
                         }
                     },
                     .run { _ in
@@ -431,7 +435,7 @@ struct ChickenMapFeature {
                             }
                             // Send current location immediately on connect
                             if let currentLocation = locationClient.lastLocation() {
-                                await send(.newLocationFetched(currentLocation))
+                                await send(.internal(.newLocationFetched(currentLocation)))
                                 do {
                                     try apiClient.setChickenLocation(gameId, currentLocation)
                                 } catch {
@@ -440,7 +444,7 @@ struct ChickenMapFeature {
                             }
                             var lastWrite = Date.now
                             for await coordinate in locationClient.startTracking() {
-                                await send(.newLocationFetched(coordinate))
+                                await send(.internal(.newLocationFetched(coordinate)))
                                 let isInvisible = invisibilityUntil.value.map { Date.now < $0 } ?? false
                                 if Date.now.timeIntervalSince(lastWrite) >= AppConstants.locationThrottleSeconds && !isInvisible {
                                     let isJammed = jammerUntil.value.map { Date.now < $0 } ?? false
@@ -465,11 +469,11 @@ struct ChickenMapFeature {
                                 try await clock.sleep(for: .seconds(delay))
                             }
                             if let currentLocation = locationClient.lastLocation() {
-                                await send(.newLocationFetched(currentLocation))
+                                await send(.internal(.newLocationFetched(currentLocation)))
                             }
                             var lastWrite = Date.now
                             for await coordinate in locationClient.startTracking() {
-                                await send(.newLocationFetched(coordinate))
+                                await send(.internal(.newLocationFetched(coordinate)))
                                 let isRadarPinged = radarPingUntil.value.map { Date.now < $0 } ?? false
                                 if isRadarPinged && Date.now.timeIntervalSince(lastWrite) >= AppConstants.locationThrottleSeconds {
                                     let isJammed = jammerUntil.value.map { Date.now < $0 } ?? false
@@ -497,14 +501,14 @@ struct ChickenMapFeature {
                                 try await clock.sleep(for: .seconds(delay))
                             }
                             for await hunters in apiClient.hunterLocationsStream(gameId) {
-                                await send(.hunterLocationsUpdated(hunters))
+                                await send(.internal(.hunterLocationsUpdated(hunters)))
                             }
                         }
                     )
                 }
 
                 return .merge(effects)
-            case .gameInitialized:
+            case .view(.gameInitialized):
                 let (lastUpdate, lastRadius) = state.game.findLastUpdate()
 
                 state.radius = lastRadius
@@ -549,7 +553,7 @@ struct ChickenMapFeature {
                         logger.error("Failed to update game status to inProgress: \(error)")
                     }
                 }
-            case .timerTicked:
+            case .internal(.timerTicked):
                 state.nowDate = .now
 
                 // Countdown phases (chicken perspective)
@@ -582,7 +586,7 @@ struct ChickenMapFeature {
                     state.countdownText = text
                     return .run { send in
                         try await clock.sleep(for: .seconds(AppConstants.countdownDisplaySeconds))
-                        await send(.countdownDismissed)
+                        await send(.internal(.countdownDismissed))
                     }
                 }
 
@@ -721,7 +725,7 @@ struct ChickenMapFeature {
                             availablePowerUps: state.availablePowerUps
                         )
                         if !nearbyPowerUps.isEmpty {
-                            effects.append(contentsOf: nearbyPowerUps.map { .send(.powerUpCollected($0)) })
+                            effects.append(contentsOf: nearbyPowerUps.map { .send(.internal(.powerUpCollected($0))) })
                         }
 
                         // Zone check (visual warning only — no elimination)
@@ -756,7 +760,7 @@ struct ChickenMapFeature {
                     availablePowerUps: state.availablePowerUps
                 )
                 if !nearbyPowerUps.isEmpty {
-                    return .merge(nearbyPowerUps.map { .send(.powerUpCollected($0)) })
+                    return .merge(nearbyPowerUps.map { .send(.internal(.powerUpCollected($0))) })
                 }
 
                 // Zone check (visual warning only — no elimination)

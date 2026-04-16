@@ -34,7 +34,7 @@ struct GameFlowIntegrationTests {
         }
 
         // 1. Hunter taps FOUND
-        await store.send(.foundButtonTapped) {
+        await store.send(.view(.foundButtonTapped)) {
             $0.isEnteringFoundCode = true
         }
 
@@ -46,7 +46,7 @@ struct GameFlowIntegrationTests {
         var wrongState = store.state
         wrongState.enteredCode = "0000"
 
-        await store.send(.submitCodeButtonTapped) {
+        await store.send(.view(.submitCodeButtonTapped)) {
             $0.enteredCode = ""
             $0.isEnteringFoundCode = false
             $0.wrongCodeAttempts = 1
@@ -69,7 +69,7 @@ struct GameFlowIntegrationTests {
         }
 
         // 4. Try again with correct code
-        await store.send(.foundButtonTapped) {
+        await store.send(.view(.foundButtonTapped)) {
             $0.isEnteringFoundCode = true
         }
 
@@ -77,11 +77,11 @@ struct GameFlowIntegrationTests {
         await store.send(.binding(.set(\.enteredCode, "4321")))
         store.exhaustivity = .on
 
-        await store.send(.submitCodeButtonTapped) {
+        await store.send(.view(.submitCodeButtonTapped)) {
             $0.enteredCode = ""
             $0.isEnteringFoundCode = false
         }
-        await store.receive(\.winnerRegistered)
+        await store.receive(\.internal.winnerRegistered)
     }
 
     // MARK: - Game ends by time
@@ -99,7 +99,7 @@ struct GameFlowIntegrationTests {
         }
         store.exhaustivity = .off
 
-        await store.send(.timerTicked) {
+        await store.send(.internal(.timerTicked)) {
             $0.destination = .alert(
                 AlertState {
                     TextState("Game Over")
@@ -130,7 +130,7 @@ struct GameFlowIntegrationTests {
         var endedGame = game
         endedGame.status = .done
 
-        await store.send(.gameConfigUpdated( endedGame)) {
+        await store.send(.internal(.gameConfigUpdated( endedGame))) {
             $0.game = endedGame
             $0.destination = .alert(
                 AlertState {

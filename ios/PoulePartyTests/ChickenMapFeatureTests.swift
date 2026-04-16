@@ -18,7 +18,7 @@ struct ChickenMapFeatureTests {
             ChickenMapFeature()
         }
 
-        await store.send(.gameInitialized) {
+        await store.send(.view(.gameInitialized)) {
             let (lastUpdate, lastRadius) = game.findLastUpdate()
             $0.radius = lastRadius
             $0.nextRadiusUpdate = lastUpdate
@@ -35,7 +35,7 @@ struct ChickenMapFeatureTests {
             ChickenMapFeature()
         }
 
-        await store.send(.beenFoundButtonTapped) {
+        await store.send(.view(.beenFoundButtonTapped)) {
             $0.destination = .endGameCode("1234")
         }
     }
@@ -45,7 +45,7 @@ struct ChickenMapFeatureTests {
             ChickenMapFeature()
         }
 
-        await store.send(.cancelGameButtonTapped) {
+        await store.send(.view(.cancelGameButtonTapped)) {
             $0.destination = .alert(
                 AlertState {
                     TextState("Cancel game")
@@ -71,7 +71,7 @@ struct ChickenMapFeatureTests {
             ChickenMapFeature()
         }
 
-        await store.send(.endGameCodeDismissed) {
+        await store.send(.view(.endGameCodeDismissed)) {
             $0.destination = nil
         }
     }
@@ -82,7 +82,7 @@ struct ChickenMapFeatureTests {
         }
 
         let location = CLLocationCoordinate2D(latitude: 50.0, longitude: 4.0)
-        await store.send(.newLocationFetched(location)) {
+        await store.send(.internal(.newLocationFetched(location))) {
             $0.userLocation = location
             $0.mapCircle = CircleOverlay(
                 center: location,
@@ -113,7 +113,7 @@ struct ChickenMapFeatureTests {
             ),
         ]
 
-        await store.send(.hunterLocationsUpdated(hunters)) {
+        await store.send(.internal(.hunterLocationsUpdated(hunters))) {
             $0.hunterAnnotations = [
                 HunterAnnotation(
                     id: "hunter-a",
@@ -139,7 +139,7 @@ struct ChickenMapFeatureTests {
             ChickenMapFeature()
         }
 
-        await store.send(.hunterLocationsUpdated([])) {
+        await store.send(.internal(.hunterLocationsUpdated([]))) {
             $0.hunterAnnotations = []
         }
     }
@@ -186,7 +186,7 @@ struct ChickenMapFeatureTests {
         }
 
         // Same game, same number of winners → no notification, but lastLiveActivityState may update
-        await store.send(.gameUpdated(game)) {
+        await store.send(.internal(.gameUpdated(game))) {
             $0.lastLiveActivityState = $0.liveActivityState
         }
     }
@@ -199,7 +199,7 @@ struct ChickenMapFeatureTests {
             ChickenMapFeature()
         }
 
-        await store.send(.winnerNotificationDismissed) {
+        await store.send(.internal(.winnerNotificationDismissed)) {
             $0.winnerNotification = nil
         }
     }
@@ -218,7 +218,7 @@ struct ChickenMapFeatureTests {
         }
 
         let newLocation = CLLocationCoordinate2D(latitude: 51.0, longitude: 5.0)
-        await store.send(.newLocationFetched(newLocation)) {
+        await store.send(.internal(.newLocationFetched(newLocation))) {
             $0.userLocation = newLocation
             // mapCircle should NOT change in stayInTheZone
         }
@@ -231,7 +231,7 @@ struct ChickenMapFeatureTests {
             ChickenMapFeature()
         }
 
-        await store.send(.infoButtonTapped) {
+        await store.send(.view(.infoButtonTapped)) {
             $0.showGameInfo = true
         }
     }
@@ -244,7 +244,7 @@ struct ChickenMapFeatureTests {
             ChickenMapFeature()
         }
 
-        await store.send(.gameInfoDismissed) {
+        await store.send(.view(.gameInfoDismissed)) {
             $0.showGameInfo = false
         }
     }
@@ -260,7 +260,7 @@ struct ChickenMapFeatureTests {
             ChickenMapFeature()
         }
 
-        await store.send(.countdownDismissed) {
+        await store.send(.internal(.countdownDismissed)) {
             $0.countdownNumber = nil
             $0.countdownText = nil
         }
@@ -289,7 +289,7 @@ struct ChickenMapFeatureTests {
             newRadius: Double(newRadius),
             driftSeed: game.zone.driftSeed
         )
-        await store.send(.timerTicked) {
+        await store.send(.internal(.timerTicked)) {
             $0.radius = newRadius
             $0.mapCircle = CircleOverlay(
                 center: expectedCenter,
@@ -315,7 +315,7 @@ struct ChickenMapFeatureTests {
         }
         store.exhaustivity = .off
 
-        await store.send(.timerTicked) {
+        await store.send(.internal(.timerTicked)) {
             $0.destination = .alert(
                 AlertState {
                     TextState("Game Over")
@@ -358,7 +358,7 @@ struct ChickenMapFeatureTests {
         await store.send(.destination(.presented(.alert(.cancelGame)))) {
             $0.destination = nil
         }
-        await store.receive(\.returnedToMenu)
+        await store.receive(\.delegate.returnedToMenu)
     }
 
     @Test func gameOverAlertSendsGoToMenu() async {
@@ -382,7 +382,7 @@ struct ChickenMapFeatureTests {
         await store.send(.destination(.presented(.alert(.gameOver)))) {
             $0.destination = nil
         }
-        await store.receive(\.allHuntersFound)
+        await store.receive(\.delegate.allHuntersFound)
     }
 
     // MARK: - Winner auto-dismiss effect
@@ -402,7 +402,7 @@ struct ChickenMapFeatureTests {
             Winner(hunterId: "h1", hunterName: "Julien", timestamp: .now)
         ]
 
-        await store.send(.gameUpdated(updatedGame)) {
+        await store.send(.internal(.gameUpdated(updatedGame))) {
             $0.game = updatedGame
             $0.lastLiveActivityState = $0.liveActivityState
             $0.winnerNotification = "Julien found the chicken! 🐔"
@@ -410,7 +410,7 @@ struct ChickenMapFeatureTests {
         }
 
         await clock.advance(by: .seconds(AppConstants.winnerNotificationSeconds))
-        await store.receive(\.winnerNotificationDismissed) {
+        await store.receive(\.internal.winnerNotificationDismissed) {
             $0.winnerNotification = nil
         }
     }

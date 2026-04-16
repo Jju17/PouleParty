@@ -26,7 +26,7 @@ struct HunterMapFeatureTests {
         }
 
         let location = CLLocationCoordinate2D(latitude: 50.0, longitude: 4.0)
-        await store.send(.newLocationFetched(location)) {
+        await store.send(.internal(.newLocationFetched(location))) {
             $0.mapCircle = CircleOverlay(
                 center: location,
                 radius: CLLocationDistance($0.radius)
@@ -52,7 +52,7 @@ struct HunterMapFeatureTests {
             )
         )
 
-        await store.send(.gameConfigUpdated( newGame)) {
+        await store.send(.internal(.gameConfigUpdated( newGame))) {
             let (lastUpdate, lastRadius) = newGame.findLastUpdate()
             $0.game = newGame
             $0.radius = lastRadius
@@ -78,7 +78,7 @@ struct HunterMapFeatureTests {
         }
         store.exhaustivity = .off
 
-        await store.send(.timerTicked) {
+        await store.send(.internal(.timerTicked)) {
             $0.destination = .alert(
                 AlertState {
                     TextState("Game Over")
@@ -114,7 +114,7 @@ struct HunterMapFeatureTests {
             newRadius: Double(newRadius),
             driftSeed: game.zone.driftSeed
         )
-        await store.send(.timerTicked) {
+        await store.send(.internal(.timerTicked)) {
             $0.radius = newRadius
             $0.mapCircle = CircleOverlay(
                 center: expectedCenter,
@@ -135,7 +135,7 @@ struct HunterMapFeatureTests {
         }
         store.exhaustivity = .off
 
-        await store.send(.timerTicked) {
+        await store.send(.internal(.timerTicked)) {
             $0.radius = 500 - Int(game.zone.shrinkMetersPerUpdate)
         }
     }
@@ -154,7 +154,7 @@ struct HunterMapFeatureTests {
             HunterMapFeature()
         }
 
-        await store.send(.foundButtonTapped) {
+        await store.send(.view(.foundButtonTapped)) {
             $0.isEnteringFoundCode = true
         }
     }
@@ -169,11 +169,11 @@ struct HunterMapFeatureTests {
             $0.apiClient.addWinner = { _, _ in }
         }
 
-        await store.send(.submitCodeButtonTapped) {
+        await store.send(.view(.submitCodeButtonTapped)) {
             $0.enteredCode = ""
             $0.isEnteringFoundCode = false
         }
-        await store.receive(\.winnerRegistered)
+        await store.receive(\.internal.winnerRegistered)
     }
 
     @Test func submitCodeButtonTappedWithWrongCodeShowsAlert() async {
@@ -184,7 +184,7 @@ struct HunterMapFeatureTests {
             HunterMapFeature()
         }
 
-        await store.send(.submitCodeButtonTapped) {
+        await store.send(.view(.submitCodeButtonTapped)) {
             $0.enteredCode = ""
             $0.isEnteringFoundCode = false
             $0.wrongCodeAttempts = 1
@@ -251,7 +251,7 @@ struct HunterMapFeatureTests {
             Winner(hunterId: "my-hunter-id", hunterName: "Me", timestamp: .now)
         ]
 
-        await store.send(.gameConfigUpdated(updatedGame))
+        await store.send(.internal(.gameConfigUpdated(updatedGame)))
 
         // The key assertion: own win should NOT trigger a notification
         #expect(store.state.winnerNotification == nil)
@@ -274,7 +274,7 @@ struct HunterMapFeatureTests {
             $0.locationClient.stopTracking = { }
         }
 
-        await store.send(.gameConfigUpdated( game)) {
+        await store.send(.internal(.gameConfigUpdated( game))) {
             $0.game = game
             $0.destination = .alert(
                 AlertState {
@@ -297,7 +297,7 @@ struct HunterMapFeatureTests {
             HunterMapFeature()
         }
 
-        await store.send(.cancelGameButtonTapped) {
+        await store.send(.view(.cancelGameButtonTapped)) {
             $0.destination = .alert(
                 AlertState {
                     TextState("Quit game")
@@ -341,7 +341,7 @@ struct HunterMapFeatureTests {
         await store.send(.destination(.presented(.alert(.leaveGame)))) {
             $0.destination = nil
         }
-        await store.receive(\.returnedToMenu)
+        await store.receive(\.delegate.returnedToMenu)
     }
 
     @Test func gameOverAlertSendsGoToMenu() async {
@@ -365,7 +365,7 @@ struct HunterMapFeatureTests {
         await store.send(.destination(.presented(.alert(.gameOver)))) {
             $0.destination = nil
         }
-        await store.receive(\.allHuntersFound)
+        await store.receive(\.delegate.allHuntersFound)
     }
 
     // MARK: - Game info
@@ -375,7 +375,7 @@ struct HunterMapFeatureTests {
             HunterMapFeature()
         }
 
-        await store.send(.infoButtonTapped) {
+        await store.send(.view(.infoButtonTapped)) {
             $0.showGameInfo = true
         }
     }
@@ -388,7 +388,7 @@ struct HunterMapFeatureTests {
             HunterMapFeature()
         }
 
-        await store.send(.gameInfoDismissed) {
+        await store.send(.view(.gameInfoDismissed)) {
             $0.showGameInfo = false
         }
     }
@@ -404,7 +404,7 @@ struct HunterMapFeatureTests {
             HunterMapFeature()
         }
 
-        await store.send(.countdownDismissed) {
+        await store.send(.internal(.countdownDismissed)) {
             $0.countdownNumber = nil
             $0.countdownText = nil
         }
@@ -420,7 +420,7 @@ struct HunterMapFeatureTests {
             HunterMapFeature()
         }
 
-        await store.send(.winnerNotificationDismissed) {
+        await store.send(.internal(.winnerNotificationDismissed)) {
             $0.winnerNotification = nil
         }
     }
@@ -433,7 +433,7 @@ struct HunterMapFeatureTests {
         }
 
         let location = CLLocationCoordinate2D(latitude: 50.0, longitude: 4.0)
-        await store.send(.userLocationUpdated(location)) {
+        await store.send(.internal(.userLocationUpdated(location))) {
             $0.userLocation = location
         }
     }
@@ -449,7 +449,7 @@ struct HunterMapFeatureTests {
             HunterMapFeature()
         }
 
-        await store.send(.submitCodeButtonTapped)
+        await store.send(.view(.submitCodeButtonTapped))
     }
 
     @Test func submitCodeButtonTappedTriggersCooldownAfterMaxAttempts() async {
@@ -462,7 +462,7 @@ struct HunterMapFeatureTests {
         }
         store.exhaustivity = .off
 
-        await store.send(.submitCodeButtonTapped) {
+        await store.send(.view(.submitCodeButtonTapped)) {
             $0.enteredCode = ""
             $0.isEnteringFoundCode = false
             $0.wrongCodeAttempts = 0
@@ -486,7 +486,7 @@ struct HunterMapFeatureTests {
         }
         store.exhaustivity = .off
 
-        await store.send(.timerTicked) {
+        await store.send(.internal(.timerTicked)) {
             $0.destination = .alert(
                 AlertState {
                     TextState("Game Over")
@@ -522,7 +522,7 @@ struct HunterMapFeatureTests {
             Winner(hunterId: "other-hunter", hunterName: "Alice", timestamp: .now)
         ]
 
-        await store.send(.gameConfigUpdated( updatedGame)) {
+        await store.send(.internal(.gameConfigUpdated( updatedGame))) {
             let (lastUpdate, lastRadius) = updatedGame.findLastUpdate()
             $0.game = updatedGame
             $0.radius = lastRadius
@@ -534,7 +534,7 @@ struct HunterMapFeatureTests {
         }
 
         await clock.advance(by: .seconds(AppConstants.winnerNotificationSeconds))
-        await store.receive(\.winnerNotificationDismissed) {
+        await store.receive(\.internal.winnerNotificationDismissed) {
             $0.winnerNotification = nil
         }
     }

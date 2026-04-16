@@ -38,13 +38,16 @@ struct HunterMapFeature {
         var userLocation: CLLocationCoordinate2D?
         var isOutsideZone: Bool = false
         var lastLiveActivityState: PoulePartyAttributes.ContentState?
-        var availablePowerUps: [PowerUp] = []
-        var collectedPowerUps: [PowerUp] = []
-        var showPowerUpInventory: Bool = false
-        var powerUpNotification: String? = nil
-        var lastActivatedPowerUpType: PowerUp.PowerUpType? = nil
+        var powerUps: MapPowerUpsFeature.State = .init()
         var previewCircle: CircleOverlay? = nil
         var decoyLocation: CLLocationCoordinate2D? = nil
+
+        // MARK: - MapFeatureState passthroughs (child → parent surface)
+        var availablePowerUps: [PowerUp] { powerUps.available }
+        var collectedPowerUps: [PowerUp] { powerUps.collected }
+        var showPowerUpInventory: Bool { powerUps.showInventory }
+        var powerUpNotification: String? { powerUps.notification }
+        var lastActivatedPowerUpType: PowerUp.PowerUpType? { powerUps.lastActivatedType }
 
         var hasChickenStarted: Bool { nowDate >= game.startDate }
         var hasGameStarted: Bool { nowDate >= game.hunterStartDate }
@@ -70,29 +73,41 @@ struct HunterMapFeature {
 
     enum Action: BindableAction {
         case binding(BindingAction<State>)
-        case cancelGameButtonTapped
-        case countdownDismissed
+        case delegate(Delegate)
         case destination(PresentationAction<Destination.Action>)
-        case foundButtonTapped
-        case gameConfigUpdated(Game)
-        case gameInfoDismissed
-        case infoButtonTapped
-        case newLocationFetched(CLLocationCoordinate2D)
-        case onTask
-        case returnedToMenu
-        case submitCodeButtonTapped
-        case timerTicked
-        case userLocationUpdated(CLLocationCoordinate2D)
-        case winnerNotificationDismissed
-        case winnerRegistered
-        case powerUpsUpdated([PowerUp])
-        case powerUpCollected(PowerUp)
-        case powerUpActivated(PowerUp)
-        case powerUpNotificationDismissed
-        case powerUpInventoryTapped
-        case powerUpInventoryDismissed
-        case allHuntersFound
-        case registrationRequiredDetected
+        case `internal`(Internal)
+        case powerUps(MapPowerUpsFeature.Action)
+        case view(View)
+
+        @CasePathable
+        enum View {
+            case cancelGameButtonTapped
+            case foundButtonTapped
+            case gameInfoDismissed
+            case infoButtonTapped
+            case onTask
+            case submitCodeButtonTapped
+        }
+
+        @CasePathable
+        enum Internal {
+            case countdownDismissed
+            case gameConfigUpdated(Game)
+            case newLocationFetched(CLLocationCoordinate2D)
+            case powerUpCollected(PowerUp)
+            case powerUpsUpdated([PowerUp])
+            case registrationRequiredDetected
+            case timerTicked
+            case userLocationUpdated(CLLocationCoordinate2D)
+            case winnerNotificationDismissed
+            case winnerRegistered
+        }
+
+        @CasePathable
+        enum Delegate {
+            case allHuntersFound
+            case returnedToMenu
+        }
     }
 
     @Reducer
@@ -128,6 +143,10 @@ struct HunterMapFeature {
     var body: some ReducerOf<Self> {
         BindingReducer()
 
+        Scope(state: \.powerUps, action: \.powerUps) {
+            MapPowerUpsFeature()
+        }
+
         Reduce { state, action in
             switch action {
             case .binding(\.enteredCode):
@@ -135,7 +154,7 @@ struct HunterMapFeature {
                 return .none
             case .binding:
                 return .none
-            case .cancelGameButtonTapped:
+            case .view(.cancelGameButtonTapped):
                 state.destination = .alert(
                     AlertState {
                         TextState("Quit game")
@@ -156,7 +175,7 @@ struct HunterMapFeature {
                 state.previewCircle = nil
                 return .run { send in
                     await liveActivityClient.end(nil)
-                    await send(.returnedToMenu)
+                    await send(.delegate(.returnedToMenu))
                 }
             case .destination(.presented(.alert(.gameOver))):
                 state.previewCircle = nil
@@ -170,14 +189,14 @@ struct HunterMapFeature {
                         logger.error("Failed to update game status to done: \(error)")
                     }
                     // Show leaderboard instead of returning to menu directly
-                    await send(.allHuntersFound)
+                    await send(.delegate(.allHuntersFound))
                 }
             case .destination(.presented(.alert(.registrationRequired))):
                 return .run { send in
                     await liveActivityClient.end(nil)
-                    await send(.returnedToMenu)
+                    await send(.delegate(.returnedToMenu))
                 }
-            case .registrationRequiredDetected:
+            case .internal(.registrationRequiredDetected):
                 state.destination = .alert(
                     AlertState {
                         TextState("Registration required")
@@ -192,25 +211,25 @@ struct HunterMapFeature {
                 return .none
             case .destination:
                 return .none
-            case .countdownDismissed:
+            case .internal(.countdownDismissed):
                 state.countdownNumber = nil
                 state.countdownText = nil
                 return .none
-            case .gameInfoDismissed:
+            case .view(.gameInfoDismissed):
                 state.showGameInfo = false
                 return .none
-            case .winnerNotificationDismissed:
+            case .internal(.winnerNotificationDismissed):
                 state.winnerNotification = nil
                 return .none
-            case let .powerUpsUpdated(allPowerUps):
+            case let .internal(.powerUpsUpdated(all)):
                 let hunterId = state.hunterId
-                state.availablePowerUps = allPowerUps.filter { $0.type.isHunterPowerUp && !$0.isCollected }
-                state.collectedPowerUps = allPowerUps.filter { $0.collectedBy == hunterId && $0.activatedAt == nil }
-                return .none
-            case let .powerUpCollected(powerUp):
+                let available = all.filter { $0.type.isHunterPowerUp && !$0.isCollected }
+                let collected = all.filter { $0.collectedBy == hunterId && $0.activatedAt == nil }
+                return .send(.powerUps(.dataUpdated(available: available, collected: collected)))
+            case let .internal(.powerUpCollected(powerUp)):
                 let gameId = state.game.id
                 let hunterId = state.hunterId
-                return .run { [analyticsClient] send in
+                return .run { [analyticsClient] _ in
                     do {
                         try await apiClient.collectPowerUp(gameId, powerUp.id, hunterId)
                         analyticsClient.powerUpCollected(type: powerUp.type.rawValue, role: "hunter")
@@ -218,13 +237,10 @@ struct HunterMapFeature {
                         logger.error("Failed to collect power-up: \(error)")
                     }
                 }
-            case let .powerUpActivated(powerUp):
+            case let .powerUps(.delegate(.activated(powerUp))):
                 let gameId = state.game.id
                 let duration = powerUp.type.durationSeconds ?? 0
                 let expiresAt = Timestamp(date: .now.addingTimeInterval(duration))
-                state.showPowerUpInventory = false
-                state.powerUpNotification = "Activated: \(powerUp.type.displayName)!"
-                state.lastActivatedPowerUpType = powerUp.type
 
                 // Zone Preview: compute next zone boundary client-side
                 if powerUp.type == .zonePreview {
@@ -241,22 +257,15 @@ struct HunterMapFeature {
                     }
                     analyticsClient.powerUpActivated(type: powerUp.type.rawValue, role: "hunter")
                     try await clock.sleep(for: .seconds(2))
-                    await send(.powerUpNotificationDismissed)
+                    await send(.powerUps(.notificationCleared))
                 }
                 .cancellable(id: CancelID.powerUpNotificationDismiss, cancelInFlight: true)
-            case .powerUpNotificationDismissed:
-                state.powerUpNotification = nil
+            case .powerUps:
                 return .none
-            case .powerUpInventoryTapped:
-                state.showPowerUpInventory = true
-                return .none
-            case .powerUpInventoryDismissed:
-                state.showPowerUpInventory = false
-                return .none
-            case .foundButtonTapped:
+            case .view(.foundButtonTapped):
                 state.isEnteringFoundCode = true
                 return .none
-            case .submitCodeButtonTapped:
+            case .view(.submitCodeButtonTapped):
                 guard !state.isCodeOnCooldown else {
                     return .none
                 }
@@ -300,18 +309,18 @@ struct HunterMapFeature {
                         try await apiClient.addWinner(gameId, winner)
                         analyticsClient.hunterFoundChicken(attempts: totalAttempts)
                         locationClient.stopTracking()
-                        await send(.winnerRegistered)
+                        await send(.internal(.winnerRegistered))
                     } catch {
                         locationClient.stopTracking()
                         logger.error("Failed to add winner: \(error.localizedDescription)")
-                        await send(.winnerRegistered)
+                        await send(.internal(.winnerRegistered))
                     }
                 }
-            case .returnedToMenu:
+            case .delegate(.returnedToMenu):
                 return .none
-            case .allHuntersFound:
+            case .delegate(.allHuntersFound):
                 return .none
-            case .winnerRegistered:
+            case .internal(.winnerRegistered):
                 let endState = PoulePartyAttributes.ContentState(
                     radiusMeters: state.radius,
                     nextShrinkDate: nil,
@@ -323,16 +332,16 @@ struct HunterMapFeature {
                 return .run { _ in
                     await liveActivityClient.end(endState)
                 }
-            case .infoButtonTapped:
+            case .view(.infoButtonTapped):
                 state.showGameInfo = true
                 return .none
-            case let .newLocationFetched(location):
+            case let .internal(.newLocationFetched(location)):
                 state.mapCircle = CircleOverlay(
                     center: location,
                     radius: CLLocationDistance(state.radius)
                 )
                 return .none
-            case .onTask:
+            case .view(.onTask):
                 let rawUid = userClient.currentUserId()
                 let gameId = state.game.id
                 if let uid = rawUid, !uid.isEmpty {
@@ -377,7 +386,7 @@ struct HunterMapFeature {
                             let registration = try? await apiClient.findRegistration(gameId, hunterId)
                             if registration == nil {
                                 logger.warning("Hunter \(hunterId) not registered for game \(gameId) — bouncing back")
-                                await send(.registrationRequiredDetected)
+                                await send(.internal(.registrationRequiredDetected))
                                 return
                             }
                         }
@@ -391,19 +400,19 @@ struct HunterMapFeature {
                     .run { send in
                         for await game in apiClient.gameConfigStream(gameId) {
                             if let game {
-                                await send(.gameConfigUpdated( game))
+                                await send(.internal(.gameConfigUpdated( game)))
                             }
                         }
                     },
                     .run { send in
                         for await _ in self.clock.timer(interval: .seconds(1)) {
-                            await send(.timerTicked)
+                            await send(.internal(.timerTicked))
                         }
                     },
                     .run { send in
                         guard powerUpsEnabled else { return }
                         for await powerUps in apiClient.powerUpsStream(gameId) {
-                            await send(.powerUpsUpdated(powerUps))
+                            await send(.internal(.powerUpsUpdated(powerUps)))
                         }
                     }
                 ]
@@ -421,7 +430,7 @@ struct HunterMapFeature {
                         }
                         for await location in apiClient.chickenLocationStream(gameId) {
                             if let location {
-                                await send(.newLocationFetched(location))
+                                await send(.internal(.newLocationFetched(location)))
                             }
                         }
                     }
@@ -439,7 +448,7 @@ struct HunterMapFeature {
                         }
                         // Send current location immediately
                         if let currentLocation = locationClient.lastLocation() {
-                            await send(.userLocationUpdated(currentLocation))
+                            await send(.internal(.userLocationUpdated(currentLocation)))
                             if shouldWriteLocation {
                                 do {
                                     try apiClient.setHunterLocation(gameId, hunterId, currentLocation)
@@ -450,7 +459,7 @@ struct HunterMapFeature {
                         }
                         var lastWrite = Date.now
                         for await coordinate in locationClient.startTracking() {
-                            await send(.userLocationUpdated(coordinate))
+                            await send(.internal(.userLocationUpdated(coordinate)))
                             if shouldWriteLocation,
                                Date.now.timeIntervalSince(lastWrite) >= AppConstants.locationThrottleSeconds {
                                 do {
@@ -465,7 +474,7 @@ struct HunterMapFeature {
                 )
 
                 return .merge(effects)
-            case let .gameConfigUpdated(game):
+            case let .internal(.gameConfigUpdated(game)):
                 // React to game cancelled/ended by chicken or Cloud Function
                 if game.status == .done, state.destination == nil {
                     locationClient.stopTracking()
@@ -554,12 +563,11 @@ struct HunterMapFeature {
 
                 // Show global power-up notification
                 if let activated = activatedPowerUp {
-                    state.powerUpNotification = activated.text
-                    state.lastActivatedPowerUpType = activated.type
+                    effects.append(.send(.powerUps(.notificationShown(text: activated.text, type: activated.type))))
                     effects.append(
                         .run { send in
                             try await clock.sleep(for: .seconds(2))
-                            await send(.powerUpNotificationDismissed)
+                            await send(.powerUps(.notificationCleared))
                         }
                         .cancellable(id: CancelID.powerUpNotificationDismiss, cancelInFlight: true)
                     )
@@ -576,7 +584,7 @@ struct HunterMapFeature {
                         state.previousWinnersCount = game.winners.count
                         effects.append(.run { send in
                             try await clock.sleep(for: .seconds(AppConstants.winnerNotificationSeconds))
-                            await send(.winnerNotificationDismissed)
+                            await send(.internal(.winnerNotificationDismissed))
                         })
                     }
                 } else {
@@ -591,12 +599,12 @@ struct HunterMapFeature {
                     locationClient.stopTracking()
                     effects.append(.run { send in
                         await liveActivityClient.end(nil)
-                        await send(.allHuntersFound)
+                        await send(.delegate(.allHuntersFound))
                     })
                 }
 
                 return effects.isEmpty ? .none : .merge(effects)
-            case .timerTicked:
+            case .internal(.timerTicked):
                 state.nowDate = .now
 
                 // Countdown phases (hunter perspective)
@@ -629,7 +637,7 @@ struct HunterMapFeature {
                     state.countdownText = text
                     return .run { send in
                         try await clock.sleep(for: .seconds(AppConstants.countdownDisplaySeconds))
-                        await send(.countdownDismissed)
+                        await send(.internal(.countdownDismissed))
                     }
                 }
 
@@ -717,7 +725,7 @@ struct HunterMapFeature {
                     availablePowerUps: state.availablePowerUps
                 )
                 if !nearbyPowerUps.isEmpty {
-                    return .merge(nearbyPowerUps.map { .send(.powerUpCollected($0)) })
+                    return .merge(nearbyPowerUps.map { .send(.internal(.powerUpCollected($0))) })
                 }
 
                 // Zone check (visual warning only — no elimination)
@@ -743,7 +751,7 @@ struct HunterMapFeature {
                     }
                 }
                 return .none
-            case let .userLocationUpdated(location):
+            case let .internal(.userLocationUpdated(location)):
                 state.userLocation = location
                 return .none
             }

@@ -55,10 +55,10 @@ struct AppFeature {
                 return .none
             case .onboarding:
                 return .none
-            case .chickenMap(.returnedToMenu):
+            case .chickenMap(.delegate(.returnedToMenu)):
                 state = AppFeature.State.home(HomeFeature.State())
                 return .none
-            case .chickenMap(.allHuntersFound):
+            case .chickenMap(.delegate(.allHuntersFound)):
                 if case let .chickenMap(chickenState) = state {
                     state = .victory(VictoryFeature.State(
                         game: chickenState.game,
@@ -81,10 +81,10 @@ struct AppFeature {
             case let .home(.chickenGameStarted(game)):
                 state = AppFeature.State.chickenMap(ChickenMapFeature.State(game: game))
                 return .none
-            case .hunterMap(.returnedToMenu):
+            case .hunterMap(.delegate(.returnedToMenu)):
                 state = AppFeature.State.home(HomeFeature.State())
                 return .none
-            case .hunterMap(.allHuntersFound):
+            case .hunterMap(.delegate(.allHuntersFound)):
                 if case let .hunterMap(hunterState) = state {
                     state = .victory(VictoryFeature.State(
                         game: hunterState.game,
@@ -93,7 +93,7 @@ struct AppFeature {
                     ))
                 }
                 return .none
-            case .hunterMap(.winnerRegistered):
+            case .hunterMap(.internal(.winnerRegistered)):
                 if case let .hunterMap(hunterState) = state {
                     state = .victory(VictoryFeature.State(
                         game: hunterState.game,

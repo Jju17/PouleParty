@@ -87,7 +87,7 @@ struct AllHuntersFoundTests {
         }
 
         // allHuntersFound is handled by AppFeature, not ChickenMapFeature
-        await store.send(.allHuntersFound)
+        await store.send(.delegate(.allHuntersFound))
     }
 
     // MARK: - Hunter state: allHuntersFound action
@@ -98,7 +98,7 @@ struct AllHuntersFoundTests {
         }
 
         // allHuntersFound is handled by AppFeature, not HunterMapFeature
-        await store.send(.allHuntersFound)
+        await store.send(.delegate(.allHuntersFound))
     }
 
     // MARK: - Game lifecycle with all-found
@@ -160,8 +160,8 @@ struct AllHuntersFoundTests {
         ]
 
         store.exhaustivity = .off
-        await store.send(.gameUpdated(updatedGame))
-        await store.receive(\.allHuntersFound)
+        await store.send(.internal(.gameUpdated(updatedGame)))
+        await store.receive(\.delegate.allHuntersFound)
     }
 
     // MARK: - findActiveGame ordering logic

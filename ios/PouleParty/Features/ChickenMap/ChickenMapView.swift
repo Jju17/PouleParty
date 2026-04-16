@@ -27,7 +27,7 @@ struct ChickenMapView: View {
                     title: "You are the 🐔",
                     subtitle: subtitle,
                     gradient: LinearGradient(colors: [.chickenYellow, .CROrange], startPoint: .leading, endPoint: .trailing),
-                    onInfoTapped: { store.send(.infoButtonTapped) }
+                    onInfoTapped: { store.send(.view(.infoButtonTapped)) }
                 )
             }
             .safeAreaInset(edge: .bottom) {
@@ -35,14 +35,14 @@ struct ChickenMapView: View {
                     state: store.state,
                     isActionButtonVisible: true,
                     actionAccessibilityLabel: "I have been found",
-                    onActionTapped: { store.send(.beenFoundButtonTapped) },
-                    onInventoryTapped: { store.send(.powerUpInventoryTapped) },
+                    onActionTapped: { store.send(.view(.beenFoundButtonTapped)) },
+                    onInventoryTapped: { store.send(.powerUps(.inventoryTapped)) },
                     isChicken: true
                 )
             }
             .task {
-                store.send(.gameInitialized)
-                store.send(.onTask)
+                store.send(.view(.gameInitialized))
+                store.send(.view(.onTask))
             }
             .idleTimerDisabled()
             .mapHaptics(store.state)
@@ -55,7 +55,7 @@ struct ChickenMapView: View {
             .sheet(
                 isPresented: Binding(
                     get: { store.destination.flatMap { if case .endGameCode = $0 { true } else { nil } } ?? false },
-                    set: { if !$0 { store.send(.endGameCodeDismissed) } }
+                    set: { if !$0 { store.send(.view(.endGameCodeDismissed)) } }
                 )
             ) {
                 NavigationStack {
@@ -66,7 +66,7 @@ struct ChickenMapView: View {
                         .toolbar {
                             ToolbarItem {
                                 Button {
-                                    store.send(.endGameCodeDismissed)
+                                    store.send(.view(.endGameCodeDismissed))
                                 } label: {
                                     Image(systemName: "xmark")
                                         .foregroundStyle(.white)
@@ -85,17 +85,17 @@ struct ChickenMapView: View {
                         targetDate: store.game.startDate,
                         nowDate: store.nowDate,
                         connectedHunters: store.game.hunterIds.count,
-                        onCancelGame: { store.send(.cancelGameButtonTapped) }
+                        onCancelGame: { store.send(.view(.cancelGameButtonTapped)) }
                     )
                 }
             }
             .mapCommonSheets(
                 state: store.state,
                 selectedPowerUp: $selectedPowerUp,
-                onCancelGame: { store.send(.cancelGameButtonTapped) },
-                onGameInfoDismiss: { store.send(.gameInfoDismissed) },
-                onInventoryDismiss: { store.send(.powerUpInventoryDismissed) },
-                onActivatePowerUp: { store.send(.powerUpActivated($0)) }
+                onCancelGame: { store.send(.view(.cancelGameButtonTapped)) },
+                onGameInfoDismiss: { store.send(.view(.gameInfoDismissed)) },
+                onInventoryDismiss: { store.send(.powerUps(.inventoryDismissed)) },
+                onActivatePowerUp: { store.send(.powerUps(.activateTapped($0))) }
             )
     }
 }
