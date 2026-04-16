@@ -149,4 +149,107 @@ class PlanSelectionViewModelBehaviorTest {
         val state = PlanSelectionUiState(selectedPlan = PricingModel.FLAT)
         assertEquals(PlanSelectionUiState.Step.CONFIGURE_PRICING, state.step)
     }
+
+    // ── Edge cases ─────────────────────────────────────────
+
+    @Test
+    fun `Reload after failure clears loadFailed flag and re-fetches`() {
+        coEvery { firestoreRepository.fetchPartyPlansConfig() } throws Exception("network")
+        val vm = createViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertTrue(vm.uiState.value.loadFailed)
+
+        coEvery { firestoreRepository.fetchPartyPlansConfig() } returns sampleConfig()
+        vm.onIntent(PlanSelectionIntent.Reload)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertFalse(vm.uiState.value.loadFailed)
+        assertFalse(vm.uiState.value.isLoading)
+    }
+
+    @Test
+    fun `re-selecting DEPOSIT after editing fields resets nested fields`() {
+        val vm = createViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+        vm.onIntent(PlanSelectionIntent.PlanSelected(PricingModel.DEPOSIT))
+        vm.onIntent(PlanSelectionIntent.PricePerHunterChanged("9"))
+        vm.onIntent(PlanSelectionIntent.HasMaxPlayersChanged(true))
+
+        vm.onIntent(PlanSelectionIntent.BackToPlans)
+        vm.onIntent(PlanSelectionIntent.PlanSelected(PricingModel.DEPOSIT))
+        assertEquals("", vm.uiState.value.pricePerHunter)
+        assertFalse(vm.uiState.value.hasMaxPlayers)
+    }
+
+    @Test
+    fun `PricePerHunterChanged accepts non-numeric input without crashing`() {
+        val vm = createViewModel()
+        vm.onIntent(PlanSelectionIntent.PricePerHunterChanged("abc"))
+        assertEquals("abc", vm.uiState.value.pricePerHunter)
+    }
+
+    @Test
+    fun `MaxPlayersChanged accepts boundary values 0 and large`() {
+        val vm = createViewModel()
+        vm.onIntent(PlanSelectionIntent.MaxPlayersChanged(0f))
+        assertEquals(0f, vm.uiState.value.maxPlayers)
+        vm.onIntent(PlanSelectionIntent.MaxPlayersChanged(10_000f))
+        assertEquals(10_000f, vm.uiState.value.maxPlayers)
+    }
+
+    @Test
+    fun `buildNavigationParams returns free defaults when plansConfig is null`() {
+        coEvery { firestoreRepository.fetchPartyPlansConfig() } throws Exception("offline")
+        val vm = createViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+        val params = vm.buildNavigationParams()
+        assertEquals("free", params.pricingModel)
+        assertEquals(5, params.numberOfPlayers)
+        assertEquals(0, params.pricePerPlayerCents)
+    }
+
+    @Test
+    fun `buildNavigationParams flat uses slider value and config price`() {
+        val vm = createViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+        vm.onIntent(PlanSelectionIntent.PlanSelected(PricingModel.FLAT))
+        vm.onIntent(PlanSelectionIntent.NumberOfPlayersChanged(15f))
+        val params = vm.buildNavigationParams()
+        assertEquals("flat", params.pricingModel)
+        assertEquals(15, params.numberOfPlayers)
+        assertEquals(300, params.pricePerPlayerCents)
+    }
+
+    @Test
+    fun `buildNavigationParams deposit converts price string to cents`() {
+        val vm = createViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+        vm.onIntent(PlanSelectionIntent.PlanSelected(PricingModel.DEPOSIT))
+        vm.onIntent(PlanSelectionIntent.PricePerHunterChanged("7"))
+        vm.onIntent(PlanSelectionIntent.HasMaxPlayersChanged(true))
+        vm.onIntent(PlanSelectionIntent.MaxPlayersChanged(25f))
+        val params = vm.buildNavigationParams()
+        assertEquals("deposit", params.pricingModel)
+        assertEquals(25, params.numberOfPlayers)
+        assertEquals(700, params.pricePerPlayerCents)
+        assertEquals(1000, params.depositAmountCents)
+    }
+
+    @Test
+    fun `buildNavigationParams deposit defaults to 50 players when no cap`() {
+        val vm = createViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+        vm.onIntent(PlanSelectionIntent.PlanSelected(PricingModel.DEPOSIT))
+        vm.onIntent(PlanSelectionIntent.PricePerHunterChanged("5"))
+        val params = vm.buildNavigationParams()
+        assertEquals(50, params.numberOfPlayers)
+    }
+
+    @Test
+    fun `buildNavigationParams deposit with empty price gives 0 cents`() {
+        val vm = createViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+        vm.onIntent(PlanSelectionIntent.PlanSelected(PricingModel.DEPOSIT))
+        val params = vm.buildNavigationParams()
+        assertEquals(0, params.pricePerPlayerCents)
+    }
 }

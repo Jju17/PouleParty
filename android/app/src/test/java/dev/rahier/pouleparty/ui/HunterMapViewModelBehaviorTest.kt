@@ -246,4 +246,86 @@ class HunterMapViewModelBehaviorTest {
         // Default Game.mock is followTheChicken
         assertEquals("Catch the \uD83D\uDC14 !", vm.hunterSubtitle)
     }
+
+    // ── Edge cases ─────────────────────────────────────────
+
+    @Test
+    fun `EnteredCodeChanged truncates beyond FOUND_CODE_DIGITS`() {
+        val vm = createViewModel()
+        vm.onIntent(HunterMapIntent.EnteredCodeChanged("123456789"))
+        assertEquals(AppConstants.FOUND_CODE_DIGITS, vm.uiState.value.enteredCode.length)
+    }
+
+    @Test
+    fun `EnteredCodeChanged with empty string is allowed`() {
+        val vm = createViewModel()
+        vm.onIntent(HunterMapIntent.EnteredCodeChanged("12"))
+        vm.onIntent(HunterMapIntent.EnteredCodeChanged(""))
+        assertEquals("", vm.uiState.value.enteredCode)
+    }
+
+    @Test
+    fun `DismissFoundCodeEntry clears entered code`() {
+        val vm = createViewModel()
+        vm.onIntent(HunterMapIntent.FoundButtonTapped)
+        vm.onIntent(HunterMapIntent.EnteredCodeChanged("99"))
+        vm.onIntent(HunterMapIntent.DismissFoundCodeEntry)
+        assertFalse(vm.uiState.value.isEnteringFoundCode)
+        assertEquals("", vm.uiState.value.enteredCode)
+    }
+
+    @Test
+    fun `LeaveGameTapped twice keeps alert showing (idempotent)`() {
+        val vm = createViewModel()
+        vm.onIntent(HunterMapIntent.LeaveGameTapped)
+        vm.onIntent(HunterMapIntent.LeaveGameTapped)
+        assertTrue(vm.uiState.value.showLeaveAlert)
+    }
+
+    @Test
+    fun `InfoTapped + DismissGameInfo cycles cleanly`() {
+        val vm = createViewModel()
+        vm.onIntent(HunterMapIntent.InfoTapped)
+        assertTrue(vm.uiState.value.showGameInfo)
+        vm.onIntent(HunterMapIntent.DismissGameInfo)
+        assertFalse(vm.uiState.value.showGameInfo)
+        vm.onIntent(HunterMapIntent.InfoTapped)
+        assertTrue(vm.uiState.value.showGameInfo)
+    }
+
+    @Test
+    fun `PowerUpInventoryTapped opens then DismissPowerUpInventory closes`() {
+        val vm = createViewModel()
+        vm.onIntent(HunterMapIntent.PowerUpInventoryTapped)
+        assertTrue(vm.uiState.value.showPowerUpInventory)
+        vm.onIntent(HunterMapIntent.DismissPowerUpInventory)
+        assertFalse(vm.uiState.value.showPowerUpInventory)
+    }
+
+    @Test
+    fun `VictoryNavigated resets shouldNavigateToVictory flag`() {
+        val vm = createViewModel()
+        vm.onIntent(HunterMapIntent.EnteredCodeChanged("1234"))
+        vm.onIntent(HunterMapIntent.SubmitFoundCode)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertTrue(vm.uiState.value.shouldNavigateToVictory)
+        vm.onIntent(HunterMapIntent.VictoryNavigated)
+        assertFalse(vm.uiState.value.shouldNavigateToVictory)
+    }
+
+    @Test
+    fun `DismissRegistrationRequiredAlert clears the flag`() {
+        val vm = createViewModel()
+        vm.onIntent(HunterMapIntent.DismissRegistrationRequiredAlert)
+        assertFalse(vm.uiState.value.showRegistrationRequiredAlert)
+    }
+
+    @Test
+    fun `CodeCopied flips codeCopied to true then back to false after delay`() {
+        val vm = createViewModel()
+        vm.onIntent(HunterMapIntent.CodeCopied)
+        assertTrue(vm.uiState.value.codeCopied)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertFalse(vm.uiState.value.codeCopied)
+    }
 }

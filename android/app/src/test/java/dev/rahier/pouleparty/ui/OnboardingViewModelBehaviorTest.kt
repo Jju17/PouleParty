@@ -164,4 +164,80 @@ class OnboardingViewModelBehaviorTest {
         assertTrue(vm.uiState.value.hasFineLocation)
         assertFalse(vm.uiState.value.hasBackgroundLocation)
     }
+
+    // ── Edge cases ─────────────────────────────────────────
+
+    @Test
+    fun `NicknameChanged with whitespace-only value blocks NextPage on slide 5`() {
+        val vm = createViewModel()
+        vm.onIntent(OnboardingIntent.PageSet(5))
+        vm.onIntent(OnboardingIntent.NicknameChanged("    "))
+        vm.onIntent(OnboardingIntent.NextPage)
+        assertEquals(5, vm.uiState.value.currentPage)
+    }
+
+    @Test
+    fun `NicknameChanged with exactly NICKNAME_MAX_LENGTH stays at the cap`() {
+        val vm = createViewModel()
+        val exact = "a".repeat(OnboardingViewModel.NICKNAME_MAX_LENGTH)
+        vm.onIntent(OnboardingIntent.NicknameChanged(exact))
+        assertEquals(OnboardingViewModel.NICKNAME_MAX_LENGTH, vm.uiState.value.nickname.length)
+    }
+
+    @Test
+    fun `NicknameChanged below cap keeps full value`() {
+        val vm = createViewModel()
+        vm.onIntent(OnboardingIntent.NicknameChanged("Jo"))
+        assertEquals("Jo", vm.uiState.value.nickname)
+    }
+
+    @Test
+    fun `PageSet to negative value still records it (no clamp)`() {
+        val vm = createViewModel()
+        vm.onIntent(OnboardingIntent.PageSet(-1))
+        assertEquals(-1, vm.uiState.value.currentPage)
+    }
+
+    @Test
+    fun `PageSet beyond TOTAL_PAGES still records (no clamp)`() {
+        val vm = createViewModel()
+        vm.onIntent(OnboardingIntent.PageSet(99))
+        assertEquals(99, vm.uiState.value.currentPage)
+    }
+
+    @Test
+    fun `NextPage from page 4 is non-blocking even without notification permission`() {
+        every { locationRepository.hasFineLocationPermission() } returns true
+        val vm = createViewModel()
+        vm.onIntent(OnboardingIntent.PageSet(4))
+        vm.onIntent(OnboardingIntent.NextPage)
+        assertEquals(5, vm.uiState.value.currentPage)
+    }
+
+    @Test
+    fun `multiple PreviousPage on page 0 stays clamped`() {
+        val vm = createViewModel()
+        repeat(5) { vm.onIntent(OnboardingIntent.PreviousPage) }
+        assertEquals(0, vm.uiState.value.currentPage)
+    }
+
+    @Test
+    fun `OnboardingCompletedLogged invoked twice fires analytics twice`() {
+        val vm = createViewModel()
+        vm.onIntent(OnboardingIntent.OnboardingCompletedLogged)
+        vm.onIntent(OnboardingIntent.OnboardingCompletedLogged)
+        verify(exactly = 2) { analyticsRepository.onboardingCompleted() }
+    }
+
+    @Test
+    fun `canCompleteOnboarding shows profanity alert and returns false`() {
+        every { locationRepository.hasFineLocationPermission() } returns true
+        val vm = createViewModel()
+        // canCompleteOnboarding reads cached hasFineLocation — refresh it first
+        vm.onIntent(OnboardingIntent.RefreshPermissions)
+        vm.onIntent(OnboardingIntent.NicknameChanged("fuck"))
+        val ok = vm.canCompleteOnboarding()
+        assertFalse(ok)
+        assertTrue(vm.uiState.value.showProfanityAlert)
+    }
 }

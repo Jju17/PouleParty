@@ -135,4 +135,55 @@ class ChickenMapViewModelBehaviorTest {
         assertFalse(vm.uiState.value.showCancelAlert)
         testDispatcher.scheduler.advanceUntilIdle()
     }
+
+    // ── Edge cases ─────────────────────────────────────────
+
+    @Test
+    fun `CancelGameTapped twice keeps alert showing (idempotent)`() {
+        val vm = createViewModel()
+        vm.onIntent(ChickenMapIntent.CancelGameTapped)
+        vm.onIntent(ChickenMapIntent.CancelGameTapped)
+        assertTrue(vm.uiState.value.showCancelAlert)
+    }
+
+    @Test
+    fun `DismissCancelAlert without prior tap is no-op`() {
+        val vm = createViewModel()
+        vm.onIntent(ChickenMapIntent.DismissCancelAlert)
+        assertFalse(vm.uiState.value.showCancelAlert)
+    }
+
+    @Test
+    fun `DismissPowerUpInventory without opening first is no-op`() {
+        val vm = createViewModel()
+        vm.onIntent(ChickenMapIntent.DismissPowerUpInventory)
+        assertFalse(vm.uiState.value.showPowerUpInventory)
+    }
+
+    @Test
+    fun `PowerUpInventoryTapped + DismissPowerUpInventory cycles cleanly`() {
+        val vm = createViewModel()
+        vm.onIntent(ChickenMapIntent.PowerUpInventoryTapped)
+        assertTrue(vm.uiState.value.showPowerUpInventory)
+        vm.onIntent(ChickenMapIntent.DismissPowerUpInventory)
+        assertFalse(vm.uiState.value.showPowerUpInventory)
+    }
+
+    @Test
+    fun `FoundButtonTapped + DismissFoundCode toggles found code dialog`() {
+        val vm = createViewModel()
+        vm.onIntent(ChickenMapIntent.FoundButtonTapped)
+        assertTrue(vm.uiState.value.showFoundCode)
+        vm.onIntent(ChickenMapIntent.DismissFoundCode)
+        assertFalse(vm.uiState.value.showFoundCode)
+    }
+
+    @Test
+    fun `CodeCopied flips codeCopied true then back false after delay`() {
+        val vm = createViewModel()
+        vm.onIntent(ChickenMapIntent.CodeCopied)
+        assertTrue(vm.uiState.value.codeCopied)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertFalse(vm.uiState.value.codeCopied)
+    }
 }

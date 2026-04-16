@@ -201,4 +201,98 @@ class HomeViewModelBehaviorTest {
         vm.onIntent(HomeIntent.LocationRequiredDismissed)
         assertFalse(vm.uiState.value.isShowingLocationRequired)
     }
+
+    // ── Edge cases ─────────────────────────────────────────
+
+    @Test
+    fun `StartButtonTapped without location permission shows alert and skips sheet`() {
+        every { locationRepository.hasFineLocationPermission() } returns false
+        val vm = createViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+        vm.onIntent(HomeIntent.StartButtonTapped)
+        assertTrue(vm.uiState.value.isShowingLocationRequired)
+        assertFalse(vm.uiState.value.isShowingJoinSheet)
+    }
+
+    @Test
+    fun `StartButtonTapped with permission opens join sheet and resets fields`() {
+        every { locationRepository.hasFineLocationPermission() } returns true
+        val vm = createViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+        vm.onIntent(HomeIntent.GameCodeChanged("OLD123"))
+        vm.onIntent(HomeIntent.TeamNameChanged("Old"))
+        vm.onIntent(HomeIntent.StartButtonTapped)
+        assertTrue(vm.uiState.value.isShowingJoinSheet)
+        assertEquals("", vm.uiState.value.gameCode)
+        assertEquals("", vm.uiState.value.teamName)
+    }
+
+    @Test
+    fun `JoinSheetDismissed clears all join state`() {
+        every { locationRepository.hasFineLocationPermission() } returns true
+        val vm = createViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+        vm.onIntent(HomeIntent.StartButtonTapped)
+        vm.onIntent(HomeIntent.GameCodeChanged("ABC123"))
+        vm.onIntent(HomeIntent.TeamNameChanged("Eagles"))
+        vm.onIntent(HomeIntent.JoinSheetDismissed)
+        assertFalse(vm.uiState.value.isShowingJoinSheet)
+        assertEquals("", vm.uiState.value.gameCode)
+        assertEquals("", vm.uiState.value.teamName)
+    }
+
+    @Test
+    fun `GameCodeChanged below required length stays in EnteringCode step`() {
+        val vm = createViewModel()
+        vm.onIntent(HomeIntent.GameCodeChanged("ABC"))
+        assertTrue(vm.uiState.value.joinStep is dev.rahier.pouleparty.ui.home.JoinFlowStep.EnteringCode)
+    }
+
+    @Test
+    fun `GameCodeChanged uppercase normalizes lowercase input`() {
+        val vm = createViewModel()
+        vm.onIntent(HomeIntent.GameCodeChanged("abc"))
+        assertEquals("ABC", vm.uiState.value.gameCode)
+    }
+
+    @Test
+    fun `GameCodeChanged with non-alphanumeric stays in EnteringCode`() {
+        val vm = createViewModel()
+        vm.onIntent(HomeIntent.GameCodeChanged("AB!@#1"))
+        assertTrue(vm.uiState.value.joinStep is dev.rahier.pouleparty.ui.home.JoinFlowStep.EnteringCode)
+    }
+
+    @Test
+    fun `RejoinActiveGameTapped without active game does nothing`() {
+        mockAuthUser("user-123")
+        coEvery { firestoreRepository.findActiveGame("user-123") } returns null
+        val vm = createViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+        vm.onIntent(HomeIntent.RejoinActiveGameTapped)
+        assertNull(vm.uiState.value.activeGame)
+    }
+
+    @Test
+    fun `ToggleMusic flips persisted preference each call`() {
+        every { prefs.getBoolean(AppConstants.PREF_IS_MUSIC_MUTED, false) } returns false
+        val vm = createViewModel()
+        val initial = vm.uiState.value.isMusicMuted
+        vm.onIntent(HomeIntent.ToggleMusic)
+        assertEquals(!initial, vm.uiState.value.isMusicMuted)
+        vm.onIntent(HomeIntent.ToggleMusic)
+        assertEquals(initial, vm.uiState.value.isMusicMuted)
+    }
+
+    @Test
+    fun `ActiveGameDismissed clears both game and role`() {
+        mockAuthUser("user-123")
+        val game = dev.rahier.pouleparty.model.Game.mock
+        coEvery { firestoreRepository.findActiveGame("user-123") } returns Pair(game, PlayerRole.HUNTER)
+        val vm = createViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertNotNull(vm.uiState.value.activeGame)
+        vm.onIntent(HomeIntent.ActiveGameDismissed)
+        assertNull(vm.uiState.value.activeGame)
+        assertNull(vm.uiState.value.activeGameRole)
+    }
 }

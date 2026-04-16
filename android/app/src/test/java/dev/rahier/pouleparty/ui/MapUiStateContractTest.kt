@@ -78,4 +78,48 @@ class MapUiStateContractTest {
         val projection = state.powerUps(activatingId = "in-flight")
         assertEquals("in-flight", projection.activatingId)
     }
+
+    // ── Edge cases ─────────────────────────────────────────
+
+    @Test
+    fun `defaults match between Chicken and Hunter UI state`() {
+        val chicken: MapUiState = ChickenMapUiState(game = Game.mock)
+        val hunter: MapUiState = HunterMapUiState(game = Game.mock)
+        assertEquals(chicken.radius, hunter.radius)
+        assertEquals(chicken.showGameInfo, hunter.showGameInfo)
+        assertEquals(chicken.showPowerUpInventory, hunter.showPowerUpInventory)
+        assertEquals(chicken.isOutsideZone, hunter.isOutsideZone)
+        assertEquals(chicken.availablePowerUps, hunter.availablePowerUps)
+        assertEquals(chicken.collectedPowerUps, hunter.collectedPowerUps)
+    }
+
+    @Test
+    fun `powerUps projection on empty state returns empty lists and null fields`() {
+        val state: MapUiState = ChickenMapUiState(game = Game.mock)
+        val projection = state.powerUps()
+        assertTrue(projection.available.isEmpty())
+        assertTrue(projection.collected.isEmpty())
+        assertNull(projection.notification)
+        assertNull(projection.lastActivatedType)
+        assertNull(projection.activatingId)
+        assertFalse(projection.showInventory)
+    }
+
+    @Test
+    fun `MapUiState contract values reflect mutations through copy`() {
+        val initial = ChickenMapUiState(game = Game.mock)
+        val updated = initial.copy(
+            radius = 750,
+            isOutsideZone = true,
+            countdownNumber = 3,
+            countdownText = "Go!",
+            powerUpNotification = "Hello"
+        )
+        val surface: MapUiState = updated
+        assertEquals(750, surface.radius)
+        assertTrue(surface.isOutsideZone)
+        assertEquals(3, surface.countdownNumber)
+        assertEquals("Go!", surface.countdownText)
+        assertEquals("Hello", surface.powerUpNotification)
+    }
 }
