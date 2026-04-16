@@ -207,4 +207,78 @@ struct MapPowerUpsFeatureTests {
         }
         await store.receive(\.delegate.activated)
     }
+
+    // MARK: - Edge cases
+
+    @Test func notificationShownReplacesPreviousNotification() async {
+        let store = TestStore(
+            initialState: MapPowerUpsFeature.State(
+                lastActivatedType: .radarPing,
+                notification: "Old"
+            )
+        ) {
+            MapPowerUpsFeature()
+        }
+
+        await store.send(.notificationShown(text: "New", type: .invisibility)) {
+            $0.notification = "New"
+            $0.lastActivatedType = .invisibility
+        }
+    }
+
+    @Test func notificationClearedOnEmptyStateIsNoOp() async {
+        let store = TestStore(initialState: MapPowerUpsFeature.State()) {
+            MapPowerUpsFeature()
+        }
+        // No state change expected — TestStore exhaustivity guarantees this.
+        await store.send(.notificationCleared)
+    }
+
+    @Test func inventoryTappedTwiceStaysOpen() async {
+        let store = TestStore(initialState: MapPowerUpsFeature.State()) {
+            MapPowerUpsFeature()
+        }
+        await store.send(.inventoryTapped) { $0.showInventory = true }
+        // Second tap does not toggle off — it just re-asserts the open state.
+        await store.send(.inventoryTapped)
+    }
+
+    @Test func dataUpdatedPreservesPreviousNotification() async {
+        let initial = MapPowerUpsFeature.State(notification: "Existing")
+        let store = TestStore(initialState: initial) { MapPowerUpsFeature() }
+
+        let p = makePowerUp(id: "x")
+        await store.send(.dataUpdated(available: [p], collected: [])) {
+            $0.available = [p]
+            // notification untouched
+        }
+    }
+
+    @Test func activateTappedWhileNotificationAlreadyShownOverwrites() async {
+        let initial = MapPowerUpsFeature.State(
+            lastActivatedType: .jammer,
+            notification: "Jammer activated!",
+            showInventory: true
+        )
+        let store = TestStore(initialState: initial) { MapPowerUpsFeature() }
+
+        let p = makePowerUp(id: "p2", type: .zoneFreeze)
+        await store.send(.activateTapped(p)) {
+            $0.showInventory = false
+            $0.notification = "Activated: \(p.type.displayName)!"
+            $0.lastActivatedType = .zoneFreeze
+        }
+        await store.receive(\.delegate.activated)
+    }
+
+    @Test func dataUpdatedWithIdenticalListsStillReplaces() async {
+        let p = makePowerUp(id: "same")
+        let store = TestStore(
+            initialState: MapPowerUpsFeature.State(available: [p], collected: [p])
+        ) { MapPowerUpsFeature() }
+
+        // Even with same content, the action runs without crashing
+        // and the lists remain equal.
+        await store.send(.dataUpdated(available: [p], collected: [p]))
+    }
 }

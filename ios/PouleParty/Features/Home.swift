@@ -509,12 +509,32 @@ struct HomeView: View {
                 Spacer()
 
                 if store.activeGame != nil {
-                    rejoinBanner
-                } else if store.currentPendingRegistration != nil {
+                    RejoinGameBanner(
+                        gameCode: store.activeGame?.gameCode,
+                        onRejoin: { store.send(.rejoinGameTapped) },
+                        onDismiss: {
+                            withAnimation { _ = store.send(.activeGameBannerDismissed) }
+                        }
+                    )
+                } else if let pending = store.currentPendingRegistration {
                     if isPendingBannerCollapsed {
-                        collapsedPendingRegistrationTab
+                        CollapsedPendingRegistrationTab(
+                            onExpand: {
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                    isPendingBannerCollapsed = false
+                                }
+                            }
+                        )
                     } else {
-                        pendingRegistrationBanner
+                        PendingRegistrationBanner(
+                            pending: pending,
+                            onJoin: { store.send(.pendingRegistrationRejoinTapped) },
+                            onCollapse: {
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                    isPendingBannerCollapsed = true
+                                }
+                            }
+                        )
                     }
                 }
 
@@ -651,148 +671,6 @@ struct HomeView: View {
         }
     }
 
-    private var pendingRegistrationBanner: some View {
-        ZStack(alignment: .topTrailing) {
-            VStack(spacing: 12) {
-                Text(store.currentPendingRegistration?.isFinished == true ? "Game ended" : "Registered to game")
-                    .font(.gameboy(size: 12))
-                    .foregroundStyle(.white)
-
-                if let pending = store.currentPendingRegistration {
-                    Text(pending.gameCode)
-                        .font(.gameboy(size: 20))
-                        .foregroundStyle(.white)
-                    Text(pending.teamName)
-                        .font(.gameboy(size: 9))
-                        .foregroundStyle(.white.opacity(0.8))
-                    if !pending.isFinished {
-                        Text("Starting in \(pending.startDate, style: .relative)")
-                            .font(.gameboy(size: 9))
-                            .foregroundStyle(.white.opacity(0.8))
-                    }
-                }
-
-                Button {
-                    store.send(.pendingRegistrationRejoinTapped)
-                } label: {
-                    Text(store.currentPendingRegistration?.isFinished == true ? "View results" : "Join")
-                        .font(.gameboy(size: 16))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 24)
-                        .padding(.vertical, 10)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(.white, lineWidth: 3)
-                        )
-                }
-                .accessibilityLabel("Open registered game")
-            }
-            .padding(20)
-            .frame(maxWidth: .infinity)
-
-            Button {
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                    isPendingBannerCollapsed = true
-                }
-            } label: {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(.white)
-                    .padding(8)
-            }
-            .accessibilityLabel("Collapse")
-            .padding(8)
-        }
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color.gradientFire)
-                .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
-        )
-        .padding(.horizontal, 24)
-        .transition(.move(edge: .trailing).combined(with: .opacity))
-    }
-
-    private var collapsedPendingRegistrationTab: some View {
-        HStack(spacing: 0) {
-            Spacer(minLength: 0)
-            Button {
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                    isPendingBannerCollapsed = false
-                }
-            } label: {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundStyle(.white)
-                    .padding(.vertical, 16)
-                    .padding(.leading, 14)
-                    .padding(.trailing, 10)
-                    .background(
-                        UnevenRoundedRectangle(
-                            topLeadingRadius: 16,
-                            bottomLeadingRadius: 16,
-                            bottomTrailingRadius: 0,
-                            topTrailingRadius: 0
-                        )
-                        .fill(Color.gradientFire)
-                        .shadow(color: .black.opacity(0.25), radius: 4, x: -2, y: 2)
-                    )
-            }
-            .accessibilityLabel("Expand registered game banner")
-        }
-        .frame(maxWidth: .infinity, minHeight: 190, alignment: .topTrailing)
-        .transition(.move(edge: .trailing))
-    }
-
-    private var rejoinBanner: some View {
-        ZStack(alignment: .topTrailing) {
-            VStack(spacing: 12) {
-                Text("Game in progress")
-                    .font(.gameboy(size: 14))
-                    .foregroundStyle(.white)
-
-                if let code = store.activeGame?.gameCode {
-                    Text(code)
-                        .font(.gameboy(size: 20))
-                        .foregroundStyle(.white)
-                }
-
-                Button {
-                    store.send(.rejoinGameTapped)
-                } label: {
-                    Text("Rejoin")
-                        .font(.gameboy(size: 16))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 24)
-                        .padding(.vertical, 10)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(.white, lineWidth: 3)
-                        )
-                }
-                .accessibilityLabel("Rejoin game")
-            }
-            .padding(20)
-            .frame(maxWidth: .infinity)
-
-            Button {
-                withAnimation { _ = store.send(.activeGameBannerDismissed) }
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(.white)
-                    .padding(8)
-            }
-            .accessibilityLabel("Dismiss")
-            .padding(8)
-        }
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color.gradientFire)
-                .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
-        )
-        .padding(.horizontal, 24)
-        .transition(.move(edge: .bottom).combined(with: .opacity))
-    }
 
     private func animateBlinking() async {
         while !Task.isCancelled {

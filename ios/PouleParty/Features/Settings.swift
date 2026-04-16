@@ -133,11 +133,19 @@ struct SettingsView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
-                nicknameSection
-                myGamesSection
-                linksSection
-                dangerSection
-                versionSection
+                SettingsNicknameSection(
+                    text: $nicknameText,
+                    isFocused: $isNicknameFocused,
+                    onSubmit: { store.send(.nicknameSubmitted($0)) }
+                )
+                SettingsMyGamesSection(
+                    isLoading: store.isLoadingGames,
+                    games: store.myGames,
+                    onTap: { store.send(.gameTapped($0)) }
+                )
+                SettingsLinksSection()
+                SettingsDangerSection(onDelete: { store.send(.deleteDataTapped) })
+                SettingsVersionSection()
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 16)
@@ -199,183 +207,11 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - Nickname
-
-    private var nicknameSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Label("Nickname", systemImage: "person")
-                .font(.banger(size: 18))
-                .foregroundStyle(Color.onBackground)
-
-            TextField("Your nickname", text: $nicknameText)
-                .font(.banger(size: 22))
-                .foregroundStyle(Color.onBackground)
-                .multilineTextAlignment(.center)
-                .padding()
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.surface)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.onBackground.opacity(0.2), lineWidth: 1)
-                )
-                .focused($isNicknameFocused)
-                .submitLabel(.done)
-                .onChange(of: nicknameText) { _, newValue in
-                    if newValue.count > AppConstants.nicknameMaxLength {
-                        nicknameText = String(newValue.prefix(AppConstants.nicknameMaxLength))
-                    }
-                }
-                .onSubmit {
-                    store.send(.nicknameSubmitted(nicknameText))
-                }
-
-            BangerText("\(nicknameText.count)/\(AppConstants.nicknameMaxLength)", size: 14)
-                .foregroundStyle(Color.onBackground.opacity(0.4))
-                .frame(maxWidth: .infinity, alignment: .trailing)
-        }
-        .settingsCard()
-    }
-
-    // MARK: - My Games
-
-    private var myGamesSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Label("My Games", systemImage: "gamecontroller")
-                .font(.banger(size: 18))
-                .foregroundStyle(Color.onBackground)
-
-            if store.isLoadingGames {
-                HStack {
-                    Spacer()
-                    ProgressView()
-                        .tint(Color.CROrange)
-                    Spacer()
-                }
-                .padding(.vertical, 12)
-            } else if store.myGames.isEmpty {
-                Text("No games yet")
-                    .font(.gameboy(size: 8))
-                    .foregroundStyle(Color.onBackground.opacity(0.4))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-            } else {
-                VStack(spacing: 0) {
-                    ForEach(Array(store.myGames.enumerated()), id: \.element.id) { index, myGame in
-                        if index > 0 {
-                            Divider().padding(.horizontal, 14)
-                        }
-                        Button {
-                            store.send(.gameTapped(myGame))
-                        } label: {
-                            GameRowView(myGame: myGame)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-            }
-        }
-        .settingsCard()
-    }
-
-    // MARK: - Links
-
-    private var linksSection: some View {
-        VStack(spacing: 0) {
-            settingsRow(icon: "hand.raised", title: "Privacy Policy") {
-                openURL(URL(string: "https://pouleparty.be/privacy")!)
-            }
-
-            Divider().padding(.horizontal, 14)
-
-            settingsRow(icon: "doc.text", title: "Terms of Use") {
-                openURL(URL(string: "https://pouleparty.be/terms")!)
-            }
-
-            Divider().padding(.horizontal, 14)
-
-            settingsRow(icon: "envelope", title: "Contact Support") {
-                if let url = URL(string: "mailto:julien@rahier.dev") {
-                    openURL(url)
-                }
-            }
-        }
-        .settingsCard(padding: 0)
-    }
-
-    // MARK: - Danger zone
-
-    private var dangerSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Button {
-                store.send(.deleteDataTapped)
-            } label: {
-                HStack {
-                    Image(systemName: "trash")
-                        .font(.banger(size: 18))
-                    BangerText("Delete My Data", size: 18)
-                }
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.danger.opacity(0.85))
-                )
-            }
-
-            BangerText("This will delete your anonymous account and all associated data. A new anonymous account will be created automatically.", size: 13)
-                .foregroundStyle(Color.onBackground.opacity(0.4))
-        }
-        .settingsCard()
-    }
-
-    // MARK: - Version
-
-    private var versionSection: some View {
-        VStack(spacing: 4) {
-            HStack {
-                BangerText("Version", size: 16)
-                    .foregroundStyle(Color.onBackground)
-                Spacer()
-                BangerText(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—", size: 16)
-                    .foregroundStyle(Color.onBackground.opacity(0.4))
-            }
-            HStack {
-                BangerText("Build", size: 14)
-                    .foregroundStyle(Color.onBackground.opacity(0.4))
-                Spacer()
-                BangerText(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "—", size: 14)
-                    .foregroundStyle(Color.onBackground.opacity(0.4))
-            }
-        }
-        .settingsCard()
-    }
-
-    // MARK: - Helpers
-
-    private func settingsRow(icon: String, title: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack {
-                Image(systemName: icon)
-                    .font(.banger(size: 18))
-                    .frame(width: 24)
-                BangerText(title, size: 18)
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(Color.onBackground.opacity(0.3))
-            }
-            .foregroundStyle(Color.onBackground)
-            .padding(14)
-        }
-    }
 }
 
 // MARK: - Game Row
 
-private struct GameRowView: View {
+struct GameRowView: View {
     let myGame: MyGame
 
     private var game: Game { myGame.game }
@@ -692,7 +528,7 @@ private struct SettingsCardModifier: ViewModifier {
     }
 }
 
-private extension View {
+extension View {
     func settingsCard(padding: CGFloat = 16) -> some View {
         modifier(SettingsCardModifier(padding: padding))
     }

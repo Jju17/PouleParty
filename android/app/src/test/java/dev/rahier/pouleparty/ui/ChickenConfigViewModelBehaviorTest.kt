@@ -137,4 +137,54 @@ class ChickenConfigViewModelBehaviorTest {
         val vm = createViewModel(gameId = "custom-game-123")
         assertEquals("custom-game-123", vm.uiState.value.game.id)
     }
+
+    // ── Newly added Intent surface coverage ──
+
+    @Test
+    fun `StartTimeTapped opens the time picker`() {
+        val vm = createViewModel()
+        vm.onIntent(ChickenConfigIntent.StartTimeTapped)
+        assertTrue(vm.uiState.value.showTimePicker)
+    }
+
+    @Test
+    fun `DismissTimePicker closes the time picker`() {
+        val vm = createViewModel()
+        vm.onIntent(ChickenConfigIntent.StartTimeTapped)
+        vm.onIntent(ChickenConfigIntent.DismissTimePicker)
+        assertFalse(vm.uiState.value.showTimePicker)
+    }
+
+    @Test
+    fun `MapSetupTapped opens the map config sheet`() {
+        val vm = createViewModel()
+        vm.onIntent(ChickenConfigIntent.MapSetupTapped)
+        assertTrue(vm.uiState.value.showMapConfig)
+    }
+
+    @Test
+    fun `DismissMapConfig closes the map config sheet`() {
+        val vm = createViewModel()
+        vm.onIntent(ChickenConfigIntent.MapSetupTapped)
+        vm.onIntent(ChickenConfigIntent.DismissMapConfig)
+        assertFalse(vm.uiState.value.showMapConfig)
+    }
+
+    @Test
+    fun `PowerUpSelectionTapped + DismissPowerUpSelection toggle the sheet`() {
+        val vm = createViewModel()
+        vm.onIntent(ChickenConfigIntent.PowerUpSelectionTapped)
+        assertTrue(vm.uiState.value.showPowerUpSelection)
+        vm.onIntent(ChickenConfigIntent.DismissPowerUpSelection)
+        assertFalse(vm.uiState.value.showPowerUpSelection)
+    }
+
+    @Test
+    fun `CodeCopied flips codeCopied to true then back to false after delay`() {
+        val vm = createViewModel()
+        vm.onIntent(ChickenConfigIntent.CodeCopied)
+        assertTrue(vm.uiState.value.codeCopied)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertFalse(vm.uiState.value.codeCopied)
+    }
 }
