@@ -48,27 +48,36 @@ fun ChickenConfigScreen(
     val state by viewModel.uiState.collectAsState()
     val dateFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
 
+    // One-shot navigation effects from the ViewModel.
+    LaunchedEffect(viewModel) {
+        viewModel.effects.collect { effect ->
+            when (effect) {
+                is ChickenConfigEffect.GameStarted -> onStartGame(effect.gameId)
+            }
+        }
+    }
+
     // Power-up selection overlay
     if (state.showPowerUpSelection) {
-        BackHandler { viewModel.dismissPowerUpSelection() }
+        BackHandler { viewModel.onIntent(ChickenConfigIntent.DismissPowerUpSelection) }
         PowerUpSelectionScreen(
             enabledTypes = state.game.powerUps.enabledTypes,
             gameMod = state.game.gameModEnum,
-            onToggle = { viewModel.togglePowerUpType(it) },
-            onDismiss = { viewModel.dismissPowerUpSelection() }
+            onToggle = { viewModel.onIntent(ChickenConfigIntent.PowerUpTypeToggled(it)) },
+            onDismiss = { viewModel.onIntent(ChickenConfigIntent.DismissPowerUpSelection) }
         )
         return
     }
 
     // Map config full-screen overlay
     if (state.showMapConfig) {
-        BackHandler { viewModel.dismissMapConfig() }
+        BackHandler { viewModel.onIntent(ChickenConfigIntent.DismissMapConfig) }
         Scaffold(
             topBar = {
                 TopAppBar(
                     title = { Text(stringResource(R.string.map_setup)) },
                     navigationIcon = {
-                        IconButton(onClick = { viewModel.dismissMapConfig() }) {
+                        IconButton(onClick = { viewModel.onIntent(ChickenConfigIntent.DismissMapConfig) }) {
                             Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
                         }
                     }
@@ -80,13 +89,13 @@ fun ChickenConfigScreen(
                     initialRadius = state.game.zone.radius,
                     finalMarker = state.game.finalLocation,
                     onLocationSelected = { point ->
-                        viewModel.onLocationSelected(point)
+                        viewModel.onIntent(ChickenConfigIntent.LocationSelected(point))
                     },
                     onFinalLocationSelected = { point ->
-                        viewModel.onFinalLocationSelected(point)
+                        viewModel.onIntent(ChickenConfigIntent.FinalLocationSelected(point))
                     },
                     onRadiusChanged = { radius ->
-                        viewModel.updateInitialRadius(radius)
+                        viewModel.onIntent(ChickenConfigIntent.InitialRadiusChanged(radius))
                     }
                 )
             }
@@ -132,7 +141,7 @@ fun ChickenConfigScreen(
                 GameCodeCard(
                     gameCode = state.game.gameCode,
                     codeCopied = state.codeCopied,
-                    onCodeCopied = { viewModel.onCodeCopied() },
+                    onCodeCopied = { viewModel.onIntent(ChickenConfigIntent.CodeCopied) },
                     colors = formCardColors,
                     elevation = formCardElevation
                 )
@@ -145,7 +154,7 @@ fun ChickenConfigScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { viewModel.onStartTimeTapped() },
+                                .clickable { viewModel.onIntent(ChickenConfigIntent.StartTimeTapped) },
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -164,7 +173,7 @@ fun ChickenConfigScreen(
                                 durationOptions.forEachIndexed { index, (minutes, label) ->
                                     SegmentedButton(
                                         selected = state.gameDurationMinutes == minutes,
-                                        onClick = { viewModel.updateGameDuration(minutes) },
+                                        onClick = { viewModel.onIntent(ChickenConfigIntent.GameDurationChanged(minutes)) },
                                         shape = SegmentedButtonDefaults.itemShape(index, durationOptions.size)
                                     ) {
                                         Text(label)
@@ -224,7 +233,7 @@ fun ChickenConfigScreen(
                                         DropdownMenuItem(
                                             text = { Text(mod.title) },
                                             onClick = {
-                                                viewModel.updateGameMod(mod)
+                                                viewModel.onIntent(ChickenConfigIntent.GameModeChanged(mod))
                                                 modeExpanded = false
                                             }
                                         )
@@ -244,7 +253,7 @@ fun ChickenConfigScreen(
                             Text(stringResource(R.string.chicken_can_see_hunters))
                             Switch(
                                 checked = state.game.chickenCanSeeHunters,
-                                onCheckedChange = { viewModel.toggleChickenCanSeeHunters(it) }
+                                onCheckedChange = { viewModel.onIntent(ChickenConfigIntent.ChickenCanSeeHuntersToggled(it)) }
                             )
                         }
                     }
@@ -262,7 +271,7 @@ fun ChickenConfigScreen(
                             Text(stringResource(R.string.enable_power_ups))
                             Switch(
                                 checked = state.game.powerUps.enabled,
-                                onCheckedChange = { viewModel.togglePowerUps(it) }
+                                onCheckedChange = { viewModel.onIntent(ChickenConfigIntent.PowerUpsToggled(it)) }
                             )
                         }
                         if (state.game.powerUps.enabled) {
@@ -279,7 +288,7 @@ fun ChickenConfigScreen(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable { viewModel.onPowerUpSelectionTapped() },
+                                    .clickable { viewModel.onIntent(ChickenConfigIntent.PowerUpSelectionTapped) },
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
@@ -307,7 +316,7 @@ fun ChickenConfigScreen(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { viewModel.onMapSetupTapped() },
+                        .clickable { viewModel.onIntent(ChickenConfigIntent.MapSetupTapped) },
                     colors = formCardColors,
                     elevation = formCardElevation
                 ) {
@@ -342,7 +351,7 @@ fun ChickenConfigScreen(
                             }
                             Slider(
                                 value = state.game.zone.shrinkIntervalMinutes.toFloat(),
-                                onValueChange = { viewModel.updateRadiusIntervalUpdate(it.toDouble()) },
+                                onValueChange = { viewModel.onIntent(ChickenConfigIntent.RadiusIntervalUpdateChanged(it.toDouble())) },
                                 valueRange = 1f..60f,
                                 steps = 58
                             )
@@ -358,7 +367,7 @@ fun ChickenConfigScreen(
                             }
                             Slider(
                                 value = state.game.zone.shrinkMetersPerUpdate.toFloat(),
-                                onValueChange = { viewModel.updateRadiusDecline(it.toDouble()) },
+                                onValueChange = { viewModel.onIntent(ChickenConfigIntent.RadiusDeclineChanged(it.toDouble())) },
                                 valueRange = 50f..1000f,
                                 steps = 94
                             )
@@ -379,7 +388,7 @@ fun ChickenConfigScreen(
                         }
                         Slider(
                             value = state.game.timing.headStartMinutes.toFloat(),
-                            onValueChange = { viewModel.updateChickenHeadStart(it.toDouble()) },
+                            onValueChange = { viewModel.onIntent(ChickenConfigIntent.HeadStartChanged(it.toDouble())) },
                             valueRange = 0f..45f,
                             steps = 44
                         )
@@ -393,14 +402,14 @@ fun ChickenConfigScreen(
                         SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                             SegmentedButton(
                                 selected = !state.isExpertMode,
-                                onClick = { viewModel.toggleExpertMode(false) },
+                                onClick = { viewModel.onIntent(ChickenConfigIntent.ExpertModeToggled(false)) },
                                 shape = SegmentedButtonDefaults.itemShape(0, 2)
                             ) {
                                 Text(stringResource(R.string.normal))
                             }
                             SegmentedButton(
                                 selected = state.isExpertMode,
-                                onClick = { viewModel.toggleExpertMode(true) },
+                                onClick = { viewModel.onIntent(ChickenConfigIntent.ExpertModeToggled(true)) },
                                 shape = SegmentedButtonDefaults.itemShape(1, 2)
                             ) {
                                 Text(stringResource(R.string.expert))
@@ -435,7 +444,7 @@ fun ChickenConfigScreen(
                         .then(if (isZoneConfigured) Modifier.shadow(4.dp, RoundedCornerShape(50.dp)) else Modifier)
                         .clip(RoundedCornerShape(50.dp))
                         .background(if (isZoneConfigured) GradientFire else Brush.linearGradient(listOf(Color.Gray.copy(alpha = 0.3f), Color.Gray.copy(alpha = 0.3f))))
-                        .then(if (isZoneConfigured) Modifier.clickable { viewModel.startGame(onStartGame) } else Modifier),
+                        .then(if (isZoneConfigured) Modifier.clickable { viewModel.onIntent(ChickenConfigIntent.StartGameTapped) } else Modifier),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -456,16 +465,16 @@ fun ChickenConfigScreen(
             initialMinute = cal.get(Calendar.MINUTE)
         )
         AlertDialog(
-            onDismissRequest = { viewModel.dismissTimePicker() },
+            onDismissRequest = { viewModel.onIntent(ChickenConfigIntent.DismissTimePicker) },
             title = { Text(stringResource(R.string.start_at)) },
             text = { TimePicker(state = timePickerState) },
             confirmButton = {
                 TextButton(onClick = {
-                    viewModel.updateStartDate(timePickerState.hour, timePickerState.minute)
+                    viewModel.onIntent(ChickenConfigIntent.StartTimeChanged(timePickerState.hour, timePickerState.minute))
                 }) { Text(stringResource(R.string.ok)) }
             },
             dismissButton = {
-                TextButton(onClick = { viewModel.dismissTimePicker() }) { Text(stringResource(R.string.cancel)) }
+                TextButton(onClick = { viewModel.onIntent(ChickenConfigIntent.DismissTimePicker) }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
@@ -473,11 +482,11 @@ fun ChickenConfigScreen(
     // Error alert
     if (state.showAlert) {
         AlertDialog(
-            onDismissRequest = { viewModel.dismissAlert() },
+            onDismissRequest = { viewModel.onIntent(ChickenConfigIntent.DismissAlert) },
             title = { Text(stringResource(R.string.error)) },
             text = { Text(state.alertMessage) },
             confirmButton = {
-                TextButton(onClick = { viewModel.dismissAlert() }) { Text(stringResource(R.string.ok)) }
+                TextButton(onClick = { viewModel.onIntent(ChickenConfigIntent.DismissAlert) }) { Text(stringResource(R.string.ok)) }
             }
         )
     }

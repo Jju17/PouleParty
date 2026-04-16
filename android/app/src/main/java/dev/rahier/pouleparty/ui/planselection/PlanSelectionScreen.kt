@@ -45,11 +45,11 @@ fun PlanSelectionScreen(
 
     if (uiState.showDailyLimitAlert) {
         AlertDialog(
-            onDismissRequest = { viewModel.dismissDailyLimitAlert() },
+            onDismissRequest = { viewModel.onIntent(PlanSelectionIntent.DismissDailyLimitAlert) },
             title = { Text(stringResource(R.string.daily_limit_reached), style = bangerStyle(22)) },
             text = { Text(stringResource(R.string.daily_limit_message)) },
             confirmButton = {
-                TextButton(onClick = { viewModel.dismissDailyLimitAlert() }) {
+                TextButton(onClick = { viewModel.onIntent(PlanSelectionIntent.DismissDailyLimitAlert) }) {
                     Text(stringResource(R.string.ok))
                 }
             }
@@ -64,7 +64,7 @@ fun PlanSelectionScreen(
     ) {
         if (uiState.step == PlanSelectionUiState.Step.CONFIGURE_PRICING) {
             TextButton(
-                onClick = { viewModel.backToPlans() },
+                onClick = { viewModel.onIntent(PlanSelectionIntent.BackToPlans) },
                 modifier = Modifier.align(Alignment.Start)
             ) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back), modifier = Modifier.size(18.dp))
@@ -95,7 +95,7 @@ fun PlanSelectionScreen(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Button(
-                        onClick = { viewModel.loadPlansConfig() },
+                        onClick = { viewModel.onIntent(PlanSelectionIntent.Reload) },
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = CROrange)
                     ) {
@@ -123,12 +123,12 @@ fun PlanSelectionScreen(
                                             if (viewModel.canCreateFreeGame()) {
                                                 onPlanSelected(PricingParams("free", 5, 0, 0))
                                             } else {
-                                                viewModel.showDailyLimitAlert()
+                                                viewModel.onIntent(PlanSelectionIntent.ShowDailyLimitAlert)
                                             }
                                         }
                                     },
-                                    onFlatTapped = { viewModel.selectPlan(PricingModel.FLAT) },
-                                    onDepositTapped = { viewModel.selectPlan(PricingModel.DEPOSIT) }
+                                    onFlatTapped = { viewModel.onIntent(PlanSelectionIntent.PlanSelected(PricingModel.FLAT)) },
+                                    onDepositTapped = { viewModel.onIntent(PlanSelectionIntent.PlanSelected(PricingModel.DEPOSIT)) }
                                 )
                             }
                             PlanSelectionUiState.Step.CONFIGURE_PRICING -> {
@@ -214,7 +214,7 @@ private fun PricingConfigContent(
         }
 
         TextButton(
-            onClick = { viewModel.backToPlans() },
+            onClick = { viewModel.onIntent(PlanSelectionIntent.BackToPlans) },
             modifier = Modifier.align(Alignment.CenterHorizontally)
         ) {
             Text(
@@ -245,7 +245,7 @@ private fun FlatConfig(uiState: PlanSelectionUiState, viewModel: PlanSelectionVi
         )
         Slider(
             value = uiState.numberOfPlayers,
-            onValueChange = { viewModel.updateNumberOfPlayers(it) },
+            onValueChange = { viewModel.onIntent(PlanSelectionIntent.NumberOfPlayersChanged(it)) },
             valueRange = config.minPlayers.toFloat()..config.maxPlayers.toFloat(),
             steps = config.maxPlayers - config.minPlayers - 1,
             colors = SliderDefaults.colors(thumbColor = CROrange, activeTrackColor = CROrange)
@@ -273,7 +273,7 @@ private fun DepositConfig(uiState: PlanSelectionUiState, viewModel: PlanSelectio
             label = "Price per hunter",
             placeholder = "5",
             value = uiState.pricePerHunter,
-            onValueChange = { viewModel.updatePricePerHunter(it) },
+            onValueChange = { viewModel.onIntent(PlanSelectionIntent.PricePerHunterChanged(it)) },
             suffix = "€"
         )
 
@@ -290,7 +290,7 @@ private fun DepositConfig(uiState: PlanSelectionUiState, viewModel: PlanSelectio
             )
             Switch(
                 checked = uiState.hasMaxPlayers,
-                onCheckedChange = { viewModel.updateHasMaxPlayers(it) },
+                onCheckedChange = { viewModel.onIntent(PlanSelectionIntent.HasMaxPlayersChanged(it)) },
                 colors = SwitchDefaults.colors(checkedTrackColor = CROrange)
             )
         }
@@ -304,7 +304,7 @@ private fun DepositConfig(uiState: PlanSelectionUiState, viewModel: PlanSelectio
                 )
                 Slider(
                     value = uiState.maxPlayers,
-                    onValueChange = { viewModel.updateMaxPlayers(it) },
+                    onValueChange = { viewModel.onIntent(PlanSelectionIntent.MaxPlayersChanged(it)) },
                     valueRange = 2f..50f,
                     steps = 47,
                     colors = SliderDefaults.colors(thumbColor = CROrange, activeTrackColor = CROrange)

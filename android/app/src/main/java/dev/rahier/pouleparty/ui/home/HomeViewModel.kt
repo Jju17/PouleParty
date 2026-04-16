@@ -13,9 +13,12 @@ import dev.rahier.pouleparty.model.GameStatus
 import dev.rahier.pouleparty.model.Registration
 import dev.rahier.pouleparty.ui.PlayerRole
 import dev.rahier.pouleparty.util.getTrimmedString
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -56,6 +59,42 @@ class HomeViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
+    private val _effects = Channel<HomeEffect>(Channel.BUFFERED)
+    val effects: Flow<HomeEffect> = _effects.receiveAsFlow()
+
+    /** Single entry point for every user interaction. */
+    fun onIntent(intent: HomeIntent) {
+        when (intent) {
+            HomeIntent.StartButtonTapped -> onStartButtonTapped()
+            HomeIntent.RulesTapped -> onRulesTapped()
+            HomeIntent.RulesDismissed -> onRulesDismissed()
+            HomeIntent.GameNotFoundDismissed -> onGameNotFoundDismissed()
+            HomeIntent.LocationRequiredDismissed -> onLocationRequiredDismissed()
+            HomeIntent.LocationPermissionDenied -> onLocationPermissionDenied()
+            HomeIntent.CreatePartyTapped -> { /* host handles — see [canCreateParty] */ }
+            HomeIntent.JoinSheetDismissed -> onJoinSheetDismissed()
+            HomeIntent.ToggleMusic -> toggleMusicMuted()
+            HomeIntent.ActiveGameDismissed -> dismissActiveGame()
+            HomeIntent.RejoinActiveGameTapped -> rejoinActiveGame()
+            HomeIntent.RegisterTapped -> onRegisterTapped()
+            HomeIntent.SubmitRegistrationTapped -> onSubmitRegistrationTapped()
+            HomeIntent.JoinValidatedGameTapped -> joinValidatedGame()
+            HomeIntent.PendingRegistrationJoinTapped -> joinPendingRegistration()
+            HomeIntent.RefreshActiveGame -> checkForActiveGame()
+            is HomeIntent.GameCodeChanged -> onGameCodeChanged(intent.code)
+            is HomeIntent.TeamNameChanged -> onTeamNameChanged(intent.name)
+        }
+    }
+
+    /**
+     * Returns whether the host can trigger party creation navigation.
+     * Kept as a direct API (not an Intent) because it's a synchronous
+     * permission gate the Compose navigation layer inspects.
+     */
+    fun canCreateParty(): Boolean = onCreatePartyTapped()
+
+    fun hasLocationPermission(): Boolean = locationRepository.hasFineLocationPermission()
+
     init {
         _uiState.update {
             it.copy(
@@ -86,10 +125,6 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun refreshActiveGame() {
-        checkForActiveGame()
-    }
-
     private fun checkForActiveGame() {
         val userId = auth.currentUser?.uid ?: return
         viewModelScope.launch {
@@ -102,38 +137,35 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun toggleMusicMuted() {
+    private fun toggleMusicMuted() {
         val newValue = !_uiState.value.isMusicMuted
         _uiState.update { it.copy(isMusicMuted = newValue) }
         prefs.edit().putBoolean(AppConstants.PREF_IS_MUSIC_MUTED, newValue).apply()
     }
 
-    fun dismissActiveGame() {
+    private fun dismissActiveGame() {
         _uiState.update { it.copy(activeGame = null, activeGameRole = null) }
     }
 
-    fun rejoinGame(
-        onRejoinAsChicken: (String) -> Unit,
-        onRejoinAsHunter: (String, String) -> Unit
-    ) {
+    private fun rejoinActiveGame() {
         val game = _uiState.value.activeGame ?: return
         val role = _uiState.value.activeGameRole ?: return
         _uiState.update { it.copy(activeGame = null, activeGameRole = null) }
         val savedNickname = prefs.getTrimmedString(AppConstants.PREF_USER_NICKNAME)
         val hunterName = savedNickname.ifEmpty { "Hunter" }
-        when (role) {
-            PlayerRole.CHICKEN -> onRejoinAsChicken(game.id)
-            PlayerRole.HUNTER -> onRejoinAsHunter(game.id, hunterName)
+        viewModelScope.launch {
+            when (role) {
+                PlayerRole.CHICKEN -> _effects.send(HomeEffect.NavigateToChickenMap(game.id))
+                PlayerRole.HUNTER -> _effects.send(HomeEffect.NavigateToHunterMap(game.id, hunterName))
+            }
         }
     }
 
-    fun hasLocationPermission(): Boolean = locationRepository.hasFineLocationPermission()
-
-    fun onLocationPermissionDenied() {
+    private fun onLocationPermissionDenied() {
         _uiState.update { it.copy(isShowingLocationRequired = true) }
     }
 
-    fun onStartButtonTapped() {
+    private fun onStartButtonTapped() {
         if (!locationRepository.hasFineLocationPermission()) {
             _uiState.update { it.copy(isShowingLocationRequired = true) }
             return
@@ -148,7 +180,7 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun onJoinSheetDismissed() {
+    private fun onJoinSheetDismissed() {
         _uiState.update {
             it.copy(
                 isShowingJoinSheet = false,
@@ -159,7 +191,7 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun onGameCodeChanged(code: String) {
+    private fun onGameCodeChanged(code: String) {
         val normalized = code.trim().uppercase()
         _uiState.update { it.copy(gameCode = normalized) }
         if (normalized.length == AppConstants.GAME_CODE_LENGTH
@@ -201,17 +233,17 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun onTeamNameChanged(name: String) {
+    private fun onTeamNameChanged(name: String) {
         _uiState.update { it.copy(teamName = name) }
     }
 
-    fun onRegisterTapped() {
+    private fun onRegisterTapped() {
         val step = _uiState.value.joinStep
         if (step !is JoinFlowStep.CodeValidated) return
         _uiState.update { it.copy(joinStep = JoinFlowStep.Registering(step.game)) }
     }
 
-    fun onSubmitRegistrationTapped() {
+    private fun onSubmitRegistrationTapped() {
         val step = _uiState.value.joinStep
         if (step !is JoinFlowStep.Registering) return
         if (!_uiState.value.isTeamNameValid) return
@@ -247,7 +279,7 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun onJoinTapped(onGameFound: (String, String) -> Unit, onGameDone: (String) -> Unit) {
+    private fun joinValidatedGame() {
         val step = _uiState.value.joinStep
         if (step !is JoinFlowStep.CodeValidated) return
         if (step.game.registration.required && !step.alreadyRegistered) return
@@ -263,16 +295,16 @@ class HomeViewModel @Inject constructor(
                 pendingRegistration = null
             )
         }
-        when (step.game.gameStatusEnum) {
-            GameStatus.WAITING, GameStatus.IN_PROGRESS -> onGameFound(step.game.id, hunterName)
-            GameStatus.DONE -> onGameDone(step.game.id)
+        viewModelScope.launch {
+            val effect = when (step.game.gameStatusEnum) {
+                GameStatus.WAITING, GameStatus.IN_PROGRESS -> HomeEffect.NavigateToHunterMap(step.game.id, hunterName)
+                GameStatus.DONE -> HomeEffect.NavigateToGameDone(step.game.id)
+            }
+            _effects.send(effect)
         }
     }
 
-    fun onPendingRegistrationJoinTapped(
-        onGameFound: (String, String) -> Unit,
-        onGameDone: (String) -> Unit
-    ) {
+    private fun joinPendingRegistration() {
         val pending = _uiState.value.pendingRegistration ?: return
         val savedNickname = prefs.getTrimmedString(AppConstants.PREF_USER_NICKNAME)
         val hunterName = savedNickname.ifEmpty { "Hunter" }
@@ -284,30 +316,31 @@ class HomeViewModel @Inject constructor(
             }
             clearPendingRegistration()
             _uiState.update { it.copy(pendingRegistration = null) }
-            when (game.gameStatusEnum) {
-                GameStatus.WAITING, GameStatus.IN_PROGRESS -> onGameFound(game.id, hunterName)
-                GameStatus.DONE -> onGameDone(game.id)
+            val effect = when (game.gameStatusEnum) {
+                GameStatus.WAITING, GameStatus.IN_PROGRESS -> HomeEffect.NavigateToHunterMap(game.id, hunterName)
+                GameStatus.DONE -> HomeEffect.NavigateToGameDone(game.id)
             }
+            _effects.send(effect)
         }
     }
 
-    fun onRulesTapped() {
+    private fun onRulesTapped() {
         _uiState.update { it.copy(isShowingGameRules = true) }
     }
 
-    fun onRulesDismissed() {
+    private fun onRulesDismissed() {
         _uiState.update { it.copy(isShowingGameRules = false) }
     }
 
-    fun onGameNotFoundDismissed() {
+    private fun onGameNotFoundDismissed() {
         _uiState.update { it.copy(isShowingGameNotFound = false) }
     }
 
-    fun onLocationRequiredDismissed() {
+    private fun onLocationRequiredDismissed() {
         _uiState.update { it.copy(isShowingLocationRequired = false) }
     }
 
-    fun onCreatePartyTapped(): Boolean {
+    private fun onCreatePartyTapped(): Boolean {
         if (!locationRepository.hasFineLocationPermission()) {
             _uiState.update { it.copy(isShowingLocationRequired = true) }
             return false

@@ -18,9 +18,12 @@ import dev.rahier.pouleparty.model.Zone
 import dev.rahier.pouleparty.model.calculateNormalModeSettings
 import dev.rahier.pouleparty.util.calendarAt
 import kotlin.math.ceil
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.Date
@@ -92,6 +95,37 @@ class ChickenConfigViewModel @Inject constructor(
     )
     val uiState: StateFlow<ChickenConfigUiState> = _uiState.asStateFlow()
 
+    private val _effects = Channel<ChickenConfigEffect>(Channel.BUFFERED)
+    val effects: Flow<ChickenConfigEffect> = _effects.receiveAsFlow()
+
+    /** Single entry point for every user interaction. */
+    fun onIntent(intent: ChickenConfigIntent) {
+        when (intent) {
+            ChickenConfigIntent.StartTimeTapped -> onStartTimeTapped()
+            ChickenConfigIntent.DismissTimePicker -> dismissTimePicker()
+            ChickenConfigIntent.MapSetupTapped -> onMapSetupTapped()
+            ChickenConfigIntent.DismissMapConfig -> dismissMapConfig()
+            ChickenConfigIntent.PowerUpSelectionTapped -> onPowerUpSelectionTapped()
+            ChickenConfigIntent.DismissPowerUpSelection -> dismissPowerUpSelection()
+            ChickenConfigIntent.CodeCopied -> onCodeCopied()
+            ChickenConfigIntent.DismissAlert -> dismissAlert()
+            ChickenConfigIntent.StartGameTapped -> startGame()
+            is ChickenConfigIntent.StartTimeChanged -> updateStartDate(intent.hour, intent.minute)
+            is ChickenConfigIntent.GameModeChanged -> updateGameMod(intent.mode)
+            is ChickenConfigIntent.ChickenCanSeeHuntersToggled -> toggleChickenCanSeeHunters(intent.value)
+            is ChickenConfigIntent.RadiusIntervalUpdateChanged -> updateRadiusIntervalUpdate(intent.value)
+            is ChickenConfigIntent.RadiusDeclineChanged -> updateRadiusDecline(intent.value)
+            is ChickenConfigIntent.HeadStartChanged -> updateChickenHeadStart(intent.value)
+            is ChickenConfigIntent.InitialRadiusChanged -> updateInitialRadius(intent.value)
+            is ChickenConfigIntent.ExpertModeToggled -> toggleExpertMode(intent.expert)
+            is ChickenConfigIntent.GameDurationChanged -> updateGameDuration(intent.minutes)
+            is ChickenConfigIntent.LocationSelected -> onLocationSelected(intent.point)
+            is ChickenConfigIntent.FinalLocationSelected -> onFinalLocationSelected(intent.point)
+            is ChickenConfigIntent.PowerUpsToggled -> togglePowerUps(intent.enabled)
+            is ChickenConfigIntent.PowerUpTypeToggled -> togglePowerUpType(intent.type)
+        }
+    }
+
     init {
         resolveInitialLocation()
     }
@@ -105,15 +139,15 @@ class ChickenConfigViewModel @Inject constructor(
         }
     }
 
-    fun onStartTimeTapped() {
+    private fun onStartTimeTapped() {
         _uiState.update { it.copy(showTimePicker = true) }
     }
 
-    fun dismissTimePicker() {
+    private fun dismissTimePicker() {
         _uiState.update { it.copy(showTimePicker = false) }
     }
 
-    fun updateStartDate(hour: Int, minute: Int) {
+    private fun updateStartDate(hour: Int, minute: Int) {
         val cal = calendarAt(hour = hour, minute = minute)
         // Ensure at least 2 min from now
         val minDate = Date(System.currentTimeMillis() + 120_000)
@@ -123,40 +157,40 @@ class ChickenConfigViewModel @Inject constructor(
         _uiState.update { it.copy(game = it.game.withStartDate(cal.time), showTimePicker = false) }
     }
 
-    fun updateGameMod(mod: GameMod) {
+    private fun updateGameMod(mod: GameMod) {
         _uiState.update { it.copy(game = it.game.copy(gameMode = mod.firestoreValue)) }
     }
 
-    fun toggleChickenCanSeeHunters(value: Boolean) {
+    private fun toggleChickenCanSeeHunters(value: Boolean) {
         _uiState.update { it.copy(game = it.game.withChickenCanSeeHunters(value)) }
     }
 
-    fun updateRadiusIntervalUpdate(value: Double) {
+    private fun updateRadiusIntervalUpdate(value: Double) {
         _uiState.update { it.copy(game = it.game.copy(zone = it.game.zone.copy(shrinkIntervalMinutes = value))) }
     }
 
-    fun updateRadiusDecline(value: Double) {
+    private fun updateRadiusDecline(value: Double) {
         _uiState.update { it.copy(game = it.game.copy(zone = it.game.zone.copy(shrinkMetersPerUpdate = value))) }
     }
 
-    fun updateChickenHeadStart(value: Double) {
+    private fun updateChickenHeadStart(value: Double) {
         _uiState.update { it.copy(game = it.game.copy(timing = it.game.timing.copy(headStartMinutes = value))) }
         recalculateIfNormalMode()
     }
 
-    fun updateInitialRadius(value: Double) {
+    private fun updateInitialRadius(value: Double) {
         _uiState.update { it.copy(game = it.game.copy(zone = it.game.zone.copy(radius = value))) }
         recalculateIfNormalMode()
     }
 
-    fun toggleExpertMode(expert: Boolean) {
+    private fun toggleExpertMode(expert: Boolean) {
         _uiState.update { it.copy(isExpertMode = expert) }
         if (!expert) {
             recalculateIfNormalMode()
         }
     }
 
-    fun updateGameDuration(minutes: Double) {
+    private fun updateGameDuration(minutes: Double) {
         _uiState.update { it.copy(gameDurationMinutes = minutes) }
         recalculateIfNormalMode()
     }
@@ -178,7 +212,7 @@ class ChickenConfigViewModel @Inject constructor(
         }
     }
 
-    fun onCodeCopied() {
+    private fun onCodeCopied() {
         _uiState.update { it.copy(codeCopied = true) }
         viewModelScope.launch {
             kotlinx.coroutines.delay(1000)
@@ -186,35 +220,35 @@ class ChickenConfigViewModel @Inject constructor(
         }
     }
 
-    fun dismissAlert() {
+    private fun dismissAlert() {
         _uiState.update { it.copy(showAlert = false) }
     }
 
-    fun onMapSetupTapped() {
+    private fun onMapSetupTapped() {
         _uiState.update { it.copy(showMapConfig = true) }
     }
 
-    fun dismissMapConfig() {
+    private fun dismissMapConfig() {
         _uiState.update { it.copy(showMapConfig = false) }
     }
 
-    fun onLocationSelected(point: com.mapbox.geojson.Point) {
+    private fun onLocationSelected(point: com.mapbox.geojson.Point) {
         _uiState.update {
             it.copy(game = it.game.withInitialLocation(point))
         }
     }
 
-    fun onFinalLocationSelected(point: com.mapbox.geojson.Point?) {
+    private fun onFinalLocationSelected(point: com.mapbox.geojson.Point?) {
         _uiState.update {
             it.copy(game = it.game.withFinalLocation(point))
         }
     }
 
-    fun togglePowerUps(enabled: Boolean) {
+    private fun togglePowerUps(enabled: Boolean) {
         _uiState.update { it.copy(game = it.game.copy(powerUps = it.game.powerUps.copy(enabled = enabled))) }
     }
 
-    fun togglePowerUpType(type: dev.rahier.pouleparty.model.PowerUpType) {
+    private fun togglePowerUpType(type: dev.rahier.pouleparty.model.PowerUpType) {
         _uiState.update { state ->
             val current = state.game.powerUps.enabledTypes
             val unavailable = if (state.game.gameModEnum == GameMod.STAY_IN_THE_ZONE) {
@@ -233,15 +267,15 @@ class ChickenConfigViewModel @Inject constructor(
         }
     }
 
-    fun onPowerUpSelectionTapped() {
+    private fun onPowerUpSelectionTapped() {
         _uiState.update { it.copy(showPowerUpSelection = true) }
     }
 
-    fun dismissPowerUpSelection() {
+    private fun dismissPowerUpSelection() {
         _uiState.update { it.copy(showPowerUpSelection = false) }
     }
 
-    fun startGame(onSuccess: (String) -> Unit) {
+    private fun startGame() {
         viewModelScope.launch {
             try {
                 // Auto-calculate endDate
@@ -258,7 +292,7 @@ class ChickenConfigViewModel @Inject constructor(
                 }
                 val finalGame = game.withEndDate(endDate)
                 firestoreRepository.setConfig(finalGame)
-                onSuccess(finalGame.id)
+                _effects.send(ChickenConfigEffect.GameStarted(finalGame.id))
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(

@@ -53,6 +53,17 @@ fun HomeScreen(
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
+    // One-shot navigation effects from the ViewModel.
+    LaunchedEffect(viewModel) {
+        viewModel.effects.collect { effect ->
+            when (effect) {
+                is HomeEffect.NavigateToChickenMap -> onNavigateToChickenMap(effect.gameId)
+                is HomeEffect.NavigateToHunterMap -> onNavigateToHunterMap(effect.gameId, effect.hunterName)
+                is HomeEffect.NavigateToGameDone -> onNavigateToVictory(effect.gameId)
+            }
+        }
+    }
+
     // Music playback
     val mediaPlayer = remember {
         MediaPlayer.create(context, R.raw.background_music).apply {
@@ -87,14 +98,14 @@ fun HomeScreen(
         pendingPermissionAction = PendingPermissionAction.None
         if (granted) {
             when (action) {
-                PendingPermissionAction.Start -> viewModel.onStartButtonTapped()
+                PendingPermissionAction.Start -> viewModel.onIntent(HomeIntent.StartButtonTapped)
                 PendingPermissionAction.CreateParty -> {
                     isShowingPlanSelection = true
                 }
                 PendingPermissionAction.None -> {}
             }
         } else {
-            viewModel.onLocationPermissionDenied()
+            viewModel.onIntent(HomeIntent.LocationPermissionDenied)
         }
     }
 
@@ -115,7 +126,7 @@ fun HomeScreen(
 
     // Re-check for active game when screen is resumed (e.g. back navigation)
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
-        viewModel.refreshActiveGame()
+        viewModel.onIntent(HomeIntent.RefreshActiveGame)
     }
 
     // Blinking animation for START text
@@ -158,7 +169,7 @@ fun HomeScreen(
             TextButton(
                 onClick = {
                     if (viewModel.hasLocationPermission()) {
-                        viewModel.onStartButtonTapped()
+                        viewModel.onIntent(HomeIntent.StartButtonTapped)
                     } else {
                         pendingPermissionAction = PendingPermissionAction.Start
                         locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
@@ -197,7 +208,7 @@ fun HomeScreen(
         ) {
             IconButton(
                 onClick = {
-                    viewModel.toggleMusicMuted()
+                    viewModel.onIntent(HomeIntent.ToggleMusic)
                     musicButtonScale = 1.3f
                 },
                 modifier = Modifier.scale(animatedScale)
@@ -254,12 +265,7 @@ fun HomeScreen(
                             color = Color.White
                         )
                         TextButton(
-                            onClick = {
-                                viewModel.rejoinGame(
-                                    onRejoinAsChicken = { gameId -> onNavigateToChickenMap(gameId) },
-                                    onRejoinAsHunter = { gameId, hunterName -> onNavigateToHunterMap(gameId, hunterName) }
-                                )
-                            },
+                            onClick = { viewModel.onIntent(HomeIntent.RejoinActiveGameTapped) },
                             modifier = Modifier
                                 .border(3.dp, Color.White, RoundedCornerShape(10.dp))
                         ) {
@@ -274,7 +280,7 @@ fun HomeScreen(
 
                     // Close button
                     IconButton(
-                        onClick = { viewModel.dismissActiveGame() },
+                        onClick = { viewModel.onIntent(HomeIntent.ActiveGameDismissed) },
                         modifier = Modifier.align(Alignment.TopEnd)
                     ) {
                         Text(
@@ -292,12 +298,7 @@ fun HomeScreen(
                     isCollapsed = isPendingBannerCollapsed,
                     onCollapse = { isPendingBannerCollapsed = true },
                     onExpand = { isPendingBannerCollapsed = false },
-                    onJoin = {
-                        viewModel.onPendingRegistrationJoinTapped(
-                            onGameFound = { gameId, hunterName -> onNavigateToHunterMap(gameId, hunterName) },
-                            onGameDone = { gameId -> onNavigateToVictory(gameId) }
-                        )
-                    }
+                    onJoin = { viewModel.onIntent(HomeIntent.PendingRegistrationJoinTapped) }
                 )
                 }
             }
@@ -308,7 +309,7 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 TextButton(
-                    onClick = { viewModel.onRulesTapped() },
+                    onClick = { viewModel.onIntent(HomeIntent.RulesTapped) },
                     modifier = Modifier
                         .padding(16.dp)
                         .border(2.dp, MaterialTheme.colorScheme.onBackground, RoundedCornerShape(12.dp))
@@ -350,28 +351,23 @@ fun HomeScreen(
     if (state.isShowingJoinSheet) {
         JoinFlowBottomSheet(
             state = state,
-            onDismiss = { viewModel.onJoinSheetDismissed() },
-            onCodeChanged = { viewModel.onGameCodeChanged(it) },
-            onTeamNameChanged = { viewModel.onTeamNameChanged(it) },
-            onJoinTapped = {
-                viewModel.onJoinTapped(
-                    onGameFound = { gameId, hunterName -> onNavigateToHunterMap(gameId, hunterName) },
-                    onGameDone = { gameId -> onNavigateToVictory(gameId) }
-                )
-            },
-            onRegisterTapped = { viewModel.onRegisterTapped() },
-            onSubmitRegistrationTapped = { viewModel.onSubmitRegistrationTapped() }
+            onDismiss = { viewModel.onIntent(HomeIntent.JoinSheetDismissed) },
+            onCodeChanged = { viewModel.onIntent(HomeIntent.GameCodeChanged(it)) },
+            onTeamNameChanged = { viewModel.onIntent(HomeIntent.TeamNameChanged(it)) },
+            onJoinTapped = { viewModel.onIntent(HomeIntent.JoinValidatedGameTapped) },
+            onRegisterTapped = { viewModel.onIntent(HomeIntent.RegisterTapped) },
+            onSubmitRegistrationTapped = { viewModel.onIntent(HomeIntent.SubmitRegistrationTapped) }
         )
     }
 
     // Game not found alert
     if (state.isShowingGameNotFound) {
         AlertDialog(
-            onDismissRequest = { viewModel.onGameNotFoundDismissed() },
+            onDismissRequest = { viewModel.onIntent(HomeIntent.GameNotFoundDismissed) },
             title = { Text(stringResource(R.string.game_not_found)) },
             text = { Text(stringResource(R.string.game_not_found_message)) },
             confirmButton = {
-                TextButton(onClick = { viewModel.onGameNotFoundDismissed() }) { Text(stringResource(R.string.ok)) }
+                TextButton(onClick = { viewModel.onIntent(HomeIntent.GameNotFoundDismissed) }) { Text(stringResource(R.string.ok)) }
             }
         )
     }
@@ -379,18 +375,18 @@ fun HomeScreen(
     // Location required alert
     if (state.isShowingLocationRequired) {
         AlertDialog(
-            onDismissRequest = { viewModel.onLocationRequiredDismissed() },
+            onDismissRequest = { viewModel.onIntent(HomeIntent.LocationRequiredDismissed) },
             title = { Text(stringResource(R.string.location_required)) },
             text = { Text(stringResource(R.string.location_required_message)) },
             confirmButton = {
-                TextButton(onClick = { viewModel.onLocationRequiredDismissed() }) { Text(stringResource(R.string.ok)) }
+                TextButton(onClick = { viewModel.onIntent(HomeIntent.LocationRequiredDismissed) }) { Text(stringResource(R.string.ok)) }
             }
         )
     }
 
     // Game Rules fullscreen overlay
     if (state.isShowingGameRules) {
-        GameRulesOverlay(onDismiss = { viewModel.onRulesDismissed() })
+        GameRulesOverlay(onDismiss = { viewModel.onIntent(HomeIntent.RulesDismissed) })
     }
 
     // Plan selection bottom sheet

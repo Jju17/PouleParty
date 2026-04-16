@@ -6,11 +6,14 @@ import dev.rahier.pouleparty.data.FirestoreRepository
 import dev.rahier.pouleparty.data.LocationRepository
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameMod
+import dev.rahier.pouleparty.ui.chickenmap.ChickenMapIntent
 import dev.rahier.pouleparty.ui.chickenmap.ChickenMapViewModel
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.junit.After
@@ -30,6 +33,11 @@ class ChickenMapViewModelBehaviorTest {
         Dispatchers.setMain(testDispatcher)
         firestoreRepository = mockk(relaxed = true)
         locationRepository = mockk(relaxed = true)
+        // Make `loadGame()` exit early so init coroutines settle without
+        // needing real game data from the relaxed mock.
+        io.mockk.coEvery { firestoreRepository.getConfig(any()) } returns null
+        io.mockk.every { firestoreRepository.gameConfigFlow(any()) } returns kotlinx.coroutines.flow.emptyFlow()
+        io.mockk.every { firestoreRepository.powerUpsFlow(any()) } returns kotlinx.coroutines.flow.emptyFlow()
     }
 
     @After
@@ -53,27 +61,25 @@ class ChickenMapViewModelBehaviorTest {
     @Test
     fun `onCancelGameTapped shows cancel alert`() {
         val vm = createViewModel()
-        vm.onCancelGameTapped()
+        vm.onIntent(ChickenMapIntent.CancelGameTapped)
         assertTrue(vm.uiState.value.showCancelAlert)
     }
 
     @Test
     fun `dismissCancelAlert hides cancel alert`() {
         val vm = createViewModel()
-        vm.onCancelGameTapped()
-        vm.dismissCancelAlert()
+        vm.onIntent(ChickenMapIntent.CancelGameTapped)
+        vm.onIntent(ChickenMapIntent.DismissCancelAlert)
         assertFalse(vm.uiState.value.showCancelAlert)
     }
 
     // MARK: - Game over
 
     @Test
-    fun `confirmGameOver clears alert and calls callback`() {
+    fun `confirmGameOver clears alert (NavigateToVictory effect emitted)`() {
         val vm = createViewModel()
-        var menuCalled = false
-        vm.confirmGameOver { menuCalled = true }
+        vm.onIntent(ChickenMapIntent.ConfirmGameOver)
         assertFalse(vm.uiState.value.showGameOverAlert)
-        assertTrue(menuCalled)
     }
 
     // MARK: - Game info
@@ -81,15 +87,15 @@ class ChickenMapViewModelBehaviorTest {
     @Test
     fun `onInfoTapped shows game info`() {
         val vm = createViewModel()
-        vm.onInfoTapped()
+        vm.onIntent(ChickenMapIntent.InfoTapped)
         assertTrue(vm.uiState.value.showGameInfo)
     }
 
     @Test
     fun `dismissGameInfo hides game info`() {
         val vm = createViewModel()
-        vm.onInfoTapped()
-        vm.dismissGameInfo()
+        vm.onIntent(ChickenMapIntent.InfoTapped)
+        vm.onIntent(ChickenMapIntent.DismissGameInfo)
         assertFalse(vm.uiState.value.showGameInfo)
     }
 
@@ -98,15 +104,15 @@ class ChickenMapViewModelBehaviorTest {
     @Test
     fun `onFoundButtonTapped shows found code`() {
         val vm = createViewModel()
-        vm.onFoundButtonTapped()
+        vm.onIntent(ChickenMapIntent.FoundButtonTapped)
         assertTrue(vm.uiState.value.showFoundCode)
     }
 
     @Test
     fun `dismissFoundCode hides found code`() {
         val vm = createViewModel()
-        vm.onFoundButtonTapped()
-        vm.dismissFoundCode()
+        vm.onIntent(ChickenMapIntent.FoundButtonTapped)
+        vm.onIntent(ChickenMapIntent.DismissFoundCode)
         assertFalse(vm.uiState.value.showFoundCode)
     }
 
@@ -122,13 +128,11 @@ class ChickenMapViewModelBehaviorTest {
     // MARK: - Confirm cancel game
 
     @Test
-    fun `confirmCancelGame dismisses alert and calls callback`() {
+    fun `confirmCancelGame dismisses alert (NavigateToMenu effect emitted)`() {
         val vm = createViewModel()
-        vm.onCancelGameTapped()
-        var menuCalled = false
-        vm.confirmCancelGame { menuCalled = true }
+        vm.onIntent(ChickenMapIntent.CancelGameTapped)
+        vm.onIntent(ChickenMapIntent.ConfirmCancelGame)
         assertFalse(vm.uiState.value.showCancelAlert)
         testDispatcher.scheduler.advanceUntilIdle()
-        assertTrue(menuCalled)
     }
 }

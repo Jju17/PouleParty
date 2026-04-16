@@ -33,14 +33,29 @@ class OnboardingViewModel @Inject constructor(
     @param:ApplicationContext private val context: Context
 ) : ViewModel() {
 
-    fun logOnboardingCompleted() {
-        analyticsRepository.onboardingCompleted()
-    }
-
     private val _uiState = MutableStateFlow(OnboardingUiState())
     val uiState: StateFlow<OnboardingUiState> = _uiState.asStateFlow()
 
-    fun refreshPermissions() {
+    /** Single entry point for every user interaction. */
+    fun onIntent(intent: OnboardingIntent) {
+        when (intent) {
+            OnboardingIntent.NextPage -> nextPage()
+            OnboardingIntent.PreviousPage -> previousPage()
+            OnboardingIntent.DismissLocationAlert -> dismissLocationAlert()
+            OnboardingIntent.DismissProfanityAlert -> dismissProfanityAlert()
+            OnboardingIntent.RefreshPermissions -> refreshPermissions()
+            OnboardingIntent.RefreshNotificationPermission -> refreshNotificationPermission()
+            OnboardingIntent.OnboardingCompletedLogged -> logOnboardingCompleted()
+            is OnboardingIntent.PageSet -> setPage(intent.page)
+            is OnboardingIntent.NicknameChanged -> onNicknameChanged(intent.name)
+        }
+    }
+
+    private fun logOnboardingCompleted() {
+        analyticsRepository.onboardingCompleted()
+    }
+
+    private fun refreshPermissions() {
         _uiState.update {
             it.copy(
                 hasFineLocation = locationRepository.hasFineLocationPermission(),
@@ -50,7 +65,7 @@ class OnboardingViewModel @Inject constructor(
         }
     }
 
-    fun refreshNotificationPermission() {
+    private fun refreshNotificationPermission() {
         _uiState.update {
             it.copy(hasNotificationPermission = hasNotificationPermission())
         }
@@ -67,7 +82,7 @@ class OnboardingViewModel @Inject constructor(
         }
     }
 
-    fun nextPage() {
+    private fun nextPage() {
         val current = _uiState.value.currentPage
         // Block on location slide (page 3) if fine location not granted
         if (current == 3 && !_uiState.value.hasFineLocation) return
@@ -86,26 +101,26 @@ class OnboardingViewModel @Inject constructor(
         }
     }
 
-    fun previousPage() {
+    private fun previousPage() {
         val current = _uiState.value.currentPage
         if (current > 0) {
             _uiState.update { it.copy(currentPage = current - 1) }
         }
     }
 
-    fun setPage(page: Int) {
+    private fun setPage(page: Int) {
         _uiState.update { it.copy(currentPage = page) }
     }
 
-    fun onNicknameChanged(name: String) {
+    private fun onNicknameChanged(name: String) {
         _uiState.update { it.copy(nickname = name.take(NICKNAME_MAX_LENGTH)) }
     }
 
-    fun dismissLocationAlert() {
+    private fun dismissLocationAlert() {
         _uiState.update { it.copy(showLocationAlert = false) }
     }
 
-    fun dismissProfanityAlert() {
+    private fun dismissProfanityAlert() {
         _uiState.update { it.copy(showProfanityAlert = false) }
     }
 

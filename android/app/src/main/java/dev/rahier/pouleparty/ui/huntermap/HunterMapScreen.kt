@@ -43,6 +43,7 @@ import dev.rahier.pouleparty.ui.components.zoomForRadius
 import dev.rahier.pouleparty.ui.components.CountdownView
 import dev.rahier.pouleparty.ui.components.GameInfoDialog
 import dev.rahier.pouleparty.ui.components.HapticManager
+import dev.rahier.pouleparty.ui.components.MapHapticsEffect
 import dev.rahier.pouleparty.ui.components.KeepScreenOn
 import dev.rahier.pouleparty.ui.components.GameOverAlertDialog
 import dev.rahier.pouleparty.model.PowerUpType
@@ -71,12 +72,17 @@ fun HunterMapScreen(
 
     val view = LocalView.current
 
-    // Navigate to victory screen when code is correct
-    LaunchedEffect(state.shouldNavigateToVictory) {
-        if (state.shouldNavigateToVictory) {
-            HapticManager.success(view)
-            viewModel.onVictoryNavigated()
-            onVictory(viewModel.gameId, viewModel.hunterName, viewModel.hunterId)
+    // One-shot navigation effects from the ViewModel.
+    LaunchedEffect(viewModel) {
+        viewModel.effects.collect { effect ->
+            when (effect) {
+                HunterMapEffect.NavigateToMenu -> onGoToMenu()
+                HunterMapEffect.NavigateToVictory -> {
+                    HapticManager.success(view)
+                    viewModel.onIntent(HunterMapIntent.VictoryNavigated)
+                    onVictory(viewModel.gameId, viewModel.hunterName, viewModel.hunterId)
+                }
+            }
         }
     }
 
@@ -88,19 +94,8 @@ fun HunterMapScreen(
         }
     }
 
-    // Haptic feedback for game events
-    LaunchedEffect(state.countdownNumber) {
-        if (state.countdownNumber != null) HapticManager.heavyImpact(view)
-    }
-    LaunchedEffect(state.countdownText) {
-        if (state.countdownText != null) HapticManager.heavyImpact(view)
-    }
-    LaunchedEffect(state.isOutsideZone) {
-        if (state.isOutsideZone) HapticManager.warning(view)
-    }
-    LaunchedEffect(state.powerUpNotification) {
-        if (state.powerUpNotification != null) HapticManager.success(view)
-    }
+    // Shared haptics (countdown / zone warning / power-up / winners)
+    MapHapticsEffect(state, view)
     LaunchedEffect(state.showGameOverAlert) {
         if (state.showGameOverAlert) HapticManager.warning(view)
     }
@@ -272,7 +267,7 @@ fun HunterMapScreen(
                 titleRes = R.string.you_are_hunter,
                 subtitle = viewModel.hunterSubtitle,
                 gradientColors = listOf(HunterRed, CRPink),
-                onInfoTapped = { viewModel.onInfoTapped() }
+                onInfoTapped = { viewModel.onIntent(HunterMapIntent.InfoTapped) }
             )
 
             // Bottom bar
@@ -301,7 +296,7 @@ fun HunterMapScreen(
                     // Power-up inventory button
                     if (state.collectedPowerUps.isNotEmpty()) {
                         Button(
-                            onClick = { viewModel.onPowerUpInventoryTapped() },
+                            onClick = { viewModel.onIntent(HunterMapIntent.PowerUpInventoryTapped) },
                             colors = ButtonDefaults.buttonColors(containerColor = CROrange),
                             shape = RoundedCornerShape(8.dp),
                             modifier = Modifier.size(width = 44.dp, height = 40.dp),
@@ -314,7 +309,7 @@ fun HunterMapScreen(
                     // FOUND button (only visible after game starts)
                     if (state.hasGameStarted) {
                         Button(
-                            onClick = { viewModel.onFoundButtonTapped() },
+                            onClick = { viewModel.onIntent(HunterMapIntent.FoundButtonTapped) },
                             colors = ButtonDefaults.buttonColors(containerColor = HunterRed),
                             shape = RoundedCornerShape(50.dp),
                             modifier = Modifier.size(width = 50.dp, height = 40.dp),
@@ -365,7 +360,7 @@ fun HunterMapScreen(
     // Found code entry dialog
     if (state.isEnteringFoundCode) {
         AlertDialog(
-            onDismissRequest = { viewModel.dismissFoundCodeEntry() },
+            onDismissRequest = { viewModel.onIntent(HunterMapIntent.DismissFoundCodeEntry) },
             title = { Text(stringResource(R.string.enter_found_code)) },
             text = {
                 Column {
@@ -373,7 +368,7 @@ fun HunterMapScreen(
                     Spacer(Modifier.height(8.dp))
                     OutlinedTextField(
                         value = state.enteredCode,
-                        onValueChange = { viewModel.onEnteredCodeChanged(it) },
+                        onValueChange = { viewModel.onIntent(HunterMapIntent.EnteredCodeChanged(it)) },
                         label = { Text(stringResource(R.string.four_digit_code)) },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
@@ -381,10 +376,10 @@ fun HunterMapScreen(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { viewModel.submitFoundCode() }) { Text(stringResource(R.string.submit)) }
+                TextButton(onClick = { viewModel.onIntent(HunterMapIntent.SubmitFoundCode) }) { Text(stringResource(R.string.submit)) }
             },
             dismissButton = {
-                TextButton(onClick = { viewModel.dismissFoundCodeEntry() }) { Text(stringResource(R.string.cancel)) }
+                TextButton(onClick = { viewModel.onIntent(HunterMapIntent.DismissFoundCodeEntry) }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
@@ -392,11 +387,11 @@ fun HunterMapScreen(
     // Wrong code alert
     if (state.showWrongCodeAlert) {
         AlertDialog(
-            onDismissRequest = { viewModel.dismissWrongCodeAlert() },
+            onDismissRequest = { viewModel.onIntent(HunterMapIntent.DismissWrongCodeAlert) },
             title = { Text(stringResource(R.string.wrong_code)) },
             text = { Text(stringResource(R.string.wrong_code_message)) },
             confirmButton = {
-                TextButton(onClick = { viewModel.dismissWrongCodeAlert() }) { Text(stringResource(R.string.ok)) }
+                TextButton(onClick = { viewModel.onIntent(HunterMapIntent.DismissWrongCodeAlert) }) { Text(stringResource(R.string.ok)) }
             }
         )
     }
@@ -404,16 +399,16 @@ fun HunterMapScreen(
     // Quit game alert
     if (state.showLeaveAlert) {
         AlertDialog(
-            onDismissRequest = { viewModel.dismissLeaveAlert() },
+            onDismissRequest = { viewModel.onIntent(HunterMapIntent.DismissLeaveAlert) },
             title = { Text(stringResource(R.string.quit_game)) },
             text = { Text(stringResource(R.string.quit_game_message)) },
             confirmButton = {
-                TextButton(onClick = { viewModel.confirmLeaveGame(onGoToMenu) }) {
+                TextButton(onClick = { viewModel.onIntent(HunterMapIntent.ConfirmLeaveGame) }) {
                     Text(stringResource(R.string.quit))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { viewModel.dismissLeaveAlert() }) {
+                TextButton(onClick = { viewModel.onIntent(HunterMapIntent.DismissLeaveAlert) }) {
                     Text(stringResource(R.string.never_mind))
                 }
             }
@@ -425,9 +420,7 @@ fun HunterMapScreen(
         GameOverAlertDialog(
             message = state.gameOverMessage,
             onConfirm = {
-                viewModel.confirmGameOver {
-                    onVictory(viewModel.gameId, viewModel.hunterName, viewModel.hunterId)
-                }
+                viewModel.onIntent(HunterMapIntent.ConfirmGameOver)
             }
         )
     }
@@ -440,7 +433,7 @@ fun HunterMapScreen(
             text = { Text(stringResource(R.string.you_must_register_before_joining_this_game)) },
             confirmButton = {
                 TextButton(onClick = {
-                    viewModel.dismissRegistrationRequiredAlert()
+                    viewModel.onIntent(HunterMapIntent.DismissRegistrationRequiredAlert)
                     onGoToMenu()
                 }) { Text(stringResource(R.string.back_to_menu)) }
             }
@@ -452,9 +445,9 @@ fun HunterMapScreen(
         GameInfoDialog(
             game = state.game,
             codeCopied = state.codeCopied,
-            onCodeCopied = { viewModel.onCodeCopied() },
-            onDismiss = { viewModel.dismissGameInfo() },
-            onCancelGame = { viewModel.onLeaveGameTapped() },
+            onCodeCopied = { viewModel.onIntent(HunterMapIntent.CodeCopied) },
+            onDismiss = { viewModel.onIntent(HunterMapIntent.DismissGameInfo) },
+            onCancelGame = { viewModel.onIntent(HunterMapIntent.LeaveGameTapped) },
             leaveGameLabel = stringResource(R.string.quit)
         )
     }
@@ -476,8 +469,8 @@ fun HunterMapScreen(
             collectedPowerUps = state.collectedPowerUps,
             activatingPowerUpId = state.activatingPowerUpId,
             activateButtonColor = CROrange,
-            onActivate = { viewModel.activatePowerUp(it) },
-            onDismiss = { viewModel.dismissPowerUpInventory() }
+            onActivate = { viewModel.onIntent(HunterMapIntent.ActivatePowerUp(it)) },
+            onDismiss = { viewModel.onIntent(HunterMapIntent.DismissPowerUpInventory) }
         )
     }
 }

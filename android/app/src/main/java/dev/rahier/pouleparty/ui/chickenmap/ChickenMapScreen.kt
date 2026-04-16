@@ -41,6 +41,7 @@ import dev.rahier.pouleparty.ui.components.zoomForRadius
 import dev.rahier.pouleparty.ui.components.CountdownView
 import dev.rahier.pouleparty.ui.components.GameInfoDialog
 import dev.rahier.pouleparty.ui.components.HapticManager
+import dev.rahier.pouleparty.ui.components.MapHapticsEffect
 import dev.rahier.pouleparty.ui.components.KeepScreenOn
 import dev.rahier.pouleparty.ui.components.GameOverAlertDialog
 import dev.rahier.pouleparty.model.PowerUpType
@@ -70,11 +71,16 @@ fun ChickenMapScreen(
 
     val view = LocalView.current
 
-    // Navigate to victory when all hunters found
-    LaunchedEffect(state.shouldNavigateToVictory) {
-        if (state.shouldNavigateToVictory) {
-            HapticManager.success(view)
-            onVictory(state.game.id)
+    // One-shot navigation effects from the ViewModel.
+    LaunchedEffect(viewModel) {
+        viewModel.effects.collect { effect ->
+            when (effect) {
+                ChickenMapEffect.NavigateToMenu -> onGoToMenu()
+                ChickenMapEffect.NavigateToVictory -> {
+                    HapticManager.success(view)
+                    onVictory(state.game.id)
+                }
+            }
         }
     }
 
@@ -86,19 +92,8 @@ fun ChickenMapScreen(
         }
     }
 
-    // Haptic feedback for game events
-    LaunchedEffect(state.countdownNumber) {
-        if (state.countdownNumber != null) HapticManager.heavyImpact(view)
-    }
-    LaunchedEffect(state.countdownText) {
-        if (state.countdownText != null) HapticManager.heavyImpact(view)
-    }
-    LaunchedEffect(state.isOutsideZone) {
-        if (state.isOutsideZone) HapticManager.warning(view)
-    }
-    LaunchedEffect(state.powerUpNotification) {
-        if (state.powerUpNotification != null) HapticManager.success(view)
-    }
+    // Shared haptics (countdown / zone warning / power-up / winners)
+    MapHapticsEffect(state, view)
     LaunchedEffect(state.showGameOverAlert) {
         if (state.showGameOverAlert) HapticManager.warning(view)
     }
@@ -271,7 +266,7 @@ fun ChickenMapScreen(
             titleRes = R.string.you_are_chicken,
             subtitle = viewModel.chickenSubtitle,
             gradientColors = listOf(ChickenYellow, CROrange),
-            onInfoTapped = { viewModel.onInfoTapped() }
+            onInfoTapped = { viewModel.onIntent(ChickenMapIntent.InfoTapped) }
         )
 
         // Bottom bar
@@ -299,7 +294,7 @@ fun ChickenMapScreen(
             // Power-up inventory button
             if (state.collectedPowerUps.isNotEmpty()) {
                 Button(
-                    onClick = { viewModel.onPowerUpInventoryTapped() },
+                    onClick = { viewModel.onIntent(ChickenMapIntent.PowerUpInventoryTapped) },
                     colors = ButtonDefaults.buttonColors(containerColor = CROrange),
                     shape = RoundedCornerShape(8.dp),
                     modifier = Modifier.size(width = 44.dp, height = 40.dp),
@@ -312,7 +307,7 @@ fun ChickenMapScreen(
             // FOUND button (only visible after game starts)
             if (state.hasGameStarted) {
                 Button(
-                    onClick = { viewModel.onFoundButtonTapped() },
+                    onClick = { viewModel.onIntent(ChickenMapIntent.FoundButtonTapped) },
                     colors = ButtonDefaults.buttonColors(containerColor = HunterRed),
                     shape = RoundedCornerShape(50.dp),
                     modifier = Modifier.size(width = 50.dp, height = 40.dp),
@@ -338,7 +333,7 @@ fun ChickenMapScreen(
                 targetDate = state.game.startDate,
                 nowDate = state.nowDate,
                 connectedHunters = state.game.hunterIds.size,
-                onCancelGame = { viewModel.onCancelGameTapped() }
+                onCancelGame = { viewModel.onIntent(ChickenMapIntent.CancelGameTapped) }
             )
         }
 
@@ -362,16 +357,16 @@ fun ChickenMapScreen(
     // Cancel alert
     if (state.showCancelAlert) {
         AlertDialog(
-            onDismissRequest = { viewModel.dismissCancelAlert() },
+            onDismissRequest = { viewModel.onIntent(ChickenMapIntent.DismissCancelAlert) },
             title = { Text(stringResource(R.string.cancel_game)) },
             text = { Text(stringResource(R.string.cancel_game_message)) },
             confirmButton = {
-                TextButton(onClick = { viewModel.confirmCancelGame(onGoToMenu) }) {
+                TextButton(onClick = { viewModel.onIntent(ChickenMapIntent.ConfirmCancelGame) }) {
                     Text(stringResource(R.string.cancel_game), color = Danger)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { viewModel.dismissCancelAlert() }) {
+                TextButton(onClick = { viewModel.onIntent(ChickenMapIntent.DismissCancelAlert) }) {
                     Text(stringResource(R.string.never_mind))
                 }
             }
@@ -383,7 +378,7 @@ fun ChickenMapScreen(
         GameOverAlertDialog(
             message = state.gameOverMessage,
             onConfirm = {
-                viewModel.confirmGameOver { onVictory(state.game.id) }
+                viewModel.onIntent(ChickenMapIntent.ConfirmGameOver)
             }
         )
     }
@@ -391,11 +386,11 @@ fun ChickenMapScreen(
     // Found code dialog
     if (state.showFoundCode) {
         AlertDialog(
-            onDismissRequest = { viewModel.dismissFoundCode() },
+            onDismissRequest = { viewModel.onIntent(ChickenMapIntent.DismissFoundCode) },
             title = null,
             text = { EndGameCodeContent(foundCode = state.game.foundCode) },
             confirmButton = {
-                TextButton(onClick = { viewModel.dismissFoundCode() }) {
+                TextButton(onClick = { viewModel.onIntent(ChickenMapIntent.DismissFoundCode) }) {
                     Text(stringResource(R.string.close))
                 }
             }
@@ -407,9 +402,9 @@ fun ChickenMapScreen(
         GameInfoDialog(
             game = state.game,
             codeCopied = state.codeCopied,
-            onCodeCopied = { viewModel.onCodeCopied() },
-            onDismiss = { viewModel.dismissGameInfo() },
-            onCancelGame = { viewModel.onCancelGameTapped() }
+            onCodeCopied = { viewModel.onIntent(ChickenMapIntent.CodeCopied) },
+            onDismiss = { viewModel.onIntent(ChickenMapIntent.DismissGameInfo) },
+            onCancelGame = { viewModel.onIntent(ChickenMapIntent.CancelGameTapped) }
         )
     }
 
@@ -430,8 +425,8 @@ fun ChickenMapScreen(
             collectedPowerUps = state.collectedPowerUps,
             activatingPowerUpId = state.activatingPowerUpId,
             activateButtonColor = PowerupStealth,
-            onActivate = { viewModel.activatePowerUp(it) },
-            onDismiss = { viewModel.dismissPowerUpInventory() }
+            onActivate = { viewModel.onIntent(ChickenMapIntent.ActivatePowerUp(it)) },
+            onDismiss = { viewModel.onIntent(ChickenMapIntent.DismissPowerUpInventory) }
         )
     }
 }

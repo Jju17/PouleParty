@@ -58,25 +58,25 @@ fun OnboardingScreen(
         if (isBlocked) {
             pagerState.scrollToPage(s.currentPage)
         } else {
-            viewModel.setPage(page)
+            viewModel.onIntent(OnboardingIntent.PageSet(page))
         }
     }
 
     // Permission launchers
     val fineLocationLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { viewModel.refreshPermissions() }
+    ) { viewModel.onIntent(OnboardingIntent.RefreshPermissions) }
 
     val backgroundLocationLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { viewModel.refreshPermissions() }
+    ) { viewModel.onIntent(OnboardingIntent.RefreshPermissions) }
 
     val notificationLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { viewModel.refreshNotificationPermission() }
+    ) { viewModel.onIntent(OnboardingIntent.RefreshNotificationPermission) }
 
     LaunchedEffect(Unit) {
-        viewModel.refreshPermissions()
+        viewModel.onIntent(OnboardingIntent.RefreshPermissions)
     }
 
     Box(
@@ -115,7 +115,7 @@ fun OnboardingScreen(
                 5 -> SlideNickname(
                     nickname = state.nickname,
                     maxLength = OnboardingViewModel.NICKNAME_MAX_LENGTH,
-                    onNicknameChanged = { viewModel.onNicknameChanged(it) }
+                    onNicknameChanged = { viewModel.onIntent(OnboardingIntent.NicknameChanged(it)) }
                 )
                 6 -> SlideReady()
             }
@@ -153,7 +153,7 @@ fun OnboardingScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (state.currentPage > 0) {
-                    TextButton(onClick = { viewModel.previousPage() }) {
+                    TextButton(onClick = { viewModel.onIntent(OnboardingIntent.PreviousPage) }) {
                         Text(
                             stringResource(R.string.back),
                             style = bangerStyle(18),
@@ -180,11 +180,11 @@ fun OnboardingScreen(
                         .clickable(enabled = !isNextDisabled) {
                             if (viewModel.isLastPage) {
                                 if (viewModel.canCompleteOnboarding()) {
-                                    viewModel.logOnboardingCompleted()
+                                    viewModel.onIntent(OnboardingIntent.OnboardingCompletedLogged)
                                     onOnboardingCompleted(state.nickname.trim())
                                 }
                             } else {
-                                viewModel.nextPage()
+                                viewModel.onIntent(OnboardingIntent.NextPage)
                             }
                         },
                     contentAlignment = Alignment.Center
@@ -203,11 +203,11 @@ fun OnboardingScreen(
     // Location required alert
     if (state.showLocationAlert) {
         AlertDialog(
-            onDismissRequest = { viewModel.dismissLocationAlert() },
+            onDismissRequest = { viewModel.onIntent(OnboardingIntent.DismissLocationAlert) },
             title = { Text(stringResource(R.string.location_required)) },
             text = { Text(stringResource(R.string.location_required_message)) },
             confirmButton = {
-                TextButton(onClick = { viewModel.dismissLocationAlert() }) { Text(stringResource(R.string.ok)) }
+                TextButton(onClick = { viewModel.onIntent(OnboardingIntent.DismissLocationAlert) }) { Text(stringResource(R.string.ok)) }
             }
         )
     }
@@ -215,11 +215,11 @@ fun OnboardingScreen(
     // Profanity alert
     if (state.showProfanityAlert) {
         AlertDialog(
-            onDismissRequest = { viewModel.dismissProfanityAlert() },
+            onDismissRequest = { viewModel.onIntent(OnboardingIntent.DismissProfanityAlert) },
             title = { Text(stringResource(R.string.inappropriate_nickname)) },
             text = { Text(stringResource(R.string.inappropriate_nickname_message)) },
             confirmButton = {
-                TextButton(onClick = { viewModel.dismissProfanityAlert() }) { Text(stringResource(R.string.ok)) }
+                TextButton(onClick = { viewModel.onIntent(OnboardingIntent.DismissProfanityAlert) }) { Text(stringResource(R.string.ok)) }
             }
         )
     }

@@ -28,23 +28,26 @@ import dev.rahier.pouleparty.ui.processRadiusUpdate
 import dev.rahier.pouleparty.ui.seededRandom
 import dev.rahier.pouleparty.ui.shouldCheckZone
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import com.google.firebase.auth.FirebaseAuth
 import java.util.Date
 import javax.inject.Inject
 
 data class HunterMapUiState(
-    val game: Game = Game.mock,
-    val nextRadiusUpdate: Date? = null,
-    val nowDate: Date = Date(),
-    val radius: Int = 1500,
-    val circleCenter: Point? = null,
+    override val game: Game = Game.mock,
+    override val nextRadiusUpdate: Date? = null,
+    override val nowDate: Date = Date(),
+    override val radius: Int = 1500,
+    override val circleCenter: Point? = null,
     val showLeaveAlert: Boolean = false,
     val showGameOverAlert: Boolean = false,
     val gameOverMessage: String = "",
@@ -52,27 +55,27 @@ data class HunterMapUiState(
     val enteredCode: String = "",
     val showWrongCodeAlert: Boolean = false,
     val previousWinnersCount: Int = -1,
-    val winnerNotification: String? = null,
+    override val winnerNotification: String? = null,
     val shouldNavigateToVictory: Boolean = false,
-    val hasGameStarted: Boolean = false,
-    val countdownNumber: Int? = null,
-    val countdownText: String? = null,
-    val showGameInfo: Boolean = false,
+    override val hasGameStarted: Boolean = false,
+    override val countdownNumber: Int? = null,
+    override val countdownText: String? = null,
+    override val showGameInfo: Boolean = false,
     val codeCopied: Boolean = false,
     val wrongCodeAttempts: Int = 0,
     val codeCooldownUntil: Long = 0,
     val userLocation: Point? = null,
-    val isOutsideZone: Boolean = false,
-    val availablePowerUps: List<PowerUp> = emptyList(),
-    val collectedPowerUps: List<PowerUp> = emptyList(),
-    val showPowerUpInventory: Boolean = false,
-    val powerUpNotification: String? = null,
-    val lastActivatedPowerUpType: PowerUpType? = null,
+    override val isOutsideZone: Boolean = false,
+    override val availablePowerUps: List<PowerUp> = emptyList(),
+    override val collectedPowerUps: List<PowerUp> = emptyList(),
+    override val showPowerUpInventory: Boolean = false,
+    override val powerUpNotification: String? = null,
+    override val lastActivatedPowerUpType: PowerUpType? = null,
     val previewCircle: Pair<Point, Double>? = null,
     val activatingPowerUpId: String? = null,
     val decoyLocation: Point? = null,
     val showRegistrationRequiredAlert: Boolean = false
-)
+) : dev.rahier.pouleparty.ui.MapUiState
 
 @HiltViewModel
 class HunterMapViewModel @Inject constructor(
@@ -106,6 +109,32 @@ class HunterMapViewModel @Inject constructor(
 
     override fun notifyPowerUp(message: String, type: PowerUpType?) {
         showNotification(message, type)
+    }
+
+    private val _effects = Channel<HunterMapEffect>(Channel.BUFFERED)
+    val effects: Flow<HunterMapEffect> = _effects.receiveAsFlow()
+
+    /** Single entry point for every user interaction. */
+    fun onIntent(intent: HunterMapIntent) {
+        when (intent) {
+            HunterMapIntent.DismissRegistrationRequiredAlert -> dismissRegistrationRequiredAlert()
+            HunterMapIntent.PowerUpInventoryTapped -> onPowerUpInventoryTapped()
+            HunterMapIntent.DismissPowerUpInventory -> dismissPowerUpInventory()
+            HunterMapIntent.FoundButtonTapped -> onFoundButtonTapped()
+            HunterMapIntent.DismissFoundCodeEntry -> dismissFoundCodeEntry()
+            HunterMapIntent.SubmitFoundCode -> submitFoundCode()
+            HunterMapIntent.VictoryNavigated -> onVictoryNavigated()
+            HunterMapIntent.DismissWrongCodeAlert -> dismissWrongCodeAlert()
+            HunterMapIntent.LeaveGameTapped -> onLeaveGameTapped()
+            HunterMapIntent.DismissLeaveAlert -> dismissLeaveAlert()
+            HunterMapIntent.ConfirmLeaveGame -> confirmLeaveGame()
+            HunterMapIntent.ConfirmGameOver -> confirmGameOver()
+            HunterMapIntent.InfoTapped -> onInfoTapped()
+            HunterMapIntent.DismissGameInfo -> dismissGameInfo()
+            HunterMapIntent.CodeCopied -> onCodeCopied()
+            is HunterMapIntent.ActivatePowerUp -> activatePowerUp(intent.powerUp)
+            is HunterMapIntent.EnteredCodeChanged -> onEnteredCodeChanged(intent.code)
+        }
     }
 
     init {
@@ -158,7 +187,7 @@ class HunterMapViewModel @Inject constructor(
         }
     }
 
-    fun dismissRegistrationRequiredAlert() {
+    private fun dismissRegistrationRequiredAlert() {
         _uiState.update { it.copy(showRegistrationRequiredAlert = false) }
     }
 
@@ -431,7 +460,7 @@ class HunterMapViewModel @Inject constructor(
         }
     }
 
-    fun activatePowerUp(powerUp: PowerUp) {
+    private fun activatePowerUp(powerUp: PowerUp) {
         if (_uiState.value.activatingPowerUpId != null) return
         _uiState.update { it.copy(activatingPowerUpId = powerUp.id) }
         viewModelScope.launch {
@@ -470,27 +499,27 @@ class HunterMapViewModel @Inject constructor(
         }
     }
 
-    fun onPowerUpInventoryTapped() {
+    private fun onPowerUpInventoryTapped() {
         _uiState.update { it.copy(showPowerUpInventory = true) }
     }
 
-    fun dismissPowerUpInventory() {
+    private fun dismissPowerUpInventory() {
         _uiState.update { it.copy(showPowerUpInventory = false) }
     }
 
-    fun onFoundButtonTapped() {
+    private fun onFoundButtonTapped() {
         _uiState.update { it.copy(isEnteringFoundCode = true) }
     }
 
-    fun onEnteredCodeChanged(code: String) {
+    private fun onEnteredCodeChanged(code: String) {
         _uiState.update { it.copy(enteredCode = code.take(AppConstants.FOUND_CODE_DIGITS)) }
     }
 
-    fun dismissFoundCodeEntry() {
+    private fun dismissFoundCodeEntry() {
         _uiState.update { it.copy(isEnteringFoundCode = false, enteredCode = "") }
     }
 
-    fun submitFoundCode() {
+    private fun submitFoundCode() {
         if (_uiState.value.codeCooldownUntil > System.currentTimeMillis()) return
 
         val code = _uiState.value.enteredCode.trim()
@@ -520,34 +549,35 @@ class HunterMapViewModel @Inject constructor(
             firestoreRepository.addWinner(gameId, winner)
             analyticsRepository.hunterFoundChicken(attempts = totalAttempts)
             _uiState.update { it.copy(shouldNavigateToVictory = true) }
+            _effects.send(HunterMapEffect.NavigateToVictory)
         }
     }
 
-    fun onVictoryNavigated() {
+    private fun onVictoryNavigated() {
         _uiState.update { it.copy(shouldNavigateToVictory = false) }
     }
 
-    fun dismissWrongCodeAlert() {
+    private fun dismissWrongCodeAlert() {
         _uiState.update { it.copy(showWrongCodeAlert = false) }
     }
 
-    fun onLeaveGameTapped() {
+    private fun onLeaveGameTapped() {
         _uiState.update { it.copy(showLeaveAlert = true) }
     }
 
-    fun dismissLeaveAlert() {
+    private fun dismissLeaveAlert() {
         _uiState.update { it.copy(showLeaveAlert = false) }
     }
 
-    fun confirmLeaveGame(onGoToMenu: () -> Unit) {
+    private fun confirmLeaveGame() {
         _uiState.update { it.copy(showLeaveAlert = false, previewCircle = null) }
-        onGoToMenu()
+        viewModelScope.launch { _effects.send(HunterMapEffect.NavigateToMenu) }
     }
 
-    fun confirmGameOver(onGoToMenu: () -> Unit) {
+    private fun confirmGameOver() {
         cancelStreams()
         _uiState.update { it.copy(showGameOverAlert = false, previewCircle = null) }
-        onGoToMenu()
+        viewModelScope.launch { _effects.send(HunterMapEffect.NavigateToVictory) }
     }
 
     val hunterSubtitle: String
@@ -559,15 +589,15 @@ class HunterMapViewModel @Inject constructor(
             }
         }
 
-    fun onInfoTapped() {
+    private fun onInfoTapped() {
         _uiState.update { it.copy(showGameInfo = true) }
     }
 
-    fun dismissGameInfo() {
+    private fun dismissGameInfo() {
         _uiState.update { it.copy(showGameInfo = false) }
     }
 
-    fun onCodeCopied() {
+    private fun onCodeCopied() {
         handleCodeCopied { copied -> _uiState.update { it.copy(codeCopied = copied) } }
     }
 

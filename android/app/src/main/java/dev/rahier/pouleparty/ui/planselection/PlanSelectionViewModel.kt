@@ -41,11 +41,26 @@ class PlanSelectionViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(PlanSelectionUiState())
     val uiState: StateFlow<PlanSelectionUiState> = _uiState.asStateFlow()
 
+    /** Single entry point for every user interaction. */
+    fun onIntent(intent: PlanSelectionIntent) {
+        when (intent) {
+            PlanSelectionIntent.BackToPlans -> backToPlans()
+            PlanSelectionIntent.DismissDailyLimitAlert -> dismissDailyLimitAlert()
+            PlanSelectionIntent.ShowDailyLimitAlert -> showDailyLimitAlert()
+            PlanSelectionIntent.Reload -> loadPlansConfig()
+            is PlanSelectionIntent.PlanSelected -> selectPlan(intent.plan)
+            is PlanSelectionIntent.NumberOfPlayersChanged -> updateNumberOfPlayers(intent.value)
+            is PlanSelectionIntent.PricePerHunterChanged -> updatePricePerHunter(intent.value)
+            is PlanSelectionIntent.HasMaxPlayersChanged -> updateHasMaxPlayers(intent.value)
+            is PlanSelectionIntent.MaxPlayersChanged -> updateMaxPlayers(intent.value)
+        }
+    }
+
     init {
         loadPlansConfig()
     }
 
-    fun loadPlansConfig() {
+    private fun loadPlansConfig() {
         _uiState.update { it.copy(isLoading = true, loadFailed = false) }
         viewModelScope.launch {
             try {
@@ -69,7 +84,7 @@ class PlanSelectionViewModel @Inject constructor(
         return count < 1
     }
 
-    fun selectPlan(plan: PricingModel) {
+    private fun selectPlan(plan: PricingModel) {
         _uiState.update {
             when (plan) {
                 PricingModel.FLAT -> it.copy(
@@ -87,31 +102,31 @@ class PlanSelectionViewModel @Inject constructor(
         }
     }
 
-    fun backToPlans() {
+    private fun backToPlans() {
         _uiState.update { it.copy(selectedPlan = null) }
     }
 
-    fun updateNumberOfPlayers(value: Float) {
+    private fun updateNumberOfPlayers(value: Float) {
         _uiState.update { it.copy(numberOfPlayers = value) }
     }
 
-    fun updatePricePerHunter(value: String) {
+    private fun updatePricePerHunter(value: String) {
         _uiState.update { it.copy(pricePerHunter = value) }
     }
 
-    fun updateHasMaxPlayers(value: Boolean) {
+    private fun updateHasMaxPlayers(value: Boolean) {
         _uiState.update { it.copy(hasMaxPlayers = value) }
     }
 
-    fun updateMaxPlayers(value: Float) {
+    private fun updateMaxPlayers(value: Float) {
         _uiState.update { it.copy(maxPlayers = value) }
     }
 
-    fun dismissDailyLimitAlert() {
+    private fun dismissDailyLimitAlert() {
         _uiState.update { it.copy(showDailyLimitAlert = false) }
     }
 
-    fun showDailyLimitAlert() {
+    private fun showDailyLimitAlert() {
         _uiState.update { it.copy(showDailyLimitAlert = true) }
     }
 

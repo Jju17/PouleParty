@@ -36,15 +36,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import dev.rahier.pouleparty.R
-import dev.rahier.pouleparty.model.GameMod
-import dev.rahier.pouleparty.model.PowerUpType
-import dev.rahier.pouleparty.ui.chickenconfig.ChickenMapConfigScreen
 import dev.rahier.pouleparty.ui.chickenconfig.PowerUpSelectionScreen
-import dev.rahier.pouleparty.ui.components.GameCodeCard
+import dev.rahier.pouleparty.ui.gamecreation.steps.ChickenSeesHuntersStep
+import dev.rahier.pouleparty.ui.gamecreation.steps.ChickenSelectionStep
+import dev.rahier.pouleparty.ui.gamecreation.steps.DurationStep
+import dev.rahier.pouleparty.ui.gamecreation.steps.GameModeStep
+import dev.rahier.pouleparty.ui.gamecreation.steps.HeadStartStep
+import dev.rahier.pouleparty.ui.gamecreation.steps.ParticipationStep
+import dev.rahier.pouleparty.ui.gamecreation.steps.PowerUpsStep
+import dev.rahier.pouleparty.ui.gamecreation.steps.RecapStep
+import dev.rahier.pouleparty.ui.gamecreation.steps.RegistrationStep
+import dev.rahier.pouleparty.ui.gamecreation.steps.StartTimeStep
+import dev.rahier.pouleparty.ui.gamecreation.steps.ZoneSetupStep
 import dev.rahier.pouleparty.ui.theme.*
-import dev.rahier.pouleparty.util.startOfToday
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,16 +62,25 @@ fun GameCreationScreen(
     val state by viewModel.uiState.collectAsState()
     val dateFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
 
+    // One-shot navigation effects from the ViewModel.
+    LaunchedEffect(viewModel) {
+        viewModel.effects.collect { effect ->
+            when (effect) {
+                is GameCreationEffect.GameStarted -> onStartGame(effect.gameId)
+            }
+        }
+    }
+
     val isForward = state.goingForward
 
     // Power-up selection overlay
     if (state.showPowerUpSelection) {
-        BackHandler { viewModel.dismissPowerUpSelection() }
+        BackHandler { viewModel.onIntent(GameCreationIntent.DismissPowerUpSelection) }
         PowerUpSelectionScreen(
             enabledTypes = state.game.powerUps.enabledTypes,
             gameMod = state.game.gameModEnum,
-            onToggle = { viewModel.togglePowerUpType(it) },
-            onDismiss = { viewModel.dismissPowerUpSelection() }
+            onToggle = { viewModel.onIntent(GameCreationIntent.PowerUpTypeToggled(it)) },
+            onDismiss = { viewModel.onIntent(GameCreationIntent.DismissPowerUpSelection) }
         )
         return
     }
@@ -73,7 +88,7 @@ fun GameCreationScreen(
     // Handle back press
     BackHandler {
         if (state.canGoBack) {
-            viewModel.back()
+            viewModel.onIntent(GameCreationIntent.Back)
         } else {
             onDismiss()
         }
@@ -114,62 +129,62 @@ fun GameCreationScreen(
                 when (step) {
                     GameCreationStep.PARTICIPATION -> ParticipationStep(
                         isParticipating = state.isParticipating,
-                        onSelect = { viewModel.setParticipating(it) }
+                        onSelect = { viewModel.onIntent(GameCreationIntent.ParticipatingChanged(it)) }
                     )
                     GameCreationStep.CHICKEN_SELECTION -> ChickenSelectionStep()
                     GameCreationStep.GAME_MODE -> GameModeStep(
                         selectedMode = state.game.gameModEnum,
-                        onSelect = { viewModel.updateGameMod(it) }
+                        onSelect = { viewModel.onIntent(GameCreationIntent.GameModeChanged(it)) }
                     )
                     GameCreationStep.ZONE_SETUP -> ZoneSetupStep(
                         game = state.game,
                         isZoneConfigured = state.isZoneConfigured,
-                        onLocationSelected = { viewModel.onLocationSelected(it) },
-                        onFinalLocationSelected = { viewModel.onFinalLocationSelected(it) },
-                        onRadiusChanged = { viewModel.updateInitialRadius(it) }
+                        onLocationSelected = { viewModel.onIntent(GameCreationIntent.LocationSelected(it)) },
+                        onFinalLocationSelected = { viewModel.onIntent(GameCreationIntent.FinalLocationSelected(it)) },
+                        onRadiusChanged = { viewModel.onIntent(GameCreationIntent.InitialRadiusChanged(it)) }
                     )
                     GameCreationStep.START_TIME -> StartTimeStep(
                         startDate = state.game.startDate,
                         showDatePicker = state.showDatePicker,
                         showTimePicker = state.showTimePicker,
-                        onTapTime = { viewModel.onStartTimeTapped() },
-                        onDismissDatePicker = { viewModel.dismissDatePicker() },
-                        onDismissTimePicker = { viewModel.dismissTimePicker() },
-                        onDateSelected = { y, m, d -> viewModel.updateStartDateOnly(y, m, d) },
-                        onTimeSelected = { h, m -> viewModel.updateStartTime(h, m) }
+                        onTapTime = { viewModel.onIntent(GameCreationIntent.StartTimeTapped) },
+                        onDismissDatePicker = { viewModel.onIntent(GameCreationIntent.DismissDatePicker) },
+                        onDismissTimePicker = { viewModel.onIntent(GameCreationIntent.DismissTimePicker) },
+                        onDateSelected = { y, m, d -> viewModel.onIntent(GameCreationIntent.StartDateChanged(y, m, d)) },
+                        onTimeSelected = { h, m -> viewModel.onIntent(GameCreationIntent.StartTimeChanged(h, m)) }
                     )
                     GameCreationStep.DURATION -> DurationStep(
                         gameDurationMinutes = state.gameDurationMinutes,
                         startDate = state.game.startDate,
                         dateFormat = dateFormat,
-                        onDurationChanged = { viewModel.updateDuration(it) }
+                        onDurationChanged = { viewModel.onIntent(GameCreationIntent.DurationChanged(it)) }
                     )
                     GameCreationStep.HEAD_START -> HeadStartStep(
                         headStartMinutes = state.game.timing.headStartMinutes,
-                        onHeadStartChanged = { viewModel.updateHeadStart(it) }
+                        onHeadStartChanged = { viewModel.onIntent(GameCreationIntent.HeadStartChanged(it)) }
                     )
                     GameCreationStep.POWER_UPS -> PowerUpsStep(
                         powerUpsEnabled = state.game.powerUps.enabled,
                         enabledPowerUpTypes = state.game.powerUps.enabledTypes,
                         gameMod = state.game.gameModEnum,
-                        onTogglePowerUps = { viewModel.togglePowerUps(it) },
-                        onPowerUpSelectionTapped = { viewModel.onPowerUpSelectionTapped() }
+                        onTogglePowerUps = { viewModel.onIntent(GameCreationIntent.PowerUpsToggled(it)) },
+                        onPowerUpSelectionTapped = { viewModel.onIntent(GameCreationIntent.PowerUpSelectionTapped) }
                     )
                     GameCreationStep.CHICKEN_SEES_HUNTERS -> ChickenSeesHuntersStep(
                         chickenCanSeeHunters = state.game.chickenCanSeeHunters,
-                        onToggle = { viewModel.toggleChickenCanSeeHunters(it) }
+                        onToggle = { viewModel.onIntent(GameCreationIntent.ChickenCanSeeHuntersToggled(it)) }
                     )
                     GameCreationStep.REGISTRATION -> RegistrationStep(
                         requiresRegistration = state.game.registration.required,
                         isDepositPlan = state.game.pricing.model == "deposit",
                         registrationClosesBeforeStartMinutes = state.game.registration.closesMinutesBefore,
-                        onToggle = { viewModel.toggleRequiresRegistration(it) },
-                        onDeadlineChanged = { viewModel.setRegistrationClosesBeforeStart(it) }
+                        onToggle = { viewModel.onIntent(GameCreationIntent.RequiresRegistrationToggled(it)) },
+                        onDeadlineChanged = { viewModel.onIntent(GameCreationIntent.RegistrationClosesBeforeStartChanged(it)) }
                     )
                     GameCreationStep.RECAP -> RecapStep(
                         state = state,
                         dateFormat = dateFormat,
-                        onCodeCopied = { viewModel.onCodeCopied() }
+                        onCodeCopied = { viewModel.onIntent(GameCreationIntent.CodeCopied) }
                     )
                 }
             }
@@ -178,10 +193,10 @@ fun GameCreationScreen(
             BottomBar(
                 state = state,
                 onBack = {
-                    if (state.canGoBack) viewModel.back() else onDismiss()
+                    if (state.canGoBack) viewModel.onIntent(GameCreationIntent.Back) else onDismiss()
                 },
-                onNext = { viewModel.next() },
-                onStartGame = { viewModel.startGame(onStartGame) }
+                onNext = { viewModel.onIntent(GameCreationIntent.Next) },
+                onStartGame = { viewModel.onIntent(GameCreationIntent.StartGameTapped) }
             )
         }
     }
@@ -189,11 +204,11 @@ fun GameCreationScreen(
     // Error alert
     if (state.showAlert) {
         AlertDialog(
-            onDismissRequest = { viewModel.dismissAlert() },
+            onDismissRequest = { viewModel.onIntent(GameCreationIntent.DismissAlert) },
             title = { Text(stringResource(R.string.error)) },
             text = { Text(state.alertMessage) },
             confirmButton = {
-                TextButton(onClick = { viewModel.dismissAlert() }) { Text(stringResource(R.string.ok)) }
+                TextButton(onClick = { viewModel.onIntent(GameCreationIntent.DismissAlert) }) { Text(stringResource(R.string.ok)) }
             }
         )
     }
@@ -288,856 +303,4 @@ private fun BottomBar(
             }
         }
     }
-}
-
-// ── Step Composables ────────────────────────────────────────────
-
-@Composable
-private fun StepContainer(
-    title: String,
-    subtitle: String? = null,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-    Column(
-        modifier = Modifier
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp)
-            .padding(vertical = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(24.dp)
-    ) {
-        Text(
-            text = title,
-            style = bangerStyle(32),
-            color = MaterialTheme.colorScheme.onBackground,
-            textAlign = TextAlign.Center
-        )
-        if (subtitle != null) {
-            Text(
-                text = subtitle,
-                style = gameboyStyle(10),
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-                textAlign = TextAlign.Center
-            )
-        }
-        content()
-    }
-    }
-}
-
-@Composable
-private fun OptionCard(
-    text: String,
-    emoji: String,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    gradient: Brush? = null,
-    subtitle: String? = null
-) {
-    val shape = RoundedCornerShape(16.dp)
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(if (isSelected) 8.dp else 2.dp, shape)
-            .clip(shape)
-            .then(
-                if (isSelected && gradient != null) {
-                    Modifier.background(gradient)
-                } else if (isSelected) {
-                    Modifier.background(GradientFire)
-                } else {
-                    Modifier
-                        .background(MaterialTheme.colorScheme.surface)
-                        .border(1.5.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f), shape)
-                }
-            )
-            .clickable { onClick() }
-            .padding(horizontal = 20.dp, vertical = 16.dp)
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(emoji, fontSize = 36.sp)
-            Spacer(Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text,
-                    style = bangerStyle(22),
-                    color = if (isSelected) Color.Black else MaterialTheme.colorScheme.onBackground
-                )
-                if (subtitle != null) {
-                    Text(
-                        subtitle,
-                        style = gameboyStyle(7),
-                        color = if (isSelected) Color.Black.copy(alpha = 0.7f)
-                        else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
-                    )
-                }
-            }
-            if (isSelected) {
-                Spacer(Modifier.width(8.dp))
-                Icon(
-                    imageVector = Icons.Filled.CheckCircle,
-                    contentDescription = null,
-                    tint = Color.Black,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-        }
-    }
-}
-
-// ── PARTICIPATION ───────────────────────────────────────────────
-
-@Composable
-private fun ParticipationStep(
-    isParticipating: Boolean,
-    onSelect: (Boolean) -> Unit
-) {
-    StepContainer(
-        title = "Tu participes ?",
-        subtitle = "Est-ce que tu joues aussi ?"
-    ) {
-        OptionCard(
-            text = "Je suis la Poule",
-            emoji = "\uD83D\uDC14",
-            isSelected = isParticipating,
-            onClick = { onSelect(true) }
-        )
-        OptionCard(
-            text = "J'organise",
-            emoji = "\uD83D\uDCCB",
-            isSelected = !isParticipating,
-            onClick = { onSelect(false) }
-        )
-    }
-}
-
-// ── CHICKEN SELECTION ───────────────────────────────────────────
-
-@Composable
-private fun ChickenSelectionStep() {
-    StepContainer(
-        title = "Qui sera la Poule ?",
-        subtitle = "Comment choisir la poule ?"
-    ) {
-        OptionCard(
-            text = "Au hasard",
-            emoji = "\uD83C\uDFB2",
-            isSelected = true,
-            onClick = { }
-        )
-        OptionCard(
-            text = "Premier arrive",
-            emoji = "\uD83C\uDFC3",
-            isSelected = false,
-            onClick = { }
-        )
-        OptionCard(
-            text = "Je designe",
-            emoji = "\uD83D\uDC46",
-            isSelected = false,
-            onClick = { }
-        )
-    }
-}
-
-// ── GAME MODE ───────────────────────────────────────────────────
-
-@Composable
-private fun GameModeStep(
-    selectedMode: GameMod,
-    onSelect: (GameMod) -> Unit
-) {
-    StepContainer(
-        title = "Quel mode de jeu ?",
-        subtitle = "Choisis comment tu veux jouer"
-    ) {
-        OptionCard(
-            text = "Follow the Chicken",
-            emoji = "\uD83D\uDC14",
-            isSelected = selectedMode == GameMod.FOLLOW_THE_CHICKEN,
-            onClick = { onSelect(GameMod.FOLLOW_THE_CHICKEN) },
-            gradient = GradientChicken,
-            subtitle = "The zone shrinks toward the chicken"
-        )
-
-        OptionCard(
-            text = "Stay in the Zone",
-            emoji = "\uD83D\uDCCD",
-            isSelected = selectedMode == GameMod.STAY_IN_THE_ZONE,
-            onClick = { onSelect(GameMod.STAY_IN_THE_ZONE) },
-            gradient = GradientHunter,
-            subtitle = "Fixed zone that shrinks"
-        )
-    }
-}
-
-// ── ZONE SETUP ──────────────────────────────────────────────────
-
-@Composable
-private fun ZoneSetupStep(
-    game: dev.rahier.pouleparty.model.Game,
-    isZoneConfigured: Boolean,
-    onLocationSelected: (com.mapbox.geojson.Point) -> Unit,
-    onFinalLocationSelected: (com.mapbox.geojson.Point?) -> Unit,
-    onRadiusChanged: (Double) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier.fillMaxSize()
-    ) {
-        // Title area
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = "Configure la zone",
-                style = bangerStyle(28),
-                color = MaterialTheme.colorScheme.onBackground,
-                textAlign = TextAlign.Center
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = if (game.gameModEnum == GameMod.STAY_IN_THE_ZONE)
-                    "Place la zone de depart et la zone finale"
-                else
-                    "Place la zone de depart",
-                style = gameboyStyle(9),
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-                textAlign = TextAlign.Center
-            )
-            if (!isZoneConfigured) {
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = if (game.gameModEnum == GameMod.STAY_IN_THE_ZONE)
-                        stringResource(R.string.set_start_and_final_zone)
-                    else
-                        stringResource(R.string.set_start_zone),
-                    style = gameboyStyle(8),
-                    color = CROrange,
-                    textAlign = TextAlign.Center
-                )
-            }
-        }
-
-        // Map fills remaining space
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-        ) {
-            ChickenMapConfigScreen(
-                initialRadius = game.zone.radius,
-                finalMarker = game.finalLocation,
-                onLocationSelected = onLocationSelected,
-                onFinalLocationSelected = onFinalLocationSelected,
-                onRadiusChanged = onRadiusChanged,
-                isFollowMode = game.gameModEnum == GameMod.FOLLOW_THE_CHICKEN
-            )
-        }
-    }
-}
-
-// ── START TIME ──────────────────────────────────────────────────
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun StartTimeStep(
-    startDate: Date,
-    showDatePicker: Boolean,
-    showTimePicker: Boolean,
-    onTapTime: () -> Unit,
-    onDismissDatePicker: () -> Unit,
-    onDismissTimePicker: () -> Unit,
-    onDateSelected: (year: Int, month: Int, day: Int) -> Unit,
-    onTimeSelected: (hour: Int, minute: Int) -> Unit
-) {
-    val displayFormat = remember { SimpleDateFormat("EEE d MMM, HH:mm", Locale.getDefault()) }
-    StepContainer(
-        title = "Quand ?",
-        subtitle = "Choisis la date et l'heure de depart"
-    ) {
-        // Combined date+time display card
-        val shape = RoundedCornerShape(16.dp)
-        Box(
-            modifier = Modifier
-                .shadow(4.dp, shape)
-                .clip(shape)
-                .background(MaterialTheme.colorScheme.surface)
-                .clickable { onTapTime() }
-                .padding(horizontal = 32.dp, vertical = 24.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = displayFormat.format(startDate),
-                style = bangerStyle(28),
-                color = CROrange,
-                textAlign = TextAlign.Center
-            )
-        }
-
-        Text(
-            text = "Appuie pour changer",
-            style = gameboyStyle(9),
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
-        )
-    }
-
-    // Date picker dialog (shown first)
-    if (showDatePicker) {
-        val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = startDate.time,
-            // Disallow picking dates in the past (from today onwards)
-            selectableDates = object : SelectableDates {
-                override fun isSelectableDate(utcTimeMillis: Long): Boolean {
-                    val todayStartMs = startOfToday().timeInMillis
-                    return utcTimeMillis >= todayStartMs - 24L * 60 * 60 * 1000
-                }
-            }
-        )
-        DatePickerDialog(
-            onDismissRequest = onDismissDatePicker,
-            confirmButton = {
-                TextButton(onClick = {
-                    val millis = datePickerState.selectedDateMillis
-                    if (millis != null) {
-                        val cal = Calendar.getInstance().apply { timeInMillis = millis }
-                        onDateSelected(
-                            cal.get(Calendar.YEAR),
-                            cal.get(Calendar.MONTH),
-                            cal.get(Calendar.DAY_OF_MONTH)
-                        )
-                    }
-                }) { Text(stringResource(R.string.ok)) }
-            },
-            dismissButton = {
-                TextButton(onClick = onDismissDatePicker) { Text(stringResource(R.string.cancel)) }
-            }
-        ) {
-            DatePicker(state = datePickerState)
-        }
-    }
-
-    // Time picker dialog (shown after date is picked)
-    if (showTimePicker) {
-        val cal = remember(startDate) { Calendar.getInstance().apply { time = startDate } }
-        val timePickerState = rememberTimePickerState(
-            initialHour = cal.get(Calendar.HOUR_OF_DAY),
-            initialMinute = cal.get(Calendar.MINUTE),
-            is24Hour = true
-        )
-        AlertDialog(
-            onDismissRequest = onDismissTimePicker,
-            title = { Text(stringResource(R.string.start_at)) },
-            text = { TimePicker(state = timePickerState) },
-            confirmButton = {
-                TextButton(onClick = {
-                    onTimeSelected(timePickerState.hour, timePickerState.minute)
-                }) { Text(stringResource(R.string.ok)) }
-            },
-            dismissButton = {
-                TextButton(onClick = onDismissTimePicker) { Text(stringResource(R.string.cancel)) }
-            }
-        )
-    }
-}
-
-// ── DURATION ────────────────────────────────────────────────────
-
-@Composable
-private fun DurationStep(
-    gameDurationMinutes: Double,
-    startDate: Date,
-    dateFormat: SimpleDateFormat,
-    onDurationChanged: (Double) -> Unit
-) {
-    StepContainer(
-        title = "Combien de temps ?",
-        subtitle = "Duree de la partie"
-    ) {
-        val durationOptions = listOf(
-            60.0 to "1h",
-            90.0 to "1h30",
-            120.0 to "2h",
-            150.0 to "2h30",
-            180.0 to "3h"
-        )
-
-        durationOptions.forEach { (minutes, label) ->
-            val isSelected = gameDurationMinutes == minutes
-            val shape = RoundedCornerShape(16.dp)
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .shadow(if (isSelected) 6.dp else 2.dp, shape)
-                    .clip(shape)
-                    .then(
-                        if (isSelected) Modifier.background(GradientFire)
-                        else Modifier
-                            .background(MaterialTheme.colorScheme.surface)
-                            .border(1.5.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f), shape)
-                    )
-                    .clickable { onDurationChanged(minutes) }
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = label,
-                    style = bangerStyle(24),
-                    color = if (isSelected) Color.White else MaterialTheme.colorScheme.onBackground
-                )
-            }
-        }
-
-        // End time preview
-        val endTime = Date(startDate.time + (gameDurationMinutes * 60 * 1000).toLong())
-        Text(
-            text = "${stringResource(R.string.ends_at)} ${dateFormat.format(endTime)}",
-            style = gameboyStyle(10),
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
-        )
-    }
-}
-
-// ── HEAD START ──────────────────────────────────────────────────
-
-@Composable
-private fun HeadStartStep(
-    headStartMinutes: Double,
-    onHeadStartChanged: (Double) -> Unit
-) {
-    StepContainer(
-        title = "Avance de la poule ?",
-        subtitle = "Temps avant que les chasseurs ne commencent"
-    ) {
-        Text(
-            text = "${headStartMinutes.toInt()} min",
-            style = bangerStyle(64),
-            color = CROrange
-        )
-
-        Slider(
-            value = headStartMinutes.toFloat(),
-            onValueChange = { onHeadStartChanged(it.toDouble()) },
-            valueRange = 0f..15f,
-            steps = 14,
-            modifier = Modifier.fillMaxWidth(),
-            colors = SliderDefaults.colors(thumbColor = CROrange, activeTrackColor = CROrange)
-        )
-
-        Text(
-            text = if (headStartMinutes.toInt() == 0) "Pas d'avance" else "${headStartMinutes.toInt()} minutes d'avance pour la poule",
-            style = gameboyStyle(9),
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-            textAlign = TextAlign.Center
-        )
-    }
-}
-
-// ── POWER UPS ───────────────────────────────────────────────────
-
-@Composable
-private fun PowerUpsStep(
-    powerUpsEnabled: Boolean,
-    enabledPowerUpTypes: List<String>,
-    gameMod: GameMod,
-    onTogglePowerUps: (Boolean) -> Unit,
-    onPowerUpSelectionTapped: () -> Unit
-) {
-    StepContainer(
-        title = "Power-Ups ?",
-        subtitle = "Active les bonus en jeu"
-    ) {
-        // Toggle card
-        val shape = RoundedCornerShape(16.dp)
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = shape,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    stringResource(R.string.enable_power_ups),
-                    style = bangerStyle(20),
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-                Switch(
-                    checked = powerUpsEnabled,
-                    onCheckedChange = onTogglePowerUps,
-                    colors = SwitchDefaults.colors(checkedTrackColor = CROrange)
-                )
-            }
-        }
-
-        if (powerUpsEnabled) {
-            val unavailable = if (gameMod == GameMod.STAY_IN_THE_ZONE) {
-                setOf(
-                    PowerUpType.INVISIBILITY.firestoreValue,
-                    PowerUpType.DECOY.firestoreValue,
-                    PowerUpType.JAMMER.firestoreValue
-                )
-            } else emptySet()
-            val enabledCount = enabledPowerUpTypes.count { it !in unavailable }
-            val totalCount = PowerUpType.entries.count { it.firestoreValue !in unavailable }
-
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onPowerUpSelectionTapped() },
-                shape = shape,
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        stringResource(R.string.choose_power_ups),
-                        style = gameboyStyle(10),
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            stringResource(R.string.power_ups_count_format, enabledCount, totalCount),
-                            style = gameboyStyle(10),
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-// ── CHICKEN SEES HUNTERS ────────────────────────────────────────
-
-@Composable
-private fun ChickenSeesHuntersStep(
-    chickenCanSeeHunters: Boolean,
-    onToggle: (Boolean) -> Unit
-) {
-    StepContainer(
-        title = "La poule voit les chasseurs ?",
-        subtitle = "Can the chicken see where the hunters are?"
-    ) {
-        OptionCard(
-            text = "Oui, elle les voit",
-            emoji = "\uD83D\uDC40",
-            isSelected = chickenCanSeeHunters,
-            onClick = { onToggle(true) }
-        )
-        OptionCard(
-            text = "Non, a l'aveugle",
-            emoji = "\uD83D\uDE48",
-            isSelected = !chickenCanSeeHunters,
-            onClick = { onToggle(false) }
-        )
-    }
-}
-
-@Composable
-private fun RegistrationStep(
-    requiresRegistration: Boolean,
-    isDepositPlan: Boolean,
-    registrationClosesBeforeStartMinutes: Int?,
-    onToggle: (Boolean) -> Unit,
-    onDeadlineChanged: (Int?) -> Unit
-) {
-    StepContainer(
-        title = stringResource(R.string.registration),
-        subtitle = stringResource(R.string.do_hunters_need_to_register_before_joining)
-    ) {
-        OptionCard(
-            text = stringResource(R.string.open_join),
-            emoji = "\uD83D\uDEAA",
-            isSelected = !requiresRegistration,
-            onClick = { if (!isDepositPlan) onToggle(false) }
-        )
-        OptionCard(
-            text = stringResource(R.string.registration_required),
-            emoji = "\uD83D\uDCDD",
-            isSelected = requiresRegistration,
-            onClick = { if (!isDepositPlan) onToggle(true) }
-        )
-        if (isDepositPlan) {
-            Text(
-                text = stringResource(R.string.registration_required_for_paid_deposit_games),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-                modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
-            )
-        }
-
-        AnimatedVisibility(
-            visible = requiresRegistration,
-            enter = fadeIn(animationSpec = tween(300)) + expandVertically(animationSpec = tween(300)),
-            exit = fadeOut(animationSpec = tween(300)) + shrinkVertically(animationSpec = tween(300))
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = stringResource(R.string.registration_closes),
-                    style = gameboyStyle(9),
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
-                )
-                val options = listOf(
-                    R.string.at_game_start to null,
-                    R.string.fifteen_min_before to 15,
-                    R.string.thirty_min_before to 30,
-                    R.string.one_hour_before to 60,
-                    R.string.two_hours_before to 120,
-                    R.string.one_day_before to 1440,
-                )
-                options.chunked(2).forEach { row ->
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        row.forEach { (labelRes, minutes) ->
-                            val isSelected = registrationClosesBeforeStartMinutes == minutes
-                            val bgColor = if (isSelected) CROrange else MaterialTheme.colorScheme.surface
-                            val textColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onBackground
-                            Button(
-                                onClick = { onDeadlineChanged(minutes) },
-                                colors = ButtonDefaults.buttonColors(containerColor = bgColor),
-                                shape = RoundedCornerShape(50),
-                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text(
-                                    text = stringResource(labelRes),
-                                    style = gameboyStyle(8),
-                                    color = textColor,
-                                    maxLines = 1
-                                )
-                            }
-                        }
-                        if (row.size == 1) {
-                            Spacer(Modifier.weight(1f))
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-// ── RECAP ───────────────────────────────────────────────────────
-
-@Composable
-private fun RecapStep(
-    state: GameCreationUiState,
-    dateFormat: SimpleDateFormat,
-    onCodeCopied: () -> Unit
-) {
-    val game = state.game
-    val endTime = Date(game.startDate.time + (state.gameDurationMinutes * 60 * 1000).toLong())
-
-    StepContainer(
-        title = "Recapitulatif",
-        subtitle = "Verifie avant de lancer"
-    ) {
-        // Game code
-        GameCodeCard(
-            gameCode = game.gameCode,
-            codeCopied = state.codeCopied,
-            onCodeCopied = onCodeCopied,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-        )
-
-        // Summary card
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                RecapRow(
-                    label = stringResource(R.string.role),
-                    value = if (state.isParticipating) "Chicken \uD83D\uDC14" else "Organizer \uD83D\uDCCB"
-                )
-                HorizontalDivider()
-
-                RecapRow(
-                    label = stringResource(R.string.game_mode),
-                    value = game.gameModEnum.title
-                )
-                HorizontalDivider()
-
-                RecapRow(
-                    label = stringResource(R.string.max_players),
-                    value = "${game.maxPlayers}"
-                )
-                HorizontalDivider()
-
-                RecapRow(
-                    label = stringResource(R.string.start_at),
-                    value = dateFormat.format(game.startDate)
-                )
-                HorizontalDivider()
-
-                RecapRow(
-                    label = stringResource(R.string.duration),
-                    value = formatDuration(state.gameDurationMinutes)
-                )
-                HorizontalDivider()
-
-                RecapRow(
-                    label = stringResource(R.string.ends_at),
-                    value = dateFormat.format(endTime)
-                )
-                HorizontalDivider()
-
-                RecapRow(
-                    label = stringResource(R.string.chicken_head_start),
-                    value = "${game.timing.headStartMinutes.toInt()} min"
-                )
-                HorizontalDivider()
-
-                RecapRow(
-                    label = stringResource(R.string.zone_radius),
-                    value = "${game.zone.radius.toInt()} m"
-                )
-                HorizontalDivider()
-
-                RecapRow(
-                    label = stringResource(R.string.power_ups),
-                    value = if (game.powerUps.enabled) "ON" else "OFF"
-                )
-                if (game.powerUps.enabled) {
-                    HorizontalDivider()
-                    val enabledNames = PowerUpType.entries
-                        .filter { it.firestoreValue in game.powerUps.enabledTypes }
-                        .joinToString(", ") { it.title }
-                    RecapRow(
-                        label = stringResource(R.string.active_types),
-                        value = enabledNames
-                    )
-                }
-
-                if (game.gameModEnum == GameMod.FOLLOW_THE_CHICKEN) {
-                    HorizontalDivider()
-                    RecapRow(
-                        label = stringResource(R.string.chicken_can_see_hunters),
-                        value = if (game.chickenCanSeeHunters) "Yes" else "No"
-                    )
-                }
-
-                if (game.isPaid) {
-                    HorizontalDivider()
-                    RecapRow(
-                        label = stringResource(R.string.pricing),
-                        value = game.pricingModelEnum.title
-                    )
-                    HorizontalDivider()
-                    val totalCents = game.pricing.pricePerPlayer * game.maxPlayers
-                    RecapRow(
-                        label = stringResource(R.string.total_price),
-                        value = String.format("%.2f€", totalCents / 100.0)
-                    )
-                    if (game.pricing.deposit > 0) {
-                        HorizontalDivider()
-                        RecapRow(
-                            label = stringResource(R.string.deposit),
-                            value = String.format("%.2f€", game.pricing.deposit / 100.0)
-                        )
-                    }
-                }
-
-                HorizontalDivider()
-                RecapRow(
-                    label = stringResource(R.string.registration),
-                    value = if (game.registration.required) stringResource(R.string.registration_required) else stringResource(R.string.open_join)
-                )
-                if (game.registration.required && game.registration.closesMinutesBefore != null) {
-                    HorizontalDivider()
-                    RecapRow(
-                        label = stringResource(R.string.registration_closes),
-                        value = registrationDeadlineLabel(game.registration.closesMinutesBefore)
-                    )
-                }
-
-                if (!state.isZoneConfigured) {
-                    HorizontalDivider()
-                    Text(
-                        text = if (game.gameModEnum == GameMod.STAY_IN_THE_ZONE)
-                            stringResource(R.string.set_start_and_final_zone)
-                        else
-                            stringResource(R.string.set_start_zone),
-                        style = gameboyStyle(8),
-                        color = CROrange,
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center
-                    )
-                }
-            }
-        }
-
-        Spacer(Modifier.height(16.dp))
-    }
-}
-
-@Composable
-private fun RecapRow(label: String, value: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = label,
-            style = gameboyStyle(9),
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
-        )
-        Text(
-            text = value,
-            style = gameboyStyle(9),
-            color = MaterialTheme.colorScheme.onBackground
-        )
-    }
-}
-
-private fun formatDuration(minutes: Double): String {
-    val hours = minutes.toInt() / 60
-    val mins = minutes.toInt() % 60
-    return if (mins == 0) "${hours}h" else "${hours}h${mins}"
-}
-
-private fun registrationDeadlineLabel(minutes: Int): String = when {
-    minutes < 60 -> "$minutes min before"
-    minutes == 60 -> "1 hour before"
-    minutes == 1440 -> "1 day before"
-    else -> "${minutes / 60} hours before"
 }

@@ -29,12 +29,15 @@ import dev.rahier.pouleparty.ui.interpolateZoneCenter
 import dev.rahier.pouleparty.ui.processRadiusUpdate
 import dev.rahier.pouleparty.ui.shouldCheckZone
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import android.util.Log
 import java.util.Date
@@ -48,35 +51,35 @@ data class HunterAnnotation(
 )
 
 data class ChickenMapUiState(
-    val game: Game = Game.mock,
+    override val game: Game = Game.mock,
     val hunterAnnotations: List<HunterAnnotation> = emptyList(),
-    val nextRadiusUpdate: Date? = null,
-    val nowDate: Date = Date(),
-    val radius: Int = 1500,
-    val circleCenter: Point? = null,
+    override val nextRadiusUpdate: Date? = null,
+    override val nowDate: Date = Date(),
+    override val radius: Int = 1500,
+    override val circleCenter: Point? = null,
     val showCancelAlert: Boolean = false,
     val showGameOverAlert: Boolean = false,
     val gameOverMessage: String = "",
-    val showGameInfo: Boolean = false,
+    override val showGameInfo: Boolean = false,
     val codeCopied: Boolean = false,
     val showFoundCode: Boolean = false,
     val previousWinnersCount: Int = -1,
-    val winnerNotification: String? = null,
-    val hasGameStarted: Boolean = false,
+    override val winnerNotification: String? = null,
+    override val hasGameStarted: Boolean = false,
     val hasHuntStarted: Boolean = false,
-    val countdownNumber: Int? = null,
-    val countdownText: String? = null,
+    override val countdownNumber: Int? = null,
+    override val countdownText: String? = null,
     val userLocation: Point? = null,
-    val isOutsideZone: Boolean = false,
-    val availablePowerUps: List<PowerUp> = emptyList(),
-    val collectedPowerUps: List<PowerUp> = emptyList(),
-    val showPowerUpInventory: Boolean = false,
-    val powerUpNotification: String? = null,
-    val lastActivatedPowerUpType: PowerUpType? = null,
+    override val isOutsideZone: Boolean = false,
+    override val availablePowerUps: List<PowerUp> = emptyList(),
+    override val collectedPowerUps: List<PowerUp> = emptyList(),
+    override val showPowerUpInventory: Boolean = false,
+    override val powerUpNotification: String? = null,
+    override val lastActivatedPowerUpType: PowerUpType? = null,
     val lastSpawnBatchIndex: Int = 0,
     val activatingPowerUpId: String? = null,
     val shouldNavigateToVictory: Boolean = false
-)
+) : dev.rahier.pouleparty.ui.MapUiState
 
 @HiltViewModel
 class ChickenMapViewModel @Inject constructor(
@@ -96,6 +99,27 @@ class ChickenMapViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(ChickenMapUiState())
     val uiState: StateFlow<ChickenMapUiState> = _uiState.asStateFlow()
     private var hasSpawnedInitialPowerUps = false
+
+    private val _effects = Channel<ChickenMapEffect>(Channel.BUFFERED)
+    val effects: Flow<ChickenMapEffect> = _effects.receiveAsFlow()
+
+    /** Single entry point for every user interaction. */
+    fun onIntent(intent: ChickenMapIntent) {
+        when (intent) {
+            ChickenMapIntent.CancelGameTapped -> onCancelGameTapped()
+            ChickenMapIntent.DismissCancelAlert -> dismissCancelAlert()
+            ChickenMapIntent.ConfirmCancelGame -> confirmCancelGame()
+            ChickenMapIntent.ConfirmGameOver -> confirmGameOver()
+            ChickenMapIntent.InfoTapped -> onInfoTapped()
+            ChickenMapIntent.DismissGameInfo -> dismissGameInfo()
+            ChickenMapIntent.FoundButtonTapped -> onFoundButtonTapped()
+            ChickenMapIntent.DismissFoundCode -> dismissFoundCode()
+            ChickenMapIntent.CodeCopied -> onCodeCopied()
+            ChickenMapIntent.PowerUpInventoryTapped -> onPowerUpInventoryTapped()
+            ChickenMapIntent.DismissPowerUpInventory -> dismissPowerUpInventory()
+            is ChickenMapIntent.ActivatePowerUp -> activatePowerUp(intent.powerUp)
+        }
+    }
 
     override val currentUserLocation: Point?
         get() = _uiState.value.userLocation
@@ -417,50 +441,51 @@ class ChickenMapViewModel @Inject constructor(
                     }
                     cancelStreams()
                     _uiState.update { it.copy(shouldNavigateToVictory = true) }
+                    _effects.send(ChickenMapEffect.NavigateToVictory)
                     return@collect
                 }
             }
         }
     }
 
-    fun onCancelGameTapped() {
+    private fun onCancelGameTapped() {
         _uiState.update { it.copy(showCancelAlert = true) }
     }
 
-    fun dismissCancelAlert() {
+    private fun dismissCancelAlert() {
         _uiState.update { it.copy(showCancelAlert = false) }
     }
 
-    fun confirmCancelGame(onGoToMenu: () -> Unit) {
+    private fun confirmCancelGame() {
         _uiState.update { it.copy(showCancelAlert = false) }
         viewModelScope.launch {
             try { firestoreRepository.updateGameStatus(gameId, GameStatus.DONE) } catch (e: Exception) { Log.e("ChickenMapVM", "Failed to update game status", e) }
-            onGoToMenu()
+            _effects.send(ChickenMapEffect.NavigateToMenu)
         }
     }
 
-    fun confirmGameOver(onGoToMenu: () -> Unit) {
+    private fun confirmGameOver() {
         _uiState.update { it.copy(showGameOverAlert = false) }
-        onGoToMenu()
+        viewModelScope.launch { _effects.send(ChickenMapEffect.NavigateToVictory) }
     }
 
-    fun onInfoTapped() {
+    private fun onInfoTapped() {
         _uiState.update { it.copy(showGameInfo = true) }
     }
 
-    fun dismissGameInfo() {
+    private fun dismissGameInfo() {
         _uiState.update { it.copy(showGameInfo = false) }
     }
 
-    fun onFoundButtonTapped() {
+    private fun onFoundButtonTapped() {
         _uiState.update { it.copy(showFoundCode = true) }
     }
 
-    fun dismissFoundCode() {
+    private fun dismissFoundCode() {
         _uiState.update { it.copy(showFoundCode = false) }
     }
 
-    fun onCodeCopied() {
+    private fun onCodeCopied() {
         handleCodeCopied { copied -> _uiState.update { it.copy(codeCopied = copied) } }
     }
 
@@ -510,7 +535,7 @@ class ChickenMapViewModel @Inject constructor(
         }
     }
 
-    fun spawnPeriodicPowerUps(batchIndex: Int) {
+    private fun spawnPeriodicPowerUps(batchIndex: Int) {
         val state = _uiState.value
         if (!state.game.powerUps.enabled) return
         val center = state.circleCenter ?: state.game.initialLocation
@@ -551,7 +576,7 @@ class ChickenMapViewModel @Inject constructor(
         }
     }
 
-    fun activatePowerUp(powerUp: PowerUp) {
+    private fun activatePowerUp(powerUp: PowerUp) {
         if (_uiState.value.activatingPowerUpId != null) return
         _uiState.update { it.copy(activatingPowerUpId = powerUp.id) }
         viewModelScope.launch {
@@ -594,11 +619,11 @@ class ChickenMapViewModel @Inject constructor(
         }
     }
 
-    fun onPowerUpInventoryTapped() {
+    private fun onPowerUpInventoryTapped() {
         _uiState.update { it.copy(showPowerUpInventory = true) }
     }
 
-    fun dismissPowerUpInventory() {
+    private fun dismissPowerUpInventory() {
         _uiState.update { it.copy(showPowerUpInventory = false) }
     }
 

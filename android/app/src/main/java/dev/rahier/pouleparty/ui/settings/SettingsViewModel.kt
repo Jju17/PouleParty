@@ -42,6 +42,28 @@ class SettingsViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
+    /** Single entry point for every user interaction. */
+    fun onIntent(intent: SettingsIntent) {
+        when (intent) {
+            SettingsIntent.DismissGameDetail -> dismissGameDetail()
+            SettingsIntent.ShowLeaderboard -> showLeaderboard()
+            SettingsIntent.DismissLeaderboard -> dismissLeaderboard()
+            SettingsIntent.SaveNickname -> saveNickname()
+            SettingsIntent.DismissNicknameSaved -> dismissNicknameSaved()
+            SettingsIntent.DismissProfanityAlert -> dismissProfanityAlert()
+            SettingsIntent.DeleteDataTapped -> onDeleteDataTapped()
+            SettingsIntent.DeleteDismissed -> onDeleteDismissed()
+            SettingsIntent.ConfirmDelete -> confirmDelete()
+            SettingsIntent.DeleteSuccessDismissed -> onDeleteSuccessDismissed()
+            SettingsIntent.DeleteErrorDismissed -> onDeleteErrorDismissed()
+            is SettingsIntent.NicknameChanged -> onNicknameChanged(intent.name)
+            is SettingsIntent.GameSelected -> selectGame(intent.game)
+        }
+    }
+
+    /** Kept as a direct API (not an Intent) — read synchronously by composables. */
+    fun currentUserId(): String = auth.currentUser?.uid ?: ""
+
     init {
         val saved = prefs.getTrimmedString(AppConstants.PREF_USER_NICKNAME)
         _uiState.update { it.copy(nickname = saved) }
@@ -62,29 +84,27 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun selectGame(myGame: MyGame) {
+    private fun selectGame(myGame: MyGame) {
         _uiState.update { it.copy(selectedGame = myGame) }
     }
 
-    fun dismissGameDetail() {
+    private fun dismissGameDetail() {
         _uiState.update { it.copy(selectedGame = null, isShowingLeaderboard = false) }
     }
 
-    fun showLeaderboard() {
+    private fun showLeaderboard() {
         _uiState.update { it.copy(isShowingLeaderboard = true) }
     }
 
-    fun dismissLeaderboard() {
+    private fun dismissLeaderboard() {
         _uiState.update { it.copy(isShowingLeaderboard = false) }
     }
 
-    fun currentUserId(): String = auth.currentUser?.uid ?: ""
-
-    fun onNicknameChanged(name: String) {
+    private fun onNicknameChanged(name: String) {
         _uiState.update { it.copy(nickname = name.take(NICKNAME_MAX_LENGTH)) }
     }
 
-    fun saveNickname() {
+    private fun saveNickname() {
         val trimmed = _uiState.value.nickname.trim()
         if (trimmed.isEmpty()) return
         if (ProfanityFilter.containsProfanity(trimmed)) {
@@ -100,23 +120,23 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun dismissNicknameSaved() {
+    private fun dismissNicknameSaved() {
         _uiState.update { it.copy(isShowingNicknameSaved = false) }
     }
 
-    fun dismissProfanityAlert() {
+    private fun dismissProfanityAlert() {
         _uiState.update { it.copy(isShowingProfanityAlert = false) }
     }
 
-    fun onDeleteDataTapped() {
+    private fun onDeleteDataTapped() {
         _uiState.update { it.copy(isShowingDeleteConfirmation = true) }
     }
 
-    fun onDeleteDismissed() {
+    private fun onDeleteDismissed() {
         _uiState.update { it.copy(isShowingDeleteConfirmation = false) }
     }
 
-    fun confirmDelete() {
+    private fun confirmDelete() {
         _uiState.update { it.copy(isShowingDeleteConfirmation = false) }
         viewModelScope.launch {
             val success = try {
@@ -138,11 +158,11 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun onDeleteSuccessDismissed() {
+    private fun onDeleteSuccessDismissed() {
         _uiState.update { it.copy(isShowingDeleteSuccess = false) }
     }
 
-    fun onDeleteErrorDismissed() {
+    private fun onDeleteErrorDismissed() {
         _uiState.update { it.copy(isShowingDeleteError = false) }
     }
 

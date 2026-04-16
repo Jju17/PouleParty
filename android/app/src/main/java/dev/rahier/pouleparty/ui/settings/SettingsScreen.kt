@@ -99,7 +99,7 @@ fun SettingsScreen(
 
                     OutlinedTextField(
                         value = state.nickname,
-                        onValueChange = { viewModel.onNicknameChanged(it) },
+                        onValueChange = { viewModel.onIntent(SettingsIntent.NicknameChanged(it)) },
                         singleLine = true,
                         textStyle = bangerStyle(22).copy(textAlign = TextAlign.Center),
                         shape = RoundedCornerShape(12.dp),
@@ -124,7 +124,7 @@ fun SettingsScreen(
                         )
 
                         Button(
-                            onClick = { viewModel.saveNickname() },
+                            onClick = { viewModel.onIntent(SettingsIntent.SaveNickname) },
                             enabled = state.nickname.trim().isNotEmpty(),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = Color.Black,
@@ -186,7 +186,7 @@ fun SettingsScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Button(
-                        onClick = { viewModel.onDeleteDataTapped() },
+                        onClick = { viewModel.onIntent(SettingsIntent.DeleteDataTapped) },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Danger.copy(alpha = 0.85f),
                             contentColor = Color.White
@@ -268,60 +268,60 @@ fun SettingsScreen(
     // Dialogs
     if (state.isShowingNicknameSaved) {
         AlertDialog(
-            onDismissRequest = { viewModel.dismissNicknameSaved() },
+            onDismissRequest = { viewModel.onIntent(SettingsIntent.DismissNicknameSaved) },
             title = { Text(stringResource(R.string.nickname_saved)) },
             confirmButton = {
-                TextButton(onClick = { viewModel.dismissNicknameSaved() }) { Text(stringResource(R.string.ok)) }
+                TextButton(onClick = { viewModel.onIntent(SettingsIntent.DismissNicknameSaved) }) { Text(stringResource(R.string.ok)) }
             }
         )
     }
 
     if (state.isShowingProfanityAlert) {
         AlertDialog(
-            onDismissRequest = { viewModel.dismissProfanityAlert() },
+            onDismissRequest = { viewModel.onIntent(SettingsIntent.DismissProfanityAlert) },
             title = { Text(stringResource(R.string.inappropriate_nickname)) },
             text = { Text(stringResource(R.string.inappropriate_nickname_message)) },
             confirmButton = {
-                TextButton(onClick = { viewModel.dismissProfanityAlert() }) { Text(stringResource(R.string.ok)) }
+                TextButton(onClick = { viewModel.onIntent(SettingsIntent.DismissProfanityAlert) }) { Text(stringResource(R.string.ok)) }
             }
         )
     }
 
     if (state.isShowingDeleteConfirmation) {
         AlertDialog(
-            onDismissRequest = { viewModel.onDeleteDismissed() },
+            onDismissRequest = { viewModel.onIntent(SettingsIntent.DeleteDismissed) },
             title = { Text(stringResource(R.string.delete_data_title)) },
             text = { Text(stringResource(R.string.delete_data_message)) },
             confirmButton = {
                 TextButton(
-                    onClick = { viewModel.confirmDelete() },
+                    onClick = { viewModel.onIntent(SettingsIntent.ConfirmDelete) },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) { Text(stringResource(R.string.delete)) }
             },
             dismissButton = {
-                TextButton(onClick = { viewModel.onDeleteDismissed() }) { Text(stringResource(R.string.cancel)) }
+                TextButton(onClick = { viewModel.onIntent(SettingsIntent.DeleteDismissed) }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
 
     if (state.isShowingDeleteSuccess) {
         AlertDialog(
-            onDismissRequest = { viewModel.onDeleteSuccessDismissed() },
+            onDismissRequest = { viewModel.onIntent(SettingsIntent.DeleteSuccessDismissed) },
             title = { Text(stringResource(R.string.data_deleted)) },
             text = { Text(stringResource(R.string.data_deleted_message)) },
             confirmButton = {
-                TextButton(onClick = { viewModel.onDeleteSuccessDismissed() }) { Text(stringResource(R.string.ok)) }
+                TextButton(onClick = { viewModel.onIntent(SettingsIntent.DeleteSuccessDismissed) }) { Text(stringResource(R.string.ok)) }
             }
         )
     }
 
     if (state.isShowingDeleteError) {
         AlertDialog(
-            onDismissRequest = { viewModel.onDeleteErrorDismissed() },
+            onDismissRequest = { viewModel.onIntent(SettingsIntent.DeleteErrorDismissed) },
             title = { Text(stringResource(R.string.error)) },
             text = { Text(stringResource(R.string.delete_error_message)) },
             confirmButton = {
-                TextButton(onClick = { viewModel.onDeleteErrorDismissed() }) { Text(stringResource(R.string.ok)) }
+                TextButton(onClick = { viewModel.onIntent(SettingsIntent.DeleteErrorDismissed) }) { Text(stringResource(R.string.ok)) }
             }
         )
     }
@@ -383,7 +383,7 @@ private fun MyGamesSection(state: SettingsUiState, viewModel: SettingsViewModel)
                                 )
                             }
                             GameRow(myGame = myGame, dateFormat = dateFormat) {
-                                viewModel.selectGame(myGame)
+                                viewModel.onIntent(SettingsIntent.GameSelected(myGame))
                             }
                         }
                     }
@@ -397,14 +397,14 @@ private fun MyGamesSection(state: SettingsUiState, viewModel: SettingsViewModel)
         GameDetailDialog(
             myGame = selectedGame,
             dateFormat = dateFormat,
-            onDismiss = { viewModel.dismissGameDetail() },
-            onViewLeaderboard = { viewModel.showLeaderboard() }
+            onDismiss = { viewModel.onIntent(SettingsIntent.DismissGameDetail) },
+            onViewLeaderboard = { viewModel.onIntent(SettingsIntent.ShowLeaderboard) }
         )
         if (state.isShowingLeaderboard) {
             LeaderboardDialog(
                 game = selectedGame.game,
                 currentUserId = viewModel.currentUserId(),
-                onDismiss = { viewModel.dismissLeaderboard() }
+                onDismiss = { viewModel.onIntent(SettingsIntent.DismissLeaderboard) }
             )
         }
     }

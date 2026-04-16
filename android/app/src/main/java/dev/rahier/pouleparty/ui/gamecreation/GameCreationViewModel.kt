@@ -19,6 +19,9 @@ import dev.rahier.pouleparty.model.Zone
 import dev.rahier.pouleparty.model.calculateNormalModeSettings
 import dev.rahier.pouleparty.util.calendarAt
 import kotlin.math.ceil
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -148,6 +151,39 @@ class GameCreationViewModel @Inject constructor(
     )
     val uiState: StateFlow<GameCreationUiState> = _uiState.asStateFlow()
 
+    private val _effects = Channel<GameCreationEffect>(Channel.BUFFERED)
+    val effects: Flow<GameCreationEffect> = _effects.receiveAsFlow()
+
+    /** Single entry point for every user interaction. */
+    fun onIntent(intent: GameCreationIntent) {
+        when (intent) {
+            GameCreationIntent.Next -> next()
+            GameCreationIntent.Back -> back()
+            GameCreationIntent.StartTimeTapped -> onStartTimeTapped()
+            GameCreationIntent.DismissDatePicker -> dismissDatePicker()
+            GameCreationIntent.DismissTimePicker -> dismissTimePicker()
+            GameCreationIntent.PowerUpSelectionTapped -> onPowerUpSelectionTapped()
+            GameCreationIntent.DismissPowerUpSelection -> dismissPowerUpSelection()
+            GameCreationIntent.CodeCopied -> onCodeCopied()
+            GameCreationIntent.DismissAlert -> dismissAlert()
+            GameCreationIntent.StartGameTapped -> startGame()
+            is GameCreationIntent.ParticipatingChanged -> setParticipating(intent.isParticipating)
+            is GameCreationIntent.GameModeChanged -> updateGameMod(intent.mode)
+            is GameCreationIntent.StartDateChanged -> updateStartDateOnly(intent.year, intent.month, intent.day)
+            is GameCreationIntent.StartTimeChanged -> updateStartTime(intent.hour, intent.minute)
+            is GameCreationIntent.DurationChanged -> updateDuration(intent.minutes)
+            is GameCreationIntent.HeadStartChanged -> updateHeadStart(intent.minutes)
+            is GameCreationIntent.InitialRadiusChanged -> updateInitialRadius(intent.radius)
+            is GameCreationIntent.PowerUpsToggled -> togglePowerUps(intent.enabled)
+            is GameCreationIntent.PowerUpTypeToggled -> togglePowerUpType(intent.type)
+            is GameCreationIntent.ChickenCanSeeHuntersToggled -> toggleChickenCanSeeHunters(intent.value)
+            is GameCreationIntent.RequiresRegistrationToggled -> toggleRequiresRegistration(intent.required)
+            is GameCreationIntent.RegistrationClosesBeforeStartChanged -> setRegistrationClosesBeforeStart(intent.minutes)
+            is GameCreationIntent.LocationSelected -> onLocationSelected(intent.point)
+            is GameCreationIntent.FinalLocationSelected -> onFinalLocationSelected(intent.point)
+        }
+    }
+
     init {
         resolveInitialLocation()
     }
@@ -161,7 +197,7 @@ class GameCreationViewModel @Inject constructor(
         }
     }
 
-    fun next() {
+    private fun next() {
         val state = _uiState.value
         val nextIndex = state.currentStepIndex + 1
         if (nextIndex < state.steps.size) {
@@ -170,7 +206,7 @@ class GameCreationViewModel @Inject constructor(
         clampStartDateToMinimum()
     }
 
-    fun back() {
+    private fun back() {
         val state = _uiState.value
         if (state.currentStepIndex > 0) {
             _uiState.update { it.copy(currentStepIndex = state.currentStepIndex - 1, goingForward = false) }
@@ -178,11 +214,11 @@ class GameCreationViewModel @Inject constructor(
         clampStartDateToMinimum()
     }
 
-    fun setParticipating(participating: Boolean) {
+    private fun setParticipating(participating: Boolean) {
         _uiState.update { it.copy(isParticipating = participating) }
     }
 
-    fun updateGameMod(mod: GameMod) {
+    private fun updateGameMod(mod: GameMod) {
         _uiState.update { state ->
             // Switching to Follow the Chicken: the final zone is dynamically the
             // chicken's live position, so clear any manually-placed final zone.
@@ -195,15 +231,15 @@ class GameCreationViewModel @Inject constructor(
         }
     }
 
-    fun onStartTimeTapped() {
+    private fun onStartTimeTapped() {
         _uiState.update { it.copy(showDatePicker = true) }
     }
 
-    fun dismissDatePicker() {
+    private fun dismissDatePicker() {
         _uiState.update { it.copy(showDatePicker = false) }
     }
 
-    fun dismissTimePicker() {
+    private fun dismissTimePicker() {
         _uiState.update { it.copy(showTimePicker = false) }
     }
 
@@ -211,7 +247,7 @@ class GameCreationViewModel @Inject constructor(
      * Apply a new date (year/month/day) to the start date, keeping the existing
      * hour/minute. Then advances to the time picker so the user can pick the time.
      */
-    fun updateStartDateOnly(year: Int, month: Int, day: Int) {
+    private fun updateStartDateOnly(year: Int, month: Int, day: Int) {
         _uiState.update { state ->
             val cal = java.util.Calendar.getInstance().apply {
                 time = state.game.startDate
@@ -233,7 +269,7 @@ class GameCreationViewModel @Inject constructor(
      * year/month/day. If the resulting datetime is in the past (less than 2 minutes
      * from now), clamp it forward.
      */
-    fun updateStartTime(hour: Int, minute: Int) {
+    private fun updateStartTime(hour: Int, minute: Int) {
         _uiState.update { state ->
             val cal = calendarAt(state.game.startDate, hour, minute)
             val minDate = state.minimumStartDate
@@ -244,26 +280,26 @@ class GameCreationViewModel @Inject constructor(
         }
     }
 
-    fun updateDuration(minutes: Double) {
+    private fun updateDuration(minutes: Double) {
         _uiState.update { it.copy(gameDurationMinutes = minutes) }
         recalculateIfNormalMode()
     }
 
-    fun updateHeadStart(value: Double) {
+    private fun updateHeadStart(value: Double) {
         _uiState.update { it.copy(game = it.game.copy(timing = it.game.timing.copy(headStartMinutes = value))) }
         recalculateIfNormalMode()
     }
 
-    fun updateInitialRadius(value: Double) {
+    private fun updateInitialRadius(value: Double) {
         _uiState.update { it.copy(game = it.game.copy(zone = it.game.zone.copy(radius = value))) }
         recalculateIfNormalMode()
     }
 
-    fun togglePowerUps(enabled: Boolean) {
+    private fun togglePowerUps(enabled: Boolean) {
         _uiState.update { it.copy(game = it.game.copy(powerUps = it.game.powerUps.copy(enabled = enabled))) }
     }
 
-    fun togglePowerUpType(type: PowerUpType) {
+    private fun togglePowerUpType(type: PowerUpType) {
         _uiState.update { state ->
             val current = state.game.powerUps.enabledTypes
             val unavailable = if (state.game.gameModEnum == GameMod.STAY_IN_THE_ZONE) {
@@ -280,11 +316,11 @@ class GameCreationViewModel @Inject constructor(
         }
     }
 
-    fun toggleChickenCanSeeHunters(value: Boolean) {
+    private fun toggleChickenCanSeeHunters(value: Boolean) {
         _uiState.update { it.copy(game = it.game.withChickenCanSeeHunters(value)) }
     }
 
-    fun toggleRequiresRegistration(value: Boolean) {
+    private fun toggleRequiresRegistration(value: Boolean) {
         _uiState.update { state ->
             // Deposit games always require registration
             if (state.game.pricing.model == "deposit" && !value) return@update state
@@ -299,7 +335,7 @@ class GameCreationViewModel @Inject constructor(
         clampStartDateToMinimum()
     }
 
-    fun setRegistrationClosesBeforeStart(minutes: Int?) {
+    private fun setRegistrationClosesBeforeStart(minutes: Int?) {
         _uiState.update { state ->
             state.copy(game = state.game.copy(registration = state.game.registration.copy(closesMinutesBefore = minutes)))
         }
@@ -318,23 +354,23 @@ class GameCreationViewModel @Inject constructor(
         }
     }
 
-    fun onLocationSelected(point: Point) {
+    private fun onLocationSelected(point: Point) {
         _uiState.update { it.copy(game = it.game.withInitialLocation(point)) }
     }
 
-    fun onFinalLocationSelected(point: Point?) {
+    private fun onFinalLocationSelected(point: Point?) {
         _uiState.update { it.copy(game = it.game.withFinalLocation(point)) }
     }
 
-    fun onPowerUpSelectionTapped() {
+    private fun onPowerUpSelectionTapped() {
         _uiState.update { it.copy(showPowerUpSelection = true) }
     }
 
-    fun dismissPowerUpSelection() {
+    private fun dismissPowerUpSelection() {
         _uiState.update { it.copy(showPowerUpSelection = false) }
     }
 
-    fun onCodeCopied() {
+    private fun onCodeCopied() {
         _uiState.update { it.copy(codeCopied = true) }
         viewModelScope.launch {
             kotlinx.coroutines.delay(1000)
@@ -342,7 +378,7 @@ class GameCreationViewModel @Inject constructor(
         }
     }
 
-    fun dismissAlert() {
+    private fun dismissAlert() {
         _uiState.update { it.copy(showAlert = false) }
     }
 
@@ -363,7 +399,7 @@ class GameCreationViewModel @Inject constructor(
         }
     }
 
-    fun startGame(onSuccess: (String) -> Unit) {
+    private fun startGame() {
         clampStartDateToMinimum()
         viewModelScope.launch {
             try {
@@ -384,7 +420,7 @@ class GameCreationViewModel @Inject constructor(
                     pricingModel = finalGame.pricing.model,
                     powerUpsEnabled = finalGame.powerUps.enabled
                 )
-                onSuccess(finalGame.id)
+                _effects.send(GameCreationEffect.GameStarted(finalGame.id))
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(

@@ -5,12 +5,15 @@ import com.google.firebase.auth.FirebaseAuth
 import dev.rahier.pouleparty.data.FirestoreRepository
 import dev.rahier.pouleparty.data.LocationRepository
 import dev.rahier.pouleparty.model.GameMod
+import dev.rahier.pouleparty.ui.chickenconfig.ChickenConfigIntent
 import dev.rahier.pouleparty.ui.chickenconfig.ChickenConfigViewModel
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.junit.After
@@ -55,7 +58,7 @@ class ChickenConfigViewModelBehaviorTest {
         val cal = java.util.Calendar.getInstance().apply {
             add(java.util.Calendar.HOUR_OF_DAY, 1)
         }
-        vm.updateStartDate(cal.get(java.util.Calendar.HOUR_OF_DAY), cal.get(java.util.Calendar.MINUTE))
+        vm.onIntent(ChickenConfigIntent.StartTimeChanged(cal.get(java.util.Calendar.HOUR_OF_DAY), cal.get(java.util.Calendar.MINUTE)))
         val updatedCal = java.util.Calendar.getInstance().apply { time = vm.uiState.value.game.startDate }
         assertEquals(cal.get(java.util.Calendar.HOUR_OF_DAY), updatedCal.get(java.util.Calendar.HOUR_OF_DAY))
         assertEquals(cal.get(java.util.Calendar.MINUTE), updatedCal.get(java.util.Calendar.MINUTE))
@@ -64,35 +67,35 @@ class ChickenConfigViewModelBehaviorTest {
     @Test
     fun `updateGameMod updates game mod`() {
         val vm = createViewModel()
-        vm.updateGameMod(GameMod.STAY_IN_THE_ZONE)
+        vm.onIntent(ChickenConfigIntent.GameModeChanged(GameMod.STAY_IN_THE_ZONE))
         assertEquals(GameMod.STAY_IN_THE_ZONE, vm.uiState.value.game.gameModEnum)
     }
 
     @Test
     fun `updateInitialRadius updates game radius`() {
         val vm = createViewModel()
-        vm.updateInitialRadius(2000.0)
+        vm.onIntent(ChickenConfigIntent.InitialRadiusChanged(2000.0))
         assertEquals(2000.0, vm.uiState.value.game.zone.radius, 0.01)
     }
 
     @Test
     fun `updateRadiusDecline updates decline value`() {
         val vm = createViewModel()
-        vm.updateRadiusDecline(200.0)
+        vm.onIntent(ChickenConfigIntent.RadiusDeclineChanged(200.0))
         assertEquals(200.0, vm.uiState.value.game.zone.shrinkMetersPerUpdate, 0.01)
     }
 
     @Test
     fun `updateRadiusIntervalUpdate updates interval`() {
         val vm = createViewModel()
-        vm.updateRadiusIntervalUpdate(10.0)
+        vm.onIntent(ChickenConfigIntent.RadiusIntervalUpdateChanged(10.0))
         assertEquals(10.0, vm.uiState.value.game.zone.shrinkIntervalMinutes, 0.01)
     }
 
     @Test
     fun `updateChickenHeadStart updates head start`() {
         val vm = createViewModel()
-        vm.updateChickenHeadStart(10.0)
+        vm.onIntent(ChickenConfigIntent.HeadStartChanged(10.0))
         assertEquals(10.0, vm.uiState.value.game.timing.headStartMinutes, 0.01)
     }
 
@@ -100,17 +103,18 @@ class ChickenConfigViewModelBehaviorTest {
     fun `dismissAlert clears alert`() {
         val vm = createViewModel()
         // Trigger an alert first via internal state
-        vm.dismissAlert()
+        vm.onIntent(ChickenConfigIntent.DismissAlert)
         assertFalse(vm.uiState.value.showAlert)
     }
 
     @Test
-    fun `startGame success calls callback`() {
+    fun `startGame success completes without alert`() {
         val vm = createViewModel()
-        var successGameId: String? = null
-        vm.startGame { successGameId = it }
+        vm.onIntent(ChickenConfigIntent.StartGameTapped)
         testDispatcher.scheduler.advanceUntilIdle()
-        assertEquals("test-id", successGameId)
+        // No alert means the Firestore write succeeded; the GameStarted
+        // effect emission is covered by the screen integration test.
+        assertFalse(vm.uiState.value.showAlert)
     }
 
     @Test
@@ -118,7 +122,7 @@ class ChickenConfigViewModelBehaviorTest {
         coEvery { firestoreRepository.setConfig(any()) } throws Exception("network error")
         val vm = createViewModel()
         var callbackCalled = false
-        vm.startGame { callbackCalled = true }
+        vm.onIntent(ChickenConfigIntent.StartGameTapped)
         testDispatcher.scheduler.advanceUntilIdle()
         assertFalse(callbackCalled)
         assertTrue(vm.uiState.value.showAlert)

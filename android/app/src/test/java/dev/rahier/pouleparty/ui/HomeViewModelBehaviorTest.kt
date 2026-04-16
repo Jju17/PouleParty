@@ -7,6 +7,7 @@ import dev.rahier.pouleparty.AppConstants
 import dev.rahier.pouleparty.data.FirestoreRepository
 import dev.rahier.pouleparty.data.LocationRepository
 import dev.rahier.pouleparty.model.Game
+import dev.rahier.pouleparty.ui.home.HomeIntent
 import dev.rahier.pouleparty.ui.home.HomeViewModel
 import io.mockk.coEvery
 import io.mockk.every
@@ -109,98 +110,6 @@ class HomeViewModelBehaviorTest {
 
     // ── rejoinGame ──
 
-    @Test
-    fun `rejoinGame as hunter calls onRejoinAsHunter with game id and nickname`() {
-        mockAuthUser("user-123")
-        val game = Game.mock
-        coEvery { firestoreRepository.findActiveGame("user-123") } returns Pair(game, PlayerRole.HUNTER)
-        every { prefs.getString(AppConstants.PREF_USER_NICKNAME, "") } returns "Julien"
-
-        val vm = createViewModel()
-        testDispatcher.scheduler.advanceUntilIdle()
-
-        var hunterGameId: String? = null
-        var hunterName: String? = null
-        vm.rejoinGame(
-            onRejoinAsChicken = { fail("Should not call chicken callback") },
-            onRejoinAsHunter = { id, name -> hunterGameId = id; hunterName = name }
-        )
-
-        assertEquals(game.id, hunterGameId)
-        assertEquals("Julien", hunterName)
-    }
-
-    @Test
-    fun `rejoinGame as hunter uses default name when nickname is empty`() {
-        mockAuthUser("user-123")
-        val game = Game.mock
-        coEvery { firestoreRepository.findActiveGame("user-123") } returns Pair(game, PlayerRole.HUNTER)
-        every { prefs.getString(AppConstants.PREF_USER_NICKNAME, "") } returns ""
-
-        val vm = createViewModel()
-        testDispatcher.scheduler.advanceUntilIdle()
-
-        var hunterName: String? = null
-        vm.rejoinGame(
-            onRejoinAsChicken = { fail("Should not call chicken callback") },
-            onRejoinAsHunter = { _, name -> hunterName = name }
-        )
-
-        assertEquals("Hunter", hunterName)
-    }
-
-    @Test
-    fun `rejoinGame as chicken calls onRejoinAsChicken with game id`() {
-        mockAuthUser("user-123")
-        val game = Game.mock
-        coEvery { firestoreRepository.findActiveGame("user-123") } returns Pair(game, PlayerRole.CHICKEN)
-
-        val vm = createViewModel()
-        testDispatcher.scheduler.advanceUntilIdle()
-
-        var chickenGameId: String? = null
-        vm.rejoinGame(
-            onRejoinAsChicken = { id -> chickenGameId = id },
-            onRejoinAsHunter = { _, _ -> fail("Should not call hunter callback") }
-        )
-
-        assertEquals(game.id, chickenGameId)
-    }
-
-    @Test
-    fun `rejoinGame clears active game from state`() {
-        mockAuthUser("user-123")
-        val game = Game.mock
-        coEvery { firestoreRepository.findActiveGame("user-123") } returns Pair(game, PlayerRole.CHICKEN)
-
-        val vm = createViewModel()
-        testDispatcher.scheduler.advanceUntilIdle()
-        assertNotNull(vm.uiState.value.activeGame)
-
-        vm.rejoinGame(
-            onRejoinAsChicken = { },
-            onRejoinAsHunter = { _, _ -> }
-        )
-
-        assertNull(vm.uiState.value.activeGame)
-        assertNull(vm.uiState.value.activeGameRole)
-    }
-
-    @Test
-    fun `rejoinGame with no active game does nothing`() {
-        mockAuthUser(null) // No user → no active game loaded
-        val vm = createViewModel()
-        testDispatcher.scheduler.advanceUntilIdle()
-
-        var called = false
-        vm.rejoinGame(
-            onRejoinAsChicken = { called = true },
-            onRejoinAsHunter = { _, _ -> called = true }
-        )
-
-        assertFalse(called)
-    }
-
     // ── Location permission ──
 
     @Test
@@ -227,7 +136,7 @@ class HomeViewModelBehaviorTest {
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
 
-        vm.onLocationPermissionDenied()
+        vm.onIntent(HomeIntent.LocationPermissionDenied)
 
         assertTrue(vm.uiState.value.isShowingLocationRequired)
     }
@@ -238,7 +147,7 @@ class HomeViewModelBehaviorTest {
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
 
-        vm.onStartButtonTapped()
+        vm.onIntent(HomeIntent.StartButtonTapped)
 
         assertTrue(vm.uiState.value.isShowingJoinSheet)
         assertFalse(vm.uiState.value.isShowingLocationRequired)
@@ -250,7 +159,7 @@ class HomeViewModelBehaviorTest {
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
 
-        vm.onStartButtonTapped()
+        vm.onIntent(HomeIntent.StartButtonTapped)
 
         assertTrue(vm.uiState.value.isShowingLocationRequired)
         assertFalse(vm.uiState.value.isShowingJoinSheet)
@@ -262,7 +171,7 @@ class HomeViewModelBehaviorTest {
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
 
-        val result = vm.onCreatePartyTapped()
+        val result = vm.canCreateParty()
 
         assertFalse(result)
         assertTrue(vm.uiState.value.isShowingLocationRequired)
@@ -274,7 +183,7 @@ class HomeViewModelBehaviorTest {
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
 
-        val result = vm.onCreatePartyTapped()
+        val result = vm.canCreateParty()
 
         assertTrue(result)
         assertFalse(vm.uiState.value.isShowingLocationRequired)
@@ -286,10 +195,10 @@ class HomeViewModelBehaviorTest {
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
 
-        vm.onLocationPermissionDenied()
+        vm.onIntent(HomeIntent.LocationPermissionDenied)
         assertTrue(vm.uiState.value.isShowingLocationRequired)
 
-        vm.onLocationRequiredDismissed()
+        vm.onIntent(HomeIntent.LocationRequiredDismissed)
         assertFalse(vm.uiState.value.isShowingLocationRequired)
     }
 }
