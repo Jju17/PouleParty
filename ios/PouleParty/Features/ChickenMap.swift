@@ -884,32 +884,15 @@ struct ChickenMapView: View {
 
             // Final zone glow (always visible for chicken)
             if let finalLocation = store.game.finalLocation {
-                let finalCircle = Polygon(center: finalLocation, radius: 50, vertices: 36)
-                PolylineAnnotation(lineCoordinates: finalCircle.outerRing.coordinates)
-                    .lineColor(StyleColor(UIColor(Color.zoneGreen).withAlphaComponent(0.15)))
-                    .lineWidth(8)
-                PolylineAnnotation(lineCoordinates: finalCircle.outerRing.coordinates)
-                    .lineColor(StyleColor(UIColor(Color.zoneGreen).withAlphaComponent(0.5)))
-                    .lineWidth(3)
-                PolylineAnnotation(lineCoordinates: finalCircle.outerRing.coordinates)
-                    .lineColor(StyleColor(UIColor(Color.zoneGreen).withAlphaComponent(0.9)))
-                    .lineWidth(1.5)
+                finalZoneGlowContent(center: finalLocation)
             }
 
             // Power-up markers (chicken power-ups only)
             if store.hasGameStarted {
                 ForEvery(store.availablePowerUps) { powerUp in
                     MapViewAnnotation(coordinate: powerUp.coordinate) {
-                        Button {
+                        PowerUpMapMarker(powerUp: powerUp) {
                             selectedPowerUp = powerUp
-                        } label: {
-                            Image(systemName: powerUp.type.iconName)
-                                .font(.system(size: 20))
-                                .foregroundStyle(.white)
-                                .padding(8)
-                                .background(powerUp.type.color)
-                                .clipShape(Circle())
-                                .shadow(color: powerUp.type.color.opacity(0.5), radius: 6, y: 2)
                         }
                     }
                     .allowOverlap(true)
@@ -921,16 +904,7 @@ struct ChickenMapView: View {
             if store.hasHuntStarted {
                 ForEvery(self.store.hunterAnnotations) { hunter in
                     MapViewAnnotation(coordinate: hunter.coordinate) {
-                        VStack(spacing: 2) {
-                            Text(hunter.displayName)
-                                .font(.caption2)
-                                .fontWeight(.semibold)
-                            Image(systemName: "figure.walk")
-                                .foregroundStyle(.white)
-                                .padding(6)
-                                .background(Color.CROrange)
-                                .clipShape(Circle())
-                        }
+                        HunterMapMarker(displayName: hunter.displayName)
                     }
                 }
             }

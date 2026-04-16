@@ -128,3 +128,18 @@ func zoneOverlayContent(circle: CircleOverlay, overlayColor: UIColor) -> some Ma
         .lineColor(StyleColor(UIColor(Color.zoneGreen).withAlphaComponent(0.9)))
         .lineWidth(2.5)
 }
+
+/// Layered neon glow marking the game's final zone center on the chicken map.
+@MapContentBuilder
+func finalZoneGlowContent(center: CLLocationCoordinate2D) -> some MapContent {
+    let finalCircle = Polygon(center: center, radius: 50, vertices: 36)
+    PolylineAnnotation(lineCoordinates: finalCircle.outerRing.coordinates)
+        .lineColor(StyleColor(UIColor(Color.zoneGreen).withAlphaComponent(0.15)))
+        .lineWidth(8)
+    PolylineAnnotation(lineCoordinates: finalCircle.outerRing.coordinates)
+        .lineColor(StyleColor(UIColor(Color.zoneGreen).withAlphaComponent(0.5)))
+        .lineWidth(3)
+    PolylineAnnotation(lineCoordinates: finalCircle.outerRing.coordinates)
+        .lineColor(StyleColor(UIColor(Color.zoneGreen).withAlphaComponent(0.9)))
+        .lineWidth(1.5)
+}

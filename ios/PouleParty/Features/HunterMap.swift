@@ -861,16 +861,8 @@ struct HunterMapView: View {
             if store.hasGameStarted {
                 ForEvery(store.availablePowerUps) { powerUp in
                     MapViewAnnotation(coordinate: powerUp.coordinate) {
-                        Button {
+                        PowerUpMapMarker(powerUp: powerUp) {
                             selectedPowerUp = powerUp
-                        } label: {
-                            Image(systemName: powerUp.type.iconName)
-                                .font(.system(size: 20))
-                                .foregroundStyle(.white)
-                                .padding(8)
-                                .background(powerUp.type.color)
-                                .clipShape(Circle())
-                                .shadow(color: powerUp.type.color.opacity(0.5), radius: 6, y: 2)
                         }
                     }
                     .allowOverlap(true)
@@ -881,9 +873,7 @@ struct HunterMapView: View {
             // Decoy: fake chicken marker when decoy is active
             if let decoyLocation = store.decoyLocation {
                 MapViewAnnotation(coordinate: decoyLocation) {
-                    Text("🐔")
-                        .font(.system(size: 28))
-                        .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
+                    DecoyMapMarker()
                 }
                 .allowOverlap(true)
                 .allowOverlapWithPuck(true)
