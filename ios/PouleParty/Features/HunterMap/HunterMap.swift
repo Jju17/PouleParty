@@ -300,7 +300,7 @@ struct HunterMapFeature {
                 let winner = Winner(
                     hunterId: state.hunterId,
                     hunterName: state.hunterName,
-                    timestamp: .now
+                    timestamp: Timestamp(date: .now)
                 )
                 let gameId = state.game.id
                 let totalAttempts = state.wrongCodeAttempts + 1

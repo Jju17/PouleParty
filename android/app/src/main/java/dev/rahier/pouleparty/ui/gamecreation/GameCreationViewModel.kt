@@ -18,7 +18,6 @@ import dev.rahier.pouleparty.model.Timing
 import dev.rahier.pouleparty.model.Zone
 import dev.rahier.pouleparty.model.calculateNormalModeSettings
 import dev.rahier.pouleparty.util.calendarAt
-import kotlin.math.ceil
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -35,7 +34,6 @@ data class GameCreationUiState(
     val currentStepIndex: Int = 0,
     val isParticipating: Boolean = true,
     val gameDurationMinutes: Double = 90.0,
-    val isExpertMode: Boolean = false,
     val showPowerUpSelection: Boolean = false,
     val showDatePicker: Boolean = false,
     val showTimePicker: Boolean = false,
@@ -282,17 +280,17 @@ class GameCreationViewModel @Inject constructor(
 
     private fun updateDuration(minutes: Double) {
         _uiState.update { it.copy(gameDurationMinutes = minutes) }
-        recalculateIfNormalMode()
+        recalculateNormalMode()
     }
 
     private fun updateHeadStart(value: Double) {
         _uiState.update { it.copy(game = it.game.copy(timing = it.game.timing.copy(headStartMinutes = value))) }
-        recalculateIfNormalMode()
+        recalculateNormalMode()
     }
 
     private fun updateInitialRadius(value: Double) {
         _uiState.update { it.copy(game = it.game.copy(zone = it.game.zone.copy(radius = value))) }
-        recalculateIfNormalMode()
+        recalculateNormalMode()
     }
 
     private fun togglePowerUps(enabled: Boolean) {
@@ -382,9 +380,8 @@ class GameCreationViewModel @Inject constructor(
         _uiState.update { it.copy(showAlert = false) }
     }
 
-    private fun recalculateIfNormalMode() {
+    private fun recalculateNormalMode() {
         val state = _uiState.value
-        if (state.isExpertMode) return
         val effectiveDuration = maxOf(state.gameDurationMinutes - state.game.timing.headStartMinutes, 1.0)
         val (interval, decline) = calculateNormalModeSettings(
             state.game.zone.radius, effectiveDuration
@@ -405,13 +402,7 @@ class GameCreationViewModel @Inject constructor(
             try {
                 val game = _uiState.value.game
                 val state = _uiState.value
-                val endDate = if (state.isExpertMode) {
-                    val shrinks = ceil(game.zone.radius / game.zone.shrinkMetersPerUpdate)
-                    val durationMs = (shrinks * game.zone.shrinkIntervalMinutes * 60 * 1000).toLong()
-                    Date(game.hunterStartDate.time + durationMs)
-                } else {
-                    Date(game.startDate.time + (state.gameDurationMinutes * 60 * 1000).toLong())
-                }
+                val endDate = Date(game.startDate.time + (state.gameDurationMinutes * 60 * 1000).toLong())
                 val finalGame = game.withEndDate(endDate)
                 firestoreRepository.setConfig(finalGame)
                 analyticsRepository.gameCreated(

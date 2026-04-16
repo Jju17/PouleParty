@@ -14,20 +14,20 @@ import dev.rahier.pouleparty.model.PowerUpType
 import dev.rahier.pouleparty.AppConstants
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
-import dev.rahier.pouleparty.ui.CountdownPhase
-import dev.rahier.pouleparty.ui.CountdownResult
-import dev.rahier.pouleparty.ui.PlayerRole
-import dev.rahier.pouleparty.ui.checkGameOverByTime
-import dev.rahier.pouleparty.ui.checkZoneStatus
-import dev.rahier.pouleparty.ui.detectNewWinners
-import dev.rahier.pouleparty.ui.evaluateCountdown
-import dev.rahier.pouleparty.ui.BaseMapViewModel
-import dev.rahier.pouleparty.ui.RoadSnapService
-import dev.rahier.pouleparty.ui.generatePowerUps
-import dev.rahier.pouleparty.ui.snapPowerUpsToRoads
-import dev.rahier.pouleparty.ui.interpolateZoneCenter
-import dev.rahier.pouleparty.ui.processRadiusUpdate
-import dev.rahier.pouleparty.ui.shouldCheckZone
+import dev.rahier.pouleparty.ui.gamelogic.CountdownPhase
+import dev.rahier.pouleparty.ui.gamelogic.CountdownResult
+import dev.rahier.pouleparty.ui.gamelogic.PlayerRole
+import dev.rahier.pouleparty.ui.gamelogic.checkGameOverByTime
+import dev.rahier.pouleparty.ui.gamelogic.checkZoneStatus
+import dev.rahier.pouleparty.ui.gamelogic.detectNewWinners
+import dev.rahier.pouleparty.ui.gamelogic.evaluateCountdown
+import dev.rahier.pouleparty.ui.map.BaseMapViewModel
+import dev.rahier.pouleparty.ui.gamelogic.RoadSnapService
+import dev.rahier.pouleparty.ui.gamelogic.generatePowerUps
+import dev.rahier.pouleparty.ui.gamelogic.snapPowerUpsToRoads
+import dev.rahier.pouleparty.ui.gamelogic.interpolateZoneCenter
+import dev.rahier.pouleparty.ui.gamelogic.processRadiusUpdate
+import dev.rahier.pouleparty.ui.gamelogic.shouldCheckZone
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -79,7 +79,7 @@ data class ChickenMapUiState(
     val lastSpawnBatchIndex: Int = 0,
     val activatingPowerUpId: String? = null,
     val shouldNavigateToVictory: Boolean = false
-) : dev.rahier.pouleparty.ui.MapUiState
+) : dev.rahier.pouleparty.ui.map.MapUiState
 
 @HiltViewModel
 class ChickenMapViewModel @Inject constructor(

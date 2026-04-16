@@ -550,7 +550,7 @@ private fun GameDetailDialog(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text("🏆", fontSize = 18.sp)
                             Spacer(Modifier.width(6.dp))
-                            Text("View Leaderboard", style = bangerStyle(18), color = Color.White)
+                            Text(stringResource(R.string.view_leaderboard), style = bangerStyle(18), color = Color.White)
                         }
                     }
                 }

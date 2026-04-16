@@ -21,8 +21,8 @@ struct AllHuntersFoundTests {
         var game = Game.mock
         game.hunterIds = ["h1", "h2"]
         game.winners = [
-            Winner(hunterId: "h1", hunterName: "Alice", timestamp: .now),
-            Winner(hunterId: "h2", hunterName: "Bob", timestamp: .now)
+            Winner(hunterId: "h1", hunterName: "Alice", timestamp: Timestamp(date: .now)),
+            Winner(hunterId: "h2", hunterName: "Bob", timestamp: Timestamp(date: .now))
         ]
 
         #expect(!game.hunterIds.isEmpty)
@@ -33,7 +33,7 @@ struct AllHuntersFoundTests {
         var game = Game.mock
         game.hunterIds = ["h1", "h2", "h3"]
         game.winners = [
-            Winner(hunterId: "h1", hunterName: "Alice", timestamp: .now)
+            Winner(hunterId: "h1", hunterName: "Alice", timestamp: Timestamp(date: .now))
         ]
 
         #expect(game.winners.count < game.hunterIds.count)
@@ -52,7 +52,7 @@ struct AllHuntersFoundTests {
         var game = Game.mock
         game.hunterIds = []
         game.winners = [
-            Winner(hunterId: "h1", hunterName: "Alice", timestamp: .now)
+            Winner(hunterId: "h1", hunterName: "Alice", timestamp: Timestamp(date: .now))
         ]
 
         #expect(!((!game.hunterIds.isEmpty) && game.winners.count >= game.hunterIds.count))
@@ -62,8 +62,8 @@ struct AllHuntersFoundTests {
         var game = Game.mock
         game.hunterIds = ["h1"]
         game.winners = [
-            Winner(hunterId: "h1", hunterName: "Alice", timestamp: .now),
-            Winner(hunterId: "h2", hunterName: "Bob", timestamp: .now)
+            Winner(hunterId: "h1", hunterName: "Alice", timestamp: Timestamp(date: .now)),
+            Winner(hunterId: "h2", hunterName: "Bob", timestamp: Timestamp(date: .now))
         ]
 
         #expect(game.winners.count >= game.hunterIds.count)
@@ -73,7 +73,7 @@ struct AllHuntersFoundTests {
         var game = Game.mock
         game.hunterIds = ["h1"]
         game.winners = [
-            Winner(hunterId: "h1", hunterName: "Alice", timestamp: .now)
+            Winner(hunterId: "h1", hunterName: "Alice", timestamp: Timestamp(date: .now))
         ]
 
         #expect(!game.hunterIds.isEmpty && game.winners.count >= game.hunterIds.count)
@@ -111,8 +111,8 @@ struct AllHuntersFoundTests {
 
         // All hunters find chicken
         game.winners = [
-            Winner(hunterId: "h1", hunterName: "Alice", timestamp: .now),
-            Winner(hunterId: "h2", hunterName: "Bob", timestamp: .now)
+            Winner(hunterId: "h1", hunterName: "Alice", timestamp: Timestamp(date: .now)),
+            Winner(hunterId: "h2", hunterName: "Bob", timestamp: Timestamp(date: .now))
         ]
         game.status = .done
         #expect(game.status == .done)
@@ -123,7 +123,7 @@ struct AllHuntersFoundTests {
         var game = Game.mock
         let hunterIds = (1...20).map { "h\($0)" }
         let winners = hunterIds.enumerated().map { (i, id) in
-            Winner(hunterId: id, hunterName: "Hunter \(i)", timestamp: .now)
+            Winner(hunterId: id, hunterName: "Hunter \(i)", timestamp: Timestamp(date: .now))
         }
         game.hunterIds = hunterIds
         game.winners = winners
@@ -156,7 +156,7 @@ struct AllHuntersFoundTests {
         // Game update: the single hunter found the chicken
         var updatedGame = game
         updatedGame.winners = [
-            Winner(hunterId: "h1", hunterName: "Alice", timestamp: .now)
+            Winner(hunterId: "h1", hunterName: "Alice", timestamp: Timestamp(date: .now))
         ]
 
         store.exhaustivity = .off

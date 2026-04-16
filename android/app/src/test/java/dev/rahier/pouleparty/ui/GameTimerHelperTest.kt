@@ -1,5 +1,7 @@
 package dev.rahier.pouleparty.ui
 
+import dev.rahier.pouleparty.ui.gamelogic.*
+
 import com.mapbox.geojson.Point
 import dev.rahier.pouleparty.model.GameMod
 import dev.rahier.pouleparty.model.Winner

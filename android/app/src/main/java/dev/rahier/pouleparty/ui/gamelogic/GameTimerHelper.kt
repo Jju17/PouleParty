@@ -1,4 +1,4 @@
-package dev.rahier.pouleparty.ui
+package dev.rahier.pouleparty.ui.gamelogic
 
 import android.location.Location
 import com.mapbox.geojson.Point

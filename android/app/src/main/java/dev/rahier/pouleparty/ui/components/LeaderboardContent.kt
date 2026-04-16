@@ -9,8 +9,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.ui.theme.CROrange
 import dev.rahier.pouleparty.ui.theme.bangerStyle
 import dev.rahier.pouleparty.ui.theme.gameboyStyle
@@ -47,7 +49,7 @@ fun LeaderboardContent(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         if (podium.isNotEmpty()) {
-            Text("Podium", style = bangerStyle(20), color = CROrange)
+            Text(stringResource(R.string.podium), style = bangerStyle(20), color = CROrange)
             podium.forEachIndexed { index, entry ->
                 itemRenderer(index + 1, entry)
             }
@@ -55,7 +57,7 @@ fun LeaderboardContent(
         if (others.isNotEmpty()) {
             Spacer(Modifier.height(4.dp))
             Text(
-                "Other hunters",
+                stringResource(R.string.other_hunters),
                 style = bangerStyle(18),
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
             )

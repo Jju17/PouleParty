@@ -144,7 +144,7 @@ struct GameTests {
         let winner = Winner(
             hunterId: "hunter-1",
             hunterName: "Julien",
-            timestamp: .now
+            timestamp: Timestamp(date: .now)
         )
         let data = try encoder.encode(winner)
         let decoded = try decoder.decode(Winner.self, from: data)

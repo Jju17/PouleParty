@@ -6,6 +6,7 @@
 //
 
 import ComposableArchitecture
+import FirebaseFirestore
 import SwiftUI
 
 @Reducer
@@ -92,7 +93,7 @@ func buildLeaderboardEntries(
             id: hunterId,
             displayName: displayName,
             teamName: teamName,
-            foundTimestamp: winner?.timestamp,
+            foundTimestamp: winner?.timestamp.dateValue(),
             isCurrentUser: hunterId == currentUserId
         )
     }
@@ -294,8 +295,8 @@ private struct ConfettiView: View {
         game: {
             var game = Game.mock
             game.winners = [
-                Winner(hunterId: "h1", hunterName: "Alice", timestamp: game.startDate.addingTimeInterval(120)),
-                Winner(hunterId: "h2", hunterName: "Bob", timestamp: game.startDate.addingTimeInterval(300)),
+                Winner(hunterId: "h1", hunterName: "Alice", timestamp: Timestamp(date: game.startDate.addingTimeInterval(120))),
+                Winner(hunterId: "h2", hunterName: "Bob", timestamp: Timestamp(date: game.startDate.addingTimeInterval(300))),
             ]
             return game
         }(),

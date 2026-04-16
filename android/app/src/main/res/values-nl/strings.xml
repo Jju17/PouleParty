@@ -4,21 +4,14 @@
     <string name="start">START</string>
     <string name="press_start">Druk op start om te spelen</string>
     <string name="rules">Regels</string>
-    <string name="i_am_la_poule">Ik ben de kip</string>
-    <string name="create_game_title">Spel aanmaken</string>
-    <string name="create_game_message">Je maakt een nieuw spel aan als de Kip. Ben je klaar?</string>
     <string name="continue_label">Doorgaan</string>
     <string name="join_game">Spel deelnemen</string>
-    <string name="join_game_message">Voer de spelcode in om deel te nemen.</string>
-    <string name="game_code">Spelcode</string>
     <string name="join">Deelnemen</string>
     <string name="cancel">Annuleren</string>
     <string name="ok">OK</string>
     <string name="close">Sluiten</string>
     <string name="game_not_found">Spel niet gevonden</string>
     <string name="game_not_found_message">Geen actief spel gevonden met deze code. Controleer de code en probeer opnieuw.</string>
-    <string name="game_in_progress">Spel bezig</string>
-    <string name="game_in_progress_message">Dit spel is al bezig. Je kunt niet meer deelnemen.</string>
     <string name="rejoin_game_in_progress">Spel bezig</string>
     <string name="rejoin">Hervatten</string>
     <string name="location_required">Locatie vereist</string>
@@ -38,9 +31,6 @@
     <string name="expand_registered_game_banner">Toon registratiebanner</string>
 
     <!-- Leaderboard -->
-    <string name="podium">Podium</string>
-    <string name="other_hunters">Andere jagers</string>
-    <string name="did_not_find_the_chicken">Hebben de kip niet gevonden</string>
     <string name="no_participants">Geen deelnemers</string>
     <string name="this_game_ended_without_any_hunters_joining">Dit spel eindigde zonder dat er jagers meededen.</string>
     <string name="game_ended">Spel beëindigd</string>
@@ -66,25 +56,15 @@
 
     <!-- Chicken Config -->
     <string name="game_settings">Spelinstellingen</string>
-    <string name="game_code_label">Spelcode</string>
-    <string name="schedule_label">Planning</string>
-    <string name="power_ups_label">Power-Ups</string>
-    <string name="advanced_label">Geavanceerd</string>
-    <string name="head_start_label">Voorsprong</string>
-    <string name="mode_label">Modus</string>
     <string name="start_at">Start om</string>
-    <string name="end_at">Einde om</string>
     <string name="game_mode">Spelmodus</string>
     <string name="map_setup">Kaartinstellingen</string>
     <string name="start_game">Spel starten</string>
-    <string name="configure_the_zone">Configureer de zone</string>
-    <string name="tap_map_to_adjust">Tik op de kaart om je zones aan te passen</string>
     <string name="set_start_zone">Stel een startzone in om te beginnen</string>
     <string name="set_start_and_final_zone">Stel een start- en eindzone in om te beginnen</string>
     <string name="radius_interval_update">Straalupdate elke</string>
     <string name="radius_decline">Straalvermindering van</string>
     <string name="chicken_head_start">Voorsprong kip</string>
-    <string name="minutes_format">%d minuten</string>
     <string name="meters_format">%d meter</string>
     <string name="error">Fout</string>
     <string name="duration">Duur</string>
@@ -96,13 +76,9 @@
     <string name="total_price">Totaalprijs</string>
     <string name="deposit">Borg</string>
     <string name="zone_radius">Zonestraal</string>
-    <string name="zone">Zone</string>
     <string name="start_zone">Startzone</string>
     <string name="final_zone">Eindzone</string>
     <string name="final_zone_hint">Tik in de startzone om het centrum van de eindzone te plaatsen</string>
-    <string name="settings_mode">Instellingsmodus</string>
-    <string name="normal">Normaal</string>
-    <string name="expert">Expert</string>
 
     <!-- Chicken Map -->
     <string name="you_are_chicken">Jij bent de 🐔</string>
@@ -136,7 +112,6 @@
     <string name="game_results">Spelresultaten</string>
     <string name="you_found_chicken">Je hebt\nde kip gevonden!</string>
     <string name="back_to_menu">TERUG NAAR MENU</string>
-    <string name="still_in_party">%d nog in het spel 🔍</string>
 
     <!-- End Game Code -->
     <string name="show_code_instruction">Toon deze code\naan de jager</string>
@@ -217,12 +192,6 @@
     <string name="setting_map_desc">Kies de startlocatie en de beginstraal van de zone.</string>
 
     <!-- Game Modes (subtitles) -->
-    <string name="chicken_dont_be_seen">Laat je niet zien!</string>
-    <string name="chicken_stay_in_zone">Blijf in de zone 📍</string>
-    <string name="chicken_you_see_them">Je kunt ze zien 👀</string>
-    <string name="hunter_catch_chicken">Vang de 🐔!</string>
-    <string name="hunter_stay_in_zone">Blijf in de zone 📍</string>
-    <string name="hunter_chicken_sees_you">Vang de 🐔 (ze ziet je! 👀)</string>
 
     <!-- Zone Warning -->
     <string name="return_to_zone">Keer terug naar de zone!</string>
@@ -233,7 +202,6 @@
     <!-- Pre-Game Overlay -->
     <string name="game_starting_in">Spel begint over</string>
     <string name="connected">verbonden</string>
-    <string name="share_code">Deel deze code:</string>
     <string name="tap_to_copy">Tik om te kopiëren:</string>
     <string name="copied">Gekopieerd!</string>
 
@@ -278,7 +246,6 @@
     <string name="no_power_ups_collected">Nog geen power-ups verzameld</string>
     <string name="activate">Activeren</string>
     <string name="not_available_in_this_mode">Niet beschikbaar in deze modus</string>
-    <string name="duration_format">%1$ds</string>
     <string name="instant">Direct</string>
 
     <!-- Auth -->
@@ -287,5 +254,7 @@
     <!-- My Games -->
     <string name="my_games">Mijn spellen</string>
     <string name="no_games_yet">Nog geen spellen</string>
-    <string name="build">Build</string>
+    <string name="podium">Podium</string>
+    <string name="other_hunters">Andere jagers</string>
+    <string name="view_leaderboard">Bekijk ranglijst</string>
 </resources>

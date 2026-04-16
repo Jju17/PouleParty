@@ -153,7 +153,7 @@ struct ChickenMapFeatureTests {
         // Simulate the reducer's winner detection logic
         var updatedGame = game
         updatedGame.winners = [
-            Winner(hunterId: "h1", hunterName: "Julien", timestamp: .now)
+            Winner(hunterId: "h1", hunterName: "Julien", timestamp: Timestamp(date: .now))
         ]
 
         let previousCount = state.previousWinnersCount
@@ -174,7 +174,7 @@ struct ChickenMapFeatureTests {
     }
 
     @Test func gameUpdatedWithNoNewWinnersDoesNotShowNotification() async {
-        let winner = Winner(hunterId: "h1", hunterName: "Julien", timestamp: .now)
+        let winner = Winner(hunterId: "h1", hunterName: "Julien", timestamp: Timestamp(date: .now))
         var game = Game.mock
         game.winners = [winner]
 
@@ -399,7 +399,7 @@ struct ChickenMapFeatureTests {
 
         var updatedGame = Game.mock
         updatedGame.winners = [
-            Winner(hunterId: "h1", hunterName: "Julien", timestamp: .now)
+            Winner(hunterId: "h1", hunterName: "Julien", timestamp: Timestamp(date: .now))
         ]
 
         await store.send(.internal(.gameUpdated(updatedGame))) {

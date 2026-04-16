@@ -11,7 +11,7 @@ import dev.rahier.pouleparty.data.LocationRepository
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameStatus
 import dev.rahier.pouleparty.model.Registration
-import dev.rahier.pouleparty.ui.PlayerRole
+import dev.rahier.pouleparty.ui.gamelogic.PlayerRole
 import dev.rahier.pouleparty.util.getTrimmedString
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow

@@ -19,7 +19,7 @@ import com.mapbox.geojson.Point
 import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameMod
-import dev.rahier.pouleparty.ui.chickenconfig.ChickenMapConfigScreen
+import dev.rahier.pouleparty.ui.chickenmapconfig.ChickenMapConfigScreen
 import dev.rahier.pouleparty.ui.theme.CROrange
 import dev.rahier.pouleparty.ui.theme.bangerStyle
 import dev.rahier.pouleparty.ui.theme.gameboyStyle

@@ -262,7 +262,7 @@ struct GameTimerLogicTests {
 
     @Test func detectNewWinnersReturnsNilWhenNoNewWinners() {
         let winners = [
-            Winner(hunterId: "h1", hunterName: "Alice", timestamp: .now)
+            Winner(hunterId: "h1", hunterName: "Alice", timestamp: Timestamp(date: .now))
         ]
         let result = detectNewWinners(winners: winners, previousCount: 1)
         #expect(result == nil)
@@ -270,8 +270,8 @@ struct GameTimerLogicTests {
 
     @Test func detectNewWinnersReturnsNotification() {
         let winners = [
-            Winner(hunterId: "h1", hunterName: "Alice", timestamp: .now),
-            Winner(hunterId: "h2", hunterName: "Bob", timestamp: .now)
+            Winner(hunterId: "h1", hunterName: "Alice", timestamp: Timestamp(date: .now)),
+            Winner(hunterId: "h2", hunterName: "Bob", timestamp: Timestamp(date: .now))
         ]
         let result = detectNewWinners(winners: winners, previousCount: 1)
         #expect(result == "Bob found the chicken! 🐔")
@@ -279,8 +279,8 @@ struct GameTimerLogicTests {
 
     @Test func detectNewWinnersFiltersOwnHunter() {
         let winners = [
-            Winner(hunterId: "h1", hunterName: "Alice", timestamp: .now),
-            Winner(hunterId: "me", hunterName: "Me", timestamp: .now)
+            Winner(hunterId: "h1", hunterName: "Alice", timestamp: Timestamp(date: .now)),
+            Winner(hunterId: "me", hunterName: "Me", timestamp: Timestamp(date: .now))
         ]
         let result = detectNewWinners(winners: winners, previousCount: 1, ownHunterId: "me")
         #expect(result == nil)
@@ -293,7 +293,7 @@ struct GameTimerLogicTests {
 
     @Test func detectNewWinnersFromZero() {
         let winners = [
-            Winner(hunterId: "h1", hunterName: "Alice", timestamp: .now)
+            Winner(hunterId: "h1", hunterName: "Alice", timestamp: Timestamp(date: .now))
         ]
         let result = detectNewWinners(winners: winners, previousCount: 0)
         #expect(result == "Alice found the chicken! 🐔")

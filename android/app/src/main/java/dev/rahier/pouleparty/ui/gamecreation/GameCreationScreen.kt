@@ -36,7 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import dev.rahier.pouleparty.R
-import dev.rahier.pouleparty.ui.chickenconfig.PowerUpSelectionScreen
+import dev.rahier.pouleparty.ui.powerupselection.PowerUpSelectionScreen
 import dev.rahier.pouleparty.ui.gamecreation.steps.ChickenSeesHuntersStep
 import dev.rahier.pouleparty.ui.gamecreation.steps.ChickenSelectionStep
 import dev.rahier.pouleparty.ui.gamecreation.steps.DurationStep

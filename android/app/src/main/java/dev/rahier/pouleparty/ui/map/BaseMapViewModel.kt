@@ -1,4 +1,4 @@
-package dev.rahier.pouleparty.ui
+package dev.rahier.pouleparty.ui.map
 
 import android.location.Location
 import android.util.Log
@@ -12,7 +12,7 @@ import dev.rahier.pouleparty.data.LocationRepository
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.PowerUp
 import dev.rahier.pouleparty.model.PowerUpType
-import dev.rahier.pouleparty.ui.chickenconfig.powerUpEmoji
+import dev.rahier.pouleparty.ui.powerupselection.powerUpEmoji
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.Job

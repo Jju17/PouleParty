@@ -14,8 +14,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.rahier.pouleparty.model.PowerUpType
-import dev.rahier.pouleparty.ui.chickenconfig.powerUpColor
-import dev.rahier.pouleparty.ui.chickenconfig.powerUpTextColor
+import dev.rahier.pouleparty.ui.powerupselection.powerUpColor
+import dev.rahier.pouleparty.ui.powerupselection.powerUpTextColor
 import dev.rahier.pouleparty.ui.theme.CROrange
 
 @Composable

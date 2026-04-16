@@ -1,4 +1,4 @@
-package dev.rahier.pouleparty.ui
+package dev.rahier.pouleparty.ui.gamelogic
 
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.GeoPoint

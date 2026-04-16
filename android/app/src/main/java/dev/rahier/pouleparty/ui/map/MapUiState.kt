@@ -1,4 +1,4 @@
-package dev.rahier.pouleparty.ui
+package dev.rahier.pouleparty.ui.map
 
 import com.mapbox.geojson.Point
 import dev.rahier.pouleparty.model.Game

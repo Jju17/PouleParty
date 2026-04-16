@@ -4,8 +4,8 @@ import android.content.Context
 import android.location.Location
 import com.mapbox.geojson.Point
 import dev.rahier.pouleparty.data.LocationRepository
-import dev.rahier.pouleparty.ui.chickenconfig.ChickenMapConfigViewModel
-import dev.rahier.pouleparty.ui.chickenconfig.MapConfigPinMode
+import dev.rahier.pouleparty.ui.chickenmapconfig.ChickenMapConfigViewModel
+import dev.rahier.pouleparty.ui.chickenmapconfig.MapConfigPinMode
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic

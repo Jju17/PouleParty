@@ -148,7 +148,7 @@ extension ApiClient: DependencyKey {
                         [
                             "hunterId": winner.hunterId,
                             "hunterName": winner.hunterName,
-                            "timestamp": Timestamp(date: winner.timestamp)
+                            "timestamp": winner.timestamp
                         ] as [String: Any]
                     ])
                 ])

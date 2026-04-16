@@ -40,8 +40,8 @@ import androidx.compose.ui.unit.sp
 import com.google.firebase.Timestamp
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.PowerUpType
-import dev.rahier.pouleparty.ui.chickenconfig.powerUpColor
-import dev.rahier.pouleparty.ui.chickenconfig.powerUpTextColor
+import dev.rahier.pouleparty.ui.powerupselection.powerUpColor
+import dev.rahier.pouleparty.ui.powerupselection.powerUpTextColor
 import dev.rahier.pouleparty.ui.theme.*
 import kotlinx.coroutines.delay
 import java.util.Date

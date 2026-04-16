@@ -1,4 +1,4 @@
-package dev.rahier.pouleparty.ui.chickenconfig
+package dev.rahier.pouleparty.ui.chickenmapconfig
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable

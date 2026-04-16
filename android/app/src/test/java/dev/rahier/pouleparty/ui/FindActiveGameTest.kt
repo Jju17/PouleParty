@@ -1,5 +1,7 @@
 package dev.rahier.pouleparty.ui
 
+import dev.rahier.pouleparty.ui.gamelogic.PlayerRole
+
 import com.google.firebase.Timestamp
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameStatus

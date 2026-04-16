@@ -1,4 +1,4 @@
-package dev.rahier.pouleparty.ui
+package dev.rahier.pouleparty.ui.map
 
 import dev.rahier.pouleparty.model.PowerUp
 import dev.rahier.pouleparty.model.PowerUpType

@@ -13,8 +13,8 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import dev.rahier.pouleparty.model.PowerUpType
-import dev.rahier.pouleparty.ui.chickenconfig.powerUpColor
-import dev.rahier.pouleparty.ui.chickenconfig.powerUpIcon
+import dev.rahier.pouleparty.ui.powerupselection.powerUpColor
+import dev.rahier.pouleparty.ui.powerupselection.powerUpIcon
 
 @Composable
 fun PowerUpMapMarker(

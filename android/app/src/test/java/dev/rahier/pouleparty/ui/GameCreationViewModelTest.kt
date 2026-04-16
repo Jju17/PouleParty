@@ -91,7 +91,6 @@ class GameCreationViewModelTest {
         assertEquals(0, state.currentStepIndex)
         assertTrue(state.isParticipating)
         assertEquals(90.0, state.gameDurationMinutes, 0.0)
-        assertFalse(state.isExpertMode)
         assertFalse(state.showAlert)
         assertTrue(state.goingForward)
     }

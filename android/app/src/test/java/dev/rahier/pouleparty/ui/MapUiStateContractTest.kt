@@ -1,5 +1,9 @@
 package dev.rahier.pouleparty.ui
 
+import dev.rahier.pouleparty.ui.map.MapUiState
+import dev.rahier.pouleparty.ui.map.PowerUpsUiState
+import dev.rahier.pouleparty.ui.map.powerUps
+
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.PowerUp
 import dev.rahier.pouleparty.model.PowerUpType

@@ -1,5 +1,7 @@
 package dev.rahier.pouleparty.ui
 
+import dev.rahier.pouleparty.ui.gamelogic.PlayerRole
+
 import android.content.SharedPreferences
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser

@@ -3,7 +3,7 @@ package dev.rahier.pouleparty.ui.components
 import android.view.View
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import dev.rahier.pouleparty.ui.MapUiState
+import dev.rahier.pouleparty.ui.map.MapUiState
 
 /**
  * Fires haptic feedback on key state transitions shared by both map screens.

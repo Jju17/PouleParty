@@ -1,4 +1,4 @@
-package dev.rahier.pouleparty.ui.chickenconfig
+package dev.rahier.pouleparty.ui.chickenmapconfig
 
 import android.content.Context
 import android.location.Geocoder

@@ -17,7 +17,7 @@ import dev.rahier.pouleparty.model.HunterLocation
 import dev.rahier.pouleparty.model.PowerUp
 import dev.rahier.pouleparty.model.Registration
 import dev.rahier.pouleparty.model.Winner
-import dev.rahier.pouleparty.ui.PlayerRole
+import dev.rahier.pouleparty.ui.gamelogic.PlayerRole
 import dev.rahier.pouleparty.util.startOfToday
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
