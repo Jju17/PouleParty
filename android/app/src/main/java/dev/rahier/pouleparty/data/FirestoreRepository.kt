@@ -9,6 +9,8 @@ import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.FieldValue
 import java.util.Date
 import dev.rahier.pouleparty.AppConstants
+import dev.rahier.pouleparty.model.Challenge
+import dev.rahier.pouleparty.model.ChallengeCompletion
 import dev.rahier.pouleparty.model.ChickenLocation
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameStatus
@@ -481,6 +483,128 @@ class FirestoreRepository @Inject constructor(
             .await()
         return doc.toObject(PartyPlansConfig::class.java)
             ?: throw IllegalStateException("Party plans config document is missing or malformed")
+    }
+
+    // ── Challenges ───────────────────────────────────────
+
+    /** Live stream of the global `/challenges` collection, ordered by points desc. */
+    fun challengesStream(): Flow<List<Challenge>> = callbackFlow {
+        val listener = firestore.collection(AppConstants.COLLECTION_CHALLENGES)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    Log.w(TAG, "Challenges listener error", error)
+                    trySend(emptyList())
+                    return@addSnapshotListener
+                }
+                if (snapshot == null) {
+                    trySend(emptyList())
+                    return@addSnapshotListener
+                }
+                val challenges = snapshot.documents.mapNotNull { doc ->
+                    doc.toObject(Challenge::class.java)?.copy(id = doc.id)
+                }
+                trySend(challenges)
+            }
+        awaitClose { listener.remove() }
+    }
+
+    /** Live stream of `/games/{gameId}/challengeCompletions` — one doc per hunter. */
+    fun challengeCompletionsStream(gameId: String): Flow<List<ChallengeCompletion>> = callbackFlow {
+        if (gameId.isEmpty()) {
+            trySend(emptyList())
+            awaitClose { }
+            return@callbackFlow
+        }
+        val listener = firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
+            .collection(AppConstants.SUBCOLLECTION_CHALLENGE_COMPLETIONS)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    Log.w(TAG, "Challenge completions listener error for game $gameId", error)
+                    trySend(emptyList())
+                    return@addSnapshotListener
+                }
+                if (snapshot == null) {
+                    trySend(emptyList())
+                    return@addSnapshotListener
+                }
+                val completions = snapshot.documents.mapNotNull { doc ->
+                    doc.toObject(ChallengeCompletion::class.java)?.copy(hunterId = doc.id)
+                }
+                trySend(completions)
+            }
+        awaitClose { listener.remove() }
+    }
+
+    /**
+     * Marks a challenge as completed for the given hunter. Uses a Firestore transaction
+     * so concurrent writes don't lose updates. If the hunter already completed this
+     * challenge, it's a no-op (idempotent).
+     */
+    suspend fun markChallengeCompleted(
+        gameId: String,
+        hunterId: String,
+        teamName: String,
+        challengeId: String,
+        points: Int
+    ) {
+        if (gameId.isEmpty() || hunterId.isEmpty() || challengeId.isEmpty()) {
+            Log.w(
+                TAG,
+                "markChallengeCompleted skipped — gameId: '$gameId', hunterId: '$hunterId', challengeId: '$challengeId'"
+            )
+            return
+        }
+        withRetry("markChallengeCompleted($gameId, $hunterId, $challengeId)") {
+            val docRef = firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
+                .collection(AppConstants.SUBCOLLECTION_CHALLENGE_COMPLETIONS).document(hunterId)
+            firestore.runTransaction { transaction ->
+                val snapshot = transaction.get(docRef)
+                val existing = if (snapshot.exists()) {
+                    snapshot.toObject(ChallengeCompletion::class.java)
+                } else {
+                    null
+                }
+                if (existing != null && existing.completedChallengeIds.contains(challengeId)) {
+                    // Idempotent: already completed.
+                    return@runTransaction null
+                }
+                val updatedIds = (existing?.completedChallengeIds ?: emptyList()) + challengeId
+                val updatedTotal = (existing?.totalPoints ?: 0) + points
+                val data = mapOf(
+                    "hunterId" to hunterId,
+                    "completedChallengeIds" to updatedIds,
+                    "totalPoints" to updatedTotal,
+                    "teamName" to teamName
+                )
+                transaction.set(docRef, data)
+                null
+            }.await()
+        }
+    }
+
+    /**
+     * Fetches the nickname for each of the given user ids. Missing users
+     * simply don't appear in the returned map.
+     */
+    suspend fun fetchNicknames(userIds: List<String>): Map<String, String> {
+        if (userIds.isEmpty()) return emptyMap()
+        val result = mutableMapOf<String, String>()
+        for (userId in userIds.distinct()) {
+            if (userId.isEmpty()) continue
+            try {
+                val doc = firestore.collection(AppConstants.COLLECTION_USERS)
+                    .document(userId)
+                    .get()
+                    .await()
+                val nickname = doc.getString("nickname")
+                if (!nickname.isNullOrEmpty()) {
+                    result[userId] = nickname
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to fetch nickname for $userId", e)
+            }
+        }
+        return result
     }
 
     suspend fun saveNickname(userId: String, nickname: String) {

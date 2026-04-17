@@ -17,7 +17,9 @@ object AppConstants {
     const val SUBCOLLECTION_HUNTER_LOCATIONS = "hunterLocations"
     const val SUBCOLLECTION_POWER_UPS = "powerUps"
     const val SUBCOLLECTION_REGISTRATIONS = "registrations"
+    const val SUBCOLLECTION_CHALLENGE_COMPLETIONS = "challengeCompletions"
     const val COLLECTION_USERS = "users"
+    const val COLLECTION_CHALLENGES = "challenges"
 
     // Pending registration banner
     const val PREF_PENDING_REGISTRATION_GAME_ID = "pendingRegistrationGameId"

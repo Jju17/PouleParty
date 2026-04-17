@@ -251,6 +251,16 @@
     <!-- Auth -->
     <string name="connection_failed">Verbinding mislukt. Controleer je internet en probeer opnieuw.</string>
 
+    <!-- Challenges -->
+    <string name="challenges">Uitdagingen</string>
+    <string name="leaderboard">Ranglijst</string>
+    <string name="challenge_validate">Valideren</string>
+    <string name="challenge_done">✓ Gedaan</string>
+    <string name="challenge_validate_confirm">Heb je het bewijs naar WhatsApp gestuurd?</string>
+    <string name="challenge_points_format">%d ptn</string>
+    <string name="challenges_empty">Nog geen uitdagingen. Kom later terug!</string>
+    <string name="leaderboard_empty">Nog geen jagers.</string>
+
     <!-- My Games -->
     <string name="my_games">Mijn spellen</string>
     <string name="no_games_yet">Nog geen spellen</string>

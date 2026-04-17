@@ -37,6 +37,9 @@ struct HomeFeatureTests {
                 AlertState {
                     TextState("Location Required")
                 } actions: {
+                    ButtonState(action: .openSettings) {
+                        TextState("Open Settings")
+                    }
                     ButtonState(role: .cancel) {
                         TextState("OK")
                     }

@@ -40,6 +40,22 @@ struct HunterMapView: View {
                     isChicken: false
                 )
             }
+            .overlay(alignment: .bottomTrailing) {
+                if store.hasChallenges {
+                    ChallengesFabButton {
+                        store.send(.view(.challengesButtonTapped))
+                    }
+                    .padding(.trailing, 16)
+                    // Offset above the bottom bar (MapBottomBar is ~72pt tall including padding)
+                    .padding(.bottom, 96)
+                }
+            }
+            .sheet(
+                item: $store.scope(state: \.challenges, action: \.challenges)
+            ) { challengesStore in
+                ChallengesView(store: challengesStore)
+                    .presentationDetents([.large])
+            }
             .task {
                 store.send(.view(.onTask))
             }
@@ -83,6 +99,27 @@ struct HunterMapView: View {
                 onInventoryDismiss: { store.send(.powerUps(.inventoryDismissed)) },
                 onActivatePowerUp: { store.send(.powerUps(.activateTapped($0))) }
             )
+    }
+}
+
+/// Floating action button that opens the Challenges & Leaderboard sheet.
+/// Matches the visual tone (dark translucent material) of the bottom bar.
+struct ChallengesFabButton: View {
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            ZStack {
+                Circle()
+                    .fill(Color.darkBackground.opacity(0.85))
+                Image(systemName: "trophy.fill")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundStyle(Color.CROrange)
+            }
+        }
+        .frame(width: 52, height: 52)
+        .neonGlow(.CROrange, intensity: .subtle)
+        .accessibilityLabel("Challenges and leaderboard")
     }
 }
 

@@ -36,6 +36,10 @@ struct ApiClient {
     var findRegistration: (String, String) async throws -> Registration?
     var createRegistration: (String, Registration) async throws -> Void
     var fetchAllRegistrations: (String) async throws -> [Registration]
+    var challengesStream: () -> AsyncStream<[Challenge]>
+    var challengeCompletionsStream: (String) -> AsyncStream<[ChallengeCompletion]>
+    var markChallengeCompleted: (String, String, String, String, Int) async throws -> Void
+    var fetchUserNicknames: ([String]) async throws -> [String: String]
 }
 
 private let logger = Logger(category: "ApiClient")
@@ -44,6 +48,8 @@ private let chickenLocationsSubcollection = "chickenLocations"
 private let hunterLocationsSubcollection = "hunterLocations"
 private let powerUpsSubcollection = "powerUps"
 private let registrationsSubcollection = "registrations"
+private let challengesCollection = "challenges"
+private let challengeCompletionsSubcollection = "challengeCompletions"
 private let maxRetries = 3
 private let initialDelayNs: UInt64 = 500_000_000
 
@@ -90,7 +96,11 @@ extension ApiClient: TestDependencyKey {
         fetchMyGames: { _ in [] },
         findRegistration: { _, _ in nil },
         createRegistration: { _, _ in },
-        fetchAllRegistrations: { _ in [] }
+        fetchAllRegistrations: { _ in [] },
+        challengesStream: { AsyncStream { _ in } },
+        challengeCompletionsStream: { _ in AsyncStream { _ in } },
+        markChallengeCompleted: { _, _, _, _, _ in },
+        fetchUserNicknames: { _ in [:] }
     )
 }
 
@@ -499,6 +509,117 @@ extension ApiClient: DependencyKey {
             return snapshot.documents.compactMap { doc in
                 try? doc.data(as: Registration.self)
             }
+        },
+        challengesStream: {
+            AsyncStream { continuation in
+                let listener = Firestore.firestore()
+                    .collection(challengesCollection)
+                    .addSnapshotListener { snapshot, error in
+                        if let error {
+                            logger.warning("Challenges listener error: \(error.localizedDescription)")
+                        }
+                        guard let documents = snapshot?.documents else {
+                            continuation.yield([])
+                            return
+                        }
+                        let challenges = documents.compactMap { doc -> Challenge? in
+                            do { return try doc.data(as: Challenge.self) }
+                            catch {
+                                logger.error("Failed to decode Challenge \(doc.documentID): \(error.localizedDescription)")
+                                return nil
+                            }
+                        }
+                        continuation.yield(challenges)
+                    }
+
+                continuation.onTermination = { _ in
+                    listener.remove()
+                }
+            }
+        },
+        challengeCompletionsStream: { gameId in
+            AsyncStream { continuation in
+                let listener = Firestore.firestore()
+                    .collection(gamesCollection).document(gameId)
+                    .collection(challengeCompletionsSubcollection)
+                    .addSnapshotListener { snapshot, error in
+                        if let error {
+                            logger.warning("Challenge completions listener error for game \(gameId): \(error.localizedDescription)")
+                        }
+                        guard let documents = snapshot?.documents else {
+                            continuation.yield([])
+                            return
+                        }
+                        let completions = documents.compactMap { doc -> ChallengeCompletion? in
+                            do { return try doc.data(as: ChallengeCompletion.self) }
+                            catch {
+                                logger.error("Failed to decode ChallengeCompletion \(doc.documentID): \(error.localizedDescription)")
+                                return nil
+                            }
+                        }
+                        continuation.yield(completions)
+                    }
+
+                continuation.onTermination = { _ in
+                    listener.remove()
+                }
+            }
+        },
+        markChallengeCompleted: { gameId, hunterId, teamName, challengeId, points in
+            guard !gameId.isEmpty, !hunterId.isEmpty, !challengeId.isEmpty else {
+                logger.warning("markChallengeCompleted skipped — gameId: '\(gameId)', hunterId: '\(hunterId)', challengeId: '\(challengeId)'")
+                return
+            }
+            try await withRetry("markChallengeCompleted(\(gameId), \(hunterId), \(challengeId))") {
+                let db = Firestore.firestore()
+                let docRef = db.collection(gamesCollection).document(gameId)
+                    .collection(challengeCompletionsSubcollection).document(hunterId)
+                _ = try await db.runTransaction { transaction, errorPointer in
+                    let snapshot: DocumentSnapshot
+                    do {
+                        snapshot = try transaction.getDocument(docRef)
+                    } catch let error as NSError {
+                        errorPointer?.pointee = error
+                        return nil
+                    }
+                    let existing = (try? snapshot.data(as: ChallengeCompletion.self)) ?? ChallengeCompletion()
+                    if existing.completedChallengeIds.contains(challengeId) {
+                        // Idempotent — nothing to do.
+                        return nil
+                    }
+                    let payload: [String: Any] = [
+                        "completedChallengeIds": existing.completedChallengeIds + [challengeId],
+                        "totalPoints": existing.totalPoints + points,
+                        "teamName": teamName
+                    ]
+                    transaction.setData(payload, forDocument: docRef)
+                    return nil
+                }
+            }
+        },
+        fetchUserNicknames: { userIds in
+            let uniqueIds = Array(Set(userIds)).filter { !$0.isEmpty }
+            guard !uniqueIds.isEmpty else { return [:] }
+            // Firestore `in` queries are limited to 30 values — batch accordingly.
+            let batchSize = 30
+            let db = Firestore.firestore()
+            var result: [String: String] = [:]
+            for start in stride(from: 0, to: uniqueIds.count, by: batchSize) {
+                let chunk = Array(uniqueIds[start..<min(start + batchSize, uniqueIds.count)])
+                do {
+                    let snapshot = try await db.collection("users")
+                        .whereField(FieldPath.documentID(), in: chunk)
+                        .getDocuments()
+                    for doc in snapshot.documents {
+                        if let nickname = doc.data()["nickname"] as? String, !nickname.isEmpty {
+                            result[doc.documentID] = nickname
+                        }
+                    }
+                } catch {
+                    logger.warning("fetchUserNicknames chunk failed: \(error.localizedDescription)")
+                }
+            }
+            return result
         }
     )
 }

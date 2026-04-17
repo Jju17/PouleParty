@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -55,6 +56,7 @@ import dev.rahier.pouleparty.ui.components.PowerUpInventoryDialog
 import dev.rahier.pouleparty.ui.components.PowerUpMapMarker
 import dev.rahier.pouleparty.ui.components.PowerUpNotificationOverlay
 import dev.rahier.pouleparty.ui.components.PreGameOverlay
+import dev.rahier.pouleparty.ui.challenges.ChallengesSheet
 
 import dev.rahier.pouleparty.ui.theme.*
 
@@ -104,6 +106,7 @@ fun HunterMapScreen(
     }
 
     var selectedPowerUpType by remember { mutableStateOf<PowerUpType?>(null) }
+    var isChallengesSheetVisible by remember { mutableStateOf(false) }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -269,6 +272,30 @@ fun HunterMapScreen(
                 gradientColors = listOf(HunterRed, CRPink),
                 onInfoTapped = { viewModel.onIntent(HunterMapIntent.InfoTapped) }
             )
+
+            // Challenges FAB — sits above the bottom bar on the right.
+            if (state.hasChallenges) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .navigationBarsPadding()
+                        .padding(bottom = 96.dp, end = 16.dp)
+                ) {
+                    IconButton(
+                        onClick = { isChallengesSheetVisible = true },
+                        modifier = Modifier
+                            .shadow(6.dp, CircleShape)
+                            .background(CRDarkBackground.copy(alpha = 0.85f), CircleShape)
+                            .size(52.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.EmojiEvents,
+                            contentDescription = stringResource(R.string.challenges),
+                            tint = Color.White
+                        )
+                    }
+                }
+            }
 
             // Bottom bar
             Row(
@@ -472,5 +499,10 @@ fun HunterMapScreen(
             onActivate = { viewModel.onIntent(HunterMapIntent.ActivatePowerUp(it)) },
             onDismiss = { viewModel.onIntent(HunterMapIntent.DismissPowerUpInventory) }
         )
+    }
+
+    // Challenges / Leaderboard sheet
+    if (isChallengesSheetVisible) {
+        ChallengesSheet(onDismiss = { isChallengesSheetVisible = false })
     }
 }

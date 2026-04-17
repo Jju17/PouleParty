@@ -258,6 +258,16 @@
     <string name="no_games_yet">No games yet</string>
 
     <!-- Mapbox -->
+    <!-- Challenges -->
+    <string name="challenges">Challenges</string>
+    <string name="leaderboard">Leaderboard</string>
+    <string name="challenge_validate">Validate</string>
+    <string name="challenge_done">✓ Done</string>
+    <string name="challenge_validate_confirm">Did you send the proof on WhatsApp?</string>
+    <string name="challenge_points_format">%d pts</string>
+    <string name="challenges_empty">No challenges yet. Check back later!</string>
+    <string name="leaderboard_empty">No hunters yet.</string>
+
     <string name="mapbox_access_token" translatable="false">pk.eyJ1Ijoiamp1MTciLCJhIjoiY20yaGpwaG53MGI2YzJsc2NxOTNzMWJ2bCJ9.D6NMFnmGF7pA2LN64vmqcA</string>
     <string name="podium">Podium</string>
     <string name="other_hunters">Other hunters</string>

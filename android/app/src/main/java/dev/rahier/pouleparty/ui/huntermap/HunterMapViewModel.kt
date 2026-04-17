@@ -74,7 +74,8 @@ data class HunterMapUiState(
     val previewCircle: Pair<Point, Double>? = null,
     val activatingPowerUpId: String? = null,
     val decoyLocation: Point? = null,
-    val showRegistrationRequiredAlert: Boolean = false
+    val showRegistrationRequiredAlert: Boolean = false,
+    val hasChallenges: Boolean = false
 ) : dev.rahier.pouleparty.ui.map.MapUiState
 
 @HiltViewModel
@@ -139,6 +140,15 @@ class HunterMapViewModel @Inject constructor(
 
     init {
         loadGame()
+        observeChallengesAvailability()
+    }
+
+    private fun observeChallengesAvailability() {
+        viewModelScope.launch {
+            firestoreRepository.challengesStream().collect { list ->
+                _uiState.update { it.copy(hasChallenges = list.isNotEmpty()) }
+            }
+        }
     }
 
     private fun loadGame() {

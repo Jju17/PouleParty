@@ -255,6 +255,16 @@
     <!-- Auth -->
     <string name="connection_failed">Connexion échouée. Vérifie ta connexion internet et réessaie.</string>
 
+    <!-- Challenges -->
+    <string name="challenges">Défis</string>
+    <string name="leaderboard">Classement</string>
+    <string name="challenge_validate">Valider</string>
+    <string name="challenge_done">✓ Fait</string>
+    <string name="challenge_validate_confirm">Avez-vous bien envoyé la preuve sur WhatsApp ?</string>
+    <string name="challenge_points_format">%d pts</string>
+    <string name="challenges_empty">Aucun défi pour l\'instant. Reviens plus tard !</string>
+    <string name="leaderboard_empty">Aucun chasseur pour l\'instant.</string>
+
     <!-- My Games -->
     <string name="my_games">Mes parties</string>
     <string name="no_games_yet">Aucune partie pour l\'instant</string>

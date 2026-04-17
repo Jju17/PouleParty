@@ -538,4 +538,90 @@ struct HunterMapFeatureTests {
             $0.winnerNotification = nil
         }
     }
+
+    // MARK: - hasChallenges gate
+
+    @Test func hasChallengesDefaultsFalse() {
+        let state = HunterMapFeature.State(game: .mock)
+        #expect(state.hasChallenges == false)
+    }
+
+    @Test func challengesAvailabilityUpdatedSetsTrue() async {
+        let store = TestStore(initialState: HunterMapFeature.State(game: .mock)) {
+            HunterMapFeature()
+        }
+        await store.send(.internal(.challengesAvailabilityUpdated(true))) {
+            $0.hasChallenges = true
+        }
+    }
+
+    @Test func challengesAvailabilityUpdatedSetsFalse() async {
+        var state = HunterMapFeature.State(game: .mock)
+        state.hasChallenges = true
+        let store = TestStore(initialState: state) {
+            HunterMapFeature()
+        }
+        await store.send(.internal(.challengesAvailabilityUpdated(false))) {
+            $0.hasChallenges = false
+        }
+    }
+
+    @Test func challengesAvailabilityTransitionsEmptyToNonEmpty() async {
+        let store = TestStore(initialState: HunterMapFeature.State(game: .mock)) {
+            HunterMapFeature()
+        }
+        await store.send(.internal(.challengesAvailabilityUpdated(false)))
+        await store.send(.internal(.challengesAvailabilityUpdated(true))) {
+            $0.hasChallenges = true
+        }
+    }
+
+    @Test func challengesAvailabilityTransitionsNonEmptyToEmpty() async {
+        var state = HunterMapFeature.State(game: .mock)
+        state.hasChallenges = true
+        let store = TestStore(initialState: state) {
+            HunterMapFeature()
+        }
+        await store.send(.internal(.challengesAvailabilityUpdated(true)))
+        await store.send(.internal(.challengesAvailabilityUpdated(false))) {
+            $0.hasChallenges = false
+        }
+    }
+
+    @Test func challengesAvailabilityIdempotentTrue() async {
+        var state = HunterMapFeature.State(game: .mock)
+        state.hasChallenges = true
+        let store = TestStore(initialState: state) {
+            HunterMapFeature()
+        }
+        // Sending the same value twice should not change state (idempotent).
+        await store.send(.internal(.challengesAvailabilityUpdated(true)))
+        await store.send(.internal(.challengesAvailabilityUpdated(true)))
+    }
+
+    @Test func challengesAvailabilityIdempotentFalse() async {
+        let store = TestStore(initialState: HunterMapFeature.State(game: .mock)) {
+            HunterMapFeature()
+        }
+        await store.send(.internal(.challengesAvailabilityUpdated(false)))
+        await store.send(.internal(.challengesAvailabilityUpdated(false)))
+    }
+
+    @Test func challengesAvailabilityTransitionsViaSuccessiveInternalActions() async {
+        // Full state-machine dance: false → true → true → false → true.
+        let store = TestStore(initialState: HunterMapFeature.State(game: .mock)) {
+            HunterMapFeature()
+        }
+        await store.send(.internal(.challengesAvailabilityUpdated(false)))
+        await store.send(.internal(.challengesAvailabilityUpdated(true))) {
+            $0.hasChallenges = true
+        }
+        await store.send(.internal(.challengesAvailabilityUpdated(true)))
+        await store.send(.internal(.challengesAvailabilityUpdated(false))) {
+            $0.hasChallenges = false
+        }
+        await store.send(.internal(.challengesAvailabilityUpdated(true))) {
+            $0.hasChallenges = true
+        }
+    }
 }

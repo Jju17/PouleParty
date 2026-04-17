@@ -91,8 +91,10 @@ cd web && npm run dev
   ├── /chickenLocations/latest     → Single doc, overwritten each position update
   ├── /hunterLocations/{hunterId}  → One doc per hunter, overwritten
   ├── /powerUps/{powerUpId}        → One doc per spawned power-up (collected/activated state)
-  └── /registrations/{userId}      → One doc per registered hunter (teamName, paid, joinedAt)
+  ├── /registrations/{userId}      → One doc per registered hunter (teamName, paid, joinedAt)
+  └── /challengeCompletions/{hunterId} → One doc per hunter who has completed at least one challenge (completedChallengeIds, totalPoints, teamName)
 
+/challenges/{challengeId}          → Global, dev-managed challenge catalog (title, body, points, lastUpdated)
 /users/{userId}                    → User profile (nickname, FCM token, platform, updatedAt)
 /registrations/{docId}             → Event registration (admin-only, used by web)
 ```

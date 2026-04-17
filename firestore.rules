@@ -100,6 +100,19 @@ service cloud.firestore {
         allow delete: if false;
       }
 
+      // Challenge completions subcollection — one doc per hunter who has
+      // completed at least one challenge. Readable by any participant (for
+      // the live leaderboard). Writable only by the owning hunter, and only
+      // while they are still in hunterIds.
+      match /challengeCompletions/{hunterId} {
+        allow read: if request.auth != null
+                    && request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.hunterIds;
+        allow create, update: if request.auth != null
+                      && request.auth.uid == hunterId
+                      && request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.hunterIds;
+        allow delete: if false;
+      }
+
       // Power-ups subcollection
       match /powerUps/{powerUpId} {
         allow read: if request.auth != null
@@ -132,6 +145,13 @@ service cloud.firestore {
 
     // Admin config — read-only for authenticated users, write only via admin SDK
     match /config/{docId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // Global challenges catalog — populated by devs via the Firebase Console.
+    // Authenticated clients can read; no client writes.
+    match /challenges/{challengeId} {
       allow read: if request.auth != null;
       allow write: if false;
     }

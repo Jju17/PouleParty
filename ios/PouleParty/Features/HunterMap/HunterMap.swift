@@ -19,6 +19,7 @@ struct HunterMapFeature {
     @ObservableState
     struct State: Equatable {
         @Presents var destination: Destination.State?
+        @Presents var challenges: ChallengesFeature.State?
         var game: Game
         var hunterId: String = ""
         var hunterName: String = "Hunter"
@@ -41,6 +42,7 @@ struct HunterMapFeature {
         var powerUps: MapPowerUpsFeature.State = .init()
         var previewCircle: CircleOverlay? = nil
         var decoyLocation: CLLocationCoordinate2D? = nil
+        var hasChallenges: Bool = false
 
         // MARK: - MapFeatureState passthroughs (child → parent surface)
         var availablePowerUps: [PowerUp] { powerUps.available }
@@ -73,6 +75,7 @@ struct HunterMapFeature {
 
     enum Action: BindableAction {
         case binding(BindingAction<State>)
+        case challenges(PresentationAction<ChallengesFeature.Action>)
         case delegate(Delegate)
         case destination(PresentationAction<Destination.Action>)
         case `internal`(Internal)
@@ -82,6 +85,7 @@ struct HunterMapFeature {
         @CasePathable
         enum View {
             case cancelGameButtonTapped
+            case challengesButtonTapped
             case foundButtonTapped
             case gameInfoDismissed
             case infoButtonTapped
@@ -91,6 +95,7 @@ struct HunterMapFeature {
 
         @CasePathable
         enum Internal {
+            case challengesAvailabilityUpdated(Bool)
             case countdownDismissed
             case gameConfigUpdated(Game)
             case newLocationFetched(CLLocationCoordinate2D)
@@ -335,6 +340,28 @@ struct HunterMapFeature {
             case .view(.infoButtonTapped):
                 state.showGameInfo = true
                 return .none
+            case .view(.challengesButtonTapped):
+                // Prefer the team name from the hunter's registration; fall back
+                // to the stored hunter name so the leaderboard still has something
+                // to show.
+                let gameId = state.game.id
+                let hunterId = state.hunterId
+                let hunterIds = state.game.hunterIds
+                let fallbackName = state.hunterName
+                state.challenges = ChallengesFeature.State(
+                    gameId: gameId,
+                    hunterId: hunterId,
+                    hunterIds: hunterIds,
+                    myTeamName: fallbackName
+                )
+                return .run { [apiClient] send in
+                    if let registration = try? await apiClient.findRegistration(gameId, hunterId),
+                       !registration.teamName.isEmpty {
+                        await send(.challenges(.presented(.binding(.set(\.myTeamName, registration.teamName)))))
+                    }
+                }
+            case .challenges:
+                return .none
             case let .internal(.newLocationFetched(location)):
                 state.mapCircle = CircleOverlay(
                     center: location,
@@ -473,7 +500,18 @@ struct HunterMapFeature {
                     }
                 )
 
+                effects.append(
+                    .run { send in
+                        for await challenges in apiClient.challengesStream() {
+                            await send(.internal(.challengesAvailabilityUpdated(!challenges.isEmpty)))
+                        }
+                    }
+                )
+
                 return .merge(effects)
+            case let .internal(.challengesAvailabilityUpdated(hasChallenges)):
+                state.hasChallenges = hasChallenges
+                return .none
             case let .internal(.gameConfigUpdated(game)):
                 // React to game cancelled/ended by chicken or Cloud Function
                 if game.status == .done, state.destination == nil {
@@ -758,6 +796,9 @@ struct HunterMapFeature {
         }
         .ifLet(\.$destination, action: \.destination) {
           Destination()
+        }
+        .ifLet(\.$challenges, action: \.challenges) {
+          ChallengesFeature()
         }
     }
 }
