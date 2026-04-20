@@ -245,6 +245,7 @@ export default function Register() {
             <label htmlFor="email" className={`block text-sm font-medium mb-1.5 ${mutedText}`}>
               {r.emailLabel}
             </label>
+            <p className={`text-xs mb-1.5 ${mutedText} opacity-70`}>{r.emailHint}</p>
             <input
               id="email"
               type="email"

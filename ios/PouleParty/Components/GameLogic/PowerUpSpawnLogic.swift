@@ -70,20 +70,3 @@ func generatePowerUps(
     return result
 }
 
-/// Snaps power-up locations to the nearest walkable road.
-/// Falls back to original locations if the API call fails.
-func snapPowerUpsToRoads(_ powerUps: [PowerUp]) async -> [PowerUp] {
-    guard !powerUps.isEmpty else { return powerUps }
-
-    let coordinates = powerUps.map { $0.coordinate }
-    let snapped = await RoadSnapService.snapToRoads(coordinates)
-
-    return zip(powerUps, snapped).map { original, snappedCoord in
-        PowerUp(
-            id: original.id,
-            type: original.type,
-            location: GeoPoint(latitude: snappedCoord.latitude, longitude: snappedCoord.longitude),
-            spawnedAt: original.spawnedAt
-        )
-    }
-}

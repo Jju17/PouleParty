@@ -115,7 +115,7 @@ private fun BadgeItem(
 
     Row(
         modifier = Modifier
-            .shadow(8.dp, RoundedCornerShape(18.dp), ambientColor = bgColor.copy(alpha = 0.6f), spotColor = bgColor.copy(alpha = 0.6f))
+            .neonGlow(bgColor, NeonGlowIntensity.MEDIUM, cornerRadius = 18.dp)
             .clip(RoundedCornerShape(18.dp))
             .background(bgColor)
             .clickable(onClick = onClick)

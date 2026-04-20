@@ -477,27 +477,23 @@ class HunterMapViewModel @Inject constructor(
             try {
                 val duration = powerUp.typeEnum.durationSeconds ?: 0
                 val expiresAt = Timestamp(Date(System.currentTimeMillis() + duration * 1000))
-                firestoreRepository.activatePowerUp(gameId, powerUp.id, expiresAt)
+                val activeEffectField = when (powerUp.typeEnum) {
+                    PowerUpType.RADAR_PING -> "powerUps.activeEffects.radarPing"
+                    else -> null
+                }
+                firestoreRepository.activatePowerUp(gameId, powerUp.id, activeEffectField, expiresAt)
                 analyticsRepository.powerUpActivated(type = powerUp.type, role = "hunter")
 
-                when (powerUp.typeEnum) {
-                    PowerUpType.ZONE_PREVIEW -> {
-                        // Compute next zone preview (client-side only)
-                        val state = _uiState.value
-                        val nextRadius = state.radius - state.game.zone.shrinkMetersPerUpdate.toInt()
-                        if (nextRadius > 0) {
-                            val center = state.circleCenter ?: state.game.initialLocation
-                            _uiState.update {
-                                it.copy(previewCircle = Pair(center, nextRadius.toDouble()))
-                            }
+                if (powerUp.typeEnum == PowerUpType.ZONE_PREVIEW) {
+                    // Compute next zone preview (client-side only — no Firestore effect)
+                    val state = _uiState.value
+                    val nextRadius = state.radius - state.game.zone.shrinkMetersPerUpdate.toInt()
+                    if (nextRadius > 0) {
+                        val center = state.circleCenter ?: state.game.initialLocation
+                        _uiState.update {
+                            it.copy(previewCircle = Pair(center, nextRadius.toDouble()))
                         }
                     }
-                    PowerUpType.RADAR_PING -> {
-                        firestoreRepository.updateGameActiveEffect(
-                            gameId, "powerUps.activeEffects.radarPing", expiresAt
-                        )
-                    }
-                    else -> {}
                 }
                 _uiState.update { it.copy(showPowerUpInventory = false) }
                 showNotification("Activated: ${powerUp.typeEnum.title}!", powerUp.typeEnum)

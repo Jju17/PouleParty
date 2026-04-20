@@ -2,13 +2,13 @@ import { initializeApp } from "firebase/app";
 import { getFunctions } from "firebase/functions";
 
 const app = initializeApp({
-  projectId: "pouleparty-ba586",
-  appId: "1:847523524308:web:f3c668f3473f4b5a041541",
-  storageBucket: "pouleparty-ba586.firebasestorage.app",
-  apiKey: "AIzaSyDiRR0sjbN7QW3SfbJLeTC6JnJ0ywB2BuI",
-  authDomain: "pouleparty-ba586.firebaseapp.com",
-  messagingSenderId: "847523524308",
-  measurementId: "G-XX9H54JSFW",
+  projectId: "pouleparty-prod",
+  appId: "1:1047338092854:web:5350c58adb0ebd23db8b97",
+  storageBucket: "pouleparty-prod.firebasestorage.app",
+  apiKey: "AIzaSyDIB83YywX0aWV2kZlr7z1qqrCHqrygpeo",
+  authDomain: "pouleparty-prod.firebaseapp.com",
+  messagingSenderId: "1047338092854",
+  measurementId: "G-GS7ZW3VJ9F",
 });
 
 export const functions = getFunctions(app, "europe-west1");

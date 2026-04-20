@@ -24,10 +24,13 @@ struct ApiClient {
     var setChickenLocation: (String, CLLocationCoordinate2D) throws -> Void
     var setConfig: (Game) async throws -> Void
     var setHunterLocation: (String, String, CLLocationCoordinate2D) throws -> Void
-    var spawnPowerUps: (String, [PowerUp]) async throws -> Void
     var collectPowerUp: (String, String, String) async throws -> Void
-    var activatePowerUp: (String, String, Timestamp) async throws -> Void
-    var updateGameActiveEffect: (String, String, Timestamp) async throws -> Void
+    /// Activates a collected power-up atomically. Sets `activatedAt` / `expiresAt`
+    /// on the power-up doc AND, if `activeEffectField` is provided, sets
+    /// `powerUps.activeEffects.<field>` on the game doc — both in a single
+    /// Firestore transaction so the state never drifts (no half-activated
+    /// power-up with no visible effect).
+    var activatePowerUp: (_ gameId: String, _ powerUpId: String, _ activeEffectField: String?, _ expiresAt: Timestamp) async throws -> Void
     var powerUpsStream: (String) -> AsyncStream<[PowerUp]>
     var updateHeartbeat: (String) throws -> Void
     var countFreeGamesToday: (String) async throws -> Int
@@ -43,6 +46,20 @@ struct ApiClient {
 }
 
 private let logger = Logger(category: "ApiClient")
+
+/// Logs a Firestore `addSnapshotListener` error. `permission-denied` is a
+/// transient hiccup during network wobbles / auth token refreshes — the
+/// listener recovers automatically, so we log it at `.debug` to avoid noisy
+/// warnings in production. Other errors stay at `.warning`.
+private func logListenerError(_ operation: String, _ error: Error) {
+    let code = (error as NSError).code
+    if code == FirestoreErrorCode.permissionDenied.rawValue {
+        logger.debug("\(operation) listener transient permission-denied (expected during auth refresh): \(error.localizedDescription)")
+    } else {
+        logger.warning("\(operation) listener error: \(error.localizedDescription)")
+    }
+}
+
 private let gamesCollection = "games"
 private let chickenLocationsSubcollection = "chickenLocations"
 private let hunterLocationsSubcollection = "hunterLocations"
@@ -85,10 +102,8 @@ extension ApiClient: TestDependencyKey {
         setChickenLocation: { _, _ in },
         setConfig: { _ in },
         setHunterLocation: { _, _, _ in },
-        spawnPowerUps: { _, _ in },
         collectPowerUp: { _, _, _ in },
-        activatePowerUp: { _, _, _ in },
-        updateGameActiveEffect: { _, _, _ in },
+        activatePowerUp: { _, _, _, _ in },
         powerUpsStream: { _ in AsyncStream { _ in } },
         updateHeartbeat: { _ in },
         countFreeGamesToday: { _ in 0 },
@@ -218,7 +233,7 @@ extension ApiClient: DependencyKey {
                     .limit(to: 1)
                     .addSnapshotListener { snapshot, error in
                         if let error {
-                            logger.warning("Chicken location listener error for game \(gameId): \(error.localizedDescription)")
+                            logListenerError("Chicken location (game \(gameId))", error)
                         }
                         guard let document = snapshot?.documents.first else {
                             continuation.yield(nil)
@@ -250,7 +265,7 @@ extension ApiClient: DependencyKey {
                     .document(gameId)
                     .addSnapshotListener { snapshot, error in
                         if let error {
-                            logger.warning("Game config listener error for game \(gameId): \(error.localizedDescription)")
+                            logListenerError("Game config (game \(gameId))", error)
                         }
                         guard let snapshot = snapshot else {
                             continuation.yield(nil)
@@ -277,7 +292,7 @@ extension ApiClient: DependencyKey {
                     .collection(gamesCollection).document(gameId).collection(hunterLocationsSubcollection)
                     .addSnapshotListener { snapshot, error in
                         if let error {
-                            logger.warning("Hunter locations listener error for game \(gameId): \(error.localizedDescription)")
+                            logListenerError("Hunter locations (game \(gameId))", error)
                         }
                         guard let documents = snapshot?.documents else {
                             continuation.yield([])
@@ -329,18 +344,6 @@ extension ApiClient: DependencyKey {
                 .collection(gamesCollection).document(gameId).collection(hunterLocationsSubcollection).document(hunterId)
             try ref.setData(from: hunterLocation, merge: true)
         },
-        spawnPowerUps: { gameId, powerUps in
-            try await withRetry("spawnPowerUps(\(gameId), \(powerUps.count) items)") {
-                let batch = Firestore.firestore().batch()
-                for powerUp in powerUps {
-                    let ref = Firestore.firestore()
-                        .collection(gamesCollection).document(gameId)
-                        .collection(powerUpsSubcollection).document(powerUp.id)
-                    try batch.setData(from: powerUp, forDocument: ref, merge: true)
-                }
-                try await batch.commit()
-            }
-        },
         collectPowerUp: { gameId, powerUpId, userId in
             try await withRetry("collectPowerUp(\(gameId), \(powerUpId))") {
                 let db = Firestore.firestore()
@@ -367,22 +370,23 @@ extension ApiClient: DependencyKey {
                 }
             }
         },
-        activatePowerUp: { gameId, powerUpId, expiresAt in
+        activatePowerUp: { gameId, powerUpId, activeEffectField, expiresAt in
             try await withRetry("activatePowerUp(\(gameId), \(powerUpId))") {
-                try await Firestore.firestore()
-                    .collection(gamesCollection).document(gameId)
+                let db = Firestore.firestore()
+                let puRef = db.collection(gamesCollection).document(gameId)
                     .collection(powerUpsSubcollection).document(powerUpId)
-                    .updateData([
-                        "activatedAt": Timestamp(date: .now),
+                let gameRef = db.collection(gamesCollection).document(gameId)
+                _ = try await db.runTransaction { transaction, _ in
+                    let now = Timestamp(date: .now)
+                    transaction.updateData([
+                        "activatedAt": now,
                         "expiresAt": expiresAt
-                    ])
-            }
-        },
-        updateGameActiveEffect: { gameId, field, until in
-            try await withRetry("updateGameActiveEffect(\(gameId), \(field))") {
-                try await Firestore.firestore()
-                    .collection(gamesCollection).document(gameId)
-                    .updateData([field: until])
+                    ], forDocument: puRef)
+                    if let field = activeEffectField {
+                        transaction.updateData([field: expiresAt], forDocument: gameRef)
+                    }
+                    return nil
+                }
             }
         },
         powerUpsStream: { gameId in
@@ -392,7 +396,7 @@ extension ApiClient: DependencyKey {
                     .collection(powerUpsSubcollection)
                     .addSnapshotListener { snapshot, error in
                         if let error {
-                            logger.warning("Power-ups listener error for game \(gameId): \(error.localizedDescription)")
+                            logListenerError("Power-ups (game \(gameId))", error)
                         }
                         guard let documents = snapshot?.documents else {
                             continuation.yield([])
@@ -516,7 +520,7 @@ extension ApiClient: DependencyKey {
                     .collection(challengesCollection)
                     .addSnapshotListener { snapshot, error in
                         if let error {
-                            logger.warning("Challenges listener error: \(error.localizedDescription)")
+                            logListenerError("Challenges", error)
                         }
                         guard let documents = snapshot?.documents else {
                             continuation.yield([])
@@ -544,7 +548,7 @@ extension ApiClient: DependencyKey {
                     .collection(challengeCompletionsSubcollection)
                     .addSnapshotListener { snapshot, error in
                         if let error {
-                            logger.warning("Challenge completions listener error for game \(gameId): \(error.localizedDescription)")
+                            logListenerError("Challenge completions (game \(gameId))", error)
                         }
                         guard let documents = snapshot?.documents else {
                             continuation.yield([])

@@ -10,8 +10,10 @@ export default {
       "Un cache-cache GPS grandeur nature ! Un joueur est la Poule, les autres sont Chasseurs. La zone rétrécit, la traque s'intensifie !",
     cta: "Prochain event : 23 avril !",
     appComingSoon: "Application bientôt disponible...",
+    downloadApp: "Télécharge l'application !",
     appStore: "App Store",
     googlePlay: "Google Play",
+    androidDisclaimer: "⚠️ Android : l'app est en test fermé. Ton adresse email doit être enregistrée côté développeur pour pouvoir la télécharger. Si ça ne marche pas, préviens-nous sur le groupe WhatsApp !",
   },
   privacy: {
     title: "Politique de confidentialité",
@@ -19,7 +21,7 @@ export default {
     overview: "Responsable du traitement",
     overviewText:
       "Poule Party (\"nous\", \"notre\", \"l'application\") est un jeu mobile de géolocalisation. Le responsable du traitement de vos données personnelles est :",
-    controllerDetails: "Julien Rahier — julien@rahier.dev — Belgique",
+    controllerDetails: "Julien Rahier, julien@rahier.dev, Belgique",
     dataCollected: "Données collectées",
     locationData: "Données de localisation :",
     locationDataText:
@@ -36,9 +38,9 @@ export default {
     legalBasis: "Base légale du traitement",
     legalBasisIntro: "Conformément au RGPD (Art. 6), nous traitons vos données sur les bases légales suivantes :",
     legalBasisConsent: "Consentement (Art. 6(1)(a)) :",
-    legalBasisConsentText: "Données de localisation — vous accordez explicitement la permission de localisation avant toute collecte de données. Vous pouvez retirer votre consentement à tout moment en révoquant les permissions de localisation dans les paramètres de votre appareil.",
+    legalBasisConsentText: "Données de localisation : vous accordez explicitement la permission de localisation avant toute collecte de données. Vous pouvez retirer votre consentement à tout moment en révoquant les permissions de localisation dans les paramètres de votre appareil.",
     legalBasisLegitimate: "Intérêt légitime (Art. 6(1)(f)) :",
-    legalBasisLegitimateText: "Authentification anonyme et rapports de crash — nécessaires au fonctionnement de l'application et au maintien de la qualité du service. Notre intérêt légitime ne prévaut pas sur vos droits, car les données sont entièrement anonymes.",
+    legalBasisLegitimateText: "Authentification anonyme et rapports de crash : nécessaires au fonctionnement de l'application et au maintien de la qualité du service. Notre intérêt légitime ne prévaut pas sur vos droits, car les données sont entièrement anonymes.",
     howWeUse: "Utilisation de vos données",
     howWeUse1:
       "Les données de localisation sont utilisées uniquement pour les mécaniques de jeu en temps réel (affichage des positions sur la carte, détection de zone).",
@@ -145,7 +147,7 @@ export default {
     contactText: "Si vous avez des questions concernant ces conditions, contactez-nous à",
   },
   register: {
-    date: "23 avril 2026 — 19h00",
+    date: "23 avril 2026 à 19h00",
     intro:
       "Prépare-toi pour une expérience totalement insolite : une chasse à la poule grandeur nature, en plein cœur de la ville.",
     description:
@@ -188,6 +190,7 @@ export default {
     lastNameLabel: "Nom",
     lastNamePlaceholder: "Dupont",
     emailLabel: "Email",
+    emailHint: "📱 Sur Android, mets ton adresse Play Store : c'est celle-là qui te donnera accès à l'app (test fermé)",
     emailPlaceholder: "jean@example.com",
     gsmLabel: "GSM",
     gsmHint: "Pour t'ajouter au groupe WhatsApp de l'event",

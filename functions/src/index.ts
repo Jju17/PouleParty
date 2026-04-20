@@ -1,13 +1,21 @@
 import { cert, initializeApp } from "firebase-admin/app";
-import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { getFirestore, FieldValue, GeoPoint } from "firebase-admin/firestore";
 import { getFunctions } from "firebase-admin/functions";
 import { getMessaging } from "firebase-admin/messaging";
 import { onDocumentCreated, onDocumentUpdated } from "firebase-functions/v2/firestore";
 import { onTaskDispatched } from "firebase-functions/v2/tasks";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { defineString } from "firebase-functions/params";
+import { defineString, defineSecret } from "firebase-functions/params";
 import { createHash } from "crypto";
 import { google } from "googleapis";
+import {
+  deterministicDriftCenterServer,
+  filterEnabledTypesServer,
+  generatePowerUpsServer,
+  haversineDistance,
+  interpolateZoneCenterServer,
+  SpawnedPowerUp,
+} from "./powerUpSpawn";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const serviceAccount = require("../service-account.json");
@@ -17,6 +25,12 @@ const REGION = "europe-west1";
 const db = getFirestore();
 
 const REGISTRATION_SHEET_ID = defineString("REGISTRATION_SHEET_ID");
+const MAPBOX_ACCESS_TOKEN = defineSecret("MAPBOX_ACCESS_TOKEN");
+
+const POWER_UP_INITIAL_BATCH_SIZE = 5;
+const POWER_UP_PERIODIC_BATCH_SIZE = 2;
+// Max periodic batches scheduled per game to bound Cloud Task volume.
+const MAX_POWER_UP_SHRINK_BATCHES = 100;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -239,6 +253,255 @@ export const transitionGameStatus = onTaskDispatched(
 // Firestore trigger: schedule tasks when a new game is created
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Power-up spawn — server-authoritative
+// ---------------------------------------------------------------------------
+
+/**
+ * Deterministic power-up generation, ported from the client
+ * `generatePowerUps` (`ios/PouleParty/Components/GameLogic/PowerUpSpawnLogic.swift`
+ * and `android/.../ui/gamelogic/PowerUpSpawnHelper.kt`).
+ *
+ * MUST produce identical positions for the same `(driftSeed, batchIndex, count, enabledTypes)` —
+ * clients no longer run this logic but the math is kept identical so any future
+ * parity drift is easier to debug side-by-side.
+ */
+/**
+ * Snaps a single coordinate to the nearest walkable road via the Mapbox
+ * Directions API. Mirrors client `RoadSnapService.snapSinglePoint`.
+ * Falls back to the input coordinate on any failure.
+ */
+async function snapToRoad(
+  lat: number,
+  lng: number,
+  accessToken: string
+): Promise<{ latitude: number; longitude: number }> {
+  // Second point ~11m north — the Directions API needs 2 points for a route.
+  const offsetLat = lat + 0.0001;
+  const coordString = `${lng},${lat};${lng},${offsetLat}`;
+  const url =
+    `https://api.mapbox.com/directions/v5/mapbox/walking/${coordString}` +
+    `?access_token=${accessToken}&overview=false&steps=false`;
+
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) return { latitude: lat, longitude: lng };
+    const json = await resp.json() as { waypoints?: Array<{ location: [number, number] }> };
+    const waypoint = json.waypoints?.[0];
+    if (!waypoint || !Array.isArray(waypoint.location) || waypoint.location.length !== 2) {
+      return { latitude: lat, longitude: lng };
+    }
+    const [snappedLng, snappedLat] = waypoint.location;
+    // Reject snaps that moved > 200m (likely a data issue).
+    const distanceMeters = haversineDistance(lat, lng, snappedLat, snappedLng);
+    if (distanceMeters > 200) return { latitude: lat, longitude: lng };
+    return { latitude: snappedLat, longitude: snappedLng };
+  } catch (err) {
+    console.warn(`[spawn] snapToRoad failed for ${lat},${lng}:`, err);
+    return { latitude: lat, longitude: lng };
+  }
+}
+
+/**
+ * Writes an already-generated batch of power-ups to Firestore. Uses the
+ * deterministic IDs from `generatePowerUpsServer` so re-runs are idempotent
+ * (reschedule / retries don't produce duplicates).
+ */
+async function writePowerUpBatch(
+  gameId: string,
+  powerUps: SpawnedPowerUp[]
+): Promise<void> {
+  if (powerUps.length === 0) return;
+  const batch = db.batch();
+  const col = db.collection("games").doc(gameId).collection("powerUps");
+  for (const pu of powerUps) {
+    // merge:true is important — a task retry must NOT overwrite
+    // collect/activation fields written by clients between attempts
+    // (otherwise a retry could "resurrect" a collected power-up).
+    batch.set(col.doc(pu.id), {
+      type: pu.type,
+      location: pu.location,
+      spawnedAt: pu.spawnedAt,
+    }, { merge: true });
+  }
+  await batch.commit();
+}
+
+/**
+ * Generates + snaps + writes one batch of power-ups for a game.
+ * Reads the current game doc to pick up the latest zone center / radius /
+ * enabledTypes (the zone may have shrunk since the game was created).
+ */
+async function spawnBatchForGame(
+  gameId: string,
+  batchIndex: number,
+  count: number,
+  mapboxToken: string
+): Promise<void> {
+  const gameRef = db.collection("games").doc(gameId);
+  const snap = await gameRef.get();
+  if (!snap.exists) {
+    console.warn(`[spawn] game ${gameId} missing — skipping batch ${batchIndex}`);
+    return;
+  }
+  const data = snap.data() as Record<string, unknown>;
+
+  // Don't spawn on games that were cancelled/finished. Checks both the
+  // status flag (set by `transitionGameStatus`) and the endDate (in case the
+  // status transition task is running late). Either means "game over — stop
+  // spawning anything further".
+  if (data.status === "done") {
+    console.log(`[spawn] game ${gameId} is done — skipping batch ${batchIndex}`);
+    return;
+  }
+  const endTimestamp = (data.timing as { end?: FirebaseFirestore.Timestamp } | undefined)?.end?.toDate();
+  if (endTimestamp && endTimestamp <= new Date()) {
+    console.log(`[spawn] game ${gameId} passed endTimestamp — skipping batch ${batchIndex}`);
+    return;
+  }
+
+  const powerUps = data.powerUps as
+    | { enabled?: boolean; enabledTypes?: string[] }
+    | undefined;
+  if (!powerUps?.enabled) return;
+  const gameMode = (data.gameMode as string) ?? "followTheChicken";
+  const enabledTypes = filterEnabledTypesServer(powerUps.enabledTypes ?? [], gameMode);
+  if (enabledTypes.length === 0) return;
+
+  const zone = data.zone as {
+    center?: GeoPoint;
+    finalCenter?: GeoPoint | null;
+    radius?: number;
+    shrinkMetersPerUpdate?: number;
+    driftSeed?: number;
+  } | undefined;
+  const initialCenter = zone?.center;
+  const initialRadius = zone?.radius;
+  const shrinkMetersPerUpdate = zone?.shrinkMetersPerUpdate;
+  const driftSeed = zone?.driftSeed;
+  const finalCenter = zone?.finalCenter ?? undefined;
+  if (
+    !initialCenter ||
+    typeof initialRadius !== "number" ||
+    typeof shrinkMetersPerUpdate !== "number" ||
+    typeof driftSeed !== "number"
+  ) {
+    console.error(`[spawn] game ${gameId} missing zone data for batch ${batchIndex}`);
+    return;
+  }
+
+  // Compute the center + radius that match the zone at the time this batch
+  // should fire. `batchIndex = 0` = initial spawn (no shrink), N > 0 = after
+  // N shrinks.
+  //
+  // zoneFreeze adjustment: if a freeze is active at fire time, the zone
+  // hasn't actually shrunk for this batch yet — treat the zone as one
+  // shrink behind schedule. Doesn't handle multiple historical freezes
+  // perfectly but covers the common case (freeze active when spawn fires).
+  // The NOMINAL `batchIndex` is still used for deterministic IDs / PRNG
+  // so different tasks never collide on the same ID.
+  const activeEffects = (data.powerUps as { activeEffects?: Record<string, FirebaseFirestore.Timestamp> } | undefined)?.activeEffects;
+  const zoneFreezeExpiresAt = activeEffects?.zoneFreeze?.toDate();
+  const isZoneFrozen = zoneFreezeExpiresAt !== undefined && zoneFreezeExpiresAt > new Date();
+  const effectiveBatchIndex = isZoneFrozen && batchIndex > 0 ? batchIndex - 1 : batchIndex;
+  const currentRadius = Math.max(
+    0,
+    initialRadius - effectiveBatchIndex * shrinkMetersPerUpdate
+  );
+  if (currentRadius <= 0) {
+    console.log(`[spawn] zone has collapsed for game ${gameId} — skipping batch ${batchIndex}`);
+    return;
+  }
+
+  let spawnCenter: { latitude: number; longitude: number };
+  if (effectiveBatchIndex === 0) {
+    // Initial batch (or first batch frozen): use the raw zone.center
+    // (no drift, no chicken location yet).
+    spawnCenter = { latitude: initialCenter.latitude, longitude: initialCenter.longitude };
+  } else if (gameMode === "stayInTheZone") {
+    // Periodic shrink center = linear interpolation toward finalCenter + seeded drift.
+    const interpolated = interpolateZoneCenterServer(
+      { latitude: initialCenter.latitude, longitude: initialCenter.longitude },
+      finalCenter ? { latitude: finalCenter.latitude, longitude: finalCenter.longitude } : undefined,
+      initialRadius,
+      currentRadius
+    );
+    const previousRadius = currentRadius + shrinkMetersPerUpdate;
+    spawnCenter = deterministicDriftCenterServer(
+      interpolated,
+      previousRadius,
+      currentRadius,
+      driftSeed
+    );
+  } else {
+    // followTheChicken: the zone tracks the chicken's live GPS. Read the
+    // latest chickenLocation doc — fall back to initial center if missing.
+    const locSnap = await db
+      .collection("games").doc(gameId)
+      .collection("chickenLocations").doc("latest")
+      .get();
+    const locData = locSnap.data() as { location?: GeoPoint } | undefined;
+    if (locData?.location) {
+      spawnCenter = {
+        latitude: locData.location.latitude,
+        longitude: locData.location.longitude,
+      };
+    } else {
+      spawnCenter = { latitude: initialCenter.latitude, longitude: initialCenter.longitude };
+    }
+  }
+
+  const generated = generatePowerUpsServer(
+    spawnCenter,
+    currentRadius,
+    count,
+    driftSeed,
+    batchIndex,
+    enabledTypes
+  );
+
+  // Snap each location in parallel; falls back per-point on failure.
+  const snapped: SpawnedPowerUp[] = await Promise.all(
+    generated.map(async (pu) => {
+      const s = await snapToRoad(
+        pu.location.latitude,
+        pu.location.longitude,
+        mapboxToken
+      );
+      return {
+        ...pu,
+        location: new GeoPoint(s.latitude, s.longitude),
+      };
+    })
+  );
+
+  await writePowerUpBatch(gameId, snapped);
+  console.log(`[spawn] wrote ${snapped.length} power-ups for game ${gameId} (batch ${batchIndex})`);
+}
+
+/**
+ * Cloud Task handler: spawn one periodic (post-shrink) power-up batch.
+ * Scheduled by `onGameCreated` — fires once per zone shrink.
+ */
+export const spawnPowerUpBatch = onTaskDispatched(
+  {
+    region: REGION,
+    retryConfig: { maxAttempts: 3, minBackoffSeconds: 10 },
+    rateLimits: { maxConcurrentDispatches: 50 },
+    secrets: [MAPBOX_ACCESS_TOKEN],
+  },
+  async (req) => {
+    const { gameId, batchIndex, count } = req.data as {
+      gameId: string;
+      batchIndex: number;
+      count: number;
+    };
+    await spawnBatchForGame(gameId, batchIndex, count, MAPBOX_ACCESS_TOKEN.value());
+  }
+);
+
+// ---------------------------------------------------------------------------
+
 /**
  * Firestore trigger: when a new game is created, schedule Cloud Tasks for:
  *   1. waiting → inProgress at startTimestamp
@@ -246,9 +509,15 @@ export const transitionGameStatus = onTaskDispatched(
  *   3. chicken_start notification at startTimestamp
  *   4. hunter_start notification at hunterStartDate
  *   5. zone_shrink notifications at each interval after hunterStartDate
+ *   6. spawn initial power-up batch (inline, pre-game) + schedule one
+ *      `spawnPowerUpBatch` task per zone shrink.
  */
 export const onGameCreated = onDocumentCreated(
-  { document: "games/{gameId}", region: REGION },
+  {
+    document: "games/{gameId}",
+    region: REGION,
+    secrets: [MAPBOX_ACCESS_TOKEN],
+  },
   async (event) => {
     const snap = event.data;
     if (!snap) return;
@@ -284,6 +553,9 @@ export const onGameCreated = onDocumentCreated(
     const notifQueue = getFunctions().taskQueue(
       `locations/${REGION}/functions/sendGameNotification`
     );
+    const spawnQueue = getFunctions().taskQueue(
+      `locations/${REGION}/functions/spawnPowerUpBatch`
+    );
 
     try {
       // Schedule waiting → inProgress at startTimestamp
@@ -300,6 +572,18 @@ export const onGameCreated = onDocumentCreated(
         // Schedule chicken_start notification
         await notifQueue.enqueue(
           { gameId, notificationType: "chicken_start" },
+          { scheduleTime: startTimestamp }
+        );
+
+        // Schedule the initial power-up batch at game start — not earlier,
+        // so power-ups don't sit in Firestore while the game is still in
+        // `waiting` state (which could be hours or days for a scheduled game).
+        await spawnQueue.enqueue(
+          {
+            gameId,
+            batchIndex: 0,
+            count: POWER_UP_INITIAL_BATCH_SIZE,
+          },
           { scheduleTime: startTimestamp }
         );
       }
@@ -342,6 +626,22 @@ export const onGameCreated = onDocumentCreated(
           );
           shrinkTime = new Date(shrinkTime.getTime() + intervalMs);
           shrinkCount++;
+        }
+
+        // Schedule periodic power-up batches at each shrink boundary. The
+        // batchIndex starts at 1 (batch 0 was the inline initial spawn above).
+        const spawnCount = Math.min(shrinkCount, MAX_POWER_UP_SHRINK_BATCHES);
+        let spawnTime = new Date(hunterStartDate.getTime() + intervalMs);
+        for (let batchIndex = 1; batchIndex <= spawnCount; batchIndex++) {
+          await spawnQueue.enqueue(
+            {
+              gameId,
+              batchIndex,
+              count: POWER_UP_PERIODIC_BATCH_SIZE,
+            },
+            { scheduleTime: spawnTime }
+          );
+          spawnTime = new Date(spawnTime.getTime() + intervalMs);
         }
       }
     } catch (error) {
@@ -454,12 +754,6 @@ export const registerForEvent = onCall(
       const existingDoc = await transaction.get(ref);
       if (existingDoc.exists) {
         throw new HttpsError("already-exists", "This email is already registered.");
-      }
-
-      // Use transactional read to prevent race conditions on capacity
-      const allRegs = await transaction.get(db.collection("registrations"));
-      if (allRegs.docs.length >= MAX_REGISTRATIONS) {
-        throw new HttpsError("resource-exhausted", "Event is full.");
       }
 
       transaction.set(ref, {

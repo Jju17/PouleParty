@@ -17,6 +17,8 @@ import dev.rahier.pouleparty.model.PowerUpType
 import dev.rahier.pouleparty.ui.powerupselection.powerUpColor
 import dev.rahier.pouleparty.ui.powerupselection.powerUpTextColor
 import dev.rahier.pouleparty.ui.theme.CROrange
+import dev.rahier.pouleparty.ui.theme.NeonGlowIntensity
+import dev.rahier.pouleparty.ui.theme.neonGlow
 
 @Composable
 fun PowerUpNotificationOverlay(
@@ -31,13 +33,15 @@ fun PowerUpNotificationOverlay(
                 .padding(top = 120.dp),
             contentAlignment = Alignment.TopCenter
         ) {
+            val bgColor = powerUpType?.let { type -> powerUpColor(type) } ?: CROrange
             Text(
                 text = it,
                 color = powerUpType?.let { type -> powerUpTextColor(type) } ?: Color.White,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier
-                    .background((powerUpType?.let { type -> powerUpColor(type) } ?: CROrange).copy(alpha = 0.9f), RoundedCornerShape(20.dp))
+                    .neonGlow(bgColor, NeonGlowIntensity.SUBTLE, cornerRadius = 20.dp)
+                    .background(bgColor.copy(alpha = 0.9f), RoundedCornerShape(20.dp))
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             )
         }

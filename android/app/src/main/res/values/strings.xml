@@ -250,9 +250,6 @@
     <string name="not_available_in_this_mode">Not available in this mode</string>
     <string name="instant">Instant</string>
 
-    <!-- Auth -->
-    <string name="connection_failed">Connection failed. Please check your internet and try again.</string>
-
     <!-- My Games -->
     <string name="my_games">My Games</string>
     <string name="no_games_yet">No games yet</string>

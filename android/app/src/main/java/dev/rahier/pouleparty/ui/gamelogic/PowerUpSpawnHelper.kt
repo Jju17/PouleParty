@@ -72,20 +72,3 @@ fun generatePowerUps(
 
     return result
 }
-
-/**
- * Snaps power-up locations to the nearest walkable road.
- * Falls back to original locations if the API call fails.
- */
-suspend fun snapPowerUpsToRoads(powerUps: List<PowerUp>, accessToken: String): List<PowerUp> {
-    if (powerUps.isEmpty()) return powerUps
-
-    val points = powerUps.map { it.locationPoint }
-    val snapped = RoadSnapService.snapToRoads(points, accessToken)
-
-    return powerUps.zip(snapped).map { (original, snappedPoint) ->
-        original.copy(
-            location = GeoPoint(snappedPoint.latitude(), snappedPoint.longitude())
-        )
-    }
-}

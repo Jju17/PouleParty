@@ -4,6 +4,7 @@ import android.util.Log
 import com.mapbox.geojson.Point
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.GeoPoint
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.FieldValue
@@ -38,6 +39,23 @@ class FirestoreRepository @Inject constructor(
         private const val TAG = "FirestoreRepository"
         private const val MAX_RETRIES = 3
         private const val INITIAL_DELAY_MS = 500L
+
+        /**
+         * Logs a Firestore snapshot-listener error. `PERMISSION_DENIED` is a
+         * transient hiccup during network wobbles / auth token refreshes —
+         * the listener recovers automatically, so we log it at debug level to
+         * avoid noisy warnings in production. Other errors stay at warn.
+         */
+        internal fun logListenerError(operation: String, error: Throwable?) {
+            error ?: return
+            if ((error as? FirebaseFirestoreException)?.code ==
+                FirebaseFirestoreException.Code.PERMISSION_DENIED
+            ) {
+                Log.d(TAG, "$operation listener transient permission-denied (expected during auth refresh): ${error.message}")
+            } else {
+                Log.w(TAG, "$operation listener error", error)
+            }
+        }
     }
 
     private suspend fun <T> withRetry(operation: String, block: suspend () -> T): T {
@@ -252,7 +270,7 @@ class FirestoreRepository @Inject constructor(
             .limit(1)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    Log.w(TAG, "Chicken location listener error for game $gameId", error)
+                    logListenerError("Chicken location (game $gameId)", error)
                     trySend(null)
                     return@addSnapshotListener
                 }
@@ -283,7 +301,7 @@ class FirestoreRepository @Inject constructor(
         val listener = firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    Log.w(TAG, "Game config listener error for game $gameId", error)
+                    logListenerError("Game config (game $gameId)", error)
                     trySend(null)
                     return@addSnapshotListener
                 }
@@ -319,18 +337,6 @@ class FirestoreRepository @Inject constructor(
 
     // ── Power-ups ──────────────────────────────────────
 
-    suspend fun spawnPowerUps(gameId: String, powerUps: List<PowerUp>) {
-        withRetry("spawnPowerUps($gameId, ${powerUps.size} items)") {
-            val batch = firestore.batch()
-            for (powerUp in powerUps) {
-                val ref = firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
-                    .collection(AppConstants.SUBCOLLECTION_POWER_UPS).document(powerUp.id)
-                batch.set(ref, powerUp)
-            }
-            batch.commit().await()
-        }
-    }
-
     suspend fun collectPowerUp(gameId: String, powerUpId: String, userId: String) {
         withRetry("collectPowerUp($gameId, $powerUpId)") {
             val docRef = firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
@@ -349,24 +355,34 @@ class FirestoreRepository @Inject constructor(
         }
     }
 
-    suspend fun activatePowerUp(gameId: String, powerUpId: String, expiresAt: Timestamp) {
+    /**
+     * Activates a collected power-up atomically. Sets `activatedAt` / `expiresAt`
+     * on the power-up doc AND, if [activeEffectField] is non-null, sets
+     * `powerUps.activeEffects.<field>` on the game doc — both in a single
+     * Firestore transaction so the state never drifts (no half-activated
+     * power-up with no visible effect).
+     */
+    suspend fun activatePowerUp(
+        gameId: String,
+        powerUpId: String,
+        activeEffectField: String?,
+        expiresAt: Timestamp
+    ) {
         withRetry("activatePowerUp($gameId, $powerUpId)") {
-            firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
+            val puRef = firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
                 .collection(AppConstants.SUBCOLLECTION_POWER_UPS).document(powerUpId)
-                .update(
-                    mapOf(
-                        "activatedAt" to Timestamp.now(),
-                        "expiresAt" to expiresAt
-                    )
-                ).await()
-        }
-    }
-
-    suspend fun updateGameActiveEffect(gameId: String, field: String, until: Timestamp) {
-        withRetry("updateGameActiveEffect($gameId, $field)") {
-            firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
-                .update(field, until)
-                .await()
+            val gameRef = firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
+            firestore.runTransaction { txn ->
+                val now = Timestamp.now()
+                txn.update(puRef, mapOf(
+                    "activatedAt" to now,
+                    "expiresAt" to expiresAt
+                ))
+                if (activeEffectField != null) {
+                    txn.update(gameRef, activeEffectField, expiresAt)
+                }
+                null
+            }.await()
         }
     }
 
@@ -375,7 +391,7 @@ class FirestoreRepository @Inject constructor(
             .collection(AppConstants.SUBCOLLECTION_POWER_UPS)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    Log.w(TAG, "Power-ups listener error for game $gameId", error)
+                    logListenerError("Power-ups (game $gameId)", error)
                     trySend(emptyList())
                     return@addSnapshotListener
                 }
@@ -399,7 +415,7 @@ class FirestoreRepository @Inject constructor(
             .collection(AppConstants.SUBCOLLECTION_HUNTER_LOCATIONS)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    Log.w(TAG, "Hunter locations listener error for game $gameId", error)
+                    logListenerError("Hunter locations (game $gameId)", error)
                     trySend(emptyList())
                     return@addSnapshotListener
                 }
@@ -492,7 +508,7 @@ class FirestoreRepository @Inject constructor(
         val listener = firestore.collection(AppConstants.COLLECTION_CHALLENGES)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    Log.w(TAG, "Challenges listener error", error)
+                    logListenerError("Challenges", error)
                     trySend(emptyList())
                     return@addSnapshotListener
                 }
@@ -519,7 +535,7 @@ class FirestoreRepository @Inject constructor(
             .collection(AppConstants.SUBCOLLECTION_CHALLENGE_COMPLETIONS)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    Log.w(TAG, "Challenge completions listener error for game $gameId", error)
+                    logListenerError("Challenge completions (game $gameId)", error)
                     trySend(emptyList())
                     return@addSnapshotListener
                 }

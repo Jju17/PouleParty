@@ -361,61 +361,52 @@ class HunterMapViewModelBehaviorTest {
     }
 
     @Test
-    fun `hasChallenges handles empty then non-empty transition`() = kotlinx.coroutines.test.runTest(testDispatcher) {
-        val flow = kotlinx.coroutines.flow.MutableSharedFlow<List<dev.rahier.pouleparty.model.Challenge>>(replay = 0)
+    fun `hasChallenges handles empty then non-empty transition`() {
+        val flow = kotlinx.coroutines.flow.MutableStateFlow<List<dev.rahier.pouleparty.model.Challenge>>(emptyList())
         io.mockk.every { firestoreRepository.challengesStream() } returns flow
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
         assertFalse(vm.uiState.value.hasChallenges)
 
-        flow.emit(emptyList())
-        testDispatcher.scheduler.advanceUntilIdle()
-        assertFalse(vm.uiState.value.hasChallenges)
-
-        flow.emit(listOf(dev.rahier.pouleparty.model.Challenge(id = "c1", title = "T", body = "B", points = 5)))
+        flow.value = listOf(dev.rahier.pouleparty.model.Challenge(id = "c1", title = "T", body = "B", points = 5))
         testDispatcher.scheduler.advanceUntilIdle()
         assertTrue(vm.uiState.value.hasChallenges)
     }
 
     @Test
-    fun `hasChallenges handles non-empty then empty transition`() = kotlinx.coroutines.test.runTest(testDispatcher) {
-        val flow = kotlinx.coroutines.flow.MutableSharedFlow<List<dev.rahier.pouleparty.model.Challenge>>(replay = 0)
+    fun `hasChallenges handles non-empty then empty transition`() {
+        val flow = kotlinx.coroutines.flow.MutableStateFlow<List<dev.rahier.pouleparty.model.Challenge>>(
+            listOf(dev.rahier.pouleparty.model.Challenge(id = "c1", title = "T", body = "B", points = 5))
+        )
         io.mockk.every { firestoreRepository.challengesStream() } returns flow
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
-
-        flow.emit(listOf(dev.rahier.pouleparty.model.Challenge(id = "c1", title = "T", body = "B", points = 5)))
-        testDispatcher.scheduler.advanceUntilIdle()
         assertTrue(vm.uiState.value.hasChallenges)
 
-        flow.emit(emptyList())
+        flow.value = emptyList()
         testDispatcher.scheduler.advanceUntilIdle()
         assertFalse(vm.uiState.value.hasChallenges)
     }
 
     @Test
-    fun `hasChallenges reflects latest emission across multiple updates`() = kotlinx.coroutines.test.runTest(testDispatcher) {
-        val flow = kotlinx.coroutines.flow.MutableSharedFlow<List<dev.rahier.pouleparty.model.Challenge>>(replay = 0)
-        io.mockk.every { firestoreRepository.challengesStream() } returns flow
-        val vm = createViewModel()
-        testDispatcher.scheduler.advanceUntilIdle()
-
+    fun `hasChallenges reflects latest emission across multiple updates`() {
         val c1 = dev.rahier.pouleparty.model.Challenge(id = "c1", title = "T1", body = "B", points = 5)
         val c2 = dev.rahier.pouleparty.model.Challenge(id = "c2", title = "T2", body = "B", points = 10)
-
-        flow.emit(listOf(c1))
+        val flow = kotlinx.coroutines.flow.MutableStateFlow(listOf(c1))
+        io.mockk.every { firestoreRepository.challengesStream() } returns flow
+        val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
         assertTrue(vm.uiState.value.hasChallenges)
 
-        flow.emit(listOf(c1, c2))
+        flow.value = listOf(c1, c2)
         testDispatcher.scheduler.advanceUntilIdle()
         assertTrue(vm.uiState.value.hasChallenges)
 
-        flow.emit(emptyList())
+        flow.value = emptyList()
         testDispatcher.scheduler.advanceUntilIdle()
         assertFalse(vm.uiState.value.hasChallenges)
 
-        flow.emit(listOf(c2))
+        flow.value = listOf(c2)
         testDispatcher.scheduler.advanceUntilIdle()
         assertTrue(vm.uiState.value.hasChallenges)
     }

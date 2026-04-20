@@ -23,6 +23,7 @@ struct AppFeature {
 
     enum Action {
         case appStarted
+        case newUserSignedIn
         case chickenMap(ChickenMapFeature.Action)
         case hunterMap(HunterMapFeature.Action)
         case onboarding(OnboardingFeature.Action)
@@ -38,10 +39,13 @@ struct AppFeature {
         Reduce { state, action in
             switch action {
             case .appStarted:
-                return .run { _ in
+                return .run { send in
                     await liveActivityClient.cleanupOrphaned()
                     do {
-                        _ = try await userClient.signInAnonymously()
+                        let result = try await userClient.signInAnonymously()
+                        if result.isNewUser {
+                            await send(.newUserSignedIn)
+                        }
                         if let token = userClient.fcmToken() {
                             await FCMTokenManager.shared.saveToken(token)
                         }
@@ -50,6 +54,10 @@ struct AppFeature {
                             .error("Anonymous sign-in failed: \(error.localizedDescription)")
                     }
                 }
+            case .newUserSignedIn:
+                UserDefaults.standard.set(false, forKey: AppConstants.prefOnboardingCompleted)
+                state = .onboarding(OnboardingFeature.State())
+                return .none
             case .onboarding(.onboardingCompleted):
                 state = .home(HomeFeature.State())
                 return .none

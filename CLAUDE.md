@@ -22,7 +22,9 @@ There's also a **web** landing page (React/Vite) and **Cloud Functions** backend
 The zone is a circle that shrinks periodically. The shrink interval and amount are configurable. In "Stay in the Zone" mode, the center drifts deterministically using a seed stored in the game document — every client computes the same drift. There's also a "final zone" point: as the radius shrinks, the center interpolates linearly from start to final position.
 
 ### Power-Ups
-6 types, split between chicken and hunter. They spawn deterministically on the map (using the game's `zone.driftSeed`), get snapped to nearest roads via Mapbox API, and are collected by proximity (30m). Some have timed effects tracked as timestamps in `powerUps.activeEffects` on the game document. In `stayInTheZone` mode, position-dependent chicken power-ups (invisibility, decoy, jammer) are automatically disabled.
+6 types, split between chicken and hunter. **Server-authoritative spawning** (since April 2026): a Cloud Function (`spawnPowerUpBatch`) generates deterministically from the game's `zone.driftSeed`, snaps to nearest roads via Mapbox API, and writes docs directly — clients only consume via `powerUpsStream`. Initial batch (5) fires at `timing.start`; periodic batches (2) fire at each zone shrink. Collected by proximity (30m). Some have timed effects tracked as timestamps in `powerUps.activeEffects` on the game document. In `stayInTheZone` mode, position-dependent chicken power-ups (invisibility, decoy, jammer) are automatically disabled server-side.
+
+**Activation is also atomic** — clients call `ApiClient.activatePowerUp` / `FirestoreRepository.activatePowerUp` with an optional `activeEffectField`. The implementation uses a Firestore transaction to update both the power-up doc (`activatedAt`, `expiresAt`) and the game doc (`powerUps.activeEffects.<field>`) in one commit, so the state can't half-apply.
 
 ### Game Lifecycle
 1. Chicken creates game → Firestore document created → Cloud Functions schedule status transitions and notifications via Cloud Tasks
@@ -106,12 +108,12 @@ The `gameCode` is derived from the document ID (first 6 chars, uppercased).
 **This is critical**: iOS and Android must produce identical results for all game logic. Several pure functions are duplicated across platforms and must stay in sync:
 
 - **Zone computation**: `findLastUpdate()`, `deterministicDriftCenter()`, `interpolateZoneCenter()`, `processRadiusUpdate()`
-- **Power-up spawning**: `generatePowerUps()` — deterministic positions from seed
-- **Seeded random**: Uses splitmix64-style PRNG with unsigned shifts
+- **Seeded random**: Uses splitmix64-style PRNG with unsigned shifts (used at runtime for jammer noise)
 - **Game timer logic**: Countdown, zone check, winner detection, power-up activation detection
 - **Normal mode settings**: `calculateNormalModeSettings()` — auto-computes shrink params from duration
+- **Power-up spawning reference**: `generatePowerUps()` exists on iOS + Android as a reference mirror of the authoritative TS implementation in `functions/src/powerUpSpawn.ts`. Not called at runtime but kept so parity tests catch accidental drift. The TS port — `generatePowerUpsServer`, `interpolateZoneCenterServer`, `deterministicDriftCenterServer`, `filterEnabledTypesServer` — has its own unit tests under `functions/test/`.
 
-When modifying any of these, **always update both platforms** and verify with unit tests that outputs match for the same inputs.
+When modifying any of these, **always update both platforms** (and the TS version when applicable) and verify with unit tests that outputs match for the same inputs.
 
 ## Authentication
 
@@ -127,7 +129,7 @@ Anonymous Firebase Auth. Users don't create accounts — a UID is generated on f
 
 ## Security rules
 
-See `firestore.rules`. Key principle: the creator has full control over their game, hunters can only update `hunterIds`, `winners`, and `powerUps` (active effects) fields. Subcollection writes are restricted by role. Power-up collection uses transactions to prevent double-collection. Registration creation enforces the `registration.closesMinutesBefore` deadline if set.
+See `firestore.rules`. Key principle: the creator has full control over their game, hunters can only update `hunterIds`, `winners`, and `powerUps` (active effects) fields. Subcollection writes are restricted by role. **Power-up creation is denied to all clients** (`allow create: if false`) — only the Cloud Function (which bypasses rules via admin SDK) can spawn them. Power-up collection uses transactions to prevent double-collection. Registration creation enforces the `registration.closesMinutesBefore` deadline if set.
 
 ## Conventions
 
@@ -159,7 +161,7 @@ When asked to prepare a release or create a build:
 2. **Update CHANGELOG.md** — add a new section at the top with the version number, date, and all changes grouped by Added/Changed/Fixed. Include iOS and Android version info. Review git log since last release to capture everything.
 3. **Pre-flight iOS icons** — App Store rejects icons with an alpha channel (error 90717). Check the 1024×1024 icons in `ios/PouleParty/Resources/Assets.xcassets/AppIcon.appiconset/` with `sips -g hasAlpha <file>.png`. If any return `hasAlpha: yes`, flatten them first (e.g. via Pillow: open as RGBA, paste onto an RGB background — black for Dark variants, white for Default — and save back).
 4. **Build release artifacts**:
-   - **iOS**: `xcodebuild archive -scheme PouleParty -configuration Release -destination 'generic/platform=iOS'` — **do NOT pass `-archivePath`** unless you manually move the archive into `~/Library/Developer/Xcode/Archives/YYYY-MM-DD/` afterwards; Xcode Organizer only scans that default path, so a custom path makes the archive invisible in the UI. Running from the `ios/` directory ensures xcodebuild finds the project.
+   - **iOS**: `xcodebuild archive -scheme PouleParty -configuration Release -destination 'generic/platform=iOS'` — **do NOT pass `-archivePath`** unless you manually move the archive into `~/Library/Developer/Xcode/Archives/YYYY-MM-DD/` afterwards; Xcode Organizer only scans that default path, so a custom path makes the archive invisible in the UI. Running from the `ios/` directory ensures xcodebuild finds the project. After archiving, run `open "$(ls -dt ~/Library/Developer/Xcode/Archives/*/PouleParty*.xcarchive | head -1)"` so Xcode pops directly on the fresh archive inside Organizer — saves the user from hunting for it manually.
    - **Android**: `cd android && JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" ./gradlew bundleProductionRelease` — AAB lands at `android/app/build/outputs/bundle/productionRelease/app-production-release.aab`.
 5. **Write store descriptions** — prepare What's New text in EN/FR/NL for both App Store and Google Play. Put them in `RELEASE_NOTES.md`.
 6. **Android release notes** — provide Google Play release notes in the `<en-US>`, `<fr-FR>`, `<nl-NL>` tag format ready to paste into the Play Console.

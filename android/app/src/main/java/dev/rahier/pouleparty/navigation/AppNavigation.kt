@@ -3,25 +3,13 @@ package dev.rahier.pouleparty.navigation
 import android.content.Context
 import android.net.Uri
 import android.util.Log
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Button
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
-import dev.rahier.pouleparty.R
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -69,24 +57,26 @@ fun AppNavigation() {
     val navController = rememberNavController()
     val context = LocalContext.current
     val prefs = context.getSharedPreferences(AppConstants.PREFS_NAME, Context.MODE_PRIVATE)
-    val hasCompletedOnboarding = prefs.getBoolean(AppConstants.PREF_ONBOARDING_COMPLETED, false)
 
-    var isAuthReady by remember { mutableStateOf(FirebaseAuth.getInstance().currentUser != null) }
-    var authError by remember { mutableStateOf(false) }
-    var authRetryTrigger by remember { mutableIntStateOf(0) }
+    var authAttemptComplete by remember { mutableStateOf(FirebaseAuth.getInstance().currentUser != null) }
 
-    LaunchedEffect(authRetryTrigger) {
-        if (!isAuthReady) {
-            authError = false
+    LaunchedEffect(Unit) {
+        if (FirebaseAuth.getInstance().currentUser == null) {
             try {
-                FirebaseAuth.getInstance().signInAnonymously().await()
-                isAuthReady = true
+                val result = FirebaseAuth.getInstance().signInAnonymously().await()
+                if (result.additionalUserInfo?.isNewUser == true) {
+                    // Fresh Firebase user was created (first install, or cached uid became invalid
+                    // after server-side deletion). Force the user back through onboarding so they
+                    // re-enter a nickname tied to the new uid.
+                    prefs.edit().putBoolean(AppConstants.PREF_ONBOARDING_COMPLETED, false).apply()
+                }
             } catch (e: Exception) {
                 Log.e("AppNavigation", "Anonymous sign-in failed", e)
-                authError = true
+                authAttemptComplete = true
                 return@LaunchedEffect
             }
         }
+        authAttemptComplete = true
         // Save FCM token + run migration after auth is ready
         val userId = FirebaseAuth.getInstance().currentUser?.uid
         if (userId != null) {
@@ -118,26 +108,9 @@ fun AppNavigation() {
         }
     }
 
-    if (authError) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Text(stringResource(R.string.connection_failed))
-                Button(onClick = { authRetryTrigger++ }) {
-                    Text(stringResource(R.string.retry))
-                }
-            }
-        }
-        return
-    }
+    if (!authAttemptComplete) return
 
-    if (!isAuthReady) return
-
+    val hasCompletedOnboarding = prefs.getBoolean(AppConstants.PREF_ONBOARDING_COMPLETED, false)
     val startDestination = if (hasCompletedOnboarding) Routes.HOME else Routes.ONBOARDING
 
     NavHost(navController = navController, startDestination = startDestination) {

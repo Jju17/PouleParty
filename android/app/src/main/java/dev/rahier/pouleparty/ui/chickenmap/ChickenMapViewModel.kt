@@ -22,9 +22,6 @@ import dev.rahier.pouleparty.ui.gamelogic.checkZoneStatus
 import dev.rahier.pouleparty.ui.gamelogic.detectNewWinners
 import dev.rahier.pouleparty.ui.gamelogic.evaluateCountdown
 import dev.rahier.pouleparty.ui.map.BaseMapViewModel
-import dev.rahier.pouleparty.ui.gamelogic.RoadSnapService
-import dev.rahier.pouleparty.ui.gamelogic.generatePowerUps
-import dev.rahier.pouleparty.ui.gamelogic.snapPowerUpsToRoads
 import dev.rahier.pouleparty.ui.gamelogic.interpolateZoneCenter
 import dev.rahier.pouleparty.ui.gamelogic.processRadiusUpdate
 import dev.rahier.pouleparty.ui.gamelogic.shouldCheckZone
@@ -42,7 +39,6 @@ import kotlinx.coroutines.launch
 import android.util.Log
 import java.util.Date
 import javax.inject.Inject
-import javax.inject.Named
 
 data class HunterAnnotation(
     val id: String,
@@ -76,7 +72,6 @@ data class ChickenMapUiState(
     override val showPowerUpInventory: Boolean = false,
     override val powerUpNotification: String? = null,
     override val lastActivatedPowerUpType: PowerUpType? = null,
-    val lastSpawnBatchIndex: Int = 0,
     val activatingPowerUpId: String? = null,
     val shouldNavigateToVictory: Boolean = false
 ) : dev.rahier.pouleparty.ui.map.MapUiState
@@ -87,7 +82,6 @@ class ChickenMapViewModel @Inject constructor(
     locationRepository: LocationRepository,
     analyticsRepository: dev.rahier.pouleparty.data.AnalyticsRepository,
     auth: FirebaseAuth,
-    @param:Named("mapboxAccessToken") private val mapboxAccessToken: String,
     savedStateHandle: SavedStateHandle
 ) : BaseMapViewModel(firestoreRepository, locationRepository, analyticsRepository, auth) {
 
@@ -98,7 +92,6 @@ class ChickenMapViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(ChickenMapUiState())
     val uiState: StateFlow<ChickenMapUiState> = _uiState.asStateFlow()
-    private var hasSpawnedInitialPowerUps = false
 
     private val _effects = Channel<ChickenMapEffect>(Channel.BUFFERED)
     val effects: Flow<ChickenMapEffect> = _effects.receiveAsFlow()
@@ -169,7 +162,6 @@ class ChickenMapViewModel @Inject constructor(
             streamJobs += viewModelScope.launch { trackHunters(game) }
             streamJobs += viewModelScope.launch { streamGameConfig() }
             streamJobs += viewModelScope.launch { streamPowerUps() }
-            streamJobs += viewModelScope.launch { spawnInitialPowerUps(game) }
             streamJobs += viewModelScope.launch { sendHeartbeat(game) }
         }
     }
@@ -272,9 +264,9 @@ class ChickenMapViewModel @Inject constructor(
                                 circleCenter = radiusResult.newCircleCenter ?: it.circleCenter
                             )
                         }
-                        // Spawn new power-ups on zone shrink
-                        val nextBatch = _uiState.value.lastSpawnBatchIndex + 1
-                        spawnPeriodicPowerUps(nextBatch)
+                        // Periodic power-ups are spawned by the `spawnPowerUpBatch`
+                        // Cloud Task scheduled at game creation — no client-side
+                        // spawn here.
                     }
                 }
 
@@ -491,19 +483,6 @@ class ChickenMapViewModel @Inject constructor(
 
     // ── Power-ups ──────────────────────────────────────
 
-    private fun filterEnabledTypes(game: Game): List<String> {
-        val types = game.powerUps.enabledTypes.toMutableList()
-        if (game.gameModEnum == GameMod.STAY_IN_THE_ZONE) {
-            // These power-ups have no effect in stayInTheZone (no position sharing)
-            types.removeAll {
-                it == PowerUpType.INVISIBILITY.firestoreValue
-                    || it == PowerUpType.DECOY.firestoreValue
-                    || it == PowerUpType.JAMMER.firestoreValue
-            }
-        }
-        return types
-    }
-
     /** Periodically write a heartbeat so hunters can detect chicken disconnect. */
     private suspend fun sendHeartbeat(game: Game) {
         val delayMs = game.startDate.time - System.currentTimeMillis()
@@ -511,50 +490,6 @@ class ChickenMapViewModel @Inject constructor(
         while (true) {
             firestoreRepository.updateHeartbeat(gameId)
             delay(30_000)
-        }
-    }
-
-    private suspend fun spawnInitialPowerUps(game: Game) {
-        if (hasSpawnedInitialPowerUps) return
-        hasSpawnedInitialPowerUps = true
-        if (!game.powerUps.enabled) return
-        val center = game.initialLocation
-        var powerUps = generatePowerUps(
-            center = center,
-            radius = game.zone.radius,
-            count = AppConstants.POWER_UP_INITIAL_BATCH_SIZE,
-            driftSeed = game.zone.driftSeed,
-            batchIndex = 0,
-            enabledTypes = filterEnabledTypes(game)
-        )
-        powerUps = snapPowerUpsToRoads(powerUps, mapboxAccessToken)
-        try {
-            firestoreRepository.spawnPowerUps(gameId, powerUps)
-        } catch (e: Exception) {
-            Log.e("ChickenMapVM", "Failed to spawn initial power-ups", e)
-        }
-    }
-
-    private fun spawnPeriodicPowerUps(batchIndex: Int) {
-        val state = _uiState.value
-        if (!state.game.powerUps.enabled) return
-        val center = state.circleCenter ?: state.game.initialLocation
-        var powerUps = generatePowerUps(
-            center = center,
-            radius = state.radius.toDouble(),
-            count = AppConstants.POWER_UP_PERIODIC_BATCH_SIZE,
-            driftSeed = state.game.zone.driftSeed,
-            batchIndex = batchIndex,
-            enabledTypes = filterEnabledTypes(state.game)
-        )
-        streamJobs += viewModelScope.launch {
-            try {
-                powerUps = snapPowerUpsToRoads(powerUps, mapboxAccessToken)
-                firestoreRepository.spawnPowerUps(gameId, powerUps)
-                _uiState.update { it.copy(lastSpawnBatchIndex = batchIndex) }
-            } catch (e: Exception) {
-                Log.e("ChickenMapVM", "Failed to spawn periodic power-ups", e)
-            }
         }
     }
 
@@ -583,32 +518,15 @@ class ChickenMapViewModel @Inject constructor(
             try {
                 val duration = powerUp.typeEnum.durationSeconds ?: 0
                 val expiresAt = Timestamp(Date(System.currentTimeMillis() + duration * 1000))
-                firestoreRepository.activatePowerUp(gameId, powerUp.id, expiresAt)
-                analyticsRepository.powerUpActivated(type = powerUp.type, role = "chicken")
-
-                when (powerUp.typeEnum) {
-                    PowerUpType.INVISIBILITY -> {
-                        firestoreRepository.updateGameActiveEffect(
-                            gameId, "powerUps.activeEffects.invisibility", expiresAt
-                        )
-                    }
-                    PowerUpType.ZONE_FREEZE -> {
-                        firestoreRepository.updateGameActiveEffect(
-                            gameId, "powerUps.activeEffects.zoneFreeze", expiresAt
-                        )
-                    }
-                    PowerUpType.DECOY -> {
-                        firestoreRepository.updateGameActiveEffect(
-                            gameId, "powerUps.activeEffects.decoy", expiresAt
-                        )
-                    }
-                    PowerUpType.JAMMER -> {
-                        firestoreRepository.updateGameActiveEffect(
-                            gameId, "powerUps.activeEffects.jammer", expiresAt
-                        )
-                    }
-                    else -> {}
+                val activeEffectField = when (powerUp.typeEnum) {
+                    PowerUpType.INVISIBILITY -> "powerUps.activeEffects.invisibility"
+                    PowerUpType.ZONE_FREEZE -> "powerUps.activeEffects.zoneFreeze"
+                    PowerUpType.DECOY -> "powerUps.activeEffects.decoy"
+                    PowerUpType.JAMMER -> "powerUps.activeEffects.jammer"
+                    else -> null
                 }
+                firestoreRepository.activatePowerUp(gameId, powerUp.id, activeEffectField, expiresAt)
+                analyticsRepository.powerUpActivated(type = powerUp.type, role = "chicken")
                 _uiState.update { it.copy(showPowerUpInventory = false) }
                 showNotification("Activated: ${powerUp.typeEnum.title}!", powerUp.typeEnum)
             } catch (e: Exception) {

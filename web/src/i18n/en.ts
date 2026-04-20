@@ -10,8 +10,10 @@ export default {
       "A real-world GPS hide-and-seek game. One player is the Chicken, the rest are Hunters. The zone shrinks, the hunt intensifies!",
     cta: "Next event: April 23!",
     appComingSoon: "App coming soon...",
+    downloadApp: "Download the app!",
     appStore: "App Store",
     googlePlay: "Google Play",
+    androidDisclaimer: "⚠️ Android: the app is in closed testing. Your email must be registered with the developer before you can download it. If it doesn't work, let us know on the WhatsApp group!",
   },
   privacy: {
     title: "Privacy Policy",
@@ -19,7 +21,7 @@ export default {
     overview: "Data Controller",
     overviewText:
       'Poule Party ("we", "our", "the app") is a location-based mobile game. The data controller responsible for your personal data is:',
-    controllerDetails: "Julien Rahier — julien@rahier.dev — Belgium",
+    controllerDetails: "Julien Rahier, julien@rahier.dev, Belgium",
     dataCollected: "Data We Collect",
     locationData: "Location data:",
     locationDataText:
@@ -36,9 +38,9 @@ export default {
     legalBasis: "Legal Basis for Processing",
     legalBasisIntro: "Under the GDPR (Art. 6), we process your data based on the following legal grounds:",
     legalBasisConsent: "Consent (Art. 6(1)(a)):",
-    legalBasisConsentText: "Location data — you explicitly grant location permission before any data is collected. You can withdraw consent at any time by revoking location permissions in your device settings.",
+    legalBasisConsentText: "Location data: you explicitly grant location permission before any data is collected. You can withdraw consent at any time by revoking location permissions in your device settings.",
     legalBasisLegitimate: "Legitimate interest (Art. 6(1)(f)):",
-    legalBasisLegitimateText: "Anonymous authentication and crash reporting — necessary for the app to function and to maintain service quality. Our legitimate interest does not override your rights, as the data is fully anonymous.",
+    legalBasisLegitimateText: "Anonymous authentication and crash reporting: necessary for the app to function and to maintain service quality. Our legitimate interest does not override your rights, as the data is fully anonymous.",
     howWeUse: "How We Use Your Data",
     howWeUse1:
       "Location data is used solely for real-time gameplay mechanics (showing positions on the map, zone detection).",
@@ -145,7 +147,7 @@ export default {
     contactText: "If you have questions about these terms, please contact us at",
   },
   register: {
-    date: "April 23, 2026 — 7:00 PM",
+    date: "April 23, 2026 at 7:00 PM",
     intro:
       "Get ready for a totally unique experience: a life-size chicken hunt, right in the heart of the city.",
     description:
@@ -188,6 +190,7 @@ export default {
     lastNameLabel: "Last name",
     lastNamePlaceholder: "Doe",
     emailLabel: "Email",
+    emailHint: "📱 On Android, use your Play Store email: that's the one that unlocks the app (closed testing)",
     emailPlaceholder: "john@example.com",
     gsmLabel: "Phone number",
     gsmHint: "To add you to the event's WhatsApp group",

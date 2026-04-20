@@ -46,13 +46,15 @@ fun GameStartCountdownOverlay(
                 Text(
                     text = "$countdownNumber",
                     style = gameboyStyle(80),
-                    color = CROrange
+                    color = CROrange,
+                    modifier = Modifier.neonGlow(CROrange, NeonGlowIntensity.INTENSE)
                 )
             } else if (countdownText != null) {
                 Text(
                     text = countdownText,
                     style = bangerStyle(48),
-                    color = CROrange
+                    color = CROrange,
+                    modifier = Modifier.neonGlow(CROrange, NeonGlowIntensity.MEDIUM)
                 )
             }
         }

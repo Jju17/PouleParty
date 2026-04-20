@@ -6,6 +6,35 @@ Format: [Keep a Changelog](https://keepachangelog.com/). Versions follow [Semant
 
 ---
 
+## [1.6.0] — 2026-04-20
+
+**iOS**: 1.6.0 (8) · **Android**: 1.6.0 (15)
+
+### Added
+- **Power-up collection disc** — power-ups on the map now display a pulsing semi-transparent disc matching the power-up's neon color. The disc grows as you get closer and pulses to invite you to collect it — way more discoverable than tiny flat markers.
+- **Auto re-onboarding after Firebase user deletion** — if your anonymous Firebase UID is invalidated (e.g. server-side user purge), the next app launch detects the freshly created UID and sends you back through the onboarding flow so you can re-enter a nickname tied to the new identity.
+
+### Changed
+- **Server-authoritative power-up spawning (big refactor)** — clients no longer generate, snap, or write power-ups. A new `spawnPowerUpBatch` Cloud Function handles the full pipeline: deterministic generation from the zone's drift seed, road-snapping via the Mapbox Directions API, and a single atomic Firestore batch write. Tasks are scheduled at game creation — initial batch of 5 at `timing.start`, 2 extra at each zone shrink. Defensive skips for missing/ended games, disabled power-ups, or collapsed zones. `zoneFreeze` is taken into account via an `effectiveBatchIndex` heuristic. Retries are idempotent (`{ merge: true }` preserves client-written `collectedBy` / `activatedAt`). Result: no more missed spawns when the chicken's device is backgrounded, offline, or crashes — and a malicious client can no longer skip or tamper with spawns.
+- **Atomic power-up activation** — activating a power-up now runs in a single Firestore transaction that updates both the power-up document (`activatedAt`, `expiresAt`) and the game document (`powerUps.activeEffects.<field>`) at once. No more partial state if one write fails.
+- **Firestore security rules** — `/games/{gameId}/powerUps/{id}` now denies all client writes (`allow create: if false`). Only the Cloud Function's admin SDK can spawn power-ups.
+- **Firebase SDKs upgraded** — `firebase-functions` 5.x → 7.2.5, `firebase-admin` 12.x → 13.8.0. Fixed 3 high/critical transitive CVEs (protobufjs, path-to-regexp, fast-xml-parser).
+- **Shared `Modifier.neonGlow` on Android** — replaces scattered custom shadow code with a single helper supporting SUBTLE/MEDIUM/INTENSE intensities (mirrors the iOS helper exactly). Applied everywhere: power-up badges, FAB, inventory button, zone warnings, FOUND button, game start countdown.
+- **Shared `PowerUpsMapOverlay` composable on Android** — factored the power-up marker + disc rendering shared between `ChickenMap` and `HunterMap` into a single component.
+- **Silenced `permission-denied` listener errors** — Firestore snapshot listeners no longer log transient auth-token-refresh permission errors as errors; downgraded to debug.
+- **Reference-only `generatePowerUps` on clients** — the pure spawn algorithms on iOS (`PowerUpSpawnLogic.swift`) and Android (`PowerUpSpawnHelper.kt`) are no longer called at runtime. They remain as reference implementations kept in sync with `functions/src/powerUpSpawn.ts` so cross-platform parity tests continue to validate the algorithm.
+
+### Fixed
+- **Power-ups disappearing from the map** — a regression where `ForEvery` mixed `PolygonAnnotation` and `MapViewAnnotation` silently dropped the view-annotation branch. Now split into two `ForEvery` loops so both render correctly.
+- **Icon file size** — 1024×1024 iOS icons re-exported smaller (287 KB / 261 KB, previously ~1.6 MB each) while keeping zero alpha channel.
+- **3 flaky Android tests** in `HunterMapViewModelBehaviorTest` — replaced `MutableSharedFlow` + `runTest` + `emit` pattern (prone to coroutine timing races) with `MutableStateFlow` + direct `.value` assignment. Verified stable across 3 consecutive reruns.
+
+### Removed
+- **Dead client code** — removed `RoadSnapService.swift` (iOS) and `RoadSnapService.kt` (Android). Road snapping now happens exclusively in the Cloud Function. Hilt `mapboxAccessToken` binding also removed — Mapbox SDK reads the token directly from `res/values/strings.xml` by convention.
+- **Error/retry auth screen on Android** — replaced the blocking "Connection failed" screen with the new re-onboarding flow for genuine new users. String resource `connection_failed` removed from EN/FR/NL.
+
+---
+
 ## [1.5.0] — 2026-04-17
 
 **iOS**: 1.5.0 (7) · **Android**: 1.5.0 (14)

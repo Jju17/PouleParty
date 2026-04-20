@@ -289,7 +289,9 @@ fun ChickenMapScreen(
                     onClick = { viewModel.onIntent(ChickenMapIntent.PowerUpInventoryTapped) },
                     colors = ButtonDefaults.buttonColors(containerColor = CROrange),
                     shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.size(width = 44.dp, height = 40.dp),
+                    modifier = Modifier
+                        .size(width = 44.dp, height = 40.dp)
+                        .neonGlow(CROrange, NeonGlowIntensity.SUBTLE, cornerRadius = 8.dp),
                     contentPadding = PaddingValues(0.dp)
                 ) {
                     Text("\u26A1${state.collectedPowerUps.size}", fontSize = 11.sp, color = Color.White)
@@ -302,7 +304,9 @@ fun ChickenMapScreen(
                     onClick = { viewModel.onIntent(ChickenMapIntent.FoundButtonTapped) },
                     colors = ButtonDefaults.buttonColors(containerColor = HunterRed),
                     shape = RoundedCornerShape(50.dp),
-                    modifier = Modifier.size(width = 50.dp, height = 40.dp),
+                    modifier = Modifier
+                        .size(width = 50.dp, height = 40.dp)
+                        .neonGlow(HunterRed, NeonGlowIntensity.SUBTLE, cornerRadius = 20.dp),
                     contentPadding = PaddingValues(0.dp)
                 ) {
                     Text(stringResource(R.string.found), fontSize = 11.sp, color = Color.White)
@@ -339,6 +343,7 @@ fun ChickenMapScreen(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .padding(top = 140.dp)
+                    .neonGlow(ZoneDanger, NeonGlowIntensity.SUBTLE, cornerRadius = 12.dp)
                     .background(ZoneDanger.copy(alpha = 0.9f), RoundedCornerShape(12.dp))
                     .padding(horizontal = 24.dp, vertical = 12.dp)
             )

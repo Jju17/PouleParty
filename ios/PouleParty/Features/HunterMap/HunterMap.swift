@@ -256,10 +256,8 @@ struct HunterMapFeature {
                 }
 
                 return .run { [analyticsClient] send in
-                    try? await apiClient.activatePowerUp(gameId, powerUp.id, expiresAt)
-                    if powerUp.type == .radarPing {
-                        try? await apiClient.updateGameActiveEffect(gameId, powerUp.type.firestoreEffectField, expiresAt)
-                    }
+                    let effectField: String? = powerUp.type == .radarPing ? powerUp.type.firestoreEffectField : nil
+                    try? await apiClient.activatePowerUp(gameId, powerUp.id, effectField, expiresAt)
                     analyticsClient.powerUpActivated(type: powerUp.type.rawValue, role: "hunter")
                     try await clock.sleep(for: .seconds(2))
                     await send(.powerUps(.notificationCleared))

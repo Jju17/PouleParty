@@ -34,7 +34,6 @@ struct ChickenMapFeature {
         var isOutsideZone: Bool = false
         var lastLiveActivityState: PoulePartyAttributes.ContentState?
         var powerUps: MapPowerUpsFeature.State = .init()
-        var lastSpawnBatchIndex: Int = 0
 
         // MARK: - MapFeatureState passthroughs (child → parent surface)
         var availablePowerUps: [PowerUp] { powerUps.available }
@@ -206,13 +205,14 @@ struct ChickenMapFeature {
                 let duration = powerUp.type.durationSeconds ?? 0
                 let expiresAt = Timestamp(date: .now.addingTimeInterval(duration))
                 return .run { [analyticsClient] send in
-                    try? await apiClient.activatePowerUp(gameId, powerUp.id, expiresAt)
+                    let effectField: String?
                     switch powerUp.type {
                     case .invisibility, .zoneFreeze, .decoy, .jammer:
-                        try? await apiClient.updateGameActiveEffect(gameId, powerUp.type.firestoreEffectField, expiresAt)
+                        effectField = powerUp.type.firestoreEffectField
                     default:
-                        break
+                        effectField = nil
                     }
+                    try? await apiClient.activatePowerUp(gameId, powerUp.id, effectField, expiresAt)
                     analyticsClient.powerUpActivated(type: powerUp.type.rawValue, role: "chicken")
                     try await clock.sleep(for: .seconds(2))
                     await send(.powerUps(.notificationCleared))
@@ -341,23 +341,7 @@ struct ChickenMapFeature {
                 let gameId = state.game.id
                 let gameMod = state.game.gameMode
                 let startDate = state.game.startDate
-                let initialCenter = state.game.zone.center.toCLCoordinates
-                let initialRadius = state.game.zone.radius
-                let driftSeed = state.game.zone.driftSeed
                 let powerUpsEnabled = state.game.powerUps.enabled
-                // Filter out position-dependent power-ups in stayInTheZone (no position sharing in that mode)
-                let enabledPowerUpTypes: [String] = {
-                    var types = state.game.powerUps.enabledTypes
-                    if gameMod == .stayInTheZone {
-                        let uselessInZone: Set<String> = [
-                            PowerUp.PowerUpType.invisibility.rawValue,
-                            PowerUp.PowerUpType.decoy.rawValue,
-                            PowerUp.PowerUpType.jammer.rawValue
-                        ]
-                        types.removeAll { uselessInZone.contains($0) }
-                    }
-                    return types
-                }()
 
                 // Shared references so the tracking loop can check active effects
                 let invisibilityUntil = LockIsolated<Date?>(nil)
@@ -384,23 +368,6 @@ struct ChickenMapFeature {
                         guard powerUpsEnabled else { return }
                         for await powerUps in apiClient.powerUpsStream(gameId) {
                             await send(.internal(.powerUpsUpdated(powerUps)))
-                        }
-                    },
-                    .run { _ in
-                        guard powerUpsEnabled else { return }
-                        let generated = generatePowerUps(
-                            center: initialCenter,
-                            radius: initialRadius,
-                            count: AppConstants.powerUpInitialBatchSize,
-                            driftSeed: driftSeed,
-                            batchIndex: 0,
-                            enabledTypes: enabledPowerUpTypes
-                        )
-                        let powerUps = await snapPowerUpsToRoads(generated)
-                        do {
-                            try await apiClient.spawnPowerUps(gameId, powerUps)
-                        } catch {
-                            logger.error("Failed to spawn power-ups: \(error)")
                         }
                     }
                 ]
@@ -681,77 +648,9 @@ struct ChickenMapFeature {
                     state.nextRadiusUpdate = result.newNextUpdate
                     state.mapCircle = result.newCircle
 
-                    // Spawn periodic power-ups on zone shrink
-                    var spawnEffect: Effect<Action>? = nil
-                    if !result.isGameOver, state.game.powerUps.enabled {
-                        let nextBatch = state.lastSpawnBatchIndex + 1
-                        state.lastSpawnBatchIndex = nextBatch
-                        let center = state.mapCircle?.center ?? state.game.zone.center.toCLCoordinates
-                        let currentRadius = Double(state.radius)
-                        let seed = state.game.zone.driftSeed
-                        let gId = state.game.id
-                        let spawnTypes: [String]
-                        if state.game.gameMode == .stayInTheZone {
-                            let uselessInZone: Set<String> = [
-                                PowerUp.PowerUpType.invisibility.rawValue,
-                                PowerUp.PowerUpType.decoy.rawValue,
-                                PowerUp.PowerUpType.jammer.rawValue
-                            ]
-                            spawnTypes = state.game.powerUps.enabledTypes.filter { !uselessInZone.contains($0) }
-                        } else {
-                            spawnTypes = state.game.powerUps.enabledTypes
-                        }
-                        spawnEffect = .run { _ in
-                            let generated = generatePowerUps(
-                                center: center,
-                                radius: currentRadius,
-                                count: AppConstants.powerUpPeriodicBatchSize,
-                                driftSeed: seed,
-                                batchIndex: nextBatch,
-                                enabledTypes: spawnTypes
-                            )
-                            let newPowerUps = await snapPowerUpsToRoads(generated)
-                            try? await apiClient.spawnPowerUps(gId, newPowerUps)
-                        }
-                    }
-                    if let spawnEffect {
-                        // Don't return early — fall through to zone check and LA update below
-                        // We'll merge the spawn effect with any other effects at the end
-                        var effects: [Effect<Action>] = [spawnEffect]
-
-                        // Power-up proximity check — collect all nearby power-ups
-                        let nearbyPowerUps = findNearbyPowerUps(
-                            userLocation: state.userLocation,
-                            availablePowerUps: state.availablePowerUps
-                        )
-                        if !nearbyPowerUps.isEmpty {
-                            effects.append(contentsOf: nearbyPowerUps.map { .send(.internal(.powerUpCollected($0))) })
-                        }
-
-                        // Zone check (visual warning only — no elimination)
-                        if shouldCheckZone(role: .chicken, gameMod: state.game.gameMode),
-                           let userLoc = state.userLocation,
-                           let circle = state.mapCircle {
-                            let zoneResult = checkZoneStatus(
-                                userLocation: userLoc,
-                                zoneCenter: circle.center,
-                                zoneRadius: circle.radius
-                            )
-                            state.isOutsideZone = zoneResult.isOutsideZone
-                        }
-
-                        // Update Live Activity only when state meaningfully changes
-                        if let laUpdate = checkLiveActivityUpdate(
-                            currentState: state.liveActivityState,
-                            lastState: state.lastLiveActivityState
-                        ) {
-                            state.lastLiveActivityState = laUpdate.newState
-                            effects.append(.run { _ in
-                                await liveActivityClient.update(laUpdate.newState)
-                            })
-                        }
-                        return .merge(effects)
-                    }
+                    // Periodic power-ups are spawned by the `spawnPowerUpBatch`
+                    // Cloud Task scheduled at game creation — no client-side
+                    // spawn here. The chicken just observes `powerUpsStream`.
                 }
 
                 // Power-up proximity check — collect all nearby power-ups

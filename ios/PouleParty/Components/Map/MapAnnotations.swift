@@ -18,12 +18,12 @@ struct PowerUpMapMarker: View {
     var body: some View {
         Button(action: onTap) {
             Image(systemName: powerUp.type.iconName)
-                .font(.system(size: 20))
+                .font(.system(size: 12))
                 .foregroundStyle(.white)
-                .padding(8)
+                .padding(5)
                 .background(powerUp.type.color)
                 .clipShape(Circle())
-                .shadow(color: powerUp.type.color.opacity(0.5), radius: 6, y: 2)
+                .shadow(color: powerUp.type.color.opacity(0.5), radius: 4, y: 1)
         }
     }
 }

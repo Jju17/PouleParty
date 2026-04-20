@@ -248,9 +248,6 @@
     <string name="not_available_in_this_mode">Niet beschikbaar in deze modus</string>
     <string name="instant">Direct</string>
 
-    <!-- Auth -->
-    <string name="connection_failed">Verbinding mislukt. Controleer je internet en probeer opnieuw.</string>
-
     <!-- Challenges -->
     <string name="challenges">Uitdagingen</string>
     <string name="leaderboard">Ranglijst</string>

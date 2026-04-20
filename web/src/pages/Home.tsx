@@ -37,12 +37,31 @@ export default function Home() {
             className="text-xl text-[#EF0778] dark:text-[#F54D9E] mb-3"
             style={{ fontFamily: "Bangers, cursive" }}
           >
-            {t.home.appComingSoon}
+            {t.home.downloadApp}
           </p>
-          <div className="flex justify-center items-center gap-4 blur-[3px] opacity-50 pointer-events-none select-none" aria-hidden="true">
-            <img src="/app-store-badge.svg" alt="" className="h-[50px]" />
-            <img src="/google-play-badge.svg" alt="" className="h-[50px]" />
+          <div className="flex justify-center items-center gap-4">
+            <a
+              href="https://apps.apple.com/be/app/poule-party/id6738432103"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:scale-105 transition-transform duration-300"
+              aria-label={t.home.appStore}
+            >
+              <img src="/app-store-badge.svg" alt={t.home.appStore} className="h-[50px]" />
+            </a>
+            <a
+              href="https://play.google.com/store/apps/details?id=dev.rahier.pouleparty2"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:scale-105 transition-transform duration-300"
+              aria-label={t.home.googlePlay}
+            >
+              <img src="/google-play-badge.svg" alt={t.home.googlePlay} className="h-[50px]" />
+            </a>
           </div>
+          <p className="mt-4 text-sm text-black/70 dark:text-gray-400 max-w-md mx-auto italic">
+            {t.home.androidDisclaimer}
+          </p>
         </div>
       </div>
     </Layout>

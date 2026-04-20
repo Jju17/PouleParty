@@ -45,9 +45,9 @@ android/app/src/main/java/dev/rahier/pouleparty/
 │   └── AppNavigation.kt             # Compose NavHost, routes, anonymous auth + FCM
 └── ui/
     ├── BaseMapViewModel.kt          # Abstract VM shared by Chicken/Hunter map
-    ├── GameTimerHelper.kt           # Pure logic (must match iOS GameTimerLogic.swift)
-    ├── PowerUpSpawnHelper.kt        # Pure logic (must match iOS PowerUpSpawnLogic.swift)
-    ├── RoadSnapService.kt           # Mapbox Directions API road snapping
+    ├── gamelogic/
+    │   ├── GameTimerHelper.kt       # Pure logic (must match iOS GameTimerLogic.swift)
+    │   └── PowerUpSpawnHelper.kt    # Reference-only spawn algorithm (parity with functions/src/powerUpSpawn.ts)
     ├── components/                  # 12 reusable UI components
     ├── theme/                       # Color.kt (66 colors), Theme.kt, Type.kt
     ├── home/                        # HomeScreen, HomeViewModel, JoinFlowState
@@ -68,7 +68,7 @@ android/app/src/main/java/dev/rahier/pouleparty/
 
 **Navigation:** Compose Navigation with string-based routes and arguments in `AppNavigation.kt`.
 
-**DI:** Single `AppModule` providing singletons (FirebaseAuth, Firestore, FusedLocationProvider, SharedPreferences, Mapbox token).
+**DI:** Single `AppModule` providing singletons (FirebaseAuth, Firestore, FusedLocationProvider, SharedPreferences). The Mapbox access token is read by the SDK directly from `res/values/strings.xml#mapbox_access_token` — no Hilt binding (the former road-snap binding was removed when power-up spawning moved server-side).
 
 ### ViewModels (11)
 
@@ -117,8 +117,8 @@ These files must match their iOS equivalents exactly:
 
 | File | iOS equivalent | Purpose |
 |---|---|---|
-| `GameTimerHelper.kt` | `GameTimerLogic.swift` | Zone checks, countdown, radius updates, drift, winner/power-up detection |
-| `PowerUpSpawnHelper.kt` | `PowerUpSpawnLogic.swift` | Deterministic power-up generation |
+| `ui/gamelogic/GameTimerHelper.kt` | `GameTimerLogic.swift` | Zone checks, countdown, radius updates, drift, winner/power-up detection |
+| `ui/gamelogic/PowerUpSpawnHelper.kt` | `PowerUpSpawnLogic.swift` | Reference-only spawn algorithm — kept in sync with `functions/src/powerUpSpawn.ts` for parity tests; **not called at runtime** since spawning moved server-side in April 2026 |
 
 ## Dependencies
 

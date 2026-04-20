@@ -82,7 +82,7 @@ These files have **no dependencies** and must match their Android equivalents ex
 | File | Purpose |
 |---|---|
 | `GameTimerLogic.swift` | Zone checks, countdown, radius updates, drift, winner/power-up detection, seeded random |
-| `PowerUpSpawnLogic.swift` | Deterministic power-up generation + road snapping |
+| `PowerUpSpawnLogic.swift` | Reference implementation of deterministic power-up generation. Kept in sync with `functions/src/powerUpSpawn.ts` for cross-platform parity tests — **not called at runtime** since spawning moved server-side in April 2026. |
 
 ## Dependencies (SPM)
 

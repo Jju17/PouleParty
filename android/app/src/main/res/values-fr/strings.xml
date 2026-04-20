@@ -252,9 +252,6 @@
     <string name="not_available_in_this_mode">Indisponible dans ce mode</string>
     <string name="instant">Instantané</string>
 
-    <!-- Auth -->
-    <string name="connection_failed">Connexion échouée. Vérifie ta connexion internet et réessaie.</string>
-
     <!-- Challenges -->
     <string name="challenges">Défis</string>
     <string name="leaderboard">Classement</string>

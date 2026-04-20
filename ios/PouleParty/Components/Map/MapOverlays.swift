@@ -159,12 +159,18 @@ func powerUpsMapContent(
     pulseAlpha: Double,
     onTap: @escaping (PowerUp) -> Void
 ) -> some MapContent {
+    // Two separate loops: Mapbox dispatches PolygonAnnotation (style layer)
+    // and MapViewAnnotation (UIKit overlay) through different pipelines;
+    // mixing both inside a single ForEvery silently drops the view-annotation
+    // branch of the tuple.
     ForEvery(powerUps) { powerUp in
         powerUpCollectionOverlay(
             coordinate: powerUp.coordinate,
             color: powerUp.type.color,
             pulseAlpha: pulseAlpha
         )
+    }
+    ForEvery(powerUps) { powerUp in
         MapViewAnnotation(coordinate: powerUp.coordinate) {
             PowerUpMapMarker(powerUp: powerUp) {
                 onTap(powerUp)

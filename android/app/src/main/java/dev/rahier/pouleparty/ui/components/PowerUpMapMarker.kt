@@ -9,12 +9,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import dev.rahier.pouleparty.model.PowerUpType
 import dev.rahier.pouleparty.ui.powerupselection.powerUpColor
 import dev.rahier.pouleparty.ui.powerupselection.powerUpIcon
+import dev.rahier.pouleparty.ui.theme.NeonGlowIntensity
+import dev.rahier.pouleparty.ui.theme.neonGlow
 
 @Composable
 fun PowerUpMapMarker(
@@ -26,8 +27,8 @@ fun PowerUpMapMarker(
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
-            .size(40.dp)
-            .shadow(6.dp, CircleShape, ambientColor = color, spotColor = color)
+            .size(24.dp)
+            .neonGlow(color, NeonGlowIntensity.SUBTLE, cornerRadius = 12.dp)
             .background(color, CircleShape)
             .clickable(onClick = onClick)
     ) {
@@ -35,7 +36,7 @@ fun PowerUpMapMarker(
             imageVector = powerUpIcon(type),
             contentDescription = type.title,
             tint = Color.White,
-            modifier = Modifier.size(22.dp)
+            modifier = Modifier.size(14.dp)
         )
     }
 }

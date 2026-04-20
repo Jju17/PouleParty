@@ -16,6 +16,76 @@ Téléchargez, organisez une partie et faites péter vos retours 🏃💨🐔
 
 ---
 
+# Release 1.6.0
+
+## What's New
+
+### ⚡ Power-ups rebuilt server-side
+- Power-ups are now spawned by a Cloud Function, not by the Chicken's phone
+- No more missed spawns when the Chicken's device is backgrounded, offline, or crashes
+- Road-snapping still happens — just on the server now (via Mapbox Directions)
+- Activation is atomic: power-up state and the game's active effects update together in a single transaction
+
+### 🎯 Pulsing collection disc
+- Each power-up on the map now shows a pulsing disc in its neon color
+- Way easier to spot from a distance, and more fun to walk into
+
+### 🔐 Smarter onboarding after account reset
+- If your anonymous Firebase identity is invalidated, the app sends you back through onboarding to set a nickname tied to your new identity
+
+### ♻️ Under the hood
+- Firebase SDKs upgraded (admin 13, functions 7) — 3 security vulnerabilities fixed
+- Android: new shared neon glow helper matching iOS behavior pixel-for-pixel
+- Android: power-up map rendering factored into a shared composable
+- 3 flaky Android tests stabilized
+
+### 🐛 Fixes
+- Power-ups no longer disappear from the map after a regression in the map annotation rendering
+- Smaller iOS icon files (kept zero alpha)
+
+---
+
+## App Store "What's New" (copy-paste)
+
+<en>
+Power-ups got a major upgrade: they're now spawned reliably by the server, so no more missed spawns if the Chicken's phone sleeps or loses signal. Each power-up now pulses on the map with its own neon color — way easier to spot. Smarter auto-recovery if your account gets reset. Plus a bunch of under-the-hood polish.
+</en>
+
+<fr>
+Gros coup de jeune sur les power-ups : ils sont désormais générés par le serveur, donc plus aucun raté si le téléphone de la Poule s'endort ou perd la connexion. Chaque power-up pulse maintenant sur la carte avec sa couleur néon — bien plus facile à repérer. Reprise automatique plus intelligente si ton compte est réinitialisé. Et plein de petits polish sous le capot.
+</fr>
+
+<nl>
+Power-ups kregen een grote upgrade: ze worden nu betrouwbaar door de server gespawnd, dus geen gemiste spawns meer als de telefoon van de Kip slaapt of verbinding verliest. Elke power-up pulseert nu op de kaart in zijn eigen neonkleur — veel makkelijker te zien. Slimmer automatisch herstel als je account wordt gereset. Plus allerlei afwerking onder de motorkap.
+</nl>
+
+---
+
+## Google Play Release Notes (copy-paste format)
+
+<en-US>
+Power-ups are now spawned server-side — no more missed spawns if the Chicken's phone sleeps. Each power-up pulses on the map in its neon color, way easier to spot. Smarter auto-recovery if your account is reset. Plus SDK upgrades, security fixes, and UI polish.
+</en-US>
+
+<fr-FR>
+Les power-ups sont désormais générés côté serveur — plus aucun raté si le téléphone de la Poule s'endort. Chaque power-up pulse sur la carte avec sa couleur néon, bien plus visible. Reprise automatique plus intelligente après réinitialisation de compte. Mises à jour SDK, corrections de sécurité et polish UI.
+</fr-FR>
+
+<nl-NL>
+Power-ups worden nu serverzijdig gespawnd — geen gemiste spawns meer als de telefoon van de Kip slaapt. Elke power-up pulseert op de kaart in zijn neonkleur, veel zichtbaarder. Slimmer automatisch herstel na account-reset. Plus SDK-upgrades, beveiligingsfixes en UI-afwerking.
+</nl-NL>
+
+---
+
+## Version Info
+
+| Platform | Version | Build |
+|---|---|---|
+| iOS | 1.6.0 | 8 |
+| Android | 1.6.0 | 15 |
+
+---
+
 # Release 1.5.0
 
 ## What's New

@@ -118,9 +118,11 @@ service cloud.firestore {
         allow read: if request.auth != null
                     && (request.auth.uid == get(/databases/$(database)/documents/games/$(gameId)).data.creatorId
                         || request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.hunterIds);
-        // Only the creator can spawn power-ups (merge-safe)
-        allow create: if request.auth != null
-                      && get(/databases/$(database)/documents/games/$(gameId)).data.creatorId == request.auth.uid;
+        // Power-ups are spawned exclusively by the `spawnPowerUpBatch` /
+        // `onGameCreated` Cloud Functions (admin SDK bypasses rules). Clients
+        // never create power-ups — prevents anti-cheat gaps and drift between
+        // chicken app state and Firestore.
+        allow create: if false;
         // Collection: only if not already collected, and collectedBy must match the user
         allow update: if request.auth != null
                       && (

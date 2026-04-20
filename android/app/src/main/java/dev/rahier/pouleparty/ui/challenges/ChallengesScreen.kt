@@ -51,7 +51,9 @@ import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.model.Challenge
 import dev.rahier.pouleparty.ui.theme.CROrange
 import dev.rahier.pouleparty.ui.theme.CRPink
+import dev.rahier.pouleparty.ui.theme.NeonGlowIntensity
 import dev.rahier.pouleparty.ui.theme.ZoneGreen
+import dev.rahier.pouleparty.ui.theme.neonGlow
 import dev.rahier.pouleparty.ui.theme.bangerStyle
 import dev.rahier.pouleparty.ui.theme.gameboyStyle
 
@@ -230,7 +232,7 @@ private fun ChallengeRow(
 ) {
     val completedBorder = if (isCompleted) {
         Modifier
-            .shadow(elevation = 10.dp, shape = RoundedCornerShape(14.dp))
+            .neonGlow(ZoneGreen, NeonGlowIntensity.MEDIUM, cornerRadius = 14.dp)
             .border(
                 width = 2.dp,
                 color = ZoneGreen,
