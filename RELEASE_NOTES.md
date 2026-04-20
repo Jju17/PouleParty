@@ -1,3 +1,84 @@
+# Beta testers announcement (WhatsApp)
+
+🐔🎉 **Poule Party est dispo sur l'App Store !**
+
+Quelques mois de taf pour en arriver là. En gros ce qu'on peut faire :
+
+🗺️ **Jeu de chasse en extérieur** — 1 Poule (qui se cache et fuit) vs les Chasseurs (qui doivent la trouver physiquement) dans une zone GPS qui rétrécit progressivement sur une vraie carte
+🎮 **Deux modes de jeu** — soit la zone suit la Poule, soit elle est fixée à l'avance et dérive toute seule
+⚡ **Power-ups** — 6 pouvoirs à ramasser sur la map (invisibilité, radar, brouillage de signal, faux signal, gel de zone, preview de la prochaine zone)
+📳 Feedback haptique sur les moments clés, notifications push localisées, écran qui reste allumé pendant les parties
+🔥 Parties gratuites ou payantes (forfait ou caution + commission)
+
+👉 https://apps.apple.com/us/app/poule-party/id6738432103
+
+Téléchargez, organisez une partie et faites péter vos retours 🏃💨🐔
+
+---
+
+# Release 1.5.0
+
+## What's New
+
+### 🎯 New: Challenges feature
+- Hunters can now complete fun side-challenges during a game and earn points
+- Live team leaderboard with gold/silver/bronze podium
+- Validate a challenge → send your proof on WhatsApp → row turns neon green
+
+### 🗺️ Location permission UX
+- "Open Settings" button when location access is denied (onboarding + Home)
+
+### 🔔 Push notifications
+- Localized titles and bodies now properly resolved on iOS and Android
+
+### ♻️ Under the hood
+- Large codebase cleanup and reorganization on iOS and Android
+- Launch Screen logo fixed (was invisible after the previous logo rename)
+- Cross-platform data model parity (Winner timestamp type aligned)
+
+---
+
+## App Store "What's New" (copy-paste)
+
+<en>
+Play with challenges! Your friends hunting the Chicken can now complete fun side-quests during a game and race up a team leaderboard. Also: clearer "Open Settings" button when you deny location, localized push notifications, and a big internal cleanup. Bug fix: the launch screen logo is back.
+</en>
+
+<fr>
+Les défis débarquent ! Les chasseurs peuvent maintenant relever des défis fun pendant la partie et grimper au classement des équipes. Aussi : bouton « Ouvrir les Réglages » plus clair quand on refuse la localisation, notifications push localisées, et gros nettoyage interne. Correction : le logo du launch screen est de retour.
+</fr>
+
+<nl>
+Uitdagingen zijn er! Jagers kunnen nu tijdens een spel leuke zijopdrachten voltooien en klimmen in de team-ranglijst. Ook: duidelijkere "Open Instellingen"-knop bij geweigerde locatietoegang, gelokaliseerde pushnotificaties, en een grote interne opschoonbeurt. Bugfix: het logo op het launch-scherm is terug.
+</nl>
+
+---
+
+## Google Play Release Notes (copy-paste format)
+
+<en-US>
+Challenges! Hunters can now complete fun side-quests during a game and climb the team leaderboard. Plus: "Open Settings" button on location-denied prompts, localized push notifications, logo fix on the launch screen.
+</en-US>
+
+<fr-FR>
+Des défis ! Les chasseurs peuvent relever des défis fun pendant la partie et grimper au classement des équipes. Aussi : bouton « Ouvrir les Réglages » quand on refuse la localisation, notifications push localisées, logo du launch screen corrigé.
+</fr-FR>
+
+<nl-NL>
+Uitdagingen! Jagers kunnen tijdens een spel leuke zijopdrachten voltooien en klimmen in de team-ranglijst. Plus: "Open Instellingen"-knop bij geweigerde locatietoegang, gelokaliseerde pushnotificaties, logo op het launch-scherm hersteld.
+</nl-NL>
+
+---
+
+## Version Info
+
+| Platform | Version | Build |
+|---|---|---|
+| iOS | 1.5.0 | 7 |
+| Android | 1.5.0 | 14 |
+
+---
+
 # Release 1.4.1
 
 ## What's New

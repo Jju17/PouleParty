@@ -4,6 +4,28 @@ import com.mapbox.geojson.Point
 import kotlin.math.*
 
 /**
+ * Computes the pulse alpha for the power-up collection overlay based on a
+ * monotonic time value. The disc breathes between [minAlpha, maxAlpha] over
+ * a [periodMs] period.
+ *
+ * Exposed as a pure function so it can be unit-tested independently of Compose.
+ */
+fun powerUpPulseAlpha(
+    timeMs: Long,
+    periodMs: Long = 2000L,
+    minAlpha: Float = 0.08f,
+    maxAlpha: Float = 0.18f
+): Float {
+    require(periodMs > 0) { "periodMs must be > 0" }
+    require(minAlpha in 0f..1f && maxAlpha in 0f..1f && minAlpha <= maxAlpha) {
+        "alpha bounds must be in [0, 1] with min <= max"
+    }
+    val phase = (timeMs.mod(periodMs)).toDouble() / periodMs.toDouble()
+    val sine = (sin(phase * 2 * PI) + 1) / 2  // 0…1
+    return (minAlpha + (maxAlpha - minAlpha) * sine).toFloat()
+}
+
+/**
  * Approximate a circle as a polygon with [numPoints] vertices.
  */
 fun circlePolygonPoints(

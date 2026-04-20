@@ -3,6 +3,7 @@ package dev.rahier.pouleparty.ui
 import com.mapbox.geojson.Point
 import dev.rahier.pouleparty.ui.components.circlePolygonPoints
 import dev.rahier.pouleparty.ui.components.outerBoundsPoints
+import dev.rahier.pouleparty.ui.components.powerUpPulseAlpha
 import org.junit.Assert.*
 import org.junit.Test
 import kotlin.math.*
@@ -88,6 +89,109 @@ class ZoneOverlayUtilsTest {
         assertEquals(50.0 - padding, minLat, 0.001)
         assertEquals(4.0 + padding, maxLon, 0.001)
         assertEquals(4.0 - padding, minLon, 0.001)
+    }
+
+    // ── powerUpPulseAlpha ──────────────────────────────
+
+    @Test
+    fun `powerUpPulseAlpha at time 0 returns midpoint`() {
+        // sin(0) = 0, (0+1)/2 = 0.5 → min + 0.5*(max-min) = midpoint
+        val alpha = powerUpPulseAlpha(timeMs = 0L, periodMs = 2000L, minAlpha = 0.08f, maxAlpha = 0.18f)
+        assertEquals(0.13f, alpha, 0.001f)
+    }
+
+    @Test
+    fun `powerUpPulseAlpha at quarter period returns max`() {
+        // sin(π/2) = 1, (1+1)/2 = 1 → maxAlpha
+        val alpha = powerUpPulseAlpha(timeMs = 500L, periodMs = 2000L, minAlpha = 0.08f, maxAlpha = 0.18f)
+        assertEquals(0.18f, alpha, 0.001f)
+    }
+
+    @Test
+    fun `powerUpPulseAlpha at half period returns midpoint`() {
+        // sin(π) = 0, (0+1)/2 = 0.5 → midpoint
+        val alpha = powerUpPulseAlpha(timeMs = 1000L, periodMs = 2000L, minAlpha = 0.08f, maxAlpha = 0.18f)
+        assertEquals(0.13f, alpha, 0.001f)
+    }
+
+    @Test
+    fun `powerUpPulseAlpha at three-quarter period returns min`() {
+        // sin(3π/2) = -1, (-1+1)/2 = 0 → minAlpha
+        val alpha = powerUpPulseAlpha(timeMs = 1500L, periodMs = 2000L, minAlpha = 0.08f, maxAlpha = 0.18f)
+        assertEquals(0.08f, alpha, 0.001f)
+    }
+
+    @Test
+    fun `powerUpPulseAlpha wraps at period boundary`() {
+        val atZero = powerUpPulseAlpha(timeMs = 0L, periodMs = 2000L)
+        val atPeriod = powerUpPulseAlpha(timeMs = 2000L, periodMs = 2000L)
+        val atTwoPeriods = powerUpPulseAlpha(timeMs = 4000L, periodMs = 2000L)
+        assertEquals(atZero, atPeriod, 0.001f)
+        assertEquals(atZero, atTwoPeriods, 0.001f)
+    }
+
+    @Test
+    fun `powerUpPulseAlpha stays within bounds for any time`() {
+        val minAlpha = 0.05f
+        val maxAlpha = 0.25f
+        for (timeMs in 0L..10_000L step 73L) {
+            val alpha = powerUpPulseAlpha(timeMs, periodMs = 2000L, minAlpha = minAlpha, maxAlpha = maxAlpha)
+            assertTrue("alpha $alpha < min $minAlpha at t=$timeMs", alpha >= minAlpha - 0.001f)
+            assertTrue("alpha $alpha > max $maxAlpha at t=$timeMs", alpha <= maxAlpha + 0.001f)
+        }
+    }
+
+    @Test
+    fun `powerUpPulseAlpha respects custom period`() {
+        // With period = 4000ms, quarter period is 1000ms → max
+        val alpha = powerUpPulseAlpha(timeMs = 1000L, periodMs = 4000L, minAlpha = 0.0f, maxAlpha = 1.0f)
+        assertEquals(1.0f, alpha, 0.001f)
+    }
+
+    @Test
+    fun `powerUpPulseAlpha handles degenerate range (min equals max)`() {
+        val alpha = powerUpPulseAlpha(timeMs = 500L, periodMs = 2000L, minAlpha = 0.1f, maxAlpha = 0.1f)
+        assertEquals(0.1f, alpha, 0.001f)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `powerUpPulseAlpha rejects non-positive period`() {
+        powerUpPulseAlpha(timeMs = 100L, periodMs = 0L)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `powerUpPulseAlpha rejects negative period`() {
+        powerUpPulseAlpha(timeMs = 100L, periodMs = -1000L)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `powerUpPulseAlpha rejects min greater than max`() {
+        powerUpPulseAlpha(timeMs = 100L, minAlpha = 0.5f, maxAlpha = 0.1f)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `powerUpPulseAlpha rejects alpha out of range`() {
+        powerUpPulseAlpha(timeMs = 100L, minAlpha = -0.1f, maxAlpha = 0.5f)
+    }
+
+    @Test
+    fun `powerUpPulseAlpha handles very large time values`() {
+        // 10 years of milliseconds — should still be within bounds
+        val tenYearsMs = 10L * 365L * 24L * 3600L * 1000L
+        val alpha = powerUpPulseAlpha(timeMs = tenYearsMs, periodMs = 2000L, minAlpha = 0.08f, maxAlpha = 0.18f)
+        assertTrue(alpha in 0.08f..0.18f)
+    }
+
+    @Test
+    fun `powerUpPulseAlpha is continuous across period boundary`() {
+        // Verify the function doesn't jump discontinuously at period transitions
+        val justBeforePeriod = powerUpPulseAlpha(timeMs = 1999L, periodMs = 2000L)
+        val justAfterPeriod = powerUpPulseAlpha(timeMs = 2001L, periodMs = 2000L)
+        // Difference should be tiny (not jumping from max to min)
+        assertTrue(
+            "Should be continuous, got $justBeforePeriod → $justAfterPeriod",
+            abs(justBeforePeriod - justAfterPeriod) < 0.01f
+        )
     }
 
     // ── Helper ─────────────────────────────────────────

@@ -157,10 +157,13 @@ When asked to prepare a release or create a build:
 
 1. **Bump versions** — increment `versionCode`/`versionName` in `android/app/build.gradle.kts` and `CURRENT_PROJECT_VERSION`/`MARKETING_VERSION` in the Xcode project
 2. **Update CHANGELOG.md** — add a new section at the top with the version number, date, and all changes grouped by Added/Changed/Fixed. Include iOS and Android version info. Review git log since last release to capture everything.
-3. **Build release artifacts** — iOS archive (`xcodebuild archive`) and Android production release AAB (`./gradlew bundleProductionRelease`)
-4. **Write store descriptions** — prepare What's New text in EN/FR/NL for both App Store and Google Play. Put them in `RELEASE_NOTES.md`.
-5. **Android release notes** — provide Google Play release notes in the `<en-US>`, `<fr-FR>`, `<nl-NL>` tag format ready to paste into the Play Console.
-6. **List next steps** — remind which manual steps remain (upload to stores, deploy Cloud Functions + Firestore rules to production)
+3. **Pre-flight iOS icons** — App Store rejects icons with an alpha channel (error 90717). Check the 1024×1024 icons in `ios/PouleParty/Resources/Assets.xcassets/AppIcon.appiconset/` with `sips -g hasAlpha <file>.png`. If any return `hasAlpha: yes`, flatten them first (e.g. via Pillow: open as RGBA, paste onto an RGB background — black for Dark variants, white for Default — and save back).
+4. **Build release artifacts**:
+   - **iOS**: `xcodebuild archive -scheme PouleParty -configuration Release -destination 'generic/platform=iOS'` — **do NOT pass `-archivePath`** unless you manually move the archive into `~/Library/Developer/Xcode/Archives/YYYY-MM-DD/` afterwards; Xcode Organizer only scans that default path, so a custom path makes the archive invisible in the UI. Running from the `ios/` directory ensures xcodebuild finds the project.
+   - **Android**: `cd android && JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" ./gradlew bundleProductionRelease` — AAB lands at `android/app/build/outputs/bundle/productionRelease/app-production-release.aab`.
+5. **Write store descriptions** — prepare What's New text in EN/FR/NL for both App Store and Google Play. Put them in `RELEASE_NOTES.md`.
+6. **Android release notes** — provide Google Play release notes in the `<en-US>`, `<fr-FR>`, `<nl-NL>` tag format ready to paste into the Play Console.
+7. **List next steps** — remind which manual steps remain (upload to stores, deploy Cloud Functions + Firestore rules to production)
 
 ### Zero Warnings Policy
 

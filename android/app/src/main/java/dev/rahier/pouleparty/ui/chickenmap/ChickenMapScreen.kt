@@ -197,20 +197,12 @@ fun ChickenMapScreen(
                 }
             }
 
-            // Power-up markers (chicken power-ups only)
-            if (state.hasGameStarted) state.availablePowerUps.forEach { powerUp ->
-                ViewAnnotation(
-                    options = viewAnnotationOptions {
-                        geometry(powerUp.locationPoint)
-                        allowOverlap(true)
-                        allowOverlapWithPuck(true)
-                    }
-                ) {
-                    PowerUpMapMarker(
-                        type = powerUp.typeEnum,
-                        onClick = { selectedPowerUpType = powerUp.typeEnum }
-                    )
-                }
+            // Power-up markers + collection-radius discs (chicken power-ups only)
+            if (state.hasGameStarted) {
+                dev.rahier.pouleparty.ui.components.PowerUpsMapOverlay(
+                    powerUps = state.availablePowerUps,
+                    onMarkerClick = { selectedPowerUpType = it.typeEnum }
+                )
             }
 
             // Hunter annotations (chickenCanSeeHunters) -- only after hunt starts

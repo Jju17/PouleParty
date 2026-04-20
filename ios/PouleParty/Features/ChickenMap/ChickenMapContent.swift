@@ -24,6 +24,7 @@ struct ChickenMapContent: View {
         zoom: 14
     )
     @State private var mapBearing: Double = 0
+    @State private var powerUpPulseClock: TimeInterval = 0
 
     private var overlayColor: UIColor {
         store.isOutsideZone
@@ -44,16 +45,13 @@ struct ChickenMapContent: View {
                 finalZoneGlowContent(center: finalLocation)
             }
 
-            // Power-up markers (chicken power-ups only)
+            // Power-up markers + collection-radius discs (chicken power-ups only)
             if store.hasGameStarted {
-                ForEvery(store.availablePowerUps) { powerUp in
-                    MapViewAnnotation(coordinate: powerUp.coordinate) {
-                        PowerUpMapMarker(powerUp: powerUp) {
-                            selectedPowerUp = powerUp
-                        }
-                    }
-                    .allowOverlap(true)
-                    .allowOverlapWithPuck(true)
+                powerUpsMapContent(
+                    powerUps: store.availablePowerUps,
+                    pulseAlpha: powerUpPulseAlpha(at: powerUpPulseClock)
+                ) { powerUp in
+                    selectedPowerUp = powerUp
                 }
             }
 
@@ -73,6 +71,9 @@ struct ChickenMapContent: View {
             }
         }
         .ignoresSafeArea()
+        .onReceive(Timer.publish(every: 0.1, on: .main, in: .common).autoconnect()) { _ in
+            powerUpPulseClock = Date().timeIntervalSinceReferenceDate
+        }
         .onChange(of: store.mapCircle) { _, newCircle in
             guard let center = newCircle?.center, let radius = newCircle?.radius else { return }
             withViewportAnimation(.default(maxDuration: 1)) {

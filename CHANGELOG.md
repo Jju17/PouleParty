@@ -6,6 +6,32 @@ Format: [Keep a Changelog](https://keepachangelog.com/). Versions follow [Semant
 
 ---
 
+## [1.5.0] — 2026-04-17
+
+**iOS**: 1.5.0 (7) · **Android**: 1.5.0 (14)
+
+### Added
+- **Challenges feature** — hunters can now complete fun side-challenges during a game (photo proofs shared via WhatsApp, validated manually). New floating action button on the hunter map opens a modal with two tabs:
+  - **Challenges tab** — live list of challenges from the new global `/challenges` Firestore collection. Tap "Valider", confirm on the alert, and the row turns neon-green. Points are added to your team.
+  - **Leaderboard tab** — live team ranking with gold/silver/bronze podium for the top 3, and your team highlighted.
+  - FAB is hidden entirely when no challenges are configured (so it doesn't appear in games without them).
+- **"Open Settings" button on location-denied alerts** — both onboarding and Home now let you jump straight to iOS/Android system settings when location permission is denied, instead of showing only "OK".
+- **Localized FCM push notifications** — Cloud Functions send localized title/body keys; iOS `Localizable.xcstrings` now includes all `notif_*` keys (previously missing); Android `PouleFCMService` resolves keys with fallback.
+- **23 missing iOS localization keys** added (EN/FR/NL) covering permissions prompts, settings labels, and leaderboard copy.
+
+### Changed
+- **Major codebase refactor (iOS + Android)** — folder/package reorganization for clarity: iOS `Features/` grouped by feature into subfolders; `Components/` split into `GameLogic/`, `Services/`, `PowerUps/`, `Map/`. Android `ui/` split into `ui/gamelogic/`, `ui/map/`, `ui/chickenmapconfig/`, `ui/powerupselection/`.
+- **Removed dead `ChickenConfig` feature** on both platforms — replaced long ago by the multi-step `GameCreation` flow, but orphan code had remained. All related screens, view models, TCA reducers, tests, and navigation routes deleted.
+- **Removed "Expert mode" toggle** from both the old `ChickenConfig` and the active `GameCreation` — settings are always auto-computed in normal mode now.
+- **Challenges modal header** — manual drag indicator + SwiftUI `ToolbarItem` close button on iOS; Material `ModalBottomSheet` drag handle + title row with close button on Android.
+
+### Fixed
+- **Launch Screen logo missing on iOS** — storyboard still referenced a removed `logo` asset; now points to the current `chicken` asset.
+- **`Winner.timestamp` type mismatch** — iOS used `Date` while Android used `Timestamp`; unified on Firestore `Timestamp` for byte-for-byte cross-platform parity.
+- **Unused localization keys cleanup** — removed 11 orphan keys from iOS `Localizable.xcstrings` and 34 from Android `strings.xml` (EN/FR/NL) left over from the refactor.
+
+---
+
 ## [1.4.1] — 2026-04-13
 
 **iOS**: 1.4.1 (6) · **Android**: 1.4.1 (13)

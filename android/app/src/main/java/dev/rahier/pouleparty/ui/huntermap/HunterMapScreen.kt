@@ -192,20 +192,12 @@ fun HunterMapScreen(
                     }
                 }
 
-                // Power-up markers (hunter power-ups only)
-                if (state.hasGameStarted) state.availablePowerUps.forEach { powerUp ->
-                    ViewAnnotation(
-                        options = viewAnnotationOptions {
-                            geometry(powerUp.locationPoint)
-                            allowOverlap(true)
-                            allowOverlapWithPuck(true)
-                        }
-                    ) {
-                        PowerUpMapMarker(
-                            type = powerUp.typeEnum,
-                            onClick = { selectedPowerUpType = powerUp.typeEnum }
-                        )
-                    }
+                // Power-up markers + collection-radius discs (hunter power-ups only)
+                if (state.hasGameStarted) {
+                    dev.rahier.pouleparty.ui.components.PowerUpsMapOverlay(
+                        powerUps = state.availablePowerUps,
+                        onMarkerClick = { selectedPowerUpType = it.typeEnum }
+                    )
                 }
 
                 // Decoy: fake chicken marker when decoy is active
