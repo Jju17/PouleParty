@@ -2,8 +2,8 @@ package dev.rahier.pouleparty.ui.map
 
 import com.mapbox.geojson.Point
 import dev.rahier.pouleparty.model.Game
-import dev.rahier.pouleparty.model.PowerUp
-import dev.rahier.pouleparty.model.PowerUpType
+import dev.rahier.pouleparty.powerups.model.PowerUp
+import dev.rahier.pouleparty.powerups.model.PowerUpType
 import java.util.Date
 
 /**

@@ -5,6 +5,7 @@ import com.google.firebase.Timestamp
 import com.google.firebase.firestore.Exclude
 import com.google.firebase.firestore.GeoPoint
 import dev.rahier.pouleparty.AppConstants
+import dev.rahier.pouleparty.powerups.model.PowerUpType
 import java.util.Date
 
 data class Timing(

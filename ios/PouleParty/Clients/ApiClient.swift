@@ -403,7 +403,9 @@ extension ApiClient: DependencyKey {
                             return
                         }
                         let powerUps = documents.compactMap { doc -> PowerUp? in
-                            do { return try doc.data(as: PowerUp.self) }
+                            var data = doc.data()
+                            data["id"] = doc.documentID
+                            do { return try Firestore.Decoder().decode(PowerUp.self, from: data) }
                             catch { logger.error("Failed to decode PowerUp \(doc.documentID): \(error.localizedDescription)"); return nil }
                         }
                         continuation.yield(powerUps)

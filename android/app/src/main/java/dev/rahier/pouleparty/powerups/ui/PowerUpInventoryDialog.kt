@@ -1,4 +1,4 @@
-package dev.rahier.pouleparty.ui.components
+package dev.rahier.pouleparty.powerups.ui
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,7 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
 import dev.rahier.pouleparty.R
-import dev.rahier.pouleparty.model.PowerUp
+import dev.rahier.pouleparty.powerups.model.PowerUp
 
 @Composable
 fun PowerUpInventoryDialog(

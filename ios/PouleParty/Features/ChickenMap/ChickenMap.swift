@@ -427,8 +427,10 @@ struct ChickenMapFeature {
                         }
                     )
                 } else {
-                    // stayInTheZone: chicken needs GPS for zone check (no Firestore writes normally)
-                    // When radar ping is active, force-write location so hunters can see the chicken
+                    // stayInTheZone: chicken needs GPS for zone check (no Firestore writes normally).
+                    // Radar Ping broadcasts are handled by a separate timer-driven effect below
+                    // because CoreLocation's 10 m distance filter means a stationary chicken would
+                    // never emit a new coordinate here, and therefore never trigger a ping write.
                     effects.append(
                         .run { send in
                             let delay = startDate.timeIntervalSinceNow
@@ -442,7 +444,8 @@ struct ChickenMapFeature {
                             for await coordinate in locationClient.startTracking() {
                                 await send(.internal(.newLocationFetched(coordinate)))
                                 let isRadarPinged = radarPingUntil.value.map { Date.now < $0 } ?? false
-                                if isRadarPinged && Date.now.timeIntervalSince(lastWrite) >= AppConstants.locationThrottleSeconds {
+                                let isInvisible = invisibilityUntil.value.map { Date.now < $0 } ?? false
+                                if isRadarPinged && !isInvisible && Date.now.timeIntervalSince(lastWrite) >= AppConstants.locationThrottleSeconds {
                                     let isJammed = jammerUntil.value.map { Date.now < $0 } ?? false
                                     let sendCoordinate = isJammed ? applyJammerNoise(to: coordinate) : coordinate
                                     do {
@@ -451,6 +454,31 @@ struct ChickenMapFeature {
                                         logger.error("Failed to send chicken location during radar ping: \(error)")
                                     }
                                     lastWrite = .now
+                                }
+                            }
+                        }
+                    )
+
+                    // Radar Ping support for stayInTheZone: drives writes on a timer
+                    // so a stationary chicken still broadcasts while a ping is active.
+                    // Ticks every throttle period; no-ops when the ping is inactive
+                    // (or when invisibility is active — safety net; in practice
+                    // invisibility isn't spawned in stayInTheZone).
+                    effects.append(
+                        .run { _ in
+                            let tick = Duration.milliseconds(Int(AppConstants.locationThrottleSeconds * 1000))
+                            for await _ in self.clock.timer(interval: tick) {
+                                let isRadarPinged = radarPingUntil.value.map { Date.now < $0 } ?? false
+                                guard isRadarPinged else { continue }
+                                let isInvisible = invisibilityUntil.value.map { Date.now < $0 } ?? false
+                                guard !isInvisible else { continue }
+                                guard let coordinate = locationClient.lastLocation() else { continue }
+                                let isJammed = jammerUntil.value.map { Date.now < $0 } ?? false
+                                let sendCoordinate = isJammed ? applyJammerNoise(to: coordinate) : coordinate
+                                do {
+                                    try apiClient.setChickenLocation(gameId, sendCoordinate)
+                                } catch {
+                                    logger.error("Failed to broadcast chicken location during radar ping: \(error)")
                                 }
                             }
                         }

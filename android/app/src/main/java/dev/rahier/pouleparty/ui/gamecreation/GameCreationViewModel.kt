@@ -13,7 +13,7 @@ import dev.rahier.pouleparty.model.GameMod
 import dev.rahier.pouleparty.model.GamePowerUps
 import dev.rahier.pouleparty.model.GameRegistration
 import dev.rahier.pouleparty.model.Pricing
-import dev.rahier.pouleparty.model.PowerUpType
+import dev.rahier.pouleparty.powerups.model.PowerUpType
 import dev.rahier.pouleparty.model.Timing
 import dev.rahier.pouleparty.model.Zone
 import dev.rahier.pouleparty.model.calculateNormalModeSettings

@@ -6,6 +6,66 @@ Format: [Keep a Changelog](https://keepachangelog.com/). Versions follow [Semant
 
 ---
 
+## [1.6.3] — 2026-04-21
+
+**iOS**: 1.6.3 (11) · **Android**: 1.6.3 (18)
+
+### Fixed
+- **Radar Ping invisible in `stayInTheZone` mode** — when a hunter activated Radar Ping, the Chicken's position was never broadcast if the Chicken was standing still. Root cause: writes were only triggered from the CoreLocation/FusedLocation update stream, which has a 10 m distance filter. A stationary Chicken emits no update, therefore no write, therefore no ping. Fixed on both platforms with a dedicated timer-driven broadcast loop (5 s tick, matches `locationThrottleSeconds`). Loop is only scheduled in stayInTheZone, no-ops when ping is inactive. Invisibility safety net added (wins over radar ping, matching followTheChicken behavior).
+
+### Added
+- **Pure helper `shouldBroadcastDuringRadarPing`** (iOS `GameTimerLogic.swift`) for the broadcast decision, fully unit-tested.
+- **Android tests**: `radarPingBroadcastLoop writes chicken location while ping is active in stayInTheZone`, `does not write when ping is inactive`, `is not scheduled in followTheChicken mode`.
+- **iOS tests**: 6 unit tests in `LocationTrackingEffectsTests` covering all edge cases (active/expired/nil ping, invisibility overrides, expiry boundary).
+
+### Audit
+Full power-up audit passed. All 6 types (zonePreview, radarPing, invisibility, zoneFreeze, decoy, jammer) verified to apply effects correctly on both platforms, with role-based inventory filtering preventing cross-role collection/activation. Decoy seed (`driftSeed xor decoyTimestamp`) is deterministic across iOS/Android so all hunters see the same fake chicken.
+
+### Changed
+- **Power-up code consolidated into a dedicated module on both platforms** (structural refactor, zero behavior change):
+  - **iOS**: `ios/PouleParty/Features/PowerUps/{Model,Logic,Feature,UI}/` — groups `PowerUp.swift`, `PowerUpSpawnLogic.swift`, `MapPowerUpsFeature.swift`, and all 7 UI components under one folder. Extracted the power-up map content (`powerUpsMapContent`, `powerUpCollectionOverlay`, `powerUpPulseAlpha`) and markers (`PowerUpMapMarker`, `DecoyMapMarker`) from `MapOverlays.swift`/`MapAnnotations.swift` into dedicated files.
+  - **Android**: new `dev.rahier.pouleparty.powerups.{model,logic,ui,selection}` package tree. Every power-up file moved out of `model/`, `ui/gamelogic/`, `ui/components/`, `ui/map/`, `ui/powerupselection/` and re-packaged. 27 import sites updated across production and tests.
+  - Commits preserve git history via `git mv`. No functional change — full iOS + Android test suites pass as-is.
+
+---
+
+## [1.6.2] — 2026-04-21
+
+**iOS**: 1.6.2 (10) · **Android**: 1.6.2 (17) · **Functions**: `spawnPowerUpBatch` redeployed (staging + prod)
+
+### Fixed
+- **Power-ups invisible on iOS after the server-authoritative refactor** — the 1.6.0 Cloud Function wrote power-up docs without an explicit `id` field (Firestore's document name was meant to carry it). iOS `PowerUp` struct had `let id: String` non-optional, so `doc.data(as: PowerUp.self)` silently threw `keyNotFound: id` on every decode and the map stayed empty. Android was unaffected thanks to its `val id: String = ""` default + `.copy(id = doc.id)` injection.
+
+### Changed
+- **Cloud Function `writePowerUpBatch` now writes an explicit `id` field** matching the document name. Makes power-up docs self-contained (survives JSON export, no drift risk since they're only written once by the CF). Symmetrical with Android's model.
+- **iOS `ApiClient.powerUpsStream` decode path is defensive** — injects `doc.documentID` into the data map before calling `Firestore.Decoder()`. Handles both new docs (with `id`) and any legacy docs that might linger from 1.6.0 / 1.6.1.
+
+### Added
+- **Regression tests** for PowerUp decoding:
+  - iOS `PowerUpTests`: decode with explicit `id`, decode after client-side injection, and assert decode fails loudly if `id` is missing AND not injected (prevents silent regression).
+  - Android `PowerUpTest`: lock in the data class default-value contract (`id: String = ""`) so no-one breaks the `toObject → copy(id = doc.id)` chain.
+
+---
+
+## [1.6.1] — 2026-04-20
+
+**iOS**: 1.6.1 (9) · **Android**: 1.6.1 (16) · **Web**: NL added
+
+### Added
+- **Dutch (NL) locale on the web landing page** — `nl.ts` added with full translation of the home, register, privacy, terms, support sections. Locale switcher in the header now cycles EN → FR → NL → EN. Browser default is auto-detected (`navigator.language`).
+
+### Changed
+- **Complete FR + NL translation audit pass across iOS, Android, and web**. ~70 strings fixed for consistency, tone (tutoiement everywhere except legal pages), and idiomatic phrasing:
+  - **iOS** (`Localizable.xcstrings`): 4 fully-empty keys filled (`Create a party`, `Daily limit reached`, etc.), ~20 EN-only keys gained FR + NL, `Never mind` FR fixed from the misleading "Autant pour moi" to "Laisse tomber", `Game Code` FR unified to "Code de partie", apostrophe typographique harmonisée (`'` partout), "Ouvrir les paramètres" partout (cohérent avec l'OS), tutoiement appliqué sur notifs + onboarding + alerts ("Trouve-la !", "Reste dedans !", "Active-le", etc.), NL "Join Game" corrigé grammaticalement ("Meedoen aan spel"), "FINAAL" (et non "EINDE"), "1 dag van tevoren", "Bevestigen" au lieu de "Verzenden".
+  - **Android** (`values-fr/strings.xml` + `values-nl/strings.xml`) : `app_name` ajouté dans les 2 locales, `never_mind` FR fixé, `enter_found_code` FR passe à "Code de capture" et NL à "Voer de vangstcode in", tutoiement appliqué (`hunt_them_down`, `hunt_subtitle`, `mode_stay_detail3`, `setting_map_desc`, `return_to_zone`, `notif_hunter_start_body`, `notif_zone_shrink_body`), `nominate_subtitle` FR retraduit ("Le futur marié..." au lieu de "L'enterrement de vie de garçon..."), NL infinitifs cohérents (`Adres zoeken`, `Klassement bekijken`, `Opnieuw proberen`), `Contact opnemen met support`, `%d pnt` abréviation correcte, `Inschrijving sluit om` comme label.
+  - **Web** (`fr.ts`) : tutoiement propre sur tout le block `register.*` (`Ta mission`, `Retrouve la Poule`, `Réalise des défis`, etc.) ; `privacy.*` et `terms.*` laissés en vouvoiement (ton légal standard).
+
+### Fixed
+- **Android `app_name` MissingTranslation warning** — ajouté dans `values-fr/` et `values-nl/`.
+- **iOS snapshot baselines regenerated** suite aux ajustements de texte FR (GameCreation screens).
+
+---
+
 ## [1.6.0] — 2026-04-20
 
 **iOS**: 1.6.0 (8) · **Android**: 1.6.0 (15)

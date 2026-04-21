@@ -12,8 +12,8 @@ import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameMod
 import dev.rahier.pouleparty.model.GameStatus
 import dev.rahier.pouleparty.AppConstants
-import dev.rahier.pouleparty.model.PowerUp
-import dev.rahier.pouleparty.model.PowerUpType
+import dev.rahier.pouleparty.powerups.model.PowerUp
+import dev.rahier.pouleparty.powerups.model.PowerUpType
 import dev.rahier.pouleparty.model.Winner
 import dev.rahier.pouleparty.ui.gamelogic.CountdownPhase
 import dev.rahier.pouleparty.ui.gamelogic.CountdownResult

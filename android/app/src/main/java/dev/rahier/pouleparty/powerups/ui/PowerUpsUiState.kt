@@ -1,7 +1,8 @@
-package dev.rahier.pouleparty.ui.map
+package dev.rahier.pouleparty.powerups.ui
 
-import dev.rahier.pouleparty.model.PowerUp
-import dev.rahier.pouleparty.model.PowerUpType
+import dev.rahier.pouleparty.powerups.model.PowerUp
+import dev.rahier.pouleparty.powerups.model.PowerUpType
+import dev.rahier.pouleparty.ui.map.MapUiState
 
 /**
  * Read-only power-up UI surface shared by ChickenMapUiState and HunterMapUiState.

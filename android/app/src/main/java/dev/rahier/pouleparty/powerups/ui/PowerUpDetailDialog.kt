@@ -1,4 +1,4 @@
-package dev.rahier.pouleparty.ui.components
+package dev.rahier.pouleparty.powerups.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -18,7 +18,7 @@ import dev.rahier.pouleparty.R
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import dev.rahier.pouleparty.model.PowerUpType
+import dev.rahier.pouleparty.powerups.model.PowerUpType
 
 @Composable
 fun PowerUpDetailDialog(type: PowerUpType, onDismiss: () -> Unit) {

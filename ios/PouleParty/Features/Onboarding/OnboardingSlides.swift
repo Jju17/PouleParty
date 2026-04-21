@@ -312,6 +312,7 @@ struct OnboardingNotificationSlide: View {
 struct OnboardingNicknameSlide: View {
     @Binding var nickname: String
     let maxLength: Int
+    var isFocused: FocusState<Bool>.Binding
 
     var body: some View {
         OnboardingSlideLayout(
@@ -323,6 +324,7 @@ struct OnboardingNicknameSlide: View {
         } extraContent: {
             VStack(spacing: 8) {
                 TextField("Your nickname", text: $nickname)
+                    .focused(isFocused)
                     .font(.banger(size: 22))
                     .foregroundStyle(Color.onBackground)
                     .multilineTextAlignment(.center)

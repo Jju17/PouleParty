@@ -16,6 +16,166 @@ Téléchargez, organisez une partie et faites péter vos retours 🏃💨🐔
 
 ---
 
+# Release 1.6.3
+
+## What's New
+
+Critical fix for Radar Ping in "Stay in the Zone" mode: a stationary Chicken never broadcast its position during an active ping, so Hunters saw nothing. Now a dedicated 5 s timer loop force-broadcasts the Chicken's position while a ping is active, even if the Chicken is standing still.
+
+Full audit of all 6 power-ups passed — everything works as expected on both iOS and Android.
+
+---
+
+## App Store "What's New" (copy-paste)
+
+<en>
+Fix: Radar Ping now works in "Stay in the Zone" mode even if the Chicken is standing still — previously a stationary Chicken never broadcast their position during a ping.
+</en>
+
+<fr>
+Correctif : le Radar Ping fonctionne enfin en mode "Reste dans la zone" même quand la Poule ne bouge pas — jusqu'ici une Poule immobile ne diffusait jamais sa position pendant un ping.
+</fr>
+
+<nl>
+Fix: Radar Ping werkt nu in "Stay in the Zone"-modus ook als de Kip stilstaat — voorheen zond een stilstaande Kip nooit haar positie uit tijdens een ping.
+</nl>
+
+---
+
+## Google Play Release Notes (copy-paste format)
+
+<en-US>
+Fix: Radar Ping works in "Stay in the Zone" even when the Chicken is standing still.
+</en-US>
+
+<fr-FR>
+Correctif : Radar Ping fonctionne en "Reste dans la zone" même quand la Poule est immobile.
+</fr-FR>
+
+<nl-NL>
+Fix: Radar Ping werkt in "Stay in the Zone" ook als de Kip stilstaat.
+</nl-NL>
+
+---
+
+## Version Info
+
+| Platform | Version | Build |
+|---|---|---|
+| iOS | 1.6.3 | 11 |
+| Android | 1.6.3 | 18 |
+
+---
+
+# Release 1.6.2
+
+## What's New
+
+Critical iOS fix: power-ups were invisible on the map since 1.6.0 because of a silent decode failure. Fixed both on the server (Cloud Function now writes an explicit `id` field) and on the client (iOS decoder now injects the document ID before decoding, so legacy docs still work).
+
+---
+
+## App Store "What's New" (copy-paste)
+
+<en>
+Fix: power-ups are visible on the map again — a silent decode error since 1.6.0 caused the iOS map to show no power-ups at all. Sorry!
+</en>
+
+<fr>
+Correctif : les power-ups réapparaissent sur la carte — une erreur de décodage silencieuse depuis la 1.6.0 les rendait invisibles sur iOS. Désolé !
+</fr>
+
+<nl>
+Fix: power-ups zijn weer zichtbaar op de kaart — een stille decodeerfout sinds 1.6.0 zorgde ervoor dat er op iOS helemaal geen power-ups verschenen. Sorry!
+</nl>
+
+---
+
+## Google Play Release Notes (copy-paste format)
+
+<en-US>
+Fix: power-ups reappear on the map after a silent iOS decode bug introduced in 1.6.0.
+</en-US>
+
+<fr-FR>
+Correctif : les power-ups réapparaissent sur la carte après un bug de décodage silencieux sur iOS introduit en 1.6.0.
+</fr-FR>
+
+<nl-NL>
+Fix: power-ups zijn weer zichtbaar op de kaart na een stille iOS-decodeerfout in 1.6.0.
+</nl-NL>
+
+---
+
+## Version Info
+
+| Platform | Version | Build |
+|---|---|---|
+| iOS | 1.6.2 | 10 |
+| Android | 1.6.2 | 17 |
+
+---
+
+# Release 1.6.1
+
+## What's New
+
+Translation pass: about 70 FR and NL strings fixed across iOS, Android, and the website — clearer terminology, consistent tutoiement, and idiomatic Dutch. Dutch (NL) added to the web landing page.
+
+### 🇫🇷 Français
+- "Code de trouvaille" → **Code de capture**, "Autant pour moi" → **Laisse tomber**
+- Tutoiement harmonisé (notifs, onboarding, alertes)
+- "Ouvrir les paramètres" partout (cohérent avec l'OS)
+
+### 🇳🇱 Nederlands
+- **Vangstcode** voor de gevonden code, **Meedoen aan spel** (au lieu du "Spel deelnemen" grammaticalement cassé)
+- **FINAAL**, **Bevestigen**, **Klassement bekijken**, **Opnieuw proberen**
+- Idiomen opgeschoond (**1 dag van tevoren**, **Adres zoeken**, …)
+- Neue **NL-locale op de website** (landing page)
+
+---
+
+## App Store "What's New" (copy-paste)
+
+<en>
+Translation polish. Dozens of French and Dutch strings got a clean-up pass: clearer terminology, consistent casual tone, and more natural Dutch phrasing. No functional changes.
+</en>
+
+<fr>
+Petit lifting des traductions : des dizaines de textes en français et néerlandais ont été repris — terminologie plus claire, tutoiement cohérent, formulations plus naturelles en néerlandais. Aucun changement de fonctionnement.
+</fr>
+
+<nl>
+Vertalingen opgepoetst. Tientallen Franse en Nederlandse teksten zijn bijgewerkt: duidelijker terminologie, consistente casual toon en natuurlijker Nederlands. Geen functionele wijzigingen.
+</nl>
+
+---
+
+## Google Play Release Notes (copy-paste format)
+
+<en-US>
+Translation polish: dozens of French and Dutch strings reviewed for consistency and tone. No functional changes.
+</en-US>
+
+<fr-FR>
+Lifting des traductions : des dizaines de textes en français et néerlandais revus pour plus de cohérence et un ton uniforme. Aucun changement de fonctionnement.
+</fr-FR>
+
+<nl-NL>
+Vertalingen opgepoetst: tientallen Franse en Nederlandse teksten herzien voor samenhang en toon. Geen functionele wijzigingen.
+</nl-NL>
+
+---
+
+## Version Info
+
+| Platform | Version | Build |
+|---|---|---|
+| iOS | 1.6.1 | 9 |
+| Android | 1.6.1 | 16 |
+
+---
+
 # Release 1.6.0
 
 ## What's New

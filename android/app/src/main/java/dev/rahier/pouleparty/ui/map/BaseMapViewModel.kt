@@ -10,9 +10,9 @@ import dev.rahier.pouleparty.data.AnalyticsRepository
 import dev.rahier.pouleparty.data.FirestoreRepository
 import dev.rahier.pouleparty.data.LocationRepository
 import dev.rahier.pouleparty.model.Game
-import dev.rahier.pouleparty.model.PowerUp
-import dev.rahier.pouleparty.model.PowerUpType
-import dev.rahier.pouleparty.ui.powerupselection.powerUpEmoji
+import dev.rahier.pouleparty.powerups.model.PowerUp
+import dev.rahier.pouleparty.powerups.model.PowerUpType
+import dev.rahier.pouleparty.powerups.selection.powerUpEmoji
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.Job

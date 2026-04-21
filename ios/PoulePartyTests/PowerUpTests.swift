@@ -91,4 +91,48 @@ struct PowerUpTests {
         #expect(abs(powerUp.coordinate.latitude - 50.8466) < 0.0001)
         #expect(abs(powerUp.coordinate.longitude - 4.3528) < 0.0001)
     }
+
+    // MARK: - Firestore decoding (regression for v1.6.2 id injection)
+
+    /// Server-written docs after the 1.6.2 Cloud Function include an explicit `id`
+    /// field. Decode must succeed naturally.
+    @Test func decodesDocWithExplicitIdField() throws {
+        let data: [String: Any] = [
+            "id": "pu-0-0-1529788",
+            "type": "radarPing",
+            "location": GeoPoint(latitude: 50.8466, longitude: 4.3528),
+            "spawnedAt": Timestamp(date: Date(timeIntervalSince1970: 1_800_000_000)),
+        ]
+        let powerUp = try Firestore.Decoder().decode(PowerUp.self, from: data)
+        #expect(powerUp.id == "pu-0-0-1529788")
+        #expect(powerUp.type == .radarPing)
+    }
+
+    /// Legacy / pre-1.6.2 docs don't have an `id` field — the ApiClient
+    /// injects `doc.documentID` before decoding. This test simulates that path.
+    @Test func decodesDocWithoutIdAfterInjection() throws {
+        var data: [String: Any] = [
+            "type": "zoneFreeze",
+            "location": GeoPoint(latitude: 50.8466, longitude: 4.3528),
+            "spawnedAt": Timestamp(date: Date(timeIntervalSince1970: 1_800_000_000)),
+        ]
+        // Simulate ApiClient injecting the document ID before decode.
+        data["id"] = "legacy-doc-id"
+        let powerUp = try Firestore.Decoder().decode(PowerUp.self, from: data)
+        #expect(powerUp.id == "legacy-doc-id")
+        #expect(powerUp.type == .zoneFreeze)
+    }
+
+    /// A doc missing the `id` field AND no injection must fail loudly.
+    /// Protects against silent loss of the id injection in ApiClient.
+    @Test func decodeFailsWithoutIdWhenNotInjected() {
+        let data: [String: Any] = [
+            "type": "radarPing",
+            "location": GeoPoint(latitude: 50.8466, longitude: 4.3528),
+            "spawnedAt": Timestamp(date: Date(timeIntervalSince1970: 1_800_000_000)),
+        ]
+        #expect(throws: (any Error).self) {
+            _ = try Firestore.Decoder().decode(PowerUp.self, from: data)
+        }
+    }
 }

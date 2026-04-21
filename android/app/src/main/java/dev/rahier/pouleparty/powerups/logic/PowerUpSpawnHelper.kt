@@ -1,11 +1,11 @@
-package dev.rahier.pouleparty.ui.gamelogic
+package dev.rahier.pouleparty.powerups.logic
 
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.GeoPoint
 import com.mapbox.geojson.Point
 import dev.rahier.pouleparty.AppConstants
-import dev.rahier.pouleparty.model.PowerUp
-import dev.rahier.pouleparty.model.PowerUpType
+import dev.rahier.pouleparty.powerups.model.PowerUp
+import dev.rahier.pouleparty.powerups.model.PowerUpType
 import java.util.UUID
 import kotlin.math.*
 

@@ -47,14 +47,17 @@ export default function Layout({ children }: { children: ReactNode }) {
             {t.nav.register}
           </Link>
           <button
-            onClick={() => setLocale(locale === "en" ? "fr" : "en")}
+            onClick={() => {
+              const next = locale === "en" ? "fr" : locale === "fr" ? "nl" : "en";
+              setLocale(next);
+            }}
             className={`px-2.5 py-1.5 rounded-full border-2 text-xs font-bold transition-all duration-300 ${
               isDark
                 ? "border-[#FF8C33] text-[#FF8C33] hover:bg-[#FF8C33] hover:text-[#1A1A2E]"
                 : "border-[#FE6A00] text-[#FE6A00] hover:bg-[#FE6A00] hover:text-white"
             }`}
           >
-            {locale === "en" ? "FR" : "EN"}
+            {locale === "en" ? "FR" : locale === "fr" ? "NL" : "EN"}
           </button>
         </nav>
       </header>

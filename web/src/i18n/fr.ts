@@ -155,19 +155,19 @@ export default {
     conceptTitle: "🎯 Le concept",
     conceptText:
       "Une \"Poule\" est lâchée dans la ville avec quelques minutes d'avance…",
-    mission: "Votre mission ? La retrouver avant les autres équipes.",
+    mission: "Ta mission ? La retrouver avant les autres équipes.",
     zoneText:
-      "Grâce à un système de localisation évolutif, une zone autour de la Poule apparaît et se réduit progressivement… À vous de vous rapprocher, enquêter, et foncer au bon moment.",
+      "Grâce à un système de localisation évolutif, une zone autour de la Poule apparaît et se réduit progressivement… À toi de te rapprocher, d'enquêter et de foncer au bon moment.",
     butWait: "Mais ce n'est pas tout 👇",
-    pointsTitle: "🏆 Gagnez des points (et la gloire)",
+    pointsTitle: "🏆 Gagne des points (et la gloire)",
     pointsList: [
-      "🧭 Retrouvez la Poule avant les autres",
-      "📸 Réalisez des défis fun et décalés",
-      "🎭 Faites preuve de créativité (et d'audace)",
-      "😈 (Optionnel) Sabotez les autres équipes",
+      "🧭 Retrouve la Poule avant les autres",
+      "📸 Réalise des défis fun et décalés",
+      "🎭 Fais preuve de créativité (et d'audace)",
+      "😈 (Optionnel) Sabote les autres équipes",
     ],
     pointsOutro:
-      "Chaque action vous rapporte des points… et à la fin, une seule équipe sera sacrée gagnante.",
+      "Chaque action te rapporte des points… et à la fin, une seule équipe sera sacrée gagnante.",
     whyTitle: "🎉 Pourquoi participer ?",
     whyList: [
       "Une activité originale et ultra fun",

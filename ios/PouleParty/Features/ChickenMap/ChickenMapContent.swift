@@ -55,12 +55,18 @@ struct ChickenMapContent: View {
                 }
             }
 
-            // Hunter annotations (chickenCanSeeHunters) -- only after hunt starts
+            // Hunter annotations (chickenCanSeeHunters) -- only after hunt starts.
+            // allowOverlap(true) lets multiple hunters at the same spot stack
+            // instead of one hiding the others. allowOverlapWithPuck(true)
+            // keeps the hunter marker visible when the chicken's own location
+            // puck is at the exact same coordinate.
             if store.hasHuntStarted {
                 ForEvery(store.hunterAnnotations) { hunter in
                     MapViewAnnotation(coordinate: hunter.coordinate) {
                         HunterMapMarker(displayName: hunter.displayName)
                     }
+                    .allowOverlap(true)
+                    .allowOverlapWithPuck(true)
                 }
             }
         }

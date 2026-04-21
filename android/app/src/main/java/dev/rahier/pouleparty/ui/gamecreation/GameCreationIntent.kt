@@ -2,7 +2,7 @@ package dev.rahier.pouleparty.ui.gamecreation
 
 import com.mapbox.geojson.Point
 import dev.rahier.pouleparty.model.GameMod
-import dev.rahier.pouleparty.model.PowerUpType
+import dev.rahier.pouleparty.powerups.model.PowerUpType
 
 /**
  * User-initiated actions on the game-creation wizard. Dispatched through

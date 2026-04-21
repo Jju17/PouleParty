@@ -1,7 +1,7 @@
 package dev.rahier.pouleparty.ui
 
-import dev.rahier.pouleparty.model.PowerUpType
-import dev.rahier.pouleparty.ui.powerupselection.powerUpIcon
+import dev.rahier.pouleparty.powerups.model.PowerUpType
+import dev.rahier.pouleparty.powerups.selection.powerUpIcon
 import org.junit.Assert.*
 import org.junit.Test
 

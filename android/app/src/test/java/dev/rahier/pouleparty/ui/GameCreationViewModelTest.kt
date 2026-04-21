@@ -8,7 +8,7 @@ import dev.rahier.pouleparty.data.AnalyticsRepository
 import dev.rahier.pouleparty.data.FirestoreRepository
 import dev.rahier.pouleparty.data.LocationRepository
 import dev.rahier.pouleparty.model.GameMod
-import dev.rahier.pouleparty.model.PowerUpType
+import dev.rahier.pouleparty.powerups.model.PowerUpType
 import dev.rahier.pouleparty.ui.gamecreation.GameCreationStep
 import dev.rahier.pouleparty.ui.gamecreation.GameCreationViewModel
 import dev.rahier.pouleparty.ui.gamecreation.GameCreationIntent

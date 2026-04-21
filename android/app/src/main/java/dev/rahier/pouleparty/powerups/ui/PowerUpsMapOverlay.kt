@@ -1,4 +1,4 @@
-package dev.rahier.pouleparty.ui.components
+package dev.rahier.pouleparty.powerups.ui
 
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
@@ -14,8 +14,9 @@ import com.mapbox.maps.extension.compose.annotation.generated.PolygonAnnotation
 import com.mapbox.maps.viewannotation.geometry
 import com.mapbox.maps.viewannotation.viewAnnotationOptions
 import dev.rahier.pouleparty.AppConstants
-import dev.rahier.pouleparty.model.PowerUp
-import dev.rahier.pouleparty.ui.powerupselection.powerUpColor
+import dev.rahier.pouleparty.powerups.model.PowerUp
+import dev.rahier.pouleparty.powerups.selection.powerUpColor
+import dev.rahier.pouleparty.ui.components.circlePolygonPoints
 
 /**
  * Power-up markers + collection-radius discs, shared between the chicken

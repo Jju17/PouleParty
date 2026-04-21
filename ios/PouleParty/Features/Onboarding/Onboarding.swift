@@ -178,6 +178,7 @@ struct OnboardingFeature {
 
 struct OnboardingView: View {
     let store: StoreOf<OnboardingFeature>
+    @FocusState private var isNicknameFocused: Bool
 
     var body: some View {
         ZStack {
@@ -220,7 +221,8 @@ struct OnboardingView: View {
                         get: { store.nickname },
                         set: { store.send(.nicknameChanged($0)) }
                     ),
-                    maxLength: AppConstants.nicknameMaxLength
+                    maxLength: AppConstants.nicknameMaxLength,
+                    isFocused: $isNicknameFocused
                 )
                 .tag(5)
 
@@ -288,6 +290,15 @@ struct OnboardingView: View {
         }
         .task {
             store.send(.onTask)
+        }
+        .onChange(of: store.currentPage) { _, newPage in
+            // Flush any pending TextField binding updates before the view can
+            // transition away. Leaving focus alive causes lingering
+            // `nicknameChanged` actions after AppFeature swaps state to .home,
+            // which trips the `ifCaseLet` runtime warning.
+            if newPage != OnboardingFeature.nicknamePageIndex {
+                isNicknameFocused = false
+            }
         }
         .alert("Location Required", isPresented: Binding(
             get: { store.showLocationAlert },

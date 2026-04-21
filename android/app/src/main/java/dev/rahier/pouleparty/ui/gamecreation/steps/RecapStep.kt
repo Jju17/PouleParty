@@ -18,7 +18,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.model.GameMod
-import dev.rahier.pouleparty.model.PowerUpType
+import dev.rahier.pouleparty.powerups.model.PowerUpType
 import dev.rahier.pouleparty.ui.components.GameCodeCard
 import dev.rahier.pouleparty.ui.gamecreation.GameCreationUiState
 import dev.rahier.pouleparty.ui.gamecreation.RecapRow

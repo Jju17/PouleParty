@@ -1,8 +1,8 @@
 package dev.rahier.pouleparty.ui
 
-import dev.rahier.pouleparty.model.PowerUpType
-import dev.rahier.pouleparty.ui.powerupselection.powerUpColor
-import dev.rahier.pouleparty.ui.powerupselection.powerUpEmoji
+import dev.rahier.pouleparty.powerups.model.PowerUpType
+import dev.rahier.pouleparty.powerups.selection.powerUpColor
+import dev.rahier.pouleparty.powerups.selection.powerUpEmoji
 import org.junit.Assert.*
 import org.junit.Test
 

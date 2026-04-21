@@ -1,4 +1,4 @@
-package dev.rahier.pouleparty.model
+package dev.rahier.pouleparty.powerups.model
 
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.Exclude

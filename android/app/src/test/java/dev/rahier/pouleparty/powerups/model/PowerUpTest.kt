@@ -1,4 +1,4 @@
-package dev.rahier.pouleparty.model
+package dev.rahier.pouleparty.powerups.model
 
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.GeoPoint
@@ -82,5 +82,42 @@ class PowerUpTest {
         assertEquals(PowerUpType.RADAR_PING, mock.typeEnum)
         assertFalse(mock.isCollected)
         assertFalse(mock.isActivated)
+    }
+
+    // MARK: - Firestore decoding contract (regression for v1.6.2)
+
+    /**
+     * FirestoreRepository.powerUpsFlow relies on the data class tolerating
+     * a missing `id` field: `doc.toObject(PowerUp::class.java)` falls back to
+     * the default "" then `.copy(id = doc.id)` injects the document name.
+     * Locking that contract in so no-one makes `id` non-defaulted.
+     */
+    @Test
+    fun `id has safe default so toObject never fails when Firestore lacks id`() {
+        val withoutId = PowerUp(
+            type = "radarPing",
+            location = GeoPoint(50.8466, 4.3528),
+            spawnedAt = Timestamp(Date(1_800_000_000_000L))
+        )
+        assertEquals("", withoutId.id)
+        val injected = withoutId.copy(id = "pu-0-0-1529788")
+        assertEquals("pu-0-0-1529788", injected.id)
+        assertEquals(PowerUpType.RADAR_PING, injected.typeEnum)
+    }
+
+    /**
+     * Server 1.6.2+ writes an explicit `id` field. Round-trip must preserve it
+     * even when `.copy(id = doc.id)` is chained afterwards — both should agree.
+     */
+    @Test
+    fun `explicit id from Firestore is preserved through copy`() {
+        val fromServer = PowerUp(
+            id = "pu-0-0-1529788",
+            type = "radarPing",
+            location = GeoPoint(50.8466, 4.3528),
+            spawnedAt = Timestamp(Date(1_800_000_000_000L))
+        )
+        val afterCopy = fromServer.copy(id = "pu-0-0-1529788")
+        assertEquals("pu-0-0-1529788", afterCopy.id)
     }
 }

@@ -2,6 +2,7 @@ package dev.rahier.pouleparty.model
 
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.GeoPoint
+import dev.rahier.pouleparty.powerups.model.PowerUpType
 import org.junit.Assert.*
 import org.junit.Test
 import java.util.Date

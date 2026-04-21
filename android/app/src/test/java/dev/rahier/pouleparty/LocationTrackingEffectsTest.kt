@@ -3,7 +3,9 @@ package dev.rahier.pouleparty
 import com.google.firebase.Timestamp
 import com.mapbox.geojson.Point
 import dev.rahier.pouleparty.model.*
+import dev.rahier.pouleparty.powerups.model.*
 import dev.rahier.pouleparty.ui.gamelogic.*
+import dev.rahier.pouleparty.powerups.logic.*
 import org.junit.Assert.*
 import org.junit.Test
 import java.util.Date

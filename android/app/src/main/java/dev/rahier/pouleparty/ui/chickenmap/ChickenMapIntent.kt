@@ -1,6 +1,6 @@
 package dev.rahier.pouleparty.ui.chickenmap
 
-import dev.rahier.pouleparty.model.PowerUp
+import dev.rahier.pouleparty.powerups.model.PowerUp
 
 /** User-initiated actions on the chicken-map screen. */
 sealed interface ChickenMapIntent {

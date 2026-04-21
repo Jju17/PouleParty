@@ -1,4 +1,4 @@
-package dev.rahier.pouleparty.ui.powerupselection
+package dev.rahier.pouleparty.powerups.selection
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -30,7 +30,7 @@ import androidx.compose.ui.unit.dp
 import dev.rahier.pouleparty.R
 import androidx.compose.ui.unit.sp
 import dev.rahier.pouleparty.model.GameMod
-import dev.rahier.pouleparty.model.PowerUpType
+import dev.rahier.pouleparty.powerups.model.PowerUpType
 import dev.rahier.pouleparty.ui.theme.*
 
 fun powerUpColor(type: PowerUpType): Color = when (type) {

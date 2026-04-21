@@ -17,7 +17,7 @@ import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameStatus
 import dev.rahier.pouleparty.model.PartyPlansConfig
 import dev.rahier.pouleparty.model.HunterLocation
-import dev.rahier.pouleparty.model.PowerUp
+import dev.rahier.pouleparty.powerups.model.PowerUp
 import dev.rahier.pouleparty.model.Registration
 import dev.rahier.pouleparty.model.Winner
 import dev.rahier.pouleparty.ui.gamelogic.PlayerRole

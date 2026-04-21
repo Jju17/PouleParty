@@ -9,8 +9,8 @@ import dev.rahier.pouleparty.data.LocationRepository
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameMod
 import dev.rahier.pouleparty.model.GameStatus
-import dev.rahier.pouleparty.model.PowerUp
-import dev.rahier.pouleparty.model.PowerUpType
+import dev.rahier.pouleparty.powerups.model.PowerUp
+import dev.rahier.pouleparty.powerups.model.PowerUpType
 import dev.rahier.pouleparty.AppConstants
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
@@ -163,6 +163,9 @@ class ChickenMapViewModel @Inject constructor(
             streamJobs += viewModelScope.launch { streamGameConfig() }
             streamJobs += viewModelScope.launch { streamPowerUps() }
             streamJobs += viewModelScope.launch { sendHeartbeat(game) }
+            if (game.gameModEnum == GameMod.STAY_IN_THE_ZONE) {
+                streamJobs += viewModelScope.launch { radarPingBroadcastLoop(game) }
+            }
         }
     }
 
@@ -325,6 +328,11 @@ class ChickenMapViewModel @Inject constructor(
             return
         }
 
+        // Radar Ping support for stayInTheZone is driven by [radarPingBroadcastLoop]
+        // instead of the location flow above, because the flow's 10 m distance
+        // filter means a stationary chicken would never emit a write here, even
+        // during an active ping.
+
         // Send current location immediately on connect
         locationRepository.getLastLocation()?.let { latLng ->
             _uiState.update { it.copy(circleCenter = latLng, userLocation = latLng) }
@@ -351,6 +359,37 @@ class ChickenMapViewModel @Inject constructor(
                 firestoreRepository.setChickenLocation(gameId, sendLatLng)
                 lastWrite = Date()
             }
+        }
+    }
+
+    /**
+     * Timer-driven Radar Ping broadcaster for stayInTheZone mode. Ticks every
+     * throttle period and writes the last-known chicken location to Firestore
+     * while a radar ping is active. Needed because the location flow only fires
+     * on movement (≥10 m filter) — a stationary chicken would otherwise never
+     * broadcast during a ping.
+     */
+    private suspend fun radarPingBroadcastLoop(game: Game) {
+        val delayMs = game.startDate.time - System.currentTimeMillis()
+        if (delayMs > 0) delay(delayMs)
+        while (true) {
+            delay(AppConstants.LOCATION_THROTTLE_MS)
+            val currentGame = _uiState.value.game
+            if (!currentGame.isRadarPingActive) continue
+            // Safety net: if invisibility somehow got activated (not spawned in
+            // stayInTheZone today, but future-proof), it wins over radar ping.
+            if (currentGame.isChickenInvisible) continue
+            val latLng = locationRepository.getLastLocation() ?: continue
+            var sendLatLng = latLng
+            if (currentGame.isJammerActive) {
+                val latNoise = (Math.random() - 0.5) * AppConstants.JAMMER_NOISE_DEGREES
+                val lonNoise = (Math.random() - 0.5) * AppConstants.JAMMER_NOISE_DEGREES
+                sendLatLng = Point.fromLngLat(
+                    latLng.longitude() + lonNoise,
+                    latLng.latitude() + latNoise
+                )
+            }
+            firestoreRepository.setChickenLocation(gameId, sendLatLng)
         }
     }
 

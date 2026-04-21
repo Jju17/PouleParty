@@ -5,7 +5,7 @@
     <string name="press_start">Druk op start om te spelen</string>
     <string name="rules">Regels</string>
     <string name="continue_label">Doorgaan</string>
-    <string name="join_game">Spel deelnemen</string>
+    <string name="join_game">Meedoen aan spel</string>
     <string name="join">Deelnemen</string>
     <string name="cancel">Annuleren</string>
     <string name="ok">OK</string>
@@ -45,7 +45,7 @@
     <string name="registration_required">Inschrijving vereist</string>
     <string name="open_join">Open toegang</string>
     <string name="registration_required_for_paid_deposit_games">Inschrijving is verplicht voor betaalde spellen (borg).</string>
-    <string name="registration_closes">Inschrijving sluit</string>
+    <string name="registration_closes">Inschrijving sluit om</string>
     <string name="at_game_start">Bij aanvang van het spel</string>
     <string name="fifteen_min_before">15 min voor</string>
     <string name="thirty_min_before">30 min voor</string>
@@ -94,10 +94,10 @@
     <string name="quit">Verlaten</string>
     <string name="quit_game">Spel verlaten</string>
     <string name="quit_game_message">Weet je zeker dat je het spel wilt verlaten?</string>
-    <string name="enter_found_code">Voer gevonden code in</string>
-    <string name="enter_code_message">Voer de 4-cijferige code in die de kip toont.</string>
+    <string name="enter_found_code">Voer de vangstcode in</string>
+    <string name="enter_code_message">Voer de 4-cijferige vangstcode in die de Kip toont.</string>
     <string name="four_digit_code">4-cijferige code</string>
-    <string name="submit">Verzenden</string>
+    <string name="submit">Bevestigen</string>
     <string name="wrong_code">Verkeerde code</string>
     <string name="wrong_code_message">Die code is onjuist. Probeer opnieuw!</string>
 
@@ -128,7 +128,7 @@
     <string name="welcome_title">Welkom bij\nPouleParty!</string>
     <string name="welcome_subtitle">Het ultieme echte\nverstopspel</string>
     <string name="nominate_chicken">Kies een Kip</string>
-    <string name="nominate_subtitle">Kies de bruidegom, het feestvarken of wie er echt een Kip wil zijn.\n\nZijn taak: zich verstoppen.</string>
+    <string name="nominate_subtitle">Kies de bruidegom, het feestvarken of wie er echt een Kip wil zijn.\n\nHun taak: zich verstoppen.</string>
     <string name="hunt_them_down">Jaag ze op</string>
     <string name="hunt_subtitle">Vorm teams. Gebruik de kaart om ze op te sporen.\n\nDe Kip kan overal verstopt zitten!</string>
     <string name="need_location">We hebben je locatie nodig</string>
@@ -158,7 +158,7 @@
     <string name="notif_chicken_start_title">Het spel is begonnen!</string>
     <string name="notif_chicken_start_body">Jij bent de Kip! Verstop je snel!</string>
     <string name="notif_hunter_start_title">De jacht begint!</string>
-    <string name="notif_hunter_start_body">De Kip verstopt zich. Ga ze zoeken!</string>
+    <string name="notif_hunter_start_body">De Kip verstopt zich. Ga haar zoeken!</string>
     <string name="notif_zone_shrink_title">Zone krimpt!</string>
     <string name="notif_zone_shrink_body">De zone is net kleiner geworden. Blijf erin!</string>
     <string name="notif_hunter_found_title">Kip gevonden!</string>
@@ -197,7 +197,7 @@
     <string name="return_to_zone">Keer terug naar de zone!</string>
 
     <!-- Map Config -->
-    <string name="search_address">Zoek adres</string>
+    <string name="search_address">Adres zoeken</string>
 
     <!-- Pre-Game Overlay -->
     <string name="game_starting_in">Spel begint over</string>
@@ -216,7 +216,7 @@
     <string name="nickname_saved">Bijnaam opgeslagen!</string>
     <string name="privacy_policy">Privacybeleid</string>
     <string name="terms_of_use">Gebruiksvoorwaarden</string>
-    <string name="contact_support">Contact opnemen</string>
+    <string name="contact_support">Contact opnemen met support</string>
     <string name="delete_my_data">Mijn gegevens verwijderen</string>
     <string name="delete_data_footer">Dit verwijdert je anonieme account en alle bijbehorende gegevens. Je kunt de app gewoon blijven gebruiken — er wordt automatisch een nieuw anoniem account aangemaakt.</string>
     <string name="delete_data_title">Mijn gegevens verwijderen</string>
@@ -240,7 +240,7 @@
     <string name="daily_limit_reached">Dagelijkse limiet bereikt</string>
     <string name="daily_limit_message">Je kunt maar 1 gratis spel per dag maken. Upgrade naar een betaald plan voor onbeperkte spellen.</string>
     <string name="failed_to_load_pricing">Laden van prijzen mislukt</string>
-    <string name="retry">Opnieuw</string>
+    <string name="retry">Opnieuw proberen</string>
 
     <!-- Power-Up Dialogs -->
     <string name="no_power_ups_collected">Nog geen power-ups verzameld</string>
@@ -254,7 +254,7 @@
     <string name="challenge_validate">Valideren</string>
     <string name="challenge_done">✓ Gedaan</string>
     <string name="challenge_validate_confirm">Heb je het bewijs naar WhatsApp gestuurd?</string>
-    <string name="challenge_points_format">%d ptn</string>
+    <string name="challenge_points_format">%d pnt</string>
     <string name="challenges_empty">Nog geen uitdagingen. Kom later terug!</string>
     <string name="leaderboard_empty">Nog geen jagers.</string>
 
@@ -263,6 +263,9 @@
     <string name="no_games_yet">Nog geen spellen</string>
     <string name="podium">Podium</string>
     <string name="other_hunters">Andere jagers</string>
-    <string name="view_leaderboard">Bekijk ranglijst</string>
+    <string name="view_leaderboard">Klassement bekijken</string>
     <string name="open_settings">Open Instellingen</string>
+
+    <!-- App name (matches default) -->
+    <string name="app_name">PouleParty</string>
 </resources>

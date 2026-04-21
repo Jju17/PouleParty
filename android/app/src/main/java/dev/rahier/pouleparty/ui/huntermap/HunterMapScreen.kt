@@ -47,14 +47,14 @@ import dev.rahier.pouleparty.ui.components.HapticManager
 import dev.rahier.pouleparty.ui.components.MapHapticsEffect
 import dev.rahier.pouleparty.ui.components.KeepScreenOn
 import dev.rahier.pouleparty.ui.components.GameOverAlertDialog
-import dev.rahier.pouleparty.model.PowerUpType
-import dev.rahier.pouleparty.ui.components.ActivePowerUpBadge
+import dev.rahier.pouleparty.powerups.model.PowerUpType
+import dev.rahier.pouleparty.powerups.ui.ActivePowerUpBadge
 import dev.rahier.pouleparty.ui.components.GameStartCountdownOverlay
 import dev.rahier.pouleparty.ui.components.MapTopBar
-import dev.rahier.pouleparty.ui.components.PowerUpDetailDialog
-import dev.rahier.pouleparty.ui.components.PowerUpInventoryDialog
-import dev.rahier.pouleparty.ui.components.PowerUpMapMarker
-import dev.rahier.pouleparty.ui.components.PowerUpNotificationOverlay
+import dev.rahier.pouleparty.powerups.ui.PowerUpDetailDialog
+import dev.rahier.pouleparty.powerups.ui.PowerUpInventoryDialog
+import dev.rahier.pouleparty.powerups.ui.PowerUpMapMarker
+import dev.rahier.pouleparty.powerups.ui.PowerUpNotificationOverlay
 import dev.rahier.pouleparty.ui.components.PreGameOverlay
 import dev.rahier.pouleparty.ui.challenges.ChallengesSheet
 
@@ -194,7 +194,7 @@ fun HunterMapScreen(
 
                 // Power-up markers + collection-radius discs (hunter power-ups only)
                 if (state.hasGameStarted) {
-                    dev.rahier.pouleparty.ui.components.PowerUpsMapOverlay(
+                    dev.rahier.pouleparty.powerups.ui.PowerUpsMapOverlay(
                         powerUps = state.availablePowerUps,
                         onMarkerClick = { selectedPowerUpType = it.typeEnum }
                     )

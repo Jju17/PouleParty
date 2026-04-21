@@ -315,6 +315,27 @@ func checkLiveActivityUpdate(
     return LiveActivityUpdate(newState: currentState, didChange: true)
 }
 
+// MARK: - Radar Ping Broadcast
+
+/// Decides whether the chicken should force-broadcast its location while a
+/// Radar Ping is active in stayInTheZone mode. Pure function — all time-based
+/// inputs are explicit so the caller drives the clock in tests.
+///
+/// Returns `true` only when radar ping is live **and** the chicken is not
+/// invisible (safety net — invisibility isn't spawned in stayInTheZone today,
+/// but if it ever leaks through, it wins over radar ping, matching the
+/// followTheChicken behavior).
+func shouldBroadcastDuringRadarPing(
+    now: Date,
+    radarPingUntil: Date?,
+    invisibilityUntil: Date?
+) -> Bool {
+    let isRadarPinged = radarPingUntil.map { now < $0 } ?? false
+    guard isRadarPinged else { return false }
+    let isInvisible = invisibilityUntil.map { now < $0 } ?? false
+    return !isInvisible
+}
+
 // MARK: - Jammer Noise
 
 func applyJammerNoise(to coordinate: CLLocationCoordinate2D) -> CLLocationCoordinate2D {

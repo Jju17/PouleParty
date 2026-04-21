@@ -25,7 +25,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.model.GameMod
-import dev.rahier.pouleparty.model.PowerUpType
+import dev.rahier.pouleparty.powerups.model.PowerUpType
 import dev.rahier.pouleparty.ui.gamecreation.StepContainer
 import dev.rahier.pouleparty.ui.theme.CROrange
 import dev.rahier.pouleparty.ui.theme.bangerStyle

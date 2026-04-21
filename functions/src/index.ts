@@ -319,6 +319,7 @@ async function writePowerUpBatch(
     // collect/activation fields written by clients between attempts
     // (otherwise a retry could "resurrect" a collected power-up).
     batch.set(col.doc(pu.id), {
+      id: pu.id,
       type: pu.type,
       location: pu.location,
       spawnedAt: pu.spawnedAt,

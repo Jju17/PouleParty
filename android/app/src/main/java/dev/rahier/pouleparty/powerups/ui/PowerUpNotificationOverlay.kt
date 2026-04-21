@@ -1,4 +1,4 @@
-package dev.rahier.pouleparty.ui.components
+package dev.rahier.pouleparty.powerups.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -13,9 +13,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import dev.rahier.pouleparty.model.PowerUpType
-import dev.rahier.pouleparty.ui.powerupselection.powerUpColor
-import dev.rahier.pouleparty.ui.powerupselection.powerUpTextColor
+import dev.rahier.pouleparty.powerups.model.PowerUpType
+import dev.rahier.pouleparty.powerups.selection.powerUpColor
+import dev.rahier.pouleparty.powerups.selection.powerUpTextColor
 import dev.rahier.pouleparty.ui.theme.CROrange
 import dev.rahier.pouleparty.ui.theme.NeonGlowIntensity
 import dev.rahier.pouleparty.ui.theme.neonGlow

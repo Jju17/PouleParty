@@ -1,11 +1,12 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
 import en from "./en";
 import fr from "./fr";
+import nl from "./nl";
 
 type Translations = typeof en;
-type Locale = "en" | "fr";
+type Locale = "en" | "fr" | "nl";
 
-const translations: Record<Locale, Translations> = { en, fr };
+const translations: Record<Locale, Translations> = { en, fr, nl };
 
 interface I18nContextType {
   locale: Locale;
@@ -23,7 +24,9 @@ function detectLocale(): Locale {
   const stored = localStorage.getItem("locale") as Locale | null;
   if (stored && translations[stored]) return stored;
   const browser = navigator.language.slice(0, 2);
-  return browser === "fr" ? "fr" : "en";
+  if (browser === "fr") return "fr";
+  if (browser === "nl") return "nl";
+  return "en";
 }
 
 export function I18nProvider({ children }: { children: ReactNode }) {

@@ -71,8 +71,8 @@
     <string name="radius_format">Rayon : %dm</string>
     <string name="found">TROUVÉ</string>
     <string name="cancel_game">Annuler la partie</string>
-    <string name="cancel_game_message">Es-tu sûr de vouloir annuler et finir la partie maintenant ?</string>
-    <string name="never_mind">Autant pour moi</string>
+    <string name="cancel_game_message">Es-tu sûr de vouloir annuler la partie maintenant ?</string>
+    <string name="never_mind">Laisse tomber</string>
     <string name="game_info">Infos de la partie</string>
 
     <!-- Hunter Map -->
@@ -80,7 +80,7 @@
     <string name="quit">Quitter</string>
     <string name="quit_game">Quitter la partie</string>
     <string name="quit_game_message">Es-tu sûr de vouloir quitter la partie ?</string>
-    <string name="enter_found_code">Code de trouvaille</string>
+    <string name="enter_found_code">Code de capture</string>
     <string name="enter_code_message">Entre le code à 4 chiffres montré par la poule.</string>
     <string name="four_digit_code">Code à 4 chiffres</string>
     <string name="submit">Valider</string>
@@ -114,9 +114,9 @@
     <string name="welcome_title">Bienvenue sur\nPouleParty !</string>
     <string name="welcome_subtitle">Le jeu de cache-cache\nultime entre potes</string>
     <string name="nominate_chicken">Choisis une Poule</string>
-    <string name="nominate_subtitle">L\'enterrement de vie de garçon, la fêtée du jour, ou celui qui veut vraiment être une Poule.\n\nSon job : se cacher.</string>
-    <string name="hunt_them_down">Chassez-la</string>
-    <string name="hunt_subtitle">Formez des équipes. Utilisez la carte pour la traquer.\n\nLa Poule peut se cacher n\'importe où !</string>
+    <string name="nominate_subtitle">Le futur marié, la fêtée du jour, ou celui qui veut vraiment être une Poule.\n\nSon job : se cacher.</string>
+    <string name="hunt_them_down">Traque-la</string>
+    <string name="hunt_subtitle">Forme des équipes. Utilise la carte pour la traquer.\n\nLa Poule peut se cacher n\'importe où !</string>
     <string name="need_location">On a besoin de ta position</string>
     <string name="location_granted">C\'est tout bon ! Le jeu suivra ta position même en arrière-plan.\n\nFun maximum garanti !</string>
     <string name="location_partial">Presque ! Le jeu doit suivre la Poule même quand l\'appli est en arrière-plan.\n\nAutorise la localisation en permanence.</string>
@@ -144,9 +144,9 @@
     <string name="notif_chicken_start_title">C\'est parti !</string>
     <string name="notif_chicken_start_body">Tu es la Poule ! Cache-toi vite !</string>
     <string name="notif_hunter_start_title">La chasse commence !</string>
-    <string name="notif_hunter_start_body">La Poule se cache. Trouvez-la !</string>
+    <string name="notif_hunter_start_body">La Poule se cache. Trouve-la !</string>
     <string name="notif_zone_shrink_title">La zone rétrécit !</string>
-    <string name="notif_zone_shrink_body">La zone vient de rétrécir. Restez dedans !</string>
+    <string name="notif_zone_shrink_body">La zone vient de rétrécir. Reste dedans !</string>
     <string name="notif_hunter_found_title">Poule trouvée !</string>
     <string name="notif_hunter_found_body">%1$s a trouvé la poule ! %2$s chasseurs restants</string>
 
@@ -164,7 +164,7 @@
     <string name="mode_stay_desc">La zone rétrécit et se déplace autour du point de départ. Les Chasseurs doivent trouver la Poule sans aucun indice de position !</string>
     <string name="mode_stay_detail1">Pas de partage de position entre joueurs</string>
     <string name="mode_stay_detail2">La zone se déplace vers le point final défini par le créateur</string>
-    <string name="mode_stay_detail3">Stratégie : fouillez la zone mouvante pour trouver la Poule !</string>
+    <string name="mode_stay_detail3">Stratégie : fouille la zone mouvante pour trouver la Poule !</string>
     <string name="chicken_can_see_hunters">La poule voit les chasseurs</string>
     <string name="chicken_can_see_hunters_title">La poule voit les chasseurs 👀</string>
     <string name="chicken_can_see_hunters_desc">Une option disponible dans tous les modes de jeu. La Poule peut voir tous les Chasseurs sur sa carte !</string>
@@ -175,7 +175,7 @@
     <string name="setting_start_end_desc">Quand la partie commence et se termine. La Poule gagne si le temps est écoulé !</string>
     <string name="setting_radius_interval_desc">La fréquence de rétrécissement de la zone (en minutes).</string>
     <string name="setting_radius_decline_desc">De combien de mètres la zone rétrécit à chaque mise à jour.</string>
-    <string name="setting_map_desc">Choisissez le lieu de départ et le rayon initial de la zone.</string>
+    <string name="setting_map_desc">Choisis le lieu de départ et le rayon initial de la zone.</string>
 
     <!-- Profanity -->
     <string name="inappropriate_nickname">Pseudo inapproprié</string>
@@ -202,7 +202,7 @@
     <!-- Game Modes (subtitles) -->
 
     <!-- Zone Warning -->
-    <string name="return_to_zone">Retournez dans la zone !</string>
+    <string name="return_to_zone">Retourne dans la zone !</string>
 
     <!-- Power-Ups -->
     <string name="power_ups">Power-Ups</string>
@@ -268,5 +268,8 @@
     <string name="podium">Podium</string>
     <string name="other_hunters">Autres chasseurs</string>
     <string name="view_leaderboard">Voir le classement</string>
-    <string name="open_settings">Ouvrir les Réglages</string>
+    <string name="open_settings">Ouvrir les paramètres</string>
+
+    <!-- App name (matches default) -->
+    <string name="app_name">PouleParty</string>
 </resources>

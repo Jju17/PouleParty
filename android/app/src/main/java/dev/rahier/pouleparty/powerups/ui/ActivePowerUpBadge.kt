@@ -1,4 +1,4 @@
-package dev.rahier.pouleparty.ui.components
+package dev.rahier.pouleparty.powerups.ui
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandHorizontally
@@ -39,9 +39,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.firebase.Timestamp
 import dev.rahier.pouleparty.model.Game
-import dev.rahier.pouleparty.model.PowerUpType
-import dev.rahier.pouleparty.ui.powerupselection.powerUpColor
-import dev.rahier.pouleparty.ui.powerupselection.powerUpTextColor
+import dev.rahier.pouleparty.powerups.model.PowerUpType
+import dev.rahier.pouleparty.powerups.selection.powerUpColor
+import dev.rahier.pouleparty.powerups.selection.powerUpTextColor
 import dev.rahier.pouleparty.ui.theme.*
 import kotlinx.coroutines.delay
 import java.util.Date
