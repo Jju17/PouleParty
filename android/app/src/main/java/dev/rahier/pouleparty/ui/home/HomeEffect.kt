@@ -13,4 +13,11 @@ sealed interface HomeEffect {
     data class NavigateToHunterMap(val gameId: String, val hunterName: String) : HomeEffect
     /** Navigate to the post-game screen when the joined game is DONE. */
     data class NavigateToGameDone(val gameId: String) : HomeEffect
+    /**
+     * Show the payment-confirmation screen after a successful Caution deposit.
+     * The pending-registration banner on Home is the fallback after dismissal —
+     * we route through the confirmation screen first so the hunter gets an
+     * explicit success moment + share affordance.
+     */
+    data class NavigateToPaymentConfirmed(val gameId: String, val kind: String) : HomeEffect
 }

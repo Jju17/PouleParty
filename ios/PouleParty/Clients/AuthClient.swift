@@ -37,6 +37,15 @@ extension UserClient: DependencyKey {
             Auth.auth().currentUser?.uid
         },
         deleteAccount: {
+            // Delete the user's Firestore profile doc while still authenticated
+            // (rules require auth.uid == userId). Auth deletion can only happen
+            // AFTER the Firestore delete because the rules check disappears once
+            // the auth user is gone.
+            if let userId = Auth.auth().currentUser?.uid {
+                try? await Firestore.firestore()
+                    .collection("users").document(userId)
+                    .delete()
+            }
             try await Auth.auth().currentUser?.delete()
             _ = try await Auth.auth().signInAnonymously()
         },

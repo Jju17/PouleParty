@@ -19,6 +19,7 @@ struct AppFeature {
         case hunterMap(HunterMapFeature.State)
         case home(HomeFeature.State)
         case victory(VictoryFeature.State)
+        case paymentConfirmed(PaymentConfirmationFeature.State)
     }
 
     enum Action {
@@ -29,6 +30,7 @@ struct AppFeature {
         case onboarding(OnboardingFeature.Action)
         case home(HomeFeature.Action)
         case victory(VictoryFeature.Action)
+        case paymentConfirmed(PaymentConfirmationFeature.Action)
     }
 
     @Dependency(\.apiClient) var apiClient
@@ -116,7 +118,13 @@ struct AppFeature {
             case .home(.accountDeletionCompleted):
                 state = .onboarding(OnboardingFeature.State())
                 return .none
-            case .chickenMap, .hunterMap, .home, .victory:
+            case let .home(.paymentConfirmationRequested(game, kind)):
+                state = .paymentConfirmed(PaymentConfirmationFeature.State(game: game, kind: kind))
+                return .none
+            case .paymentConfirmed(.delegate(.done)):
+                state = .home(HomeFeature.State())
+                return .none
+            case .chickenMap, .hunterMap, .home, .victory, .paymentConfirmed:
                 return .none
             }
         }
@@ -134,6 +142,9 @@ struct AppFeature {
         }
         .ifCaseLet(\.victory, action: \.victory) {
             VictoryFeature()
+        }
+        .ifCaseLet(\.paymentConfirmed, action: \.paymentConfirmed) {
+            PaymentConfirmationFeature()
         }
     }
 }
@@ -163,6 +174,10 @@ struct AppView: View {
             case .victory:
                 if let store = store.scope(state: \.victory, action: \.victory) {
                     VictoryView(store: store)
+                }
+            case .paymentConfirmed:
+                if let store = store.scope(state: \.paymentConfirmed, action: \.paymentConfirmed) {
+                    PaymentConfirmationView(store: store)
                 }
             }
         }

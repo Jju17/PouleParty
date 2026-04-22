@@ -10,7 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AcUnit
 import androidx.compose.material.icons.filled.CellTower
-import androidx.compose.material.icons.filled.DirectionsWalk
+import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.SignalCellularConnectedNoInternet0Bar
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -63,7 +63,7 @@ fun powerUpIcon(type: PowerUpType): ImageVector = when (type) {
     PowerUpType.RADAR_PING -> Icons.Filled.CellTower
     PowerUpType.INVISIBILITY -> Icons.Filled.VisibilityOff
     PowerUpType.ZONE_FREEZE -> Icons.Filled.AcUnit
-    PowerUpType.DECOY -> Icons.Filled.DirectionsWalk
+    PowerUpType.DECOY -> Icons.AutoMirrored.Filled.DirectionsWalk
     PowerUpType.JAMMER -> Icons.Filled.SignalCellularConnectedNoInternet0Bar
 }
 

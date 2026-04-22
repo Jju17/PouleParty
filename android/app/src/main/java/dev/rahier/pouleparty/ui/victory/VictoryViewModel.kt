@@ -1,8 +1,10 @@
 package dev.rahier.pouleparty.ui.victory
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.rahier.pouleparty.data.FirestoreRepository
 import dev.rahier.pouleparty.model.Game
@@ -19,12 +21,17 @@ data class VictoryUiState(
     val hunterId: String = "",
     val hunterName: String = "",
     val isChicken: Boolean = false,
-    val registrations: List<Registration> = emptyList()
+    val registrations: List<Registration> = emptyList(),
+    val reportTarget: LeaderboardEntry? = null,
+    val reportResult: ReportResult? = null
 )
+
+enum class ReportResult { SUCCESS, FAILURE }
 
 @HiltViewModel
 class VictoryViewModel @Inject constructor(
     private val firestoreRepository: FirestoreRepository,
+    private val auth: FirebaseAuth,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -72,6 +79,44 @@ class VictoryViewModel @Inject constructor(
                 if (game != null) {
                     _uiState.update { it.copy(game = game) }
                 }
+            }
+        }
+    }
+
+    fun onReportInitiated(entry: LeaderboardEntry) {
+        _uiState.update { it.copy(reportTarget = entry) }
+    }
+
+    fun onReportDismissed() {
+        _uiState.update { it.copy(reportTarget = null) }
+    }
+
+    fun onReportResultDismissed() {
+        _uiState.update { it.copy(reportResult = null) }
+    }
+
+    fun onReportConfirmed() {
+        val target = _uiState.value.reportTarget ?: return
+        val reporterId = auth.currentUser?.uid
+        _uiState.update { it.copy(reportTarget = null) }
+        if (reporterId.isNullOrEmpty()) {
+            _uiState.update { it.copy(reportResult = ReportResult.FAILURE) }
+            return
+        }
+        viewModelScope.launch {
+            val result = runCatching {
+                firestoreRepository.reportPlayer(
+                    reporterId = reporterId,
+                    reportedUserId = target.id,
+                    reportedNickname = target.displayName,
+                    gameId = gameId
+                )
+            }
+            if (result.isFailure) {
+                Log.e("VictoryViewModel", "reportPlayer failed", result.exceptionOrNull())
+            }
+            _uiState.update {
+                it.copy(reportResult = if (result.isSuccess) ReportResult.SUCCESS else ReportResult.FAILURE)
             }
         }
     }

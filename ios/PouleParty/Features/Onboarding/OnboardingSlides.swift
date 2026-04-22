@@ -193,7 +193,7 @@ struct OnboardingLocationSlide: View {
 
             default:
                 Group {
-                    BangerText("Without it, the game can't work.\nNo location = no map = no fun.\n\nWe promise we only use it during the game!", size: 18)
+                    BangerText("Without it, the game can't work.\nNo location = no map = no fun.\n\nWe only share your position with other players while a game is in progress.", size: 18)
                         .multilineTextAlignment(.center)
                         .foregroundStyle(Color.onBackground.opacity(0.6))
                         .padding(.horizontal, 10)
@@ -356,6 +356,16 @@ struct OnboardingReadySlide: View {
         ) {
             Text("🎉")
                 .font(.system(size: 80))
+        } extraContent: {
+            VStack(spacing: 8) {
+                BangerText("⚠️ Play safely", size: 16)
+                    .foregroundStyle(Color.CROrange)
+                BangerText("Watch for traffic. Respect private property. Don't run where you wouldn't normally run. PouleParty is not responsible for injuries or damage.", size: 13)
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(Color.onBackground.opacity(0.6))
+                    .padding(.horizontal, 10)
+            }
+            .padding(.top, 16)
         }
     }
 }

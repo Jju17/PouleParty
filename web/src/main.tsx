@@ -9,6 +9,7 @@ import Privacy from "./pages/Privacy";
 import Support from "./pages/Support";
 import Terms from "./pages/Terms";
 import Register from "./pages/Register";
+import DeleteAccount from "./pages/DeleteAccount";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
@@ -21,6 +22,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/support" element={<Support />} />
+          <Route path="/delete-account" element={<DeleteAccount />} />
         </Routes>
       </BrowserRouter>
     </I18nProvider>

@@ -61,6 +61,9 @@ export default {
     thirdPartyCrashlyticsUrl: "https://firebase.google.com/support/privacy/",
     thirdPartyMapbox: "Mapbox",
     thirdPartyMapboxUrl: "https://www.mapbox.com/legal/privacy",
+    thirdPartyStripe: "Stripe",
+    thirdPartyStripeUrl: "https://stripe.com/privacy",
+    thirdPartyStripeText: "voor betalingen van betaalde games (forfait voor de organisator, borg voor de speler). Wij hebben nooit toegang tot uw bankgegevens: deze worden rechtstreeks naar Stripe verzonden, dat ze verwerkt als onafhankelijke verwerkingsverantwoordelijke.",
     dataSharing: "Delen van gegevens",
     dataSharingText:
       "We verkopen, ruilen of delen uw persoonsgegevens niet met derden voor marketingdoeleinden. Locatiegegevens worden uitsluitend gedeeld met andere spelers in dezelfde spelsessie tijdens het actieve spel.",
@@ -130,21 +133,44 @@ export default {
   },
   terms: {
     title: "Gebruiksvoorwaarden",
-    lastUpdated: "Laatst bijgewerkt: 4 maart 2026",
+    lastUpdated: "Laatst bijgewerkt: 22 april 2026",
     acceptance: "Aanvaarding van de voorwaarden",
     acceptanceText:
       "Door Poule Party te downloaden, installeren of gebruiken gaat u akkoord met deze gebruiksvoorwaarden. Als u niet akkoord gaat, gebruik de app dan niet.",
     description: "Beschrijving van de dienst",
     descriptionText:
-      "Poule Party is een gratis mobiele game op basis van locatie, waarbij één speler (de Kip) zich verstopt terwijl andere spelers (Jagers) haar proberen te vinden via een realtime kaart met een krimpende zone.",
+      "Poule Party is een mobiele game op basis van locatie, waarbij één speler (de Kip) zich verstopt terwijl andere spelers (Jagers) haar proberen te vinden via een realtime kaart met een krimpende zone. De app is gratis; sommige spellen kunnen georganiseerd worden met een makersvergoeding of een terugbetaalbare waarborg (zie Tarieven hieronder).",
     userConduct: "Gedrag van gebruikers",
     conduct1: "Gebruik de app uitsluitend voor het beoogde doel (het spelen van de game).",
     conduct2: "Probeer niet te valsspelen, te hacken of de app te reverse-engineeren.",
     conduct3: "Respecteer andere spelers en speel op veilige, openbare plekken.",
     conduct4: "U bent zelf verantwoordelijk voor uw veiligheid tijdens het spelen.",
+    pricing: "Tarieven & betalingen",
+    pricingIntro:
+      "Poule Party ondersteunt drie tariefmodi die door de maker van het spel worden gekozen:",
+    pricingFree: "Gratis spellen:",
+    pricingFreeText:
+      "Er is geen betaling nodig. Makers en Jagers spelen gratis.",
+    pricingFlat: "Makersvergoeding (\"Forfait\"):",
+    pricingFlatText:
+      "De maker betaalt bij de creatie een vast bedrag voor de dienst van het organiseren en hosten van een reëel evenement (timing, zonebeheer, meldingen, ondersteuning). Dit is een servicevergoeding voor een fysieke activiteit en is niet terugbetaalbaar zodra het spel begint. Makers kunnen een promotiecode gebruiken als die aan hen is verstrekt.",
+    pricingDeposit: "Terugbetaalbare waarborg (\"Caution\"):",
+    pricingDepositText:
+      "Elke Jager betaalt bij de registratie een waarborg. De waarborg wordt bewaard door onze betalingsprovider (Stripe) en is na afloop van het spel terugbetaalbaar aan elke deelnemer, ongeacht het resultaat. De waarborg is geen inzet, geen prijzenpot en wordt nooit naar winnaars herverdeeld. Poule Party neemt geen enkele commissie op de waarborg.",
+    pricingNoGambling: "Geen gokken, geen geldprijzen:",
+    pricingNoGamblingText:
+      "Poule Party is een fysiek spel op basis van vaardigheid. Een spel winnen geeft geen recht op geld of digitale goederen. We organiseren geen kansspelen en keren geen geldprijzen uit.",
+    pricingPayments:
+      "Alle betalingen worden verwerkt door Stripe. We zien of bewaren je kaartgegevens nooit. Om je waarborg na een spel terug te krijgen, mail julien@rahier.dev met de spelcode en het e-mailadres dat je bij de registratie gebruikte — we doen de terugbetaling binnen enkele werkdagen via Stripe op de oorspronkelijke betaalmethode.",
     location: "Locatiegegevens",
     locationText:
       "De app heeft toegang tot de locatie nodig om te functioneren. Uw locatie wordt uitsluitend gedeeld met andere spelers in uw spelsessie tijdens het actieve spel. Zie ons privacybeleid voor meer details.",
+    ugc: "Gebruikersinhoud & moderatie",
+    ugcText:
+      "Nicknames die je invoert zijn zichtbaar voor andere spelers in jouw spellen en in de leaderboards na afloop. Je gaat ermee akkoord geen aanstootgevende, beledigende, intimiderende, lasterlijke of seksuele nicknames te gebruiken, en evenmin namen die andermans identiteit misbruiken. De app bevat een automatisch profaniteitsfilter, maar je kan ook elke speler in het leaderboard rapporteren via de vlag-knop. We bekijken elk rapport en kunnen inhoud verwijderen, accounts hernoemen of recidivisten bannen. Misbruikers of kwaadwillige rapporteerders kunnen eveneens geband worden.",
+    safety: "Fysieke veiligheid",
+    safetyText:
+      "Poule Party is een fysiek spel in de echte wereld. Let op het verkeer, respecteer privéterrein en speel nooit op een manier die jou, andere spelers of omstanders in gevaar brengt. Speel niet tijdens het autorijden of fietsen. Respecteer de lokale wetten. Je speelt op eigen risico.",
     disclaimer: "Disclaimer",
     disclaimerText:
       "De app wordt \"as is\" aangeboden, zonder enige garantie. We garanderen geen ononderbroken of foutloze dienst.",
@@ -232,5 +258,34 @@ export default {
   },
   footer: {
     rights: "Alle rechten voorbehouden.",
+  },
+  deleteAccount: {
+    title: "Je Poule Party-account verwijderen",
+    intro:
+      "Je kan je Poule Party-account en alle bijhorende gegevens verwijderen. Deze pagina is het web-eindpunt voor verwijdering dat Google Play vereist — dezelfde actie kan ook in de app via Instellingen → Verwijder mijn gegevens.",
+    dataDeletedTitle: "Wat wordt verwijderd",
+    dataDeleted: [
+      "Je anonieme Firebase-gebruikers-ID",
+      "Je nickname, Stripe-klantreferentie en push-token",
+      "Alle profielgegevens onder /users/{jouw-id}",
+    ],
+    dataKeptTitle: "Wat blijft bewaard",
+    dataKept: [
+      "Spellen die je hebt aangemaakt of waaraan je meedeed blijven bewaard zodat andere deelnemers de resultaten nog kunnen zien. Je nickname wordt vervangen door een algemeen label.",
+      "Anonieme analytics en crash-rapporten (geaggregeerd, niet gekoppeld aan jouw identiteit).",
+      "Betalingsgegevens die Stripe en onze boekhouding wettelijk moeten bewaren (meestal 7–10 jaar in België).",
+    ],
+    howTitle: "Hoe een verwijdering aanvragen",
+    howText:
+      "Stuur een e-mail naar onderstaand adres vanaf het e-mailadres waarop je de bevestiging wil ontvangen, met:",
+    howList: [
+      "Je nickname (zoals hij in de app verschijnt)",
+      "De geschatte datum van je laatste spel, indien je je die herinnert",
+      "Onderwerp: \"Verwijder mijn Poule Party-account\"",
+    ],
+    timeframe:
+      "We behandelen verwijderingsverzoeken binnen 30 dagen (meestal binnen een week). Je ontvangt een bevestigingsmail zodra het klaar is.",
+    emailButton: "Stuur verwijderingsverzoek",
+    backHome: "Terug naar home",
   },
 };

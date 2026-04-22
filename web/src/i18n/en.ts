@@ -56,6 +56,9 @@ export default {
     thirdPartyCrashlyticsUrl: "https://firebase.google.com/support/privacy/",
     thirdPartyMapbox: "Mapbox",
     thirdPartyMapboxUrl: "https://www.mapbox.com/legal/privacy",
+    thirdPartyStripe: "Stripe",
+    thirdPartyStripeUrl: "https://stripe.com/privacy",
+    thirdPartyStripeText: "for paid-game payments (creator flat fee, hunter deposit). We never have access to your bank details: they are transmitted directly to Stripe, which processes them as an independent data controller.",
     dataSharing: "Data Sharing",
     dataSharingText:
       "We do not sell, trade, or share your personal data with third parties for marketing purposes. Location data is only shared with other players in the same game session during active gameplay.",
@@ -116,21 +119,44 @@ export default {
   },
   terms: {
     title: "Terms of Use",
-    lastUpdated: "Last updated: March 4, 2026",
+    lastUpdated: "Last updated: April 22, 2026",
     acceptance: "Acceptance of Terms",
     acceptanceText:
       "By downloading, installing or using Poule Party, you agree to these Terms of Use. If you do not agree, please do not use the app.",
     description: "Description of the Service",
     descriptionText:
-      "Poule Party is a free location-based mobile game where one player (the Chicken) hides while other players (Hunters) try to find them using a real-time map with a shrinking zone.",
+      "Poule Party is a location-based mobile game where one player (the Chicken) hides while other players (Hunters) try to find them using a real-time map with a shrinking zone. The app is free; some games may optionally be organized with a creator fee or a refundable deposit (see Pricing below).",
     userConduct: "User Conduct",
     conduct1: "Use the app only for its intended purpose (playing the game).",
     conduct2: "Do not attempt to cheat, hack, or reverse-engineer the app.",
     conduct3: "Respect other players and play in safe, public locations.",
     conduct4: "You are responsible for your own safety while playing.",
+    pricing: "Pricing & Payments",
+    pricingIntro:
+      "Poule Party supports three pricing modes, chosen by the game creator at creation time:",
+    pricingFree: "Free games:",
+    pricingFreeText:
+      "No payment is involved. Creators and Hunters play at no cost.",
+    pricingFlat: "Creator fee (\"Forfait\"):",
+    pricingFlatText:
+      "The creator pays a fixed amount at creation time for the service of organizing and hosting a real-world event (timing, zone management, notifications, support). This is a service fee for real-world activity and is not refundable once the game starts. Creators may use a promo code if one has been issued to them.",
+    pricingDeposit: "Refundable deposit (\"Caution\"):",
+    pricingDepositText:
+      "Each Hunter pays a deposit at registration. The deposit is held by our payment processor (Stripe) and is refundable to every participant after the game ends, regardless of the result. The deposit is not a prize pool, not a wager, and is never redistributed to winners. Poule Party takes no commission on the deposit.",
+    pricingNoGambling: "No gambling, no prize money:",
+    pricingNoGamblingText:
+      "Poule Party is a skill-based physical game. Winning a game does not entitle a player to any money or digital goods. We do not run games of chance and do not offer cash prizes.",
+    pricingPayments:
+      "All payments are processed by Stripe. We never see or store your card details. To request a deposit refund after your game ends, email julien@rahier.dev with the game code and the email used at registration — we issue the refund on the original payment method via Stripe within a few business days.",
     location: "Location Data",
     locationText:
       "The app requires location access to function. Your location is shared with other players in your game session only during active gameplay. See our Privacy Policy for details.",
+    ugc: "User-Generated Content & Moderation",
+    ugcText:
+      "Nicknames you enter are visible to other players in your games and in post-game leaderboards. You agree not to use offensive, insulting, harassing, defamatory, sexual, or impersonating nicknames. The app includes an automated profanity filter, but you can also report any player from the leaderboard using the flag button. We review every report and may remove offending content, rename accounts, or ban repeat offenders. Abusive or bad-faith reporters may also be banned.",
+    safety: "Physical Safety",
+    safetyText:
+      "Poule Party is a physical game played in the real world. Watch for traffic, respect private property, and never play in a way that endangers you, other players, or anyone around you. Do not play while driving or cycling. Always follow local laws. You play at your own risk.",
     disclaimer: "Disclaimer",
     disclaimerText:
       'The app is provided "as is" without warranties of any kind. We do not guarantee uninterrupted or error-free service.',
@@ -215,5 +241,34 @@ export default {
   },
   footer: {
     rights: "All rights reserved.",
+  },
+  deleteAccount: {
+    title: "Delete your Poule Party account",
+    intro:
+      "You can delete your Poule Party account and all the data tied to it. This page is the web-accessible deletion endpoint required by Google Play — the same action is also available inside the app under Settings → Delete My Data.",
+    dataDeletedTitle: "What is deleted",
+    dataDeleted: [
+      "Your anonymous Firebase user ID",
+      "Your nickname, Stripe customer reference, and push notification token",
+      "Any user profile data stored under /users/{your-id}",
+    ],
+    dataKeptTitle: "What is kept",
+    dataKept: [
+      "Games you created or joined are kept so other participants can still see final results. Your nickname is replaced with a generic label.",
+      "Anonymous analytics and crash reports (aggregated, not tied to your identity).",
+      "Payment records that Stripe and our accounting are legally required to retain (usually 7–10 years in Belgium).",
+    ],
+    howTitle: "How to request deletion",
+    howText:
+      "Send an email to the address below from the email you'd like a confirmation at, and include:",
+    howList: [
+      "Your nickname (as it appears in the app)",
+      "Approximate date of your last game, if you remember it",
+      "Subject line: \"Delete my Poule Party account\"",
+    ],
+    timeframe:
+      "We process deletion requests within 30 days (usually within a week). You'll receive an email confirmation once it's done.",
+    emailButton: "Email deletion request",
+    backHome: "Back to home",
   },
 };

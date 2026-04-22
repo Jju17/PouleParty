@@ -31,8 +31,30 @@ export default function Terms() {
         </section>
 
         <section>
+          <h2 className="text-xl font-semibold mb-2">{t.terms.pricing}</h2>
+          <p className="mb-3">{t.terms.pricingIntro}</p>
+          <ul className="list-disc pl-6 space-y-2 mb-3">
+            <li><strong>{t.terms.pricingFree}</strong> {t.terms.pricingFreeText}</li>
+            <li><strong>{t.terms.pricingFlat}</strong> {t.terms.pricingFlatText}</li>
+            <li><strong>{t.terms.pricingDeposit}</strong> {t.terms.pricingDepositText}</li>
+            <li><strong>{t.terms.pricingNoGambling}</strong> {t.terms.pricingNoGamblingText}</li>
+          </ul>
+          <p>{t.terms.pricingPayments}</p>
+        </section>
+
+        <section>
           <h2 className="text-xl font-semibold mb-2">{t.terms.location}</h2>
           <p>{t.terms.locationText}</p>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-semibold mb-2">{t.terms.ugc}</h2>
+          <p>{t.terms.ugcText}</p>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-semibold mb-2">{t.terms.safety}</h2>
+          <p>{t.terms.safetyText}</p>
         </section>
 
         <section>

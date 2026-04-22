@@ -53,6 +53,7 @@ fun HomeScreen(
     onNavigateToHunterMap: (String, String) -> Unit,
     onNavigateToVictory: (String) -> Unit,
     onNavigateToSettings: () -> Unit = {},
+    onNavigateToPaymentConfirmed: (gameId: String, kind: String) -> Unit = { _, _ -> },
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -65,8 +66,21 @@ fun HomeScreen(
                 is HomeEffect.NavigateToChickenMap -> onNavigateToChickenMap(effect.gameId)
                 is HomeEffect.NavigateToHunterMap -> onNavigateToHunterMap(effect.gameId, effect.hunterName)
                 is HomeEffect.NavigateToGameDone -> onNavigateToVictory(effect.gameId)
+                is HomeEffect.NavigateToPaymentConfirmed -> onNavigateToPaymentConfirmed(effect.gameId, effect.kind)
             }
         }
+    }
+
+    // Caution hunter payment overlay
+    state.paymentContext?.let { ctx ->
+        androidx.activity.compose.BackHandler { viewModel.onPaymentCancelled() }
+        dev.rahier.pouleparty.ui.payment.PaymentScreen(
+            context = ctx,
+            onCreatorPaid = { /* not used from hunter flow */ },
+            onHunterPaid = { viewModel.onHunterPaymentCompleted() },
+            onCancelled = { viewModel.onPaymentCancelled() },
+        )
+        return
     }
 
     // Music playback

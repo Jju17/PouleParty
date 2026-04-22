@@ -34,6 +34,25 @@ The zone is a circle that shrinks periodically. The shrink interval and amount a
 5. Hunters who find the chicken enter the found code → added to `winners` array
 6. Game ends when time runs out, zone collapses, chicken cancels, or all hunters find the chicken
 
+### Pricing Modes (Stripe)
+
+Three pricing modes drive when money changes hands:
+
+| Mode | Value | Creator pays | Hunters pay | Promo codes | Where created |
+|------|-------|--------------|-------------|-------------|---------------|
+| **Free** | `free` | ❌ | ❌ | ❌ | Client (direct Firestore write) |
+| **Forfait** | `flat` | ✅ `pricePerPlayer × maxPlayers` at creation | ❌ | ✅ (creator-applied at payment) | Server-only via `createCreatorPaymentSheet` / `redeemFreeCreation`; webhook flips `pending_payment` → `waiting` |
+| **Caution** | `deposit` | ❌ *(for now — creator fee deferred)* | ✅ `pricing.deposit` at registration (mandatory) | ❌ | Game doc: client. Registration: server-only via `createHunterPaymentSheet` + webhook |
+
+**Stripe integration**:
+- Mobile SDKs: `StripePaymentSheet` (iOS SPM), `com.stripe:stripe-android` (Android). Drop-in UI supports **Bancontact + card** for EUR/BE via `automatic_payment_methods`.
+- Debug/Release publishable keys: iOS build settings (`STRIPE_PUBLISHABLE_KEY` in pbxproj, exposed via Info.plist); Android `buildConfigField` per `staging` / `production` flavor.
+- Secrets (server-side): Firebase secrets `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET`, separate values per project (`pouleparty-ba586` test, `pouleparty-prod` live).
+- Bancontact redirect: iOS URL scheme `pouleparty://stripe-redirect` in Info.plist + `StripeAPI.handleURLCallback` in AppDelegate; Android handled automatically by the SDK.
+- Promo codes: created in Stripe Dashboard, validated server-side via `validatePromoCode` (rate-limited per user). 100%-off codes skip PaymentSheet entirely and create the game via `redeemFreeCreation`.
+- Webhook dedup: `paymentEvents/{eventId}` Firestore doc; retries are idempotent.
+- Firestore rules enforce: Forfait games only creatable via admin SDK; Caution registrations only creatable via admin SDK; `users.stripeCustomerId` is admin-SDK-only; `paymentEvents` / `rateLimits` are fully locked.
+
 ## Build & run
 
 ### iOS
@@ -90,6 +109,8 @@ cd web && npm run dev
   ├── pricing: { model, pricePerPlayer, deposit, commission }
   ├── registration: { required, closesMinutesBefore }
   ├── powerUps: { enabled, enabledTypes, activeEffects: { invisibility, zoneFreeze, radarPing, decoy, jammer } }
+  ├── payment: { provider, amountCents, currency, promoCodeId, baseAmountCents, paymentIntentId, paidAt }
+  │                                  → Only for Forfait games (created server-side)
   ├── /chickenLocations/latest     → Single doc, overwritten each position update
   ├── /hunterLocations/{hunterId}  → One doc per hunter, overwritten
   ├── /powerUps/{powerUpId}        → One doc per spawned power-up (collected/activated state)
@@ -97,8 +118,10 @@ cd web && npm run dev
   └── /challengeCompletions/{hunterId} → One doc per hunter who has completed at least one challenge (completedChallengeIds, totalPoints, teamName)
 
 /challenges/{challengeId}          → Global, dev-managed challenge catalog (title, body, points, lastUpdated)
-/users/{userId}                    → User profile (nickname, FCM token, platform, updatedAt)
+/users/{userId}                    → User profile (nickname, FCM token, platform, updatedAt, stripeCustomerId [admin-only])
 /registrations/{docId}             → Event registration (admin-only, used by web)
+/paymentEvents/{eventId}           → Stripe webhook dedupe (admin-only)
+/rateLimits/{key}                  → Server-side rate-limit counters, e.g. `promo_{uid}` (admin-only)
 ```
 
 The `gameCode` is derived from the document ID (first 6 chars, uppercased).

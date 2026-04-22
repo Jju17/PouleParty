@@ -6,6 +6,8 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
 
     <application
         android:name=".PoulePartyApp"
@@ -34,6 +36,15 @@
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
+
+        <!-- Foreground service used while a game is active so the Chicken / Hunter keeps
+             receiving location updates even when the app is backgrounded. Required by
+             Android 14+ whenever the app uses ACCESS_BACKGROUND_LOCATION. -->
+        <service
+            android:name=".service.LocationForegroundService"
+            android:foregroundServiceType="location"
+            android:exported="false"
+            android:stopWithTask="true" />
 
         <!-- FCM default notification channel (used when the server does not specify one) -->
         <meta-data

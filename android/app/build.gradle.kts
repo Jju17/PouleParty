@@ -24,8 +24,8 @@ android {
         applicationId = "dev.rahier.pouleparty2"
         minSdk = 26
         targetSdk = 35
-        versionCode = 18
-        versionName = "1.6.3"
+        versionCode = 24
+        versionName = "1.8.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -45,9 +45,13 @@ android {
     productFlavors {
         create("staging") {
             dimension = "environment"
+            // Stripe test publishable key — pk_test_*. Rotate in Stripe Dashboard.
+            buildConfigField("String", "STRIPE_PUBLISHABLE_KEY", "\"pk_test_51TOioI9y90nsLqhVN0M6NgIYPwWHEbIdoaiPgKjmkoHUeWjeZhS2ObYFc4ejC3jnh6nDbehbgzzWQHkkF3yUVrKY00UWSXTYex\"")
         }
         create("production") {
             dimension = "environment"
+            // Stripe live publishable key — pk_live_*. Rotate in Stripe Dashboard.
+            buildConfigField("String", "STRIPE_PUBLISHABLE_KEY", "\"pk_live_51TOigX6h9cy8iP6lavNsc4XKwiBJTJUUq3c8qP9tLfY0nCF3jbzXXUHmggsuoWbX7Tzr6whKvdpYYOaeLKn1fWhK00kinzuEao\"")
         }
     }
 
@@ -75,6 +79,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -108,6 +113,10 @@ dependencies {
     implementation("com.google.firebase:firebase-auth-ktx")
     implementation("com.google.firebase:firebase-messaging-ktx")
     implementation("com.google.firebase:firebase-crashlytics-ktx")
+    implementation("com.google.firebase:firebase-functions-ktx")
+
+    // Stripe (PaymentSheet drop-in — supports Bancontact + card for BE/EUR)
+    implementation("com.stripe:stripe-android:21.8.0")
 
     // Mapbox Maps (ndk27 artifacts for 16 KB page size support on Android 15+)
     implementation("com.mapbox.maps:android-ndk27:11.20.2")

@@ -16,28 +16,26 @@ Téléchargez, organisez une partie et faites péter vos retours 🏃💨🐔
 
 ---
 
-# Release 1.6.3
+# Release 1.8.1
 
 ## What's New
 
-Critical fix for Radar Ping in "Stay in the Zone" mode: a stationary Chicken never broadcast its position during an active ping, so Hunters saw nothing. Now a dedicated 5 s timer loop force-broadcasts the Chicken's position while a ping is active, even if the Chicken is standing still.
-
-Full audit of all 6 power-ups passed — everything works as expected on both iOS and Android.
+A proper success moment after you pay — the app now celebrates the new game with confetti, the game code ready to share with a single tap, and a live countdown to start.
 
 ---
 
 ## App Store "What's New" (copy-paste)
 
 <en>
-Fix: Radar Ping now works in "Stay in the Zone" mode even if the Chicken is standing still — previously a stationary Chicken never broadcast their position during a ping.
+After you create a paid game or register with a deposit, you finally get a proper success screen — confetti, the game code ready to share, a live countdown to start, and a status that updates in real time as soon as the payment is confirmed.
 </en>
 
 <fr>
-Correctif : le Radar Ping fonctionne enfin en mode "Reste dans la zone" même quand la Poule ne bouge pas — jusqu'ici une Poule immobile ne diffusait jamais sa position pendant un ping.
+Quand tu crées une partie payante ou t'inscris avec une caution, tu obtiens enfin un vrai écran de confirmation — confettis, code de partie prêt à partager, countdown live jusqu'au start, et un statut qui se met à jour en direct dès que le paiement est confirmé.
 </fr>
 
 <nl>
-Fix: Radar Ping werkt nu in "Stay in the Zone"-modus ook als de Kip stilstaat — voorheen zond een stilstaande Kip nooit haar positie uit tijdens een ping.
+Na een betaalde aanmaak of registratie met waarborg krijg je eindelijk een echt bevestigingsscherm — confetti, spelcode klaar om te delen, live aftelling tot de start, en een status die live bijwerkt zodra je betaling bevestigd is.
 </nl>
 
 ---
@@ -45,15 +43,157 @@ Fix: Radar Ping werkt nu in "Stay in the Zone"-modus ook als de Kip stilstaat �
 ## Google Play Release Notes (copy-paste format)
 
 <en-US>
-Fix: Radar Ping works in "Stay in the Zone" even when the Chicken is standing still.
+After a paid game creation or deposit registration, a full success screen with confetti, the game code ready to share, a live countdown, and a status that updates in real time as soon as the payment is confirmed.
 </en-US>
 
 <fr-FR>
-Correctif : Radar Ping fonctionne en "Reste dans la zone" même quand la Poule est immobile.
+Après la création d'une partie payante ou une inscription avec caution, un écran de succès complet avec confettis, code de partie prêt à partager, countdown live, et un statut qui se met à jour dès que le paiement est confirmé.
 </fr-FR>
 
 <nl-NL>
-Fix: Radar Ping werkt in "Stay in the Zone" ook als de Kip stilstaat.
+Na een betaalde aanmaak of registratie met waarborg: een volledig succesoverzicht met confetti, deelbare spelcode, live aftelling, en een status die live bijwerkt zodra je betaling bevestigd is.
+</nl-NL>
+
+---
+
+## Version Info
+
+| Platform | Version | Build |
+|---|---|---|
+| iOS | 1.8.1 | 2 |
+| Android | 1.8.1 | 24 |
+
+---
+
+## App Review Notes (App Store Connect — Version 1.8.1)
+
+Paste verbatim in the "App Review Information → Notes" field for version 1.8.1 before resubmitting:
+
+```
+Thank you for the review.
+
+(1) Android references in What's New — removed. The "What's New" text for 1.8.1 is now strictly iOS-only with no mention of any other platform.
+
+(2) Apple Pay visibility. Apple Pay is presented by Stripe's drop-in PaymentSheet during the app's two paid flows:
+  a. Create a paid game — from the main screen tap "Create Party", then on the plan-selection sheet pick "Forfait" (the middle paid plan), complete the short wizard and tap "Pay" on the recap step. The Stripe PaymentSheet opens and, on a device with a configured Apple Pay wallet, an Apple Pay button is shown at the top of the sheet next to card and Bancontact.
+  b. Join a paid game — from the main screen tap "Start", enter a 6-character code for a game whose creator chose the "Caution" (deposit) plan. After validating your team name, tap "Pay". The same PaymentSheet opens and the Apple Pay button is shown if the device wallet is configured.
+
+If no card is set up in the device's Apple Wallet the Stripe SDK hides the Apple Pay button — this is by design and is why the button may not be visible on a review device that does not have a wallet configured.
+
+Merchant ID: merchant.dev.rahier.pouleparty (registered in our Apple Developer account).
+Entitlement: com.apple.developer.in-app-payments is enabled.
+Code reference: ios/PouleParty/Features/Payment/PaymentFeature.swift — PaymentSheet.Configuration.applePay = .init(merchantId: "merchant.dev.rahier.pouleparty", merchantCountryCode: "BE").
+
+We can provide a screen recording on request.
+
+(3) Location purpose strings. NSLocationWhenInUseUsageDescription and NSLocationAlwaysAndWhenInUseUsageDescription have been rewritten to describe the specific use and provide a concrete example of how the location data is used (Hunters seeing the Chicken's live position during an active game, Chicken running with the phone in a pocket while the zone keeps following them). The "Always" justification explicitly states that tracking stops as soon as the game ends.
+
+Test account for QA is available on request.
+```
+
+---
+
+## App Store "What's New" — 1.8.1 (resubmit — use ONLY these iOS-specific texts, never paste the Google Play block into App Store Connect)
+
+<en>
+After you create a paid game or register with a deposit, you finally get a proper success screen — confetti, the game code ready to share, a live countdown to start, and a status that updates in real time as soon as the payment is confirmed.
+</en>
+
+<fr>
+Quand tu crées une partie payante ou t'inscris avec une caution, tu obtiens enfin un vrai écran de confirmation — confettis, code de partie prêt à partager, countdown live jusqu'au start, et un statut qui se met à jour en direct dès que le paiement est confirmé.
+</fr>
+
+<nl>
+Na een betaalde aanmaak of registratie met waarborg krijg je eindelijk een echt bevestigingsscherm — confetti, spelcode klaar om te delen, live aftelling tot de start, en een status die live bijwerkt zodra je betaling bevestigd is.
+</nl>
+
+---
+
+# Release 1.8.0
+
+## What's New
+
+Privacy, moderation and safety pass: you can now report a player straight from the leaderboard, a reminder to play safely appears before your first game, and account deletion now fully wipes your profile. Background location handling is upgraded to meet the latest Android and iOS requirements.
+
+---
+
+## App Store "What's New" (copy-paste)
+
+<en>
+Report a player directly from the leaderboard, new safety tips before your first game, and account deletion now fully removes your profile. Background location handling updated to match the latest iOS requirements.
+</en>
+
+<fr>
+Signale un joueur directement depuis le classement, nouveaux conseils de sécurité avant ta première partie, et la suppression de compte efface maintenant tout ton profil. Gestion de la localisation en arrière-plan mise à jour pour les dernières exigences d'iOS.
+</fr>
+
+<nl>
+Rapporteer een speler rechtstreeks vanuit het klassement, nieuwe veiligheidstips vóór je eerste spel, en het verwijderen van je account wist nu ook volledig je profiel. Achtergrondlocatie bijgewerkt volgens de nieuwste iOS-vereisten.
+</nl>
+
+---
+
+## Google Play Release Notes (copy-paste format)
+
+<en-US>
+Report a player from the leaderboard, new safety tips before your first game, and account deletion now fully wipes your profile. Background location handling upgraded for Android 14+.
+</en-US>
+
+<fr-FR>
+Signale un joueur depuis le classement, nouveaux conseils de sécurité avant ta première partie, et la suppression de compte efface maintenant tout ton profil. Gestion de la localisation en arrière-plan mise à jour pour Android 14+.
+</fr-FR>
+
+<nl-NL>
+Rapporteer een speler vanuit het klassement, nieuwe veiligheidstips vóór je eerste spel, en accountverwijdering wist nu je volledige profiel. Achtergrondlocatie bijgewerkt voor Android 14+.
+</nl-NL>
+
+---
+
+## Version Info
+
+| Platform | Version | Build |
+|---|---|---|
+| iOS | 1.8.0 | 4 |
+| Android | 1.8.0 | 22 |
+
+---
+
+# Release 1.7.1
+
+## What's New
+
+Apple Pay (iOS) and Google Pay (Android) are now available at checkout, on top of card and Bancontact. One-tap payment for anyone with a wallet set up.
+
+---
+
+## App Store "What's New" (copy-paste)
+
+<en>
+Apple Pay is now available at checkout — pay in one tap with Face ID or Touch ID, on top of card and Bancontact.
+</en>
+
+<fr>
+Apple Pay est désormais disponible au paiement — en un tap avec Face ID ou Touch ID, en plus de carte et Bancontact.
+</fr>
+
+<nl>
+Apple Pay is nu beschikbaar bij het afrekenen — betaal met één tap via Face ID of Touch ID, naast kaart en Bancontact.
+</nl>
+
+---
+
+## Google Play Release Notes (copy-paste format)
+
+<en-US>
+Google Pay is now available at checkout — pay in one tap, on top of card and Bancontact.
+</en-US>
+
+<fr-FR>
+Google Pay est disponible au paiement — en un tap, en plus de carte et Bancontact.
+</fr-FR>
+
+<nl-NL>
+Google Pay is nu beschikbaar bij het afrekenen — betaal met één tap, naast kaart en Bancontact.
 </nl-NL>
 
 ---

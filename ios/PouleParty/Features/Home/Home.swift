@@ -75,6 +75,9 @@ struct HomeFeature {
         case networkRequestFailed
         case noActiveGameFound
         case onTask
+        /// Emitted after a successful Forfait or Caution payment. Caught by
+        /// `AppFeature` to swap root state to `.paymentConfirmed(...)`.
+        case paymentConfirmationRequested(game: Game, kind: PaymentConfirmationFeature.Kind)
         case pendingRegistrationDismissed
         case pendingRegistrationRefreshed(PendingRegistration?)
         case pendingRegistrationRejoinTapped
@@ -171,6 +174,13 @@ struct HomeFeature {
             case let .destination(.presented(.gameCreation(.gameCreated(game)))):
                 state.destination = nil
                 return .send(.chickenGameStarted(game))
+            case let .destination(.presented(.gameCreation(.paidGameCreated(game)))):
+                // Forfait game was created server-side in `.pendingPayment`; webhook
+                // flips to `.waiting` within a couple of seconds. Route to the
+                // confirmation screen so the creator gets immediate feedback
+                // instead of being dumped back on Home.
+                state.destination = nil
+                return .send(.paymentConfirmationRequested(game: game, kind: .creatorForfait))
             case let .destination(.presented(.planSelection(.planSelected(pricingModel, numberOfPlayers, pricePerPlayerCents, depositAmountCents)))):
                 state.destination = nil
                 state.pendingPlanResult = PlanSelectionResult(
@@ -210,6 +220,9 @@ struct HomeFeature {
                     return .send(.hunterGameJoined(game, hunterName))
                 case .done:
                     return .send(.completedGameFound(game))
+                case .pendingPayment, .paymentFailed:
+                    // Paid-creator game not yet live — nothing to join.
+                    return .none
                 }
             case let .destination(.presented(.joinFlow(.delegate(.registered(game, teamName))))):
                 state.destination = nil
@@ -221,7 +234,10 @@ struct HomeFeature {
                         startDate: game.startDate
                     )
                 }
-                return .none
+                // Show the confirmation screen so the hunter sees their payment
+                // succeeded and can share the code with teammates. The pending
+                // registration banner on Home is the fallback after dismissal.
+                return .send(.paymentConfirmationRequested(game: game, kind: .hunterCaution))
             case .destination:
                 return .none
             case .activeGameBannerDismissed:
@@ -328,6 +344,9 @@ struct HomeFeature {
                 state.activeGame = nil
                 state.activeGameRole = nil
                 return .none
+            case .paymentConfirmationRequested:
+                // Terminal — `AppFeature` catches this and swaps root state.
+                return .none
             case .onTask:
                 let userId = userClient.currentUserId()
                 guard let userId, !userId.isEmpty else {
@@ -410,6 +429,8 @@ struct HomeFeature {
                             await send(.hunterGameJoined(game, finalName))
                         case .done:
                             await send(.completedGameFound(game))
+                        case .pendingPayment, .paymentFailed:
+                            await send(.gameNotFound)
                         }
                     } catch {
                         await send(.networkRequestFailed)

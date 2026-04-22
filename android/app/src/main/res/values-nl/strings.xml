@@ -134,7 +134,7 @@
     <string name="need_location">We hebben je locatie nodig</string>
     <string name="location_granted">Alles klaar! Het spel volgt je locatie ook op de achtergrond.\n\nMaximaal plezier gegarandeerd!</string>
     <string name="location_partial">Bijna klaar! Het spel moet de Kip ook volgen als de app op de achtergrond draait.\n\nSta achtergrondlocatie toe.</string>
-    <string name="location_denied">Zonder locatie werkt het spel niet.\nGeen locatie = geen kaart = geen plezier.\n\nWe gebruiken het alleen tijdens het spel!</string>
+    <string name="location_denied">Zonder locatie werkt het spel niet.\nGeen locatie = geen kaart = geen plezier.\n\nJe locatie wordt alleen met andere spelers gedeeld terwijl een spel bezig is.</string>
     <string name="always_allowed">Altijd toegestaan!</string>
     <string name="allow_always">Altijd toestaan</string>
     <string name="allow_location_access">Locatietoegang toestaan</string>
@@ -268,4 +268,37 @@
 
     <!-- App name (matches default) -->
     <string name="app_name">PouleParty</string>
+
+    <!-- Location foreground service -->
+    <string name="location_service_channel_name">Locatie tijdens het spel</string>
+    <string name="location_service_channel_description">Laat de app je locatie volgen tijdens actieve spellen.</string>
+    <string name="location_service_title">Spel bezig</string>
+    <string name="location_service_text">Je locatie wordt gedeeld zodat de Kip en Jagers gesynchroniseerd blijven.</string>
+
+    <!-- Safety disclaimer -->
+    <string name="safety_banner_title">⚠️ Speel veilig</string>
+    <string name="safety_banner_text">Let op het verkeer. Respecteer privéterrein. Ren niet op plekken waar je dat normaal niet zou doen. PouleParty is niet verantwoordelijk voor verwondingen of schade.</string>
+
+    <!-- Payment confirmation screen -->
+    <string name="payment_confirmed_title_creator">Spel aangemaakt!</string>
+    <string name="payment_confirmed_title_hunter">Je bent ingeschreven!</string>
+    <string name="payment_confirmed_subtitle_creator">Je vast bedrag is goed ontvangen. Deel de code zodat jagers kunnen meedoen.</string>
+    <string name="payment_confirmed_subtitle_hunter">Je waarborg is goed ontvangen. Tot op de speeldag — je waarborg krijg je erna terug.</string>
+    <string name="payment_confirmed_game_code">Spelcode</string>
+    <string name="payment_confirmed_starts_in">Het spel begint over</string>
+    <string name="payment_confirmed_status_waiting">Wachten op spelers</string>
+    <string name="payment_confirmed_status_in_progress">Spel bezig</string>
+    <string name="payment_confirmed_status_done">Spel beëindigd</string>
+    <string name="payment_confirmed_status_pending_payment">Betaling valideren…</string>
+    <string name="payment_confirmed_status_payment_failed">Betaling mislukt</string>
+    <string name="payment_confirmed_share">Deel de code</string>
+    <string name="payment_confirmed_back_home">Terug naar home</string>
+
+    <!-- Player reporting (UGC moderation) -->
+    <string name="report_player_cd">Rapporteer %1$s</string>
+    <string name="report_player_title">Deze speler rapporteren?</string>
+    <string name="report_player_message">Rapporteer %1$s voor een aanstootgevende nickname of ongepast gedrag. We bekijken elk rapport; wie misbruik maakt kan geband worden.</string>
+    <string name="report_player_submit">Rapporteer</string>
+    <string name="report_player_success">Bedankt — rapport verzonden</string>
+    <string name="report_player_error">Rapport kon niet verzonden worden. Probeer straks opnieuw.</string>
 </resources>

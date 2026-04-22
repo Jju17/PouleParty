@@ -136,7 +136,36 @@
     <string name="need_location">We Need Your Location</string>
     <string name="location_granted">You\'re all set! The game will track location even in the background.\n\nMaximum fun guaranteed!</string>
     <string name="location_partial">Almost there! The game needs to track the Chicken even when the app is in the background.\n\nPlease allow background location.</string>
-    <string name="location_denied">Without it, the game can\'t work.\nNo location = no map = no fun.\n\nWe promise we only use it during the game!</string>
+    <string name="location_denied">Without it, the game can\'t work.\nNo location = no map = no fun.\n\nWe only share your position with other players while a game is in progress.</string>
+    <string name="location_service_channel_name">Game location tracking</string>
+    <string name="location_service_channel_description">Keeps the app tracking your position during active games.</string>
+    <string name="location_service_title">Game in progress</string>
+    <string name="location_service_text">Sharing your location so the Chicken and Hunters stay in sync.</string>
+    <string name="safety_banner_title">⚠️ Play safely</string>
+    <string name="safety_banner_text">Watch for traffic. Respect private property. Don\'t run where you wouldn\'t normally run. PouleParty is not responsible for injuries or damage.</string>
+
+    <!-- Payment confirmation screen (shown after successful Forfait/Caution/promo) -->
+    <string name="payment_confirmed_title_creator">Partie créée !</string>
+    <string name="payment_confirmed_title_hunter">Tu es inscrit !</string>
+    <string name="payment_confirmed_subtitle_creator">Ton forfait est bien encaissé. Partage le code pour que les chasseurs rejoignent.</string>
+    <string name="payment_confirmed_subtitle_hunter">Ta caution est bien reçue. Rendez-vous le jour J — elle te sera remboursée après la partie.</string>
+    <string name="payment_confirmed_game_code">Game code</string>
+    <string name="payment_confirmed_starts_in">Game starts in</string>
+    <string name="payment_confirmed_status_waiting">Waiting for players</string>
+    <string name="payment_confirmed_status_in_progress">Game in progress</string>
+    <string name="payment_confirmed_status_done">Game finished</string>
+    <string name="payment_confirmed_status_pending_payment">Validating payment…</string>
+    <string name="payment_confirmed_status_payment_failed">Payment failed</string>
+    <string name="payment_confirmed_share">Share the code</string>
+    <string name="payment_confirmed_back_home">Back to home</string>
+
+    <!-- Player reporting (UGC moderation) -->
+    <string name="report_player_cd">Report %1$s</string>
+    <string name="report_player_title">Report this player?</string>
+    <string name="report_player_message">Report %1$s for an offensive nickname or inappropriate behaviour. We review every report; abusive reporters may be banned.</string>
+    <string name="report_player_submit">Report</string>
+    <string name="report_player_success">Thanks — report submitted</string>
+    <string name="report_player_error">Couldn\'t submit the report. Try again in a moment.</string>
     <string name="always_allowed">Always allowed!</string>
     <string name="allow_always">Allow Always</string>
     <string name="allow_location_access">Allow Location Access</string>

@@ -13,7 +13,9 @@ import dev.rahier.pouleparty.model.GameMod
 import dev.rahier.pouleparty.model.GamePowerUps
 import dev.rahier.pouleparty.model.GameRegistration
 import dev.rahier.pouleparty.model.Pricing
+import dev.rahier.pouleparty.model.PricingModel
 import dev.rahier.pouleparty.powerups.model.PowerUpType
+import dev.rahier.pouleparty.ui.payment.PaymentContext
 import dev.rahier.pouleparty.model.Timing
 import dev.rahier.pouleparty.model.Zone
 import dev.rahier.pouleparty.model.calculateNormalModeSettings
@@ -40,7 +42,9 @@ data class GameCreationUiState(
     val showAlert: Boolean = false,
     val alertMessage: String = "",
     val codeCopied: Boolean = false,
-    val goingForward: Boolean = true
+    val goingForward: Boolean = true,
+    /** Non-null when the Forfait creator payment screen should be shown as an overlay. */
+    val paymentContext: PaymentContext? = null,
 ) {
     val steps: List<GameCreationStep>
         get() {
@@ -398,12 +402,22 @@ class GameCreationViewModel @Inject constructor(
 
     private fun startGame() {
         clampStartDateToMinimum()
+        val game = _uiState.value.game
+        val state = _uiState.value
+        val endDate = Date(game.startDate.time + (state.gameDurationMinutes * 60 * 1000).toLong())
+        val finalGame = game.withEndDate(endDate)
+
+        // Forfait: creator pays upfront — defer the Firestore write until the Stripe
+        // webhook flips the server-created game doc from `pending_payment` to `waiting`.
+        // Free and Caution modes still go through the direct client write path (Caution
+        // creator doesn't pay right now; only hunters pay a deposit at registration).
+        if (finalGame.pricingModelEnum == PricingModel.FLAT) {
+            _uiState.update { it.copy(paymentContext = PaymentContext.CreatorForfait(finalGame)) }
+            return
+        }
+
         viewModelScope.launch {
             try {
-                val game = _uiState.value.game
-                val state = _uiState.value
-                val endDate = Date(game.startDate.time + (state.gameDurationMinutes * 60 * 1000).toLong())
-                val finalGame = game.withEndDate(endDate)
                 firestoreRepository.setConfig(finalGame)
                 analyticsRepository.gameCreated(
                     gameMode = finalGame.gameMode,
@@ -421,5 +435,24 @@ class GameCreationViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    fun onCreatorPaymentCompleted(gameId: String) {
+        val finalGame = _uiState.value.game
+        analyticsRepository.gameCreated(
+            gameMode = finalGame.gameMode,
+            maxPlayers = finalGame.maxPlayers,
+            pricingModel = finalGame.pricing.model,
+            powerUpsEnabled = finalGame.powerUps.enabled
+        )
+        _uiState.update { it.copy(paymentContext = null) }
+        // Forfait game is created server-side in `pending_payment`. Dismiss creation
+        // UI and surface a soft toast — the game appears in Settings > My Games
+        // once the webhook flips status to `waiting` (a second or two later).
+        viewModelScope.launch { _effects.send(GameCreationEffect.PaidGameCreated(gameId)) }
+    }
+
+    fun onPaymentCancelled() {
+        _uiState.update { it.copy(paymentContext = null) }
     }
 }

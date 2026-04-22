@@ -5,6 +5,7 @@
 
 import Firebase
 import FirebaseMessaging
+import StripePaymentSheet
 import UIKit
 import UserNotifications
 
@@ -18,8 +19,36 @@ class AppDelegate: NSObject, UIApplicationDelegate, MessagingDelegate, UNUserNot
         MigrationManager.runIfNeeded()
         Messaging.messaging().delegate = self
         UNUserNotificationCenter.current().delegate = self
-        application.registerForRemoteNotifications()
+        configureStripe()
+        // Apple guideline 4.5.4: do not register for remote notifications before the user
+        // has granted permission. On subsequent launches, register only if already authorized.
+        // The onboarding notification slide triggers registration on first grant via NotificationClient.
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            if settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional {
+                DispatchQueue.main.async {
+                    application.registerForRemoteNotifications()
+                }
+            }
+        }
         return true
+    }
+
+    private func configureStripe() {
+        let key = Bundle.main.object(forInfoDictionaryKey: "StripePublishableKey") as? String ?? ""
+        guard key.hasPrefix("pk_") else {
+            assertionFailure("StripePublishableKey missing/invalid in Info.plist — set STRIPE_PUBLISHABLE_KEY in project build settings")
+            return
+        }
+        StripeAPI.defaultPublishableKey = key
+    }
+
+    func application(
+        _ app: UIApplication,
+        open url: URL,
+        options: [UIApplication.OpenURLOptionsKey: Any] = [:]
+    ) -> Bool {
+        if StripeAPI.handleURLCallback(with: url) { return true }
+        return false
     }
 
     func application(

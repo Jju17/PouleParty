@@ -56,6 +56,9 @@ export default {
     thirdPartyCrashlyticsUrl: "https://firebase.google.com/support/privacy/",
     thirdPartyMapbox: "Mapbox",
     thirdPartyMapboxUrl: "https://www.mapbox.com/legal/privacy",
+    thirdPartyStripe: "Stripe",
+    thirdPartyStripeUrl: "https://stripe.com/privacy",
+    thirdPartyStripeText: "pour les paiements des parties payantes (forfait créateur, caution joueur). Nous n'avons jamais accès à vos données bancaires : elles sont transmises directement à Stripe qui les traite en tant que responsable de traitement indépendant.",
     dataSharing: "Partage des données",
     dataSharingText:
       "Nous ne vendons, n'échangeons ni ne partageons vos données personnelles avec des tiers à des fins commerciales. Les données de localisation sont uniquement partagées avec les autres joueurs de la même session pendant le jeu.",
@@ -116,21 +119,44 @@ export default {
   },
   terms: {
     title: "Conditions d'utilisation",
-    lastUpdated: "Dernière mise à jour : 4 mars 2026",
+    lastUpdated: "Dernière mise à jour : 22 avril 2026",
     acceptance: "Acceptation des conditions",
     acceptanceText:
       "En téléchargeant, installant ou utilisant Poule Party, vous acceptez ces conditions d'utilisation. Si vous n'êtes pas d'accord, veuillez ne pas utiliser l'application.",
     description: "Description du service",
     descriptionText:
-      "Poule Party est un jeu mobile gratuit basé sur la géolocalisation dans lequel un joueur (la Poule) se cache tandis que les autres joueurs (les Chasseurs) tentent de la trouver à l'aide d'une carte en temps réel avec une zone qui rétrécit.",
+      "Poule Party est un jeu mobile basé sur la géolocalisation dans lequel un joueur (la Poule) se cache tandis que les autres joueurs (les Chasseurs) tentent de la trouver à l'aide d'une carte en temps réel avec une zone qui rétrécit. L'application est gratuite ; certaines parties peuvent être organisées avec un forfait créateur ou une caution remboursable (voir Tarification ci-dessous).",
     userConduct: "Comportement des utilisateurs",
     conduct1: "Utilisez l'application uniquement dans le cadre prévu (jouer au jeu).",
     conduct2: "Ne tentez pas de tricher, pirater ou rétro-ingéniérer l'application.",
     conduct3: "Respectez les autres joueurs et jouez dans des lieux publics et sûrs.",
     conduct4: "Vous êtes responsable de votre propre sécurité pendant le jeu.",
+    pricing: "Tarification & paiements",
+    pricingIntro:
+      "Poule Party propose trois modes de tarification, choisis par le créateur de la partie :",
+    pricingFree: "Parties gratuites :",
+    pricingFreeText:
+      "Aucun paiement n'est requis. Créateur et Chasseurs jouent sans frais.",
+    pricingFlat: "Forfait créateur :",
+    pricingFlatText:
+      "Le créateur paie un montant fixe à la création pour le service d'organisation et d'hébergement d'un événement réel (minuterie, gestion de zone, notifications, support). Il s'agit d'un forfait de service pour une activité physique et il n'est pas remboursable une fois la partie lancée. Un code promo peut être appliqué si vous en avez reçu un.",
+    pricingDeposit: "Caution remboursable :",
+    pricingDepositText:
+      "Chaque Chasseur paie une caution à l'inscription. La caution est conservée par notre prestataire de paiement (Stripe) et est remboursable à chaque participant après la partie, quel que soit le résultat. La caution n'est pas une mise, pas un pot de jeu, et n'est jamais redistribuée aux gagnants. Poule Party ne prend aucune commission sur la caution.",
+    pricingNoGambling: "Pas de jeu d'argent, pas de gain :",
+    pricingNoGamblingText:
+      "Poule Party est un jeu physique basé sur l'habileté. Gagner une partie ne donne droit à aucun gain en argent ni bien numérique. Nous n'organisons pas de jeu de hasard et ne distribuons aucun prix en espèces.",
+    pricingPayments:
+      "Tous les paiements sont traités par Stripe. Nous ne voyons jamais et ne stockons jamais vos coordonnées bancaires. Pour demander le remboursement de ta caution après la partie, envoie un email à julien@rahier.dev en précisant le code de la partie et l'adresse email utilisée à l'inscription — nous effectuons le remboursement via Stripe sur le moyen de paiement d'origine en quelques jours ouvrés.",
     location: "Données de localisation",
     locationText:
       "L'application nécessite l'accès à la localisation pour fonctionner. Votre position est partagée avec les autres joueurs de votre session uniquement pendant le jeu. Consultez notre politique de confidentialité pour plus de détails.",
+    ugc: "Contenu utilisateur & modération",
+    ugcText:
+      "Les pseudos que vous saisissez sont visibles par les autres joueurs de vos parties et dans les classements. Vous acceptez de ne pas utiliser de pseudos offensants, injurieux, harcelants, diffamatoires, sexuels ou usurpant l'identité d'autrui. L'app inclut un filtre anti-insultes automatique, mais vous pouvez aussi signaler un joueur depuis le classement via le bouton drapeau. Nous examinons chaque signalement et pouvons retirer un contenu, renommer un compte ou bannir les récidivistes. Les signalements abusifs ou de mauvaise foi peuvent aussi entraîner un bannissement.",
+    safety: "Sécurité physique",
+    safetyText:
+      "Poule Party est un jeu physique joué dans le monde réel. Fais attention à la circulation, respecte la propriété privée et ne joue jamais d'une manière qui mette en danger toi, les autres joueurs ou les personnes autour. Ne joue pas en conduisant ni à vélo. Respecte les lois locales. Tu joues à tes propres risques.",
     disclaimer: "Avertissement",
     disclaimerText:
       "L'application est fournie \"en l'état\" sans garantie d'aucune sorte. Nous ne garantissons pas un service ininterrompu ou sans erreur.",
@@ -215,5 +241,34 @@ export default {
   },
   footer: {
     rights: "Tous droits réservés.",
+  },
+  deleteAccount: {
+    title: "Supprimer ton compte Poule Party",
+    intro:
+      "Tu peux supprimer ton compte Poule Party et toutes les données associées. Cette page est le point de suppression web exigé par Google Play — la même action est aussi disponible dans l'app via Paramètres → Supprimer mes données.",
+    dataDeletedTitle: "Ce qui est supprimé",
+    dataDeleted: [
+      "Ton identifiant Firebase anonyme",
+      "Ton pseudo, ta référence client Stripe et ton token de notifications push",
+      "Toutes les données de profil stockées sous /users/{ton-id}",
+    ],
+    dataKeptTitle: "Ce qui est conservé",
+    dataKept: [
+      "Les parties créées ou rejointes sont conservées pour que les autres participants voient encore les résultats. Ton pseudo est remplacé par un libellé générique.",
+      "Les analytics et rapports de crash anonymes (agrégés, non liés à ton identité).",
+      "Les enregistrements de paiement que Stripe et notre comptabilité doivent légalement conserver (en général 7–10 ans en Belgique).",
+    ],
+    howTitle: "Comment demander la suppression",
+    howText:
+      "Envoie un email à l'adresse ci-dessous depuis l'adresse où tu veux recevoir la confirmation, en incluant :",
+    howList: [
+      "Ton pseudo (tel qu'il apparaît dans l'app)",
+      "La date approximative de ta dernière partie, si tu t'en souviens",
+      "Objet : « Suppression de mon compte Poule Party »",
+    ],
+    timeframe:
+      "Nous traitons les demandes de suppression sous 30 jours (en général sous une semaine). Tu recevras un email de confirmation dès que c'est fait.",
+    emailButton: "Envoyer la demande par email",
+    backHome: "Retour à l'accueil",
   },
 };

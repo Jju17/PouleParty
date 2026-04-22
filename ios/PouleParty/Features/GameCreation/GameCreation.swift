@@ -112,6 +112,11 @@ struct GameCreationFeature {
         case configSaveFailed
         case destination(PresentationAction<Destination.Action>)
         case gameCreated(Game)
+        /// Forfait flow: server created the game doc (in `.pendingPayment`) via
+        /// the Stripe webhook path. Parent should dismiss creation UI and leave
+        /// the user on Home — the game will appear under `My Games` once the
+        /// webhook flips status to `.waiting` (a second or two).
+        case paidGameCreated(game: Game)
         case gameDurationChanged(Double)
         case gameModChanged(Game.GameMode)
         case initialRadiusChanged(Double)
@@ -131,12 +136,20 @@ struct GameCreationFeature {
         @ObservableState
         enum State: Equatable {
             case alert(AlertState<Action.Alert>)
+            case payment(PaymentFeature.State)
         }
 
         enum Action {
             case alert(Alert)
+            case payment(PaymentFeature.Action)
 
             enum Alert: Equatable { }
+        }
+
+        var body: some ReducerOf<Self> {
+            Scope(state: \.payment, action: \.payment) {
+                PaymentFeature()
+            }
         }
     }
 
@@ -205,6 +218,27 @@ struct GameCreationFeature {
                         TextState("Could not create the game. Please check your connection and try again.")
                     }
                 )
+                return .none
+
+            case let .destination(.presented(.payment(.delegate(.creatorPaymentConfirmed(gameId))))):
+                state.destination = nil
+                analyticsClient.gameCreated(
+                    gameMode: state.game.gameMode.rawValue,
+                    maxPlayers: state.game.maxPlayers,
+                    pricingModel: state.game.pricing.model.rawValue,
+                    powerUpsEnabled: state.game.powerUps.enabled
+                )
+                // `state.game.id` is the client-generated UUID sent to the Cloud
+                // Function — the server writes the Firestore doc at that same ID
+                // (see `functions/src/stripe.ts#createCreatorPaymentSheet`). The
+                // returned `gameId` parameter is kept for defensive logging via
+                // analytics; we use `state.game` (which has the full config the
+                // user just built) for the confirmation screen.
+                _ = gameId
+                return .send(.paidGameCreated(game: state.game))
+
+            case .destination(.presented(.payment(.delegate(.cancelled)))):
+                state.destination = nil
                 return .none
 
             case .destination:
@@ -296,6 +330,13 @@ struct GameCreationFeature {
                     game.endDate = game.startDate.addingTimeInterval(state.gameDurationMinutes * 60)
                 }
                 recalculateNormalMode(state: &state)
+                // Forfait requires an up-front creator payment. Rest of the flow
+                // (free / caution) stays client-created: for caution the creator
+                // doesn't pay right now — only hunters do, at registration.
+                if state.game.pricing.model == .flat {
+                    state.destination = .payment(PaymentFeature.State(context: .creatorForfait(gameConfig: state.game)))
+                    return .none
+                }
                 return .run { [state = state, analyticsClient] send in
                     do {
                         try await apiClient.setConfig(state.game)
@@ -311,7 +352,7 @@ struct GameCreationFeature {
                     }
                 }
 
-            case .gameCreated:
+            case .gameCreated, .paidGameCreated:
                 return .none
             }
         }
@@ -396,6 +437,11 @@ struct GameCreationView: View {
                 action: \.destination.alert
             )
         )
+        .sheet(
+            item: $store.scope(state: \.destination?.payment, action: \.destination.payment)
+        ) { paymentStore in
+            PaymentView(store: paymentStore)
+        }
     }
 
     // MARK: - Bottom Bar

@@ -31,6 +31,7 @@
 		F9B1BE252F58DCD200E066D6 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F9B1BE242F58DCD200E066D6 /* SwiftUI.framework */; };
 		F9B1BE322F58DCD300E066D6 /* PoulePartyWidgetsExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F9B1BE202F58DCD200E066D6 /* PoulePartyWidgetsExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		F9B5A2222F53A73B004EBFD7 /* MapboxMaps in Frameworks */ = {isa = PBXBuildFile; productRef = F9B5A2212F53A73B004EBFD7 /* MapboxMaps */; };
+		F9D782492F97E4CD006D6113 /* StripePaymentSheet in Frameworks */ = {isa = PBXBuildFile; productRef = F9C0F0022F90010100000001 /* StripePaymentSheet */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -194,6 +195,7 @@
 		647D9FBE2BA3ABF2005B6566 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
+				F9D782492F97E4CD006D6113 /* StripePaymentSheet in Frameworks */,
 				F90899CC2F58B24D0006C8DF /* FirebaseMessaging in Frameworks */,
 				6464E51C2BA5C3ED0039C387 /* FirebaseAnalytics in Frameworks */,
 				648F56402CF3DC4900B1BC28 /* ComposableArchitecture in Frameworks */,
@@ -350,6 +352,7 @@
 				BB00000A2F47000100000001 /* SwiftNavigation */,
 				F9B5A2212F53A73B004EBFD7 /* MapboxMaps */,
 				F90899CB2F58B24D0006C8DF /* FirebaseMessaging */,
+				F9C0F0022F90010100000001 /* StripePaymentSheet */,
 			);
 			productName = PouleParty;
 			productReference = 647D9FC12BA3ABF2005B6566 /* PouleParty.app */;
@@ -438,6 +441,7 @@
 				648F563E2CF3DC4900B1BC28 /* XCRemoteSwiftPackageReference "swift-composable-architecture" */,
 				F9B5A21F2F53A61C004EBFD7 /* XCRemoteSwiftPackageReference "mapbox-maps-ios" */,
 				F9A8B0362F828F36008B15E2 /* XCRemoteSwiftPackageReference "swift-snapshot-testing" */,
+				F9C0F0012F90010100000001 /* XCRemoteSwiftPackageReference "stripe-ios-spm" */,
 			);
 			preferredProjectObjectVersion = 100;
 			productRefGroup = 647D9FC22BA3ABF2005B6566 /* Products */;
@@ -578,11 +582,11 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 2;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 1.6.3;
+				MARKETING_VERSION = 1.8.1;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.rahier.PoulePartyTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -601,10 +605,10 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 2;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 1.6.3;
+				MARKETING_VERSION = 1.8.1;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.rahier.PoulePartyTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -754,7 +758,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = PouleParty/PouleParty.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 2;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"PouleParty/Resources/Preview Content\"";
 				ENABLE_APP_SANDBOX = YES;
@@ -790,10 +794,11 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.4;
-				MARKETING_VERSION = 1.6.3;
+				MARKETING_VERSION = 1.8.1;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.rahier.pouleparty;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
+				STRIPE_PUBLISHABLE_KEY = pk_test_51TOioI9y90nsLqhVN0M6NgIYPwWHEbIdoaiPgKjmkoHUeWjeZhS2ObYFc4ejC3jnh6nDbehbgzzWQHkkF3yUVrKY00UWSXTYex;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -811,7 +816,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = PouleParty/PouleParty.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 2;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"PouleParty/Resources/Preview Content\"";
 				ENABLE_APP_SANDBOX = YES;
@@ -847,10 +852,11 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.4;
-				MARKETING_VERSION = 1.6.3;
+				MARKETING_VERSION = 1.8.1;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.rahier.pouleparty;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
+				STRIPE_PUBLISHABLE_KEY = pk_live_51TOigX6h9cy8iP6lavNsc4XKwiBJTJUUq3c8qP9tLfY0nCF3jbzXXUHmggsuoWbX7Tzr6whKvdpYYOaeLKn1fWhK00kinzuEao;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -864,7 +870,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 2;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = YXXNH92P5F;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -888,7 +894,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = YXXNH92P5F;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
@@ -913,7 +919,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 2;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PoulePartyWidgets/Info.plist;
@@ -925,7 +931,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.6.3;
+				MARKETING_VERSION = 1.8.1;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.rahier.pouleparty.PoulePartyWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -945,7 +951,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 2;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PoulePartyWidgets/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = PoulePartyWidgets;
@@ -956,7 +962,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.6.3;
+				MARKETING_VERSION = 1.8.1;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.rahier.pouleparty.PoulePartyWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -1051,6 +1057,14 @@
 				minimumVersion = 11.0.0;
 			};
 		};
+		F9C0F0012F90010100000001 /* XCRemoteSwiftPackageReference "stripe-ios-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/stripe/stripe-ios-spm.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 24.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -1138,6 +1152,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = F9B5A21F2F53A61C004EBFD7 /* XCRemoteSwiftPackageReference "mapbox-maps-ios" */;
 			productName = MapboxMaps;
+		};
+		F9C0F0022F90010100000001 /* StripePaymentSheet */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F9C0F0012F90010100000001 /* XCRemoteSwiftPackageReference "stripe-ios-spm" */;
+			productName = StripePaymentSheet;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -13,6 +13,7 @@ import com.google.android.gms.location.Priority
 import com.mapbox.geojson.Point
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.rahier.pouleparty.AppConstants
+import dev.rahier.pouleparty.service.LocationForegroundService
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -55,9 +56,15 @@ class LocationRepository @Inject constructor(
     /**
      * Emit user location as Flow<Point>.
      * Uses distanceFilter ≈ 10m via smallestDisplacement to match iOS behaviour.
+     *
+     * Starts a foreground service while the flow is being collected so Android 14+
+     * allows location updates to keep flowing if the user backgrounds the app during a game.
+     * Required because the app declares ACCESS_BACKGROUND_LOCATION.
      */
     @Suppress("MissingPermission")
     fun locationFlow(): Flow<Point> = callbackFlow {
+        LocationForegroundService.start(context)
+
         val locationRequest = LocationRequest.Builder(
             Priority.PRIORITY_HIGH_ACCURACY,
             AppConstants.LOCATION_UPDATE_INTERVAL_MS
@@ -81,6 +88,7 @@ class LocationRepository @Inject constructor(
 
         awaitClose {
             fusedLocationClient.removeLocationUpdates(callback)
+            LocationForegroundService.stop(context)
         }
     }.distinctUntilChanged()
 }

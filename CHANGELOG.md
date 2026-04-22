@@ -6,6 +6,106 @@ Format: [Keep a Changelog](https://keepachangelog.com/). Versions follow [Semant
 
 ---
 
+## [1.8.1] — 2026-04-22
+
+**iOS**: 1.8.1 (2) · **Android**: 1.8.1 (24) · **Web**: Terms wording adjusted
+
+Post-payment UX pass + observability fix. Ships the confirmation screen we should have had since 1.7.0 and tightens a promise we couldn't keep in the Terms.
+
+### iOS-only build 2 changes (after 1.8.1 (1) was rejected)
+- **Location purpose strings rewritten** to include a concrete usage example per Apple guideline 5.1.1(ii). `NSLocationWhenInUseUsageDescription` now illustrates what a Hunter sees during a game; `NSLocationAlwaysAndWhenInUseUsageDescription` illustrates the Chicken-in-pocket scenario and the "stops when the game ends" guarantee.
+- Android binary unchanged (build 24) — iOS-only rebuild.
+
+### Added
+- **Post-payment confirmation screen** (iOS + Android, EN/FR/NL). Shown right after a successful Forfait payment, Caution deposit, or 100%-off promo redemption. Full-screen with confetti, game code (tap-to-copy + native share sheet), live countdown to start, real-time status badge that reflects the Firestore `pending_payment → waiting` transition as soon as the Stripe webhook fires, and a clear "Back to home" exit. Replaces the previous UX where a successful paid-creator flow dumped the user back on Home with zero feedback.
+  - iOS: new `PaymentConfirmationFeature` (TCA reducer) wired as a root case of `AppFeature.State`, emitted from `HomeFeature` when `GameCreation.paidGameCreated` or `JoinFlow.registered` lands.
+  - Android: new route `payment_confirmed/{gameId}/{kind}` with `PaymentConfirmationViewModel` streaming `gameConfigFlow`. `HomeEffect.NavigateToPaymentConfirmed` and `GameCreationScreen.onPaidGameCreated` route the two flows.
+  - Tests: 20 TCA `TestStore` tests (iOS) + 37 pure-unit tests (Android) covering webhook transitions (pending→waiting, pending→failed, waiting→done mid-screen), clock skew (start time in the past), hour/day boundaries for the countdown formatter, 10 000-day upper bound, invalid kind-arg parsing, and the `backToHomeTapped` exit being reachable regardless of game status.
+
+### Changed
+- **iOS `GameCreationFeature.Action.paidGameCreated`** now carries the full `Game` snapshot (`.paidGameCreated(game:)`) instead of only `gameId`. Internal refactor to let the confirmation screen render without a Firestore round-trip.
+- **iOS `ApiClient.gameConfigStream` decode failures** now log the full `DecodingError` (coding path + missing key) plus the `gameId` and `snapshot.exists`, replacing the opaque `"data couldn't be read because it is missing"` that hid schema drift at runtime. No behavioural change, pure observability — surfaced after reviewing real device logs that failed to pinpoint the missing field.
+- **Web Terms of Use** — deposit-refund clause softened from "returned in full automatically via Stripe" to "refundable on request via email" to match the current server capability (automatic refund cron not yet implemented). Prevents a materially-wrong promise at App/Play review time. Web-only text update.
+
+---
+
+## [1.8.0] — 2026-04-22
+
+**iOS**: 1.8.0 (4) · **Android**: 1.8.0 (22) · **Firestore rules**: `/reports` rule added · **Web**: `/delete-account` page added, Terms rewritten
+
+Privacy, moderation, and store-compliance release — the code paths that App Store / Play Store reviewers specifically look for.
+
+### Added
+- **UGC — "Report player" flow** on both platforms. A flag icon appears next to each non-self row in the Victory leaderboard and in Settings → My Games → past-game leaderboard. Confirming writes to a new admin-SDK-only `/reports/{reportId}` Firestore collection (`reporterId`, `reportedUserId`, `reportedNickname`, `gameId`, `createdAt`). New `ApiClient.reportPlayer` (iOS) and `FirestoreRepository.reportPlayer` (Android). Full EN/FR/NL localization.
+- **iOS `NSLocationWhenInUseUsageDescription` + `NSLocationAlwaysAndWhenInUseUsageDescription`** in `Info.plist`. Previously missing despite declaring `UIBackgroundModes = location` → instant rejection on iOS 13+.
+- **Android foreground service for background location** — `LocationForegroundService` with `android:foregroundServiceType="location"` declared in the manifest plus `FOREGROUND_SERVICE` / `FOREGROUND_SERVICE_LOCATION` permissions. Started/stopped by `LocationRepository.locationFlow` on collect/close so background tracking survives app backgrounding during a game, as required by Play policy on Android 14+.
+- **Web `/delete-account` page** (EN/FR/NL) at `pouleparty.be/delete-account` — the web-accessible deletion endpoint Google Play requires since 2024. Explains what is deleted vs. retained (Stripe/accounting legally held), how to request deletion via email, and the 30-day SLA.
+- **In-app safety disclaimer** on the final onboarding slide (EN/FR/NL) — traffic, private property, no running where you wouldn't normally run. Covers Apple guideline 1.4 and Google's Health & Safety expectations for location-based games.
+- **Terms of Use rewrite** (`pouleparty.be/terms`, EN/FR/NL): explicit **Pricing & Payments** section describing Free / Forfait (service fee for real-world event organizing) / Caution (escrow, no commission, not redistributed to winners). Explicit "No gambling, no prize money". New **UGC & Moderation** and **Physical Safety** sections.
+
+### Changed
+- **iOS `registerForRemoteNotifications()` gated on authorization status** (`AppDelegate`). No longer calls at launch before the user has had a chance to consent. On first grant it fires from inside `NotificationClient.requestAuthorization`. Aligns with App Store guideline 4.5.4.
+- **Onboarding location-permission copy** (iOS + Android EN/FR/NL) — removed the misleading "we only use it during the game" line that contradicted the declared background-location usage. Replaced with "your position is only shared with other players while a game is in progress".
+- **Account deletion (iOS `AuthClient` + Android `SettingsViewModel`)** — the Firestore `/users/{uid}` profile doc is now deleted **before** the Firebase Auth user. The security rule requires `auth.uid == userId`, so the opposite order silently left orphan profile docs behind.
+
+### Fixed
+- Android: 2 pre-existing `Icons.Filled.DirectionsWalk` deprecation warnings migrated to `Icons.AutoMirrored.Filled.DirectionsWalk` (zero-warnings policy).
+
+### Security
+- New `/reports/{reportId}` Firestore rule: `create` for authenticated users only, `reporterId == auth.uid` enforced, `reportedUserId != reporterId`, required keys validated. `read / update / delete` fully locked (admin-SDK only) so reporters can't spy on each other and targets can't erase reports.
+
+### Verified
+- iOS `PrivacyInfo.xcprivacy` audited — only required-reason API used directly is `UserDefaults` (already declared with reason `CA92.1`). Third-party SDKs (Firebase, Stripe, Mapbox) ship their own privacy manifests.
+
+### Notes for reviewers / store submission
+- **App Review notes** should explicitly state: the app does not use IAP because (a) the Forfait creator fee is a service fee for organizing a real-world event, and (b) the Caution deposit is escrow refunded to every hunter post-game with no commission and no redistribution to winners. Link to the Terms page (`pouleparty.be/terms`) which documents both.
+- Play Console **Data Safety form** must list: precise location, user ID (Firebase UID), device ID (FCM token), nickname, Stripe Customer ID, Firebase Analytics/Crashlytics, Mapbox SDK.
+- Play Console **Account deletion URL**: `https://pouleparty.be/delete-account`.
+
+---
+
+## [1.7.1] — 2026-04-22
+
+**iOS**: 1.7.1 (1) · **Android**: 1.7.1 (20)
+
+### Added
+- **Apple Pay** support in the PaymentSheet for iOS. Merchant ID `merchant.dev.rahier.pouleparty` registered in the Apple Developer account; `com.apple.developer.in-app-payments` entitlement added; `PaymentSheet.ApplePayConfiguration(merchantId:, merchantCountryCode: "BE")` wired in `PaymentFeature`.
+- **Google Pay** support in the PaymentSheet for Android. `PaymentSheet.GooglePayConfiguration(environment, countryCode: "BE", currencyCode: "EUR")` wired in `PaymentScreen`. Environment auto-derived from the publishable key (`pk_test_*` → Test, `pk_live_*` → Production).
+
+---
+
+## [1.7.0] — 2026-04-21
+
+**iOS**: 1.7.0 (12) · **Android**: 1.7.0 (19) · **Functions**: 5 new callables + webhook deployed (staging + prod)
+
+### Added
+- **Stripe payments — Forfait & Caution** (`functions/src/stripe.ts`, both mobile apps). Drop-in `PaymentSheet` (iOS + Android) supporting **card** and **Bancontact** (EUR/BE) via `automatic_payment_methods`.
+  - **Forfait (`flat`)**: creator pays `pricePerPlayer × maxPlayers` at the end of game creation. Server pre-creates the game doc in `pending_payment`; the webhook flips it to `waiting` on `payment_intent.succeeded`. Supports optional **promo codes** (creator-applied at payment time).
+  - **Caution (`deposit`)**: hunters pay the creator-defined deposit at registration. Registration doc is created server-side by the webhook — clients can never write `paid: true`.
+- **Promo codes via Stripe Promotion Codes** — validated server-side via `validatePromoCode` (rate-limited 10 attempts/h/user via `rateLimits/promo_{uid}`). 100%-off codes skip PaymentSheet entirely and create the game via `redeemFreeCreation`. Codes are managed from the Stripe Dashboard; no logic duplicated.
+- **Webhook dedup + signature verification** — `paymentEvents/{eventId}` Firestore doc prevents replay; `stripe.webhooks.constructEvent` validates every call.
+- **New GameStatus states** — `pending_payment` and `payment_failed` on both platforms, displayed as distinct badges in Settings > My Games.
+- **iOS**: `StripePaymentSheet` SPM (pinned `24.x`), `StripeClient` dependency, `PaymentFeature` TCA reducer, `paymentSheetBridge` SwiftUI wrapper. URL scheme `pouleparty://stripe-redirect` registered for Bancontact redirect + `StripeAPI.handleURLCallback` wired in AppDelegate.
+- **Android**: `com.stripe:stripe-android` 21.8, `StripeRepository`, `PaymentViewModel` (Hilt assisted-inject), `PaymentScreen` Compose overlay. `PaymentConfiguration.init` in `PoulePartyApp.onCreate`. `FirebaseFunctions` DI binding added.
+- **Docs**: new "Pricing Modes" section in `CLAUDE.md` with modes matrix + Stripe details. Stripe invariants documented in `.claude/rules/functions.md`.
+
+### Changed
+- **Firestore rules**:
+  - Forfait game creation (`pricing.model == 'flat'`) blocked for clients; only admin SDK / Cloud Functions can create them.
+  - Caution hunter registrations (game `pricing.model == 'deposit'`) blocked for clients; only admin SDK can write.
+  - `registrations.paid` is immutable from the client (`request.resource.data.paid == resource.data.paid`).
+  - `users.stripeCustomerId` is admin-SDK-only (clients can't preload a spoofed ID).
+  - New locked-down collections: `paymentEvents`, `rateLimits`.
+- **Android `buildConfig = true`** enabled; `STRIPE_PUBLISHABLE_KEY` is now a `buildConfigField` per flavor (`pk_test_*` for `staging`, `pk_live_*` for `production`).
+- **iOS `STRIPE_PUBLISHABLE_KEY`** user-defined build setting per configuration, read at runtime via `Info.plist`.
+- **`SwiftUI TextField` focus bug workaround** in `OnboardingNicknameSlide` — dismiss focus on page change so the `ifCaseLet` reducer no longer logs a runtime warning when SwiftUI fires a lingering binding after state transitions.
+
+### Fixed
+- **Web registration Google Sheet write** (side-effect of Stripe setup work) — prod project's Cloud Function service account `1047338092854-compute@developer.gserviceaccount.com` was shared on the registration Sheet, and the Sheets API was enabled on prod.
+- **Web hosting now points to prod Firestore** (`web/src/firebase.ts`) instead of staging.
+
+---
+
 ## [1.6.3] — 2026-04-21
 
 **iOS**: 1.6.3 (11) · **Android**: 1.6.3 (18)

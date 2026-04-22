@@ -57,6 +57,7 @@ import java.util.Locale
 fun GameCreationScreen(
     onStartGame: (String) -> Unit,
     onDismiss: () -> Unit,
+    onPaidGameCreated: (gameId: String) -> Unit = { onDismiss() },
     viewModel: GameCreationViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -67,11 +68,29 @@ fun GameCreationScreen(
         viewModel.effects.collect { effect ->
             when (effect) {
                 is GameCreationEffect.GameStarted -> onStartGame(effect.gameId)
+                // Forfait: the server created the game in `pending_payment`; we
+                // route to the payment-confirmation screen so the creator gets
+                // immediate visual feedback + share affordance. The webhook
+                // flips status to `waiting` in the background while the user
+                // reads the confirmation.
+                is GameCreationEffect.PaidGameCreated -> onPaidGameCreated(effect.gameId)
             }
         }
     }
 
     val isForward = state.goingForward
+
+    // Forfait creator payment overlay
+    state.paymentContext?.let { ctx ->
+        BackHandler { viewModel.onPaymentCancelled() }
+        dev.rahier.pouleparty.ui.payment.PaymentScreen(
+            context = ctx,
+            onCreatorPaid = { gameId -> viewModel.onCreatorPaymentCompleted(gameId) },
+            onHunterPaid = { /* not used from creator flow */ },
+            onCancelled = { viewModel.onPaymentCancelled() },
+        )
+        return
+    }
 
     // Power-up selection overlay
     if (state.showPowerUpSelection) {

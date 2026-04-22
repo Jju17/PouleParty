@@ -10,9 +10,12 @@ import SwiftUI
 
 /// Renders the podium + other finders + non-finders sections.
 /// Callers provide pre-built `LeaderboardEntry` values — this view is purely presentational.
+/// If `onReport` is non-nil, a flag button is shown next to each non-self row so users can
+/// report offensive nicknames (UGC moderation requirement on Google Play / App Store).
 struct LeaderboardContentView: View {
     let entries: [LeaderboardEntry]
     let hunterStartDate: Date
+    var onReport: ((LeaderboardEntry) -> Void)? = nil
 
     private var sortedFinders: [LeaderboardEntry] {
         entries.filter { $0.hasFound }.sorted { a, b in
@@ -36,7 +39,7 @@ struct LeaderboardContentView: View {
                     BangerText("Podium", size: 20)
                         .foregroundStyle(Color.CROrange)
                     ForEach(Array(podium.enumerated()), id: \.element.id) { index, entry in
-                        LeaderboardRowView(rank: index + 1, entry: entry, hunterStartDate: hunterStartDate)
+                        LeaderboardRowView(rank: index + 1, entry: entry, hunterStartDate: hunterStartDate, onReport: onReport)
                     }
                 }
             }
@@ -46,7 +49,7 @@ struct LeaderboardContentView: View {
                     BangerText("Other hunters", size: 18)
                         .foregroundStyle(Color.onBackground.opacity(0.7))
                     ForEach(Array(others.enumerated()), id: \.element.id) { index, entry in
-                        LeaderboardRowView(rank: index + 4, entry: entry, hunterStartDate: hunterStartDate)
+                        LeaderboardRowView(rank: index + 4, entry: entry, hunterStartDate: hunterStartDate, onReport: onReport)
                     }
                 }
             }
@@ -56,7 +59,7 @@ struct LeaderboardContentView: View {
                     BangerText("Did not find the chicken", size: 16)
                         .foregroundStyle(Color.onBackground.opacity(0.5))
                     ForEach(nonFinders) { entry in
-                        LeaderboardRowView(rank: nil, entry: entry, hunterStartDate: hunterStartDate)
+                        LeaderboardRowView(rank: nil, entry: entry, hunterStartDate: hunterStartDate, onReport: onReport)
                     }
                 }
             }
@@ -70,6 +73,7 @@ struct LeaderboardRowView: View {
     let rank: Int?
     let entry: LeaderboardEntry
     let hunterStartDate: Date
+    var onReport: ((LeaderboardEntry) -> Void)? = nil
 
     private var rankLabel: String {
         guard let rank else { return "—" }
@@ -85,6 +89,10 @@ struct LeaderboardRowView: View {
         guard let foundTimestamp = entry.foundTimestamp else { return nil }
         let totalSeconds = max(0, Int(foundTimestamp.timeIntervalSince(hunterStartDate)))
         return "+\(totalSeconds / 60)m \(String(format: "%02d", totalSeconds % 60))s"
+    }
+
+    private var canReport: Bool {
+        onReport != nil && !entry.isCurrentUser
     }
 
     var body: some View {
@@ -103,6 +111,19 @@ struct LeaderboardRowView: View {
                 Text(timeString)
                     .font(.gameboy(size: 10))
                     .foregroundStyle(Color.onBackground.opacity(0.5))
+            }
+
+            if canReport, let onReport {
+                Button {
+                    onReport(entry)
+                } label: {
+                    Image(systemName: "flag")
+                        .font(.system(size: 14))
+                        .foregroundStyle(Color.onBackground.opacity(0.4))
+                        .padding(6)
+                        .contentShape(Rectangle())
+                }
+                .accessibilityLabel(String(localized: "Report \(entry.displayName)"))
             }
         }
         .accessibilityElement(children: .combine)

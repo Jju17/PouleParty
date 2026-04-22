@@ -28,6 +28,7 @@ import dev.rahier.pouleparty.ui.chickenmap.ChickenMapScreen
 import dev.rahier.pouleparty.ui.huntermap.HunterMapScreen
 import dev.rahier.pouleparty.ui.onboarding.OnboardingScreen
 import dev.rahier.pouleparty.ui.home.HomeScreen
+import dev.rahier.pouleparty.ui.paymentconfirmation.PaymentConfirmationScreen
 import dev.rahier.pouleparty.ui.planselection.PlanSelectionScreen
 import dev.rahier.pouleparty.ui.planselection.PricingParams
 import dev.rahier.pouleparty.ui.settings.SettingsScreen
@@ -43,6 +44,7 @@ object Routes {
     const val HUNTER_MAP = "hunter_map/{gameId}/{hunterName}"
     const val VICTORY = "victory/{gameId}/{hunterName}/{hunterId}/{isChicken}"
     const val SETTINGS = "settings"
+    const val PAYMENT_CONFIRMED = "payment_confirmed/{gameId}/{kind}"
 
     fun gameCreation(gameId: String, pricingModel: String = "free", numberOfPlayers: Int = 5, pricePerPlayerCents: Int = 0, depositAmountCents: Int = 0) =
         "game_creation/$gameId/$pricingModel/$numberOfPlayers/$pricePerPlayerCents/$depositAmountCents"
@@ -50,6 +52,7 @@ object Routes {
     fun hunterMap(gameId: String, hunterName: String) = "hunter_map/$gameId/${Uri.encode(hunterName)}"
     fun victory(gameId: String, hunterName: String, hunterId: String, isChicken: Boolean = false) =
         "victory/$gameId/${Uri.encode(hunterName)}/${Uri.encode(hunterId)}/$isChicken"
+    fun paymentConfirmed(gameId: String, kind: String) = "payment_confirmed/$gameId/$kind"
 }
 
 @Composable
@@ -187,6 +190,11 @@ fun AppNavigation() {
                 },
                 onNavigateToSettings = {
                     navController.navigate(Routes.SETTINGS)
+                },
+                onNavigateToPaymentConfirmed = { gameId, kind ->
+                    navController.navigate(Routes.paymentConfirmed(gameId, kind)) {
+                        popUpTo(Routes.HOME) { inclusive = false }
+                    }
                 }
             )
         }
@@ -215,6 +223,30 @@ fun AppNavigation() {
                 },
                 onDismiss = {
                     navController.popBackStack()
+                },
+                onPaidGameCreated = { gameId ->
+                    // Collapse the creation flow back to Home before jumping to the
+                    // confirmation screen — otherwise "back" from the confirmation
+                    // would drop the user inside the half-dismissed creation flow.
+                    navController.navigate(Routes.paymentConfirmed(gameId, "creator_forfait")) {
+                        popUpTo(Routes.HOME) { inclusive = false }
+                    }
+                }
+            )
+        }
+
+        composable(
+            route = Routes.PAYMENT_CONFIRMED,
+            arguments = listOf(
+                navArgument("gameId") { type = NavType.StringType },
+                navArgument("kind") { type = NavType.StringType }
+            )
+        ) {
+            PaymentConfirmationScreen(
+                onBackToHome = {
+                    navController.navigate(Routes.HOME) {
+                        popUpTo(Routes.HOME) { inclusive = true }
+                    }
                 }
             )
         }

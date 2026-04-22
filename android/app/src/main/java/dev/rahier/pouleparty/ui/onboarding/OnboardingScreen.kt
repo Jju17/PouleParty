@@ -495,5 +495,21 @@ private fun SlideReady() {
         title = stringResource(R.string.the_endgame),
         subtitle = stringResource(R.string.endgame_subtitle),
         icon = { Text("\uD83C\uDF89", fontSize = 80.sp) }
-    )
+    ) {
+        Spacer(Modifier.height(24.dp))
+        Text(
+            stringResource(R.string.safety_banner_title),
+            style = bangerStyle(16),
+            color = CROrange,
+            textAlign = TextAlign.Center
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            stringResource(R.string.safety_banner_text),
+            style = bangerStyle(13),
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 10.dp)
+        )
+    }
 }

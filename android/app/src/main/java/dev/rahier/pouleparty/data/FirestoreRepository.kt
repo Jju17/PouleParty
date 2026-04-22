@@ -639,4 +639,40 @@ class FirestoreRepository @Inject constructor(
             Log.e(TAG, "Failed to save nickname", e)
         }
     }
+
+    /**
+     * Delete the user profile document (`/users/{userId}`). Called from the
+     * account-deletion flow before the Firebase Auth user itself is removed,
+     * since Firestore rules require `auth.uid == userId` to authorize the delete.
+     */
+    suspend fun deleteUser(userId: String) {
+        firestore.collection("users")
+            .document(userId)
+            .delete()
+            .await()
+    }
+
+    /**
+     * Submit a report against another player. Writes to the admin-SDK-only
+     * `/reports` collection so the team can review user-generated-content abuse
+     * (offensive nicknames, cheating, etc.) that surfaces via leaderboards.
+     */
+    suspend fun reportPlayer(
+        reporterId: String,
+        reportedUserId: String,
+        reportedNickname: String,
+        gameId: String
+    ) {
+        firestore.collection("reports")
+            .add(
+                mapOf(
+                    "reporterId" to reporterId,
+                    "reportedUserId" to reportedUserId,
+                    "reportedNickname" to reportedNickname,
+                    "gameId" to gameId,
+                    "createdAt" to Timestamp.now()
+                )
+            )
+            .await()
+    }
 }

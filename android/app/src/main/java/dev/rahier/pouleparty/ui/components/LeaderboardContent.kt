@@ -4,6 +4,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Flag
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,8 +34,9 @@ fun LeaderboardContent(
     entries: List<LeaderboardEntry>,
     hunterStartMs: Long,
     modifier: Modifier = Modifier,
+    onReport: ((LeaderboardEntry) -> Unit)? = null,
     itemRenderer: @Composable (rank: Int?, entry: LeaderboardEntry) -> Unit = { rank, entry ->
-        LeaderboardEntryRow(rank = rank, entry = entry, hunterStartMs = hunterStartMs)
+        LeaderboardEntryRow(rank = rank, entry = entry, hunterStartMs = hunterStartMs, onReport = onReport)
     }
 ) {
     val sortedFinders = entries
@@ -83,7 +88,8 @@ fun LeaderboardContent(
 fun LeaderboardEntryRow(
     rank: Int?,
     entry: LeaderboardEntry,
-    hunterStartMs: Long
+    hunterStartMs: Long,
+    onReport: ((LeaderboardEntry) -> Unit)? = null
 ) {
     val rankLabel = when (rank) {
         null -> "—"
@@ -131,6 +137,20 @@ fun LeaderboardEntryRow(
                 style = gameboyStyle(10),
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
             )
+        }
+
+        if (onReport != null && !entry.isCurrentUser) {
+            IconButton(
+                onClick = { onReport(entry) },
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Flag,
+                    contentDescription = stringResource(R.string.report_player_cd, entry.displayName),
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
+                )
+            }
         }
     }
 }

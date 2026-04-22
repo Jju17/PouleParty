@@ -10,8 +10,10 @@ import dev.rahier.pouleparty.data.FirestoreRepository
 import dev.rahier.pouleparty.data.LocationRepository
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameStatus
+import dev.rahier.pouleparty.model.PricingModel
 import dev.rahier.pouleparty.model.Registration
 import dev.rahier.pouleparty.ui.gamelogic.PlayerRole
+import dev.rahier.pouleparty.ui.payment.PaymentContext
 import dev.rahier.pouleparty.util.getTrimmedString
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -34,7 +36,9 @@ data class HomeUiState(
     val joinStep: JoinFlowStep = JoinFlowStep.EnteringCode,
     val activeGame: Game? = null,
     val activeGameRole: PlayerRole? = null,
-    val pendingRegistration: PendingRegistration? = null
+    val pendingRegistration: PendingRegistration? = null,
+    /** Non-null when the hunter Caution payment screen should be shown as an overlay. */
+    val paymentContext: PaymentContext? = null,
 ) {
     val isCodeValid: Boolean
         get() {
@@ -249,8 +253,17 @@ class HomeViewModel @Inject constructor(
         if (!_uiState.value.isTeamNameValid) return
         val userId = auth.currentUser?.uid ?: return
         if (userId.isEmpty()) return
-        val teamName = _uiState.value.teamName.trim()
         val game = step.game
+
+        // Caution: registration is created server-side by the Stripe webhook after
+        // a successful deposit PaymentIntent. Client must never set `paid: true` —
+        // rules block it. Route through the PaymentScreen overlay instead.
+        if (game.pricingModelEnum == PricingModel.DEPOSIT) {
+            _uiState.update { it.copy(paymentContext = PaymentContext.HunterCaution(gameId = game.id)) }
+            return
+        }
+
+        val teamName = _uiState.value.teamName.trim()
         _uiState.update { it.copy(joinStep = JoinFlowStep.SubmittingRegistration(game)) }
         viewModelScope.launch {
             try {
@@ -279,6 +292,37 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    fun onHunterPaymentCompleted() {
+        val step = _uiState.value.joinStep
+        val game = (step as? JoinFlowStep.Registering)?.game ?: return
+        val teamName = _uiState.value.teamName.trim()
+        analyticsRepository.registrationCompleted(pricingModel = game.pricing.model)
+        val pending = PendingRegistration(
+            gameId = game.id,
+            gameCode = game.gameCode,
+            teamName = teamName,
+            startMs = game.startDate.time
+        )
+        savePendingRegistration(pending)
+        _uiState.update {
+            it.copy(
+                paymentContext = null,
+                pendingRegistration = pending,
+                isShowingJoinSheet = false,
+                gameCode = "",
+                teamName = "",
+                joinStep = JoinFlowStep.EnteringCode,
+            )
+        }
+        viewModelScope.launch {
+            _effects.send(HomeEffect.NavigateToPaymentConfirmed(game.id, "hunter_caution"))
+        }
+    }
+
+    fun onPaymentCancelled() {
+        _uiState.update { it.copy(paymentContext = null) }
+    }
+
     private fun joinValidatedGame() {
         val step = _uiState.value.joinStep
         if (step !is JoinFlowStep.CodeValidated) return
@@ -299,6 +343,7 @@ class HomeViewModel @Inject constructor(
             val effect = when (step.game.gameStatusEnum) {
                 GameStatus.WAITING, GameStatus.IN_PROGRESS -> HomeEffect.NavigateToHunterMap(step.game.id, hunterName)
                 GameStatus.DONE -> HomeEffect.NavigateToGameDone(step.game.id)
+                GameStatus.PENDING_PAYMENT, GameStatus.PAYMENT_FAILED -> return@launch
             }
             _effects.send(effect)
         }
@@ -319,6 +364,10 @@ class HomeViewModel @Inject constructor(
             val effect = when (game.gameStatusEnum) {
                 GameStatus.WAITING, GameStatus.IN_PROGRESS -> HomeEffect.NavigateToHunterMap(game.id, hunterName)
                 GameStatus.DONE -> HomeEffect.NavigateToGameDone(game.id)
+                GameStatus.PENDING_PAYMENT, GameStatus.PAYMENT_FAILED -> {
+                    _uiState.update { it.copy(isShowingGameNotFound = true) }
+                    return@launch
+                }
             }
             _effects.send(effect)
         }

@@ -7,7 +7,12 @@ service cloud.firestore {
       // Any authenticated user can read a game (needed to join via game code)
       allow read: if request.auth != null;
 
-      // Any authenticated user can create a game (must include creatorId matching their uid)
+      // Any authenticated user can create a game (must include creatorId matching their uid).
+      // Forfait games (pricing.model == 'flat') can ONLY be created via the
+      // `createCreatorPaymentSheet` / `redeemFreeCreation` Cloud Functions (admin SDK
+      // bypasses rules). Free and Caution games are client-created (for Caution the
+      // creator doesn't pay right now — only hunters pay a deposit at registration,
+      // which goes through `createHunterPaymentSheet`).
       allow create: if request.auth != null
                     && request.resource.data.creatorId == request.auth.uid
                     && request.resource.data.status == 'waiting'
@@ -17,7 +22,8 @@ service cloud.firestore {
                     && request.resource.data.maxPlayers <= 50
                     && request.resource.data.timing.start < request.resource.data.timing.end
                     && request.resource.data.timing.headStartMinutes >= 0
-                    && request.resource.data.zone.shrinkIntervalMinutes >= 1;
+                    && request.resource.data.zone.shrinkIntervalMinutes >= 1
+                    && request.resource.data.get('pricing', {}).get('model', 'free') != 'flat';
 
       // Any player can update hunterIds and winners (join game, submit winner)
       // If the game requires registration, the joining user must already have a registration doc.
@@ -77,7 +83,10 @@ service cloud.firestore {
         allow delete: if false;
       }
 
-      // Registrations subcollection — hunters register before joining a game that requires it
+      // Registrations subcollection — hunters register before joining a game that requires it.
+      // For Caution-mode games (pricing.model == 'deposit'), client creation is blocked —
+      // registrations are created server-side by `createHunterPaymentSheet` + webhook only
+      // after a successful deposit PaymentIntent. Client can never mark `paid: true`.
       match /registrations/{visitorId} {
         allow read: if request.auth != null
                     && (visitorId == request.auth.uid
@@ -88,6 +97,8 @@ service cloud.firestore {
                       && request.resource.data.keys().hasAll(['userId', 'teamName', 'paid', 'joinedAt'])
                       && request.resource.data.teamName is string
                       && request.resource.data.teamName.size() > 0
+                      && request.resource.data.paid == false
+                      && get(/databases/$(database)/documents/games/$(gameId)).data.get('pricing', {}).get('model', 'free') != 'deposit'
                       // Enforce registration deadline if set
                       && (
                         get(/databases/$(database)/documents/games/$(gameId)).data.get('registration', {}).get('closesMinutesBefore', null) == null
@@ -96,7 +107,8 @@ service cloud.firestore {
                       );
         allow update: if request.auth != null
                       && visitorId == request.auth.uid
-                      && request.resource.data.userId == request.auth.uid;
+                      && request.resource.data.userId == request.auth.uid
+                      && request.resource.data.paid == resource.data.paid;
         allow delete: if false;
       }
 
@@ -139,10 +151,28 @@ service cloud.firestore {
       }
     }
 
-    // User profiles (nickname, FCM token, platform) — each user can only read/write their own document
+    // User profiles (nickname, FCM token, platform) — each user can only read/write their own document.
+    // `stripeCustomerId` is admin-SDK-only: clients must not be able to preload a spoofed
+    // value that would cause the server to reuse someone else's customer for PaymentIntents.
     match /users/{userId} {
-      allow read, write: if request.auth != null
-                         && request.auth.uid == userId;
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null
+                    && request.auth.uid == userId
+                    && !('stripeCustomerId' in request.resource.data);
+      allow update: if request.auth != null
+                    && request.auth.uid == userId
+                    && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['stripeCustomerId']);
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Stripe webhook event dedupe — admin-SDK only (writes) and no client reads.
+    match /paymentEvents/{eventId} {
+      allow read, write: if false;
+    }
+
+    // Per-user rate limit counters (e.g. promo code validation). Admin-SDK only.
+    match /rateLimits/{docId} {
+      allow read, write: if false;
     }
 
     // Admin config — read-only for authenticated users, write only via admin SDK
@@ -161,6 +191,19 @@ service cloud.firestore {
     // Event registrations — fully locked, only Cloud Functions (admin SDK) can read/write
     match /registrations/{docId} {
       allow read, write: if false;
+    }
+
+    // Player reports — created by authenticated users from the in-app "Report player"
+    // button on leaderboards. Reads and mutations are admin-SDK-only so reporters can't
+    // see each other's reports and reportees can't delete reports about them.
+    match /reports/{reportId} {
+      allow create: if request.auth != null
+                    && request.resource.data.reporterId == request.auth.uid
+                    && request.resource.data.reportedUserId is string
+                    && request.resource.data.reportedUserId.size() > 0
+                    && request.resource.data.reportedUserId != request.auth.uid
+                    && request.resource.data.keys().hasAll(['reporterId', 'reportedUserId', 'reportedNickname', 'gameId', 'createdAt']);
+      allow read, update, delete: if false;
     }
 
     // Deny access to everything else

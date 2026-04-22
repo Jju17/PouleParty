@@ -12,6 +12,8 @@ import SwiftUI
 @Reducer
 struct VictoryFeature {
 
+    enum ReportResult: Equatable { case success, failure }
+
     @ObservableState
     struct State: Equatable {
         var game: Game
@@ -19,6 +21,8 @@ struct VictoryFeature {
         var hunterName: String
         var isChicken: Bool = false
         var registrations: [Registration] = []
+        var reportTarget: LeaderboardEntry?
+        var reportResult: ReportResult?
     }
 
     enum Action {
@@ -26,6 +30,11 @@ struct VictoryFeature {
         case menuButtonTapped
         case onTask
         case registrationsLoaded([Registration])
+        case reportInitiated(LeaderboardEntry)
+        case reportDismissed
+        case reportConfirmed
+        case reportCompleted(ReportResult)
+        case reportResultDismissed
     }
 
     @Dependency(\.apiClient) var apiClient
@@ -56,6 +65,30 @@ struct VictoryFeature {
             case let .registrationsLoaded(registrations):
                 state.registrations = registrations
                 return .none
+            case let .reportInitiated(entry):
+                state.reportTarget = entry
+                return .none
+            case .reportDismissed:
+                state.reportTarget = nil
+                return .none
+            case .reportConfirmed:
+                guard let target = state.reportTarget else { return .none }
+                state.reportTarget = nil
+                let gameId = state.game.id
+                return .run { [apiClient] send in
+                    do {
+                        try await apiClient.reportPlayer(gameId, target.id, target.displayName)
+                        await send(.reportCompleted(.success))
+                    } catch {
+                        await send(.reportCompleted(.failure))
+                    }
+                }
+            case let .reportCompleted(result):
+                state.reportResult = result
+                return .none
+            case .reportResultDismissed:
+                state.reportResult = nil
+                return .none
             }
         }
     }
@@ -63,7 +96,7 @@ struct VictoryFeature {
 
 // MARK: - Leaderboard Models
 
-struct LeaderboardEntry: Equatable, Identifiable {
+struct LeaderboardEntry: Equatable, Identifiable, Hashable {
     let id: String // hunterId
     let displayName: String
     let teamName: String?
@@ -71,6 +104,10 @@ struct LeaderboardEntry: Equatable, Identifiable {
     let isCurrentUser: Bool
 
     var hasFound: Bool { foundTimestamp != nil }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
 }
 
 func buildLeaderboardEntries(
@@ -102,7 +139,7 @@ func buildLeaderboardEntries(
 // MARK: - Victory View
 
 struct VictoryView: View {
-    let store: StoreOf<VictoryFeature>
+    @Bindable var store: StoreOf<VictoryFeature>
 
     private var isSpectator: Bool { store.hunterId.isEmpty && !store.isChicken }
     private var isCurrentUserAWinner: Bool {
@@ -151,7 +188,13 @@ struct VictoryView: View {
                         if entries.isEmpty {
                             emptyStateSection
                         } else {
-                            LeaderboardContentView(entries: entries, hunterStartDate: store.game.hunterStartDate)
+                            LeaderboardContentView(
+                                entries: entries,
+                                hunterStartDate: store.game.hunterStartDate,
+                                onReport: { entry in
+                                    store.send(.reportInitiated(entry))
+                                }
+                            )
                         }
                     }
                     .padding(.horizontal, 16)
@@ -168,6 +211,43 @@ struct VictoryView: View {
         }
         .task {
             store.send(.onTask)
+        }
+        .alert(
+            "Report this player?",
+            isPresented: Binding(
+                get: { store.reportTarget != nil },
+                set: { if !$0 { store.send(.reportDismissed) } }
+            ),
+            presenting: store.reportTarget
+        ) { _ in
+            Button("Report", role: .destructive) {
+                store.send(.reportConfirmed)
+            }
+            Button("Cancel", role: .cancel) {
+                store.send(.reportDismissed)
+            }
+        } message: { target in
+            Text("Report \(target.displayName) for an offensive nickname or inappropriate behaviour. We review every report; abusive reporters may be banned.")
+        }
+        .alert(
+            "Thanks — report submitted",
+            isPresented: Binding(
+                get: { store.reportResult == .success },
+                set: { if !$0 { store.send(.reportResultDismissed) } }
+            )
+        ) {
+            Button("OK") { store.send(.reportResultDismissed) }
+        }
+        .alert(
+            "Error",
+            isPresented: Binding(
+                get: { store.reportResult == .failure },
+                set: { if !$0 { store.send(.reportResultDismissed) } }
+            )
+        ) {
+            Button("OK") { store.send(.reportResultDismissed) }
+        } message: {
+            Text("Couldn't submit the report. Try again in a moment.")
         }
     }
 
@@ -190,7 +270,7 @@ struct VictoryView: View {
 
 // MARK: - Confetti
 
-private struct ConfettiParticle {
+struct ConfettiParticle {
     var x: CGFloat
     var y: CGFloat
     var speed: CGFloat
@@ -203,7 +283,7 @@ private struct ConfettiParticle {
     var shapeType: Int // 0 = circle, 1 = rect
 }
 
-private struct ConfettiView: View {
+struct ConfettiView: View {
     @State private var particles: [ConfettiParticle] = []
     @State private var lastTime: Date = .now
     @State private var startTime: Date = .now

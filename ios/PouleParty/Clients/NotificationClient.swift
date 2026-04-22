@@ -4,6 +4,7 @@
 //
 
 import ComposableArchitecture
+import UIKit
 import UserNotifications
 
 struct NotificationClient {
@@ -32,6 +33,13 @@ extension NotificationClient: DependencyKey {
                 // Silently handle — user denied or error
             }
             let settings = await center.notificationSettings()
+            // Register for remote notifications now that the user has had a chance to consent.
+            // This triggers the APNS token flow so FCM can start delivering pushes.
+            if settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional {
+                await MainActor.run {
+                    UIApplication.shared.registerForRemoteNotifications()
+                }
+            }
             return settings.authorizationStatus
         }
     )

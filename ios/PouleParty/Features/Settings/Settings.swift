@@ -296,6 +296,8 @@ private struct GameStatusBadge: View {
         case .waiting: "Waiting"
         case .inProgress: "Live"
         case .done: "Done"
+        case .pendingPayment: "Paiement"
+        case .paymentFailed: "Échec"
         }
     }
 
@@ -304,6 +306,8 @@ private struct GameStatusBadge: View {
         case .waiting: .CROrange
         case .inProgress: Color(hex: 0x16A34A)
         case .done: .onBackground.opacity(0.3)
+        case .pendingPayment: .CROrange.opacity(0.5)
+        case .paymentFailed: .red
         }
     }
 }
@@ -451,6 +455,11 @@ struct GameLeaderboardSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @Dependency(\.userClient) var userClient
+    @Dependency(\.apiClient) var apiClient
+
+    @State private var reportTarget: LeaderboardEntry?
+    @State private var reportSuccess: Bool = false
+    @State private var reportFailure: Bool = false
 
     /// Builds entries from winners only (no registrations → no network fetch).
     /// Uses the same `LeaderboardEntry` model as VictoryView for a shared rendering path.
@@ -494,7 +503,13 @@ struct GameLeaderboardSheet: View {
                             }
                             .padding(.vertical, 40)
                         } else {
-                            LeaderboardContentView(entries: entries, hunterStartDate: game.hunterStartDate)
+                            LeaderboardContentView(
+                                entries: entries,
+                                hunterStartDate: game.hunterStartDate,
+                                onReport: { entry in
+                                    reportTarget = entry
+                                }
+                            )
                         }
                     }
                     .padding(20)
@@ -506,6 +521,44 @@ struct GameLeaderboardSheet: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
                 }
+            }
+            .alert(
+                "Report this player?",
+                isPresented: Binding(
+                    get: { reportTarget != nil },
+                    set: { if !$0 { reportTarget = nil } }
+                ),
+                presenting: reportTarget
+            ) { target in
+                Button("Report", role: .destructive) {
+                    submitReport(target: target)
+                }
+                Button("Cancel", role: .cancel) {
+                    reportTarget = nil
+                }
+            } message: { target in
+                Text("Report \(target.displayName) for an offensive nickname or inappropriate behaviour. We review every report; abusive reporters may be banned.")
+            }
+            .alert("Thanks — report submitted", isPresented: $reportSuccess) {
+                Button("OK") { reportSuccess = false }
+            }
+            .alert("Error", isPresented: $reportFailure) {
+                Button("OK") { reportFailure = false }
+            } message: {
+                Text("Couldn't submit the report. Try again in a moment.")
+            }
+        }
+    }
+
+    private func submitReport(target: LeaderboardEntry) {
+        reportTarget = nil
+        let gameId = game.id
+        Task {
+            do {
+                try await apiClient.reportPlayer(gameId, target.id, target.displayName)
+                reportSuccess = true
+            } catch {
+                reportFailure = true
             }
         }
     }

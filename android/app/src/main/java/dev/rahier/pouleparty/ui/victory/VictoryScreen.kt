@@ -9,8 +9,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -115,7 +118,8 @@ fun VictoryScreen(
                 LeaderboardContent(
                     entries = entries,
                     hunterStartMs = state.game.hunterStartDate.time,
-                    modifier = Modifier.weight(1f).fillMaxWidth()
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    onReport = { entry -> viewModel.onReportInitiated(entry) }
                 )
             }
 
@@ -128,6 +132,51 @@ fun VictoryScreen(
             )
 
             Spacer(Modifier.height(32.dp))
+        }
+
+        val reportTarget = state.reportTarget
+        if (reportTarget != null) {
+            AlertDialog(
+                onDismissRequest = { viewModel.onReportDismissed() },
+                title = { Text(stringResource(R.string.report_player_title)) },
+                text = {
+                    Text(stringResource(R.string.report_player_message, reportTarget.displayName))
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = { viewModel.onReportConfirmed() },
+                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    ) { Text(stringResource(R.string.report_player_submit)) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { viewModel.onReportDismissed() }) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                }
+            )
+        }
+
+        when (state.reportResult) {
+            ReportResult.SUCCESS -> AlertDialog(
+                onDismissRequest = { viewModel.onReportResultDismissed() },
+                title = { Text(stringResource(R.string.report_player_success)) },
+                confirmButton = {
+                    TextButton(onClick = { viewModel.onReportResultDismissed() }) {
+                        Text(stringResource(R.string.ok))
+                    }
+                }
+            )
+            ReportResult.FAILURE -> AlertDialog(
+                onDismissRequest = { viewModel.onReportResultDismissed() },
+                title = { Text(stringResource(R.string.error)) },
+                text = { Text(stringResource(R.string.report_player_error)) },
+                confirmButton = {
+                    TextButton(onClick = { viewModel.onReportResultDismissed() }) {
+                        Text(stringResource(R.string.ok))
+                    }
+                }
+            )
+            null -> Unit
         }
     }
 }

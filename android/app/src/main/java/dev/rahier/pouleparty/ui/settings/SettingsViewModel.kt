@@ -29,7 +29,14 @@ data class SettingsUiState(
     val myGames: List<MyGame> = emptyList(),
     val isLoadingGames: Boolean = false,
     val selectedGame: MyGame? = null,
-    val isShowingLeaderboard: Boolean = false
+    val isShowingLeaderboard: Boolean = false,
+    val reportTarget: ReportTarget? = null,
+    val reportResult: dev.rahier.pouleparty.ui.victory.ReportResult? = null
+)
+
+data class ReportTarget(
+    val gameId: String,
+    val entry: dev.rahier.pouleparty.ui.victory.LeaderboardEntry
 )
 
 @HiltViewModel
@@ -56,8 +63,40 @@ class SettingsViewModel @Inject constructor(
             SettingsIntent.ConfirmDelete -> confirmDelete()
             SettingsIntent.DeleteSuccessDismissed -> onDeleteSuccessDismissed()
             SettingsIntent.DeleteErrorDismissed -> onDeleteErrorDismissed()
+            SettingsIntent.ReportDismissed -> _uiState.update { it.copy(reportTarget = null) }
+            SettingsIntent.ReportConfirmed -> confirmReport()
+            SettingsIntent.ReportResultDismissed -> _uiState.update { it.copy(reportResult = null) }
             is SettingsIntent.NicknameChanged -> onNicknameChanged(intent.name)
             is SettingsIntent.GameSelected -> selectGame(intent.game)
+            is SettingsIntent.ReportInitiated -> _uiState.update {
+                it.copy(reportTarget = ReportTarget(intent.gameId, intent.entry))
+            }
+        }
+    }
+
+    private fun confirmReport() {
+        val target = _uiState.value.reportTarget ?: return
+        val reporterId = auth.currentUser?.uid
+        _uiState.update { it.copy(reportTarget = null) }
+        if (reporterId.isNullOrEmpty()) {
+            _uiState.update { it.copy(reportResult = dev.rahier.pouleparty.ui.victory.ReportResult.FAILURE) }
+            return
+        }
+        viewModelScope.launch {
+            val result = runCatching {
+                firestoreRepository.reportPlayer(
+                    reporterId = reporterId,
+                    reportedUserId = target.entry.id,
+                    reportedNickname = target.entry.displayName,
+                    gameId = target.gameId
+                )
+            }
+            if (result.isFailure) {
+                Log.e("SettingsViewModel", "reportPlayer failed", result.exceptionOrNull())
+            }
+            _uiState.update {
+                it.copy(reportResult = if (result.isSuccess) dev.rahier.pouleparty.ui.victory.ReportResult.SUCCESS else dev.rahier.pouleparty.ui.victory.ReportResult.FAILURE)
+            }
         }
     }
 
@@ -140,10 +179,14 @@ class SettingsViewModel @Inject constructor(
         _uiState.update { it.copy(isShowingDeleteConfirmation = false) }
         viewModelScope.launch {
             val success = try {
+                val userId = auth.currentUser?.uid
+                // Delete Firestore user profile first — the security rule requires
+                // auth.uid == userId, which stops holding once the auth user is deleted.
+                if (userId != null) {
+                    runCatching { firestoreRepository.deleteUser(userId) }
+                }
                 auth.currentUser?.delete()?.await()
-                // Clear local data
                 prefs.edit().clear().apply()
-                // Re-authenticate anonymously
                 auth.signInAnonymously().await()
                 true
             } catch (e: Exception) {

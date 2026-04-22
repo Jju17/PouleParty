@@ -325,6 +325,51 @@ fun SettingsScreen(
             }
         )
     }
+
+    val reportTarget = state.reportTarget
+    if (reportTarget != null) {
+        AlertDialog(
+            onDismissRequest = { viewModel.onIntent(SettingsIntent.ReportDismissed) },
+            title = { Text(stringResource(R.string.report_player_title)) },
+            text = {
+                Text(stringResource(R.string.report_player_message, reportTarget.entry.displayName))
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { viewModel.onIntent(SettingsIntent.ReportConfirmed) },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) { Text(stringResource(R.string.report_player_submit)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.onIntent(SettingsIntent.ReportDismissed) }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
+    when (state.reportResult) {
+        dev.rahier.pouleparty.ui.victory.ReportResult.SUCCESS -> AlertDialog(
+            onDismissRequest = { viewModel.onIntent(SettingsIntent.ReportResultDismissed) },
+            title = { Text(stringResource(R.string.report_player_success)) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.onIntent(SettingsIntent.ReportResultDismissed) }) {
+                    Text(stringResource(R.string.ok))
+                }
+            }
+        )
+        dev.rahier.pouleparty.ui.victory.ReportResult.FAILURE -> AlertDialog(
+            onDismissRequest = { viewModel.onIntent(SettingsIntent.ReportResultDismissed) },
+            title = { Text(stringResource(R.string.error)) },
+            text = { Text(stringResource(R.string.report_player_error)) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.onIntent(SettingsIntent.ReportResultDismissed) }) {
+                    Text(stringResource(R.string.ok))
+                }
+            }
+        )
+        null -> Unit
+    }
 }
 
 // MARK: - Components
@@ -404,7 +449,10 @@ private fun MyGamesSection(state: SettingsUiState, viewModel: SettingsViewModel)
             LeaderboardDialog(
                 game = selectedGame.game,
                 currentUserId = viewModel.currentUserId(),
-                onDismiss = { viewModel.onIntent(SettingsIntent.DismissLeaderboard) }
+                onDismiss = { viewModel.onIntent(SettingsIntent.DismissLeaderboard) },
+                onReport = { entry ->
+                    viewModel.onIntent(SettingsIntent.ReportInitiated(selectedGame.game.id, entry))
+                }
             )
         }
     }
@@ -495,6 +543,8 @@ private fun GameStatusBadge(status: GameStatus) {
         GameStatus.WAITING -> "Waiting" to CROrange
         GameStatus.IN_PROGRESS -> "Live" to Success
         GameStatus.DONE -> "Done" to MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f)
+        GameStatus.PENDING_PAYMENT -> "Paiement" to CROrange.copy(alpha = 0.5f)
+        GameStatus.PAYMENT_FAILED -> "Échec" to Color.Red
     }
     Text(
         label,
@@ -608,7 +658,8 @@ private fun DetailRow(label: String, value: String) {
 private fun LeaderboardDialog(
     game: dev.rahier.pouleparty.model.Game,
     currentUserId: String,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onReport: ((dev.rahier.pouleparty.ui.victory.LeaderboardEntry) -> Unit)? = null
 ) {
     // Build entries from winners only — no network fetch needed for a basic leaderboard.
     // Uses the same shared helper as VictoryScreen for consistency.
@@ -660,7 +711,8 @@ private fun LeaderboardDialog(
                 dev.rahier.pouleparty.ui.components.LeaderboardContent(
                     entries = entries,
                     hunterStartMs = game.hunterStartDate.time,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    onReport = onReport
                 )
             }
             Spacer(Modifier.height(32.dp))

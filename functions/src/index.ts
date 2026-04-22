@@ -804,3 +804,15 @@ export const getRegistrationCount = onCall(
     return { count: countSnap.data().count, max: MAX_REGISTRATIONS };
   }
 );
+
+// ---------------------------------------------------------------------------
+// Stripe (creator/hunter payments, promo codes, webhook)
+// ---------------------------------------------------------------------------
+
+export {
+  createCreatorPaymentSheet,
+  createHunterPaymentSheet,
+  validatePromoCode,
+  redeemFreeCreation,
+  stripeWebhook,
+} from "./stripe";

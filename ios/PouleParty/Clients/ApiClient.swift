@@ -7,6 +7,7 @@
 
 import ComposableArchitecture
 import CoreLocation
+import FirebaseAuth
 import FirebaseFirestore
 import os
 
@@ -43,6 +44,9 @@ struct ApiClient {
     var challengeCompletionsStream: (String) -> AsyncStream<[ChallengeCompletion]>
     var markChallengeCompleted: (String, String, String, String, Int) async throws -> Void
     var fetchUserNicknames: ([String]) async throws -> [String: String]
+    /// Submit a report against another player (user-generated-content moderation).
+    /// Writes a doc to `/reports/{autoId}` which is readable only by the admin SDK.
+    var reportPlayer: (_ gameId: String, _ reportedUserId: String, _ reportedNickname: String) async throws -> Void
 }
 
 private let logger = Logger(category: "ApiClient")
@@ -115,7 +119,8 @@ extension ApiClient: TestDependencyKey {
         challengesStream: { AsyncStream { _ in } },
         challengeCompletionsStream: { _ in AsyncStream { _ in } },
         markChallengeCompleted: { _, _, _, _, _ in },
-        fetchUserNicknames: { _ in [:] }
+        fetchUserNicknames: { _ in [:] },
+        reportPlayer: { _, _, _ in }
     )
 }
 
@@ -273,7 +278,16 @@ extension ApiClient: DependencyKey {
                         }
                         guard let game: Game = {
                             do { return try snapshot.data(as: Game.self) }
-                            catch { logger.error("Failed to decode Game config: \(error.localizedDescription)"); return nil }
+                            catch {
+                                // localizedDescription collapses DecodingError into a useless
+                                // "data couldn't be read because it is missing" string. Dump
+                                // the full error so we can see the missing key / bad type /
+                                // coding path when a server-side schema drift causes a decode
+                                // failure (e.g. a new required field shipping before the
+                                // corresponding client update).
+                                logger.error("Failed to decode Game config for \(gameId) (exists=\(snapshot.exists)): \(String(describing: error))")
+                                return nil
+                            }
                         }() else {
                             continuation.yield(nil)
                             return
@@ -626,6 +640,25 @@ extension ApiClient: DependencyKey {
                 }
             }
             return result
+        },
+        reportPlayer: { gameId, reportedUserId, reportedNickname in
+            guard let reporterId = Auth.auth().currentUser?.uid else {
+                throw NSError(
+                    domain: "ApiClient",
+                    code: -1,
+                    userInfo: [NSLocalizedDescriptionKey: "Not authenticated"]
+                )
+            }
+            let payload: [String: Any] = [
+                "reporterId": reporterId,
+                "reportedUserId": reportedUserId,
+                "reportedNickname": reportedNickname,
+                "gameId": gameId,
+                "createdAt": FieldValue.serverTimestamp()
+            ]
+            try await Firestore.firestore()
+                .collection("reports")
+                .addDocument(data: payload)
         }
     )
 }
