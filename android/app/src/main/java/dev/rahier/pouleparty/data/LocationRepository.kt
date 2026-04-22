@@ -52,10 +52,15 @@ class LocationRepository @Inject constructor(
 
     /**
      * Get the last known location, or null if unavailable.
+     *
+     * Returns null instead of throwing when permission is missing so callers
+     * can degrade gracefully (the @Suppress is now scoped to the actual call,
+     * with a runtime guard above it).
      */
-    @Suppress("MissingPermission")
     suspend fun getLastLocation(): Point? {
+        if (!hasFineLocationPermission()) return null
         return try {
+            @Suppress("MissingPermission")
             val location = fusedLocationClient.lastLocation.await()
             if (location != null) Point.fromLngLat(location.longitude, location.latitude) else null
         } catch (_: Exception) {

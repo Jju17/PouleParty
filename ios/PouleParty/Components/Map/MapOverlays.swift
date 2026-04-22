@@ -39,10 +39,21 @@ struct CircleOverlay: Equatable {
 
 /// Calculates the Mapbox zoom level needed to show a circle of given radius on screen.
 /// Provides ~25% padding around the circle on a typical mobile viewport.
+///
+/// Defensive defaults: a non-finite or non-positive radius (or polar latitude)
+/// would otherwise divide by zero / produce NaN and leave the camera blank.
+/// Falls back to zoom 15 in those cases — same as Android `zoomForRadius`.
 func zoomForRadius(_ radiusMeters: CLLocationDistance, latitude: CLLocationDegrees) -> CGFloat {
+    guard radiusMeters.isFinite, radiusMeters > 0 else { return 15 }
+    guard latitude.isFinite else { return 15 }
     let earthCircumference = 40_075_016.686
     let latRad = latitude * .pi / 180.0
-    let zoom = log2(earthCircumference * cos(latRad) / (2.0 * radiusMeters)) - 1.0
+    let cosLat = cos(latRad)
+    let safeCosLat = abs(cosLat) > 1e-9 ? cosLat : 1e-9
+    let arg = earthCircumference * safeCosLat / (2.0 * radiusMeters)
+    guard arg.isFinite, arg > 0 else { return 15 }
+    let zoom = log2(arg) - 1.0
+    guard zoom.isFinite else { return 15 }
     return CGFloat(min(max(zoom, 8.0), 18.0))
 }
 
@@ -106,8 +117,11 @@ func outerBoundsCoordinates(center: CLLocationCoordinate2D, padding: Double = 20
 func zoneOverlayContent(circle: CircleOverlay, overlayColor: UIColor) -> some MapContent {
     let circlePolygon = Polygon(center: circle.center, radius: circle.radius, vertices: 72)
     let outerCoords = outerBoundsCoordinates(center: circle.center)
+    // Close the polygon ring. outerBoundsCoordinates is a static 4-corner rect,
+    // but guard anyway so a future caller change can't crash the map.
+    let closingCoord = outerCoords.first ?? circle.center
     let invertedPolygon = Polygon(
-        outerRing: Ring(coordinates: outerCoords + [outerCoords[0]]),
+        outerRing: Ring(coordinates: outerCoords + [closingCoord]),
         innerRings: [circlePolygon.outerRing]
     )
     PolygonAnnotation(polygon: invertedPolygon)

@@ -927,4 +927,135 @@ struct GameTimerLogicTests {
             #expect(abs(powerUps[i].location.longitude - expectedLng) < 1e-10, "PU[\(i)] lng mismatch")
         }
     }
+
+    // MARK: - interpolateZoneCenter defensive guards
+
+    @Test func interpolateReturnsInitialWhenFinalCenterNil() {
+        let initial = CLLocationCoordinate2D(latitude: 50.85, longitude: 4.35)
+        let result = interpolateZoneCenter(
+            initialCenter: initial,
+            finalCenter: nil,
+            initialRadius: 1000,
+            currentRadius: 500
+        )
+        #expect(result.latitude == initial.latitude)
+        #expect(result.longitude == initial.longitude)
+    }
+
+    @Test func interpolateReturnsInitialWhenInitialRadiusZero() {
+        let initial = CLLocationCoordinate2D(latitude: 50.85, longitude: 4.35)
+        let final = CLLocationCoordinate2D(latitude: 50.86, longitude: 4.36)
+        let result = interpolateZoneCenter(
+            initialCenter: initial,
+            finalCenter: final,
+            initialRadius: 0,
+            currentRadius: 0
+        )
+        #expect(result.latitude == initial.latitude)
+        #expect(result.longitude == initial.longitude)
+    }
+
+    @Test func interpolateReturnsInitialWhenInitialRadiusNegative() {
+        let initial = CLLocationCoordinate2D(latitude: 50.85, longitude: 4.35)
+        let final = CLLocationCoordinate2D(latitude: 50.86, longitude: 4.36)
+        let result = interpolateZoneCenter(
+            initialCenter: initial,
+            finalCenter: final,
+            initialRadius: -10,
+            currentRadius: 0
+        )
+        #expect(result.latitude == initial.latitude)
+    }
+
+    @Test func interpolateReturnsInitialOnNaNInputs() {
+        let initial = CLLocationCoordinate2D(latitude: 50.85, longitude: 4.35)
+        let final = CLLocationCoordinate2D(latitude: 50.86, longitude: 4.36)
+        let nanResult = interpolateZoneCenter(
+            initialCenter: initial,
+            finalCenter: final,
+            initialRadius: .nan,
+            currentRadius: 500
+        )
+        #expect(nanResult.latitude == initial.latitude)
+        let nanCurrent = interpolateZoneCenter(
+            initialCenter: initial,
+            finalCenter: final,
+            initialRadius: 1000,
+            currentRadius: .nan
+        )
+        #expect(nanCurrent.latitude == initial.latitude)
+    }
+
+    @Test func interpolateClampsProgressAtZero() {
+        let initial = CLLocationCoordinate2D(latitude: 50.85, longitude: 4.35)
+        let final = CLLocationCoordinate2D(latitude: 50.95, longitude: 4.45)
+        // currentRadius > initialRadius → progress would go negative; clamp.
+        let result = interpolateZoneCenter(
+            initialCenter: initial,
+            finalCenter: final,
+            initialRadius: 1000,
+            currentRadius: 5000
+        )
+        #expect(abs(result.latitude - initial.latitude) < 1e-10)
+        #expect(abs(result.longitude - initial.longitude) < 1e-10)
+    }
+
+    @Test func interpolateClampsProgressAtOne() {
+        let initial = CLLocationCoordinate2D(latitude: 50.85, longitude: 4.35)
+        let final = CLLocationCoordinate2D(latitude: 50.95, longitude: 4.45)
+        // currentRadius is negative → progress > 1; clamp to final.
+        let result = interpolateZoneCenter(
+            initialCenter: initial,
+            finalCenter: final,
+            initialRadius: 1000,
+            currentRadius: -1000
+        )
+        #expect(abs(result.latitude - final.latitude) < 1e-10)
+        #expect(abs(result.longitude - final.longitude) < 1e-10)
+    }
+
+    @Test func interpolateMidwayReturnsMidpoint() {
+        let initial = CLLocationCoordinate2D(latitude: 50.0, longitude: 4.0)
+        let final = CLLocationCoordinate2D(latitude: 51.0, longitude: 5.0)
+        let result = interpolateZoneCenter(
+            initialCenter: initial,
+            finalCenter: final,
+            initialRadius: 1000,
+            currentRadius: 500
+        )
+        #expect(abs(result.latitude - 50.5) < 1e-10)
+        #expect(abs(result.longitude - 4.5) < 1e-10)
+    }
+
+    // MARK: - zoomForRadius defensive guards
+
+    @Test func zoomForRadiusFallsBackOnZeroRadius() {
+        #expect(zoomForRadius(0, latitude: 50.85) == 15)
+    }
+
+    @Test func zoomForRadiusFallsBackOnNegativeRadius() {
+        #expect(zoomForRadius(-100, latitude: 50.85) == 15)
+    }
+
+    @Test func zoomForRadiusFallsBackOnNaNRadius() {
+        #expect(zoomForRadius(.nan, latitude: 50.85) == 15)
+    }
+
+    @Test func zoomForRadiusFallsBackOnNaNLatitude() {
+        #expect(zoomForRadius(1000, latitude: .nan) == 15)
+    }
+
+    @Test func zoomForRadiusHandlesPolarLatitude() {
+        // cos(90°) ≈ 0, would normally divide by zero. Should still produce
+        // a finite zoom inside [8, 18].
+        let zoom = zoomForRadius(1000, latitude: 90)
+        #expect(zoom.isFinite)
+        #expect(zoom >= 8 && zoom <= 18)
+    }
+
+    @Test func zoomForRadiusInRangeForTypicalInputs() {
+        let zoom = zoomForRadius(1500, latitude: 50.85)
+        #expect(zoom.isFinite)
+        #expect(zoom > 8 && zoom < 18)
+    }
 }

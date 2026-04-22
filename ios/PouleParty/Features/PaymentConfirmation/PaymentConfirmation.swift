@@ -68,7 +68,13 @@ struct PaymentConfirmationFeature {
                     },
                     .run { [clock] send in
                         while !Task.isCancelled {
-                            try? await clock.sleep(for: .seconds(1))
+                            do {
+                                try await clock.sleep(for: .seconds(1))
+                            } catch {
+                                // Clock cancelled or failed: exit the loop instead of
+                                // spinning at 100% CPU with `try?` swallowing the error.
+                                return
+                            }
                             await send(.tick(.now))
                         }
                     }

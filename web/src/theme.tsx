@@ -12,10 +12,31 @@ const ThemeContext = createContext<ThemeContextType>({
   toggleTheme: () => {},
 });
 
+// Safari private mode throws on localStorage; guard every access so the page
+// still renders even when persistence is unavailable.
+function safeGetItem(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function safeSetItem(key: string, value: string): void {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // Ignore: quota exceeded or access denied.
+  }
+}
+
 function detectTheme(): Theme {
-  const stored = localStorage.getItem("theme") as Theme | null;
+  const stored = safeGetItem("theme") as Theme | null;
   if (stored === "light" || stored === "dark") return stored;
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  if (typeof window !== "undefined" && typeof window.matchMedia === "function") {
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  }
+  return "light";
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
@@ -27,7 +48,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const toggleTheme = () => {
     const next = theme === "light" ? "dark" : "light";
-    localStorage.setItem("theme", next);
+    safeSetItem("theme", next);
     setTheme(next);
   };
 

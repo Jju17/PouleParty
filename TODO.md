@@ -290,3 +290,40 @@ Attaquer quand **un** de ces déclencheurs apparaît :
 - **Localizable.xcstrings** : fichier unique, perd l'intégration Xcode si split
 - **Assets (Bangers, Early GameBoy, chicken.imageset)** : `.bundle(for: Bundle.module)` nécessaire partout
 - **Widget target** : ne peut pas linker FirebaseMessaging — watch the transitive deps
+
+---
+
+## 9. Migration Gradle DSL deprecated (priorité : low)
+
+### Warnings persistants dans `android/app/build.gradle.kts`
+
+Chaque build release émet 3 warnings Kotlin DSL :
+
+```
+w: file:.../build.gradle.kts:19:1: 'fun Project.android(configure: Action<BaseAppModuleExtension>): Unit' is deprecated. Replaced by com.android.build.api.dsl.ApplicationExtension.
+w: file:.../build.gradle.kts:76:5: 'fun BaseAppModuleExtension.kotlinOptions(configure: Action<DeprecatedKotlinJvmOptions>): Unit' is deprecated. Please migrate to the compilerOptions DSL.
+w: file:.../build.gradle.kts:77:9: 'var jvmTarget: String' is deprecated. Please migrate to the compilerOptions DSL.
+```
+
+### Cause
+
+- `android { … }` → l'ancien bloc `Project.android` de `BaseAppModuleExtension`, deprecated, remplacé par `com.android.build.api.dsl.ApplicationExtension`.
+- `kotlinOptions { jvmTarget = "17" }` → deprecated au profit de `compilerOptions { jvmTarget = JvmTarget.JVM_17 }`.
+
+### Plan
+
+1. Remplacer l'import + extension `android { … }` par le nouveau DSL `ApplicationExtension` (ou laisser en l'état si le nouveau DSL reste source-compatible — à vérifier sur la version d'AGP qu'on utilise).
+2. Remplacer `kotlinOptions { jvmTarget = "17" }` par `compilerOptions { jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17 }`. Import à ajouter en haut du fichier.
+3. Valider avec un `./gradlew :app:bundleProductionRelease` (voire `./gradlew help --scan` en amont) que les 3 warnings disparaissent **et** que la compilation Kotlin produit toujours du bytecode JVM 17.
+
+### Pourquoi c'est en low
+
+- Non bloquant : le projet build / package / ship correctement avec les 3 warnings en place depuis longtemps.
+- Risque de casse non-nul (Gradle DSL migrations cassent régulièrement sur les versions de transition) → ne pas tenter en plein cycle release.
+- Viole techniquement la Zero-Warnings policy de `CLAUDE.md`, mais les warnings sont pré-existants à toutes les releases récentes — à traiter hors hotfix.
+
+### Signaux pour reprioriser
+
+- Mise à jour AGP / Kotlin majeure qui rend les vieux DSL erreurs dures (plus juste deprecation).
+- Accumulation d'autres deprecations Gradle qui rendent difficile de distinguer les warnings légitimes de ceux-là.
+

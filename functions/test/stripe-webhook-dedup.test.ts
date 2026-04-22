@@ -54,7 +54,7 @@ describe("claimWebhookEvent", () => {
     expect(txSet).not.toHaveBeenCalled();
   });
 
-  test("event with fresh receivedAt (< 5 min ago) is in-flight, no write", async () => {
+  test("event with fresh receivedAt (< 30 min ago) is in-flight, no write", async () => {
     const NOW = 1_700_000_000_000;
     const { db, txSet } = makeDb({
       exists: true,
@@ -67,11 +67,11 @@ describe("claimWebhookEvent", () => {
     expect(txSet).not.toHaveBeenCalled();
   });
 
-  test("event with stale receivedAt (> 5 min ago) is re-claimed", async () => {
+  test("event with stale receivedAt (> 30 min ago) is re-claimed", async () => {
     const NOW = 1_700_000_000_000;
     const { db, txSet } = makeDb({
       exists: true,
-      data: () => ({ receivedAt: { toMillis: () => NOW - 10 * 60 * 1000 } }), // 10 min ago
+      data: () => ({ receivedAt: { toMillis: () => NOW - 45 * 60 * 1000 } }), // 45 min ago
     });
 
     const out = await claimWebhookEvent(db, FAKE_REF, "payment_intent.succeeded", () => NOW);
@@ -80,17 +80,16 @@ describe("claimWebhookEvent", () => {
     expect(txSet).toHaveBeenCalledTimes(1);
   });
 
-  test("boundary: exactly 5 min ago still in-flight (strict <)", async () => {
+  test("boundary: exactly 30 min ago still in-flight (strict <)", async () => {
     const NOW = 1_700_000_000_000;
     const { db, txSet } = makeDb({
       exists: true,
-      data: () => ({ receivedAt: { toMillis: () => NOW - 5 * 60 * 1000 } }), // exactly 5 min ago
+      data: () => ({ receivedAt: { toMillis: () => NOW - 30 * 60 * 1000 } }), // exactly 30 min ago
     });
 
     const out = await claimWebhookEvent(db, FAKE_REF, "payment_intent.succeeded", () => NOW);
 
-    // 5_000_000 ms, 5_000_000 ms staleAfterMs = 0, which is NOT < staleAfterMs → stale branch.
-    // The boundary handling is "strict less than" → exactly equal is treated as stale.
+    // diff = staleAfterMs, NOT strictly less than → stale branch → re-claim.
     expect(out.status).toBe("claimed");
     expect(txSet).toHaveBeenCalledTimes(1);
   });

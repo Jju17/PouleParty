@@ -104,11 +104,15 @@ struct SettingsLinksSection: View {
     var body: some View {
         VStack(spacing: 0) {
             SettingsRow(icon: "hand.raised", title: "Privacy Policy") {
-                openURL(URL(string: "https://pouleparty.be/privacy")!)
+                if let url = URL(string: "https://pouleparty.be/privacy") {
+                    openURL(url)
+                }
             }
             Divider().padding(.horizontal, 14)
             SettingsRow(icon: "doc.text", title: "Terms of Use") {
-                openURL(URL(string: "https://pouleparty.be/terms")!)
+                if let url = URL(string: "https://pouleparty.be/terms") {
+                    openURL(url)
+                }
             }
             Divider().padding(.horizontal, 14)
             SettingsRow(icon: "envelope", title: "Contact Support") {

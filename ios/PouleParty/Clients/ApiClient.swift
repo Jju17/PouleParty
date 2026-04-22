@@ -90,7 +90,11 @@ private func withRetry(_ operation: String, block: () async throws -> Void) asyn
             lastError = error
             logger.warning("\(operation) failed (attempt \(attempt + 1)/\(maxRetries)): \(error)")
             if attempt < maxRetries - 1 {
-                try? await Task.sleep(nanoseconds: initialDelayNs * UInt64(1 << attempt))
+                // Cap the shift so a future bump of `maxRetries` past 63 can't
+                // overflow `UInt64`. With maxRetries = 3 the cap is a no-op,
+                // but it keeps the call site safe by construction.
+                let shift = min(attempt, 20)
+                try? await Task.sleep(nanoseconds: initialDelayNs * UInt64(1 << shift))
             }
         }
     }

@@ -6,6 +6,49 @@ Format: [Keep a Changelog](https://keepachangelog.com/). Versions follow [Semant
 
 ---
 
+## [1.9.1], 2026-04-22
+
+**iOS**: 1.9.1 (1) · **Android**: 1.9.1 (27) · **Functions**: `createCreatorPaymentSheet` + `redeemFreeCreation` redeployed to staging + prod
+
+Server + Android client hotfix for the 1.9.0 Android crash on any Forfait / promo-created game (`zone.center` HashMap instead of `GeoPoint`). iOS ships the aligned marketing version with a smaller set of internal hardening (PaymentConfirmation gameId fix, Firestore-style IDs for free games, decode-failure logging).
+
+### Fixed
+- **Android — crash on every streamed Forfait / promo-created game doc** (`Fatal Exception: java.lang.RuntimeException: Failed to convert value of type java.util.HashMap to GeoPoint (found in field 'zone.center')`). Root cause was server-side: `functions/src/stripe.ts#materialiseGameDoc` spread `g.zone` directly, so `zone.center` / `zone.finalCenter` landed in Firestore as plain maps instead of `GeoPoint` native values. Kotlin's `CustomClassMapper.convertGeoPoint` throws on the wire-level mismatch and the exception bubbled up uncaught from the Firestore executor thread inside `FirestoreRepository.gameConfigFlow`'s `addSnapshotListener` callback. Two-part fix:
+  - **Server (`functions/src/stripe.ts`)** — `materialiseGameDoc` now writes `new GeoPoint(lat, lng)` instances for `zone.center` + `zone.finalCenter`. `sanitiseGamePayload` rejects malformed zones at the gate (NaN, Infinity, out-of-range lat/lng, non-numeric values, missing fields, non-object zone, radius > 50 000, start ≥ end, etc.) before they can reach Firestore. `zone.finalCenter` is now correctly optional (required for `stayInTheZone`, `null` for `followTheChicken`). `materialiseGameDoc` + `sanitiseGamePayload` both exported so tests can drive them directly.
+  - **Android (`FirestoreRepository.gameConfigFlow`)** — `runCatching` wraps `snapshot.toObject(Game::class.java)` with structured logging (gameId + `snapshot.exists()` + full stack trace). Mirrors iOS's `ApiClient.gameConfigStream` try/catch. Future schema drifts log + yield `null` instead of tearing down the app.
+- **iOS — `PaymentConfirmation` screen streamed the wrong gameId after a Forfait payment**. The Cloud Function `createCreatorPaymentSheet` creates the game doc at its own Firestore auto-ID and ignores any client-supplied id. The iOS flow was forwarding `state.game` (which still carried the client-side UUID) to the confirmation screen, so `gameConfigStream(state.game.id)` listened on an orphan doc that never existed. Fixed by patching `state.$game.id = gameId` in `GameCreation.swift` before handing the snapshot to the confirmation screen (required making `Game.id` a `var`). Side-effect: the confirmation screen's status badge now correctly flips from `pending_payment → waiting` as soon as the Stripe webhook fires.
+- **iOS — cryptic decode failures on `gameConfigStream`**. `ApiClient.gameConfigStream` used to log `"Failed to decode Game config: The data couldn't be read because it is missing."` — the `localizedDescription` of `DecodingError` collapses key-not-found errors into a useless string. Now logs the full `DecodingError` (coding path + missing key) + `gameId` + `snapshot.exists`, which is what surfaced the `zone.center` shape mismatch in real-device logs.
+
+### Changed
+- **Firestore-style game IDs everywhere (iOS + Android)**. Free-mode games used to be created with client-side UUIDs (iOS `uuid().uuidString` = uppercase hyphenated, Android `UUID.randomUUID().toString()` = lowercase hyphenated) while Cloud-Function-created games used Firestore auto-IDs (20-char alphanumeric). Three formats in one collection. Unified: both clients now call `Firestore.firestore().collection("games").document().documentID` / `FirebaseFirestore.getInstance().collection("games").document().id`, matching the server format. Existing games stay on their old IDs — only new games converge.
+- **iOS `Game.id` is now `var`** (was `let`). Required for the `PaymentConfirmation` fix above. No external consumer relied on the immutability, the change is source-compatible.
+- **iOS — translations catch-up.** 42 translation units added across 16 `Localizable.xcstrings` keys that had been shipped in English / French on the payment + UGC report flows without their FR / NL counterparts. All locale tabs now at 100% coverage, zero `state: "new"` entries.
+
+### Added
+- **`functions/test/stripe-zone.test.ts`** — 66 unit tests covering `sanitiseGamePayload` (zone/timing/pricing edge cases: NaN, Infinity, type coercion, missing fields, bounds) and `materialiseGameDoc` (GeoPoint instance checks, Timestamp instance checks, null finalCenter round-trip, 9 boundary coordinates including null island / poles / IDL east + west / Easter Island / sub-degree precision).
+- **`ios/PoulePartyTests/GameZoneCodableTests.swift`** — 10 iOS tests driving the real `Firestore.Decoder()` with the shape `materialiseGameDoc` writes: happy-path decode, explicit null finalCenter, missing finalCenter key, full `Game` decode, permissive plain-map fallback (documenting the iOS-vs-Android asymmetry that made iOS survive the 1.9.0 bug), encode/decode round-trip, 9 paramétré boundary coordinates matching the server tests for cross-platform parity.
+
+### Cross-platform contract pinned
+- Server writes `new GeoPoint(lat, lng)` → wire type `Value.geoPointValue` (not `Value.mapValue`).
+- iOS `Firestore.Decoder()` reads it as `FirebaseFirestore.GeoPoint`.
+- Android `CustomClassMapper.convertGeoPoint` reads it as `com.google.firebase.firestore.GeoPoint`.
+- Web (landing page) does not read game docs.
+- Single source of truth, verified by 76 new tests across server + iOS.
+
+### Test coverage
+Functions **140 tests** (was 74 at 1.9.0) · iOS: added `GameZoneCodableTests` with 10 tests · Android: build clean + existing suite passes.
+
+### Deployment steps
+```bash
+cd functions && npm run build
+firebase deploy --only functions:createCreatorPaymentSheet,functions:redeemFreeCreation --project pouleparty-ba586
+firebase deploy --only functions:createCreatorPaymentSheet,functions:redeemFreeCreation --project pouleparty-prod
+cd android && JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" ./gradlew bundleProductionRelease
+# upload app-production-release.aab to Play Console with the 1.9.1 release notes from RELEASE_NOTES.md
+```
+
+---
+
 ## [1.9.0], 2026-04-22
 
 **iOS**: 1.9.0 (3) · **Android**: 1.9.0 (26)

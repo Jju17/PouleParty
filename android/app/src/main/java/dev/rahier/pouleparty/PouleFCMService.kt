@@ -10,12 +10,31 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import dev.rahier.pouleparty.util.getTrimmedString
+import java.util.concurrent.atomic.AtomicInteger
 
 class PouleFCMService : FirebaseMessagingService() {
 
     companion object {
         private const val TAG = "PouleFCMService"
         private const val CHANNEL_ID = "game_events"
+
+        // Monotonic notification ID generator. `System.currentTimeMillis().toInt()`
+        // overflows past Int.MAX_VALUE (January 19 2038, but also negative sooner
+        // due to the toInt() cast), which collides notifications and makes them
+        // visually flicker/replace each other. A process-scoped counter always
+        // produces a unique positive ID until we hit Int.MAX_VALUE (~2 billion).
+        private val notificationIdCounter = AtomicInteger(1)
+
+        private fun nextNotificationId(): Int {
+            // Wrap to 1 if we ever approach Int.MAX_VALUE.
+            val next = notificationIdCounter.getAndIncrement()
+            return if (next < 0) {
+                notificationIdCounter.set(2)
+                1
+            } else {
+                next
+            }
+        }
     }
 
     override fun onNewToken(token: String) {
@@ -68,7 +87,15 @@ class PouleFCMService : FirebaseMessagingService() {
     private fun showNotification(title: String?, body: String?, data: Map<String, String>) {
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-            data.forEach { (k, v) -> putExtra(k, v) }
+            // FCM payloads are always <String, String>, but we guard anyway in case
+            // a future server change ships something Intent can't serialise.
+            data.forEach { (k, v) ->
+                try {
+                    putExtra(k, v)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Dropping FCM extra '$k'", e)
+                }
+            }
         }
         val pendingIntent = PendingIntent.getActivity(
             this,
@@ -88,7 +115,7 @@ class PouleFCMService : FirebaseMessagingService() {
 
         try {
             NotificationManagerCompat.from(this)
-                .notify(System.currentTimeMillis().toInt(), builder.build())
+                .notify(nextNotificationId(), builder.build())
         } catch (e: SecurityException) {
             Log.w(TAG, "Missing POST_NOTIFICATIONS permission", e)
         }

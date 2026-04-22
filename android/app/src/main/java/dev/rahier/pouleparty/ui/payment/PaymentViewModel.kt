@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Drives the Stripe PaymentSheet for creator Forfait and hunter Caution flows.
@@ -121,19 +122,44 @@ class PaymentViewModel @AssistedInject constructor(
         _state.update { it.copy(preparing = true, prepareError = null) }
 
         viewModelScope.launch {
-            when (val ctx = current.context) {
-                is PaymentContext.CreatorForfait -> {
-                    val promoId = current.validatedPromoCodeId
-                    if (current.freeOverride && promoId != null) {
-                        runCatching { stripeRepository.redeemFreeCreation(ctx.gameConfig, promoId) }
-                            .onSuccess { gameId ->
-                                _state.update { it.copy(preparing = false, outcome = Outcome.CreatorPaid(gameId)) }
-                            }
-                            .onFailure { err ->
-                                _state.update { it.copy(preparing = false, prepareError = err.message) }
-                            }
-                    } else {
-                        runCatching { stripeRepository.createCreatorPaymentSheet(ctx.gameConfig, promoId) }
+            // Cap the prepare step so a stalled Stripe call doesn't leave the
+            // user staring at a spinner forever. 30 s is generous; in practice
+            // the call returns in < 2 s.
+            val timedOut = withTimeoutOrNull(PAY_PREPARE_TIMEOUT_MS) {
+                when (val ctx = current.context) {
+                    is PaymentContext.CreatorForfait -> {
+                        val promoId = current.validatedPromoCodeId
+                        if (current.freeOverride && promoId != null) {
+                            runCatching { stripeRepository.redeemFreeCreation(ctx.gameConfig, promoId) }
+                                .onSuccess { gameId ->
+                                    _state.update { it.copy(preparing = false, outcome = Outcome.CreatorPaid(gameId)) }
+                                }
+                                .onFailure { err ->
+                                    _state.update { it.copy(preparing = false, prepareError = err.message) }
+                                }
+                        } else {
+                            runCatching { stripeRepository.createCreatorPaymentSheet(ctx.gameConfig, promoId) }
+                                .onSuccess { params ->
+                                    _state.update {
+                                        it.copy(
+                                            preparing = false,
+                                            paymentConfig = PaymentSheetConfig(
+                                                clientSecret = params.paymentIntentClientSecret,
+                                                ephemeralKeySecret = params.ephemeralKeySecret,
+                                                customerId = params.customerId,
+                                                amountCents = params.amountCents,
+                                                gameId = params.gameId,
+                                            ),
+                                        )
+                                    }
+                                }
+                                .onFailure { err ->
+                                    _state.update { it.copy(preparing = false, prepareError = err.message) }
+                                }
+                        }
+                    }
+                    is PaymentContext.HunterCaution -> {
+                        runCatching { stripeRepository.createHunterPaymentSheet(ctx.gameId) }
                             .onSuccess { params ->
                                 _state.update {
                                     it.copy(
@@ -143,7 +169,6 @@ class PaymentViewModel @AssistedInject constructor(
                                             ephemeralKeySecret = params.ephemeralKeySecret,
                                             customerId = params.customerId,
                                             amountCents = params.amountCents,
-                                            gameId = params.gameId,
                                         ),
                                     )
                                 }
@@ -153,27 +178,16 @@ class PaymentViewModel @AssistedInject constructor(
                             }
                     }
                 }
-                is PaymentContext.HunterCaution -> {
-                    runCatching { stripeRepository.createHunterPaymentSheet(ctx.gameId) }
-                        .onSuccess { params ->
-                            _state.update {
-                                it.copy(
-                                    preparing = false,
-                                    paymentConfig = PaymentSheetConfig(
-                                        clientSecret = params.paymentIntentClientSecret,
-                                        ephemeralKeySecret = params.ephemeralKeySecret,
-                                        customerId = params.customerId,
-                                        amountCents = params.amountCents,
-                                    ),
-                                )
-                            }
-                        }
-                        .onFailure { err ->
-                            _state.update { it.copy(preparing = false, prepareError = err.message) }
-                        }
-                }
+                Unit
+            }
+            if (timedOut == null) {
+                _state.update { it.copy(preparing = false, prepareError = "Stripe took too long, please retry") }
             }
         }
+    }
+
+    companion object {
+        private const val PAY_PREPARE_TIMEOUT_MS = 30_000L
     }
 
     /** Called by the screen once the PaymentSheet finishes (completed / cancelled / failed). */

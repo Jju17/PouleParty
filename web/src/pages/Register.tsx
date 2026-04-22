@@ -28,9 +28,19 @@ export default function Register() {
   const [regInfo, setRegInfo] = useState<{ count: number; max: number } | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     getRegistrationCount()
-      .then((res) => setRegInfo(res.data))
-      .catch(() => {});
+      .then((res) => {
+        if (!cancelled) setRegInfo(res.data);
+      })
+      .catch((err) => {
+        // Not fatal — the page is still usable without the count. Surface in
+        // the console for ops instead of silently dropping the error.
+        console.warn("[Register] getRegistrationCount failed", err);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [status]);
 
   const update = (field: keyof FormData) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
@@ -92,7 +102,8 @@ export default function Register() {
       }) as HttpsCallableResult<{ success: boolean }>;
       setStatus("success");
     } catch (err: unknown) {
-      const code = (err as { code?: string }).code;
+      console.error("[Register] registerForEvent failed", err);
+      const code = (err as { code?: string } | null)?.code;
       if (code === "functions/already-exists") {
         setStatus("duplicate");
       } else if (code === "functions/resource-exhausted") {

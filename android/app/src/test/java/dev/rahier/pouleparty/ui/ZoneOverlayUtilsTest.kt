@@ -4,6 +4,7 @@ import com.mapbox.geojson.Point
 import dev.rahier.pouleparty.ui.components.circlePolygonPoints
 import dev.rahier.pouleparty.ui.components.outerBoundsPoints
 import dev.rahier.pouleparty.ui.components.powerUpPulseAlpha
+import dev.rahier.pouleparty.ui.components.zoomForRadius
 import org.junit.Assert.*
 import org.junit.Test
 import kotlin.math.*
@@ -192,6 +193,42 @@ class ZoneOverlayUtilsTest {
             "Should be continuous, got $justBeforePeriod → $justAfterPeriod",
             abs(justBeforePeriod - justAfterPeriod) < 0.01f
         )
+    }
+
+    // ── zoomForRadius defensive guards ────────────────
+
+    @Test
+    fun `zoomForRadius falls back on zero radius`() {
+        assertEquals(15.0, zoomForRadius(0.0, 50.85), 0.0)
+    }
+
+    @Test
+    fun `zoomForRadius falls back on negative radius`() {
+        assertEquals(15.0, zoomForRadius(-100.0, 50.85), 0.0)
+    }
+
+    @Test
+    fun `zoomForRadius falls back on NaN radius`() {
+        assertEquals(15.0, zoomForRadius(Double.NaN, 50.85), 0.0)
+    }
+
+    @Test
+    fun `zoomForRadius falls back on NaN latitude`() {
+        assertEquals(15.0, zoomForRadius(1000.0, Double.NaN), 0.0)
+    }
+
+    @Test
+    fun `zoomForRadius handles polar latitude without NaN`() {
+        val zoom = zoomForRadius(1000.0, 90.0)
+        assertTrue("zoom must be finite at the pole, got $zoom", zoom.isFinite())
+        assertTrue("zoom in [8, 18], got $zoom", zoom in 8.0..18.0)
+    }
+
+    @Test
+    fun `zoomForRadius is in range for typical inputs`() {
+        val zoom = zoomForRadius(1500.0, 50.85)
+        assertTrue(zoom.isFinite())
+        assertTrue("zoom in (8, 18), got $zoom", zoom > 8.0 && zoom < 18.0)
     }
 
     // ── Helper ─────────────────────────────────────────

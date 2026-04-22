@@ -56,6 +56,22 @@ class FirestoreRepository @Inject constructor(
                 Log.w(TAG, "$operation listener error", error)
             }
         }
+
+        /**
+         * Safe wrapper around `DocumentSnapshot.toObject`. Schema drift (e.g.
+         * a field stored as a HashMap when the model expects a GeoPoint, as in
+         * the 1.9.0 build 24 crash) makes `toObject` throw synchronously. When
+         * that throw happens inside an `addSnapshotListener` callback the
+         * exception bubbles up to the Firestore executor thread and kills the
+         * whole process. Mirror iOS's ApiClient pattern: catch, log, return
+         * null so downstream UI degrades gracefully.
+         */
+        internal inline fun <reified T : Any> safeToObject(
+            doc: com.google.firebase.firestore.DocumentSnapshot,
+            operation: String,
+        ): T? = runCatching { doc.toObject(T::class.java) }
+            .onFailure { Log.e(TAG, "$operation: failed to decode ${doc.id}", it) }
+            .getOrNull()
     }
 
     private suspend fun <T> withRetry(operation: String, block: suspend () -> T): T {
@@ -67,7 +83,11 @@ class FirestoreRepository @Inject constructor(
                 lastException = e
                 Log.w(TAG, "$operation failed (attempt ${attempt + 1}/$MAX_RETRIES)", e)
                 if (attempt < MAX_RETRIES - 1) {
-                    delay(INITIAL_DELAY_MS * (1L shl attempt))
+                    // Cap the shift so a future bump of MAX_RETRIES past 62
+                    // can't overflow a Long. With MAX_RETRIES = 3 the cap is
+                    // a no-op but keeps the call site safe by construction.
+                    val shift = minOf(attempt, 20)
+                    delay(INITIAL_DELAY_MS * (1L shl shift))
                 }
             }
         }
@@ -279,7 +299,9 @@ class FirestoreRepository @Inject constructor(
                     return@addSnapshotListener
                 }
                 val doc = snapshot.documents.firstOrNull()
-                val chickenLocation = doc?.toObject(ChickenLocation::class.java)
+                val chickenLocation = doc?.let {
+                    safeToObject<ChickenLocation>(it, "Chicken location (game $gameId)")
+                }
                 if (chickenLocation != null) {
                     trySend(
                         Point.fromLngLat(
@@ -309,7 +331,24 @@ class FirestoreRepository @Inject constructor(
                     trySend(null)
                     return@addSnapshotListener
                 }
-                val game = snapshot.toObject(Game::class.java)?.copy(id = snapshot.id)
+                // `toObject` throws synchronously on a schema drift
+                // (e.g. zone.center stored as a HashMap rather than a GeoPoint,
+                // the 1.9.0 build 24 crash). Running inside an
+                // addSnapshotListener callback means the throw propagates all
+                // the way up to the Firestore executor thread and crashes the
+                // whole process. Mirror iOS's ApiClient.gameConfigStream
+                // pattern: catch, log with the gameId + field trace, emit null
+                // so the downstream UI degrades gracefully instead of the app
+                // being torn down.
+                val game = runCatching {
+                    snapshot.toObject(Game::class.java)?.copy(id = snapshot.id)
+                }.onFailure { error ->
+                    Log.e(
+                        TAG,
+                        "Failed to decode Game config for $gameId (exists=${snapshot.exists()})",
+                        error,
+                    )
+                }.getOrNull()
                 trySend(game)
             }
 
@@ -400,7 +439,7 @@ class FirestoreRepository @Inject constructor(
                     return@addSnapshotListener
                 }
                 val powerUps = snapshot.documents.mapNotNull { doc ->
-                    doc.toObject(PowerUp::class.java)?.copy(id = doc.id)
+                    safeToObject<PowerUp>(doc, "Power-ups (game $gameId)")?.copy(id = doc.id)
                 }
                 trySend(powerUps)
             }
@@ -424,7 +463,7 @@ class FirestoreRepository @Inject constructor(
                     return@addSnapshotListener
                 }
                 val hunters = snapshot.documents.mapNotNull { doc ->
-                    doc.toObject(HunterLocation::class.java)
+                    safeToObject<HunterLocation>(doc, "Hunter locations (game $gameId)")
                 }
                 trySend(hunters)
             }
@@ -517,7 +556,7 @@ class FirestoreRepository @Inject constructor(
                     return@addSnapshotListener
                 }
                 val challenges = snapshot.documents.mapNotNull { doc ->
-                    doc.toObject(Challenge::class.java)?.copy(id = doc.id)
+                    safeToObject<Challenge>(doc, "Challenges")?.copy(id = doc.id)
                 }
                 trySend(challenges)
             }
@@ -544,7 +583,7 @@ class FirestoreRepository @Inject constructor(
                     return@addSnapshotListener
                 }
                 val completions = snapshot.documents.mapNotNull { doc ->
-                    doc.toObject(ChallengeCompletion::class.java)?.copy(hunterId = doc.id)
+                    safeToObject<ChallengeCompletion>(doc, "Challenge completions (game $gameId)")?.copy(hunterId = doc.id)
                 }
                 trySend(completions)
             }

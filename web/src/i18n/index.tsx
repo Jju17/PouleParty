@@ -20,12 +20,33 @@ const I18nContext = createContext<I18nContextType>({
   setLocale: () => {},
 });
 
+// Safari private mode + some hardened browsers throw on localStorage access.
+// Every read/write is wrapped so a storage failure only drops persistence,
+// not the whole app.
+function safeGetItem(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function safeSetItem(key: string, value: string): void {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // Ignore: quota exceeded or access denied.
+  }
+}
+
 function detectLocale(): Locale {
-  const stored = localStorage.getItem("locale") as Locale | null;
+  const stored = safeGetItem("locale") as Locale | null;
   if (stored && translations[stored]) return stored;
-  const browser = navigator.language.slice(0, 2);
-  if (browser === "fr") return "fr";
-  if (browser === "nl") return "nl";
+  if (typeof navigator !== "undefined") {
+    const browser = navigator.language.slice(0, 2);
+    if (browser === "fr") return "fr";
+    if (browser === "nl") return "nl";
+  }
   return "en";
 }
 
@@ -33,7 +54,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(detectLocale);
 
   const setLocale = (l: Locale) => {
-    localStorage.setItem("locale", l);
+    safeSetItem("locale", l);
     document.documentElement.lang = l;
     setLocaleState(l);
   };

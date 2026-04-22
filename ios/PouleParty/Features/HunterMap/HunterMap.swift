@@ -603,15 +603,22 @@ struct HunterMapFeature {
                 // Decoy: show a fake chicken marker when decoy is active
                 if game.isDecoyActive {
                     if state.decoyLocation == nil, let center = state.mapCircle?.center {
-                        // Deterministic fake location so all hunters see the same decoy
-                        let decoyTimestamp = Int(game.powerUps.activeEffects.decoy?.dateValue().timeIntervalSince1970 ?? 0)
+                        // Deterministic fake location so all hunters see the same decoy.
+                        // If the decoy timestamp fails to decode for any reason, fall back
+                        // to 0 so we still place a consistent fake rather than crashing.
+                        let decoyDate = game.powerUps.activeEffects.decoy?.dateValue()
+                        let decoyTimestamp = decoyDate.map { Int($0.timeIntervalSince1970) } ?? 0
                         let seed = game.zone.driftSeed ^ decoyTimestamp
                         let angle = seededRandom(seed: seed, index: 0) * 2 * .pi
                         let distance = (200 + seededRandom(seed: seed, index: 1) * 300) / 111_320.0
-                        state.decoyLocation = CLLocationCoordinate2D(
-                            latitude: center.latitude + distance * cos(angle),
-                            longitude: center.longitude + distance * sin(angle) / cos(center.latitude * .pi / 180)
-                        )
+                        let cosLat = cos(center.latitude * .pi / 180)
+                        // Near the poles cosLat → 0; guard against division blowing up.
+                        let safeCosLat = abs(cosLat) > 1e-9 ? cosLat : 1e-9
+                        let lat = center.latitude + distance * cos(angle)
+                        let lng = center.longitude + distance * sin(angle) / safeCosLat
+                        if lat.isFinite, lng.isFinite {
+                            state.decoyLocation = CLLocationCoordinate2D(latitude: lat, longitude: lng)
+                        }
                     }
                 } else {
                     state.decoyLocation = nil

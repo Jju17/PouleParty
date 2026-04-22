@@ -106,27 +106,34 @@ abstract class BaseMapViewModel(
      */
     protected fun checkPowerUpProximity() {
         val userLoc = currentUserLocation ?: return
+        if (playerId.isEmpty()) {
+            // Auth lost: don't write garbage to Firestore (would corrupt
+            // collectedBy with an empty string and tank the rules check).
+            return
+        }
         for (powerUp in currentAvailablePowerUps) {
-            if (powerUp.id in collectingPowerUpIds) continue
             val results = FloatArray(1)
             Location.distanceBetween(
                 userLoc.latitude(), userLoc.longitude(),
                 powerUp.location.latitude, powerUp.location.longitude,
                 results
             )
-            if (results[0] <= AppConstants.POWER_UP_COLLECTION_RADIUS_METERS) {
-                collectingPowerUpIds.add(powerUp.id)
-                viewModelScope.launch {
-                    try {
-                        firestoreRepository.collectPowerUp(gameId, powerUp.id, playerId)
-                        analyticsRepository.powerUpCollected(powerUp.type, analyticsRole)
-                        notifyPowerUp("Collected: ${powerUp.typeEnum.title}!", powerUp.typeEnum)
-                    } catch (e: Exception) {
-                        Log.e(logTag, "Failed to collect power-up", e)
-                        notifyPowerUp("Failed to collect power-up", null)
-                    } finally {
-                        collectingPowerUpIds.remove(powerUp.id)
-                    }
+            if (results[0] > AppConstants.POWER_UP_COLLECTION_RADIUS_METERS) continue
+            // Atomic check-and-claim: `add` returns false if the id was already
+            // present, which means another tick is already collecting this same
+            // power-up. The previous "if-in then add" pattern was racy across
+            // ticks fired by the location flow + the periodic timer.
+            if (!collectingPowerUpIds.add(powerUp.id)) continue
+            viewModelScope.launch {
+                try {
+                    firestoreRepository.collectPowerUp(gameId, powerUp.id, playerId)
+                    analyticsRepository.powerUpCollected(powerUp.type, analyticsRole)
+                    notifyPowerUp("Collected: ${powerUp.typeEnum.title}!", powerUp.typeEnum)
+                } catch (e: Exception) {
+                    Log.e(logTag, "Failed to collect power-up", e)
+                    notifyPowerUp("Failed to collect power-up", null)
+                } finally {
+                    collectingPowerUpIds.remove(powerUp.id)
                 }
             }
         }

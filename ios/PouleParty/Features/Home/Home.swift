@@ -286,7 +286,12 @@ struct HomeFeature {
                 var game = Game(id: apiClient.newGameId())
                 game.foundCode = Game.generateFoundCode()
                 game.timing.headStartMinutes = 5
-                game.creatorId = userClient.currentUserId() ?? ""
+                guard let creatorId = userClient.currentUserId(), !creatorId.isEmpty else {
+                    Logger(category: "Home").error("Cannot create game: no current user id (auth not ready)")
+                    state.pendingPlanResult = nil
+                    return .none
+                }
+                game.creatorId = creatorId
                 game.pricing.model = config.model
                 game.maxPlayers = config.numberOfPlayers
                 game.pricing.pricePerPlayer = config.pricePerPlayerCents
@@ -714,7 +719,11 @@ struct HomeView: View {
             withAnimation(Animation.easeInOut(duration: 0.5)) {
                 self.isVisible.toggle()
             }
-            try? await Task.sleep(nanoseconds: UInt64(0.5 * 1_000_000_000))
+            do {
+                try await Task.sleep(nanoseconds: UInt64(0.5 * 1_000_000_000))
+            } catch {
+                return
+            }
         }
     }
 

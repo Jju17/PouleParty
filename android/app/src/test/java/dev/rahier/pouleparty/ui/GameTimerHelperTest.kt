@@ -897,4 +897,73 @@ class GameTimerHelperTest {
             assertEquals("PU[$i] lng", expected[i].lng, powerUps[i].location.longitude, 1e-10)
         }
     }
+
+    // ── interpolateZoneCenter defensive guards ────────────
+
+    @Test
+    fun `interpolate returns initial when finalCenter is null`() {
+        val initial = Point.fromLngLat(4.35, 50.85)
+        val result = interpolateZoneCenter(initial, null, 1000.0, 500.0)
+        assertEquals(initial.latitude(), result.latitude(), 0.0)
+        assertEquals(initial.longitude(), result.longitude(), 0.0)
+    }
+
+    @Test
+    fun `interpolate returns initial when initialRadius is zero`() {
+        val initial = Point.fromLngLat(4.35, 50.85)
+        val final = Point.fromLngLat(4.36, 50.86)
+        val result = interpolateZoneCenter(initial, final, 0.0, 0.0)
+        assertEquals(initial.latitude(), result.latitude(), 0.0)
+    }
+
+    @Test
+    fun `interpolate returns initial when initialRadius is negative`() {
+        val initial = Point.fromLngLat(4.35, 50.85)
+        val final = Point.fromLngLat(4.36, 50.86)
+        val result = interpolateZoneCenter(initial, final, -100.0, 0.0)
+        assertEquals(initial.latitude(), result.latitude(), 0.0)
+    }
+
+    @Test
+    fun `interpolate returns initial on NaN initialRadius`() {
+        val initial = Point.fromLngLat(4.35, 50.85)
+        val final = Point.fromLngLat(4.36, 50.86)
+        val result = interpolateZoneCenter(initial, final, Double.NaN, 500.0)
+        assertEquals(initial.latitude(), result.latitude(), 0.0)
+    }
+
+    @Test
+    fun `interpolate returns initial on NaN currentRadius`() {
+        val initial = Point.fromLngLat(4.35, 50.85)
+        val final = Point.fromLngLat(4.36, 50.86)
+        val result = interpolateZoneCenter(initial, final, 1000.0, Double.NaN)
+        assertEquals(initial.latitude(), result.latitude(), 0.0)
+    }
+
+    @Test
+    fun `interpolate clamps progress at zero when currentRadius greater than initialRadius`() {
+        val initial = Point.fromLngLat(4.35, 50.85)
+        val final = Point.fromLngLat(4.45, 50.95)
+        val result = interpolateZoneCenter(initial, final, 1000.0, 5000.0)
+        assertEquals(initial.latitude(), result.latitude(), 1e-10)
+        assertEquals(initial.longitude(), result.longitude(), 1e-10)
+    }
+
+    @Test
+    fun `interpolate clamps progress at one when currentRadius is negative`() {
+        val initial = Point.fromLngLat(4.35, 50.85)
+        val final = Point.fromLngLat(4.45, 50.95)
+        val result = interpolateZoneCenter(initial, final, 1000.0, -1000.0)
+        assertEquals(final.latitude(), result.latitude(), 1e-10)
+        assertEquals(final.longitude(), result.longitude(), 1e-10)
+    }
+
+    @Test
+    fun `interpolate midway returns midpoint`() {
+        val initial = Point.fromLngLat(4.0, 50.0)
+        val final = Point.fromLngLat(5.0, 51.0)
+        val result = interpolateZoneCenter(initial, final, 1000.0, 500.0)
+        assertEquals(50.5, result.latitude(), 1e-10)
+        assertEquals(4.5, result.longitude(), 1e-10)
+    }
 }

@@ -1,6 +1,6 @@
 import { onCall, HttpsError, onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
-import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
+import { getFirestore, FieldValue, GeoPoint, Timestamp } from "firebase-admin/firestore";
 import Stripe from "stripe";
 
 const REGION = "europe-west1";
@@ -37,7 +37,9 @@ interface PendingGamePayload {
   };
   zone: {
     center: { latitude: number; longitude: number };
-    finalCenter: { latitude: number; longitude: number };
+    /** Required for `stayInTheZone`, null for `followTheChicken` (the final
+     *  zone is dynamically the chicken's live position in that mode). */
+    finalCenter: { latitude: number; longitude: number } | null;
     radius: number;
     shrinkIntervalMinutes: number;
     shrinkMetersPerUpdate: number;
@@ -84,16 +86,71 @@ function computeCreatorAmountCents(pricing: PendingGamePayload["pricing"], maxPl
   return 0;
 }
 
-function sanitiseGamePayload(raw: unknown): PendingGamePayload {
+/**
+ * Reject anything that isn't a finite number in [min, max]. `Number.isFinite`
+ * rejects NaN and Infinity; range check then ensures the value round-trips
+ * through the downstream Firestore + mobile decoders without surprise.
+ */
+function assertFiniteNumberInRange(
+  value: unknown,
+  field: string,
+  min: number,
+  max: number,
+): asserts value is number {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < min || value > max) {
+    throw new HttpsError("invalid-argument", `${field} must be a finite number in [${min}, ${max}]`);
+  }
+}
+
+function assertLatLng(
+  value: unknown,
+  field: string,
+): asserts value is { latitude: number; longitude: number } {
+  if (!value || typeof value !== "object") {
+    throw new HttpsError("invalid-argument", `${field} must be an object`);
+  }
+  const v = value as { latitude?: unknown; longitude?: unknown };
+  assertFiniteNumberInRange(v.latitude, `${field}.latitude`, -90, 90);
+  assertFiniteNumberInRange(v.longitude, `${field}.longitude`, -180, 180);
+}
+
+// Bounds enforced at the API boundary. Any client sending past these is
+// either a misconfigured build or a malicious caller, so we reject up front.
+const MAX_NAME_LENGTH = 80;
+const MAX_ENABLED_POWER_UP_TYPES = 32;
+const VALID_GAME_MODES = new Set(["followTheChicken", "stayInTheZone"]);
+// Scheduled tasks fired in the past get rejected by Cloud Tasks; anything
+// more than 5 min in the past is guaranteed to be a stale/replay request.
+// Allow a small negative skew so clock drift between the phone and the server
+// doesn't reject legit 'start now' games.
+const START_MIN_PAST_MS = 5 * 60 * 1000;
+// Upper bound of a game scheduled into the future; prevents trivial abuse of
+// the Cloud Tasks queue with impossible-to-play dates.
+const START_MAX_FUTURE_MS = 365 * 24 * 60 * 60 * 1000;
+
+export function sanitiseGamePayload(
+  raw: unknown,
+  now: () => number = () => Date.now(),
+): PendingGamePayload {
   if (!raw || typeof raw !== "object") {
     throw new HttpsError("invalid-argument", "gameConfig missing");
   }
   const g = raw as Partial<PendingGamePayload>;
   if (typeof g.name !== "string") throw new HttpsError("invalid-argument", "name must be a string");
-  if (typeof g.maxPlayers !== "number" || g.maxPlayers < 1 || g.maxPlayers > 100) {
+  const trimmedName = g.name.trim();
+  if (trimmedName.length === 0 || trimmedName.length > MAX_NAME_LENGTH) {
+    throw new HttpsError("invalid-argument", `name must be 1..${MAX_NAME_LENGTH} chars`);
+  }
+  g.name = trimmedName;
+  if (typeof g.maxPlayers !== "number" || !Number.isInteger(g.maxPlayers) || g.maxPlayers < 1 || g.maxPlayers > 100) {
     throw new HttpsError("invalid-argument", "maxPlayers out of range");
   }
-  if (typeof g.gameMode !== "string") throw new HttpsError("invalid-argument", "gameMode required");
+  if (typeof g.gameMode !== "string" || !VALID_GAME_MODES.has(g.gameMode)) {
+    throw new HttpsError("invalid-argument", "gameMode invalid");
+  }
+  if (typeof g.chickenCanSeeHunters !== "boolean") {
+    throw new HttpsError("invalid-argument", "chickenCanSeeHunters must be a boolean");
+  }
   if (typeof g.foundCode !== "string" || !/^\d{4}$/.test(g.foundCode)) {
     throw new HttpsError("invalid-argument", "foundCode must be 4 digits");
   }
@@ -103,11 +160,88 @@ function sanitiseGamePayload(raw: unknown): PendingGamePayload {
   if (g.pricing.model === "free") {
     throw new HttpsError("invalid-argument", "free games should not go through Stripe");
   }
-  if (typeof g.pricing.pricePerPlayer !== "number" || g.pricing.pricePerPlayer < 0) {
+  if (typeof g.pricing.pricePerPlayer !== "number" || !Number.isFinite(g.pricing.pricePerPlayer) || g.pricing.pricePerPlayer < 0) {
     throw new HttpsError("invalid-argument", "pricePerPlayer invalid");
   }
-  if (typeof g.pricing.deposit !== "number" || g.pricing.deposit < 0) {
+  if (typeof g.pricing.deposit !== "number" || !Number.isFinite(g.pricing.deposit) || g.pricing.deposit < 0) {
     throw new HttpsError("invalid-argument", "deposit invalid");
+  }
+  if (typeof g.pricing.commission !== "number" || !Number.isFinite(g.pricing.commission) || g.pricing.commission < 0 || g.pricing.commission > 100) {
+    throw new HttpsError("invalid-argument", "commission invalid");
+  }
+  // Zone structure — tight validation here is what prevents the `HashMap`
+  // decode crashes on mobile clients. We refuse to persist anything that
+  // wouldn't round-trip cleanly through `new GeoPoint(lat, lng)`.
+  if (!g.zone || typeof g.zone !== "object") {
+    throw new HttpsError("invalid-argument", "zone missing");
+  }
+  const zone = g.zone as Partial<PendingGamePayload["zone"]>;
+  assertLatLng(zone.center, "zone.center");
+  // finalCenter is optional: required for `stayInTheZone`, absent for
+  // `followTheChicken`. Normalise `undefined → null` so downstream code never
+  // has to distinguish the two.
+  if (zone.finalCenter !== undefined && zone.finalCenter !== null) {
+    assertLatLng(zone.finalCenter, "zone.finalCenter");
+  } else {
+    (zone as { finalCenter: null }).finalCenter = null;
+  }
+  // Radius upper bound matches the Firestore rule (`zone.radius <= 50000`).
+  assertFiniteNumberInRange(zone.radius, "zone.radius", 0.001, 50_000);
+  assertFiniteNumberInRange(zone.shrinkIntervalMinutes, "zone.shrinkIntervalMinutes", 1, 1440);
+  assertFiniteNumberInRange(zone.shrinkMetersPerUpdate, "zone.shrinkMetersPerUpdate", 0, 10_000);
+  assertFiniteNumberInRange(zone.driftSeed, "zone.driftSeed", Number.MIN_SAFE_INTEGER, Number.MAX_SAFE_INTEGER);
+  // Timing structure — mirror the Firestore rule (`timing.start < timing.end`,
+  // `headStartMinutes >= 0`) and reject scheduleTime in the past so Cloud Tasks
+  // doesn't auto-fire everything immediately.
+  if (!g.timing || typeof g.timing !== "object") {
+    throw new HttpsError("invalid-argument", "timing missing");
+  }
+  const timing = g.timing as Partial<PendingGamePayload["timing"]>;
+  assertFiniteNumberInRange(timing.startMillis, "timing.startMillis", 0, Number.MAX_SAFE_INTEGER);
+  assertFiniteNumberInRange(timing.endMillis, "timing.endMillis", 0, Number.MAX_SAFE_INTEGER);
+  if (typeof timing.startMillis === "number" && typeof timing.endMillis === "number" && timing.startMillis >= timing.endMillis) {
+    throw new HttpsError("invalid-argument", "timing.startMillis must be before timing.endMillis");
+  }
+  const currentMs = now();
+  if (typeof timing.startMillis === "number") {
+    if (timing.startMillis < currentMs - START_MIN_PAST_MS) {
+      throw new HttpsError("invalid-argument", "timing.startMillis is in the past");
+    }
+    if (timing.startMillis > currentMs + START_MAX_FUTURE_MS) {
+      throw new HttpsError("invalid-argument", "timing.startMillis is too far in the future");
+    }
+  }
+  assertFiniteNumberInRange(timing.headStartMinutes, "timing.headStartMinutes", 0, 240);
+
+  // Registration / powerUps shape — both land in the Firestore doc verbatim,
+  // so a malformed client payload would break the mobile decoders.
+  if (!g.registration || typeof g.registration !== "object") {
+    throw new HttpsError("invalid-argument", "registration missing");
+  }
+  const reg = g.registration as Partial<PendingGamePayload["registration"]>;
+  if (typeof reg.required !== "boolean") {
+    throw new HttpsError("invalid-argument", "registration.required must be a boolean");
+  }
+  // closesMinutesBefore is optional (null/undefined = no deadline); validate only
+  // when present.
+  if (reg.closesMinutesBefore !== null && reg.closesMinutesBefore !== undefined) {
+    assertFiniteNumberInRange(reg.closesMinutesBefore, "registration.closesMinutesBefore", 0, 10_080);
+  }
+
+  if (!g.powerUps || typeof g.powerUps !== "object") {
+    throw new HttpsError("invalid-argument", "powerUps missing");
+  }
+  const pu = g.powerUps as Partial<PendingGamePayload["powerUps"]>;
+  if (typeof pu.enabled !== "boolean") {
+    throw new HttpsError("invalid-argument", "powerUps.enabled must be a boolean");
+  }
+  if (!Array.isArray(pu.enabledTypes) || pu.enabledTypes.length > MAX_ENABLED_POWER_UP_TYPES) {
+    throw new HttpsError("invalid-argument", "powerUps.enabledTypes invalid");
+  }
+  for (const t of pu.enabledTypes) {
+    if (typeof t !== "string" || t.length === 0 || t.length > 32) {
+      throw new HttpsError("invalid-argument", "powerUps.enabledTypes contains invalid entry");
+    }
   }
   return g as PendingGamePayload;
 }
@@ -241,7 +375,14 @@ export const createCreatorPaymentSheet = onCall(
   },
 );
 
-function materialiseGameDoc(
+/**
+ * Turn a sanitised client payload into the exact shape Firestore must hold so
+ * iOS (`FirebaseFirestore.GeoPoint` / `Timestamp`) and Android
+ * (`com.google.firebase.firestore.GeoPoint` / `Timestamp`) decode it without
+ * a single custom converter. Exported so the unit tests in
+ * `test/stripe-zone.test.ts` can assert the exact output shape.
+ */
+export function materialiseGameDoc(
   g: PendingGamePayload,
   creatorId: string,
   gameId: string,
@@ -264,7 +405,22 @@ function materialiseGameDoc(
       end: Timestamp.fromMillis(g.timing.endMillis),
       headStartMinutes: g.timing.headStartMinutes,
     },
-    zone: g.zone,
+    // zone.center and zone.finalCenter MUST be Firestore GeoPoint instances,
+    // not plain maps. A previous version spread `g.zone` directly, which stored
+    // `{latitude, longitude}` as a HashMap in Firestore. Android's Kotlin
+    // decoder then crashed with `Failed to convert value of type java.util.HashMap
+    // to GeoPoint (found in field 'zone.center')` the first time a client
+    // streamed a Forfait-created game. Keep these constructors in place.
+    zone: {
+      center: new GeoPoint(g.zone.center.latitude, g.zone.center.longitude),
+      finalCenter: g.zone.finalCenter
+        ? new GeoPoint(g.zone.finalCenter.latitude, g.zone.finalCenter.longitude)
+        : null,
+      radius: g.zone.radius,
+      shrinkIntervalMinutes: g.zone.shrinkIntervalMinutes,
+      shrinkMetersPerUpdate: g.zone.shrinkMetersPerUpdate,
+      driftSeed: g.zone.driftSeed,
+    },
     pricing: g.pricing,
     registration: g.registration,
     powerUps: {
@@ -538,7 +694,10 @@ export async function claimWebhookEvent(
   eventRef: FirebaseFirestore.DocumentReference,
   eventType: string,
   now: () => number = () => Date.now(),
-  staleAfterMs = 5 * 60 * 1000,
+  // 30 min covers an OOM / cold deploy / retry loop without letting a truly
+  // stuck claim block replays forever. The earlier 5 min window let a
+  // redeploy arriving 3 min after first dispatch double-process the event.
+  staleAfterMs = 30 * 60 * 1000,
 ): Promise<{ status: WebhookClaimStatus }> {
   return dbInstance.runTransaction(async (tx) => {
     const snap = await tx.get(eventRef);

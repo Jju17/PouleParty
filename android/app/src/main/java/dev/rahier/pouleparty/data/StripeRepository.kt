@@ -38,6 +38,34 @@ class StripeRepository @Inject constructor(
         val freeOverride: Boolean = false,
     )
 
+    /**
+     * Thrown when a Cloud Function returns a payload that doesn't match the
+     * expected shape (missing field, wrong type). Separate from network /
+     * auth errors so callers can distinguish "backend disagreement" from
+     * "offline" and surface an actionable message.
+     */
+    class MalformedResponseException(message: String) : IllegalStateException(message)
+
+    private fun expectString(map: Map<String, Any?>, key: String): String {
+        val value = map[key]
+            ?: throw MalformedResponseException("Missing field '$key' in response")
+        return value as? String
+            ?: throw MalformedResponseException("Field '$key' is not a String (got ${value.javaClass.simpleName})")
+    }
+
+    private fun expectInt(map: Map<String, Any?>, key: String): Int {
+        val value = map[key]
+            ?: throw MalformedResponseException("Missing field '$key' in response")
+        return (value as? Number)?.toInt()
+            ?: throw MalformedResponseException("Field '$key' is not a Number (got ${value.javaClass.simpleName})")
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun expectMap(result: Any?): Map<String, Any?> {
+        return (result as? Map<String, Any?>)
+            ?: throw MalformedResponseException("Expected an object response, got ${result?.javaClass?.simpleName ?: "null"}")
+    }
+
     /** Forfait creator payment. Pre-creates the game doc in `pending_payment`. */
     suspend fun createCreatorPaymentSheet(
         gameConfig: Game,
@@ -52,14 +80,13 @@ class StripeRepository @Inject constructor(
         if (promoCodeId != null) payload["promoCodeId"] = promoCodeId
 
         val result = functions.getHttpsCallable("createCreatorPaymentSheet").call(payload).await()
-        @Suppress("UNCHECKED_CAST")
-        val data = (result.getData() as? Map<String, Any?>) ?: error("Malformed response")
+        val data = expectMap(result.getData())
         return CreatorPaymentSheetParams(
-            gameId = data["gameId"] as String,
-            paymentIntentClientSecret = data["paymentIntentClientSecret"] as String,
-            ephemeralKeySecret = data["ephemeralKeySecret"] as String,
-            customerId = data["customerId"] as String,
-            amountCents = (data["amountCents"] as Number).toInt(),
+            gameId = expectString(data, "gameId"),
+            paymentIntentClientSecret = expectString(data, "paymentIntentClientSecret"),
+            ephemeralKeySecret = expectString(data, "ephemeralKeySecret"),
+            customerId = expectString(data, "customerId"),
+            amountCents = expectInt(data, "amountCents"),
         )
     }
 
@@ -67,21 +94,19 @@ class StripeRepository @Inject constructor(
     suspend fun createHunterPaymentSheet(gameId: String): HunterPaymentSheetParams {
         val payload = mapOf("gameId" to gameId)
         val result = functions.getHttpsCallable("createHunterPaymentSheet").call(payload).await()
-        @Suppress("UNCHECKED_CAST")
-        val data = (result.getData() as? Map<String, Any?>) ?: error("Malformed response")
+        val data = expectMap(result.getData())
         return HunterPaymentSheetParams(
-            paymentIntentClientSecret = data["paymentIntentClientSecret"] as String,
-            ephemeralKeySecret = data["ephemeralKeySecret"] as String,
-            customerId = data["customerId"] as String,
-            amountCents = (data["amountCents"] as Number).toInt(),
+            paymentIntentClientSecret = expectString(data, "paymentIntentClientSecret"),
+            ephemeralKeySecret = expectString(data, "ephemeralKeySecret"),
+            customerId = expectString(data, "customerId"),
+            amountCents = expectInt(data, "amountCents"),
         )
     }
 
     /** Validates a Stripe Promotion Code. Server re-validates at redemption time. */
     suspend fun validatePromoCode(code: String): PromoCodeValidation {
         val result = functions.getHttpsCallable("validatePromoCode").call(mapOf("code" to code)).await()
-        @Suppress("UNCHECKED_CAST")
-        val data = (result.getData() as? Map<String, Any?>) ?: error("Malformed response")
+        val data = expectMap(result.getData())
         val valid = data["valid"] as? Boolean ?: false
         if (!valid) return PromoCodeValidation(valid = false)
         return PromoCodeValidation(
@@ -101,9 +126,8 @@ class StripeRepository @Inject constructor(
             "promoCodeId" to promoCodeId,
         )
         val result = functions.getHttpsCallable("redeemFreeCreation").call(payload).await()
-        @Suppress("UNCHECKED_CAST")
-        val data = (result.getData() as? Map<String, Any?>) ?: error("Malformed response")
-        return data["gameId"] as String
+        val data = expectMap(result.getData())
+        return expectString(data, "gameId")
     }
 }
 

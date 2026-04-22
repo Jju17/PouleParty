@@ -1,3 +1,89 @@
+# Release 1.9.1
+
+> ⚠️ **Do not paste this "Summary" paragraph into any store field.** Only the blocks explicitly labelled **App Store Connect**, **Google Play Console**, or **App Review Notes** below are store-safe.
+
+**Summary (internal, do not paste):** server + Android hotfix for the 1.9.0 (26) crash on Forfait / promo-created games (`Failed to convert value of type java.util.HashMap to GeoPoint`). Server `materialiseGameDoc` now writes `GeoPoint` instances, Android `gameConfigFlow` wraps `toObject` in `runCatching` so future schema drifts degrade gracefully. iOS ships the aligned 1.9.1 marketing version with smaller internal hardening (PaymentConfirmation gameId fix, Firestore-style IDs for free games, decode-failure logging, 42 translation units added in FR + NL).
+
+---
+
+## 📱 App Store Connect — field "What's New in This Version"
+
+ASC uses **plain text per locale** (switch the language tab in the top-right of the ASC page and paste the matching block). No XML-style tags, tags are Play Console only. **Do NOT mention "Android", "Google Play", or any other platform**.
+
+**English (U.S.)**
+
+Under-the-hood hardening for paid games: the success screen now consistently follows your created party through payment confirmation, the countdown updates live as soon as Stripe confirms, and missing French / Dutch translations on the payment + player-reporting screens are now complete.
+
+**French**
+
+Durcissement en coulisses pour les parties payantes : l'écran de succès suit désormais ta partie créée jusqu'à la confirmation de paiement, le countdown se met à jour en direct dès confirmation Stripe, et les textes en anglais qui traînaient encore sur les écrans de paiement + signalement sont enfin traduits.
+
+**Dutch**
+
+Verharding onder de motorkap voor betaalde spellen: het succesoverzicht volgt nu je aangemaakte spel netjes tot aan de betalingsbevestiging, de aftelling werkt live bij bevestiging van Stripe, en achtergebleven Engelse teksten op de betaal- en rapportageschermen zijn nu vertaald.
+
+---
+
+## 📱 App Store Connect — field "Promotional Text"
+
+Unchanged from 1.9.0 / 1.8.1. No need to re-paste if ASC already has the current copy.
+
+**English (U.S.)** · 154 chars
+
+Real-world GPS hide-and-seek. One Chicken hides, the rest chase inside a shrinking zone. Power-ups, a 6-char code to share, play with your squad outdoors.
+
+**French** · 157 chars
+
+Cache-cache GPS dans la vraie vie. Une Poule se cache, les autres la chassent dans une zone qui rétrécit. Power-ups, code à 6 caractères, entre potes dehors.
+
+**Dutch** · 158 chars
+
+GPS-verstoppertje in het echte leven. Eén Kip verstopt zich, Jagers zoeken in een krimpende zone op de kaart. Power-ups, 6-cijferige code, buiten met je crew.
+
+---
+
+## 🤖 Google Play Console — field "Release notes"
+
+<en-US>
+Fix: the app crashed when opening a game that was created with a paid plan or a promo code. Server-side write + client-side decode are both hardened, please re-download to play.
+</en-US>
+
+<fr-FR>
+Correctif : l'app crashait à l'ouverture d'une partie créée avec un plan payant ou un code promo. Côté serveur + côté client, tout est durci. Mets à jour pour rejouer.
+</fr-FR>
+
+<nl-NL>
+Fix: de app crashte bij het openen van een spel gemaakt met een betaald plan of promotiecode. Zowel serverkant als clientkant zijn nu steviger. Update om terug te spelen.
+</nl-NL>
+
+---
+
+## 📝 App Store Connect — field "App Review Information → Notes"
+
+Only needed if the reviewer flags a regression on the Stripe paid flow vs. 1.8.1 (2) / 1.9.0 (3). Apple Pay integration is unchanged since 1.8.1 (2), use the review notes from that section if needed.
+
+```
+Thank you for reviewing 1.9.1.
+
+No user-visible behaviour changed on iOS between 1.9.0 (3) and 1.9.1 (1). This release aligns the iOS marketing version with the Android 1.9.1 hotfix and ships three internal hardenings on the paid Stripe flow:
+ - The "payment confirmation" screen shown after a successful Forfait payment now listens on the correct Firestore document (previously it listened on a client-side UUID that the Cloud Function did not use).
+ - Free-mode games are now identified with Firestore auto-IDs, matching the format Cloud Functions already use for Forfait / promo games.
+ - Firestore decode failures are now logged with the full coding path instead of a collapsed string, no user-facing change.
+
+Apple Pay verification steps, merchant ID, entitlement, and the APPLE_REVIEW_99 promo code are all unchanged since 1.8.1 (2). Please refer to the 1.8.1 (2) notes if needed.
+```
+
+---
+
+## Version Info (internal)
+
+| Platform | Version | Build |
+|---|---|---|
+| iOS | 1.9.1 | 1 |
+| Android | 1.9.1 | 27 |
+
+---
+
 # Release 1.9.0
 
 > ⚠️ **Do not paste this "Summary" paragraph into any store field.** Only the blocks explicitly labelled **App Store Connect**, **Google Play Console**, or **App Review Notes** below are store-safe. Apple rejected 1.8.1 (1) because an "Android" mention slipped into What's New, keep the two stores' copy strictly separate.

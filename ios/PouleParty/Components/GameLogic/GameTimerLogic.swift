@@ -118,13 +118,17 @@ func interpolateZoneCenter(
     currentRadius: Double
 ) -> CLLocationCoordinate2D {
     guard let finalCenter else { return initialCenter }
-    guard initialRadius > 0 else { return initialCenter }
+    guard initialRadius.isFinite, initialRadius > 0 else { return initialCenter }
+    guard currentRadius.isFinite else { return initialCenter }
 
-    let progress = min(max((initialRadius - currentRadius) / initialRadius, 0), 1)
+    let rawProgress = (initialRadius - currentRadius) / initialRadius
+    guard rawProgress.isFinite else { return initialCenter }
+    let progress = min(max(rawProgress, 0), 1)
 
     let lat = initialCenter.latitude + progress * (finalCenter.latitude - initialCenter.latitude)
     let lng = initialCenter.longitude + progress * (finalCenter.longitude - initialCenter.longitude)
 
+    guard lat.isFinite, lng.isFinite else { return initialCenter }
     return CLLocationCoordinate2D(latitude: lat, longitude: lng)
 }
 

@@ -64,7 +64,8 @@ async function getTokensForUserIds(userIds: string[]): Promise<string[]> {
 
 /**
  * Send a localised notification to a list of FCM tokens.
- * Cleans up stale tokens automatically.
+ * Cleans up stale tokens automatically. Splits into 500-token batches
+ * because `sendEachForMulticast` rejects anything larger.
  */
 async function sendNotificationToTokens(
   tokens: string[],
@@ -79,67 +80,90 @@ async function sendNotificationToTokens(
   }
 
   const messaging = getMessaging();
+  // Firebase Admin caps `sendEachForMulticast` at 500 tokens per call.
+  const FCM_BATCH_LIMIT = 500;
+  const tokensToRemove: string[] = [];
+  let totalSuccess = 0;
+  let totalFailure = 0;
 
-  const response = await messaging.sendEachForMulticast({
-    tokens,
-    apns: {
-      payload: {
-        aps: {
-          alert: {
-            titleLocKey,
-            locKey: bodyLocKey,
-            ...(bodyLocArgs && bodyLocArgs.length > 0 ? { locArgs: bodyLocArgs } : {}),
+  for (let start = 0; start < tokens.length; start += FCM_BATCH_LIMIT) {
+    const batch = tokens.slice(start, start + FCM_BATCH_LIMIT);
+    let response;
+    try {
+      response = await messaging.sendEachForMulticast({
+        tokens: batch,
+        apns: {
+          payload: {
+            aps: {
+              alert: {
+                titleLocKey,
+                locKey: bodyLocKey,
+                ...(bodyLocArgs && bodyLocArgs.length > 0 ? { locArgs: bodyLocArgs } : {}),
+              },
+              sound: "default",
+            },
           },
-          sound: "default",
         },
-      },
-    },
-    android: {
-      notification: {
-        channelId: "game_events",
-        sound: "default",
-        titleLocKey,
-        bodyLocKey,
-        ...(bodyLocArgs && bodyLocArgs.length > 0 ? { bodyLocArgs } : {}),
-      },
-    },
-    ...(data && Object.keys(data).length > 0 ? { data } : {}),
-  });
+        android: {
+          notification: {
+            channelId: "game_events",
+            sound: "default",
+            titleLocKey,
+            bodyLocKey,
+            ...(bodyLocArgs && bodyLocArgs.length > 0 ? { bodyLocArgs } : {}),
+          },
+        },
+        ...(data && Object.keys(data).length > 0 ? { data } : {}),
+      });
+    } catch (err) {
+      console.error(
+        `[FCM] sendEachForMulticast failed for batch ${start}..${start + batch.length}:`,
+        err,
+      );
+      continue;
+    }
+
+    totalSuccess += response.successCount;
+    totalFailure += response.failureCount;
+
+    response.responses.forEach((resp, idx) => {
+      if (!resp.success && resp.error) {
+        const token = batch[idx];
+        console.error(
+          `[FCM] send failed for token ${token.slice(0, 12)}...: ` +
+          `code=${resp.error.code} message=${resp.error.message} ` +
+          `stack=${resp.error.stack ?? "none"}`
+        );
+        if (
+          resp.error.code === "messaging/registration-token-not-registered" ||
+          resp.error.code === "messaging/invalid-registration-token"
+        ) {
+          tokensToRemove.push(token);
+        }
+      }
+    });
+  }
 
   console.log(
     `[FCM] "${titleLocKey}" → ${tokens.length} tokens: ` +
-    `${response.successCount} succeeded, ${response.failureCount} failed`
+    `${totalSuccess} succeeded, ${totalFailure} failed`
   );
-
-  // Clean up stale / invalid tokens
-  const tokensToRemove: string[] = [];
-  response.responses.forEach((resp, idx) => {
-    if (!resp.success && resp.error) {
-      console.error(
-        `[FCM] send failed for token ${tokens[idx].slice(0, 12)}...: ` +
-        `code=${resp.error.code} message=${resp.error.message} ` +
-        `stack=${resp.error.stack ?? "none"}`
-      );
-      if (
-        resp.error.code === "messaging/registration-token-not-registered" ||
-        resp.error.code === "messaging/invalid-registration-token"
-      ) {
-        tokensToRemove.push(tokens[idx]);
-      }
-    }
-  });
 
   if (tokensToRemove.length > 0) {
     // Firestore `in` queries limited to 30, so batch the cleanup
     for (let i = 0; i < tokensToRemove.length; i += 30) {
       const tokenBatch = tokensToRemove.slice(i, i + 30);
-      const batch = db.batch();
-      const snap = await db
-        .collection("users")
-        .where("token", "in", tokenBatch)
-        .get();
-      snap.docs.forEach((doc) => batch.update(doc.ref, { token: FieldValue.delete() }));
-      await batch.commit();
+      try {
+        const batch = db.batch();
+        const snap = await db
+          .collection("users")
+          .where("token", "in", tokenBatch)
+          .get();
+        snap.docs.forEach((doc) => batch.update(doc.ref, { token: FieldValue.delete() }));
+        await batch.commit();
+      } catch (err) {
+        console.error(`[FCM] failed to cleanup stale tokens batch`, err);
+      }
     }
   }
 }
@@ -186,7 +210,7 @@ export const sendGameNotification = onTaskDispatched(
     }
 
     console.log(
-      `[Notif] Game ${gameId}: sending "${notificationType}" to ${userIds.length} users: [${userIds.join(", ")}]`
+      `[Notif] Game ${gameId}: sending "${notificationType}" to ${userIds.length} users`
     );
 
     const tokens = await getTokensForUserIds(userIds);
@@ -512,6 +536,24 @@ export const onGameCreated = onDocumentCreated(
     }
     if (headStartMinutes < 0) {
       console.error(`Negative headStartMinutes (${headStartMinutes}) for game ${gameId}`);
+      return;
+    }
+    // Cloud Tasks silently auto-fires tasks scheduled in the past, which
+    // avalanches the whole lifecycle (notifs + power-up spawns + status
+    // transitions) the instant the doc is created. Reject stale game docs
+    // so the creator sees a clear failure instead of a ghost game.
+    const now = Date.now();
+    const PAST_THRESHOLD_MS = 60 * 1000;
+    if (startTimestamp && startTimestamp.getTime() < now - PAST_THRESHOLD_MS) {
+      console.error(
+        `Refusing to schedule tasks for game ${gameId}: startTimestamp (${startTimestamp.toISOString()}) is in the past`,
+      );
+      return;
+    }
+    if (endTimestamp && endTimestamp.getTime() < now - PAST_THRESHOLD_MS) {
+      console.error(
+        `Refusing to schedule tasks for game ${gameId}: endTimestamp (${endTimestamp.toISOString()}) is in the past`,
+      );
       return;
     }
 

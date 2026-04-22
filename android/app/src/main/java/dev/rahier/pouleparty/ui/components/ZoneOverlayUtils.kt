@@ -61,9 +61,20 @@ fun circlePolygonPoints(
  * Provides ~25% padding around the circle on a typical mobile viewport.
  */
 fun zoomForRadius(radiusMeters: Double, latitudeDegrees: Double): Double {
+    // Defensive bounds: a 0/negative radius would divide by zero and a non-finite
+    // input would propagate NaN through the camera, leaving the map blank.
+    if (!radiusMeters.isFinite() || radiusMeters <= 0.0) return 15.0
+    if (!latitudeDegrees.isFinite()) return 15.0
     val earthCircumference = 40_075_016.686
     val latRad = latitudeDegrees * PI / 180.0
-    val zoom = ln(earthCircumference * cos(latRad) / (2.0 * radiusMeters)) / ln(2.0) - 1.0
+    val cosLat = cos(latRad)
+    // At the poles cos(lat)=0 collapses the projection; clamp to a tiny floor so
+    // the log argument stays positive.
+    val safeCosLat = if (abs(cosLat) > 1e-9) cosLat else 1e-9
+    val arg = earthCircumference * safeCosLat / (2.0 * radiusMeters)
+    if (!arg.isFinite() || arg <= 0.0) return 15.0
+    val zoom = ln(arg) / ln(2.0) - 1.0
+    if (!zoom.isFinite()) return 15.0
     return zoom.coerceIn(8.0, 18.0)
 }
 

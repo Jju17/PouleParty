@@ -119,12 +119,16 @@ fun interpolateZoneCenter(
     currentRadius: Double
 ): Point {
     if (finalCenter == null) return initialCenter
-    if (initialRadius <= 0) return initialCenter
+    if (!initialRadius.isFinite() || initialRadius <= 0) return initialCenter
+    if (!currentRadius.isFinite()) return initialCenter
 
-    val progress = ((initialRadius - currentRadius) / initialRadius).coerceIn(0.0, 1.0)
+    val rawProgress = (initialRadius - currentRadius) / initialRadius
+    if (!rawProgress.isFinite()) return initialCenter
+    val progress = rawProgress.coerceIn(0.0, 1.0)
 
     val lat = initialCenter.latitude() + progress * (finalCenter.latitude() - initialCenter.latitude())
     val lng = initialCenter.longitude() + progress * (finalCenter.longitude() - initialCenter.longitude())
+    if (!lat.isFinite() || !lng.isFinite()) return initialCenter
 
     return Point.fromLngLat(lng, lat)
 }

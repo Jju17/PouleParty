@@ -185,13 +185,25 @@ struct ChickenMapFeature {
                 state.winnerNotification = nil
                 return .none
             case let .internal(.powerUpsUpdated(all)):
-                let userId = userClient.currentUserId() ?? ""
+                // If auth dropped between launch and now, treat the inventory
+                // as empty rather than matching everyone whose `collectedBy`
+                // happens to be "" (which would otherwise show foreign power-ups
+                // in this player's inventory).
+                let userId = userClient.currentUserId()
                 let available = all.filter { !$0.type.isHunterPowerUp && !$0.isCollected }
-                let collected = all.filter { $0.collectedBy == userId && $0.activatedAt == nil }
+                let collected: [PowerUp]
+                if let userId, !userId.isEmpty {
+                    collected = all.filter { $0.collectedBy == userId && $0.activatedAt == nil }
+                } else {
+                    collected = []
+                }
                 return .send(.powerUps(.dataUpdated(available: available, collected: collected)))
             case let .internal(.powerUpCollected(powerUp)):
                 let gameId = state.game.id
-                let userId = userClient.currentUserId() ?? ""
+                guard let userId = userClient.currentUserId(), !userId.isEmpty else {
+                    logger.error("Skipping powerUpCollected: no current user id")
+                    return .none
+                }
                 return .run { [analyticsClient] _ in
                     do {
                         try await apiClient.collectPowerUp(gameId, powerUp.id, userId)
