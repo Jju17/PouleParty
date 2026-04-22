@@ -48,6 +48,13 @@ struct HunterMapFeature {
         // count instead of recomputing them.
         var pendingWinner: Winner? = nil
         var pendingWinnerAttempts: Int = 0
+        // Raised while an `addWinner` write is in flight so a fast double-tap
+        // on the submit button can't enqueue the write twice. Because the
+        // winner record uses a fresh `Timestamp` on each submit, Firestore's
+        // `arrayUnion` does *not* dedupe — two writes = two winner entries
+        // for the same hunter, which inflates `winners.size` past
+        // `hunterIds.size` and can end the game early.
+        var isSubmittingWinner: Bool = false
 
         // MARK: - MapFeatureState passthroughs (child → parent surface)
         var availablePowerUps: [PowerUp] { powerUps.available }
@@ -212,7 +219,9 @@ struct HunterMapFeature {
                 // Must live above the catch-all `case .destination:` below,
                 // otherwise the pattern never matches.
                 guard let winner = state.pendingWinner else { return .none }
+                guard !state.isSubmittingWinner else { return .none }
                 let attempts = state.pendingWinnerAttempts
+                state.isSubmittingWinner = true
                 return submitPendingWinnerEffect(
                     gameId: state.game.id,
                     winner: winner,
@@ -297,6 +306,11 @@ struct HunterMapFeature {
                 guard !state.isCodeOnCooldown else {
                     return .none
                 }
+                // Lock against double-tap: if a winner submission is already
+                // in flight, ignore further taps until it resolves.
+                guard !state.isSubmittingWinner else {
+                    return .none
+                }
                 let code = state.enteredCode.trimmingCharacters(in: .whitespacesAndNewlines)
                 state.enteredCode = ""
                 state.isEnteringFoundCode = false
@@ -333,12 +347,14 @@ struct HunterMapFeature {
                 let totalAttempts = state.wrongCodeAttempts + 1
                 state.pendingWinner = winner
                 state.pendingWinnerAttempts = totalAttempts
+                state.isSubmittingWinner = true
                 return submitPendingWinnerEffect(
                     gameId: state.game.id,
                     winner: winner,
                     attempts: totalAttempts
                 )
             case .internal(.winnerRegistrationFailed):
+                state.isSubmittingWinner = false
                 state.destination = .alert(
                     AlertState {
                         TextState("Connection error")
@@ -356,6 +372,7 @@ struct HunterMapFeature {
             case .delegate(.allHuntersFound):
                 return .none
             case .internal(.winnerRegistered):
+                state.isSubmittingWinner = false
                 let endState = PoulePartyAttributes.ContentState(
                     radiusMeters: state.radius,
                     nextShrinkDate: nil,

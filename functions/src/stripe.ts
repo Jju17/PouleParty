@@ -78,7 +78,10 @@ interface HunterPaymentRequest {
  * Server-side amount computation for Forfait mode.
  * NEVER trust a client-sent amount — always recompute from pricing fields.
  */
-function computeCreatorAmountCents(pricing: PendingGamePayload["pricing"], maxPlayers: number): number {
+// Exported so unit tests can pin the contract: Stripe amount ≡
+// `pricePerPlayer × maxPlayers` for Forfait, zero for Caution (hunter-only
+// for now). A bug here silently double-charges or under-charges creators.
+export function computeCreatorAmountCents(pricing: PendingGamePayload["pricing"], maxPlayers: number): number {
   if (pricing.model === "flat") {
     return pricing.pricePerPlayer * maxPlayers;
   }
@@ -461,7 +464,36 @@ export const createHunterPaymentSheet = onCall(
       throw new HttpsError("failed-precondition", "Deposit amount invalid");
     }
 
+    // Enforce the registration deadline server-side. The Firestore rule
+    // checks `closesMinutesBefore` at client-side registration creation
+    // time, but this callable is the admin-SDK path that bypasses rules —
+    // without a re-check here, a hunter who opens the payment sheet just
+    // after the deadline can still be charged and join a game that was
+    // supposed to be closed.
+    const closesMinutesBefore = game.registration?.closesMinutesBefore as number | undefined;
+    if (closesMinutesBefore !== undefined && closesMinutesBefore !== null) {
+      const start = game.timing?.start;
+      const startMs = start && typeof (start as { toMillis?: () => number }).toMillis === "function"
+        ? (start as { toMillis: () => number }).toMillis()
+        : null;
+      if (startMs !== null) {
+        const deadlineMs = startMs - closesMinutesBefore * 60_000;
+        if (Date.now() > deadlineMs) {
+          throw new HttpsError(
+            "failed-precondition",
+            "Registration deadline has passed for this game",
+          );
+        }
+      }
+    }
+
     // Prevent duplicate registration / duplicate payment.
+    // Note: this `.get()` is not atomic with the PaymentIntent creation
+    // below, but Stripe's `idempotencyKey: pi_hunter_${gameId}_${uid}`
+    // is the actual safety net — two concurrent calls return the SAME
+    // PaymentIntent, so no double charge. This check exists purely to
+    // surface a clearer error to a hunter who has already completed
+    // their registration.
     const regRef = db().collection("games").doc(gameId).collection("registrations").doc(uid);
     const regSnap = await regRef.get();
     if (regSnap.exists && regSnap.data()?.paid === true) {
@@ -722,7 +754,15 @@ export async function claimWebhookEvent(
   });
 }
 
-async function handlePaymentIntentSucceeded(pi: Stripe.PaymentIntent): Promise<void> {
+// Exported so unit tests can drive the handler with a mocked Firestore
+// — otherwise the handler's branching is only covered by manual staging
+// runs and a quiet webhook dedup test. Left as a separate export rather
+// than folding into `handlePaymentIntentSucceeded` so the `stripeWebhook`
+// onRequest handler can keep using the no-arg form.
+export async function handlePaymentIntentSucceededWithDb(
+  dbInstance: FirebaseFirestore.Firestore,
+  pi: Stripe.PaymentIntent,
+): Promise<void> {
   const kind = pi.metadata.kind;
   const gameId = pi.metadata.gameId;
   const uid = pi.metadata.firebaseUid;
@@ -733,7 +773,7 @@ async function handlePaymentIntentSucceeded(pi: Stripe.PaymentIntent): Promise<v
   }
 
   if (kind === "creator_flat") {
-    const gameRef = db().collection("games").doc(gameId);
+    const gameRef = dbInstance.collection("games").doc(gameId);
     const snap = await gameRef.get();
     if (!snap.exists) {
       console.warn("[stripeWebhook] game doc missing for creator_flat", gameId);
@@ -752,7 +792,7 @@ async function handlePaymentIntentSucceeded(pi: Stripe.PaymentIntent): Promise<v
   }
 
   if (kind === "hunter_deposit") {
-    const regRef = db().collection("games").doc(gameId).collection("registrations").doc(uid);
+    const regRef = dbInstance.collection("games").doc(gameId).collection("registrations").doc(uid);
     await regRef.set(
       {
         userId: uid,
@@ -767,6 +807,10 @@ async function handlePaymentIntentSucceeded(pi: Stripe.PaymentIntent): Promise<v
   }
 
   console.warn("[stripeWebhook] unknown payment kind", kind, pi.id);
+}
+
+async function handlePaymentIntentSucceeded(pi: Stripe.PaymentIntent): Promise<void> {
+  return handlePaymentIntentSucceededWithDb(db(), pi);
 }
 
 async function handlePaymentIntentFailed(pi: Stripe.PaymentIntent): Promise<void> {

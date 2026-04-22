@@ -147,10 +147,10 @@
     <string name="safety_banner_text">Watch for traffic. Respect private property. Don\'t run where you wouldn\'t normally run. PouleParty is not responsible for injuries or damage.</string>
 
     <!-- Payment confirmation screen (shown after successful Forfait/Caution/promo) -->
-    <string name="payment_confirmed_title_creator">Partie créée !</string>
-    <string name="payment_confirmed_title_hunter">Tu es inscrit !</string>
-    <string name="payment_confirmed_subtitle_creator">Ton forfait est bien encaissé. Partage le code pour que les chasseurs rejoignent.</string>
-    <string name="payment_confirmed_subtitle_hunter">Ta caution est bien reçue. Rendez-vous le jour J — elle te sera remboursée après la partie.</string>
+    <string name="payment_confirmed_title_creator">Game created!</string>
+    <string name="payment_confirmed_title_hunter">You\'re in!</string>
+    <string name="payment_confirmed_subtitle_creator">Your package has been charged. Share the code so hunters can join.</string>
+    <string name="payment_confirmed_subtitle_hunter">Your deposit has been received. See you on the day — it will be refunded after the game.</string>
     <string name="payment_confirmed_game_code">Game code</string>
     <string name="payment_confirmed_starts_in">Game starts in</string>
     <string name="payment_confirmed_status_waiting">Waiting for players</string>

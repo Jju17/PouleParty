@@ -6,6 +6,54 @@ Format: [Keep a Changelog](https://keepachangelog.com/). Versions follow [Semant
 
 ---
 
+## [1.10.0], 2026-04-22
+
+**iOS**: 1.10.0 (1) · **Android**: 1.10.0 (28) · **Functions**: full redeploy (stripe + index)
+
+Defensive-code pass. No new features — a full codebase audit (iOS TCA, Android MVVM, cross-platform parity, Cloud Functions / Stripe / Firestore rules, concurrency & lifecycle) surfaced ~20 crash/bug/race risks; this release closes all of them. Heartbeat retries survive a flaky network, the chicken actually keeps broadcasting when backgrounded, double-tapping "I found the chicken" can't enrol you twice, abandoned `pending_payment` games get purged nightly, and schema drift on any Firestore read can't crash the Android app anymore.
+
+### Fixed
+
+- **Android — crashes on any schema drift across 9 Firestore reads.** `FirestoreRepository.kt` had nine `.toObject(X::class.java)` call sites that bypass the `safeToObject<T>()` guard introduced at 1.9.1. Any type mismatch (new required field shipped before the client update, a HashMap where a native type was expected, etc.) threw synchronously from Firestore's executor thread and killed the process. All nine call sites (`getConfig`, `findActiveGame` hunter + chicken, `findGameByCode`, `findRegistration`, `fetchAllRegistrations`, `fetchMyGames` created + joined, `fetchPartyPlansConfig`, `markChallengeCompleted`'s transaction snapshot, `challengeCompletionsStream`) now go through `safeToObject<T>()` — decode failures log with the operation name + doc id and yield `null` so the caller sees an empty result instead of a crash.
+- **Android — single-doc Firestore reads could hang the UI indefinitely on bad connectivity**. `getConfig`, `findGameByCode`, `findRegistration`, `fetchPartyPlansConfig` called `.get().await()` with no timeout. On a dying network the spinner stayed up forever. All four now wrap in `withTimeoutOrNull(15 s)` + log + return `null` so the UI can surface an error.
+- **iOS — heartbeat failures were swallowed, making a healthy chicken look offline.** `ApiClient.updateHeartbeat` was a fire-and-forget `.updateData` with no retry, and a single transient write failure meant the next heartbeat wouldn't land for 30 s — long enough for every hunter's client to flip `game.isChickenDisconnected` to true. Now wrapped in `withRetry("updateHeartbeat(…)")` (3 attempts, exponential backoff) matching `collectPowerUp` / `activatePowerUp` / `addWinner`. Call site in `ChickenMap.swift` updated to `try await`.
+- **iOS — chicken appeared frozen on every hunter's map the moment the app was backgrounded.** `Info.plist` already declared `UIBackgroundModes = location`, but `CLLocationManager.allowsBackgroundLocationUpdates` was never flipped on, so CoreLocation stopped delivering coordinates as soon as the screen locked. Now set in `LocationClient.refreshBackgroundCapability()` as soon as `.authorizedAlways` is granted (and re-checked on every `startTracking()` and authorization change). Also set `pausesLocationUpdatesAutomatically = false` so a stationary chicken hiding still broadcasts position during a radar-ping / jammer window.
+- **iOS + Android — chicken's position stayed stale for up to 5 s after invisibility expired.** The location flow throttles writes to one per 5 s. When invisibility ended, the next arriving GPS coordinate still had to wait out the throttle window before hitting Firestore, so every hunter saw a ghost at the chicken's last pre-invisibility position. Both platforms now detect the `isInvisible: true → false` transition in their location collect loops and reset the throttle cursor (`lastWrite = .distantPast` on iOS, `lastWrite = Date(0L)` on Android) so the very next coord is broadcast immediately.
+- **iOS + Android — double-tapping "Enter found code" could register the same hunter twice in `winners[]`.** `FieldValue.arrayUnion` dedupes object equality, but each submit builds a fresh `Winner` with `Timestamp.now()` — two submits = two entries = `winners.size > hunterIds.size` = game ends early. Both platforms now raise an `isSubmittingWinner` flag while the `addWinner` write is in flight, guard the submit button + retry path against re-entry, and clear the flag on success / failure.
+- **Server — belt-and-braces winner dedup in `onGameUpdated`.** Even if a client shipped without the debounce above, a hunter's entry is now deduplicated server-side on the next game update (dedupe by `hunterId`, drop entries with a missing id, write the cleaned array back). The legitimate "new winner" count is now computed on unique hunter ids rather than array-length deltas, so the dedup write can't be misread as "winners count went down" and short-circuit the notification path. Incidentally fixed the "A hunter" fallback: the handler used to read `newWinner.name`, a field the clients never write; now reads `newWinner.hunterName`, matching the iOS + Android contract.
+- **Server — hunter could pay a deposit after the registration deadline.** `createHunterPaymentSheet` read `game.status`, `game.pricing.model`, and `game.pricing.deposit` but not `game.registration.closesMinutesBefore`. The Firestore rule enforced the deadline only at client-side registration creation time; the admin-SDK callable path bypassed it. Now re-validates `now > start − closesMinutesBefore × 60 s` and throws `failed-precondition` before creating the PaymentIntent.
+- **Server — Forfait games left in `pending_payment` were never cleaned up.** When the Stripe webhook never delivered (dropped event, rotated secret, infrastructure outage), the pre-created game doc stayed stranded, invisible to the creator, and accumulated silently. New `cleanupAbandonedPendingGames` scheduled function (every 24 h, `Europe/Brussels`) deletes any game whose `status == "pending_payment"` and whose `lastHeartbeat` (set once at creation) is more than 24 h old. Bounded at 500 deletions per run to stay under Firestore's batch limit; the backlog is absorbed across daily runs.
+- **iOS — decoder failure logs collapsed `DecodingError` into "data couldn't be read"** on `ChickenLocation`, `HunterLocation`, `PowerUp` streams. `Game` had already been switched to `String(describing: error)` at 1.9.1; the other three now match. Future schema drifts surface with the exact coding path + missing key.
+- **iOS parity — jammer bucketing on 32-bit Swift Int semantics.** `applyJammerNoise` used `Int(now.timeIntervalSince1970)` — on iOS `Int` is 64-bit in practice, but the Android sibling uses an explicit `Long` and the type-width coupling was load-bearing. Switched to explicit `Int64` for the bucket + XOR, removes any platform-dependent edge case.
+- **Android — 4 `payment_confirmed_*` keys in `values/strings.xml` had French values instead of English.** English-locale users saw "Partie créée !" / "Tu es inscrit !" on the payment success screen. All four (`payment_confirmed_title_creator`, `…_title_hunter`, `…_subtitle_creator`, `…_subtitle_hunter`) now carry English source values; the existing French + Dutch translations are unchanged.
+- **iOS — untranslated `Couldn't register your win…` alert copy.** Added FR + NL translations and flipped the `%@ %@:%@` format-string entry out of `state: "new"`. `Localizable.xcstrings` is back at 100 % coverage with zero pending review.
+
+### Added
+
+- **`functions/test/stripe-webhook-handler.test.ts`** — 8 integration tests for `handlePaymentIntentSucceeded`: Forfait `pending_payment → waiting` flip (with `paymentIntentId` + `paidAt`), idempotent no-op when already flipped, missing game doc, hunter deposit registration write with `merge: true`, and four guard paths (missing kind / gameId / firebaseUid / unknown kind). `handlePaymentIntentSucceeded` refactored to accept an injectable `dbInstance` so the test can drive it without booting firebase-admin.
+- **`functions/test/stripe-amount.test.ts`** — 8 tests pinning `computeCreatorAmountCents` against `pricePerPlayer × maxPlayers` for Forfait (with edge cases: single player, zero players, 50×10 € high end), zero for Caution regardless of deposit size, and zero for Free mode. Exported `computeCreatorAmountCents` so the formula is contract-testable.
+- **`functions/test/parity.test.ts` — 4 new test blocks** for large-seed safety (`driftSeed` near `Int32.MAX`, at `Number.MAX_SAFE_INTEGER`, `generatePowerUpsServer` with giant seed + batchIndex), determinism across repeated calls, and zone-freeze seed invariance (same nominal `batchIndex` + same `driftSeed` → same power-up ids regardless of radius, proving the effective-vs-nominal batchIndex split preserves deterministic PRNG anchoring).
+
+### Changed
+
+- **Android `FirestoreRepository.kt`** — nine `.toObject(X::class.java)` → `safeToObject<X>(doc, operation)`; added `withTimeoutOrNull(15 s)` around four single-doc `.get().await()` calls; imported `withTimeoutOrNull`.
+- **iOS `ApiClient.updateHeartbeat`** — signature changed from `(String) throws -> Void` to `(String) async throws -> Void`. The only caller (`ChickenMap.swift:404`) now uses `try await`.
+
+### Test coverage
+
+Functions **186 tests** (was 140 at 1.9.1) · iOS: 607 tests in 22 suites, 0 warnings · Android: 0 warnings, existing suite passes.
+
+### Deployment steps
+
+```bash
+cd functions && npm run build
+firebase deploy --only functions --project pouleparty-ba586
+firebase deploy --only functions --project pouleparty-prod
+# firestore.rules unchanged vs 1.9.1 — skip rules deploy
+```
+
+---
+
 ## [1.9.1], 2026-04-22
 
 **iOS**: 1.9.1 (1) · **Android**: 1.9.1 (27) · **Functions**: `createCreatorPaymentSheet` + `redeemFreeCreation` redeployed to staging + prod

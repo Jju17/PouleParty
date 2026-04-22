@@ -353,8 +353,12 @@ func applyJammerNoise(
     driftSeed: Int,
     now: Date = .now
 ) -> CLLocationCoordinate2D {
-    let bucket = Int(now.timeIntervalSince1970)
-    let seed = driftSeed ^ bucket
+    // Explicit Int64 rather than relying on Swift's platform-dependent Int
+    // width. Android's bucket is `Long` — forcing Int64 here removes the
+    // remote chance of a mismatch on any hypothetical 32-bit build and
+    // documents the intent.
+    let bucket = Int64(now.timeIntervalSince1970)
+    let seed = Int(Int64(driftSeed) ^ bucket)
     let halfNoise = AppConstants.jammerNoiseDegrees / 2.0
     // seededRandom returns [0, 1). Shift to [-halfNoise, halfNoise).
     let latNoise = (seededRandom(seed: seed, index: 0) * 2.0 - 1.0) * halfNoise

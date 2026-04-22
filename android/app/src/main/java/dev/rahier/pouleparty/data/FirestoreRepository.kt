@@ -27,6 +27,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -39,6 +40,13 @@ class FirestoreRepository @Inject constructor(
         private const val TAG = "FirestoreRepository"
         private const val MAX_RETRIES = 3
         private const val INITIAL_DELAY_MS = 500L
+
+        // Unit reads (single `.get().await()`) block the UI for as long as
+        // Firestore + the network take to reply. In a bad connectivity state
+        // that can be "forever" — e.g. the hunter join flow stays on a
+        // spinner with no way out. Cap single-doc fetches so the UI can
+        // surface an error instead of freezing.
+        private const val READ_TIMEOUT_MS = 15_000L
 
         /**
          * Logs a Firestore snapshot-listener error. `PERMISSION_DENIED` is a
@@ -107,8 +115,13 @@ class FirestoreRepository @Inject constructor(
 
     suspend fun getConfig(gameId: String): Game? {
         return try {
-            val doc = firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId).get().await()
-            doc.toObject(Game::class.java)?.copy(id = doc.id)
+            val doc = withTimeoutOrNull(READ_TIMEOUT_MS) {
+                firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId).get().await()
+            } ?: run {
+                Log.w(TAG, "getConfig($gameId) timed out after ${READ_TIMEOUT_MS}ms")
+                return null
+            }
+            safeToObject<Game>(doc, "getConfig($gameId)")?.copy(id = doc.id)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to get game config $gameId", e)
             null
@@ -131,7 +144,7 @@ class FirestoreRepository @Inject constructor(
                 .get()
                 .await()
             hunterSnapshot.documents.forEach { doc ->
-                val game = doc.toObject(Game::class.java)?.copy(id = doc.id)
+                val game = safeToObject<Game>(doc, "findActiveGame hunter")?.copy(id = doc.id)
                 if (game != null) candidates.add(Pair(game, PlayerRole.HUNTER))
             }
 
@@ -142,7 +155,7 @@ class FirestoreRepository @Inject constructor(
                 .get()
                 .await()
             chickenSnapshot.documents.forEach { doc ->
-                val game = doc.toObject(Game::class.java)?.copy(id = doc.id)
+                val game = safeToObject<Game>(doc, "findActiveGame chicken")?.copy(id = doc.id)
                 if (game != null) candidates.add(Pair(game, PlayerRole.CHICKEN))
             }
 
@@ -161,13 +174,18 @@ class FirestoreRepository @Inject constructor(
 
     suspend fun findGameByCode(code: String): Game? {
         return try {
-            val snapshot = firestore.collection(AppConstants.COLLECTION_GAMES)
-                .whereEqualTo("gameCode", code.uppercase())
-                .limit(1)
-                .get()
-                .await()
+            val snapshot = withTimeoutOrNull(READ_TIMEOUT_MS) {
+                firestore.collection(AppConstants.COLLECTION_GAMES)
+                    .whereEqualTo("gameCode", code.uppercase())
+                    .limit(1)
+                    .get()
+                    .await()
+            } ?: run {
+                Log.w(TAG, "findGameByCode($code) timed out after ${READ_TIMEOUT_MS}ms")
+                return null
+            }
             snapshot.documents.firstOrNull()?.let { doc ->
-                doc.toObject(Game::class.java)?.copy(id = doc.id)
+                safeToObject<Game>(doc, "findGameByCode($code)")?.copy(id = doc.id)
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to find game by code $code", e)
@@ -203,12 +221,17 @@ class FirestoreRepository @Inject constructor(
     suspend fun findRegistration(gameId: String, userId: String): Registration? {
         if (gameId.isEmpty() || userId.isEmpty()) return null
         return try {
-            val doc = firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
-                .collection(AppConstants.SUBCOLLECTION_REGISTRATIONS).document(userId)
-                .get()
-                .await()
+            val doc = withTimeoutOrNull(READ_TIMEOUT_MS) {
+                firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
+                    .collection(AppConstants.SUBCOLLECTION_REGISTRATIONS).document(userId)
+                    .get()
+                    .await()
+            } ?: run {
+                Log.w(TAG, "findRegistration($gameId/$userId) timed out after ${READ_TIMEOUT_MS}ms")
+                return null
+            }
             if (!doc.exists()) return null
-            doc.toObject(Registration::class.java)
+            safeToObject<Registration>(doc, "findRegistration($gameId/$userId)")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to find registration $gameId/$userId", e)
             null
@@ -222,7 +245,9 @@ class FirestoreRepository @Inject constructor(
                 .collection(AppConstants.SUBCOLLECTION_REGISTRATIONS)
                 .get()
                 .await()
-            snapshot.documents.mapNotNull { it.toObject(Registration::class.java) }
+            snapshot.documents.mapNotNull {
+                safeToObject<Registration>(it, "fetchAllRegistrations($gameId)")
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to fetch registrations for game $gameId", e)
             emptyList()
@@ -512,14 +537,14 @@ class FirestoreRepository @Inject constructor(
         val seenIds = mutableSetOf<String>()
 
         for (doc in createdSnap.documents) {
-            val game = doc.toObject(Game::class.java)?.copy(id = doc.id) ?: continue
+            val game = safeToObject<Game>(doc, "fetchMyGames created")?.copy(id = doc.id) ?: continue
             if (seenIds.add(game.id)) {
                 result.add(dev.rahier.pouleparty.model.MyGame(game, dev.rahier.pouleparty.model.MyGameRole.CREATOR))
             }
         }
 
         for (doc in joinedSnap.documents) {
-            val game = doc.toObject(Game::class.java)?.copy(id = doc.id) ?: continue
+            val game = safeToObject<Game>(doc, "fetchMyGames joined")?.copy(id = doc.id) ?: continue
             // Creator takes precedence if the user is both creator and hunter on the same game.
             if (seenIds.add(game.id)) {
                 result.add(dev.rahier.pouleparty.model.MyGame(game, dev.rahier.pouleparty.model.MyGameRole.HUNTER))
@@ -532,11 +557,13 @@ class FirestoreRepository @Inject constructor(
     }
 
     suspend fun fetchPartyPlansConfig(): PartyPlansConfig {
-        val doc = firestore.collection("config")
-            .document("partyPlans")
-            .get()
-            .await()
-        return doc.toObject(PartyPlansConfig::class.java)
+        val doc = withTimeoutOrNull(READ_TIMEOUT_MS) {
+            firestore.collection("config")
+                .document("partyPlans")
+                .get()
+                .await()
+        } ?: throw IllegalStateException("Party plans config fetch timed out after ${READ_TIMEOUT_MS}ms")
+        return safeToObject<PartyPlansConfig>(doc, "fetchPartyPlansConfig")
             ?: throw IllegalStateException("Party plans config document is missing or malformed")
     }
 
@@ -615,7 +642,10 @@ class FirestoreRepository @Inject constructor(
             firestore.runTransaction { transaction ->
                 val snapshot = transaction.get(docRef)
                 val existing = if (snapshot.exists()) {
-                    snapshot.toObject(ChallengeCompletion::class.java)
+                    safeToObject<ChallengeCompletion>(
+                        snapshot,
+                        "markChallengeCompleted($gameId, $hunterId)"
+                    )
                 } else {
                     null
                 }

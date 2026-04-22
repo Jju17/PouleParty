@@ -275,3 +275,102 @@ describe("parity, drift edges", () => {
     expect(out.longitude).toBeCloseTo(4.350282673772987, TOL);
   });
 });
+
+// ─── large-seed safety ───────────────────────────────────────
+//
+// JS bitwise ops are 32-bit; seeds that exceed ~2^31 wrap. The parity
+// audit flagged this as untested: iOS/Android run splitmix64 on 64-bit,
+// the TS reference runs 32-bit ops, and no end-to-end test pinned what
+// happens on seeds past Int32.MAX. These lock the TS behavior so a
+// platform that sends a giant `driftSeed` never silently produces NaN /
+// Infinity / a coordinate flung past the poles.
+
+describe("parity, large seeds don't blow up", () => {
+  test("drift center with driftSeed near Int32.MAX stays finite", () => {
+    const out = deterministicDriftCenterServer(
+      { latitude: 50.85, longitude: 4.35 },
+      1500,
+      1400,
+      2_147_483_000,
+    );
+    expect(Number.isFinite(out.latitude)).toBe(true);
+    expect(Number.isFinite(out.longitude)).toBe(true);
+    expect(Math.abs(out.latitude)).toBeLessThanOrEqual(90);
+    expect(Math.abs(out.longitude)).toBeLessThanOrEqual(180);
+  });
+
+  test("drift center with driftSeed past Int32.MAX stays finite", () => {
+    // Number.MAX_SAFE_INTEGER = 2^53 − 1. TS bitwise truncates to 32-bit;
+    // we care only that no NaN escapes and the output remains a plausible
+    // coordinate.
+    const out = deterministicDriftCenterServer(
+      { latitude: 50.85, longitude: 4.35 },
+      1500,
+      1400,
+      Number.MAX_SAFE_INTEGER,
+    );
+    expect(Number.isFinite(out.latitude)).toBe(true);
+    expect(Number.isFinite(out.longitude)).toBe(true);
+  });
+
+  test("generatePowerUps with large seed + batchIndex produces N finite points", () => {
+    const pus = generatePowerUpsServer(
+      { latitude: 50.85, longitude: 4.35 },
+      1500,
+      5,
+      1_234_567_890,
+      42,
+      ["invisibility", "radarPing", "zoneFreeze"],
+    );
+    expect(pus).toHaveLength(5);
+    for (const p of pus) {
+      expect(Number.isFinite(p.location.latitude)).toBe(true);
+      expect(Number.isFinite(p.location.longitude)).toBe(true);
+      expect(Math.abs(p.location.latitude)).toBeLessThanOrEqual(90);
+      expect(Math.abs(p.location.longitude)).toBeLessThanOrEqual(180);
+    }
+  });
+
+  test("generatePowerUps is deterministic across repeated calls", () => {
+    const args = [
+      { latitude: 50.85, longitude: 4.35 },
+      1500,
+      3,
+      77,
+      1,
+      ["invisibility", "radarPing"],
+    ] as const;
+    const a = generatePowerUpsServer(...args);
+    const b = generatePowerUpsServer(...args);
+    expect(a.length).toBe(b.length);
+    for (let i = 0; i < a.length; i++) {
+      expect(a[i].id).toBe(b[i].id);
+      expect(a[i].type).toBe(b[i].type);
+      expect(a[i].location.latitude).toBe(b[i].location.latitude);
+      expect(a[i].location.longitude).toBe(b[i].location.longitude);
+    }
+  });
+});
+
+// ─── zone-freeze: shrink step is deterministic under freeze semantics ─
+//
+// When a zone-freeze power-up is active at spawn time, the server uses
+// `effectiveBatchIndex = batchIndex - 1` for the radius / center
+// computation but keeps the *nominal* batchIndex for the PRNG seed.
+// The consequence we care about for parity: generating batch N with a
+// frozen radius must produce power-ups at *the same positions* as batch
+// N with the non-frozen radius would have placed them, just anchored to
+// the effective (unshrunken) center/radius.
+describe("parity, zone freeze doesn't shift PRNG seeding", () => {
+  test("same nominal batchIndex + seed → same power-up IDs across radii", () => {
+    const center = { latitude: 50.85, longitude: 4.35 };
+    const types = ["invisibility", "radarPing"];
+    const unfrozen = generatePowerUpsServer(center, 1200, 3, 42, 5, types);
+    const frozen = generatePowerUpsServer(center, 1500, 3, 42, 5, types);
+    // The ids encode `(batchIndex, i, itemSeed)` — itemSeed is derived
+    // from `(driftSeed, batchIndex)` only, NOT radius, so the ids must
+    // match identically even though the radii differ.
+    expect(unfrozen.map((p) => p.id)).toEqual(frozen.map((p) => p.id));
+    expect(unfrozen.map((p) => p.type)).toEqual(frozen.map((p) => p.type));
+  });
+});

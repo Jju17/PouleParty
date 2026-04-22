@@ -1,3 +1,92 @@
+# Release 1.10.0
+
+> ⚠️ **Do not paste this "Summary" paragraph into any store field.** Only the blocks explicitly labelled **App Store Connect**, **Google Play Console**, or **App Review Notes** below are store-safe.
+
+**Summary (internal, do not paste):** full-codebase defensive audit pass. No new features — closes ~20 crash / bug / race risks surfaced by iOS-TCA, Android-MVVM, parity, Cloud-Functions / Stripe / rules, and concurrency audits. User-visible wins: the chicken keeps broadcasting when the phone is pocketed (background location was declared in Info.plist but never actually enabled on `CLLocationManager`), the position no longer looks stuck for 5 s after invisibility expires, double-tapping "I found the chicken" can't inflate winners anymore, and English-locale users no longer see French copy on the payment-success screen. Invisible wins: Android Firestore reads survive schema drift, abandoned `pending_payment` games get purged nightly, heartbeats retry on transient errors, server revalidates the hunter registration deadline, and `winners[]` is deduplicated server-side. Functions **186 tests** (was 140 at 1.9.1), iOS 607 tests, 0 warnings on both platforms.
+
+---
+
+## 📱 App Store Connect — field "What's New in This Version"
+
+ASC uses **plain text per locale** (switch the language tab in the top-right of the ASC page and paste the matching block). No XML-style tags, tags are Play Console only. **Do NOT mention "Android", "Google Play", or any other platform**.
+
+**English (U.S.)**
+
+Stability pass for long games. The Chicken keeps broadcasting even with the phone in a pocket, the position refreshes instantly when invisibility ends, and a double-tap on "I found the Chicken" can no longer register you twice. Under-the-hood fixes for transient network glitches: heartbeats retry, the payment-success screen now reads English when your phone is set to English, and a bunch of rare crash paths are closed.
+
+**French**
+
+Passe de stabilité pour les longues parties. La Poule continue d'émettre même le téléphone dans la poche, la position se rafraîchit direct à la fin d'une invisibilité, et un double-tap sur "J'ai trouvé la Poule" ne t'inscrit plus deux fois. Corrections en coulisses pour les coupures de réseau passagères : les heartbeats retentent, l'écran de confirmation de paiement s'affiche bien dans ta langue, et quelques crashs rares sont fermés.
+
+**Dutch**
+
+Stabiliteitsronde voor lange spellen. De Kip blijft zenden met de telefoon in je zak, de positie ververst meteen zodra onzichtbaarheid afloopt, en een dubbeltik op "Ik heb de Kip gevonden" schrijft je niet meer twee keer in. Onderhuidse fixes voor korte netwerkhapers: heartbeats proberen opnieuw, het betalingsbevestigingsscherm toont in de juiste taal, en een reeks zeldzame crashes zijn gesloten.
+
+---
+
+## 📱 App Store Connect — field "Promotional Text"
+
+Unchanged from 1.9.1 / 1.9.0 / 1.8.1. No need to re-paste if ASC already has the current copy.
+
+**English (U.S.)** · 154 chars
+
+Real-world GPS hide-and-seek. One Chicken hides, the rest chase inside a shrinking zone. Power-ups, a 6-char code to share, play with your squad outdoors.
+
+**French** · 157 chars
+
+Cache-cache GPS dans la vraie vie. Une Poule se cache, les autres la chassent dans une zone qui rétrécit. Power-ups, code à 6 caractères, entre potes dehors.
+
+**Dutch** · 158 chars
+
+GPS-verstoppertje in het echte leven. Eén Kip verstopt zich, Jagers zoeken in een krimpende zone op de kaart. Power-ups, 6-cijferige code, buiten met je crew.
+
+---
+
+## 🤖 Google Play Console — field "Release notes"
+
+<en-US>
+Stability pass: the Chicken keeps broadcasting when the phone is pocketed, position refreshes the instant invisibility ends, double-tapping "I found the Chicken" can't enrol you twice, and the app survives a lot more rare Firestore schema drifts without crashing. Heartbeats retry on flaky networks, payment-success copy is now English when your phone is in English.
+</en-US>
+
+<fr-FR>
+Passe de stabilité : la Poule continue d'émettre le téléphone en poche, la position se rafraîchit à la fin de l'invisibilité, un double-tap sur "J'ai trouvé la Poule" ne t'inscrit plus deux fois, et l'app survit à beaucoup plus de désynchros Firestore sans planter. Les heartbeats retentent sur réseaux faiblards, et l'écran de confirmation de paiement s'affiche bien dans ta langue.
+</fr-FR>
+
+<nl-NL>
+Stabiliteitsronde: de Kip blijft zenden met de telefoon in je zak, de positie ververst direct zodra onzichtbaarheid afloopt, een dubbeltik op "Ik heb de Kip gevonden" schrijft je niet meer twee keer in, en de app overleeft veel meer zeldzame Firestore-schemadrifts zonder te crashen. Heartbeats proberen opnieuw op wankele netwerken, de betalingsbevestiging verschijnt in de juiste taal.
+</nl-NL>
+
+---
+
+## 📝 App Store Connect — field "App Review Information → Notes"
+
+Paid flow (Stripe PaymentSheet / Apple Pay) is unchanged from 1.9.1 (1) and 1.8.1 (2). Only needed if the reviewer flags a regression.
+
+```
+Thank you for reviewing 1.10.0.
+
+This release is a defensive-code pass — no new user-facing features, no changes to the Stripe paid flow, no new permissions, no changes to Info.plist purpose strings.
+
+If the reviewer needs to exercise the PaymentSheet:
+  - Create Party → Forfait plan → enter promo code APPLE_REVIEW_99 (99 %-off, preserved from 1.8.1). This takes the price to ~1 cent and opens the Stripe PaymentSheet, where the Apple Pay button is visible on devices with a configured Apple Pay wallet.
+  - The PaymentSheet and Apple Pay integration are identical to 1.9.1 (1) and 1.8.1 (2). Merchant ID: merchant.dev.rahier.pouleparty. Entitlement: com.apple.developer.in-app-payments.
+
+Changes in this version are primarily server-side hardening (retries, timeouts, defensive decoding, a nightly cleanup job for abandoned Forfait reservations) and two client-side bug fixes visible to players:
+  - Background location tracking now actually works while the app is backgrounded (the entitlement was already declared in Info.plist; CLLocationManager.allowsBackgroundLocationUpdates is now flipped on when .authorizedAlways is granted, as Apple's documentation requires). Location tracking stops as soon as the game ends.
+  - Double-tapping the "I found the Chicken" button is now idempotent.
+```
+
+---
+
+## Version Info (internal)
+
+| Platform | Version | Build |
+|---|---|---|
+| iOS | 1.10.0 | 1 |
+| Android | 1.10.0 | 28 |
+
+---
+
 # Release 1.9.1
 
 > ⚠️ **Do not paste this "Summary" paragraph into any store field.** Only the blocks explicitly labelled **App Store Connect**, **Google Play Console**, or **App Review Notes** below are store-safe.

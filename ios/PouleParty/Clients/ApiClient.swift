@@ -33,7 +33,7 @@ struct ApiClient {
     /// power-up with no visible effect).
     var activatePowerUp: (_ gameId: String, _ powerUpId: String, _ activeEffectField: String?, _ expiresAt: Timestamp) async throws -> Void
     var powerUpsStream: (String) -> AsyncStream<[PowerUp]>
-    var updateHeartbeat: (String) throws -> Void
+    var updateHeartbeat: (String) async throws -> Void
     var countFreeGamesToday: (String) async throws -> Int
     var fetchPartyPlansConfig: () async throws -> PartyPlansConfig
     var fetchMyGames: (String) async throws -> [MyGame]
@@ -257,7 +257,14 @@ extension ApiClient: DependencyKey {
                         }
                         guard let chickenLocation: ChickenLocation = {
                             do { return try document.data(as: ChickenLocation.self) }
-                            catch { logger.error("Failed to decode ChickenLocation: \(error.localizedDescription)"); return nil }
+                            catch {
+                                // localizedDescription collapses DecodingError into a useless
+                                // "data couldn't be read" string. Dump the full error so we
+                                // can see the missing key / bad type / coding path when a
+                                // schema drift happens.
+                                logger.error("Failed to decode ChickenLocation: \(String(describing: error))")
+                                return nil
+                            }
                         }() else {
                             continuation.yield(nil)
                             return
@@ -325,7 +332,10 @@ extension ApiClient: DependencyKey {
                         }
                         let hunters = documents.compactMap { doc -> HunterLocation? in
                             do { return try doc.data(as: HunterLocation.self) }
-                            catch { logger.error("Failed to decode HunterLocation \(doc.documentID): \(error.localizedDescription)"); return nil }
+                            catch {
+                                logger.error("Failed to decode HunterLocation \(doc.documentID): \(String(describing: error))")
+                                return nil
+                            }
                         }
                         continuation.yield(hunters)
                     }
@@ -431,7 +441,10 @@ extension ApiClient: DependencyKey {
                             var data = doc.data()
                             data["id"] = doc.documentID
                             do { return try Firestore.Decoder().decode(PowerUp.self, from: data) }
-                            catch { logger.error("Failed to decode PowerUp \(doc.documentID): \(error.localizedDescription)"); return nil }
+                            catch {
+                                logger.error("Failed to decode PowerUp \(doc.documentID): \(String(describing: error))")
+                                return nil
+                            }
                         }
                         continuation.yield(powerUps)
                     }
@@ -442,9 +455,17 @@ extension ApiClient: DependencyKey {
             }
         },
         updateHeartbeat: { gameId in
-            Firestore.firestore().collection(gamesCollection).document(gameId).updateData([
-                "lastHeartbeat": Timestamp(date: .now)
-            ])
+            // Retry matters here: heartbeat drives hunter-side disconnect
+            // detection, so a single transient write failure must not make
+            // the chicken look offline. A lost heartbeat used to silently
+            // swallow its error and the next tick would happen 30s later,
+            // long enough for hunters to see the "chicken disconnected"
+            // warning even though the chicken was fine.
+            try await withRetry("updateHeartbeat(\(gameId))") {
+                try await Firestore.firestore().collection(gamesCollection).document(gameId).updateData([
+                    "lastHeartbeat": Timestamp(date: .now)
+                ])
+            }
         },
         countFreeGamesToday: { userId in
             let db = Firestore.firestore()

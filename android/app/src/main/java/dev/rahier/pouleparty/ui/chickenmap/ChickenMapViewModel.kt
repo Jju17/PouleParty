@@ -336,13 +336,25 @@ class ChickenMapViewModel @Inject constructor(
         }
 
         var lastWrite = Date()
+        var wasInvisible = false
         locationRepository.locationFlow().collect { latLng ->
             _uiState.update { it.copy(circleCenter = latLng, userLocation = latLng) }
 
             // Throttle Firestore writes (skip when invisible)
             val liveGame = _uiState.value.game
+            val isInvisible = liveGame.isChickenInvisible
+            // Detect invisibility expiring: by the time the next tick
+            // arrives the last broadcast position can be up to 5 s stale
+            // (throttle) plus any time spent invisible. Reset the throttle
+            // window so the very next coord is broadcast immediately —
+            // otherwise hunters keep seeing a ghost at the chicken's last
+            // pre-invisibility position for up to LOCATION_THROTTLE_MS.
+            if (wasInvisible && !isInvisible) {
+                lastWrite = Date(0L)
+            }
+            wasInvisible = isInvisible
             if (Date().time - lastWrite.time >= AppConstants.LOCATION_THROTTLE_MS
-                && !liveGame.isChickenInvisible) {
+                && !isInvisible) {
                 val sendLatLng = if (liveGame.isJammerActive) {
                     applyJammerNoise(latLng, liveGame.zone.driftSeed)
                 } else {

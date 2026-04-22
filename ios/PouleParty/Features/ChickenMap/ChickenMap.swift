@@ -401,7 +401,7 @@ struct ChickenMapFeature {
                         }
                         while true {
                             do {
-                                try apiClient.updateHeartbeat(gameId)
+                                try await apiClient.updateHeartbeat(gameId)
                             } catch {
                                 logger.error("Failed to update heartbeat: \(error)")
                             }
@@ -430,9 +430,22 @@ struct ChickenMapFeature {
                                 }
                             }
                             var lastWrite = Date.now
+                            var wasInvisible = false
                             for await coordinate in locationClient.startTracking() {
                                 await send(.internal(.newLocationFetched(coordinate)))
                                 let isInvisible = invisibilityUntil.value.map { Date.now < $0 } ?? false
+                                // Detect invisibility expiring: by the time the
+                                // next tick arrives the last broadcast position
+                                // can be up to 5 s stale (throttle) plus any
+                                // time spent invisible. Reset the throttle so
+                                // the very next coord is broadcast immediately
+                                // and hunters see the fresh position instead of
+                                // a ghost at the chicken's last pre-invisibility
+                                // location.
+                                if wasInvisible && !isInvisible {
+                                    lastWrite = .distantPast
+                                }
+                                wasInvisible = isInvisible
                                 if Date.now.timeIntervalSince(lastWrite) >= AppConstants.locationThrottleSeconds && !isInvisible {
                                     let isJammed = jammerUntil.value.map { Date.now < $0 } ?? false
                                     let sendCoordinate = isJammed ? applyJammerNoise(to: coordinate, driftSeed: driftSeed) : coordinate

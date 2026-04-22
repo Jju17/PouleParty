@@ -18,7 +18,7 @@
       "localizations" : {
         "en" : {
           "stringUnit" : {
-            "state" : "new",
+            "state" : "translated",
             "value" : "%1$@ %2$@:%3$@"
           }
         },
@@ -945,25 +945,21 @@
         }
       }
     },
-    "Couldn't register your win. Check your connection and retry — your code was correct." : {
-      "extractionState" : "stale",
+    "Couldn't register your win. Check your connection and retry, your code was correct." : {
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Impossible d'enregistrer ta victoire. Vérifie ta connexion et réessaie — ton code était bon."
+            "value" : "Impossible d'enregistrer ta victoire. Vérifie ta connexion et réessaie, ton code était bon."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kon je overwinning niet registreren. Controleer je verbinding en probeer opnieuw — je code was juist."
+            "value" : "Kon je overwinning niet registreren. Controleer je verbinding en probeer opnieuw, je code was correct."
           }
         }
       }
-    },
-    "Couldn't register your win. Check your connection and retry, your code was correct." : {
-
     },
     "Couldn't submit the report. Try again in a moment." : {
       "comment" : "A message displayed when a report submission fails.",
@@ -1748,23 +1744,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Hoe te spelen"
-          }
-        }
-      }
-    },
-    "Hunter payment will be available soon." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Le paiement pour les chasseurs sera bientôt disponible."
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Betaling voor jagers komt binnenkort beschikbaar."
           }
         }
       }

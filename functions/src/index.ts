@@ -1,11 +1,13 @@
 import { cert, initializeApp } from "firebase-admin/app";
-import { getFirestore, FieldValue, GeoPoint } from "firebase-admin/firestore";
+import { getFirestore, FieldValue, GeoPoint, Timestamp } from "firebase-admin/firestore";
 import { getFunctions } from "firebase-admin/functions";
 import { getMessaging } from "firebase-admin/messaging";
 import { onDocumentCreated, onDocumentUpdated } from "firebase-functions/v2/firestore";
 import { onTaskDispatched } from "firebase-functions/v2/tasks";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { onSchedule } from "firebase-functions/v2/scheduler";
 import { defineString, defineSecret } from "firebase-functions/params";
+import { logger } from "firebase-functions/v2";
 import { createHash } from "crypto";
 import { google } from "googleapis";
 import {
@@ -676,19 +678,58 @@ export const onGameUpdated = onDocumentUpdated(
     const after = event.data?.after.data();
     if (!before || !after) return;
 
-    const winnersBefore = (before.winners as Array<{ name?: string }>) ?? [];
-    const winnersAfter = (after.winners as Array<{ name?: string }>) ?? [];
+    type WinnerShape = { hunterId?: string; hunterName?: string; timestamp?: unknown };
+    const winnersBefore = (before.winners as Array<WinnerShape>) ?? [];
+    const rawWinnersAfter = (after.winners as Array<WinnerShape>) ?? [];
 
-    if (winnersAfter.length <= winnersBefore.length) return;
+    // ── Dedup by hunterId ──────────────────────────────────────────
+    // Firestore's `arrayUnion` does NOT dedupe objects — two writes
+    // from the same hunter with different `timestamp` values produce
+    // two entries. That inflates `winners.length` past `hunterIds.length`
+    // and would end the game early. The clients already debounce at
+    // the UI layer; this is the server-side safety net.
+    const seenHunterIds = new Set<string>();
+    const winnersAfter: WinnerShape[] = [];
+    let hadDuplicate = false;
+    for (const w of rawWinnersAfter) {
+      const hid = w.hunterId;
+      if (!hid) {
+        // Winners without a hunterId are malformed — drop them.
+        hadDuplicate = true;
+        continue;
+      }
+      if (seenHunterIds.has(hid)) {
+        hadDuplicate = true;
+        continue;
+      }
+      seenHunterIds.add(hid);
+      winnersAfter.push(w);
+    }
+    if (hadDuplicate && event.data) {
+      // Write the deduped array back. The resulting onGameUpdated
+      // callback will see no duplicates and exit via the early-return
+      // below (length comparison) — no infinite loop.
+      await event.data.after.ref.update({ winners: winnersAfter });
+    }
+
+    // Count genuinely-new hunters (by id), not array-length deltas —
+    // otherwise a dedup write by this function would look like "winners
+    // count went down" and we'd always early-return.
+    const beforeIds = new Set(
+      winnersBefore.map((w) => w.hunterId).filter((v): v is string => !!v)
+    );
+    const newWinners = winnersAfter.filter(
+      (w) => w.hunterId && !beforeIds.has(w.hunterId)
+    );
+    if (newWinners.length === 0) return;
 
     // Don't send notifications for finished games
     if (after.status === "done") return;
 
-    // A new winner was added
-    const newWinner = winnersAfter[winnersAfter.length - 1];
-    const hunterName = ((newWinner.name as string) ?? "A hunter").slice(0, 50);
+    const newWinner = newWinners[newWinners.length - 1];
+    const hunterName = (newWinner.hunterName ?? "A hunter").slice(0, 50);
     const totalHunters = ((after.hunterIds as string[]) ?? []).length;
-    const remainingCount = totalHunters - winnersAfter.length;
+    const remainingCount = Math.max(0, totalHunters - winnersAfter.length);
 
     const allUserIds = [
       ...(after.creatorId ? [after.creatorId] : []),
@@ -825,3 +866,58 @@ export {
   redeemFreeCreation,
   stripeWebhook,
 } from "./stripe";
+
+// ---------------------------------------------------------------------------
+// Scheduled: purge abandoned pending_payment games
+// ---------------------------------------------------------------------------
+
+/**
+ * Forfait games are pre-created server-side in `pending_payment` status,
+ * then flipped to `waiting` by the Stripe webhook handler. If the webhook
+ * never arrives (Stripe outage, dropped event, signature mismatch caused
+ * by a rotated secret, etc.), the game doc is stranded in `pending_payment`
+ * forever. Users can't join, the creator can't see a failure, and these
+ * docs accumulate silently.
+ *
+ * Run daily, delete games that have been `pending_payment` for more than
+ * 24 h. 24 h is a generous window: Stripe retries webhooks for up to 3
+ * days, but a real delivery happens in seconds. A game still pending after
+ * 24 h is either truly abandoned (user never completed the sheet) or
+ * broken (webhook permanently lost).
+ *
+ * Idempotent by construction: each call requeries + deletes the same set
+ * if re-run.
+ */
+export const cleanupAbandonedPendingGames = onSchedule(
+  {
+    schedule: "every 24 hours",
+    region: REGION,
+    timeZone: "Europe/Brussels",
+  },
+  async () => {
+    const cutoff = Timestamp.fromMillis(Date.now() - 24 * 60 * 60 * 1000);
+    const snap = await db
+      .collection("games")
+      .where("status", "==", "pending_payment")
+      .where("lastHeartbeat", "<", cutoff)
+      .limit(500)
+      .get();
+
+    if (snap.empty) {
+      logger.info("cleanupAbandonedPendingGames: nothing to delete");
+      return;
+    }
+
+    // Batch delete up to 500 per run; the scheduler re-fires every 24 h
+    // so a backlog is absorbed across runs without one call exceeding
+    // Firestore's 500-op batch limit.
+    const batch = db.batch();
+    for (const doc of snap.docs) {
+      batch.delete(doc.ref);
+    }
+    await batch.commit();
+    logger.info(
+      `cleanupAbandonedPendingGames: deleted ${snap.size} abandoned pending_payment games`,
+    );
+  },
+);

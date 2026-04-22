@@ -77,7 +77,14 @@ data class HunterMapUiState(
     val showRegistrationRequiredAlert: Boolean = false,
     val hasChallenges: Boolean = false,
     val winnerRegistrationFailed: Boolean = false,
-    val pendingWinner: Winner? = null
+    val pendingWinner: Winner? = null,
+    // Raised while an `addWinner` write is in flight so a fast double-tap
+    // on the submit button can't enqueue the write twice. Because the
+    // winner record uses a fresh `Timestamp` on each submit, Firestore's
+    // `arrayUnion` does *not* dedupe — two writes = two winner entries
+    // for the same hunter, which inflates `winners.size` past
+    // `hunterIds.size` and can end the game early.
+    val isSubmittingWinner: Boolean = false,
 ) : dev.rahier.pouleparty.ui.map.MapUiState
 
 @HiltViewModel
@@ -531,6 +538,9 @@ class HunterMapViewModel @Inject constructor(
 
     private fun submitFoundCode() {
         if (_uiState.value.codeCooldownUntil > System.currentTimeMillis()) return
+        // Lock against double-tap: if a winner submission is already in
+        // flight, ignore further taps until it resolves.
+        if (_uiState.value.isSubmittingWinner) return
 
         val code = _uiState.value.enteredCode.trim()
         _uiState.update { it.copy(isEnteringFoundCode = false, enteredCode = "") }
@@ -562,21 +572,39 @@ class HunterMapViewModel @Inject constructor(
     // we keep the freshly-built Winner in state so the second attempt records
     // the original found-the-chicken timestamp, not a retry-time one.
     private fun recordWinner(winner: Winner, totalAttempts: Int) {
-        _uiState.update { it.copy(pendingWinner = winner, winnerRegistrationFailed = false) }
+        _uiState.update {
+            it.copy(
+                pendingWinner = winner,
+                winnerRegistrationFailed = false,
+                isSubmittingWinner = true,
+            )
+        }
         viewModelScope.launch {
             try {
                 firestoreRepository.addWinner(gameId, winner)
                 analyticsRepository.hunterFoundChicken(attempts = totalAttempts)
-                _uiState.update { it.copy(pendingWinner = null, shouldNavigateToVictory = true) }
+                _uiState.update {
+                    it.copy(
+                        pendingWinner = null,
+                        shouldNavigateToVictory = true,
+                        isSubmittingWinner = false,
+                    )
+                }
                 _effects.send(HunterMapEffect.NavigateToVictory)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to register winner, will surface retry prompt", e)
-                _uiState.update { it.copy(winnerRegistrationFailed = true) }
+                _uiState.update {
+                    it.copy(
+                        winnerRegistrationFailed = true,
+                        isSubmittingWinner = false,
+                    )
+                }
             }
         }
     }
 
     private fun retryWinnerRegistration() {
+        if (_uiState.value.isSubmittingWinner) return
         val winner = _uiState.value.pendingWinner ?: return
         val totalAttempts = _uiState.value.wrongCodeAttempts + 1
         recordWinner(winner, totalAttempts)
