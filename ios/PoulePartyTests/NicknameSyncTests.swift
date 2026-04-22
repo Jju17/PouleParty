@@ -13,7 +13,7 @@ struct NicknameSyncTests {
 
         var state = OnboardingFeature.State()
         state.currentPage = OnboardingFeature.totalPages - 1
-        state.locationAuthorizationStatus = .authorizedWhenInUse
+        state.locationAuthorizationStatus = .authorizedAlways
         state.nickname = "Alice"
 
         let store = TestStore(initialState: state) {
@@ -37,7 +37,7 @@ struct NicknameSyncTests {
 
         var state = OnboardingFeature.State()
         state.currentPage = OnboardingFeature.totalPages - 1
-        state.locationAuthorizationStatus = .authorizedWhenInUse
+        state.locationAuthorizationStatus = .authorizedAlways
         state.nickname = "  Bob  "
 
         let store = TestStore(initialState: state) {

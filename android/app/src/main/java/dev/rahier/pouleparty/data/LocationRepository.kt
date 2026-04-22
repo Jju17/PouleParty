@@ -3,6 +3,7 @@ package dev.rahier.pouleparty.data
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Looper
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -34,11 +35,20 @@ class LocationRepository @Inject constructor(
             Manifest.permission.ACCESS_FINE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
 
-    fun hasBackgroundLocationPermission(): Boolean =
-        ContextCompat.checkSelfPermission(
+    fun hasBackgroundLocationPermission(): Boolean {
+        // Pre-Android 10 (API 29) `ACCESS_BACKGROUND_LOCATION` didn't exist
+        // as a separate runtime permission, granting fine location included
+        // background implicitly. `checkSelfPermission` reports DENIED on
+        // those devices even though the app can track in background, so we
+        // treat fine as sufficient there.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            return hasFineLocationPermission()
+        }
+        return ContextCompat.checkSelfPermission(
             context,
             Manifest.permission.ACCESS_BACKGROUND_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
+    }
 
     /**
      * Get the last known location, or null if unavailable.

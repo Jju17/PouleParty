@@ -228,13 +228,14 @@ struct GameCreationFeature {
                     pricingModel: state.game.pricing.model.rawValue,
                     powerUpsEnabled: state.game.powerUps.enabled
                 )
-                // `state.game.id` is the client-generated UUID sent to the Cloud
-                // Function — the server writes the Firestore doc at that same ID
-                // (see `functions/src/stripe.ts#createCreatorPaymentSheet`). The
-                // returned `gameId` parameter is kept for defensive logging via
-                // analytics; we use `state.game` (which has the full config the
-                // user just built) for the confirmation screen.
-                _ = gameId
+                // The Cloud Function `createCreatorPaymentSheet` ignores any
+                // client-supplied id and writes the game doc at its own Firestore
+                // auto-ID (see `functions/src/stripe.ts:195`). Patch the local
+                // game snapshot with the authoritative server id before handing
+                // it to the confirmation screen, otherwise its `gameConfigStream`
+                // subscribes to the orphan client-side id and never sees the
+                // webhook flip `pending_payment → waiting`.
+                state.$game.withLock { $0.id = gameId }
                 return .send(.paidGameCreated(game: state.game))
 
             case .destination(.presented(.payment(.delegate(.cancelled)))):

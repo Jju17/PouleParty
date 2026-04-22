@@ -70,8 +70,9 @@ class OnboardingViewModelBehaviorTest {
     }
 
     @Test
-    fun `NextPage on location slide blocked when permission missing`() {
+    fun `NextPage on location slide blocked when no permissions at all`() {
         every { locationRepository.hasFineLocationPermission() } returns false
+        every { locationRepository.hasBackgroundLocationPermission() } returns false
         val vm = createViewModel()
         vm.onIntent(OnboardingIntent.RefreshPermissions)
         vm.onIntent(OnboardingIntent.PageSet(3))
@@ -81,8 +82,23 @@ class OnboardingViewModelBehaviorTest {
     }
 
     @Test
-    fun `NextPage on location slide proceeds when permission granted`() {
+    fun `NextPage on location slide blocked with fine but no background`() {
+        // Used to pass with fine-only, the whole point of the tightening.
+        // Regression guard: if this ever flips back, the chicken can silently
+        // stop broadcasting when the phone is pocketed.
         every { locationRepository.hasFineLocationPermission() } returns true
+        every { locationRepository.hasBackgroundLocationPermission() } returns false
+        val vm = createViewModel()
+        vm.onIntent(OnboardingIntent.RefreshPermissions)
+        vm.onIntent(OnboardingIntent.PageSet(3))
+        vm.onIntent(OnboardingIntent.NextPage)
+        assertEquals(3, vm.uiState.value.currentPage)
+    }
+
+    @Test
+    fun `NextPage on location slide proceeds when background permission granted`() {
+        every { locationRepository.hasFineLocationPermission() } returns true
+        every { locationRepository.hasBackgroundLocationPermission() } returns true
         val vm = createViewModel()
         vm.onIntent(OnboardingIntent.RefreshPermissions)
         vm.onIntent(OnboardingIntent.PageSet(3))
@@ -121,6 +137,7 @@ class OnboardingViewModelBehaviorTest {
     fun `NextPage capped at last page`() {
         val vm = createViewModel()
         every { locationRepository.hasFineLocationPermission() } returns true
+        every { locationRepository.hasBackgroundLocationPermission() } returns true
         vm.onIntent(OnboardingIntent.PageSet(OnboardingViewModel.TOTAL_PAGES - 1))
         vm.onIntent(OnboardingIntent.NextPage)
         assertEquals(OnboardingViewModel.TOTAL_PAGES - 1, vm.uiState.value.currentPage)
@@ -129,8 +146,9 @@ class OnboardingViewModelBehaviorTest {
     @Test
     fun `DismissLocationAlert hides the alert`() {
         val vm = createViewModel()
-        // Force the alert to show via canCompleteOnboarding (no permission)
+        // Force the alert to show via canCompleteOnboarding (no background).
         every { locationRepository.hasFineLocationPermission() } returns false
+        every { locationRepository.hasBackgroundLocationPermission() } returns false
         vm.canCompleteOnboarding()
         assertTrue(vm.uiState.value.showLocationAlert)
         vm.onIntent(OnboardingIntent.DismissLocationAlert)
@@ -208,6 +226,7 @@ class OnboardingViewModelBehaviorTest {
     @Test
     fun `NextPage from page 4 is non-blocking even without notification permission`() {
         every { locationRepository.hasFineLocationPermission() } returns true
+        every { locationRepository.hasBackgroundLocationPermission() } returns true
         val vm = createViewModel()
         vm.onIntent(OnboardingIntent.PageSet(4))
         vm.onIntent(OnboardingIntent.NextPage)
@@ -232,12 +251,107 @@ class OnboardingViewModelBehaviorTest {
     @Test
     fun `canCompleteOnboarding shows profanity alert and returns false`() {
         every { locationRepository.hasFineLocationPermission() } returns true
+        every { locationRepository.hasBackgroundLocationPermission() } returns true
         val vm = createViewModel()
-        // canCompleteOnboarding reads cached hasFineLocation — refresh it first
+        // canCompleteOnboarding reads cached permission flags, refresh first.
         vm.onIntent(OnboardingIntent.RefreshPermissions)
         vm.onIntent(OnboardingIntent.NicknameChanged("fuck"))
         val ok = vm.canCompleteOnboarding()
         assertFalse(ok)
         assertTrue(vm.uiState.value.showProfanityAlert)
+    }
+
+    @Test
+    fun `canCompleteOnboarding returns false and shows alert with fine but no background`() {
+        // The last-page gate must match the page-3 gate, otherwise a user
+        // could start with Always, swipe to the last page, revoke background
+        // in Settings, come back, and "Let's Go" would ship them into the
+        // game without the perm we need.
+        every { locationRepository.hasFineLocationPermission() } returns true
+        every { locationRepository.hasBackgroundLocationPermission() } returns false
+        val vm = createViewModel()
+        vm.onIntent(OnboardingIntent.RefreshPermissions)
+        vm.onIntent(OnboardingIntent.NicknameChanged("Alice"))
+        val ok = vm.canCompleteOnboarding()
+        assertFalse(ok)
+        assertTrue(vm.uiState.value.showLocationAlert)
+    }
+
+    @Test
+    fun `canCompleteOnboarding returns false with empty nickname (defensive gate)`() {
+        // The Next button on page 5 already blocks empty nicknames, but the
+        // final gate must also refuse, otherwise a back-then-swipe path
+        // could ship the user into the app with nickname = "".
+        every { locationRepository.hasFineLocationPermission() } returns true
+        every { locationRepository.hasBackgroundLocationPermission() } returns true
+        val vm = createViewModel()
+        vm.onIntent(OnboardingIntent.RefreshPermissions)
+        val ok = vm.canCompleteOnboarding()
+        assertFalse(ok)
+    }
+
+    @Test
+    fun `canCompleteOnboarding returns false with whitespace-only nickname`() {
+        every { locationRepository.hasFineLocationPermission() } returns true
+        every { locationRepository.hasBackgroundLocationPermission() } returns true
+        val vm = createViewModel()
+        vm.onIntent(OnboardingIntent.RefreshPermissions)
+        vm.onIntent(OnboardingIntent.NicknameChanged("     "))
+        val ok = vm.canCompleteOnboarding()
+        assertFalse(ok)
+    }
+
+    @Test
+    fun `canCompleteOnboarding returns true when background granted and nickname clean`() {
+        every { locationRepository.hasFineLocationPermission() } returns true
+        every { locationRepository.hasBackgroundLocationPermission() } returns true
+        val vm = createViewModel()
+        vm.onIntent(OnboardingIntent.RefreshPermissions)
+        vm.onIntent(OnboardingIntent.NicknameChanged("Alice"))
+        val ok = vm.canCompleteOnboarding()
+        assertTrue(ok)
+        assertFalse(vm.uiState.value.showLocationAlert)
+        assertFalse(vm.uiState.value.showProfanityAlert)
+    }
+
+    @Test
+    fun `initial state seeds permissions from the repository`() {
+        // Before this guard, the VM initialised `hasFineLocation=false` and
+        // waited for the screen's LaunchedEffect to refresh, causing a
+        // visible flash of the "Allow Location Access" button on re-installs
+        // where Always was already granted. The VM now reads the repo in
+        // init {}, so the very first emission reflects reality.
+        every { locationRepository.hasFineLocationPermission() } returns true
+        every { locationRepository.hasBackgroundLocationPermission() } returns true
+        val vm = createViewModel()
+        assertTrue(vm.uiState.value.hasFineLocation)
+        assertTrue(vm.uiState.value.hasBackgroundLocation)
+    }
+
+    @Test
+    fun `initial state shows missing permissions when repository reports denied`() {
+        every { locationRepository.hasFineLocationPermission() } returns false
+        every { locationRepository.hasBackgroundLocationPermission() } returns false
+        val vm = createViewModel()
+        assertFalse(vm.uiState.value.hasFineLocation)
+        assertFalse(vm.uiState.value.hasBackgroundLocation)
+    }
+
+    @Test
+    fun `RefreshPermissions after a toggle flips cached state (simulates settings return)`() {
+        // Initial state: no perms. LaunchedEffect(Unit) + lifecycle ON_RESUME
+        // both trigger RefreshPermissions, simulate the settings round-trip
+        // by flipping the mock between calls. Regression guard for the
+        // DisposableEffect we added to OnboardingScreen.
+        every { locationRepository.hasFineLocationPermission() } returns false
+        every { locationRepository.hasBackgroundLocationPermission() } returns false
+        val vm = createViewModel()
+        vm.onIntent(OnboardingIntent.RefreshPermissions)
+        assertFalse(vm.uiState.value.hasBackgroundLocation)
+
+        every { locationRepository.hasFineLocationPermission() } returns true
+        every { locationRepository.hasBackgroundLocationPermission() } returns true
+        vm.onIntent(OnboardingIntent.RefreshPermissions)
+        assertTrue(vm.uiState.value.hasBackgroundLocation)
     }
 }

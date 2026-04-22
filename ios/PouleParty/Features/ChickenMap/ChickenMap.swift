@@ -212,7 +212,15 @@ struct ChickenMapFeature {
                     default:
                         effectField = nil
                     }
-                    try? await apiClient.activatePowerUp(gameId, powerUp.id, effectField, expiresAt)
+                    do {
+                        try await apiClient.activatePowerUp(gameId, powerUp.id, effectField, expiresAt)
+                    } catch {
+                        // Server rejected the activation (rule denied, offline, ...).
+                        // The next `gameConfigStream` tick will reconcile the
+                        // optimistic UI effect back to the real state; just
+                        // log so we notice in production.
+                        logger.error("Failed to activate power-up \(powerUp.type.rawValue): \(error.localizedDescription)")
+                    }
                     analyticsClient.powerUpActivated(type: powerUp.type.rawValue, role: "chicken")
                     try await clock.sleep(for: .seconds(2))
                     await send(.powerUps(.notificationCleared))
@@ -222,7 +230,6 @@ struct ChickenMapFeature {
                 return .none
             case let .internal(.gameUpdated(game)):
                 // Detect newly activated power-ups (compare old vs new)
-                    _ = Date.now
                 let activatedPowerUp = detectActivatedPowerUp(oldGame: state.game, newGame: game)
 
                 state.game = game
@@ -342,6 +349,7 @@ struct ChickenMapFeature {
                 let gameMod = state.game.gameMode
                 let startDate = state.game.startDate
                 let powerUpsEnabled = state.game.powerUps.enabled
+                let driftSeed = state.game.zone.driftSeed
 
                 // Shared references so the tracking loop can check active effects
                 let invisibilityUntil = LockIsolated<Date?>(nil)
@@ -415,7 +423,7 @@ struct ChickenMapFeature {
                                 let isInvisible = invisibilityUntil.value.map { Date.now < $0 } ?? false
                                 if Date.now.timeIntervalSince(lastWrite) >= AppConstants.locationThrottleSeconds && !isInvisible {
                                     let isJammed = jammerUntil.value.map { Date.now < $0 } ?? false
-                                    let sendCoordinate = isJammed ? applyJammerNoise(to: coordinate) : coordinate
+                                    let sendCoordinate = isJammed ? applyJammerNoise(to: coordinate, driftSeed: driftSeed) : coordinate
                                     do {
                                         try apiClient.setChickenLocation(gameId, sendCoordinate)
                                     } catch {
@@ -447,7 +455,7 @@ struct ChickenMapFeature {
                                 let isInvisible = invisibilityUntil.value.map { Date.now < $0 } ?? false
                                 if isRadarPinged && !isInvisible && Date.now.timeIntervalSince(lastWrite) >= AppConstants.locationThrottleSeconds {
                                     let isJammed = jammerUntil.value.map { Date.now < $0 } ?? false
-                                    let sendCoordinate = isJammed ? applyJammerNoise(to: coordinate) : coordinate
+                                    let sendCoordinate = isJammed ? applyJammerNoise(to: coordinate, driftSeed: driftSeed) : coordinate
                                     do {
                                         try apiClient.setChickenLocation(gameId, sendCoordinate)
                                     } catch {
@@ -474,7 +482,7 @@ struct ChickenMapFeature {
                                 guard !isInvisible else { continue }
                                 guard let coordinate = locationClient.lastLocation() else { continue }
                                 let isJammed = jammerUntil.value.map { Date.now < $0 } ?? false
-                                let sendCoordinate = isJammed ? applyJammerNoise(to: coordinate) : coordinate
+                                let sendCoordinate = isJammed ? applyJammerNoise(to: coordinate, driftSeed: driftSeed) : coordinate
                                 do {
                                     try apiClient.setChickenLocation(gameId, sendCoordinate)
                                 } catch {

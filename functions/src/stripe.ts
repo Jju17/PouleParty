@@ -486,17 +486,24 @@ export const stripeWebhook = onRequest(
       return;
     }
 
-    // Dedup — Stripe may deliver an event more than once.
+    // Dedup, Stripe may deliver an event more than once, and two deliveries
+    // can hit this handler concurrently. The previous get-then-set pattern
+    // could admit both, leading to double side-effects (e.g. two hunter
+    // registrations from a single PaymentIntent). Claim the event atomically
+    // in a transaction so only one handler invocation ever proceeds.
     const eventRef = db().collection("paymentEvents").doc(event.id);
-    const eventSnap = await eventRef.get();
-    if (eventSnap.exists) {
+    const claim = await claimWebhookEvent(db(), eventRef, event.type);
+
+    if (claim.status === "completed") {
       res.status(200).send("already processed");
       return;
     }
-    await eventRef.set({
-      type: event.type,
-      receivedAt: FieldValue.serverTimestamp(),
-    });
+    if (claim.status === "in_flight") {
+      // 409 → Stripe will retry with backoff, letting the other invocation
+      // finish first and mark the event `completedAt`.
+      res.status(409).send("in-flight, retry later");
+      return;
+    }
 
     try {
       switch (event.type) {
@@ -510,6 +517,7 @@ export const stripeWebhook = onRequest(
           // Ignore other events — return 200 so Stripe doesn't retry.
           break;
       }
+      await eventRef.set({ completedAt: FieldValue.serverTimestamp() }, { merge: true });
       res.status(200).send("ok");
     } catch (err) {
       console.error("[stripeWebhook] handler failed:", err);
@@ -519,6 +527,41 @@ export const stripeWebhook = onRequest(
     }
   },
 );
+
+export type WebhookClaimStatus = "claimed" | "completed" | "in_flight";
+
+// Exposed + pure (no global state) so the unit tests can drive the
+// transaction callback with a mocked snapshot + tx, verifying every branch
+// without booting firebase-admin.
+export async function claimWebhookEvent(
+  dbInstance: Pick<FirebaseFirestore.Firestore, "runTransaction">,
+  eventRef: FirebaseFirestore.DocumentReference,
+  eventType: string,
+  now: () => number = () => Date.now(),
+  staleAfterMs = 5 * 60 * 1000,
+): Promise<{ status: WebhookClaimStatus }> {
+  return dbInstance.runTransaction(async (tx) => {
+    const snap = await tx.get(eventRef);
+    if (snap.exists) {
+      const data = snap.data() as { completedAt?: FirebaseFirestore.Timestamp; receivedAt?: FirebaseFirestore.Timestamp } | undefined;
+      if (data?.completedAt) {
+        return { status: "completed" as const };
+      }
+      // In-flight: another invocation is still processing OR crashed. If the
+      // claim is older than `staleAfterMs`, treat it as stale and re-claim;
+      // otherwise ask Stripe to retry later (via 409) so we don't race.
+      const receivedMs = data?.receivedAt?.toMillis() ?? 0;
+      if (now() - receivedMs < staleAfterMs) {
+        return { status: "in_flight" as const };
+      }
+    }
+    tx.set(eventRef, {
+      type: eventType,
+      receivedAt: FieldValue.serverTimestamp(),
+    });
+    return { status: "claimed" as const };
+  });
+}
 
 async function handlePaymentIntentSucceeded(pi: Stripe.PaymentIntent): Promise<void> {
   const kind = pi.metadata.kind;

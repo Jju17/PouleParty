@@ -132,8 +132,8 @@ func interpolateZoneCenter(
 
 /// Computes a deterministic drifted center for stayInTheZone mode.
 /// The result is offset from `basePoint`, always within both:
-///  - `newRadius * 0.5` of basePoint (so basePoint stays well inside)
-///  - `(oldRadius - newRadius)` of any previous center that was also computed this way
+/// , `newRadius * 0.5` of basePoint (so basePoint stays well inside)
+/// , `(oldRadius, newRadius)` of any previous center that was also computed this way
 ///
 /// `driftSeed` is a random integer stored in the Game document so every
 /// client produces the exact same circle at each shrink step while each
@@ -338,10 +338,23 @@ func shouldBroadcastDuringRadarPing(
 
 // MARK: - Jammer Noise
 
-func applyJammerNoise(to coordinate: CLLocationCoordinate2D) -> CLLocationCoordinate2D {
+/// Adds deterministic ±halfNoise ° of latitude/longitude jitter to `coordinate`.
+///
+/// The noise is a pure function of `(driftSeed, now)` bucketed to 1 s, so iOS
+/// and Android produce the same value for the same inputs (used by parity
+/// tests) and the bruit shifts once per second, too fast for a hunter to
+/// average out, too slow to burn battery re-computing inside a single write.
+func applyJammerNoise(
+    to coordinate: CLLocationCoordinate2D,
+    driftSeed: Int,
+    now: Date = .now
+) -> CLLocationCoordinate2D {
+    let bucket = Int(now.timeIntervalSince1970)
+    let seed = driftSeed ^ bucket
     let halfNoise = AppConstants.jammerNoiseDegrees / 2.0
-    let latNoise = Double.random(in: -halfNoise...halfNoise)
-    let lonNoise = Double.random(in: -halfNoise...halfNoise)
+    // seededRandom returns [0, 1). Shift to [-halfNoise, halfNoise).
+    let latNoise = (seededRandom(seed: seed, index: 0) * 2.0 - 1.0) * halfNoise
+    let lonNoise = (seededRandom(seed: seed, index: 1) * 2.0 - 1.0) * halfNoise
     return CLLocationCoordinate2D(
         latitude: coordinate.latitude + latNoise,
         longitude: coordinate.longitude + lonNoise

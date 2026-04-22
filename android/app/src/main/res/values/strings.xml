@@ -102,6 +102,8 @@
     <string name="submit">Submit</string>
     <string name="wrong_code">Wrong code</string>
     <string name="wrong_code_message">That code is incorrect. Try again!</string>
+    <string name="winner_registration_failed_title">Connection error</string>
+    <string name="winner_registration_failed_message">Couldn\'t register your win. Check your connection and retry — your code was correct.</string>
 
     <!-- Game Info Dialog -->
     <string name="mode">Mode</string>

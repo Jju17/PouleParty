@@ -10,7 +10,12 @@ import Foundation
 import FirebaseFirestore
 
 struct Game: Codable, Equatable, Identifiable {
-    let id: String
+    // `var` (not `let`) because the Forfait paid-creation flow has to patch
+    // the locally-built game with the server-authoritative Firestore auto-ID
+    // returned by `createCreatorPaymentSheet`, otherwise the confirmation
+    // screen streams an orphan doc that never sees the `pending_payment →
+    // waiting` webhook flip. See GameCreation.swift#creatorPaymentConfirmed.
+    var id: String
     var name: String = ""
     var maxPlayers: Int = 10
     var gameMode: GameMode = .stayInTheZone

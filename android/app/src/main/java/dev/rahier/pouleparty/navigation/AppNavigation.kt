@@ -144,7 +144,12 @@ fun AppNavigation() {
         composable(Routes.PLAN_SELECTION) {
             PlanSelectionScreen(
                 onPlanSelected = { params ->
-                    val gameId = java.util.UUID.randomUUID().toString()
+                    // Firestore-style auto-ID (20-char alphanumeric) so free-game
+                    // IDs match the Cloud Function format used for Forfait games.
+                    val gameId = FirebaseFirestore.getInstance()
+                        .collection("games")
+                        .document()
+                        .id
                     navController.navigate(
                         Routes.gameCreation(
                             gameId,

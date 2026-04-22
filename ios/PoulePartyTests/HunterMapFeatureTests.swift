@@ -168,13 +168,102 @@ struct HunterMapFeatureTests {
         } withDependencies: {
             $0.apiClient.addWinner = { _, _ in }
         }
+        // The Winner built inside the reducer uses `Date.now` for its
+        // timestamp, which makes exhaustive state matching flaky, assert
+        // the observable transitions instead of the whole state diff.
+        store.exhaustivity = .off
 
-        await store.send(.view(.submitCodeButtonTapped)) {
-            $0.enteredCode = ""
-            $0.isEnteringFoundCode = false
-        }
+        await store.send(.view(.submitCodeButtonTapped))
         await store.receive(\.internal.winnerRegistered)
     }
+
+    @Test func submitCodeButtonTappedWithCorrectCodeAndFailedWriteShowsRetry() async {
+        struct TestError: Error {}
+        var state = HunterMapFeature.State(game: .mock)
+        state.enteredCode = "1234"
+
+        let store = TestStore(initialState: state) {
+            HunterMapFeature()
+        } withDependencies: {
+            $0.apiClient.addWinner = { _, _ in throw TestError() }
+        }
+        store.exhaustivity = .off
+
+        await store.send(.view(.submitCodeButtonTapped))
+        await store.receive(\.internal.winnerRegistrationFailed)
+        // The retry alert must surface so the hunter can try again.
+        #expect(store.state.destination != nil)
+        // pendingWinner must be held in state for the retry path.
+        #expect(store.state.pendingWinner != nil)
+    }
+
+    @Test func retryAfterTransientFailureEventuallyNavigates() async {
+        // Flakes once, succeeds on retry, the most common real-world pattern.
+        struct TestError: Error {}
+        var state = HunterMapFeature.State(game: .mock)
+        state.enteredCode = "1234"
+
+        let callCount = LockIsolated(0)
+        let store = TestStore(initialState: state) {
+            HunterMapFeature()
+        } withDependencies: {
+            $0.apiClient.addWinner = { _, _ in
+                let n = callCount.withValue { count in
+                    count += 1
+                    return count
+                }
+                if n == 1 { throw TestError() }
+            }
+        }
+        store.exhaustivity = .off
+
+        await store.send(.view(.submitCodeButtonTapped))
+        await store.receive(\.internal.winnerRegistrationFailed)
+        #expect(store.state.destination != nil)
+
+        // Hunter taps Retry → alert dismissed, addWinner fires again, this
+        // time succeeding → winnerRegistered.
+        await store.send(.destination(.presented(.alert(.retryWinnerRegistration))))
+        await store.receive(\.internal.winnerRegistered)
+        #expect(callCount.value == 2)
+    }
+
+    @Test func retryKeepsSameWinnerAcrossAttempts() async {
+        // The Winner object (timestamp, hunterId) built on the first submit
+        // must be the SAME one sent on every retry, otherwise analytics would
+        // log the "wrong" found-time on the write that finally sticks.
+        struct TestError: Error {}
+        var state = HunterMapFeature.State(game: .mock)
+        state.enteredCode = "1234"
+
+        let submittedWinners = LockIsolated<[Winner]>([])
+        let store = TestStore(initialState: state) {
+            HunterMapFeature()
+        } withDependencies: {
+            $0.apiClient.addWinner = { _, winner in
+                submittedWinners.withValue { $0.append(winner) }
+                throw TestError()
+            }
+        }
+        store.exhaustivity = .off
+
+        await store.send(.view(.submitCodeButtonTapped))
+        await store.receive(\.internal.winnerRegistrationFailed)
+
+        await store.send(.destination(.presented(.alert(.retryWinnerRegistration))))
+        await store.receive(\.internal.winnerRegistrationFailed)
+
+        await store.send(.destination(.presented(.alert(.retryWinnerRegistration))))
+        await store.receive(\.internal.winnerRegistrationFailed)
+
+        let all = submittedWinners.value
+        #expect(all.count == 3)
+        // Every submit attempt used the exact same Winner, not a freshly
+        // constructed one with a drifted timestamp.
+        #expect(all[0] == all[1])
+        #expect(all[0] == all[2])
+    }
+
 
     @Test func submitCodeButtonTappedWithWrongCodeShowsAlert() async {
         var state = HunterMapFeature.State(game: .mock)

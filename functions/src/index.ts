@@ -12,10 +12,10 @@ import {
   deterministicDriftCenterServer,
   filterEnabledTypesServer,
   generatePowerUpsServer,
-  haversineDistance,
   interpolateZoneCenterServer,
   SpawnedPowerUp,
 } from "./powerUpSpawn";
+import { snapToRoad } from "./mapbox";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const serviceAccount = require("../service-account.json");
@@ -266,41 +266,8 @@ export const transitionGameStatus = onTaskDispatched(
  * clients no longer run this logic but the math is kept identical so any future
  * parity drift is easier to debug side-by-side.
  */
-/**
- * Snaps a single coordinate to the nearest walkable road via the Mapbox
- * Directions API. Mirrors client `RoadSnapService.snapSinglePoint`.
- * Falls back to the input coordinate on any failure.
- */
-async function snapToRoad(
-  lat: number,
-  lng: number,
-  accessToken: string
-): Promise<{ latitude: number; longitude: number }> {
-  // Second point ~11m north — the Directions API needs 2 points for a route.
-  const offsetLat = lat + 0.0001;
-  const coordString = `${lng},${lat};${lng},${offsetLat}`;
-  const url =
-    `https://api.mapbox.com/directions/v5/mapbox/walking/${coordString}` +
-    `?access_token=${accessToken}&overview=false&steps=false`;
-
-  try {
-    const resp = await fetch(url);
-    if (!resp.ok) return { latitude: lat, longitude: lng };
-    const json = await resp.json() as { waypoints?: Array<{ location: [number, number] }> };
-    const waypoint = json.waypoints?.[0];
-    if (!waypoint || !Array.isArray(waypoint.location) || waypoint.location.length !== 2) {
-      return { latitude: lat, longitude: lng };
-    }
-    const [snappedLng, snappedLat] = waypoint.location;
-    // Reject snaps that moved > 200m (likely a data issue).
-    const distanceMeters = haversineDistance(lat, lng, snappedLat, snappedLng);
-    if (distanceMeters > 200) return { latitude: lat, longitude: lng };
-    return { latitude: snappedLat, longitude: snappedLng };
-  } catch (err) {
-    console.warn(`[spawn] snapToRoad failed for ${lat},${lng}:`, err);
-    return { latitude: lat, longitude: lng };
-  }
-}
+// `snapToRoad` lives in `./mapbox.ts` so the retry logic can be exercised by
+// unit tests with a mocked `fetch` without having to initialise firebase-admin.
 
 /**
  * Writes an already-generated batch of power-ups to Firestore. Uses the

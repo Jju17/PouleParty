@@ -12,6 +12,8 @@ sealed interface HunterMapIntent {
     object SubmitFoundCode : HunterMapIntent
     object VictoryNavigated : HunterMapIntent
     object DismissWrongCodeAlert : HunterMapIntent
+    object RetryWinnerRegistration : HunterMapIntent
+    object DismissWinnerRegistrationError : HunterMapIntent
     object LeaveGameTapped : HunterMapIntent
     object DismissLeaveAlert : HunterMapIntent
     object ConfirmLeaveGame : HunterMapIntent

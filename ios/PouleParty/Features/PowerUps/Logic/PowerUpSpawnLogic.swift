@@ -23,7 +23,11 @@ func generatePowerUps(
     batchIndex: Int,
     enabledTypes: [String] = PowerUp.PowerUpType.allCases.map(\.rawValue)
 ) -> [PowerUp] {
-    let powerUpTypes = PowerUp.PowerUpType.allCases.filter { enabledTypes.contains($0.rawValue) }
+    // Preserve the input order (matches the TS server reference); filtering
+    // through `allCases` would re-sort into enum-declaration order, which
+    // would pick a different type at the same `itemSeed % count` index than
+    // the server ever spawned. Locked by `ParityGoldenTests`.
+    let powerUpTypes = enabledTypes.compactMap(PowerUp.PowerUpType.init(rawValue:))
     guard !powerUpTypes.isEmpty else { return [] }
 
     var result: [PowerUp] = []

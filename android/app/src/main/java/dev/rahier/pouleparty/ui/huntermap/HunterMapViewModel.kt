@@ -75,7 +75,9 @@ data class HunterMapUiState(
     val activatingPowerUpId: String? = null,
     val decoyLocation: Point? = null,
     val showRegistrationRequiredAlert: Boolean = false,
-    val hasChallenges: Boolean = false
+    val hasChallenges: Boolean = false,
+    val winnerRegistrationFailed: Boolean = false,
+    val pendingWinner: Winner? = null
 ) : dev.rahier.pouleparty.ui.map.MapUiState
 
 @HiltViewModel
@@ -135,6 +137,8 @@ class HunterMapViewModel @Inject constructor(
             HunterMapIntent.CodeCopied -> onCodeCopied()
             is HunterMapIntent.ActivatePowerUp -> activatePowerUp(intent.powerUp)
             is HunterMapIntent.EnteredCodeChanged -> onEnteredCodeChanged(intent.code)
+            HunterMapIntent.RetryWinnerRegistration -> retryWinnerRegistration()
+            HunterMapIntent.DismissWinnerRegistrationError -> dismissWinnerRegistrationError()
         }
     }
 
@@ -546,17 +550,42 @@ class HunterMapViewModel @Inject constructor(
         }
 
         val totalAttempts = _uiState.value.wrongCodeAttempts + 1
+        val winner = Winner(
+            hunterId = hunterId,
+            hunterName = hunterName,
+            timestamp = Timestamp.now()
+        )
+        recordWinner(winner, totalAttempts)
+    }
+
+    // Extracted so the "retry" path can reuse it after a network failure -
+    // we keep the freshly-built Winner in state so the second attempt records
+    // the original found-the-chicken timestamp, not a retry-time one.
+    private fun recordWinner(winner: Winner, totalAttempts: Int) {
+        _uiState.update { it.copy(pendingWinner = winner, winnerRegistrationFailed = false) }
         viewModelScope.launch {
-            val winner = Winner(
-                hunterId = hunterId,
-                hunterName = hunterName,
-                timestamp = Timestamp.now()
-            )
-            firestoreRepository.addWinner(gameId, winner)
-            analyticsRepository.hunterFoundChicken(attempts = totalAttempts)
-            _uiState.update { it.copy(shouldNavigateToVictory = true) }
-            _effects.send(HunterMapEffect.NavigateToVictory)
+            try {
+                firestoreRepository.addWinner(gameId, winner)
+                analyticsRepository.hunterFoundChicken(attempts = totalAttempts)
+                _uiState.update { it.copy(pendingWinner = null, shouldNavigateToVictory = true) }
+                _effects.send(HunterMapEffect.NavigateToVictory)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to register winner, will surface retry prompt", e)
+                _uiState.update { it.copy(winnerRegistrationFailed = true) }
+            }
         }
+    }
+
+    private fun retryWinnerRegistration() {
+        val winner = _uiState.value.pendingWinner ?: return
+        val totalAttempts = _uiState.value.wrongCodeAttempts + 1
+        recordWinner(winner, totalAttempts)
+    }
+
+    private fun dismissWinnerRegistrationError() {
+        // Dismiss clears the error overlay but keeps `pendingWinner` so the
+        // hunter can re-trigger the retry from the found-code flow if needed.
+        _uiState.update { it.copy(winnerRegistrationFailed = false) }
     }
 
     private fun onVictoryNavigated() {

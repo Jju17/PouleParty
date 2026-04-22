@@ -330,10 +330,16 @@ struct PowerUpLifecycleTests {
 
     @Test func applyJammerNoiseChangesCoordinate() {
         let original = CLLocationCoordinate2D(latitude: 50.8466, longitude: 4.3528)
-        // Run multiple times to reduce chance of false pass
+        // Step the clock by 1s between calls so the time-bucketed seed
+        // produces a different offset each iteration.
         var anyDifferent = false
-        for _ in 0..<10 {
-            let jammed = applyJammerNoise(to: original)
+        let base = Date(timeIntervalSince1970: 1_700_000_000)
+        for i in 0..<10 {
+            let jammed = applyJammerNoise(
+                to: original,
+                driftSeed: 12345,
+                now: base.addingTimeInterval(TimeInterval(i))
+            )
             if jammed.latitude != original.latitude || jammed.longitude != original.longitude {
                 anyDifferent = true
                 break
@@ -345,12 +351,28 @@ struct PowerUpLifecycleTests {
     @Test func applyJammerNoiseStaysWithinBounds() {
         let original = CLLocationCoordinate2D(latitude: 50.8466, longitude: 4.3528)
         let halfNoise = AppConstants.jammerNoiseDegrees / 2.0
-        for _ in 0..<100 {
-            let jammed = applyJammerNoise(to: original)
+        let base = Date(timeIntervalSince1970: 1_700_000_000)
+        for i in 0..<100 {
+            let jammed = applyJammerNoise(
+                to: original,
+                driftSeed: 12345,
+                now: base.addingTimeInterval(TimeInterval(i))
+            )
             let latDiff = abs(jammed.latitude - original.latitude)
             let lonDiff = abs(jammed.longitude - original.longitude)
             #expect(latDiff <= halfNoise + 1e-10)
             #expect(lonDiff <= halfNoise + 1e-10)
         }
+    }
+
+    @Test func applyJammerNoiseIsDeterministic() {
+        // Same (driftSeed, now) must produce the exact same offset on every call.
+        // This is what allows parity tests to pin the output across iOS/Android.
+        let original = CLLocationCoordinate2D(latitude: 50.8466, longitude: 4.3528)
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let a = applyJammerNoise(to: original, driftSeed: 777, now: now)
+        let b = applyJammerNoise(to: original, driftSeed: 777, now: now)
+        #expect(a.latitude == b.latitude)
+        #expect(a.longitude == b.longitude)
     }
 }

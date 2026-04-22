@@ -24,8 +24,8 @@ android {
         applicationId = "dev.rahier.pouleparty2"
         minSdk = 26
         targetSdk = 35
-        versionCode = 24
-        versionName = "1.8.1"
+        versionCode = 26
+        versionName = "1.9.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -80,6 +80,10 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+
+    testOptions {
+        unitTests.isReturnDefaultValues = true
     }
 }
 

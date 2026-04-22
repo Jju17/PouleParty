@@ -86,6 +86,8 @@
     <string name="submit">Valider</string>
     <string name="wrong_code">Mauvais code</string>
     <string name="wrong_code_message">Ce code est incorrect. Réessaie !</string>
+    <string name="winner_registration_failed_title">Erreur de connexion</string>
+    <string name="winner_registration_failed_message">Impossible d\'enregistrer ta victoire. Vérifie ta connexion et réessaie — ton code était bon.</string>
 
     <!-- Game Info Dialog -->
     <string name="mode">Mode</string>

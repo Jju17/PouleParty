@@ -73,7 +73,7 @@ struct OnboardingFeatureTests {
 
     @Test func pageChangedUpdatesCurrentPage() async {
         var state = OnboardingFeature.State()
-        state.locationAuthorizationStatus = .authorizedWhenInUse
+        state.locationAuthorizationStatus = .authorizedAlways
         state.nickname = "Player"
 
         let store = TestStore(initialState: state) {
@@ -127,7 +127,7 @@ struct OnboardingFeatureTests {
         var state = OnboardingFeature.State()
         state.currentPage = 5
         state.nickname = ""
-        state.locationAuthorizationStatus = .authorizedWhenInUse
+        state.locationAuthorizationStatus = .authorizedAlways
 
         let store = TestStore(initialState: state) {
             OnboardingFeature()
@@ -141,7 +141,7 @@ struct OnboardingFeatureTests {
         var state = OnboardingFeature.State()
         state.currentPage = 5
         state.nickname = "   "
-        state.locationAuthorizationStatus = .authorizedWhenInUse
+        state.locationAuthorizationStatus = .authorizedAlways
 
         let store = TestStore(initialState: state) {
             OnboardingFeature()
@@ -155,7 +155,7 @@ struct OnboardingFeatureTests {
         var state = OnboardingFeature.State()
         state.currentPage = 5
         state.nickname = "Alice"
-        state.locationAuthorizationStatus = .authorizedWhenInUse
+        state.locationAuthorizationStatus = .authorizedAlways
 
         let store = TestStore(initialState: state) {
             OnboardingFeature()
@@ -193,7 +193,10 @@ struct OnboardingFeatureTests {
         await store.send(.nextButtonTapped)
     }
 
-    @Test func nextButtonAllowedOnPage3WithWhenInUse() async {
+    @Test func nextButtonBlockedOnPage3WithWhenInUseOnly() async {
+        // `.authorizedWhenInUse` used to let the user through, we now
+        // require `.authorizedAlways` because chicken broadcasts while
+        // the phone is backgrounded. Regression guard for that tightening.
         var state = OnboardingFeature.State()
         state.currentPage = 3
         state.locationAuthorizationStatus = .authorizedWhenInUse
@@ -202,9 +205,8 @@ struct OnboardingFeatureTests {
             OnboardingFeature()
         }
 
-        await store.send(.nextButtonTapped) {
-            $0.currentPage = 4
-        }
+        // No state change, the reducer bails out of `.nextButtonTapped`.
+        await store.send(.nextButtonTapped)
     }
 
     @Test func nextButtonAllowedOnPage3WithAlwaysAuth() async {
@@ -219,6 +221,18 @@ struct OnboardingFeatureTests {
         await store.send(.nextButtonTapped) {
             $0.currentPage = 4
         }
+    }
+
+    @Test func nextButtonBlockedOnPage3WithRestrictedLocation() async {
+        var state = OnboardingFeature.State()
+        state.currentPage = 3
+        state.locationAuthorizationStatus = .restricted
+
+        let store = TestStore(initialState: state) {
+            OnboardingFeature()
+        }
+
+        await store.send(.nextButtonTapped)
     }
 
     // MARK: - Location Authorization Updates
@@ -287,7 +301,7 @@ struct OnboardingFeatureTests {
     @Test func lastPageNextWithLocationTriggersCompletion() async {
         var state = OnboardingFeature.State()
         state.currentPage = OnboardingFeature.totalPages - 1
-        state.locationAuthorizationStatus = .authorizedWhenInUse
+        state.locationAuthorizationStatus = .authorizedAlways
         state.nickname = "Alice"
 
         let store = TestStore(initialState: state) {
@@ -297,6 +311,72 @@ struct OnboardingFeatureTests {
 
         await store.send(.nextButtonTapped)
         await store.receive(\.onboardingCompleted)
+    }
+
+    @Test func lastPageNextWithEmptyNicknameSilentlyRefuses() async {
+        // Defensive gate: the nickname slide already blocks empty names,
+        // but the last page must also refuse, protects against a state
+        // drift where the user backs up, clears the nickname, then swipes
+        // forward. No alert needed; they'll see the empty field and retry.
+        var state = OnboardingFeature.State()
+        state.currentPage = OnboardingFeature.totalPages - 1
+        state.locationAuthorizationStatus = .authorizedAlways
+        state.nickname = ""
+
+        let store = TestStore(initialState: state) {
+            OnboardingFeature()
+        }
+
+        // No state change: reducer bails out without emitting onboardingCompleted.
+        await store.send(.nextButtonTapped)
+    }
+
+    @Test func lastPageNextWithWhitespaceNicknameSilentlyRefuses() async {
+        var state = OnboardingFeature.State()
+        state.currentPage = OnboardingFeature.totalPages - 1
+        state.locationAuthorizationStatus = .authorizedAlways
+        state.nickname = "   "
+
+        let store = TestStore(initialState: state) {
+            OnboardingFeature()
+        }
+
+        await store.send(.nextButtonTapped)
+    }
+
+    @Test func lastPageNextWithProfaneNicknameShowsProfanityAlert() async {
+        // Mirrors the per-page profanity gate, the last page catches it
+        // too if state drifts.
+        var state = OnboardingFeature.State()
+        state.currentPage = OnboardingFeature.totalPages - 1
+        state.locationAuthorizationStatus = .authorizedAlways
+        state.nickname = "fuck"
+
+        let store = TestStore(initialState: state) {
+            OnboardingFeature()
+        }
+
+        await store.send(.nextButtonTapped) {
+            $0.showProfanityAlert = true
+        }
+    }
+
+    @Test func lastPageNextWithWhenInUseShowsLocationAlert() async {
+        // Final gate is re-checked on the last page in case the user flipped
+        // the permission back to "While Using" in Settings between page 3
+        // and the last slide, they must still grant Always to play.
+        var state = OnboardingFeature.State()
+        state.currentPage = OnboardingFeature.totalPages - 1
+        state.locationAuthorizationStatus = .authorizedWhenInUse
+        state.nickname = "Alice"
+
+        let store = TestStore(initialState: state) {
+            OnboardingFeature()
+        }
+
+        await store.send(.nextButtonTapped) {
+            $0.showLocationAlert = true
+        }
     }
 
     // MARK: - Page Swipe Blocking
@@ -323,7 +403,7 @@ struct OnboardingFeatureTests {
     @Test func pageChangedBlocksForwardSwipePastNicknamePage() async {
         var state = OnboardingFeature.State()
         state.currentPage = 5
-        state.locationAuthorizationStatus = .authorizedWhenInUse
+        state.locationAuthorizationStatus = .authorizedAlways
         state.nickname = ""
 
         let store = TestStore(initialState: state) {
@@ -343,7 +423,7 @@ struct OnboardingFeatureTests {
     @Test func pageChangedAllowsForwardSwipeWhenAuthorizedAndNamed() async {
         var state = OnboardingFeature.State()
         state.currentPage = 3
-        state.locationAuthorizationStatus = .authorizedWhenInUse
+        state.locationAuthorizationStatus = .authorizedAlways
         state.nickname = "Alice"
 
         let store = TestStore(initialState: state) {
@@ -352,6 +432,41 @@ struct OnboardingFeatureTests {
 
         await store.send(.pageChanged(6)) {
             $0.currentPage = 6
+        }
+    }
+
+    @Test func pageChangedBlocksForwardSwipePastLocationPageWithWhenInUse() async {
+        // Pager swipes are gated the same way as Next, fine-only (whenInUse)
+        // must NOT let the user past the location page, or the gate would
+        // be trivially bypassable by swiping instead of tapping Next.
+        var state = OnboardingFeature.State()
+        state.currentPage = 3
+        state.locationAuthorizationStatus = .authorizedWhenInUse
+
+        let store = TestStore(initialState: state) {
+            OnboardingFeature()
+        }
+        store.exhaustivity = .off
+
+        await store.send(.pageChanged(4)) {
+            $0.currentPage = 4
+        }
+        await store.receive(\.pageSnappedBack) {
+            $0.currentPage = 3
+        }
+    }
+
+    @Test func pageChangedAllowsForwardSwipeFromLocationWithAlwaysAuth() async {
+        var state = OnboardingFeature.State()
+        state.currentPage = 3
+        state.locationAuthorizationStatus = .authorizedAlways
+
+        let store = TestStore(initialState: state) {
+            OnboardingFeature()
+        }
+
+        await store.send(.pageChanged(4)) {
+            $0.currentPage = 4
         }
     }
 }

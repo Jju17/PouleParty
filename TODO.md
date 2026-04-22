@@ -219,7 +219,31 @@ Features/SpectatorMap/
 
 ---
 
-## 7. Modularisation iOS (priorité : low)
+## 7. Stripe ↔ Firestore hand-reconciliation
+
+### Problème
+
+Si un event webhook Stripe `payment_intent.succeeded` n'atteint jamais `stripeWebhook` (livraison ratée, handler qui crash avant le delete du dedup marker), la partie reste bloquée en `pending_payment` ou la registration hunter reste sans `paid: true`, alors que Stripe a bien encaissé. Aujourd'hui, recovery = inspection manuelle Dashboard Stripe + Firestore.
+
+### Plan
+
+Ajouter une Cloud Function **scheduled** (cron quotidien) qui :
+
+- Query Stripe `paymentIntents.list({ created: { gte: now-36h } })`, filtre `status == 'succeeded'`.
+- Pour chaque PaymentIntent `kind == 'creator_flat'` : lit `games/{pi.metadata.gameId}`.
+  - Si status == `pending_payment` → flip vers `waiting`, set `payment.paymentIntentId`, `payment.paidAt`, `payment.reconciledAt`, log `Warning`.
+  - Si status absent ou déjà `waiting` → no-op.
+- Pour chaque PaymentIntent `kind == 'hunter_deposit'` : idem sur `games/{gameId}/registrations/{uid}` (flip `paid: true`).
+
+### Notes
+
+- Fenêtre de 36h pour absorber les retries Stripe qui peuvent traîner jusqu'à 72h (on revérifie chaque jour donc un event loupé est récupéré max J+1).
+- Cron schedule Firebase : `functions.pubsub.schedule("0 3 * * *").timeZone("Europe/Brussels")`.
+- Métrique à observer : nombre de réconciliations par run > 0 signale un souci webhook persistant.
+
+---
+
+## 8. Modularisation iOS (priorité : low)
 
 ### Objectif possible
 

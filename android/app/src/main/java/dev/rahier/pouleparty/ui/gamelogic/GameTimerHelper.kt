@@ -261,6 +261,33 @@ fun detectNewWinners(
     return "${latest.hunterName} found the chicken! 🐔"
 }
 
+// ── Jammer Noise ─────────────────────────────────────
+
+/**
+ * Adds deterministic ±halfNoise ° of latitude/longitude jitter to [coordinate].
+ *
+ * The noise is a pure function of `(driftSeed, nowMillis)` bucketed to 1 s, so
+ * iOS and Android produce the same value for the same inputs (used by parity
+ * tests) and the bruit shifts once per second, too fast for a hunter to
+ * average out, too slow to burn battery re-computing inside a single write.
+ */
+fun applyJammerNoise(
+    coordinate: com.mapbox.geojson.Point,
+    driftSeed: Int,
+    nowMillis: Long = System.currentTimeMillis(),
+    jammerNoiseDegrees: Double = dev.rahier.pouleparty.AppConstants.JAMMER_NOISE_DEGREES
+): com.mapbox.geojson.Point {
+    val bucket = nowMillis / 1000L
+    val seed = driftSeed.toLong() xor bucket
+    val halfNoise = jammerNoiseDegrees / 2.0
+    val latNoise = (seededRandom(seed, 0) * 2.0 - 1.0) * halfNoise
+    val lonNoise = (seededRandom(seed, 1) * 2.0 - 1.0) * halfNoise
+    return com.mapbox.geojson.Point.fromLngLat(
+        coordinate.longitude() + lonNoise,
+        coordinate.latitude() + latNoise
+    )
+}
+
 // ── Seeded Random (splitmix64) ──────────────────────
 
 /**

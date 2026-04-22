@@ -47,6 +47,12 @@ struct ApiClient {
     /// Submit a report against another player (user-generated-content moderation).
     /// Writes a doc to `/reports/{autoId}` which is readable only by the admin SDK.
     var reportPlayer: (_ gameId: String, _ reportedUserId: String, _ reportedNickname: String) async throws -> Void
+    /// Generate a new Firestore-style auto-ID (20-char alphanumeric) for a
+    /// brand-new game doc. Used by the free-game client path so all game IDs
+    /// in Firestore look consistent with the server-side auto-IDs produced by
+    /// Cloud Functions for Forfait / promo creations, no more mix of UUIDs
+    /// (client) and auto-IDs (server).
+    var newGameId: () -> String
 }
 
 private let logger = Logger(category: "ApiClient")
@@ -120,7 +126,8 @@ extension ApiClient: TestDependencyKey {
         challengeCompletionsStream: { _ in AsyncStream { _ in } },
         markChallengeCompleted: { _, _, _, _, _ in },
         fetchUserNicknames: { _ in [:] },
-        reportPlayer: { _, _, _ in }
+        reportPlayer: { _, _, _ in },
+        newGameId: { "test-game-id" }
     )
 }
 
@@ -659,6 +666,12 @@ extension ApiClient: DependencyKey {
             try await Firestore.firestore()
                 .collection("reports")
                 .addDocument(data: payload)
+        },
+        newGameId: {
+            // Local-only, no network call, the Firestore SDK generates the
+            // auto-ID client-side. Same 20-char alphanumeric format as the
+            // Cloud Function's `db().collection("games").doc()`.
+            Firestore.firestore().collection(gamesCollection).document().documentID
         }
     )
 }

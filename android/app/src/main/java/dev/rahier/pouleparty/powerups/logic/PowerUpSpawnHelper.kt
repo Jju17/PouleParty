@@ -26,7 +26,13 @@ fun generatePowerUps(
     batchIndex: Int,
     enabledTypes: List<String> = PowerUpType.entries.map { it.firestoreValue }
 ): List<PowerUp> {
-    val powerUpTypes = PowerUpType.entries.filter { enabledTypes.contains(it.firestoreValue) }
+    // Preserve the input order (matches the TS server reference); filtering
+    // through `entries` would re-sort into enum-declaration order, which
+    // would pick a different type at the same `itemSeed % count` index than
+    // the server ever spawned. Locked by `ParityGoldenTest`.
+    val powerUpTypes = enabledTypes.mapNotNull { fv ->
+        PowerUpType.entries.firstOrNull { it.firestoreValue == fv }
+    }
     if (powerUpTypes.isEmpty()) return emptyList()
 
     val result = mutableListOf<PowerUp>()

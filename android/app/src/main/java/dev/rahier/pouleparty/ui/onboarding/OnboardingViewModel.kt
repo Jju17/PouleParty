@@ -36,6 +36,16 @@ class OnboardingViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(OnboardingUiState())
     val uiState: StateFlow<OnboardingUiState> = _uiState.asStateFlow()
 
+    init {
+        // Seed permission flags synchronously before any composable reads
+        // the state, otherwise the first frame renders the "Allow Location
+        // Access" button even when the user already granted Always in a
+        // previous install, and they have to tap through a no-op dialog.
+        // The `LaunchedEffect(Unit)` in the screen still runs and covers
+        // the freshly-installed case.
+        refreshPermissions()
+    }
+
     /** Single entry point for every user interaction. */
     fun onIntent(intent: OnboardingIntent) {
         when (intent) {
@@ -84,8 +94,12 @@ class OnboardingViewModel @Inject constructor(
 
     private fun nextPage() {
         val current = _uiState.value.currentPage
-        // Block on location slide (page 3) if fine location not granted
-        if (current == 3 && !_uiState.value.hasFineLocation) return
+        // Block on location slide unless background location is granted. The
+        // chickenCanSeeHunters flow and the stayInTheZone radar-ping loop
+        // both assume the chicken keeps broadcasting while the phone is
+        // backgrounded, fine-only silently breaks that promise, so we
+        // require Always at onboarding (matching the iOS gate).
+        if (current == 3 && !_uiState.value.hasBackgroundLocation) return
         // Page 4 = notifications — non-blocking, always allow next
         // Block on nickname slide (page 5) if nickname is empty or inappropriate
         if (current == 5) {
@@ -125,15 +139,26 @@ class OnboardingViewModel @Inject constructor(
     }
 
     /**
-     * Check location before completing onboarding.
-     * Returns true if location is granted and onboarding can complete.
+     * Defensive final gate, mirrors every per-page check so the user can
+     * never exit onboarding with state that the per-page gates would have
+     * refused (empty nickname after a back+clear+swipe path, permission
+     * revoked in Settings between page 3 and here, etc.). Returns true only
+     * when background location is granted AND the nickname is non-empty AND
+     * passes the profanity filter. Surfaces the appropriate alert on failure.
      */
     fun canCompleteOnboarding(): Boolean {
-        if (!_uiState.value.hasFineLocation) {
+        if (!_uiState.value.hasBackgroundLocation) {
             _uiState.update { it.copy(showLocationAlert = true) }
             return false
         }
         val trimmed = _uiState.value.nickname.trim()
+        if (trimmed.isEmpty()) {
+            // Silently refuse, the "Let's Go" button is already gated on
+            // the nickname page, so this branch only fires if the UI state
+            // drifted out of sync. No alert needed; the user will see the
+            // nickname field empty and try again.
+            return false
+        }
         if (ProfanityFilter.containsProfanity(trimmed)) {
             _uiState.update { it.copy(showProfanityAlert = true) }
             return false

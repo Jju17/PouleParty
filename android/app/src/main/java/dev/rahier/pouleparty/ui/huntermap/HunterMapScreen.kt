@@ -420,6 +420,25 @@ fun HunterMapScreen(
         )
     }
 
+    // Winner registration failed, right code entered but Firestore write failed
+    if (state.winnerRegistrationFailed) {
+        AlertDialog(
+            onDismissRequest = { viewModel.onIntent(HunterMapIntent.DismissWinnerRegistrationError) },
+            title = { Text(stringResource(R.string.winner_registration_failed_title)) },
+            text = { Text(stringResource(R.string.winner_registration_failed_message)) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.onIntent(HunterMapIntent.RetryWinnerRegistration) }) {
+                    Text(stringResource(R.string.retry))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.onIntent(HunterMapIntent.DismissWinnerRegistrationError) }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
     // Quit game alert
     if (state.showLeaveAlert) {
         AlertDialog(

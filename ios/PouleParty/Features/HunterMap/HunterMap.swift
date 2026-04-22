@@ -43,6 +43,11 @@ struct HunterMapFeature {
         var previewCircle: CircleOverlay? = nil
         var decoyLocation: CLLocationCoordinate2D? = nil
         var hasChallenges: Bool = false
+        // Held between a failed `addWinner` write and a user-triggered retry,
+        // so the retry keeps the original found-the-chicken timestamp + attempt
+        // count instead of recomputing them.
+        var pendingWinner: Winner? = nil
+        var pendingWinnerAttempts: Int = 0
 
         // MARK: - MapFeatureState passthroughs (child → parent surface)
         var availablePowerUps: [PowerUp] { powerUps.available }
@@ -106,6 +111,7 @@ struct HunterMapFeature {
             case userLocationUpdated(CLLocationCoordinate2D)
             case winnerNotificationDismissed
             case winnerRegistered
+            case winnerRegistrationFailed
         }
 
         @CasePathable
@@ -130,6 +136,7 @@ struct HunterMapFeature {
                 case gameOver
                 case wrongCode
                 case registrationRequired
+                case retryWinnerRegistration
             }
         }
     }
@@ -201,6 +208,16 @@ struct HunterMapFeature {
                     await liveActivityClient.end(nil)
                     await send(.delegate(.returnedToMenu))
                 }
+            case .destination(.presented(.alert(.retryWinnerRegistration))):
+                // Must live above the catch-all `case .destination:` below,
+                // otherwise the pattern never matches.
+                guard let winner = state.pendingWinner else { return .none }
+                let attempts = state.pendingWinnerAttempts
+                return submitPendingWinnerEffect(
+                    gameId: state.game.id,
+                    winner: winner,
+                    attempts: attempts
+                )
             case .internal(.registrationRequiredDetected):
                 state.destination = .alert(
                     AlertState {
@@ -257,7 +274,15 @@ struct HunterMapFeature {
 
                 return .run { [analyticsClient] send in
                     let effectField: String? = powerUp.type == .radarPing ? powerUp.type.firestoreEffectField : nil
-                    try? await apiClient.activatePowerUp(gameId, powerUp.id, effectField, expiresAt)
+                    do {
+                        try await apiClient.activatePowerUp(gameId, powerUp.id, effectField, expiresAt)
+                    } catch {
+                        // Server rejected the activation (rule denied, offline, ...).
+                        // The next `gameConfigStream` tick will reconcile the
+                        // optimistic UI effect back to the real state; just
+                        // log so we notice in production.
+                        logger.error("Failed to activate power-up \(powerUp.type.rawValue): \(error.localizedDescription)")
+                    }
                     analyticsClient.powerUpActivated(type: powerUp.type.rawValue, role: "hunter")
                     try await clock.sleep(for: .seconds(2))
                     await send(.powerUps(.notificationCleared))
@@ -305,20 +330,27 @@ struct HunterMapFeature {
                     hunterName: state.hunterName,
                     timestamp: Timestamp(date: .now)
                 )
-                let gameId = state.game.id
                 let totalAttempts = state.wrongCodeAttempts + 1
-                return .run { [analyticsClient] send in
-                    do {
-                        try await apiClient.addWinner(gameId, winner)
-                        analyticsClient.hunterFoundChicken(attempts: totalAttempts)
-                        locationClient.stopTracking()
-                        await send(.internal(.winnerRegistered))
-                    } catch {
-                        locationClient.stopTracking()
-                        logger.error("Failed to add winner: \(error.localizedDescription)")
-                        await send(.internal(.winnerRegistered))
+                state.pendingWinner = winner
+                state.pendingWinnerAttempts = totalAttempts
+                return submitPendingWinnerEffect(
+                    gameId: state.game.id,
+                    winner: winner,
+                    attempts: totalAttempts
+                )
+            case .internal(.winnerRegistrationFailed):
+                state.destination = .alert(
+                    AlertState {
+                        TextState("Connection error")
+                    } actions: {
+                        ButtonState(action: .retryWinnerRegistration) {
+                            TextState("Retry")
+                        }
+                    } message: {
+                        TextState("Couldn't register your win. Check your connection and retry, your code was correct.")
                     }
-                }
+                )
+                return .none
             case .delegate(.returnedToMenu):
                 return .none
             case .delegate(.allHuntersFound):
@@ -797,6 +829,27 @@ struct HunterMapFeature {
         }
         .ifLet(\.$challenges, action: \.challenges) {
           ChallengesFeature()
+        }
+    }
+
+    /// Runs the Firestore `addWinner` write and branches to either the
+    /// "registered" or "failed" internal action. Keeps the effect body in one
+    /// place so the initial submit and the retry path can share it.
+    private func submitPendingWinnerEffect(
+        gameId: String,
+        winner: Winner,
+        attempts: Int
+    ) -> Effect<Action> {
+        .run { [analyticsClient, apiClient, locationClient] send in
+            do {
+                try await apiClient.addWinner(gameId, winner)
+                analyticsClient.hunterFoundChicken(attempts: attempts)
+                locationClient.stopTracking()
+                await send(.internal(.winnerRegistered))
+            } catch {
+                logger.error("Failed to add winner: \(error.localizedDescription)")
+                await send(.internal(.winnerRegistrationFailed))
+            }
         }
     }
 }

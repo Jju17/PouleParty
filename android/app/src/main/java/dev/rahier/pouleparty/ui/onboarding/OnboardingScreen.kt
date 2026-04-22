@@ -31,6 +31,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.ui.theme.*
 
@@ -53,7 +56,11 @@ fun OnboardingScreen(
         val page = pagerState.currentPage
         val s = viewModel.uiState.value
 
-        val isBlocked = (page > 3 && !s.hasFineLocation) ||
+        // Block swipe past the location page unless Always/background was
+        // granted, matches iOS `.authorizedAlways` requirement. Fine-only
+        // isn't enough: the game tracks the chicken while the app is
+        // backgrounded, and we'd silently break that otherwise.
+        val isBlocked = (page > 3 && !s.hasBackgroundLocation) ||
                 (page > 5 && s.nickname.trim().isEmpty())
 
         if (isBlocked) {
@@ -78,6 +85,22 @@ fun OnboardingScreen(
 
     LaunchedEffect(Unit) {
         viewModel.onIntent(OnboardingIntent.RefreshPermissions)
+    }
+
+    // Re-check permissions every time the user returns to the app, e.g.
+    // after bouncing out to "App settings" to grant background location on
+    // Android 11+, where the system forces the user to go through Settings
+    // instead of showing an in-app dialog. Without this, the Next button
+    // stays grey even after the user has granted access.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.onIntent(OnboardingIntent.RefreshPermissions)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     Box(
@@ -165,7 +188,7 @@ fun OnboardingScreen(
                     Spacer(Modifier.width(1.dp))
                 }
 
-                val isLocationPageBlocked = state.currentPage == 3 && !state.hasFineLocation
+                val isLocationPageBlocked = state.currentPage == 3 && !state.hasBackgroundLocation
                 val isNicknamePageEmpty = state.currentPage == 5 && state.nickname.trim().isEmpty()
                 val isNextDisabled = isLocationPageBlocked || isNicknamePageEmpty
                 Box(
@@ -236,7 +259,7 @@ fun OnboardingScreen(
     }
 }
 
-// MARK: - Generic Slide Layout
+// MARK:, Generic Slide Layout
 
 @Composable
 private fun OnboardingSlideLayout(
@@ -274,7 +297,7 @@ private fun OnboardingSlideLayout(
     }
 }
 
-// MARK: - Slides
+// MARK:, Slides
 
 @Composable
 private fun SlideWelcome() {

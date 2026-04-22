@@ -430,7 +430,12 @@ fun HomeScreen(
             dev.rahier.pouleparty.ui.planselection.PlanSelectionScreen(
                 onPlanSelected = { params ->
                     isShowingPlanSelection = false
-                    val gameId = java.util.UUID.randomUUID().toString()
+                    // Firestore-style auto-ID (20-char alphanumeric) so free-game
+                    // IDs match the Cloud Function format used for Forfait games.
+                    val gameId = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                        .collection("games")
+                        .document()
+                        .id
                     onNavigateToGameCreation(
                         gameId,
                         params.pricingModel,

@@ -68,6 +68,16 @@ abstract class BaseMapViewModel(
         streamJobs.clear()
     }
 
+    // Kill the Firestore/location streams when the VM is finally released -
+    // otherwise they keep paying quota / draining battery after the screen
+    // is gone (Compose can hold on to the VM for a moment after navigation).
+    override fun onCleared() {
+        cancelStreams()
+        notificationJob?.cancel()
+        notificationJob = null
+        super.onCleared()
+    }
+
     /**
      * Shows a power-up notification for [POWER_UP_NOTIFICATION_MS] then clears it.
      *

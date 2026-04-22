@@ -100,6 +100,8 @@
     <string name="submit">Bevestigen</string>
     <string name="wrong_code">Verkeerde code</string>
     <string name="wrong_code_message">Die code is onjuist. Probeer opnieuw!</string>
+    <string name="winner_registration_failed_title">Verbindingsfout</string>
+    <string name="winner_registration_failed_message">Kon je overwinning niet registreren. Controleer je verbinding en probeer opnieuw — je code was juist.</string>
 
     <!-- Game Info Dialog -->
     <string name="mode">Modus</string>

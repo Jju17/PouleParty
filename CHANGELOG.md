@@ -6,6 +6,56 @@ Format: [Keep a Changelog](https://keepachangelog.com/). Versions follow [Semant
 
 ---
 
+## [1.9.0], 2026-04-22
+
+**iOS**: 1.9.0 (3) · **Android**: 1.9.0 (26)
+
+Reliability + parity pass. Zero new features visible in the home screen, but a pile of silent bugs that would have bitten scale are now gone: the chicken's jammed position is deterministic across iOS + Android, the Stripe webhook can't double-process a retry, failed victory writes no longer silently ship the hunter to the leaderboard without a server record, Mapbox flakes no longer spawn power-ups in random positions. Onboarding now requires background location on both platforms, matches what the game actually needs to work when the phone is pocketed.
+
+### Fixed
+
+- **Jammer noise is now deterministic and cross-platform-consistent.** iOS used `Double.random(in:)` and Android used `Math.random()`, non-reproducible and impossible to parity-test. Both platforms now compute the offset from `seededRandom(game.zone.driftSeed ^ floor(nowSeconds))`, bucketed per second. Result: identical jitter on the same `(seed, now)`, tests can pin exact values, hunters can't infer the true position by averaging randomness.
+- **Stripe webhook dedup race.** Two concurrent deliveries of the same `event.id` could both pass the `.get()` check before either `.set()` landed, producing double hunter registrations from one PaymentIntent. Claim is now atomic via `runTransaction`, with a 3-state machine, `claimed` / `in_flight` (returns 409 so Stripe retries with backoff) / `completed` (returns 200), plus a 5-minute stale-claim window that lets a crashed handler be re-claimed.
+- **`addWinner` navigated to victory even on Firestore failure.** Hunter entered the right code, network blipped, client swallowed the error and sent them to the victory screen, server had no record of the win. Both platforms now show a retry alert holding the original `Winner` (same timestamp, same attempt count) so the write can be replayed without drifting analytics. Strings added in EN / FR / NL.
+- **`snapToRoad` silently fell back on 4xx.** A persistent 401 / 404 burnt through all retries before failing; transient 5xx / 429 had no retry at all. Rewritten with typed `NonTransientMapboxError` that breaks out of the retry loop, explicit exponential backoff on transient errors (500 ms / 1 s / 2 s), throw-on-exhaust so Cloud Task retries the whole batch instead of persisting unsnapped coordinates.
+- **Cross-platform `generatePowerUps` order divergence.** iOS and Android filtered `enabledTypes` through their enum declaration order; the TS server preserved the caller's order. Same `itemSeed` picked a different type at the same position on each side, harmless in prod because clients only consume what the server writes, but dangerous the day anyone reintroduces client-side spawning. Both clients now preserve the caller's order, matching the server. Caught by the new parity tests.
+- **iOS `try?` swallowed every `activatePowerUp` error.** Client rendered the effect locally, server never recorded it, `gameConfigStream` had to cancel the optimistic UI on the next tick. Now `do/catch` with `logger.error`, state still reconciled via the stream, but we get the trace in Console.
+- **Android ViewModel stream jobs leaked past the screen.** `BaseMapViewModel` never overrode `onCleared`, so Firestore listeners + location flows kept running after the chicken/hunter map was popped. Override added, cancels `streamJobs` + `notificationJob`. Regression guard in `BaseMapViewModelTeardownTest` drives a real `ViewModelStore.clear()` and asserts subscriber counts drop.
+- **Android `PaymentScreen` force-unwrapped `state.completionError!!` inside an `if (… != null)` guard.** Smart-cast would have saved it, but a recompose-between-check-and-use could crash. Replaced with `state.completionError?.let`.
+- **`MapboxConfigurationException` lookup** of the unused `_ = Date.now` dead assignment removed from `ChickenMap.swift:225`.
+
+### Changed
+
+- **Onboarding now requires "Always" / `ACCESS_BACKGROUND_LOCATION` on both platforms.** Accepting `.authorizedWhenInUse` on iOS or fine-only on Android silently broke `chickenCanSeeHunters` and the `stayInTheZone` radar-ping loop, both assume the chicken keeps broadcasting while the phone is pocketed. All gates tightened to Always: Next button, pager swipe, final "Let's Go" check. Pre-Android-10 fallback in `LocationRepository.hasBackgroundLocationPermission` returns `hasFineLocationPermission` because the permission didn't exist as a separate runtime check back then.
+- **Onboarding permissions seeded synchronously.** `OnboardingViewModel.init` now calls `refreshPermissions()` before the first `StateFlow` emission, so re-installs where Always is already granted don't flash the "Allow Location Access" button at the user. A `DisposableEffect` observes `Lifecycle.Event.ON_RESUME` to refresh again, catches the Android 11+ path where background permission opens the Settings app instead of an in-app dialog.
+- **Onboarding final "Let's Go" gate is defensive.** Re-checks background location, empty-nickname, and profanity even though each per-page gate would have refused earlier. Protects against state drift (back + clear + swipe) that could otherwise ship the user into the game with a bad nickname or a revoked permission.
+- **`testOptions.unitTests.isReturnDefaultValues = true`** added to `android/app/build.gradle.kts` so `android.util.Log` calls inside a `catch` block don't fail unit tests with `Method e not mocked`. Unblocks the Android `HunterMapViewModelBehaviorTest` retry-flow tests.
+
+### Added
+
+- **Cross-platform parity tests** (iOS + Android + Functions). Golden vectors for `seededRandom`, `interpolateZoneCenter`, `deterministicDriftCenter`, `generatePowerUps`, and `applyJammerNoise`, same input tables, same expected output, verbatim across `ios/PoulePartyTests/ParityGoldenTests.swift`, `android/.../ParityGoldenTest.kt`, `functions/test/parity.test.ts`. Covers the `enabledTypes`-order bug above, 1-second jammer buckets, negative seeds, pre-Q fallbacks, `currentRadius > initialRadius` clamp, `2000 → 500` drift jumps, empty / zero-count inputs.
+- **`snapToRoad` retry tests** (`functions/test/mapbox.test.ts`): happy path, transient 429 / 500 / 503 / network error with retry, non-transient 4xx with no retry, exhausted retries, exponential-backoff cadence, 200 m sanity check, URL construction.
+- **Stripe webhook dedup tests** (`functions/test/stripe-webhook-dedup.test.ts`): first-time claim, already-completed skip, in-flight fresh skip, in-flight stale re-claim, 5-minute boundary, custom window, defensive legacy-doc handling.
+- **iOS + Android onboarding tests** for the tightened gate: `.authorizedWhenInUse` now blocked on iOS (regression guard against accidental loosening), `hasFineLocation && !hasBackgroundLocation` blocked on Android, last-page defensive gate, `init`-time permission seeding, lifecycle-refresh simulation.
+- **`TODO.md §7 Stripe ↔ Firestore hand-reconciliation`**, documents the missed-webhook recovery path (a scheduled Cloud Function that queries Stripe's `payment_intent.succeeded` events and reconciles games stuck in `pending_payment`). Not implemented yet; the section spells out exactly what needs to ship when we hit that scale.
+
+### Test coverage
+
+iOS **584 tests** (was 559 at 1.8.1) · Android full suite pass · Functions **74 tests** (was 44 at 1.8.1).
+
+---
+
+## [1.8.2] — 2026-04-22 (Android hotfix — iOS unaffected)
+
+**iOS**: unchanged (still 1.8.1 (2)) · **Android**: 1.8.2 (25)
+
+Android-only emergency release. iOS is unaffected and stays at 1.8.1 (2).
+
+### Fixed
+- **Android — Mapbox crash on every map screen in release builds** (`MapboxConfigurationException: Using MapView … requires providing a valid access token`). R8 resource-shrinking in release builds was stripping `@string/mapbox_access_token` because no Kotlin code referenced it — Mapbox's by-convention lookup is reflection-style and invisible to the shrinker. Surfaced as a 100 % crash on game creation, join, chicken map, and hunter map on any 1.8.1 (24) install. Introduced silently when the Hilt binding that used to inject the token was removed during the April 2026 server-side power-up refactor. Fix: `PoulePartyApp.onCreate()` now sets `MapboxOptions.accessToken = getString(R.string.mapbox_access_token)` — token applied explicitly before any map composable runs, and the `R.string` reference keeps the resource alive through shrinking.
+
+---
+
 ## [1.8.1] — 2026-04-22
 
 **iOS**: 1.8.1 (2) · **Android**: 1.8.1 (24) · **Web**: Terms wording adjusted

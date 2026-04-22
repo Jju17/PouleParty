@@ -281,7 +281,9 @@ struct HomeFeature {
                 return .none
             case let .initialLocationResolved(location):
                 guard let config = state.pendingPlanResult else { return .none }
-                var game = Game(id: uuid().uuidString)
+                // Use a Firestore-style auto-ID so free-game IDs match the
+                // format Cloud Functions produce for Forfait games.
+                var game = Game(id: apiClient.newGameId())
                 game.foundCode = Game.generateFoundCode()
                 game.timing.headStartMinutes = 5
                 game.creatorId = userClient.currentUserId() ?? ""

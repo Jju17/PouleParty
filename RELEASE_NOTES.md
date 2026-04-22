@@ -1,3 +1,123 @@
+# Release 1.9.0
+
+> ⚠️ **Do not paste this "Summary" paragraph into any store field.** Only the blocks explicitly labelled **App Store Connect**, **Google Play Console**, or **App Review Notes** below are store-safe. Apple rejected 1.8.1 (1) because an "Android" mention slipped into What's New, keep the two stores' copy strictly separate.
+
+**Summary (internal, do not paste):** reliability + permission-parity pass. Onboarding now requires "Always" location on both platforms (matches what the game actually needs when the phone is pocketed), failed victory writes show a Retry prompt instead of silently shipping to the leaderboard, and a pile of under-the-hood fixes, jammer determinism, Stripe webhook dedup race, Mapbox retry, cross-platform parity tests (584 iOS / 74 Functions / full Android pass).
+
+---
+
+## 📱 App Store Connect, field "What's New in This Version"
+
+ASC uses **plain text per locale** (switch the language tab in the top-right of the ASC page and paste the matching block). No XML-style tags, tags are Play Console only. **Do NOT mention "Android", "Google Play", or any other platform** (guideline 2.3.10 → straight rejection).
+
+**English (U.S.)**
+
+Onboarding now requires "Always Allow" for location, the Chicken needs it to keep broadcasting position to the Hunters while the phone is in a pocket, which the previous "While Using" setting silently broke. If you previously chose "While Using", the app will prompt you to upgrade on your next game.
+
+Also: a Retry button now appears if the network drops while you're registering the winning code (no more silent "did it save?" moments), and the under-the-hood reliability is tightened across payments, power-up spawning, and background tracking.
+
+**French**
+
+L'onboarding exige désormais l'accès "Toujours autoriser" pour la localisation, la Poule en a besoin pour continuer à partager sa position avec les Chasseurs quand le téléphone est dans une poche, ce que le mode "Pendant l'utilisation" cassait silencieusement. Si tu avais choisi "Pendant l'utilisation", l'app te proposera de passer à "Toujours" à la prochaine partie.
+
+Aussi : un bouton Réessayer apparaît maintenant si le réseau lâche au moment d'enregistrer le code gagnant (fini les doutes sur "ça a bien été sauvé ?"). Plus de la fiabilité en coulisses sur les paiements, le spawn des power-ups et le tracking en arrière-plan.
+
+**Dutch**
+
+Onboarding vereist nu "Altijd toestaan" voor locatie, de Kip heeft het nodig om de positie te blijven delen met Jagers wanneer de telefoon in je zak zit, wat "Tijdens gebruik" stilletjes brak. Als je eerder "Tijdens gebruik" koos, zal de app je vragen om te upgraden bij je volgende partij.
+
+Ook: een Opnieuw-knop verschijnt nu als het netwerk uitvalt terwijl je de winnende code registreert (geen stille "is het opgeslagen?"-momenten meer). Verder veel achtergrond-betrouwbaarheid rond betalingen, power-up-spawning en tracking.
+
+---
+
+## 📱 App Store Connect, field "Promotional Text"
+
+iOS-only field, max **170 characters per locale**, editable anytime without a new submission. Evergreen pitch, reusing the 1.8.1 copy since it still fits.
+
+**English (U.S.)** · 154 chars
+
+Real-world GPS hide-and-seek. One Chicken hides, the rest chase inside a shrinking zone. Power-ups, a 6-char code to share, play with your squad outdoors.
+
+**French** · 157 chars
+
+Cache-cache GPS dans la vraie vie. Une Poule se cache, les autres la chassent dans une zone qui rétrécit. Power-ups, code à 6 caractères, entre potes dehors.
+
+**Dutch** · 158 chars
+
+GPS-verstoppertje in het echte leven. Eén Kip verstopt zich, Jagers zoeken in een krimpende zone op de kaart. Power-ups, 6-cijferige code, buiten met je crew.
+
+---
+
+## 🤖 Google Play Console, field "Release notes"
+
+Separate from App Store. Paste only into Play Console, never into App Store Connect (Apple forbids cross-platform references). Android mentions are fine here.
+
+<en-US>
+Onboarding now requires "Allow all the time" for location, the Chicken needs it to keep broadcasting with the phone in a pocket, which Fine-only silently broke. You'll be prompted to upgrade on your next game.
+
+Also: Retry button if your winning-code submission fails mid-flight, more resilient power-up spawning on network hiccups, screens now tear down cleanly so background Firestore streams don't linger.
+</en-US>
+
+<fr-FR>
+L'onboarding exige désormais la localisation "Toujours autoriser", la Poule en a besoin pour continuer à émettre avec le téléphone en poche, ce que l'accès Fine seul cassait silencieusement. Mise à jour proposée à la prochaine partie.
+
+Aussi : bouton Réessayer si l'enregistrement du code gagnant foire en plein vol, spawn de power-ups plus solide face aux hoquets réseau, écrans proprement nettoyés à la fermeture.
+</fr-FR>
+
+<nl-NL>
+Onboarding vereist nu "Altijd toestaan" voor locatie, de Kip heeft het nodig om te blijven uitzenden met de telefoon in de zak, wat Fine-alleen stilletjes brak. Upgrade-prompt bij je volgende partij.
+
+Ook: Opnieuw-knop als je winnende-code-inzending midden in de lucht faalt, sterker power-up-spawning bij netwerkhikjes, schermen worden netjes opgeruimd.
+</nl-NL>
+
+---
+
+## 📝 App Store Connect, field "App Review Information → Notes"
+
+Mandatory for this build, it touches the paid Stripe flow (webhook hardening, Forfait + Caution unchanged functionally) and tightens the location permission requirement. Paste verbatim:
+
+```
+Thank you for reviewing 1.9.0.
+
+(1) Location permission change. Onboarding now requires "Always Allow" to proceed past the location slide (1.8.1 accepted "While Using"). The game genuinely needs background location, the Chicken role keeps broadcasting its position to the Hunters while the phone is pocketed during an active game, and the stayInTheZone mode has a timer-driven location write that only fires when the app is backgrounded. The existing NSLocationAlwaysAndWhenInUseUsageDescription string (unchanged from 1.8.1 (2)) already explains this scenario with a concrete example ("the Chicken can run through the neighbourhood with the screen off while the Hunters watch the zone follow them on their map. Background location stops as soon as the game ends."). The tightened gate ensures every player reaches the game with a consistent permission state, otherwise the Chicken role silently stops broadcasting once the phone screen locks, which defeats the core mechanic.
+
+(2) Apple Pay, unchanged from 1.8.1 (2). Stripe's PaymentSheet remains the integration point for card, Bancontact, and Apple Pay. The test instructions are verbatim:
+
+To test without real money, apply the promo code APPLE_REVIEW_99 on the Forfait recap screen (99%-off coupon maintained specifically for review). The PaymentSheet opens with the Apple Pay button visible for a negligible amount, you do not need to complete the transaction; the button's presence confirms the integration.
+
+Two paid flows reachable from the main screen:
+ a. Create a paid game: tap "Create Party" → pick the "Forfait" plan → complete the wizard → tap "Pay" on the recap.
+ b. Join a paid game: tap "Start" → enter a 6-character code for a game whose creator chose the "Caution" plan → validate team name → tap "Pay".
+
+If no card is configured in the device's Apple Wallet the Stripe SDK hides the Apple Pay button, this is by design. Apple Pay sandbox cards (https://developer.apple.com/apple-pay/sandbox-testing/) work for opening the Apple Pay sheet.
+
+Merchant ID: merchant.dev.rahier.pouleparty (registered in our Apple Developer account).
+Entitlement: com.apple.developer.in-app-payments is enabled.
+Code reference: ios/PouleParty/Features/Payment/PaymentFeature.swift, PaymentSheet.Configuration.applePay = .init(merchantId: "merchant.dev.rahier.pouleparty", merchantCountryCode: "BE").
+
+(3) What changed in this build (user-visible):
+- Location permission now requires "Always" at onboarding (see point 1).
+- Retry prompt if a winning-code submission fails due to connection loss (previously the client silently navigated to the leaderboard without a server record).
+
+Under-the-hood reliability (not visible in QA, mentioned for completeness since the webhook path was touched):
+- Stripe webhook deduplication hardened (atomic Firestore transaction, 3-state claim machine, 5-minute stale-claim window). Behaviour is unchanged in the happy path; the fix only affects concurrent duplicate deliveries.
+- Mapbox road-snap now retries transient 5xx/429 with exponential backoff and bails on persistent 4xx without burning retries.
+- Jammer noise is now deterministic (seeded from the game's driftSeed bucketed per second) instead of Double.random / Math.random.
+
+We can provide a screen recording on request.
+```
+
+---
+
+## Version Info (internal)
+
+| Platform | Version | Build |
+|---|---|---|
+| iOS | 1.9.0 | 3 |
+| Android | 1.9.0 | 26 |
+
+---
+
 # Beta testers announcement (WhatsApp)
 
 🐔🎉 **Poule Party est dispo sur l'App Store !**
@@ -16,31 +136,88 @@ Téléchargez, organisez une partie et faites péter vos retours 🏃💨🐔
 
 ---
 
+# Release 1.8.2 (Android hotfix)
+
+> ⚠️ **Do not paste this "Summary" paragraph into any store field.** Only the blocks explicitly labelled **Google Play Console** below are store-safe. **Do not submit anything new to Apple** for 1.8.2 — iOS is not affected by this bug and stays on 1.8.1 (2).
+
+**Summary (internal, do not paste):** emergency fix for the Mapbox crash that 1.8.1 (24) had on every map screen in release builds. Android-only.
+
+---
+
+## 🤖 Google Play Console — field "Release notes"
+
+Android-only, paste into Play Console. No App Store equivalent (iOS keeps 1.8.1).
+
+<en-US>
+Fix: the map screens crashed on first open in release builds. Sorry for the wait — this rebuild is a clean hotfix, nothing else changed.
+</en-US>
+
+<fr-FR>
+Correctif : les écrans avec la carte crashaient à l'ouverture. Désolé pour l'attente — ce rebuild est un simple hotfix, rien d'autre ne change.
+</fr-FR>
+
+<nl-NL>
+Fix: de kaartschermen crashten bij het openen. Sorry voor het wachten — deze rebuild is enkel een hotfix, verder verandert er niets.
+</nl-NL>
+
+---
+
+## Version Info (internal)
+
+| Platform | Version | Build |
+|---|---|---|
+| iOS | unchanged (1.8.1) | unchanged (2) |
+| Android | 1.8.2 | 25 |
+
+---
+
 # Release 1.8.1
 
-## What's New
+> ⚠️ **Do not paste this "Summary" paragraph into any store field.** Only the blocks explicitly labelled **App Store Connect**, **Google Play Console**, or **App Review Notes** below are store-safe. Apple rejected a previous submission because this summary was pasted into the App Store "What's New" field — it mentioned "Android" which Apple forbids in App Store copy (guideline 2.3.10).
 
-A proper success moment after you pay — the app now celebrates the new game with confetti, the game code ready to share with a single tap, and a live countdown to start.
+**Summary (internal, do not paste):** a proper success moment after you pay — confetti, code ready to share, live countdown.
 
 ---
 
-## App Store "What's New" (copy-paste)
+## 📱 App Store Connect — field "What's New in This Version"
 
-<en>
+ASC uses **plain text per locale** (switch the language tab in the top-right of the ASC page and paste the matching block). No XML-style tags — tags are Play Console only.
+
+**English (U.S.)**
+
 After you create a paid game or register with a deposit, you finally get a proper success screen — confetti, the game code ready to share, a live countdown to start, and a status that updates in real time as soon as the payment is confirmed.
-</en>
 
-<fr>
+**French**
+
 Quand tu crées une partie payante ou t'inscris avec une caution, tu obtiens enfin un vrai écran de confirmation — confettis, code de partie prêt à partager, countdown live jusqu'au start, et un statut qui se met à jour en direct dès que le paiement est confirmé.
-</fr>
 
-<nl>
+**Dutch**
+
 Na een betaalde aanmaak of registratie met waarborg krijg je eindelijk een echt bevestigingsscherm — confetti, spelcode klaar om te delen, live aftelling tot de start, en een status die live bijwerkt zodra je betaling bevestigd is.
-</nl>
 
 ---
 
-## Google Play Release Notes (copy-paste format)
+## 📱 App Store Connect — field "Promotional Text"
+
+iOS-only field, max **170 characters per locale**, editable anytime without a new submission. Evergreen pitch — swap for a campaign without resubmitting. Plain text, no tags.
+
+**English (U.S.)** · 154 chars
+
+Real-world GPS hide-and-seek. One Chicken hides, the rest chase inside a shrinking zone. Power-ups, a 6-char code to share, play with your squad outdoors.
+
+**French** · 157 chars
+
+Cache-cache GPS dans la vraie vie. Une Poule se cache, les autres la chassent dans une zone qui rétrécit. Power-ups, code à 6 caractères, entre potes dehors.
+
+**Dutch** · 158 chars
+
+GPS-verstoppertje in het echte leven. Eén Kip verstopt zich, Jagers zoeken in een krimpende zone op de kaart. Power-ups, 6-cijferige code, buiten met je crew.
+
+---
+
+## 🤖 Google Play Console — field "Release notes"
+
+Separate from App Store. Paste only into Play Console, never into App Store Connect (Apple forbids "Android" references).
 
 <en-US>
 After a paid game creation or deposit registration, a full success screen with confetti, the game code ready to share, a live countdown, and a status that updates in real time as soon as the payment is confirmed.
@@ -56,18 +233,9 @@ Na een betaalde aanmaak of registratie met waarborg: een volledig succesoverzich
 
 ---
 
-## Version Info
+## 📝 App Store Connect — field "App Review Information → Notes"
 
-| Platform | Version | Build |
-|---|---|---|
-| iOS | 1.8.1 | 2 |
-| Android | 1.8.1 | 24 |
-
----
-
-## App Review Notes (App Store Connect — Version 1.8.1)
-
-Paste verbatim in the "App Review Information → Notes" field for version 1.8.1 before resubmitting:
+For the 1.8.1 **resubmit** (after the 2.3.10 / 2.1 / 5.1.1(ii) rejection on build 1). Paste verbatim:
 
 ```
 Thank you for the review.
@@ -78,7 +246,9 @@ Thank you for the review.
   a. Create a paid game — from the main screen tap "Create Party", then on the plan-selection sheet pick "Forfait" (the middle paid plan), complete the short wizard and tap "Pay" on the recap step. The Stripe PaymentSheet opens and, on a device with a configured Apple Pay wallet, an Apple Pay button is shown at the top of the sheet next to card and Bancontact.
   b. Join a paid game — from the main screen tap "Start", enter a 6-character code for a game whose creator chose the "Caution" (deposit) plan. After validating your team name, tap "Pay". The same PaymentSheet opens and the Apple Pay button is shown if the device wallet is configured.
 
-If no card is set up in the device's Apple Wallet the Stripe SDK hides the Apple Pay button — this is by design and is why the button may not be visible on a review device that does not have a wallet configured.
+To test without real money: apply the promo code APPLE_REVIEW_99 on the Forfait recap screen (99%-off coupon we created specifically for review). The PaymentSheet still opens with the Apple Pay button visible for a negligible amount — you do not need to complete the transaction, the button's presence confirms the integration.
+
+If no card is set up in the device's Apple Wallet the Stripe SDK hides the Apple Pay button — this is by design. Apple Pay sandbox cards (https://developer.apple.com/apple-pay/sandbox-testing/) do work for opening the Apple Pay sheet.
 
 Merchant ID: merchant.dev.rahier.pouleparty (registered in our Apple Developer account).
 Entitlement: com.apple.developer.in-app-payments is enabled.
@@ -93,47 +263,40 @@ Test account for QA is available on request.
 
 ---
 
-## App Store "What's New" — 1.8.1 (resubmit — use ONLY these iOS-specific texts, never paste the Google Play block into App Store Connect)
+## Version Info (internal)
 
-<en>
-After you create a paid game or register with a deposit, you finally get a proper success screen — confetti, the game code ready to share, a live countdown to start, and a status that updates in real time as soon as the payment is confirmed.
-</en>
-
-<fr>
-Quand tu crées une partie payante ou t'inscris avec une caution, tu obtiens enfin un vrai écran de confirmation — confettis, code de partie prêt à partager, countdown live jusqu'au start, et un statut qui se met à jour en direct dès que le paiement est confirmé.
-</fr>
-
-<nl>
-Na een betaalde aanmaak of registratie met waarborg krijg je eindelijk een echt bevestigingsscherm — confetti, spelcode klaar om te delen, live aftelling tot de start, en een status die live bijwerkt zodra je betaling bevestigd is.
-</nl>
+| Platform | Version | Build |
+|---|---|---|
+| iOS | 1.8.1 | 2 |
+| Android | 1.8.1 | 24 |
 
 ---
 
 # Release 1.8.0
 
-## What's New
+> ⚠️ **Do not paste the "Summary" paragraph below into any store field.** Only the blocks explicitly labelled **App Store Connect** and **Google Play Console** are store-safe.
 
-Privacy, moderation and safety pass: you can now report a player straight from the leaderboard, a reminder to play safely appears before your first game, and account deletion now fully wipes your profile. Background location handling is upgraded to meet the latest Android and iOS requirements.
+**Summary (internal, do not paste):** privacy, moderation and safety pass — report a player from the leaderboard, safety reminder before first game, full account deletion, and background location now matches the latest mobile platform requirements.
 
 ---
 
-## App Store "What's New" (copy-paste)
+## 📱 App Store Connect — field "What's New in This Version"
 
-<en>
+**English (U.S.)**
+
 Report a player directly from the leaderboard, new safety tips before your first game, and account deletion now fully removes your profile. Background location handling updated to match the latest iOS requirements.
-</en>
 
-<fr>
+**French**
+
 Signale un joueur directement depuis le classement, nouveaux conseils de sécurité avant ta première partie, et la suppression de compte efface maintenant tout ton profil. Gestion de la localisation en arrière-plan mise à jour pour les dernières exigences d'iOS.
-</fr>
 
-<nl>
+**Dutch**
+
 Rapporteer een speler rechtstreeks vanuit het klassement, nieuwe veiligheidstips vóór je eerste spel, en het verwijderen van je account wist nu ook volledig je profiel. Achtergrondlocatie bijgewerkt volgens de nieuwste iOS-vereisten.
-</nl>
 
 ---
 
-## Google Play Release Notes (copy-paste format)
+## 🤖 Google Play Console — field "Release notes"
 
 <en-US>
 Report a player from the leaderboard, new safety tips before your first game, and account deletion now fully wipes your profile. Background location handling upgraded for Android 14+.
@@ -149,7 +312,7 @@ Rapporteer een speler vanuit het klassement, nieuwe veiligheidstips vóór je ee
 
 ---
 
-## Version Info
+## Version Info (internal)
 
 | Platform | Version | Build |
 |---|---|---|

@@ -17,6 +17,7 @@ import com.google.firebase.auth.FirebaseAuth
 import dev.rahier.pouleparty.ui.gamelogic.CountdownPhase
 import dev.rahier.pouleparty.ui.gamelogic.CountdownResult
 import dev.rahier.pouleparty.ui.gamelogic.PlayerRole
+import dev.rahier.pouleparty.ui.gamelogic.applyJammerNoise
 import dev.rahier.pouleparty.ui.gamelogic.checkGameOverByTime
 import dev.rahier.pouleparty.ui.gamelogic.checkZoneStatus
 import dev.rahier.pouleparty.ui.gamelogic.detectNewWinners
@@ -311,15 +312,10 @@ class ChickenMapViewModel @Inject constructor(
                 val currentGame = _uiState.value.game
                 if (currentGame.isRadarPingActive
                     && Date().time - lastWrite.time >= AppConstants.LOCATION_THROTTLE_MS) {
-                    var sendLatLng = latLng
-                    // Jammer: add +/-200m random noise
-                    if (currentGame.isJammerActive) {
-                        val latNoise = (Math.random() - 0.5) * AppConstants.JAMMER_NOISE_DEGREES
-                        val lonNoise = (Math.random() - 0.5) * AppConstants.JAMMER_NOISE_DEGREES
-                        sendLatLng = Point.fromLngLat(
-                            latLng.longitude() + lonNoise,
-                            latLng.latitude() + latNoise
-                        )
+                    val sendLatLng = if (currentGame.isJammerActive) {
+                        applyJammerNoise(latLng, currentGame.zone.driftSeed)
+                    } else {
+                        latLng
                     }
                     firestoreRepository.setChickenLocation(gameId, sendLatLng)
                     lastWrite = Date()
@@ -344,17 +340,13 @@ class ChickenMapViewModel @Inject constructor(
             _uiState.update { it.copy(circleCenter = latLng, userLocation = latLng) }
 
             // Throttle Firestore writes (skip when invisible)
+            val liveGame = _uiState.value.game
             if (Date().time - lastWrite.time >= AppConstants.LOCATION_THROTTLE_MS
-                && !_uiState.value.game.isChickenInvisible) {
-                var sendLatLng = latLng
-                // Jammer: add +/-200m random noise to position
-                if (_uiState.value.game.isJammerActive) {
-                    val latNoise = (Math.random() - 0.5) * AppConstants.JAMMER_NOISE_DEGREES
-                    val lonNoise = (Math.random() - 0.5) * AppConstants.JAMMER_NOISE_DEGREES
-                    sendLatLng = Point.fromLngLat(
-                        latLng.longitude() + lonNoise,
-                        latLng.latitude() + latNoise
-                    )
+                && !liveGame.isChickenInvisible) {
+                val sendLatLng = if (liveGame.isJammerActive) {
+                    applyJammerNoise(latLng, liveGame.zone.driftSeed)
+                } else {
+                    latLng
                 }
                 firestoreRepository.setChickenLocation(gameId, sendLatLng)
                 lastWrite = Date()
@@ -380,14 +372,10 @@ class ChickenMapViewModel @Inject constructor(
             // stayInTheZone today, but future-proof), it wins over radar ping.
             if (currentGame.isChickenInvisible) continue
             val latLng = locationRepository.getLastLocation() ?: continue
-            var sendLatLng = latLng
-            if (currentGame.isJammerActive) {
-                val latNoise = (Math.random() - 0.5) * AppConstants.JAMMER_NOISE_DEGREES
-                val lonNoise = (Math.random() - 0.5) * AppConstants.JAMMER_NOISE_DEGREES
-                sendLatLng = Point.fromLngLat(
-                    latLng.longitude() + lonNoise,
-                    latLng.latitude() + latNoise
-                )
+            val sendLatLng = if (currentGame.isJammerActive) {
+                applyJammerNoise(latLng, currentGame.zone.driftSeed)
+            } else {
+                latLng
             }
             firestoreRepository.setChickenLocation(gameId, sendLatLng)
         }

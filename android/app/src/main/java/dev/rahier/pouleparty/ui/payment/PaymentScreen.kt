@@ -110,11 +110,11 @@ fun PaymentScreen(
         }
     }
 
-    if (state.completionError != null) {
+    state.completionError?.let { error ->
         AlertDialog(
             onDismissRequest = { viewModel.onDismissError() },
             title = { Text("Paiement échoué") },
-            text = { Text(state.completionError!!) },
+            text = { Text(error) },
             confirmButton = {
                 TextButton(onClick = { viewModel.onDismissError() }) { Text("OK") }
             },
