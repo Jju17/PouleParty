@@ -20,8 +20,13 @@ private var startedGameMock: Game {
 @MainActor
 struct HunterMapFeatureTests {
 
-    @Test func newLocationFetchedUpdatesMapCircle() async {
-        let store = TestStore(initialState: HunterMapFeature.State(game: .mock)) {
+    @Test func newLocationFetchedUpdatesMapCircleInFollowTheChicken() async {
+        // In `followTheChicken`, the zone center IS the chicken's live
+        // position, so `chickenLocationStream` → `.newLocationFetched`
+        // must move `mapCircle.center`.
+        var game = Game.mock
+        game.gameMode = .followTheChicken
+        let store = TestStore(initialState: HunterMapFeature.State(game: game)) {
             HunterMapFeature()
         }
 
@@ -32,6 +37,33 @@ struct HunterMapFeatureTests {
                 radius: CLLocationDistance($0.radius)
             )
         }
+    }
+
+    // Regression test for "inside the zone but flagged outside" on iOS:
+    // a stray chicken broadcast (radar ping, or a stale
+    // `chickenLocations/latest` doc replayed by the Firestore listener on
+    // connect) used to overwrite `mapCircle.center` with the chicken's
+    // position in `stayInTheZone` mode. The zone check then fired against
+    // the chicken's position rather than the real drifted center and
+    // flagged the hunter as "outside" even standing inside the visible
+    // circle. Fix lives in `HunterMap.swift:newLocationFetched`.
+    @Test func newLocationFetchedDoesNotMoveMapCircleInStayInTheZone() async {
+        var game = Game.mock
+        game.gameMode = .stayInTheZone
+        let driftCenter = CLLocationCoordinate2D(latitude: 50.85, longitude: 4.35)
+        var state = HunterMapFeature.State(game: game)
+        state.mapCircle = CircleOverlay(center: driftCenter, radius: 1500)
+        state.radius = 1500
+
+        let store = TestStore(initialState: state) {
+            HunterMapFeature()
+        }
+
+        // A chicken broadcast arrives 2 km away — this MUST NOT become
+        // the zone center in stayInTheZone.
+        let farAwayChicken = CLLocationCoordinate2D(latitude: 50.87, longitude: 4.37)
+        await store.send(.internal(.newLocationFetched(farAwayChicken)))
+        // No state change asserted ⇒ `mapCircle` stays at `driftCenter`.
     }
 
     @Test func gameConfigUpdatedUpdatesState() async {

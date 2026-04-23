@@ -540,4 +540,140 @@ class HunterMapViewModelBehaviorTest {
         io.mockk.coVerify(exactly = 0) { firestoreRepository.addWinner(any(), any()) }
         assertFalse(vm.uiState.value.shouldNavigateToVictory)
     }
+
+    // MARK:, Zone-center overwrite regression (bug 2)
+    //
+    // In `stayInTheZone`, a stray chicken broadcast (radar ping, or a stale
+    // `chickenLocations/latest` doc replayed by Firestore on listener
+    // connect) used to overwrite `circleCenter` with the chicken's
+    // position. The zone check then fired against the chicken's position
+    // rather than the real drifted center and flagged the hunter as
+    // "outside" even standing inside the visible circle. Fix lives in
+    // `HunterMapViewModel.streamChickenLocation`.
+
+    @Test
+    fun `chicken broadcast in stayInTheZone does NOT move circleCenter`() {
+        val now = System.currentTimeMillis()
+        val game = dev.rahier.pouleparty.model.Game(
+            id = "test-id",
+            gameMode = dev.rahier.pouleparty.model.GameMod.STAY_IN_THE_ZONE.firestoreValue,
+            status = dev.rahier.pouleparty.model.GameStatus.IN_PROGRESS.firestoreValue,
+            timing = dev.rahier.pouleparty.model.Timing(
+                start = com.google.firebase.Timestamp(java.util.Date(now - 60_000)),
+                end = com.google.firebase.Timestamp(java.util.Date(now + 3_600_000))
+            ),
+            zone = dev.rahier.pouleparty.model.Zone(
+                center = com.google.firebase.firestore.GeoPoint(50.8500, 4.3500),
+                finalCenter = com.google.firebase.firestore.GeoPoint(50.8501, 4.3501),
+                radius = 1500.0
+            )
+        )
+        io.mockk.coEvery { firestoreRepository.getConfig(any()) } returns game
+        // Emit the game via gameConfigFlow so streamGameConfig seeds the
+        // drifted initial circleCenter — otherwise circleCenter stays
+        // null forever in stayInTheZone and the assertion is meaningless.
+        io.mockk.every { firestoreRepository.gameConfigFlow(any()) } returns
+            kotlinx.coroutines.flow.flowOf(game)
+
+        // Emit a chicken position 2 km away — this MUST NOT become the
+        // zone center in stayInTheZone.
+        val strayChicken = com.mapbox.geojson.Point.fromLngLat(4.3700, 50.8700)
+        io.mockk.every { firestoreRepository.chickenLocationFlow(any()) } returns
+            kotlinx.coroutines.flow.flowOf(strayChicken)
+
+        val vm = createViewModel()
+        testDispatcher.scheduler.runCurrent() // let init launch children
+        // The VM's 1 Hz game-timer loop means `advanceUntilIdle` would run
+        // forever; only advance enough virtual time for the single chicken
+        // emit + the gameConfig initial pass to land in state.
+        testDispatcher.scheduler.advanceTimeBy(100)
+        testDispatcher.scheduler.runCurrent()
+
+        val centerNow = vm.uiState.value.circleCenter
+        assertNotNull("circleCenter should be initialised by gameConfigFlow", centerNow)
+        assertFalse(
+            "circleCenter was overwritten by a stray chicken broadcast in stayInTheZone",
+            centerNow?.latitude() == strayChicken.latitude() &&
+                centerNow?.longitude() == strayChicken.longitude()
+        )
+    }
+
+    @Test
+    fun `chicken broadcast in followTheChicken DOES move circleCenter`() {
+        val now = System.currentTimeMillis()
+        val game = dev.rahier.pouleparty.model.Game(
+            id = "test-id",
+            gameMode = dev.rahier.pouleparty.model.GameMod.FOLLOW_THE_CHICKEN.firestoreValue,
+            status = dev.rahier.pouleparty.model.GameStatus.IN_PROGRESS.firestoreValue,
+            timing = dev.rahier.pouleparty.model.Timing(
+                start = com.google.firebase.Timestamp(java.util.Date(now - 60_000)),
+                end = com.google.firebase.Timestamp(java.util.Date(now + 3_600_000))
+            ),
+            zone = dev.rahier.pouleparty.model.Zone(
+                center = com.google.firebase.firestore.GeoPoint(50.8500, 4.3500),
+                radius = 1500.0
+            )
+        )
+        io.mockk.coEvery { firestoreRepository.getConfig(any()) } returns game
+
+        val chickenPos = com.mapbox.geojson.Point.fromLngLat(4.3700, 50.8700)
+        io.mockk.every { firestoreRepository.chickenLocationFlow(any()) } returns
+            kotlinx.coroutines.flow.flowOf(chickenPos)
+
+        val vm = createViewModel()
+        testDispatcher.scheduler.runCurrent()
+        testDispatcher.scheduler.advanceTimeBy(100)
+        testDispatcher.scheduler.runCurrent()
+
+        val centerNow = vm.uiState.value.circleCenter
+        assertEquals(chickenPos.latitude(), centerNow?.latitude())
+        assertEquals(chickenPos.longitude(), centerNow?.longitude())
+    }
+
+    // MARK:, First-write throttle regression (bug 3)
+    //
+    // The initial `setHunterLocation` used to be gated behind
+    // `locationRepository.getLastLocation()` returning a cached fix. If
+    // it returned null, the throttle was already armed at `Date.now` and
+    // the FIRST coord from `locationFlow` was blocked for 5 s. Result:
+    // in a small 2-device test, the hunter marker stayed invisible on
+    // the chicken's map for the first several seconds even though the
+    // hunter was moving. Fix: keep `lastWrite` at epoch until the first
+    // successful write, so the first `locationFlow` emit triggers an
+    // unthrottled write.
+    @Test
+    fun `first locationFlow emit writes immediately when getLastLocation is null`() {
+        val now = System.currentTimeMillis()
+        val game = dev.rahier.pouleparty.model.Game(
+            id = "test-id",
+            chickenCanSeeHunters = true,
+            gameMode = dev.rahier.pouleparty.model.GameMod.FOLLOW_THE_CHICKEN.firestoreValue,
+            status = dev.rahier.pouleparty.model.GameStatus.IN_PROGRESS.firestoreValue,
+            timing = dev.rahier.pouleparty.model.Timing(
+                start = com.google.firebase.Timestamp(java.util.Date(now - 60_000)),
+                end = com.google.firebase.Timestamp(java.util.Date(now + 3_600_000))
+            ),
+            zone = dev.rahier.pouleparty.model.Zone(
+                center = com.google.firebase.firestore.GeoPoint(50.8500, 4.3500),
+                radius = 1500.0
+            )
+        )
+        io.mockk.coEvery { firestoreRepository.getConfig(any()) } returns game
+        io.mockk.coEvery { locationRepository.getLastLocation() } returns null
+
+        val firstPoint = com.mapbox.geojson.Point.fromLngLat(4.3500, 50.8500)
+        io.mockk.every { locationRepository.locationFlow() } returns
+            kotlinx.coroutines.flow.flowOf(firstPoint)
+
+        val vm = createViewModel()
+        testDispatcher.scheduler.runCurrent()
+        // Crucially DON'T advance past the 5 s throttle window — the
+        // whole point of the fix is that the first emit is unthrottled.
+        testDispatcher.scheduler.advanceTimeBy(100)
+        testDispatcher.scheduler.runCurrent()
+
+        io.mockk.coVerify(atLeast = 1) {
+            firestoreRepository.setHunterLocation(eq("test-id"), any(), eq(firstPoint))
+        }
+    }
 }

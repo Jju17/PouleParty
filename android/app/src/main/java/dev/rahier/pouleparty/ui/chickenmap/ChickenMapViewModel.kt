@@ -329,16 +329,40 @@ class ChickenMapViewModel @Inject constructor(
         // filter means a stationary chicken would never emit a write here, even
         // during an active ping.
 
-        // Send current location immediately on connect
+        // `circleCenter` represents the zone center. In followTheChicken it
+        // follows the chicken's GPS; in stayInTheZone the zone drifts
+        // deterministically and must NOT be moved by the chicken's own
+        // location updates. iOS already gated this on `newLocationFetched`,
+        // Android was not — visible as the zone visually following the
+        // chicken even in stayInTheZone, and zone-check firing against
+        // the chicken's position rather than the real drifted zone.
+        val zoneFollowsChicken = _uiState.value.game.gameModEnum != GameMod.STAY_IN_THE_ZONE
+
+        // Send current location immediately if we have a cached fix. If we
+        // don't, lastWrite stays at epoch so the very first coord emitted
+        // by locationFlow is broadcast immediately — otherwise hunters
+        // see no chicken puck for the first 5 s + however long the 10 m
+        // distance filter takes to produce the second coord.
+        var lastWrite = Date(0L)
         locationRepository.getLastLocation()?.let { latLng ->
-            _uiState.update { it.copy(circleCenter = latLng, userLocation = latLng) }
+            _uiState.update {
+                it.copy(
+                    circleCenter = if (zoneFollowsChicken) latLng else it.circleCenter,
+                    userLocation = latLng,
+                )
+            }
             firestoreRepository.setChickenLocation(gameId, latLng)
+            lastWrite = Date()
         }
 
-        var lastWrite = Date()
         var wasInvisible = false
         locationRepository.locationFlow().collect { latLng ->
-            _uiState.update { it.copy(circleCenter = latLng, userLocation = latLng) }
+            _uiState.update {
+                it.copy(
+                    circleCenter = if (zoneFollowsChicken) latLng else it.circleCenter,
+                    userLocation = latLng,
+                )
+            }
 
             // Throttle Firestore writes (skip when invisible)
             val liveGame = _uiState.value.game

@@ -427,9 +427,21 @@ class HunterMapViewModel @Inject constructor(
         val delayMs = game.hunterStartDate.time - System.currentTimeMillis()
         if (delayMs > 0) delay(delayMs)
         firestoreRepository.chickenLocationFlow(gameId).collect { location ->
-            if (location != null) {
-                _uiState.update { it.copy(circleCenter = location) }
-            }
+            if (location == null) return@collect
+            // Treating the chicken's broadcasted position as the zone center
+            // is correct in followTheChicken, but WRONG in stayInTheZone:
+            // the zone center there is the deterministic drifted center
+            // (set in streamGameConfig's initial pass and then advanced by
+            // processRadiusUpdate on each shrink). A stray chicken broadcast
+            // during a radar ping, or a stale chickenLocations/latest doc
+            // replayed on listener connect, must not overwrite it —
+            // otherwise the hunter's zone check fires against the chicken's
+            // position rather than the real zone and flags the hunter as
+            // "outside" even when they're standing inside the visible
+            // circle. Mirrors the gate iOS HunterMap applies on
+            // `.newLocationFetched`.
+            if (_uiState.value.game.gameModEnum == GameMod.STAY_IN_THE_ZONE) return@collect
+            _uiState.update { it.copy(circleCenter = location) }
         }
     }
 
@@ -443,15 +455,22 @@ class HunterMapViewModel @Inject constructor(
         val delayMs = game.hunterStartDate.time - System.currentTimeMillis()
         if (delayMs > 0) delay(delayMs)
 
-        // Send current location immediately
+        // Send current location immediately if we have a cached fix.
+        // If we don't, lastWrite stays at epoch so the very first coord
+        // emitted by locationFlow triggers an unthrottled write —
+        // otherwise the hunter's marker stays invisible on the chicken's
+        // map for up to 5 s + however long FusedLocationProvider's 10 m
+        // setMinUpdateDistanceMeters takes to produce the second coord,
+        // which in a small 2-device test can be long enough to look
+        // "stuck".
+        var lastWrite = Date(0L)
         locationRepository.getLastLocation()?.let { point ->
             _uiState.update { it.copy(userLocation = point) }
             if (shouldWrite) {
                 firestoreRepository.setHunterLocation(gameId, hunterId, point)
+                lastWrite = Date()
             }
         }
-
-        var lastWrite = Date()
         locationRepository.locationFlow().collect { point ->
             _uiState.update { it.copy(userLocation = point) }
             if (shouldWrite && Date().time - lastWrite.time >= AppConstants.LOCATION_THROTTLE_MS) {

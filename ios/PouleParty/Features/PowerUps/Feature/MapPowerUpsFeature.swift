@@ -21,11 +21,32 @@ struct MapPowerUpsFeature {
         var lastActivatedType: PowerUp.PowerUpType? = nil
         var notification: String? = nil
         var showInventory: Bool = false
+        /// IDs of power-ups for which a collect transaction is currently
+        /// in flight. The parent reducer checks this before dispatching a
+        /// new attempt so a 1 Hz timer tick can't spam the server with
+        /// N duplicate transactions while the user stands inside the disc.
+        /// Android has carried the equivalent `collectingPowerUpIds` since
+        /// the power-up rollout; iOS picked up the same guard at 1.11.1.
+        var collectingIds: Set<String> = []
     }
 
     enum Action {
         /// User tapped the Activate button in the inventory sheet.
         case activateTapped(PowerUp)
+        /// Atomic check-and-claim: parent calls this in the same reducer
+        /// pass that kicks off the Firestore transaction. If the id is
+        /// already in `collectingIds`, the parent bails instead of firing
+        /// a duplicate write.
+        case collectStarted(String)
+        /// Transaction succeeded — removes the id from `collectingIds` and
+        /// shows a "Collected: <name>!" banner so the user has the same
+        /// feedback Android already gives (`BaseMapViewModel.notifyPowerUp`).
+        case collectSucceeded(PowerUp)
+        /// Transaction failed — removes the id from `collectingIds` and
+        /// shows a "Failed to collect power-up" banner. Matches the
+        /// Android toast path so any future rule / network regression is
+        /// visible to the player instead of being swallowed in logs.
+        case collectFailed(PowerUp)
         /// Parent hands in the filtered lists after a Firestore stream tick.
         case dataUpdated(available: [PowerUp], collected: [PowerUp])
         case delegate(Delegate)
@@ -51,6 +72,21 @@ struct MapPowerUpsFeature {
                 state.notification = "Activated: \(powerUp.type.displayName)!"
                 state.lastActivatedType = powerUp.type
                 return .send(.delegate(.activated(powerUp)))
+
+            case let .collectStarted(id):
+                state.collectingIds.insert(id)
+                return .none
+
+            case let .collectSucceeded(powerUp):
+                state.collectingIds.remove(powerUp.id)
+                state.notification = "Collected: \(powerUp.type.displayName)!"
+                state.lastActivatedType = powerUp.type
+                return .none
+
+            case let .collectFailed(powerUp):
+                state.collectingIds.remove(powerUp.id)
+                state.notification = "Failed to collect power-up"
+                return .none
 
             case let .dataUpdated(available, collected):
                 state.available = available

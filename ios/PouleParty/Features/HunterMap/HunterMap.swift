@@ -258,16 +258,36 @@ struct HunterMapFeature {
                 let collected = all.filter { $0.collectedBy == hunterId && $0.activatedAt == nil }
                 return .send(.powerUps(.dataUpdated(available: available, collected: collected)))
             case let .internal(.powerUpCollected(powerUp)):
+                // Atomic dedup: at 1 Hz a stationary hunter would otherwise
+                // fire N duplicate transactions while the first one is still
+                // in flight. The reducer runs synchronously, so check-and-
+                // insert in the same pass is race-free — subsequent ticks
+                // for the same id short-circuit until `collectSucceeded` /
+                // `collectFailed` clears the entry.
+                guard !state.powerUps.collectingIds.contains(powerUp.id) else { return .none }
+                state.powerUps.collectingIds.insert(powerUp.id)
                 let gameId = state.game.id
                 let hunterId = state.hunterId
-                return .run { [analyticsClient] _ in
+                let distance: Double? = state.userLocation.map { userLoc in
+                    CLLocation(latitude: userLoc.latitude, longitude: userLoc.longitude)
+                        .distance(from: CLLocation(latitude: powerUp.coordinate.latitude, longitude: powerUp.coordinate.longitude))
+                }
+                let distanceLog = distance.map { String(format: "%.1fm", $0) } ?? "unknown"
+                logger.info("Collecting power-up id=\(powerUp.id) type=\(powerUp.type.rawValue) distance=\(distanceLog) hunterId=\(hunterId)")
+                return .run { [analyticsClient] send in
                     do {
                         try await apiClient.collectPowerUp(gameId, powerUp.id, hunterId)
                         analyticsClient.powerUpCollected(type: powerUp.type.rawValue, role: "hunter")
+                        logger.info("Collected power-up id=\(powerUp.id) type=\(powerUp.type.rawValue)")
+                        await send(.powerUps(.collectSucceeded(powerUp)))
                     } catch {
-                        logger.error("Failed to collect power-up: \(error)")
+                        logger.error("Failed to collect power-up id=\(powerUp.id) type=\(powerUp.type.rawValue): \(String(describing: error))")
+                        await send(.powerUps(.collectFailed(powerUp)))
                     }
+                    try await clock.sleep(for: .seconds(2))
+                    await send(.powerUps(.notificationCleared))
                 }
+                .cancellable(id: CancelID.powerUpNotificationDismiss, cancelInFlight: true)
             case let .powerUps(.delegate(.activated(powerUp))):
                 let gameId = state.game.id
                 let duration = powerUp.type.durationSeconds ?? 0
@@ -410,10 +430,25 @@ struct HunterMapFeature {
             case .challenges:
                 return .none
             case let .internal(.newLocationFetched(location)):
-                state.mapCircle = CircleOverlay(
-                    center: location,
-                    radius: CLLocationDistance(state.radius)
-                )
+                // `location` here is the chicken's broadcasted position —
+                // `chickenLocationStream` is the only producer of this action.
+                // Treating it as the zone center is correct in
+                // `followTheChicken`, but wrong in `stayInTheZone`: the zone
+                // center there is the deterministic drifted center computed
+                // in `.gameUpdated` / `processRadiusUpdate`. A stray chicken
+                // broadcast (radar-ping write, or a stale
+                // `chickenLocations/latest` doc the listener replays on
+                // connect) must not overwrite it — otherwise the hunter's
+                // zone check fires against the chicken's position rather
+                // than the real zone and flags the hunter as "outside"
+                // even when they're standing inside the visible circle.
+                // Mirrors the gate in `ChickenMap.swift:newLocationFetched`.
+                if state.game.gameMode != .stayInTheZone {
+                    state.mapCircle = CircleOverlay(
+                        center: location,
+                        radius: CLLocationDistance(state.radius)
+                    )
+                }
                 return .none
             case .view(.onTask):
                 let rawUid = userClient.currentUserId()
@@ -520,18 +555,27 @@ struct HunterMapFeature {
                         if delay > 0 {
                             try await clock.sleep(for: .seconds(delay))
                         }
-                        // Send current location immediately
+                        // Send current location immediately if we have a
+                        // cached fix. If we don't, `lastWrite` stays at
+                        // `.distantPast` so the first coordinate emitted by
+                        // `startTracking()` triggers an unthrottled write —
+                        // otherwise the hunter's marker stays invisible on
+                        // the chicken's map for up to 5 s + the time it
+                        // takes CoreLocation's 10 m distance filter to
+                        // produce the second coord, which in a small 2-
+                        // device test can be long enough to look "stuck".
+                        var lastWrite: Date = .distantPast
                         if let currentLocation = locationClient.lastLocation() {
                             await send(.internal(.userLocationUpdated(currentLocation)))
                             if shouldWriteLocation {
                                 do {
                                     try apiClient.setHunterLocation(gameId, hunterId, currentLocation)
+                                    lastWrite = .now
                                 } catch {
                                     logger.error("Failed to send initial hunter location: \(error)")
                                 }
                             }
                         }
-                        var lastWrite = Date.now
                         for await coordinate in locationClient.startTracking() {
                             await send(.internal(.userLocationUpdated(coordinate)))
                             if shouldWriteLocation,

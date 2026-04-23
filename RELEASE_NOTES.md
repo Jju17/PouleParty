@@ -1,3 +1,94 @@
+# Release 1.11.1
+
+> ⚠️ **Do not paste this "Summary" paragraph into any store field.** Only the blocks explicitly labelled **App Store Connect**, **Google Play Console**, or **App Review Notes** below are store-safe.
+
+**Summary (internal, do not paste):** three bug fixes from 1.11.0 live-testing — (1) a Hunter in a `stayInTheZone` game couldn't collect a visible Zone Preview power-up from inside the 30 m disc, surface-level cause was a silent iOS collect UX masking whatever the real server-side rejection was — closed with a `collectingIds` dedup + success/failure banners to match Android, plus info-level logs on every collect attempt to triage future reports from Console.app. (2) "Inside the zone but flagged outside" (Bug 2, iOS-reported): `HunterMap.swift:newLocationFetched` overwrote `state.mapCircle.center` with the chicken's broadcasted position on every `chickenLocationStream` emit, regardless of mode — in `stayInTheZone` the zone centre is the deterministic drifted centre, and a stray chicken broadcast (radar-ping write, or a stale `chickenLocations/latest` doc replayed by the listener on connect) pulled the circle onto the chicken's position, so the zone check fired against the chicken rather than the real zone and flagged the hunter as "outside" even inside the visible circle. `ChickenMap` already had the gate; added to `HunterMap`. Android `HunterMapViewModel.streamChickenLocation` had the same parity gap; also closed. Flushed out a related Android-chicken bug on the same trip: `ChickenMapViewModel.trackChickenOwnLocation` set `circleCenter = own-GPS` unconditionally, so the `stayInTheZone` chicken's visible zone silently followed them around until the next shrink — iOS `ChickenMap.swift` already gated this since 1.9, Android caught up. (3) "Hunter marker stuck on chicken's map" (Bug 3, iOS-reported): the initial `setHunterLocation` / `setChickenLocation` throttle cursor was armed at `Date.now` / `Date()`, so if `lastLocation()` returned `nil` at game-start (no GPS fix yet, common on field), the first coord from `startTracking` / `locationFlow` was blocked by the 5 s throttle — combined with the 10 m distance filter, a small 2-device test could go 10–20 s before either device broadcast a position. Both platforms now keep `lastWrite` at epoch until a successful write, so the first coord writes immediately. Tests: 2 new iOS `HunterMapFeatureTests` + 3 new Android `HunterMapViewModelBehaviorTest` + 5 earlier `MapPowerUpsFeatureTests`. No server, no rules, no web changes.
+
+---
+
+## 📱 App Store Connect — field "What's New in This Version"
+
+ASC uses **plain text per locale** (switch the language tab in the top-right of the ASC page and paste the matching block). No XML-style tags, tags are Play Console only. **Do NOT mention "Android", "Google Play", or any other platform**.
+
+**English (U.S.)**
+
+Three bug fixes. Power-ups now confirm when you pick them up (or show a clear error if something blocks the server write) instead of silently doing nothing. The "return to the zone" red warning no longer fires when you're actually inside the circle. And the other player's marker on the map updates the moment your GPS locks on, instead of staying stuck for the first 5–20 seconds of a game.
+
+**French**
+
+Trois correctifs. Les power-ups confirment maintenant la collecte (ou affichent un bandeau d'erreur clair si le serveur bloque l'écriture) au lieu de ne rien faire silencieusement. Le fameux "retourne dans la zone" en rouge ne se déclenche plus quand tu es bel et bien à l'intérieur du cercle. Et le marqueur de l'autre joueur sur la carte se met à jour dès que ton GPS accroche, au lieu de rester bloqué les 5–20 premières secondes d'une partie.
+
+**Dutch**
+
+Drie bugfixes. Power-ups bevestigen nu dat je ze hebt opgeraapt (of tonen een duidelijke foutmelding als de server de schrijfbewerking blokkeert) in plaats van stil niets te doen. De rode "ga terug naar de zone"-waarschuwing gaat niet meer af terwijl je eigenlijk binnen de cirkel staat. En de marker van de andere speler op de kaart wordt bijgewerkt zodra je GPS een fix heeft, in plaats van de eerste 5–20 seconden van een partij vast te blijven staan.
+
+---
+
+## 📱 App Store Connect — field "Promotional Text"
+
+Unchanged from 1.9.1 / 1.10.0 / 1.11.0. Only repaste if ASC lost the copy.
+
+**English (U.S.)** · 154 chars
+
+Real-world GPS hide-and-seek. One Chicken hides, the rest chase inside a shrinking zone. Power-ups, a 6-char code to share, play with your squad outdoors.
+
+**French** · 157 chars
+
+Cache-cache GPS dans la vraie vie. Une Poule se cache, les autres la chassent dans une zone qui rétrécit. Power-ups, code à 6 caractères, entre potes dehors.
+
+**Dutch** · 158 chars
+
+GPS-verstoppertje in het echte leven. Eén Kip verstopt zich, Jagers zoeken in een krimpende zone op de kaart. Power-ups, 6-cijferige code, buiten met je crew.
+
+---
+
+## 🤖 Google Play Console — field "Release notes"
+
+<en-US>
+Three bug fixes. Power-ups now confirm pickup (or show a clear error) instead of silent no-op. The red "return to the zone" warning no longer fires while you're inside the circle. The other player's marker updates as soon as GPS locks on, not 5-20 seconds later. Ships an iOS/Android parity round for zone detection + the initial position broadcast, and 10 new regression tests so these don't come back.
+</en-US>
+
+<fr-FR>
+Trois correctifs. Les power-ups confirment la collecte (ou affichent une erreur claire) au lieu de ne rien faire en silence. Le "retourne dans la zone" rouge ne se declenche plus quand tu es a l'interieur du cercle. Le marqueur de l'autre joueur se met a jour des que le GPS accroche, plus de blocage 5-20 s. Passe de parite iOS/Android sur la zone et le broadcast de position, plus 10 tests de non-regression.
+</fr-FR>
+
+<nl-NL>
+Drie bugfixes. Power-ups bevestigen het oprapen (of tonen een duidelijke fout) in plaats van stil niets te doen. De rode "ga terug naar de zone"-waarschuwing gaat niet meer af terwijl je in de cirkel staat. De marker van de andere speler wordt bijgewerkt zodra GPS binnenkomt, niet 5-20 s later. iOS/Android-pariteit op zonecheck + eerste positie, plus 10 nieuwe regressietesten.
+</nl-NL>
+
+---
+
+## 📝 App Store Connect — field "App Review Information → Notes"
+
+No delta from 1.11.0 (2) in terms of paid flows or permissions. Paid flows (Forfait, Caution, promo codes), location usage descriptions, Apple Pay integration, and the Apple Reviewer promo code (`APPLE_REVIEW_99`) are all unchanged. The 1.11.1 diff adds three client-side bug fixes plus their iOS/Android parity round. No new permissions, no new sensitive APIs, no new capability.
+
+If the reviewer wants a quick recap, paste this alongside the 1.11.0 notes:
+
+```
+1.11.1 (1) change summary vs 1.11.0 (2):
+- Power-up pickup UX: a "Collected: <name>!" banner now appears when a
+  pickup lands in the inventory; a "Failed to collect power-up" banner
+  surfaces any server-side rejection. 1 Hz proximity timer no longer
+  dispatches duplicate transactions while one is in flight (Set-based
+  guard). Info-level logging added around every collect attempt.
+- Zone detection fix: the hunter is no longer flagged "outside the
+  zone" while standing inside the visible circle. A stray chicken
+  broadcast (radar-ping write, or a stale chickenLocations/latest doc
+  replayed by the Firestore listener on connect) used to overwrite
+  the zone centre in `stayInTheZone` mode. HunterMap.swift now gates
+  the update by game mode, matching the ChickenMap.swift gate that
+  has existed since 1.9.
+- Initial position broadcast: when no GPS fix is cached at game-start
+  the first coordinate emitted by CoreLocation now writes immediately
+  instead of waiting 5 s for the throttle to unblock — on a clean
+  start the other player's marker appears as soon as GPS locks on.
+- No backend change, no new permission, no new paid flow.
+- 10 regression tests added (2 iOS, 3 Android, 5 earlier) to pin
+  these against regression.
+```
+
+---
+
 # Release 1.11.0
 
 > ⚠️ **Do not paste this "Summary" paragraph into any store field.** Only the blocks explicitly labelled **App Store Connect**, **Google Play Console**, or **App Review Notes** below are store-safe.

@@ -204,14 +204,31 @@ struct ChickenMapFeature {
                     logger.error("Skipping powerUpCollected: no current user id")
                     return .none
                 }
-                return .run { [analyticsClient] _ in
+                // Atomic dedup — see HunterMap for the rationale. At 1 Hz
+                // a stationary chicken would otherwise spam N duplicate
+                // transactions while the first is still in flight.
+                guard !state.powerUps.collectingIds.contains(powerUp.id) else { return .none }
+                state.powerUps.collectingIds.insert(powerUp.id)
+                let distance: Double? = state.userLocation.map { userLoc in
+                    CLLocation(latitude: userLoc.latitude, longitude: userLoc.longitude)
+                        .distance(from: CLLocation(latitude: powerUp.coordinate.latitude, longitude: powerUp.coordinate.longitude))
+                }
+                let distanceLog = distance.map { String(format: "%.1fm", $0) } ?? "unknown"
+                logger.info("Collecting power-up id=\(powerUp.id) type=\(powerUp.type.rawValue) distance=\(distanceLog) chickenId=\(userId)")
+                return .run { [analyticsClient] send in
                     do {
                         try await apiClient.collectPowerUp(gameId, powerUp.id, userId)
                         analyticsClient.powerUpCollected(type: powerUp.type.rawValue, role: "chicken")
+                        logger.info("Collected power-up id=\(powerUp.id) type=\(powerUp.type.rawValue)")
+                        await send(.powerUps(.collectSucceeded(powerUp)))
                     } catch {
-                        logger.error("Failed to collect power-up: \(error)")
+                        logger.error("Failed to collect power-up id=\(powerUp.id) type=\(powerUp.type.rawValue): \(String(describing: error))")
+                        await send(.powerUps(.collectFailed(powerUp)))
                     }
+                    try await clock.sleep(for: .seconds(2))
+                    await send(.powerUps(.notificationCleared))
                 }
+                .cancellable(id: CancelID.powerUpNotificationDismiss, cancelInFlight: true)
             case let .powerUps(.delegate(.activated(powerUp))):
                 let gameId = state.game.id
                 let duration = powerUp.type.durationSeconds ?? 0
@@ -420,16 +437,25 @@ struct ChickenMapFeature {
                             if delay > 0 {
                                 try await clock.sleep(for: .seconds(delay))
                             }
-                            // Send current location immediately on connect
+                            // If we have a cached fix, broadcast it now.
+                            // Otherwise `lastWrite` stays at `.distantPast`
+                            // so the first coord from `startTracking()` is
+                            // broadcast immediately — without this, the
+                            // hunters' map shows no chicken puck for the
+                            // first 5 s + however long CoreLocation's 10 m
+                            // distance filter takes to emit, which in a
+                            // small 2-device test can look like a "stuck"
+                            // chicken even though it's moving.
+                            var lastWrite: Date = .distantPast
                             if let currentLocation = locationClient.lastLocation() {
                                 await send(.internal(.newLocationFetched(currentLocation)))
                                 do {
                                     try apiClient.setChickenLocation(gameId, currentLocation)
+                                    lastWrite = .now
                                 } catch {
                                     logger.error("Failed to send initial chicken location: \(error)")
                                 }
                             }
-                            var lastWrite = Date.now
                             var wasInvisible = false
                             for await coordinate in locationClient.startTracking() {
                                 await send(.internal(.newLocationFetched(coordinate)))

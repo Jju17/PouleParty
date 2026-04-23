@@ -6,6 +6,143 @@ Format: [Keep a Changelog](https://keepachangelog.com/). Versions follow [Semant
 
 ---
 
+## [1.11.1], 2026-04-23
+
+**iOS**: 1.11.1 (1) · **Android**: 1.11.1 (31) · **Functions**: unchanged · **Firestore rules**: unchanged
+
+Three bugs surfaced during the 1.11.0 live-test window, all closed here:
+(a) a `stayInTheZone` hunter couldn't collect a visibly-close Zone Preview
+power-up (silent failure on iOS, no banner, no log trail); (b) the same
+hunter was shown the "return to the zone" red overlay while standing
+inside the visible circle; (c) the hunter's marker on the chicken's
+screen stayed stuck at the initial position for far too long. (a) was
+masked by an iOS/Android parity gap in the collect UX; (b) and (c) are
+iOS-reported bugs with matching Android gaps the audit confirmed.
+
+### Fixed
+
+- **iOS — silent collect failures.** `HunterMap.swift` + `ChickenMap.swift`
+  caught the `collectPowerUp` error into `logger.error(…)` and stopped
+  there: no banner, no retry signal, no indication to the player that
+  anything was even attempted. Android has shown a "Collected: X!" /
+  "Failed to collect power-up" toast since the power-up rollout
+  (`BaseMapViewModel.checkPowerUpProximity`). Both iOS screens now
+  dispatch `.powerUps(.collectSucceeded(powerUp))` / `.collectFailed(…)`
+  in the `.run` closure, which drives the existing notification banner
+  + a 2 s auto-clear. Failure banners surface the exact same UX Android
+  users got — so if the bug reproduces on a patched iOS build, the
+  player sees it immediately and we can triage from live feedback
+  instead of Xcode-only logs.
+- **iOS — 1 Hz collect transaction spam.** The timer tick fires every
+  second. A stationary hunter inside the disc was dispatching a fresh
+  `apiClient.collectPowerUp` transaction on every tick — 30+ parallel
+  transactions per 30 s stay. The first one should win and the rest
+  fail against `resource.data.collectedBy == null`, but in practice it
+  means retry backoffs stack, analytics fires multiple times, and if
+  the first one hit a transient error the log is drowned in later
+  `already collected` noise. Added `collectingIds: Set<String>` to
+  `MapPowerUpsFeature.State` and an atomic check-and-insert in both
+  parent `.powerUpCollected` handlers — one transaction per power-up
+  per player, lifetime of the effect. Matches the Android
+  `BaseMapViewModel.collectingPowerUpIds` guard introduced alongside
+  the original server-authoritative refactor.
+- **iOS — "inside the zone" flagged as "outside" in `stayInTheZone`**
+  (Bug 2). `HunterMap.swift:newLocationFetched` handler overwrote
+  `state.mapCircle.center` with the chicken's broadcasted position on
+  every `chickenLocationStream` emit, regardless of game mode. In
+  `stayInTheZone` the zone center is the deterministic drifted center
+  computed in `.gameUpdated` / `processRadiusUpdate` — a stray chicken
+  broadcast (a radar-ping write, or a stale `chickenLocations/latest`
+  doc the Firestore listener replayed on connect) pulled the circle
+  centre onto the chicken's position, so the zone check fired against
+  the chicken's position rather than the real zone and flagged the
+  hunter as "outside" even standing inside the visible circle. The
+  `ChickenMap` version of the same handler already had the gate; added
+  to `HunterMap` to match. Android `HunterMapViewModel.streamChickenLocation`
+  had the same parity gap (collect overwrote `circleCenter` unconditionally) —
+  both platforms now short-circuit the update in `stayInTheZone`.
+- **Android — chicken's own location overwrote the drifted zone centre
+  in `stayInTheZone`**. Parity bug flushed out by the audit while
+  fixing Bug 2. iOS `ChickenMap.swift:newLocationFetched` has gated
+  this since 1.9, but Android's `ChickenMapViewModel.trackChickenOwnLocation`
+  unconditionally set `circleCenter = own-GPS` each tick. In the
+  `followTheChicken` flow this is correct — in `stayInTheZone` it meant
+  the chicken's visible zone silently followed them around until the
+  next scheduled shrink recomputed the drift. Gated by
+  `gameModEnum != STAY_IN_THE_ZONE` to match iOS.
+- **iOS + Android — hunter's position stuck on chicken's map for the
+  first 5 s after the game starts** (Bug 3). The initial `setHunterLocation`
+  / `setChickenLocation` write was gated behind
+  `locationClient.lastLocation()` / `locationRepository.getLastLocation()`
+  returning a cached GPS fix. If it returned `nil` (no fix yet at
+  game-start time — common when the app has just been opened on the
+  field), the throttle cursor was already armed at `Date.now` / `Date()`,
+  so the very first coordinate from `startTracking()` / `locationFlow()`
+  was blocked by the 5 s throttle. Combined with CoreLocation's / Fused
+  Location's 10 m distance filter, a small 2-device test on a quiet
+  street could go 10–20 s before either device broadcast a single
+  position — looking exactly like "the other player's marker is stuck".
+  Both platforms now keep `lastWrite` at epoch (`.distantPast` / `Date(0L)`)
+  until a successful write happens, so the first coord the OS emits
+  from `startTracking` / `locationFlow` writes immediately and the
+  markers appear the moment GPS locks on.
+
+### Added
+
+- **iOS diagnostic logging on collect attempts.** `HunterMap` + `ChickenMap`
+  log `info`-level entries around each collect: user ↔ power-up distance
+  (m), power-up type, collector id, and the transaction outcome
+  (`Collected …` / `Failed to collect …` with the full error). Filter
+  by category `HunterMap` / `ChickenMap` in Console.app to see exactly
+  what the client attempted and why it resolved the way it did. No PII
+  beyond the anonymous Firebase UID which was already in our logs.
+- **`MapPowerUpsFeatureTests.swift`** — 5 new tests covering the
+  `collectStarted` / `collectSucceeded` / `collectFailed` actions,
+  their interaction with `collectingIds`, and the "only-the-matching-id"
+  removal contract for the dedup set.
+- **`HunterMapFeatureTests.swift`** — 2 regression tests for Bug 2:
+  `newLocationFetchedUpdatesMapCircleInFollowTheChicken` pins the
+  correct behaviour; `newLocationFetchedDoesNotMoveMapCircleInStayInTheZone`
+  asserts a stray chicken broadcast no longer hijacks the zone centre.
+- **`HunterMapViewModelBehaviorTest.kt`** — 3 regression tests:
+  `chicken broadcast in stayInTheZone does NOT move circleCenter`,
+  `chicken broadcast in followTheChicken DOES move circleCenter`, and
+  `first locationFlow emit writes immediately when getLastLocation is
+  null` (Bug 3 parity check).
+
+### Android
+
+Behavioural changes landed: `HunterMapViewModel.streamChickenLocation`
+short-circuits in `stayInTheZone`, `ChickenMapViewModel.trackChickenOwnLocation`
+gates `circleCenter` by mode, and both `trackHunterSelfLocation`
+/ chicken tracking init their throttle cursor at epoch so the first
+emit writes immediately. Version stays locked with iOS at 1.11.1 (31)
+per the cross-platform marketing-version rule in `CLAUDE.md`.
+
+### Deployment steps
+
+No server deploy. Functions, Firestore rules, and web are all untouched.
+
+```bash
+# iOS
+cd ios && xcodebuild archive -scheme PouleParty -configuration Release \
+  -destination 'generic/platform=iOS'
+open "$(ls -dt ~/Library/Developer/Xcode/Archives/*/PouleParty*.xcarchive | head -1)"
+
+# Android
+cd android && JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" \
+  ./gradlew bundleProductionRelease
+```
+
+### Breaking / migration notes
+
+None. `MapPowerUpsFeature.State.collectingIds` defaults to `[]`, so
+existing callers and tests that construct `State()` keep compiling.
+The new `collectStarted` / `collectSucceeded` / `collectFailed` actions
+are additive — no existing action case moved or changed semantics.
+
+---
+
 ## [1.11.0], 2026-04-23
 
 **iOS**: 1.11.0 (2) · **Android**: 1.11.0 (30) · **Functions**: full redeploy (`index` + `stripe`) · **Firestore rules**: redeploy
