@@ -96,6 +96,14 @@ struct HunterMapFeature {
 
         @CasePathable
         enum View {
+            /// Sent from the view on `ScenePhase.active`. iOS can suspend
+            /// the hunter-location writer coroutine while the app is in
+            /// the background, which means the chicken sees a stale
+            /// marker until the 5 s timer next ticks after resume. The
+            /// handler performs one synchronous refresh against
+            /// `locationClient.lastLocation()` so the chicken's map
+            /// catches up immediately when the player re-opens the app.
+            case appBecameActive
             case cancelGameButtonTapped
             case challengesButtonTapped
             case foundButtonTapped
@@ -173,6 +181,32 @@ struct HunterMapFeature {
                 return .none
             case .binding:
                 return .none
+            case .view(.appBecameActive):
+                // Force a single hunter-location refresh on foreground
+                // resume. The periodic 5 s writer in `.onTask` is the
+                // primary source of freshness while the app is alive, but
+                // iOS may suspend the background task so the chicken's
+                // map shows a stale marker until the first tick after
+                // resume. This catches that gap. Guarded on all three of
+                // "chicken can see hunters", "hunter phase started", and
+                // "we have a known uid + a cached fix" — any of these
+                // failing is a silent no-op.
+                let gameId = state.game.id
+                let hunterId = state.hunterId
+                guard state.game.chickenCanSeeHunters,
+                      !hunterId.isEmpty,
+                      state.hasGameStarted else {
+                    return .none
+                }
+                return .run { _ in
+                    guard let coord = locationClient.lastLocation() else { return }
+                    do {
+                        try apiClient.setHunterLocation(gameId, hunterId, coord)
+                        logger.info("Hunter location refreshed on app resume")
+                    } catch {
+                        logger.error("Failed to refresh hunter location on resume: \(error)")
+                    }
+                }
             case .view(.cancelGameButtonTapped):
                 state.destination = .alert(
                     AlertState {
@@ -548,48 +582,76 @@ struct HunterMapFeature {
                 // Hunter always tracks own location (for zone check).
                 // When chickenCanSeeHunters, also writes to Firestore.
                 // Gated behind hunterStartDate.
+                //
+                // Pre-1.11.2 we wrote only when CoreLocation emitted a new
+                // coord. With `distanceFilter = 10 m`, a stationary hunter
+                // produced zero fixes and therefore zero writes — the
+                // chicken saw a frozen marker for as long as the player
+                // sat still. 1.11.2 splits the work across two parallel
+                // effects:
+                //   1. Tracker — pushes each incoming GPS fix into both
+                //      reducer state (`userLocation`, for zone checks +
+                //      power-up proximity) and a shared `LockIsolated`
+                //      cache. No Firestore write happens here.
+                //   2. Writer — a `clock.timer` that fires every
+                //      `locationThrottleSeconds` and re-broadcasts the
+                //      latest cached coord so a stationary hunter still
+                //      refreshes on the chicken's map. Only started when
+                //      `chickenCanSeeHunters` is true.
+                // A separate `.view(.appBecameActive)` handler writes one
+                // immediate refresh on every foreground resume in case
+                // iOS suspended the writer during background.
                 let shouldWriteLocation = state.game.chickenCanSeeHunters
+                let latestLocation = LockIsolated<CLLocationCoordinate2D?>(locationClient.lastLocation())
                 effects.append(
                     .run { send in
                         let delay = hunterStartDate.timeIntervalSinceNow
                         if delay > 0 {
                             try await clock.sleep(for: .seconds(delay))
                         }
-                        // Send current location immediately if we have a
-                        // cached fix. If we don't, `lastWrite` stays at
-                        // `.distantPast` so the first coordinate emitted by
-                        // `startTracking()` triggers an unthrottled write —
-                        // otherwise the hunter's marker stays invisible on
-                        // the chicken's map for up to 5 s + the time it
-                        // takes CoreLocation's 10 m distance filter to
-                        // produce the second coord, which in a small 2-
-                        // device test can be long enough to look "stuck".
-                        var lastWrite: Date = .distantPast
                         if let currentLocation = locationClient.lastLocation() {
+                            latestLocation.setValue(currentLocation)
                             await send(.internal(.userLocationUpdated(currentLocation)))
-                            if shouldWriteLocation {
+                        }
+                        for await coordinate in locationClient.startTracking() {
+                            latestLocation.setValue(coordinate)
+                            await send(.internal(.userLocationUpdated(coordinate)))
+                        }
+                    }
+                )
+                if shouldWriteLocation {
+                    effects.append(
+                        .run { _ in
+                            let delay = hunterStartDate.timeIntervalSinceNow
+                            if delay > 0 {
+                                try await clock.sleep(for: .seconds(delay))
+                            }
+                            // Poll at 100 ms until we have a coord to send.
+                            // On a cold start without a cached `lastLocation()`
+                            // we'd otherwise wait the full 5 s throttle
+                            // window for `clock.timer` to fire before the
+                            // chicken saw the hunter's first position.
+                            while latestLocation.value == nil {
+                                try await clock.sleep(for: .milliseconds(100))
+                            }
+                            if let coord = latestLocation.value {
                                 do {
-                                    try apiClient.setHunterLocation(gameId, hunterId, currentLocation)
-                                    lastWrite = .now
+                                    try apiClient.setHunterLocation(gameId, hunterId, coord)
                                 } catch {
                                     logger.error("Failed to send initial hunter location: \(error)")
                                 }
                             }
-                        }
-                        for await coordinate in locationClient.startTracking() {
-                            await send(.internal(.userLocationUpdated(coordinate)))
-                            if shouldWriteLocation,
-                               Date.now.timeIntervalSince(lastWrite) >= AppConstants.locationThrottleSeconds {
+                            for await _ in clock.timer(interval: .seconds(AppConstants.locationThrottleSeconds)) {
+                                guard let coord = latestLocation.value else { continue }
                                 do {
-                                    try apiClient.setHunterLocation(gameId, hunterId, coordinate)
+                                    try apiClient.setHunterLocation(gameId, hunterId, coord)
                                 } catch {
                                     logger.error("Failed to send hunter location: \(error)")
                                 }
-                                lastWrite = .now
                             }
                         }
-                    }
-                )
+                    )
+                }
 
                 effects.append(
                     .run { send in

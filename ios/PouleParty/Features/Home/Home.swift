@@ -306,7 +306,7 @@ struct HomeFeature {
                 // on the next onTask for the same game. The user can still
                 // reach it via Settings → My Games.
                 if let dismissed = state.activeGame?.id {
-                    state.$dismissedActiveGameIds.withLock { ids in
+                    _ = state.$dismissedActiveGameIds.withLock { ids in
                         ids.insert(dismissed)
                     }
                 }
@@ -484,7 +484,7 @@ struct HomeFeature {
                 }
                 // Clear dismiss for this game — if the user explicitly taps
                 // the banner CTA, they no longer want it hidden.
-                state.$dismissedActiveGameIds.withLock { ids in
+                _ = state.$dismissedActiveGameIds.withLock { ids in
                     ids.remove(game.id)
                 }
                 state.activeGame = nil

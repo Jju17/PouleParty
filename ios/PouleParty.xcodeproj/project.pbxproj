@@ -586,7 +586,7 @@
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 1.11.1;
+				MARKETING_VERSION = 1.11.2;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.rahier.PoulePartyTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -608,7 +608,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 1.11.1;
+				MARKETING_VERSION = 1.11.2;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.rahier.PoulePartyTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -794,7 +794,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.4;
-				MARKETING_VERSION = 1.11.1;
+				MARKETING_VERSION = 1.11.2;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.rahier.pouleparty;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -852,7 +852,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.4;
-				MARKETING_VERSION = 1.11.1;
+				MARKETING_VERSION = 1.11.2;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.rahier.pouleparty;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -931,7 +931,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.11.1;
+				MARKETING_VERSION = 1.11.2;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.rahier.pouleparty.PoulePartyWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -962,7 +962,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.11.1;
+				MARKETING_VERSION = 1.11.2;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.rahier.pouleparty.PoulePartyWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;

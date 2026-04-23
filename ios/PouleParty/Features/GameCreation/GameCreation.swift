@@ -147,9 +147,10 @@ struct GameCreationFeature {
         }
 
         var body: some ReducerOf<Self> {
-            Scope(state: \.payment, action: \.payment) {
-                PaymentFeature()
-            }
+            EmptyReducer()
+                .ifCaseLet(\.payment, action: \.payment) {
+                    PaymentFeature()
+                }
         }
     }
 

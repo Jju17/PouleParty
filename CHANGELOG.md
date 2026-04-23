@@ -6,6 +6,93 @@ Format: [Keep a Changelog](https://keepachangelog.com/). Versions follow [Semant
 
 ---
 
+## [1.11.2], 2026-04-23
+
+**iOS**: 1.11.2 (1) · **Android**: 1.11.2 (32) · **Functions**: unchanged · **Firestore rules**: unchanged
+
+Live-test follow-up: a hunter sitting still on a bench showed up frozen on
+the chicken's map for minutes at a time. Root cause was the same on both
+platforms — the location write was driven off each GPS emission, and the
+10 m distance filter (CoreLocation on iOS, `setMinUpdateDistanceMeters`
+on Android FusedLocation) means a non-moving player produces no emissions
+and therefore no writes. The chicken's `hunterLocationsStream` /
+`hunterLocationFlow` are already `addSnapshotListener`-based, so any
+fresh write propagates instantly — the fix is exclusively on the
+hunter-side write cadence.
+
+### Fixed
+
+- **Hunter writes decoupled from GPS emissions (iOS + Android).** The
+  single `for await coordinate in startTracking()` /
+  `locationFlow().collect` loop that both updated state AND wrote to
+  Firestore is split in two:
+  1. **Tracker** — keeps its old job of pushing each new GPS fix into
+     `state.userLocation` / `_uiState.userLocation` (needed for zone
+     checks + power-up proximity) and, on iOS, into a shared
+     `LockIsolated<CLLocationCoordinate2D?>`. Never calls
+     `setHunterLocation` directly anymore.
+  2. **Writer** — a dedicated periodic coroutine (`clock.timer` on
+     iOS, `while (coroutineContext.isActive) { delay(…) }` on Android)
+     that re-broadcasts the latest cached location every
+     `locationThrottleSeconds` / `LOCATION_THROTTLE_MS` (= 5 s). Only
+     started when `chickenCanSeeHunters` is true. A stationary hunter
+     now refreshes on the chicken's map on schedule.
+- **Foreground-resume refresh (iOS + Android).** Both platforms can
+  suspend the writer coroutine when the app backgrounds — iOS
+  particularly aggressive when CoreLocation has nothing to report
+  (stationary user + 10 m filter). 1.11.2 adds a one-shot write on the
+  next resume so the chicken doesn't see a stale marker until the
+  first scheduled tick lands. iOS: `.onChange(of: scenePhase) ==
+  .active` in `HunterMapView` → new `.view(.appBecameActive)` reducer
+  action. Android: `LifecycleEventEffect(Lifecycle.Event.ON_RESUME)`
+  in `HunterMapScreen` → new `HunterMapIntent.AppResumed` handler.
+  Both paths are guarded on `chickenCanSeeHunters` + `hasGameStarted`
+  + non-empty player id; any gate failure is a silent no-op.
+
+### Notes
+
+- **No change to the chicken side.** `ChickenMap.swift` +
+  `ChickenMapViewModel.kt` already consume `hunterLocationsStream` /
+  `hunterLocationFlow` via `addSnapshotListener` /
+  `callbackFlow { addSnapshotListener(…) }`. New hunter writes push
+  into the chicken's UI immediately — so the fix needed was only on
+  the writer side.
+- **Distance filter left at 10 m on both platforms.** Dropping it to 0
+  would keep the app resident longer in background (iOS
+  `UIBackgroundModes = location` keeps the process alive only while
+  CoreLocation has fresh data to deliver), but the battery cost over
+  an hour-long game isn't justified for what 1.11.2 is trying to fix.
+  If a future bug-report says "hunter invisible for minutes in
+  background with screen off", that's the next dial to turn — not
+  now.
+- **`LOCATION_THROTTLE_MS` / `locationThrottleSeconds` kept at 5 s.**
+  Trade-off is Firestore write cost vs. how fresh the chicken's map
+  feels. 5 s is unchanged; we're just honouring it now even for
+  stationary players.
+
+### Breaking / migration notes
+
+None. New actions (`.view(.appBecameActive)`, `HunterMapIntent.AppResumed`)
+are additive. The tracker/writer split is invisible to every call site
+outside `.onTask` / `loadGame`.
+
+### Deployment steps
+
+No server deploy. Functions, Firestore rules, and web are untouched.
+
+```bash
+# iOS
+cd ios && xcodebuild archive -scheme PouleParty -configuration Release \
+  -destination 'generic/platform=iOS'
+open "$(ls -dt ~/Library/Developer/Xcode/Archives/*/PouleParty*.xcarchive | head -1)"
+
+# Android
+cd android && JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" \
+  ./gradlew bundleProductionRelease
+```
+
+---
+
 ## [1.11.1], 2026-04-23
 
 **iOS**: 1.11.1 (1) · **Android**: 1.11.1 (31) · **Functions**: unchanged · **Firestore rules**: unchanged

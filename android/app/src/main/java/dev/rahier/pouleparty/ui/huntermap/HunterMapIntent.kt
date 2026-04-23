@@ -4,6 +4,13 @@ import dev.rahier.pouleparty.powerups.model.PowerUp
 
 /** User-initiated actions on the hunter-map screen. */
 sealed interface HunterMapIntent {
+    /**
+     * Dispatched from `LifecycleEventEffect(Lifecycle.Event.ON_RESUME)` in
+     * [HunterMapScreen]. Triggers an immediate hunter-location refresh so
+     * the chicken's map catches up when the player re-opens the app,
+     * rather than waiting for the periodic 5 s writer's next tick.
+     */
+    object AppResumed : HunterMapIntent
     object DismissRegistrationRequiredAlert : HunterMapIntent
     object PowerUpInventoryTapped : HunterMapIntent
     object DismissPowerUpInventory : HunterMapIntent

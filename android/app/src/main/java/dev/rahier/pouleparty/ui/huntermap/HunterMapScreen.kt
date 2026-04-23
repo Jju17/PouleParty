@@ -23,6 +23,8 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.compose.ui.text.font.FontWeight
 import com.mapbox.maps.CameraOptions
 import com.mapbox.maps.MapboxExperimental
@@ -103,6 +105,16 @@ fun HunterMapScreen(
     }
     LaunchedEffect(state.showWrongCodeAlert) {
         if (state.showWrongCodeAlert) HapticManager.error(view)
+    }
+
+    // Force a hunter-location refresh whenever the player re-opens the
+    // app. The periodic 5 s writer in the VM is the primary cadence,
+    // but Android can suspend the writer coroutine while the app is
+    // backgrounded — this bridges the gap so the chicken's map catches
+    // up as soon as we're back in the foreground instead of waiting
+    // on the next scheduled tick.
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        viewModel.onIntent(HunterMapIntent.AppResumed)
     }
 
     var selectedPowerUpType by remember { mutableStateOf<PowerUpType?>(null) }

@@ -1,3 +1,82 @@
+# Release 1.11.2
+
+> ⚠️ **Do not paste this "Summary" paragraph into any store field.** Only the blocks explicitly labelled **App Store Connect**, **Google Play Console**, or **App Review Notes** below are store-safe.
+
+**Summary (internal, do not paste):** follow-up to 1.11.1 from the same live-test session. Hunter standing still on a bench appeared as a frozen marker on the chicken's map for minutes — the write path was driven by GPS emissions, and with the 10 m distance filter (CoreLocation / FusedLocationProvider) a stationary player produced zero emissions, therefore zero writes. Fix on both platforms splits location tracking into two pieces: a tracker coroutine that keeps updating `state.userLocation` / `_uiState.userLocation` from `startTracking()` / `locationFlow()` (so zone checks + power-up proximity keep working), and a separate periodic writer (`clock.timer` on iOS, `while (coroutineContext.isActive) { delay(…) }` on Android) that every 5 s re-broadcasts the latest cached coord to Firestore — a non-moving hunter now refreshes on schedule. Plus a one-shot refresh on foreground resume (`ScenePhase.active` on iOS, `LifecycleEventEffect(ON_RESUME)` on Android) to bridge any background suspension. No server, no rules, no web. Chicken-side rendering untouched since `hunterLocationsStream` is already a `addSnapshotListener` — fresh writes push instantly once they land.
+
+---
+
+## 📱 App Store Connect — field "What's New in This Version"
+
+ASC uses **plain text per locale** (switch the language tab in the top-right of the ASC page and paste the matching block). No XML-style tags, tags are Play Console only. **Do NOT mention "Android", "Google Play", or any other platform**.
+
+**English (U.S.)**
+
+Fix for chickens who saw a hunter's marker freeze mid-game. If a hunter stood still, the app stopped broadcasting their position — now the position is refreshed every 5 seconds regardless of movement, and re-opening the app forces an immediate refresh so the chicken sees a live marker the moment you come back.
+
+**French**
+
+Fix pour les poules qui voyaient le marker d'un chasseur figé en pleine partie. Si un chasseur restait immobile, l'app arrêtait de diffuser sa position — maintenant la position est rafraîchie toutes les 5 secondes, même immobile, et rouvrir l'app force un refresh immédiat pour que la Poule voie un marker vivant dès que tu reviens.
+
+**Dutch**
+
+Fix voor kippen die een jagermarker zagen bevriezen tijdens een spel. Als een jager stilstond, stopte de app met het delen van zijn positie — nu wordt de positie elke 5 seconden vernieuwd, ook als je stilstaat, en de app opnieuw openen forceert een directe verversing zodat de Kip een levende marker ziet zodra je terugkomt.
+
+---
+
+## 📱 App Store Connect — field "Promotional Text"
+
+Unchanged from 1.9.1 / 1.10.0 / 1.11.0 / 1.11.1. Only repaste if ASC lost the copy.
+
+**English (U.S.)** · 154 chars
+
+Real-world GPS hide-and-seek. One Chicken hides, the rest chase inside a shrinking zone. Power-ups, a 6-char code to share, play with your squad outdoors.
+
+**French** · 157 chars
+
+Cache-cache GPS dans la vraie vie. Une Poule se cache, les autres la chassent dans une zone qui rétrécit. Power-ups, code à 6 caractères, entre potes dehors.
+
+**Dutch** · 158 chars
+
+GPS-verstoppertje in het echte leven. Eén Kip verstopt zich, Jagers zoeken in een krimpende zone op de kaart. Power-ups, 6-cijferige code, buiten met je crew.
+
+---
+
+## 🤖 Google Play Console — field "Release notes"
+
+<en-US>
+Location-refresh fix. If a hunter stood still, the chicken's map used to show a frozen marker because the app only broadcast a new position on movement. Now we re-send the last known position every 5 seconds regardless of movement, and re-opening the app forces an immediate refresh so the chicken sees a live marker the moment the hunter is back on screen.
+</en-US>
+
+<fr-FR>
+Fix du rafraîchissement de position. Quand un chasseur restait immobile, la carte de la Poule montrait un marker figé parce que l'app ne diffusait une position que sur mouvement. Maintenant on ré-envoie la dernière position connue toutes les 5 secondes même à l'arrêt, et rouvrir l'app force un refresh immédiat pour que la Poule voie un marker vivant dès le retour à l'écran.
+</fr-FR>
+
+<nl-NL>
+Locatie-verversing fix. Als een jager stilstond, toonde de kaart van de Kip een bevroren marker omdat de app alleen bij beweging een nieuwe positie deelde. Nu sturen we de laatst bekende positie elke 5 seconden opnieuw, ook bij stilstand, en de app opnieuw openen forceert een directe verversing zodat de Kip een levende marker ziet zodra de jager terug in beeld is.
+</nl-NL>
+
+---
+
+## 📝 App Store Connect — field "App Review Information → Notes"
+
+No delta from 1.11.0 / 1.11.1. Paid flows (Forfait, Caution, promo codes), location usage descriptions, Apple Pay integration, and the Apple Reviewer promo code (`APPLE_REVIEW_99`) are unchanged. The 1.11.2 (1) diff is a refactor of how the hunter broadcasts their own GPS position (split tracker from writer, add a periodic refresh, refresh on app resume). No new permissions, no new sensitive APIs, no new capability.
+
+If the reviewer wants a quick recap vs 1.11.1 (1), paste this:
+
+```
+1.11.2 (1) change summary vs 1.11.1 (1):
+- Hunter-side location writer now periodically re-broadcasts the last
+  known position every 5 seconds, so a stationary player still shows
+  up fresh on the chicken's map instead of appearing frozen.
+- A foreground-resume hook forces one extra refresh so the chicken's
+  map catches up immediately when the player re-opens the app.
+- No backend change, no new permission, no new paid flow. Location
+  usage strings in Info.plist are unchanged from 1.10.0.
+```
+
+---
+
 # Release 1.11.1
 
 > ⚠️ **Do not paste this "Summary" paragraph into any store field.** Only the blocks explicitly labelled **App Store Connect**, **Google Play Console**, or **App Review Notes** below are store-safe.

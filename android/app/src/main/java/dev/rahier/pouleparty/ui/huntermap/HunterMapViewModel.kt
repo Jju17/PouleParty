@@ -27,6 +27,7 @@ import dev.rahier.pouleparty.ui.gamelogic.interpolateZoneCenter
 import dev.rahier.pouleparty.ui.gamelogic.processRadiusUpdate
 import dev.rahier.pouleparty.ui.gamelogic.seededRandom
 import dev.rahier.pouleparty.ui.gamelogic.shouldCheckZone
+import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -127,6 +128,7 @@ class HunterMapViewModel @Inject constructor(
     /** Single entry point for every user interaction. */
     fun onIntent(intent: HunterMapIntent) {
         when (intent) {
+            HunterMapIntent.AppResumed -> onAppResumed()
             HunterMapIntent.DismissRegistrationRequiredAlert -> dismissRegistrationRequiredAlert()
             HunterMapIntent.PowerUpInventoryTapped -> onPowerUpInventoryTapped()
             HunterMapIntent.DismissPowerUpInventory -> dismissPowerUpInventory()
@@ -448,6 +450,21 @@ class HunterMapViewModel @Inject constructor(
     /**
      * Hunter always tracks own location (for zone check).
      * When chickenCanSeeHunters, also writes to Firestore.
+     *
+     * Pre-1.11.2 we wrote only when FusedLocationProvider emitted a new
+     * coord. With `setMinUpdateDistanceMeters = 10 m`, a stationary hunter
+     * produced zero fixes and therefore zero writes — the chicken saw a
+     * frozen marker for as long as the player sat still. 1.11.2 splits
+     * the work across two coroutines:
+     *   1. Tracker — collects `locationFlow` and only updates
+     *      `_uiState.userLocation`; never writes directly.
+     *   2. Writer — `periodicHunterLocationWriter()` fires every
+     *      [AppConstants.LOCATION_THROTTLE_MS] and re-broadcasts the
+     *      latest cached `_uiState.userLocation` so a stationary hunter
+     *      still refreshes on the chicken's map.
+     * A `HunterMapIntent.AppResumed` handler writes one extra refresh
+     * each time the app returns to the foreground, in case Android
+     * suspended the writer coroutine during a deep background.
      */
     private suspend fun trackHunterSelfLocation(game: Game) {
         val shouldWrite = game.chickenCanSeeHunters
@@ -455,27 +472,79 @@ class HunterMapViewModel @Inject constructor(
         val delayMs = game.hunterStartDate.time - System.currentTimeMillis()
         if (delayMs > 0) delay(delayMs)
 
-        // Send current location immediately if we have a cached fix.
-        // If we don't, lastWrite stays at epoch so the very first coord
-        // emitted by locationFlow triggers an unthrottled write —
-        // otherwise the hunter's marker stays invisible on the chicken's
-        // map for up to 5 s + however long FusedLocationProvider's 10 m
-        // setMinUpdateDistanceMeters takes to produce the second coord,
-        // which in a small 2-device test can be long enough to look
-        // "stuck".
-        var lastWrite = Date(0L)
+        // Seed state immediately with the cached fix so the rest of the
+        // screen has a userLocation to work with (zone check, power-up
+        // proximity). Fire the first Firestore write in the same beat so
+        // the chicken's map doesn't wait up to 5 s for the first tick.
         locationRepository.getLastLocation()?.let { point ->
             _uiState.update { it.copy(userLocation = point) }
             if (shouldWrite) {
                 firestoreRepository.setHunterLocation(gameId, hunterId, point)
-                lastWrite = Date()
             }
         }
+
+        if (shouldWrite) {
+            streamJobs += viewModelScope.launch { periodicHunterLocationWriter() }
+        }
+
         locationRepository.locationFlow().collect { point ->
             _uiState.update { it.copy(userLocation = point) }
-            if (shouldWrite && Date().time - lastWrite.time >= AppConstants.LOCATION_THROTTLE_MS) {
+        }
+    }
+
+    /**
+     * Every [AppConstants.LOCATION_THROTTLE_MS] re-broadcasts the latest
+     * known `_uiState.userLocation` to Firestore. Split out from
+     * [trackHunterSelfLocation] so the period is bounded by the wall
+     * clock rather than by the GPS emission cadence — a hunter who
+     * stops moving still refreshes on the chicken's map.
+     * Registered in `streamJobs` so leaving the game cancels it.
+     *
+     * Before the first successful write, the loop polls at a tighter
+     * 100 ms cadence — [trackHunterSelfLocation] only fires the initial
+     * synchronous write when `locationRepository.getLastLocation()`
+     * already has a cached fix. On a cold start without one, the chicken
+     * would otherwise wait the full 5 s throttle window before the
+     * hunter's first coord showed up (reproduction: 1.11.1's
+     * `first locationFlow emit writes immediately when getLastLocation
+     * is null` regression test).
+     */
+    private suspend fun periodicHunterLocationWriter() {
+        var hasWritten = false
+        while (coroutineContext.isActive) {
+            delay(if (hasWritten) AppConstants.LOCATION_THROTTLE_MS else 100L)
+            val point = _uiState.value.userLocation ?: continue
+            try {
                 firestoreRepository.setHunterLocation(gameId, hunterId, point)
-                lastWrite = Date()
+                hasWritten = true
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to send periodic hunter location", e)
+            }
+        }
+    }
+
+    /**
+     * Force a single hunter-location refresh when the app returns to
+     * the foreground. Android can suspend the writer coroutine while
+     * the screen is off or backgrounded, which means the chicken's
+     * map shows a stale marker until the first tick after resume.
+     * Called from [HunterMapScreen]'s `LifecycleEventEffect(ON_RESUME)`.
+     */
+    private fun onAppResumed() {
+        val state = _uiState.value
+        if (!state.game.chickenCanSeeHunters) return
+        if (hunterId.isEmpty()) return
+        if (!state.hasGameStarted) return
+        viewModelScope.launch {
+            // `getLastLocation()` suspends — lives inside the coroutine, not
+            // at the synchronous early-return prelude above. Prefer the
+            // freshest in-state fix if we have one; otherwise ask the repo.
+            val point = state.userLocation ?: locationRepository.getLastLocation() ?: return@launch
+            try {
+                firestoreRepository.setHunterLocation(gameId, hunterId, point)
+                Log.i(TAG, "Hunter location refreshed on app resume")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to refresh hunter location on resume", e)
             }
         }
     }

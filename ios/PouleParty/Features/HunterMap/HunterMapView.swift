@@ -9,6 +9,12 @@ import SwiftUI
 struct HunterMapView: View {
     @Bindable var store: StoreOf<HunterMapFeature>
     @State private var selectedPowerUp: PowerUp?
+    /// Observes the app's scene phase so we can fire an immediate
+    /// hunter-location refresh when the player re-opens the app.
+    /// See `.view(.appBecameActive)` in `HunterMapFeature` — iOS can
+    /// suspend the background writer coroutine, so we catch the gap
+    /// between resume and the next periodic tick here.
+    @Environment(\.scenePhase) private var scenePhase
 
     private var subtitle: String {
         if store.game.chickenCanSeeHunters {
@@ -58,6 +64,11 @@ struct HunterMapView: View {
             }
             .task {
                 store.send(.view(.onTask))
+            }
+            .onChange(of: scenePhase) { _, newPhase in
+                if newPhase == .active {
+                    store.send(.view(.appBecameActive))
+                }
             }
             .idleTimerDisabled()
             .mapHaptics(store.state)
