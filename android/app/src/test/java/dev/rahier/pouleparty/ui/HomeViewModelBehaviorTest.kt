@@ -82,7 +82,7 @@ class HomeViewModelBehaviorTest {
     fun `checkForActiveGame finds hunter game`() {
         mockAuthUser("user-123")
         val game = Game.mock
-        coEvery { firestoreRepository.findActiveGame("user-123") } returns Pair(game, PlayerRole.HUNTER)
+        coEvery { firestoreRepository.findActiveGame("user-123") } returns FirestoreRepository.ActiveGameResult(game, PlayerRole.HUNTER, dev.rahier.pouleparty.ui.gamelogic.GamePhase.IN_PROGRESS)
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
         assertEquals(game, vm.uiState.value.activeGame)
@@ -93,7 +93,7 @@ class HomeViewModelBehaviorTest {
     fun `checkForActiveGame finds chicken game`() {
         mockAuthUser("user-123")
         val game = Game.mock
-        coEvery { firestoreRepository.findActiveGame("user-123") } returns Pair(game, PlayerRole.CHICKEN)
+        coEvery { firestoreRepository.findActiveGame("user-123") } returns FirestoreRepository.ActiveGameResult(game, PlayerRole.CHICKEN, dev.rahier.pouleparty.ui.gamelogic.GamePhase.IN_PROGRESS)
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
         assertEquals(game, vm.uiState.value.activeGame)
@@ -289,7 +289,7 @@ class HomeViewModelBehaviorTest {
     fun `ActiveGameDismissed clears both game and role`() {
         mockAuthUser("user-123")
         val game = dev.rahier.pouleparty.model.Game.mock
-        coEvery { firestoreRepository.findActiveGame("user-123") } returns Pair(game, PlayerRole.HUNTER)
+        coEvery { firestoreRepository.findActiveGame("user-123") } returns FirestoreRepository.ActiveGameResult(game, PlayerRole.HUNTER, dev.rahier.pouleparty.ui.gamelogic.GamePhase.IN_PROGRESS)
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
         assertNotNull(vm.uiState.value.activeGame)

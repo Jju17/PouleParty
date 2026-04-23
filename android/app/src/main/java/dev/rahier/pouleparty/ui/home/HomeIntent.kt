@@ -23,6 +23,7 @@ sealed interface HomeIntent {
     object JoinValidatedGameTapped : HomeIntent
     object PendingRegistrationJoinTapped : HomeIntent
     object RefreshActiveGame : HomeIntent
+    object PaymentVerificationDismissed : HomeIntent
     data class GameCodeChanged(val code: String) : HomeIntent
     data class TeamNameChanged(val name: String) : HomeIntent
 }

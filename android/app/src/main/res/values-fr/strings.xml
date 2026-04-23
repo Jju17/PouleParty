@@ -12,8 +12,13 @@
     <string name="close">Fermer</string>
     <string name="game_not_found">Partie introuvable</string>
     <string name="game_not_found_message">Aucune partie trouvée avec ce code. Vérifie le code et réessaie.</string>
+    <string name="payment_verification_failed_title">Vérification du paiement échouée</string>
+    <string name="payment_verification_failed_message">Ton paiement a été reçu mais ton inscription n\'a pas pu être confirmée. Si tu as été débité, contacte l\'organisateur — ta caution est en sécurité.</string>
     <string name="rejoin_game_in_progress">Partie en cours</string>
     <string name="rejoin">Reprendre</string>
+    <string name="upcoming_game_banner_title">Prochaine partie</string>
+    <string name="upcoming_game_cta_chicken">Ouvrir</string>
+    <string name="upcoming_game_cta_hunter">Rejoindre</string>
     <string name="location_required">Localisation requise</string>
     <string name="location_required_message">La localisation est au cœur de PouleParty ! Ta position est anonyme et utilisée uniquement pendant la partie. Active la localisation pour continuer.</string>
 

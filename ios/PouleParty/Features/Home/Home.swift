@@ -37,6 +37,18 @@ extension SharedKey where Self == FileStorageKey<PendingRegistration?>.Default {
     }
 }
 
+extension SharedKey where Self == FileStorageKey<Set<String>>.Default {
+    /// Game ids the user explicitly dismissed from the Home banner.
+    /// Persisted cross-session so a dismiss sticks until the game phase
+    /// changes (e.g. upcoming → inProgress resurfaces the banner).
+    static var dismissedActiveGameIds: Self {
+        Self[
+            .fileStorage(.documentsDirectory.appending(component: "dismissed-active-game-ids.json")),
+            default: []
+        ]
+    }
+}
+
 @Reducer
 struct HomeFeature {
 
@@ -46,18 +58,28 @@ struct HomeFeature {
         @Shared(.appStorage(AppConstants.prefIsMusicMuted)) var isMusicMuted = false
         @Shared(.appStorage(AppConstants.prefUserNickname)) var savedNickname = ""
         @Shared(.pendingRegistration) var pendingRegistration: PendingRegistration?
+        /// Set of game ids the user has dismissed from the Home banner. The
+        /// banner skips these so it doesn't reappear on every resume for a
+        /// game the user actively hid. Cleared individually when the same
+        /// game transitions phases (e.g. upcoming → inProgress — we want
+        /// the "Reprendre" banner to surface again then).
+        @Shared(.dismissedActiveGameIds) var dismissedActiveGameIds: Set<String> = []
         var gameCode: String = ""
         var musicMuted: Bool { isMusicMuted }
         var currentPendingRegistration: PendingRegistration? { pendingRegistration }
         var activeGame: Game? = nil
         var activeGameRole: GameRole? = nil
+        /// Distinguishes "Reprendre la partie" (inProgress) from "Prochaine
+        /// partie" (upcoming, `.waiting`) so the banner copy + CTA matches
+        /// the game state. Nil when no active game.
+        var activeGamePhase: GamePhase? = nil
         var pendingPlanResult: PlanSelectionResult? = nil
     }
 
     enum Action: BindableAction {
         case accountDeletionCompleted
         case activeGameBannerDismissed
-        case activeGameFound(Game, GameRole)
+        case activeGameFound(Game, GameRole, GamePhase)
         case binding(BindingAction<State>)
         case chickenConfigLocationRequested
         case chickenGameStarted(Game)
@@ -81,6 +103,11 @@ struct HomeFeature {
         case pendingRegistrationDismissed
         case pendingRegistrationRefreshed(PendingRegistration?)
         case pendingRegistrationRejoinTapped
+        /// Background result from `verifyHunterRegistrationPaid` — fires
+        /// after the Stripe PaymentSheet completed to confirm the webhook
+        /// actually wrote the registration doc. When `false`, the optimistic
+        /// pending banner is cleared + an alert surfaces.
+        case hunterRegistrationVerified(gameId: String, confirmed: Bool)
         case rejoinGameTapped
         case rulesButtonTapped
         case settingsButtonTapped
@@ -141,9 +168,10 @@ struct HomeFeature {
 
         Reduce { state, action in
             switch action {
-            case let .activeGameFound(game, role):
+            case let .activeGameFound(game, role, phase):
                 state.activeGame = game
                 state.activeGameRole = role
+                state.activeGamePhase = phase
                 return .none
             case .binding:
                 return .none
@@ -221,7 +249,21 @@ struct HomeFeature {
                 case .done:
                     return .send(.completedGameFound(game))
                 case .pendingPayment, .paymentFailed:
-                    // Paid-creator game not yet live — nothing to join.
+                    // Paid-creator game whose Stripe webhook hasn't flipped to
+                    // `waiting` (or was cancelled). Surface a visible alert
+                    // instead of silently returning — previously the user was
+                    // dropped back on Home with no feedback.
+                    state.destination = .alert(
+                        AlertState {
+                            TextState("Game not ready")
+                        } actions: {
+                            ButtonState(role: .cancel) {
+                                TextState("OK")
+                            }
+                        } message: {
+                            TextState("This game is still awaiting payment. Try again in a few moments, or contact the organizer.")
+                        }
+                    )
                     return .none
                 }
             case let .destination(.presented(.joinFlow(.delegate(.registered(game, teamName))))):
@@ -234,15 +276,43 @@ struct HomeFeature {
                         startDate: game.startDate
                     )
                 }
-                // Show the confirmation screen so the hunter sees their payment
-                // succeeded and can share the code with teammates. The pending
-                // registration banner on Home is the fallback after dismissal.
-                return .send(.paymentConfirmationRequested(game: game, kind: .hunterCaution))
+                let gameId = game.id
+                let userId = userClient.currentUserId() ?? ""
+                // Show the confirmation screen optimistically, and kick off a
+                // background verification that the Stripe webhook actually
+                // wrote the registration doc. If it never appears (webhook
+                // failure, rotated secret, etc.), clear the pending banner and
+                // alert the user instead of leaving a ghost entry.
+                return .merge(
+                    .send(.paymentConfirmationRequested(game: game, kind: .hunterCaution)),
+                    .run { [apiClient, clock] send in
+                        guard !userId.isEmpty else { return }
+                        let deadline = Date().addingTimeInterval(30)
+                        while Date() < deadline {
+                            if let registration = try? await apiClient.findRegistration(gameId, userId),
+                               registration.paid {
+                                await send(.hunterRegistrationVerified(gameId: gameId, confirmed: true))
+                                return
+                            }
+                            do { try await clock.sleep(for: .seconds(3)) } catch { return }
+                        }
+                        await send(.hunterRegistrationVerified(gameId: gameId, confirmed: false))
+                    }
+                )
             case .destination:
                 return .none
             case .activeGameBannerDismissed:
+                // Record the dismissed gameId so the banner doesn't reappear
+                // on the next onTask for the same game. The user can still
+                // reach it via Settings → My Games.
+                if let dismissed = state.activeGame?.id {
+                    state.$dismissedActiveGameIds.withLock { ids in
+                        ids.insert(dismissed)
+                    }
+                }
                 state.activeGame = nil
                 state.activeGameRole = nil
+                state.activeGamePhase = nil
                 return .none
             case .destinationDismissed:
                 state.destination = nil
@@ -350,6 +420,7 @@ struct HomeFeature {
             case .noActiveGameFound:
                 state.activeGame = nil
                 state.activeGameRole = nil
+                state.activeGamePhase = nil
                 return .none
             case .paymentConfirmationRequested:
                 // Terminal — `AppFeature` catches this and swaps root state.
@@ -363,6 +434,14 @@ struct HomeFeature {
                 return .merge(
                     .run { [apiClient] send in
                         guard let pending else { return }
+                        // TTL: a banner for a game whose start date was > 7 days
+                        // ago is a zombie (user never opened the app after the
+                        // game ended). Clear it instead of keeping it forever.
+                        let sevenDaysAgo = Date().addingTimeInterval(-7 * 24 * 60 * 60)
+                        if pending.startDate < sevenDaysAgo {
+                            await send(.pendingRegistrationRefreshed(nil))
+                            return
+                        }
                         guard let game = try? await apiClient.getConfig(pending.gameId) else {
                             // Game no longer exists — clear the banner
                             await send(.pendingRegistrationRefreshed(nil))
@@ -377,27 +456,40 @@ struct HomeFeature {
                         )
                         await send(.pendingRegistrationRefreshed(updated))
                     },
-                    .run { [apiClient] send in
-                    // First attempt may fail on cold start while auth token refreshes
-                    if let (game, role) = try? await apiClient.findActiveGame(userId) {
-                        await send(.activeGameFound(game, role))
-                        return
-                    }
-                    // Retry once after a short delay to allow auth token refresh
-                    try? await clock.sleep(for: .seconds(2))
-                    if let (game, role) = try? await apiClient.findActiveGame(userId) {
-                        await send(.activeGameFound(game, role))
-                    } else {
-                        await send(.noActiveGameFound)
-                    }
+                    .run { [apiClient, dismissedIds = state.dismissedActiveGameIds] send in
+                        func emit(_ triple: (Game, GameRole, GamePhase)?) async {
+                            guard let (game, role, phase) = triple else {
+                                await send(.noActiveGameFound)
+                                return
+                            }
+                            if dismissedIds.contains(game.id) {
+                                await send(.noActiveGameFound)
+                            } else {
+                                await send(.activeGameFound(game, role, phase))
+                            }
+                        }
+                        // First attempt may fail on cold start while auth token refreshes
+                        if let triple = try? await apiClient.findActiveGame(userId) {
+                            await emit(triple)
+                            return
+                        }
+                        // Retry once after a short delay to allow auth token refresh
+                        try? await clock.sleep(for: .seconds(2))
+                        await emit(try? await apiClient.findActiveGame(userId))
                     }
                 )
             case .rejoinGameTapped:
                 guard let game = state.activeGame, let role = state.activeGameRole else {
                     return .none
                 }
+                // Clear dismiss for this game — if the user explicitly taps
+                // the banner CTA, they no longer want it hidden.
+                state.$dismissedActiveGameIds.withLock { ids in
+                    ids.remove(game.id)
+                }
                 state.activeGame = nil
                 state.activeGameRole = nil
+                state.activeGamePhase = nil
                 switch role {
                 case .chicken:
                     return .send(.chickenGameStarted(game))
@@ -418,6 +510,30 @@ struct HomeFeature {
 
             case let .pendingRegistrationRefreshed(updated):
                 state.$pendingRegistration.withLock { $0 = updated }
+                return .none
+
+            case let .hunterRegistrationVerified(gameId, confirmed):
+                guard !confirmed else { return .none }
+                // Webhook never wrote the registration within the window — the
+                // user paid but the server never recorded them. Clear the
+                // optimistic pending banner so it doesn't look like we
+                // silently registered them, and surface an alert.
+                state.$pendingRegistration.withLock { current in
+                    if current?.gameId == gameId {
+                        current = nil
+                    }
+                }
+                state.destination = .alert(
+                    AlertState {
+                        TextState("Payment verification failed")
+                    } actions: {
+                        ButtonState(role: .cancel) {
+                            TextState("OK")
+                        }
+                    } message: {
+                        TextState("We received your payment but couldn't confirm your registration. If you were charged, please contact the organizer — your deposit is safe.")
+                    }
+                )
                 return .none
 
             case .pendingRegistrationRejoinTapped:
@@ -550,9 +666,14 @@ struct HomeView: View {
                 }
                 Spacer()
 
-                if store.activeGame != nil {
+                if let activeGame = store.activeGame,
+                   let role = store.activeGameRole,
+                   let phase = store.activeGamePhase {
                     RejoinGameBanner(
-                        gameCode: store.activeGame?.gameCode,
+                        gameCode: activeGame.gameCode,
+                        phase: phase,
+                        role: role,
+                        startDate: phase == .upcoming ? activeGame.startDate : nil,
                         onRejoin: { store.send(.rejoinGameTapped) },
                         onDismiss: {
                             withAnimation { _ = store.send(.activeGameBannerDismissed) }

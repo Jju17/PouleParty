@@ -11,8 +11,22 @@ import FirebaseAuth
 import FirebaseFirestore
 import os
 
+/// Phase of an active game, used by the Home banner to pick the right
+/// copy + CTA. Games in both phases can legitimately coexist for a single
+/// user (e.g. a hunter currently playing game A and registered to game B
+/// for tomorrow), so `findActiveGame` returns the single most-relevant one.
+enum GamePhase: Equatable {
+    /// Game has already started (`status == .inProgress`) and the user is
+    /// mid-play. Banner copy: "Partie en cours" + "Reprendre".
+    case inProgress
+    /// Game is scheduled but hasn't started yet (`status == .waiting`).
+    /// Banner copy: "Prochaine partie" + "Préparer" (chicken) or
+    /// "Rejoindre" (hunter).
+    case upcoming
+}
+
 struct ApiClient {
-    var findActiveGame: (String) async throws -> (Game, GameRole)?
+    var findActiveGame: (String) async throws -> (Game, GameRole, GamePhase)?
     var addWinner: (String, Winner) async throws -> Void
     var deleteConfig: (String) async throws -> Void
     var getConfig: (String) async throws -> Game?
@@ -103,7 +117,7 @@ private func withRetry(_ operation: String, block: () async throws -> Void) asyn
 
 extension ApiClient: TestDependencyKey {
     static let testValue = ApiClient(
-        findActiveGame: { _ in nil },
+        findActiveGame: { _ in nil as (Game, GameRole, GamePhase)? },
         addWinner: { _, _ in },
         deleteConfig: { _ in },
         getConfig: { _ in nil },
@@ -178,8 +192,27 @@ extension ApiClient: DependencyKey {
             // not have been updated to DONE yet due to network/Cloud Task lag)
             let stillActive = candidates.filter { $0.0.endDate > .now }
 
-            // Return the most recently started game
-            return stillActive.max(by: { $0.0.startDate < $1.0.startDate })
+            // Priority 1: a game already in progress — that's the most urgent
+            // one to surface. If the user has several, pick the most recently
+            // started (they probably launched it last).
+            let inProgress = stillActive.filter { $0.0.status == .inProgress }
+            if let (game, role) = inProgress.max(by: { $0.0.startDate < $1.0.startDate }) {
+                return (game, role, .inProgress)
+            }
+
+            // Priority 2: a waiting game with a future start date — surface
+            // the one that will start the soonest so the user sees the most
+            // actionable item. Games with `startDate < now` but still
+            // `.waiting` (transition Cloud Task late) are filtered out because
+            // they'll flip to inProgress within seconds and the banner would
+            // already tell the user "Prochaine partie" confusingly.
+            let upcoming = stillActive.filter {
+                $0.0.status == .waiting && $0.0.startDate > .now
+            }
+            if let (game, role) = upcoming.min(by: { $0.0.startDate < $1.0.startDate }) {
+                return (game, role, .upcoming)
+            }
+            return nil
         },
         addWinner: { gameId, winner in
             try await withRetry("addWinner(\(gameId))") {
@@ -507,8 +540,21 @@ extension ApiClient: DependencyKey {
             var result: [MyGame] = []
             var seenIds = Set<String>()
 
+            // Hide payment-limbo docs from the My Games list. The Forfait flow
+            // pre-creates the game in `pending_payment` before the Stripe sheet;
+            // if the user cancels, the client `deleteConfig` + the scheduled
+            // server purge should clean them up, but this filter is the last
+            // line of defence so a ghost never shows up as a "Paiement" pill.
+            func isVisibleInMyGames(_ status: Game.GameStatus) -> Bool {
+                switch status {
+                case .pendingPayment, .paymentFailed: return false
+                case .waiting, .inProgress, .done: return true
+                }
+            }
+
             for doc in created.documents {
                 guard let game = try? doc.data(as: Game.self) else { continue }
+                if !isVisibleInMyGames(game.status) { continue }
                 if seenIds.insert(game.id).inserted {
                     result.append(MyGame(game: game, role: .chicken))
                 }
@@ -516,6 +562,7 @@ extension ApiClient: DependencyKey {
 
             for doc in joined.documents {
                 guard let game = try? doc.data(as: Game.self) else { continue }
+                if !isVisibleInMyGames(game.status) { continue }
                 // Creator takes precedence if the same user is both creator and hunter.
                 if seenIds.insert(game.id).inserted {
                     result.append(MyGame(game: game, role: .hunter))

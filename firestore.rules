@@ -27,11 +27,14 @@ service cloud.firestore {
 
       // Any player can update hunterIds and winners (join game, submit winner)
       // If the game requires registration, the joining user must already have a registration doc.
+      // A creator can never be in their own hunterIds — enforced here so the
+      // mobile clients + server stay consistent on "creator can't self-join".
       allow update: if request.auth != null
                     && request.resource.data.diff(resource.data).affectedKeys()
                         .hasOnly(['hunterIds', 'winners'])
                     && request.resource.data.hunterIds.size() <= resource.data.maxPlayers
                     && request.resource.data.winners.size() <= resource.data.maxPlayers
+                    && !request.resource.data.hunterIds.hasAny([resource.data.creatorId])
                     && (
                       resource.data.get('registration', {}).get('required', false) == false
                       || !request.resource.data.hunterIds.hasAny([request.auth.uid])
@@ -49,10 +52,15 @@ service cloud.firestore {
       allow update: if request.auth != null
                     && resource.data.creatorId == request.auth.uid;
 
-      // Only the creator can delete, and only while still waiting
+      // Only the creator can delete, and only while still waiting OR while the
+      // game is stuck in a payment-limbo state (pending_payment / payment_failed).
+      // The Forfait flow pre-creates the doc in `pending_payment` before
+      // presenting Stripe PaymentSheet — if the user swipes down the sheet
+      // without paying, the doc would otherwise linger as a ghost in the
+      // creator's My Games list until a server-side scheduled purge runs.
       allow delete: if request.auth != null
                     && resource.data.creatorId == request.auth.uid
-                    && resource.data.status == 'waiting';
+                    && resource.data.status in ['waiting', 'pending_payment', 'payment_failed'];
 
       // Chicken locations subcollection (only the creator can write)
       match /chickenLocations/{docId} {

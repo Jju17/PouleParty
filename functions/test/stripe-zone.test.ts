@@ -307,12 +307,13 @@ describe("sanitiseGamePayload — timing", () => {
 });
 
 describe("sanitiseGamePayload — name", () => {
-  test("rejects empty name", () => {
-    expect(() => sanitiseGamePayload(validPayload({ name: "" }))).toThrow(/name/);
+  test("accepts empty name (client shows \"Game {code}\" fallback)", () => {
+    expect(() => sanitiseGamePayload(validPayload({ name: "" }))).not.toThrow();
   });
 
-  test("rejects whitespace-only name", () => {
-    expect(() => sanitiseGamePayload(validPayload({ name: "    " }))).toThrow(/name/);
+  test("accepts whitespace-only name (trimmed down to empty)", () => {
+    const out = sanitiseGamePayload(validPayload({ name: "    " }));
+    expect((out as { name: string }).name).toBe("");
   });
 
   test("rejects name longer than 80 chars", () => {

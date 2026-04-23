@@ -30,12 +30,22 @@ data class HomeUiState(
     val isShowingGameRules: Boolean = false,
     val isShowingGameNotFound: Boolean = false,
     val isShowingLocationRequired: Boolean = false,
+    /**
+     * The Stripe PaymentSheet confirmed a deposit but no matching
+     * `registrations/{uid}` doc appeared within the verification window —
+     * surface an error so the user can contact the organizer instead of
+     * showing a ghost "pending" banner indefinitely.
+     */
+    val isShowingPaymentVerificationFailed: Boolean = false,
     val isMusicMuted: Boolean = false,
     val gameCode: String = "",
     val teamName: String = "",
     val joinStep: JoinFlowStep = JoinFlowStep.EnteringCode,
     val activeGame: Game? = null,
     val activeGameRole: PlayerRole? = null,
+    /** Distinguishes "Reprendre" (IN_PROGRESS) from "Prochaine partie"
+     *  (UPCOMING) for the Home banner copy + CTA. Null when no active game. */
+    val activeGamePhase: dev.rahier.pouleparty.ui.gamelogic.GamePhase? = null,
     val pendingRegistration: PendingRegistration? = null,
     /** Non-null when the hunter Caution payment screen should be shown as an overlay. */
     val paymentContext: PaymentContext? = null,
@@ -85,6 +95,7 @@ class HomeViewModel @Inject constructor(
             HomeIntent.JoinValidatedGameTapped -> joinValidatedGame()
             HomeIntent.PendingRegistrationJoinTapped -> joinPendingRegistration()
             HomeIntent.RefreshActiveGame -> checkForActiveGame()
+            HomeIntent.PaymentVerificationDismissed -> _uiState.update { it.copy(isShowingPaymentVerificationFailed = false) }
             is HomeIntent.GameCodeChanged -> onGameCodeChanged(intent.code)
             is HomeIntent.TeamNameChanged -> onTeamNameChanged(intent.name)
         }
@@ -129,16 +140,54 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    /**
+     * In-flight guard so two concurrent `checkForActiveGame` calls (init +
+     * LifecycleEventEffect.ON_RESUME, or back-navigation + tab switch) don't
+     * race: only the first fetch runs; the second one becomes a no-op.
+     */
+    @Volatile
+    private var activeGameCheckInFlight: kotlinx.coroutines.Job? = null
+
     private fun checkForActiveGame() {
+        if (activeGameCheckInFlight?.isActive == true) return
         val userId = auth.currentUser?.uid ?: return
-        viewModelScope.launch {
+        activeGameCheckInFlight = viewModelScope.launch {
             val result = firestoreRepository.findActiveGame(userId)
-            if (result != null) {
-                _uiState.update { it.copy(activeGame = result.first, activeGameRole = result.second) }
+            val dismissedIds = loadDismissedActiveGameIds()
+            if (result != null && !dismissedIds.contains(result.game.id)) {
+                _uiState.update {
+                    it.copy(
+                        activeGame = result.game,
+                        activeGameRole = result.role,
+                        activeGamePhase = result.phase,
+                    )
+                }
             } else {
-                _uiState.update { it.copy(activeGame = null, activeGameRole = null) }
+                _uiState.update {
+                    it.copy(activeGame = null, activeGameRole = null, activeGamePhase = null)
+                }
             }
         }
+    }
+
+    private fun loadDismissedActiveGameIds(): Set<String> {
+        return prefs.getStringSet(AppConstants.PREF_DISMISSED_ACTIVE_GAME_IDS, emptySet())?.toSet()
+            ?: emptySet()
+    }
+
+    private fun addDismissedActiveGameId(gameId: String) {
+        val current = loadDismissedActiveGameIds()
+        prefs.edit()
+            .putStringSet(AppConstants.PREF_DISMISSED_ACTIVE_GAME_IDS, current + gameId)
+            .apply()
+    }
+
+    private fun removeDismissedActiveGameId(gameId: String) {
+        val current = loadDismissedActiveGameIds()
+        if (gameId !in current) return
+        prefs.edit()
+            .putStringSet(AppConstants.PREF_DISMISSED_ACTIVE_GAME_IDS, current - gameId)
+            .apply()
     }
 
     private fun toggleMusicMuted() {
@@ -148,16 +197,42 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun dismissActiveGame() {
-        _uiState.update { it.copy(activeGame = null, activeGameRole = null) }
+        val dismissedId = _uiState.value.activeGame?.id
+        _uiState.update {
+            it.copy(activeGame = null, activeGameRole = null, activeGamePhase = null)
+        }
+        if (!dismissedId.isNullOrEmpty()) {
+            addDismissedActiveGameId(dismissedId)
+        }
+    }
+
+    private fun rejoinActiveGameClearsDismissedFlag(gameId: String) {
+        removeDismissedActiveGameId(gameId)
     }
 
     private fun rejoinActiveGame() {
-        val game = _uiState.value.activeGame ?: return
+        val cachedGame = _uiState.value.activeGame ?: return
         val role = _uiState.value.activeGameRole ?: return
-        _uiState.update { it.copy(activeGame = null, activeGameRole = null) }
+        rejoinActiveGameClearsDismissedFlag(cachedGame.id)
+        _uiState.update {
+            it.copy(activeGame = null, activeGameRole = null, activeGamePhase = null)
+        }
         val savedNickname = prefs.getTrimmedString(AppConstants.PREF_USER_NICKNAME)
         val hunterName = savedNickname.ifEmpty { "Hunter" }
         viewModelScope.launch {
+            // Refetch to catch games that transitioned to done / pending_payment
+            // between the banner being shown and the tap. Falls back to the
+            // cached game if the refetch fails (better UX than freezing on a
+            // transient network error).
+            val fresh = runCatching { firestoreRepository.getConfig(cachedGame.id) }.getOrNull()
+            val game = fresh ?: cachedGame
+            when (game.gameStatusEnum) {
+                GameStatus.PENDING_PAYMENT, GameStatus.PAYMENT_FAILED, GameStatus.DONE -> {
+                    _uiState.update { it.copy(isShowingGameNotFound = true) }
+                    return@launch
+                }
+                GameStatus.WAITING, GameStatus.IN_PROGRESS -> Unit
+            }
             when (role) {
                 PlayerRole.CHICKEN -> _effects.send(HomeEffect.NavigateToChickenMap(game.id))
                 PlayerRole.HUNTER -> _effects.send(HomeEffect.NavigateToHunterMap(game.id, hunterName))
@@ -185,6 +260,10 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun onJoinSheetDismissed() {
+        // Cancel any in-flight code validation so a late Firestore response
+        // doesn't update state (or navigate) after the sheet is gone.
+        validateCodeJob?.cancel()
+        validateCodeJob = null
         _uiState.update {
             it.copy(
                 isShowingJoinSheet = false,
@@ -211,13 +290,26 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    @Volatile
+    private var validateCodeJob: kotlinx.coroutines.Job? = null
+
     private fun validateCode(code: String) {
+        // Drop any stale validation so a fast re-type doesn't race the previous
+        // Firestore read and overwrite state out of order.
+        validateCodeJob?.cancel()
         _uiState.update { it.copy(joinStep = JoinFlowStep.Validating) }
         val userId = auth.currentUser?.uid ?: ""
-        viewModelScope.launch {
+        validateCodeJob = viewModelScope.launch {
             try {
                 val game = firestoreRepository.findGameByCode(code)
                 if (game == null) {
+                    _uiState.update { it.copy(joinStep = JoinFlowStep.CodeNotFound) }
+                    return@launch
+                }
+                // Block hunters from joining their own chicken game: if they
+                // do, they'd end up in both `creatorId` and `hunterIds`, which
+                // breaks the map (who sees whose position?).
+                if (game.creatorId == userId && userId.isNotEmpty()) {
                     _uiState.update { it.copy(joinStep = JoinFlowStep.CodeNotFound) }
                     return@launch
                 }
@@ -231,6 +323,10 @@ class HomeViewModel @Inject constructor(
                 } else {
                     _uiState.update { it.copy(joinStep = JoinFlowStep.CodeValidated(game, true)) }
                 }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                // Sheet was dismissed or a newer validation started — don't
+                // update state and don't flip to NetworkError.
+                throw e
             } catch (e: Exception) {
                 _uiState.update { it.copy(joinStep = JoinFlowStep.NetworkError) }
             }
@@ -238,7 +334,11 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun onTeamNameChanged(name: String) {
-        _uiState.update { it.copy(teamName = name) }
+        // Trim trailing whitespace early so validation / storage use the same
+        // string the user actually meant. Keep a single leading space so the
+        // user can still type "The Foxes" naturally (multiple spaces collapse
+        // when they tap submit).
+        _uiState.update { it.copy(teamName = name.trimStart()) }
     }
 
     private fun onRegisterTapped() {
@@ -297,6 +397,11 @@ class HomeViewModel @Inject constructor(
         val game = (step as? JoinFlowStep.Registering)?.game ?: return
         val teamName = _uiState.value.teamName.trim()
         analyticsRepository.registrationCompleted(pricingModel = game.pricing.model)
+        // Optimistic UI: show the pending banner right away so the user gets
+        // feedback, but kick off a verification task to confirm the Stripe
+        // webhook actually wrote the registration doc. If the webhook never
+        // fires (network / Cloud Tasks failure / rotated secret), clear the
+        // banner + surface an error instead of leaving a ghost pending.
         val pending = PendingRegistration(
             gameId = game.id,
             gameCode = game.gameCode,
@@ -314,9 +419,38 @@ class HomeViewModel @Inject constructor(
                 joinStep = JoinFlowStep.EnteringCode,
             )
         }
+        val userId = auth.currentUser?.uid
         viewModelScope.launch {
             _effects.send(HomeEffect.NavigateToPaymentConfirmed(game.id, "hunter_caution"))
+            if (userId.isNullOrEmpty()) return@launch
+            val confirmed = verifyHunterRegistrationPaid(game.id, userId)
+            if (!confirmed) {
+                clearPendingRegistration()
+                _uiState.update { it.copy(pendingRegistration = null, isShowingPaymentVerificationFailed = true) }
+            }
         }
+    }
+
+    /**
+     * Polls `findRegistration(gameId, uid)` every `POLL_INTERVAL_MS` until it
+     * returns `paid=true` or the `TOTAL_TIMEOUT_MS` budget is exhausted.
+     * Returns true iff the Stripe webhook confirmed the deposit. The polling
+     * runs as a background coroutine — the caller controls the UI.
+     */
+    private suspend fun verifyHunterRegistrationPaid(gameId: String, userId: String): Boolean {
+        val POLL_INTERVAL_MS = 3_000L
+        val TOTAL_TIMEOUT_MS = 30_000L
+        val start = System.currentTimeMillis()
+        while (System.currentTimeMillis() - start < TOTAL_TIMEOUT_MS) {
+            val registration = runCatching {
+                firestoreRepository.findRegistration(gameId, userId)
+            }.getOrNull()
+            if (registration != null && registration.paid) {
+                return true
+            }
+            kotlinx.coroutines.delay(POLL_INTERVAL_MS)
+        }
+        return false
     }
 
     fun onPaymentCancelled() {
@@ -327,6 +461,24 @@ class HomeViewModel @Inject constructor(
         val step = _uiState.value.joinStep
         if (step !is JoinFlowStep.CodeValidated) return
         if (step.game.registration.required && !step.alreadyRegistered) return
+
+        // Bail out loudly for payment-limbo games: previously we fell through
+        // to `return@launch`, dropping the user back on Home with no feedback
+        // while their tap silently did nothing.
+        if (step.game.gameStatusEnum == GameStatus.PENDING_PAYMENT ||
+            step.game.gameStatusEnum == GameStatus.PAYMENT_FAILED) {
+            _uiState.update {
+                it.copy(
+                    isShowingJoinSheet = false,
+                    gameCode = "",
+                    teamName = "",
+                    joinStep = JoinFlowStep.EnteringCode,
+                    isShowingGameNotFound = true,
+                )
+            }
+            return
+        }
+
         val savedNickname = prefs.getTrimmedString(AppConstants.PREF_USER_NICKNAME)
         val hunterName = savedNickname.ifEmpty { "Hunter" }
         clearPendingRegistration()
@@ -406,6 +558,15 @@ class HomeViewModel @Inject constructor(
         val startMs = prefs.getLong(AppConstants.PREF_PENDING_REGISTRATION_START_MS, 0L)
         val isFinished = prefs.getBoolean(AppConstants.PREF_PENDING_REGISTRATION_IS_FINISHED, false)
         if (gameId.isEmpty() || gameCode.isEmpty()) return null
+
+        // TTL: if the stored game's start is more than 7 days in the past, the
+        // banner is almost certainly a zombie (user never opened the app
+        // after the game ended). Drop it rather than display forever.
+        val PENDING_TTL_MS = 7L * 24 * 60 * 60 * 1000
+        if (startMs > 0 && System.currentTimeMillis() - startMs > PENDING_TTL_MS) {
+            clearPendingRegistration()
+            return null
+        }
         return PendingRegistration(gameId, gameCode, teamName, startMs, isFinished)
     }
 

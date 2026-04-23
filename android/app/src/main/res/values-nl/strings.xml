@@ -12,8 +12,13 @@
     <string name="close">Sluiten</string>
     <string name="game_not_found">Spel niet gevonden</string>
     <string name="game_not_found_message">Geen actief spel gevonden met deze code. Controleer de code en probeer opnieuw.</string>
+    <string name="payment_verification_failed_title">Betalingsverificatie mislukt</string>
+    <string name="payment_verification_failed_message">We hebben je betaling ontvangen, maar konden je inschrijving niet bevestigen. Als je bent afgeschreven, neem dan contact op met de organisator — je borg is veilig.</string>
     <string name="rejoin_game_in_progress">Spel bezig</string>
     <string name="rejoin">Hervatten</string>
+    <string name="upcoming_game_banner_title">Volgende spel</string>
+    <string name="upcoming_game_cta_chicken">Openen</string>
+    <string name="upcoming_game_cta_hunter">Meedoen</string>
     <string name="location_required">Locatie vereist</string>
     <string name="location_required_message">Locatie is de kern van PouleParty! Je positie is anoniem en wordt alleen tijdens het spel gebruikt. Schakel locatietoegang in om door te gaan.</string>
 

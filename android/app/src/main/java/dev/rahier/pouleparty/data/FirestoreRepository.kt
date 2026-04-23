@@ -128,14 +128,20 @@ class FirestoreRepository @Inject constructor(
         }
     }
 
-    suspend fun findActiveGame(userId: String): Pair<Game, PlayerRole>? {
+    data class ActiveGameResult(
+        val game: Game,
+        val role: dev.rahier.pouleparty.ui.gamelogic.PlayerRole,
+        val phase: dev.rahier.pouleparty.ui.gamelogic.GamePhase,
+    )
+
+    suspend fun findActiveGame(userId: String): ActiveGameResult? {
         if (userId.isEmpty()) return null
         val activeStatuses = listOf(
             GameStatus.WAITING.firestoreValue,
             GameStatus.IN_PROGRESS.firestoreValue
         )
         try {
-            val candidates = mutableListOf<Pair<Game, PlayerRole>>()
+            val candidates = mutableListOf<Pair<Game, dev.rahier.pouleparty.ui.gamelogic.PlayerRole>>()
 
             // Check if user is a hunter in active games
             val hunterSnapshot = firestore.collection(AppConstants.COLLECTION_GAMES)
@@ -145,7 +151,7 @@ class FirestoreRepository @Inject constructor(
                 .await()
             hunterSnapshot.documents.forEach { doc ->
                 val game = safeToObject<Game>(doc, "findActiveGame hunter")?.copy(id = doc.id)
-                if (game != null) candidates.add(Pair(game, PlayerRole.HUNTER))
+                if (game != null) candidates.add(Pair(game, dev.rahier.pouleparty.ui.gamelogic.PlayerRole.HUNTER))
             }
 
             // Check if user is the chicken (creator) of active games
@@ -156,16 +162,38 @@ class FirestoreRepository @Inject constructor(
                 .await()
             chickenSnapshot.documents.forEach { doc ->
                 val game = safeToObject<Game>(doc, "findActiveGame chicken")?.copy(id = doc.id)
-                if (game != null) candidates.add(Pair(game, PlayerRole.CHICKEN))
+                if (game != null) candidates.add(Pair(game, dev.rahier.pouleparty.ui.gamelogic.PlayerRole.CHICKEN))
             }
 
-            // Filter out games whose end time has already passed (status may
-            // not have been updated to DONE yet due to network/Cloud Task lag)
             val now = Date()
-            val stillActive = candidates.filter { it.first.endDate.after(now) }
+            // Priority 1: games already in progress (most urgent). Filter out
+            // those whose endDate has passed (transition Cloud Task delayed).
+            val inProgress = candidates.filter {
+                it.first.gameStatusEnum == GameStatus.IN_PROGRESS && it.first.endDate.after(now)
+            }
+            val latestInProgress = inProgress.maxByOrNull { it.first.startDate.time }
+            if (latestInProgress != null) {
+                return ActiveGameResult(
+                    latestInProgress.first,
+                    latestInProgress.second,
+                    dev.rahier.pouleparty.ui.gamelogic.GamePhase.IN_PROGRESS,
+                )
+            }
 
-            // Return the most recently started game
-            return stillActive.maxByOrNull { it.first.startDate.time }
+            // Priority 2: upcoming (waiting + start in the future). Pick the
+            // one starting soonest so the user's next deadline is surfaced.
+            val upcoming = candidates.filter {
+                it.first.gameStatusEnum == GameStatus.WAITING && it.first.startDate.after(now)
+            }
+            val earliestUpcoming = upcoming.minByOrNull { it.first.startDate.time }
+            if (earliestUpcoming != null) {
+                return ActiveGameResult(
+                    earliestUpcoming.first,
+                    earliestUpcoming.second,
+                    dev.rahier.pouleparty.ui.gamelogic.GamePhase.UPCOMING,
+                )
+            }
+            return null
         } catch (e: Exception) {
             Log.e(TAG, "Failed to find active game for user $userId", e)
         }
@@ -536,8 +564,18 @@ class FirestoreRepository @Inject constructor(
         val result = mutableListOf<dev.rahier.pouleparty.model.MyGame>()
         val seenIds = mutableSetOf<String>()
 
+        // Hide payment-limbo docs from the My Games list. The Forfait flow
+        // pre-creates the game in `pending_payment` before the Stripe sheet;
+        // if the user cancels, the client delete + the scheduled server purge
+        // should clean them up, but this filter is the last line of defence.
+        fun isVisibleInMyGames(status: GameStatus): Boolean = when (status) {
+            GameStatus.PENDING_PAYMENT, GameStatus.PAYMENT_FAILED -> false
+            GameStatus.WAITING, GameStatus.IN_PROGRESS, GameStatus.DONE -> true
+        }
+
         for (doc in createdSnap.documents) {
             val game = safeToObject<Game>(doc, "fetchMyGames created")?.copy(id = doc.id) ?: continue
+            if (!isVisibleInMyGames(game.gameStatusEnum)) continue
             if (seenIds.add(game.id)) {
                 result.add(dev.rahier.pouleparty.model.MyGame(game, dev.rahier.pouleparty.model.MyGameRole.CREATOR))
             }
@@ -545,6 +583,7 @@ class FirestoreRepository @Inject constructor(
 
         for (doc in joinedSnap.documents) {
             val game = safeToObject<Game>(doc, "fetchMyGames joined")?.copy(id = doc.id) ?: continue
+            if (!isVisibleInMyGames(game.gameStatusEnum)) continue
             // Creator takes precedence if the user is both creator and hunter on the same game.
             if (seenIds.add(game.id)) {
                 result.add(dev.rahier.pouleparty.model.MyGame(game, dev.rahier.pouleparty.model.MyGameRole.HUNTER))

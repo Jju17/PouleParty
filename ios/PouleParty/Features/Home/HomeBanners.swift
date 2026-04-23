@@ -103,16 +103,48 @@ struct CollapsedPendingRegistrationTab: View {
     }
 }
 
-/// Banner shown when the user can rejoin an active game (Chicken or Hunter).
+/// Banner shown when the user has an active game they can open or rejoin.
+///
+/// Two phases drive the copy + CTA:
+///  - `.inProgress` → "Partie en cours" + "Reprendre"
+///  - `.upcoming`   → "Prochaine partie" + "Préparer" (chicken) /
+///                    "Rejoindre" (hunter)
+///
+/// Starting-in countdown is rendered only in the upcoming phase.
 struct RejoinGameBanner: View {
     let gameCode: String?
+    let phase: GamePhase
+    let role: GameRole
+    let startDate: Date?
     let onRejoin: () -> Void
     let onDismiss: () -> Void
+
+    private var title: String {
+        switch phase {
+        case .inProgress: return String(localized: "Game in progress")
+        case .upcoming: return String(localized: "Next game")
+        }
+    }
+
+    private var ctaLabel: String {
+        switch (phase, role) {
+        case (.inProgress, _): return String(localized: "Rejoin")
+        case (.upcoming, .chicken): return String(localized: "Open")
+        case (.upcoming, .hunter): return String(localized: "Join")
+        }
+    }
+
+    private var accessibilityLabel: String {
+        switch phase {
+        case .inProgress: return "Rejoin game in progress"
+        case .upcoming: return "Open upcoming game"
+        }
+    }
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
             VStack(spacing: 12) {
-                Text("Game in progress")
+                Text(title)
                     .font(.gameboy(size: 14))
                     .foregroundStyle(.white)
 
@@ -122,8 +154,14 @@ struct RejoinGameBanner: View {
                         .foregroundStyle(.white)
                 }
 
+                if phase == .upcoming, let startDate {
+                    Text("Starting in \(startDate, style: .relative)")
+                        .font(.gameboy(size: 9))
+                        .foregroundStyle(.white.opacity(0.8))
+                }
+
                 Button(action: onRejoin) {
-                    Text("Rejoin")
+                    Text(ctaLabel)
                         .font(.gameboy(size: 16))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 24)
@@ -133,7 +171,7 @@ struct RejoinGameBanner: View {
                                 .stroke(.white, lineWidth: 3)
                         )
                 }
-                .accessibilityLabel("Rejoin game")
+                .accessibilityLabel(accessibilityLabel)
             }
             .padding(20)
             .frame(maxWidth: .infinity)

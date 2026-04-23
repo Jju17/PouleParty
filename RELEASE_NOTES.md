@@ -1,6 +1,103 @@
-# Release 1.10.0
+# Release 1.11.0
 
 > ⚠️ **Do not paste this "Summary" paragraph into any store field.** Only the blocks explicitly labelled **App Store Connect**, **Google Play Console**, or **App Review Notes** below are store-safe.
+
+**Summary (internal, do not paste):** second defensive pass. Focus on the Join / Rejoin flow (a code audit surfaced a family of races + silent no-ops around `pending_payment` games, orphans, double taps, stale "Rejoin") + a phase-aware Home banner (upcoming vs in-progress) so a creator / hunter sees the right CTA before a game starts, not only once it's live. Server side: Cloud Tasks are now deferred until a game actually becomes `waiting` — a cancelled Forfait no longer enqueues ~10-100 no-op tasks. A Firestore rule blocks self-join (user can't be both `creatorId` and in `hunterIds`). Hunter Caution PaymentSheet now verifies the webhook actually wrote the registration within 30 s; otherwise the optimistic banner is cleared + a "Payment verification failed — deposit safe, contact organizer" alert surfaces. Orphan `pending_payment` game docs (creator swipe-down on PaymentSheet) are now cleaned up immediately by the client, with the 24 h scheduled purge as a backstop. Functions **212 tests** (was 186 at 1.10.0), iOS + Android full suites green.
+
+---
+
+## 📱 App Store Connect — field "What's New in This Version"
+
+ASC uses **plain text per locale** (switch the language tab in the top-right of the ASC page and paste the matching block). No XML-style tags, tags are Play Console only. **Do NOT mention "Android", "Google Play", or any other platform**.
+
+**English (U.S.)**
+
+Home screen now surfaces your upcoming games with the right action for each role (Chicken → Open, Hunter → Join) and an in-progress game still shows Rejoin. Tapping the close button on a banner now sticks across app restarts. Safer payment flow: cancelling the sheet cleans up the pending game, and if the confirmation takes too long we surface an alert instead of a silent "registered" badge. Plus a round of fixes on Join-by-code (self-join blocked, stale game states can't slip through) and under-the-hood stability.
+
+**French**
+
+L'écran d'accueil fait remonter tes prochaines parties avec la bonne action selon ton rôle (Poule → Ouvrir, Chasseur → Rejoindre), et la partie en cours affiche toujours Reprendre. Fermer une bannière la cache pour de bon, même après redémarrage. Flow de paiement plus safe : annuler la feuille nettoie la partie en attente, et si la confirmation tarde trop, on affiche une alerte au lieu d'un badge "inscrit" silencieux. Plus une vague de corrections sur Rejoindre-par-code (l'auto-invitation est bloquée, plus de passage sur une partie périmée) et des fixes de stabilité en coulisses.
+
+**Dutch**
+
+Het Home-scherm toont nu je komende spellen met de juiste actie per rol (Kip → Openen, Jager → Meedoen), en een spel in uitvoering laat nog steeds Hervatten zien. Een banner wegtikken blijft weg, ook na een herstart. Veiligere betaalstroom: het sheet annuleren ruimt de in-behandeling-zijnde partij op, en als de bevestiging te lang duurt verschijnt een waarschuwing in plaats van een stille "ingeschreven"-badge. Plus een reeks fixes voor meedoen-via-code (jezelf uitnodigen geblokkeerd, verouderde spel-statussen kunnen er niet meer door) en stabiliteit onder de motorkap.
+
+---
+
+## 📱 App Store Connect — field "Promotional Text"
+
+Unchanged from 1.9.1 / 1.10.0. No need to re-paste if ASC already has the current copy.
+
+**English (U.S.)** · 154 chars
+
+Real-world GPS hide-and-seek. One Chicken hides, the rest chase inside a shrinking zone. Power-ups, a 6-char code to share, play with your squad outdoors.
+
+**French** · 157 chars
+
+Cache-cache GPS dans la vraie vie. Une Poule se cache, les autres la chassent dans une zone qui rétrécit. Power-ups, code à 6 caractères, entre potes dehors.
+
+**Dutch** · 158 chars
+
+GPS-verstoppertje in het echte leven. Eén Kip verstopt zich, Jagers zoeken in een krimpende zone op de kaart. Power-ups, 6-cijferige code, buiten met je crew.
+
+---
+
+## 🤖 Google Play Console — field "Release notes"
+
+<en-US>
+Home banner split: upcoming games (Open for chicken, Join for hunter) vs in-progress (Rejoin). Dismiss sticks across restarts. Payment flow safer: cancelling the sheet cleans up the pending game, and we confirm the deposit registration landed - no more silent "registered" ghosts. Self-join blocked. Plus race fixes on Join-by-code and a release rebuild that restores power-ups on Android (ProGuard was stripping them silently).
+</en-US>
+
+<fr-FR>
+Bannière Accueil séparée : prochaines parties (Ouvrir Poule, Rejoindre Chasseurs) vs partie en cours (Reprendre). Fermer la cache pour de bon. Paiement plus safe : annuler la feuille nettoie la partie, et on vérifie que l'inscription est bien écrite - fini les badges "inscrit" fantômes. Auto-invitation bloquée. Plus des fixes de races sur Rejoindre-par-code et un rebuild Android qui restaure les power-ups (ProGuard les supprimait silencieusement).
+</fr-FR>
+
+<nl-NL>
+Home-banner gesplitst: komende spellen (Openen voor Kip, Meedoen voor Jagers) vs spel bezig (Hervatten). Wegtikken blijft weg, ook na herstart. Veiliger betalen: annuleren ruimt de partij direct op, en we bevestigen dat je inschrijving is weggeschreven - geen stille "ingeschreven"-badges meer. Jezelf uitnodigen geblokkeerd. Plus race-fixes in meedoen-via-code en een Android-rebuild die power-ups terugbrengt (ProGuard verwijderde ze stil).
+</nl-NL>
+
+---
+
+## 📝 App Store Connect — field "App Review Information → Notes"
+
+Paid flows (Forfait + Caution + promo codes) and location usage are affected. This note preemptively addresses the two rejection reasons from Submission 4e4dbb9c-54c3-4a4c-8f5f-ebbf6643c627 (1.9.0, April 22, 2026): guideline 5.1.1(ii) on location purpose strings, and guideline 2.1 asking what Apple Pay unlocks. Both are resolved.
+
+```
+Hello reviewer. This answers the two rejection points from Submission 4e4dbb9c (1.9.0).
+
+(A) 2.1 — What Apple Pay unlocks
+
+Poule Party is a real-world GPS hide-and-seek game. Three pricing modes:
+
+- Free: 1 game / 24 h per organizer. No Apple Pay.
+- Forfait: organizer pays a one-off fee to unlock more than 1 game / 24 h, up to 50 players, and a shareable 6-char code. Price = pricePerPlayer x maxPlayers, computed server-side.
+- Caution: a Hunter pays a refundable deposit to join a specific event-style game (anti no-show). Organizer refunds it offline after the game.
+
+No consumables, no subscription, no virtual currency. Apple Pay is surfaced by the Stripe iOS SDK alongside card + Bancontact, via automatic_payment_methods.
+
+(B) 5.1.1(ii) — Location purpose strings
+
+1.10.0 fixed the 1.9.0 root cause: INFOPLIST_KEY_NSLocation* placeholders in project.pbxproj were overriding Info.plist. All entries now match Info.plist and include a "For example, ..." example:
+
+NSLocationWhenInUseUsageDescription: "Poule Party uses your location during an active game to place you on the map, keep the Chicken inside the shrinking zone, and spawn nearby power-ups. For example, when you join as a Hunter, your team sees the Chicken's live position within the zone so you can chase them in the real world."
+
+NSLocationAlwaysAndWhenInUseUsageDescription: "Always access is requested so the Chicken's position keeps reaching the Hunters while the phone is in a pocket during an active game. For example, the Chicken runs through the neighbourhood with the screen off while the Hunters watch the zone follow them. Background location stops as soon as the game ends."
+
+Background location only runs while a game is active; stops on end / quit / zone collapse.
+
+(C) Reach the Stripe PaymentSheet
+
+Creator: Home > Create Party > Forfait > complete wizard > apply promo APPLE_REVIEW_99 > Pay. Sheet opens ~0.01 EUR. (99% not 100% because 100% bypasses the sheet.)
+Hunter: Home > Start > enter a Caution code > Register > Pay.
+
+(D) Apple Pay button visibility: Stripe SDK hides it on devices without a configured wallet. Screen recording available on request.
+
+Merchant ID: merchant.dev.rahier.pouleparty / Entitlement: com.apple.developer.in-app-payments
+```
+
+---
+
+# Release 1.10.0
 
 **Summary (internal, do not paste):** full-codebase defensive audit pass. No new features — closes ~20 crash / bug / race risks surfaced by iOS-TCA, Android-MVVM, parity, Cloud-Functions / Stripe / rules, and concurrency audits. User-visible wins: the chicken keeps broadcasting when the phone is pocketed (background location was declared in Info.plist but never actually enabled on `CLLocationManager`), the position no longer looks stuck for 5 s after invisibility expires, double-tapping "I found the chicken" can't inflate winners anymore, and English-locale users no longer see French copy on the payment-success screen. Invisible wins: Android Firestore reads survive schema drift, abandoned `pending_payment` games get purged nightly, heartbeats retry on transient errors, server revalidates the hunter registration deadline, and `winners[]` is deduplicated server-side. Functions **186 tests** (was 140 at 1.9.1), iOS 607 tests, 0 warnings on both platforms.
 
@@ -60,20 +157,41 @@ Stabiliteitsronde: de Kip blijft zenden met de telefoon in je zak, de positie ve
 
 ## 📝 App Store Connect — field "App Review Information → Notes"
 
-Paid flow (Stripe PaymentSheet / Apple Pay) is unchanged from 1.9.1 (1) and 1.8.1 (2). Only needed if the reviewer flags a regression.
+**Mandatory for 1.10.0** — addresses the two open rejections on 1.9.0 (Submission ID 4e4dbb9c-54c3-4a4c-8f5f-ebbf6643c627): vague location purpose strings (5.1.1(ii)) and a question about Apple Pay (2.1). **2 951 chars — fits the 4 000 limit.** Paste verbatim.
 
 ```
-Thank you for reviewing 1.10.0.
+Thank you for reviewing 1.10.0 and for the 1.9.0 feedback.
 
-This release is a defensive-code pass — no new user-facing features, no changes to the Stripe paid flow, no new permissions, no changes to Info.plist purpose strings.
+-- 5.1.1(ii) -- Location purpose strings
+The vague copy in 1.9.0 was a build-system bug on our side: Xcode's GENERATE_INFOPLIST_FILE setting was injecting placeholder values from the project file and silently overriding the descriptive strings we had written in the physical Info.plist after 1.8.1. Fixed in 1.10.0. The permission dialogs now read:
 
-If the reviewer needs to exercise the PaymentSheet:
-  - Create Party → Forfait plan → enter promo code APPLE_REVIEW_99 (99 %-off, preserved from 1.8.1). This takes the price to ~1 cent and opens the Stripe PaymentSheet, where the Apple Pay button is visible on devices with a configured Apple Pay wallet.
-  - The PaymentSheet and Apple Pay integration are identical to 1.9.1 (1) and 1.8.1 (2). Merchant ID: merchant.dev.rahier.pouleparty. Entitlement: com.apple.developer.in-app-payments.
+When In Use:
+"Poule Party uses your location during an active game to place you on the map, keep the Chicken inside the shrinking play zone, and spawn nearby power-ups for you to collect. For example, as a Hunter you see the Chicken's live position within the zone so your team can chase them in the real world."
 
-Changes in this version are primarily server-side hardening (retries, timeouts, defensive decoding, a nightly cleanup job for abandoned Forfait reservations) and two client-side bug fixes visible to players:
-  - Background location tracking now actually works while the app is backgrounded (the entitlement was already declared in Info.plist; CLLocationManager.allowsBackgroundLocationUpdates is now flipped on when .authorizedAlways is granted, as Apple's documentation requires). Location tracking stops as soon as the game ends.
-  - Double-tapping the "I found the Chicken" button is now idempotent.
+Always:
+"Poule Party requests Always access so the Chicken's live position keeps reaching the Hunters while the phone is in a pocket or backpack during an active game. For example, the Chicken can run through the neighbourhood with the screen off while the Hunters watch the shrinking zone follow them on the map in real time. Background tracking stops as soon as the game ends."
+
+Background tracking is strictly gated on an active game and stops the instant the game ends.
+
+-- 2.1 -- What does Apple Pay unlock?
+Poule Party is a real-world GPS hide-and-seek game. Apple Pay is one of the payment methods inside the Stripe PaymentSheet (alongside Bancontact and card) and unlocks two paid game modes:
+
+1. Forfait -- paid by the Chicken (game creator) upfront.
+   Unlocks: creating a paid game for a squad (stag party, birthday, team event) where the organiser covers the cost for every player. Server charges pricePerPlayer x maxPlayers in EUR. Hunters then join free with the 6-char game code.
+   Reproduction: tap START -> Create Party -> Forfait -> complete the wizard -> Pay. The PaymentSheet opens with Apple Pay visible on a wallet-configured device.
+
+2. Caution -- paid by each Hunter when joining a deposit game.
+   Unlocks: registering as a Hunter on a deposit-required game. Server charges a refundable deposit (~10 EUR) that is returned after the game, to keep committed squads on time.
+   Reproduction: tap START -> Join Game -> enter a Caution game code -> Pay.
+
+To exercise the full PaymentSheet without completing a real charge, use promotion code APPLE_REVIEW_99 in the Forfait flow (Create Party -> Forfait -> Promo -> APPLE_REVIEW_99). This applies a 99% discount server-side so the total is a few cents; the PaymentSheet still opens with Apple Pay visible. We intentionally do not offer a 100%-off code because it would bypass the PaymentSheet entirely via redeemFreeCreation and you wouldn't see the Apple Pay button.
+
+Merchant ID: merchant.dev.rahier.pouleparty
+Entitlement: com.apple.developer.in-app-payments
+
+The Stripe SDK hides the Apple Pay button on devices with no Apple Pay wallet configured -- this is Stripe behaviour, not an app bug.
+
+Happy to provide a screen recording if anything is unclear.
 ```
 
 ---

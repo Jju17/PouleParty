@@ -506,6 +506,212 @@ export const spawnPowerUpBatch = onTaskDispatched(
  *   6. spawn initial power-up batch (inline, pre-game) + schedule one
  *      `spawnPowerUpBatch` task per zone shrink.
  */
+/**
+ * Decides whether `onGameCreated` should schedule lifecycle tasks right now.
+ * Only games created directly in `waiting` status are playable immediately
+ * (free mode + redeemFreeCreation 100%-off). Forfait games start in
+ * `pending_payment` and are scheduled later by `onGameUpdated` when the
+ * Stripe webhook flips them to `waiting`.
+ *
+ * Exported so unit tests can pin the gating rule without booting Firestore.
+ */
+export function shouldScheduleOnCreate(status: string | undefined): boolean {
+  return status === "waiting";
+}
+
+/**
+ * Decides whether `onGameUpdated` should trigger lifecycle task scheduling.
+ * Returns true only on a transition from a payment-limbo status to
+ * `waiting` — i.e. when a Forfait game becomes playable after a successful
+ * Stripe webhook (`pending_payment → waiting`) or a successful retry after a
+ * failed PaymentIntent (`payment_failed → waiting`).
+ *
+ * Exported so unit tests can pin the transition rule without booting Firestore.
+ */
+export function shouldScheduleOnUpdate(
+  beforeStatus: string | undefined,
+  afterStatus: string | undefined,
+): boolean {
+  if (afterStatus !== "waiting") return false;
+  return beforeStatus === "pending_payment" || beforeStatus === "payment_failed";
+}
+
+/**
+ * Pure helper: given a list of game doc refs + their data, return those
+ * eligible for purge under a scheduled cleanup job. A game is eligible if
+ * its status is in `staleStatuses` AND its `lastHeartbeat` is older than
+ * `cutoffMs`. Exported for unit tests.
+ */
+export function selectStaleGamesForPurge(
+  games: Array<{ id: string; status?: string; lastHeartbeatMs?: number }>,
+  staleStatuses: ReadonlyArray<string>,
+  cutoffMs: number,
+): string[] {
+  return games
+    .filter(
+      (g) =>
+        typeof g.status === "string" &&
+        staleStatuses.includes(g.status) &&
+        typeof g.lastHeartbeatMs === "number" &&
+        g.lastHeartbeatMs < cutoffMs,
+    )
+    .map((g) => g.id);
+}
+
+/**
+ * Enqueues all lifecycle Cloud Tasks (status transitions, notifications,
+ * power-up batches) for a game that is ready to be played. Extracted so both
+ * `onGameCreated` (for free / 100%-off-redeemed games, which land directly
+ * in `waiting`) and `onGameUpdated` (for Forfait games whose Stripe webhook
+ * just flipped `pending_payment → waiting`) can call the exact same path.
+ *
+ * Returns true if tasks were scheduled, false if the game was rejected due
+ * to a validation error (timing past, etc.).
+ */
+async function scheduleGameLifecycleTasks(
+  gameId: string,
+  data: FirebaseFirestore.DocumentData,
+): Promise<boolean> {
+  const timing = data.timing as { start?: FirebaseFirestore.Timestamp; end?: FirebaseFirestore.Timestamp; headStartMinutes?: number } | undefined;
+  const zone = data.zone as { shrinkIntervalMinutes?: number } | undefined;
+
+  const startTimestamp = timing?.start?.toDate() as Date | undefined;
+  const endTimestamp = timing?.end?.toDate() as Date | undefined;
+  const headStartMinutes = (timing?.headStartMinutes as number) ?? 0;
+  const shrinkIntervalMinutes = (zone?.shrinkIntervalMinutes as number) ?? 5;
+
+  // Validate inputs to prevent infinite loops or invalid scheduling
+  if (shrinkIntervalMinutes < 1) {
+    console.error(`Invalid shrinkIntervalMinutes (${shrinkIntervalMinutes}) for game ${gameId}`);
+    return false;
+  }
+  if (startTimestamp && endTimestamp && startTimestamp >= endTimestamp) {
+    console.error(`startTimestamp >= endTimestamp for game ${gameId}`);
+    return false;
+  }
+  if (headStartMinutes < 0) {
+    console.error(`Negative headStartMinutes (${headStartMinutes}) for game ${gameId}`);
+    return false;
+  }
+  // Cloud Tasks silently auto-fires tasks scheduled in the past, which
+  // avalanches the whole lifecycle (notifs + power-up spawns + status
+  // transitions) the instant the doc is created. Reject stale game docs
+  // so the creator sees a clear failure instead of a ghost game.
+  const now = Date.now();
+  const PAST_THRESHOLD_MS = 60 * 1000;
+  if (startTimestamp && startTimestamp.getTime() < now - PAST_THRESHOLD_MS) {
+    console.error(
+      `Refusing to schedule tasks for game ${gameId}: startTimestamp (${startTimestamp.toISOString()}) is in the past`,
+    );
+    return false;
+  }
+  if (endTimestamp && endTimestamp.getTime() < now - PAST_THRESHOLD_MS) {
+    console.error(
+      `Refusing to schedule tasks for game ${gameId}: endTimestamp (${endTimestamp.toISOString()}) is in the past`,
+    );
+    return false;
+  }
+
+  const statusQueue = getFunctions().taskQueue(
+    `locations/${REGION}/functions/transitionGameStatus`
+  );
+  const notifQueue = getFunctions().taskQueue(
+    `locations/${REGION}/functions/sendGameNotification`
+  );
+  const spawnQueue = getFunctions().taskQueue(
+    `locations/${REGION}/functions/spawnPowerUpBatch`
+  );
+
+  // Schedule waiting → inProgress at startTimestamp
+  if (startTimestamp) {
+    await statusQueue.enqueue(
+      {
+        gameId,
+        targetStatus: "inProgress",
+        expectedCurrentStatus: "waiting",
+      },
+      { scheduleTime: startTimestamp }
+    );
+
+    // Schedule chicken_start notification
+    await notifQueue.enqueue(
+      { gameId, notificationType: "chicken_start" },
+      { scheduleTime: startTimestamp }
+    );
+
+    // Schedule the initial power-up batch at game start — not earlier,
+    // so power-ups don't sit in Firestore while the game is still in
+    // `waiting` state (which could be hours or days for a scheduled game).
+    await spawnQueue.enqueue(
+      {
+        gameId,
+        batchIndex: 0,
+        count: POWER_UP_INITIAL_BATCH_SIZE,
+      },
+      { scheduleTime: startTimestamp }
+    );
+  }
+
+  // Schedule inProgress → done at endTimestamp
+  if (endTimestamp) {
+    await statusQueue.enqueue(
+      {
+        gameId,
+        targetStatus: "done",
+        expectedCurrentStatus: "inProgress",
+      },
+      { scheduleTime: endTimestamp }
+    );
+  }
+
+  // Compute hunterStartDate = startTimestamp + chickenHeadStartMinutes
+  if (startTimestamp && endTimestamp) {
+    const hunterStartDate = new Date(
+      startTimestamp.getTime() + headStartMinutes * 60 * 1000
+    );
+
+    // Schedule hunter_start notification
+    await notifQueue.enqueue(
+      { gameId, notificationType: "hunter_start" },
+      { scheduleTime: hunterStartDate }
+    );
+
+    // Schedule zone_shrink notifications at each interval after hunterStartDate
+    // Cap at 100 to prevent scheduling an unreasonable number of tasks
+    const MAX_SHRINK_NOTIFICATIONS = 100;
+    const intervalMs = shrinkIntervalMinutes * 60 * 1000;
+    let shrinkTime = new Date(hunterStartDate.getTime() + intervalMs);
+    let shrinkCount = 0;
+
+    while (shrinkTime < endTimestamp && shrinkCount < MAX_SHRINK_NOTIFICATIONS) {
+      await notifQueue.enqueue(
+        { gameId, notificationType: "zone_shrink" },
+        { scheduleTime: shrinkTime }
+      );
+      shrinkTime = new Date(shrinkTime.getTime() + intervalMs);
+      shrinkCount++;
+    }
+
+    // Schedule periodic power-up batches at each shrink boundary. The
+    // batchIndex starts at 1 (batch 0 was the inline initial spawn above).
+    const spawnCount = Math.min(shrinkCount, MAX_POWER_UP_SHRINK_BATCHES);
+    let spawnTime = new Date(hunterStartDate.getTime() + intervalMs);
+    for (let batchIndex = 1; batchIndex <= spawnCount; batchIndex++) {
+      await spawnQueue.enqueue(
+        {
+          gameId,
+          batchIndex,
+          count: POWER_UP_PERIODIC_BATCH_SIZE,
+        },
+        { scheduleTime: spawnTime }
+      );
+      spawnTime = new Date(spawnTime.getTime() + intervalMs);
+    }
+  }
+
+  return true;
+}
+
 export const onGameCreated = onDocumentCreated(
   {
     document: "games/{gameId}",
@@ -518,144 +724,22 @@ export const onGameCreated = onDocumentCreated(
 
     const data = snap.data();
     const gameId = event.params.gameId;
+    const status = data.status as string | undefined;
 
-    const timing = data.timing as { start?: FirebaseFirestore.Timestamp; end?: FirebaseFirestore.Timestamp; headStartMinutes?: number } | undefined;
-    const zone = data.zone as { shrinkIntervalMinutes?: number } | undefined;
-
-    const startTimestamp = timing?.start?.toDate() as Date | undefined;
-    const endTimestamp = timing?.end?.toDate() as Date | undefined;
-    const headStartMinutes = (timing?.headStartMinutes as number) ?? 0;
-    const shrinkIntervalMinutes = (zone?.shrinkIntervalMinutes as number) ?? 5;
-
-    // Validate inputs to prevent infinite loops or invalid scheduling
-    if (shrinkIntervalMinutes < 1) {
-      console.error(`Invalid shrinkIntervalMinutes (${shrinkIntervalMinutes}) for game ${gameId}`);
-      return;
-    }
-    if (startTimestamp && endTimestamp && startTimestamp >= endTimestamp) {
-      console.error(`startTimestamp >= endTimestamp for game ${gameId}`);
-      return;
-    }
-    if (headStartMinutes < 0) {
-      console.error(`Negative headStartMinutes (${headStartMinutes}) for game ${gameId}`);
-      return;
-    }
-    // Cloud Tasks silently auto-fires tasks scheduled in the past, which
-    // avalanches the whole lifecycle (notifs + power-up spawns + status
-    // transitions) the instant the doc is created. Reject stale game docs
-    // so the creator sees a clear failure instead of a ghost game.
-    const now = Date.now();
-    const PAST_THRESHOLD_MS = 60 * 1000;
-    if (startTimestamp && startTimestamp.getTime() < now - PAST_THRESHOLD_MS) {
-      console.error(
-        `Refusing to schedule tasks for game ${gameId}: startTimestamp (${startTimestamp.toISOString()}) is in the past`,
+    // Forfait games are created in `pending_payment` and only become playable
+    // after the Stripe webhook flips them to `waiting` — don't schedule
+    // anything yet. `onGameUpdated` catches the transition and schedules at
+    // that point. This avoids burning ~10-100 no-op Cloud Tasks per game
+    // whose PaymentSheet is cancelled.
+    if (!shouldScheduleOnCreate(status)) {
+      logger.info(
+        `onGameCreated: game ${gameId} created in status "${status}", deferring task scheduling until it becomes "waiting"`,
       );
       return;
     }
-    if (endTimestamp && endTimestamp.getTime() < now - PAST_THRESHOLD_MS) {
-      console.error(
-        `Refusing to schedule tasks for game ${gameId}: endTimestamp (${endTimestamp.toISOString()}) is in the past`,
-      );
-      return;
-    }
-
-    const statusQueue = getFunctions().taskQueue(
-      `locations/${REGION}/functions/transitionGameStatus`
-    );
-    const notifQueue = getFunctions().taskQueue(
-      `locations/${REGION}/functions/sendGameNotification`
-    );
-    const spawnQueue = getFunctions().taskQueue(
-      `locations/${REGION}/functions/spawnPowerUpBatch`
-    );
 
     try {
-      // Schedule waiting → inProgress at startTimestamp
-      if (startTimestamp) {
-        await statusQueue.enqueue(
-          {
-            gameId,
-            targetStatus: "inProgress",
-            expectedCurrentStatus: "waiting",
-          },
-          { scheduleTime: startTimestamp }
-        );
-
-        // Schedule chicken_start notification
-        await notifQueue.enqueue(
-          { gameId, notificationType: "chicken_start" },
-          { scheduleTime: startTimestamp }
-        );
-
-        // Schedule the initial power-up batch at game start — not earlier,
-        // so power-ups don't sit in Firestore while the game is still in
-        // `waiting` state (which could be hours or days for a scheduled game).
-        await spawnQueue.enqueue(
-          {
-            gameId,
-            batchIndex: 0,
-            count: POWER_UP_INITIAL_BATCH_SIZE,
-          },
-          { scheduleTime: startTimestamp }
-        );
-      }
-
-      // Schedule inProgress → done at endTimestamp
-      if (endTimestamp) {
-        await statusQueue.enqueue(
-          {
-            gameId,
-            targetStatus: "done",
-            expectedCurrentStatus: "inProgress",
-          },
-          { scheduleTime: endTimestamp }
-        );
-      }
-
-      // Compute hunterStartDate = startTimestamp + chickenHeadStartMinutes
-      if (startTimestamp && endTimestamp) {
-        const hunterStartDate = new Date(
-          startTimestamp.getTime() + headStartMinutes * 60 * 1000
-        );
-
-        // Schedule hunter_start notification
-        await notifQueue.enqueue(
-          { gameId, notificationType: "hunter_start" },
-          { scheduleTime: hunterStartDate }
-        );
-
-        // Schedule zone_shrink notifications at each interval after hunterStartDate
-        // Cap at 100 to prevent scheduling an unreasonable number of tasks
-        const MAX_SHRINK_NOTIFICATIONS = 100;
-        const intervalMs = shrinkIntervalMinutes * 60 * 1000;
-        let shrinkTime = new Date(hunterStartDate.getTime() + intervalMs);
-        let shrinkCount = 0;
-
-        while (shrinkTime < endTimestamp && shrinkCount < MAX_SHRINK_NOTIFICATIONS) {
-          await notifQueue.enqueue(
-            { gameId, notificationType: "zone_shrink" },
-            { scheduleTime: shrinkTime }
-          );
-          shrinkTime = new Date(shrinkTime.getTime() + intervalMs);
-          shrinkCount++;
-        }
-
-        // Schedule periodic power-up batches at each shrink boundary. The
-        // batchIndex starts at 1 (batch 0 was the inline initial spawn above).
-        const spawnCount = Math.min(shrinkCount, MAX_POWER_UP_SHRINK_BATCHES);
-        let spawnTime = new Date(hunterStartDate.getTime() + intervalMs);
-        for (let batchIndex = 1; batchIndex <= spawnCount; batchIndex++) {
-          await spawnQueue.enqueue(
-            {
-              gameId,
-              batchIndex,
-              count: POWER_UP_PERIODIC_BATCH_SIZE,
-            },
-            { scheduleTime: spawnTime }
-          );
-          spawnTime = new Date(spawnTime.getTime() + intervalMs);
-        }
-      }
+      await scheduleGameLifecycleTasks(gameId, data);
     } catch (error) {
       console.error(`Failed to schedule tasks for game ${gameId}:`, error);
       throw error;
@@ -677,6 +761,25 @@ export const onGameUpdated = onDocumentUpdated(
     const before = event.data?.before.data();
     const after = event.data?.after.data();
     if (!before || !after) return;
+
+    const gameId = event.params.gameId;
+
+    // Stripe webhook flipped the game from `pending_payment` (or
+    // `payment_failed` retry) to `waiting` — this is the point at which the
+    // game actually becomes playable, so this is when we schedule its
+    // lifecycle Cloud Tasks. Scheduling earlier (in `onGameCreated`) would
+    // burn queue slots for games that get cancelled.
+    const beforeStatus = before.status as string | undefined;
+    const afterStatus = after.status as string | undefined;
+    if (shouldScheduleOnUpdate(beforeStatus, afterStatus)) {
+      try {
+        await scheduleGameLifecycleTasks(gameId, after);
+        logger.info(`onGameUpdated: scheduled lifecycle tasks for game ${gameId} after payment confirmation`);
+      } catch (error) {
+        console.error(`Failed to schedule tasks for paid game ${gameId}:`, error);
+        throw error;
+      }
+    }
 
     type WinnerShape = { hunterId?: string; hunterName?: string; timestamp?: unknown };
     const winnersBefore = (before.winners as Array<WinnerShape>) ?? [];
@@ -896,28 +999,40 @@ export const cleanupAbandonedPendingGames = onSchedule(
   },
   async () => {
     const cutoff = Timestamp.fromMillis(Date.now() - 24 * 60 * 60 * 1000);
-    const snap = await db
-      .collection("games")
-      .where("status", "==", "pending_payment")
-      .where("lastHeartbeat", "<", cutoff)
-      .limit(500)
-      .get();
 
-    if (snap.empty) {
+    // Purge both `pending_payment` AND `payment_failed` orphans. Both states
+    // are terminal-limbo for the client: the game can never transition to
+    // `waiting` without a successful webhook, and the user has no way to
+    // resume from them in the UI. 24 h covers Stripe retry delivery while
+    // leaving a comfortable margin for a genuinely-resumed payment flow.
+    async function purge(status: "pending_payment" | "payment_failed") {
+      const snap = await db
+        .collection("games")
+        .where("status", "==", status)
+        .where("lastHeartbeat", "<", cutoff)
+        .limit(500)
+        .get();
+
+      if (snap.empty) return 0;
+
+      const batch = db.batch();
+      for (const doc of snap.docs) {
+        batch.delete(doc.ref);
+      }
+      await batch.commit();
+      return snap.size;
+    }
+
+    const deletedPending = await purge("pending_payment");
+    const deletedFailed = await purge("payment_failed");
+    const total = deletedPending + deletedFailed;
+
+    if (total === 0) {
       logger.info("cleanupAbandonedPendingGames: nothing to delete");
       return;
     }
-
-    // Batch delete up to 500 per run; the scheduler re-fires every 24 h
-    // so a backlog is absorbed across runs without one call exceeding
-    // Firestore's 500-op batch limit.
-    const batch = db.batch();
-    for (const doc of snap.docs) {
-      batch.delete(doc.ref);
-    }
-    await batch.commit();
     logger.info(
-      `cleanupAbandonedPendingGames: deleted ${snap.size} abandoned pending_payment games`,
+      `cleanupAbandonedPendingGames: deleted ${deletedPending} pending_payment + ${deletedFailed} payment_failed games`,
     );
   },
 );

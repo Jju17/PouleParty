@@ -2981,6 +2981,39 @@
         }
       }
     },
+    "Next game" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prochaine partie"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Volgende spel"
+          }
+        }
+      }
+    },
+    "Open" : {
+      "comment" : "Home banner CTA for a creator opening their upcoming game.",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvrir"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Openen"
+          }
+        }
+      }
+    },
     "Rejoin" : {
       "localizations" : {
         "fr" : {

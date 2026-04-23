@@ -20,6 +20,18 @@ import java.util.Date
 
 enum class PlayerRole { CHICKEN, HUNTER }
 
+/**
+ * Phase of an active game, used by the Home banner to pick the right
+ * copy + CTA. See iOS `GamePhase` for parity.
+ */
+enum class GamePhase {
+    /** Game is already live (`status == IN_PROGRESS`). Banner: "Reprendre". */
+    IN_PROGRESS,
+    /** Game is scheduled but not started yet (`status == WAITING`). Banner:
+     *  "Préparer" for chicken / "Rejoindre" for hunter. */
+    UPCOMING,
+}
+
 data class ZoneCheckResult(
     val isOutsideZone: Boolean,
     val distanceToCenter: Float

@@ -6,6 +6,91 @@ Format: [Keep a Changelog](https://keepachangelog.com/). Versions follow [Semant
 
 ---
 
+## [1.11.0], 2026-04-23
+
+**iOS**: 1.11.0 (2) · **Android**: 1.11.0 (30) · **Functions**: full redeploy (`index` + `stripe`) · **Firestore rules**: redeploy
+
+### Hotfixes before upload
+
+- **Server `sanitiseGamePayload` accepted empty name**. The 0..80 loosening
+  was deployed as a hotfix to staging + prod on 2026-04-23 13:45 after a
+  user report (POULETEST 100%-off promo rejected with "name must be 1..80
+  chars" because the client never populates `game.name`). A follow-up
+  refactor tracked in `TODO.md` → "auto-remplir `game.name` avec
+  `"Game {code}"`" will make this explicit instead of a silent empty
+  string reaching the server.
+- **Android R8 strip of `PowerUp` no-arg constructor**. ProGuard rule only
+  covered `dev.rahier.pouleparty.model.**`, but `PowerUp` lives under
+  `dev.rahier.pouleparty.powerups.model.**` — so every release build before
+  1.11.0 (30) saw `toObject(PowerUp::class.java)` fail on the obfuscated
+  class with `java.lang.RuntimeException: Could not deserialize object.
+  Class bp3 does not define a no-argument constructor` (Crashlytics issue
+  b050a0b8). 1.10.0's `safeToObject<T>()` wrapper caught the throw so the
+  process no longer crashed, but power-ups silently stopped rendering in
+  release. ProGuard rule extended to cover both model packages + a comment
+  explaining the past incident so nobody re-narrows the rule. Android build
+  bumped to 1.11.0 (30) to ship this.
+
+Second defensive pass focused on the Join / Rejoin flow + a phase-aware Home banner (upcoming vs in-progress) + server-side deferred Cloud Tasks scheduling so cancelled Forfait games stop enqueuing 10-100 no-op tasks.
+
+### Added
+
+- **Phase-aware Home banner (iOS + Android)**. The banner now distinguishes `.inProgress` from `.upcoming` via a new `GamePhase` enum. In-progress games show "Game in progress" + "Rejoin"; upcoming games (`status == waiting`, `startDate > now`) show "Next game" + "Open" (chicken) / "Join" (hunter) + a relative "Starting in …" countdown. `findActiveGame` now returns `(Game, Role, Phase)` and prioritises inProgress over upcoming (earliest startDate among upcoming).
+- **Dismissed-active-game persistence as a Set (iOS + Android)**. Both platforms persist dismissed game ids cross-session (iOS `@Shared(.dismissedActiveGameIds)`, Android `PREF_DISMISSED_ACTIVE_GAME_IDS` `StringSet`). Rejoin-tap clears only the current id so other dismissed games stay hidden; a phase flip resurfaces the banner.
+- **Cloud Tasks deferred scheduling**. `onGameCreated` only schedules lifecycle tasks if `status == waiting` (free games); Forfait games created in `pending_payment` defer to `onGameUpdated` on the `pending_payment → waiting` transition from the Stripe webhook. Zero wasted Cloud Tasks for a cancelled PaymentSheet.
+- **Self-join block**. Firestore rule `!request.resource.data.hunterIds.hasAny([resource.data.creatorId])` blocks a user from being in both `creatorId` and `hunterIds`. iOS + Android clients short-circuit in `findGameByCode` / `validateCode`.
+- **Hunter Caution webhook verification (iOS + Android)**. After PaymentSheet completes, the client polls `findRegistration(gameId, uid)` every 3 s for 30 s. On timeout: optimistic `pendingRegistration` cleared + alert "Payment verification failed — contact organizer, deposit safe".
+- **Orphan game doc cleanup on PaymentSheet cancel/fail (iOS + Android)**. Creator Forfait `.canceled` / `.failed` now `deleteConfig(gameId)` immediately to avoid ghost "Paiement" entries in My Games. Firestore rules `allow delete` extended to `pending_payment` / `payment_failed`.
+- **Extended `cleanupAbandonedPendingGames`**. Scheduled purge now covers both `pending_payment` and `payment_failed` games older than 24 h.
+- **`sanitiseGamePayload` hardened**. Adds `name` 1..80 chars trim, `gameMode` whitelist, `chickenCanSeeHunters` boolean, `pricing.commission` 0..100, `registration` full shape check, `powerUps` full shape check, `timing.startMillis` must be within `[now − 5 min, now + 365 days]`. Exports `shouldScheduleOnCreate` / `shouldScheduleOnUpdate` / `selectStaleGamesForPurge` for unit testing.
+- **FCM `sendEachForMulticast` batched to 500 tokens**. Prevents silent failures for games with > 500 recipients.
+- **Webhook dedup stale window bumped to 30 min** (was 5). Covers cold-deploy windows without double-processing.
+- **7-day TTL on `PendingRegistration` (iOS + Android)**. Zombie banners from games that ended weeks ago are auto-cleared on Home re-appear.
+
+### Fixed
+
+- **iOS + Android — `pending_payment` / `payment_failed` games could be joined silently**. Both platforms now surface a visible alert instead of the silent no-op on `.joinGame` / `joinValidatedGame` / `rejoinActiveGame`. Android `rejoinActiveGame` refetches the game config before navigating to catch mid-banner transitions.
+- **Android `findActiveGame` concurrency race on `onResume`**. Guarded by `activeGameCheckInFlight: Job?` so a second call during an in-flight one is a no-op.
+- **Android `validateCode` race on fast re-type**. Previous job is cancelled on each re-type; `CancellationException` doesn't flip the UI into `NetworkError`.
+- **Android `onJoinSheetDismissed` didn't cancel the in-flight validation**. Now cancels `validateCodeJob` on dismiss.
+- **Android `teamName` trim race**. `trimStart()` at input time + `trim()` at submit.
+- **iOS `Home.destination(.joinFlow(.registered))`** runs a 30 s verification poll parallel to the navigation; clears optimistic `pendingRegistration` + surfaces alert on timeout.
+- **iOS `RejoinGameBanner` hardcoded "Game in progress"** for both phases; now derives title + CTA from `phase` + `role`. Countdown renders only for `.upcoming`.
+- **iOS + Android — `withRetry` shift cap** at 20 so a future `maxRetries` > 63 can't overflow `UInt64` / `Long`.
+
+### Changed
+
+- **iOS `ApiClient.findActiveGame`** signature: `(String) async throws -> (Game, GameRole, GamePhase)?`.
+- **Android `FirestoreRepository.findActiveGame`** signature: `suspend fun findActiveGame(userId): ActiveGameResult?`.
+- **iOS `HomeFeature.State.activeGamePhase: GamePhase?`** + mirrored action.
+- **Android `HomeUiState.activeGamePhase: GamePhase?`** + new `isShowingPaymentVerificationFailed` flag + `HomeIntent.PaymentVerificationDismissed`.
+- **Stripe webhook `claimWebhookEvent` `staleAfterMs`** 5 min → 30 min.
+
+### Test coverage
+
+Functions: **212 tests** (was 186). Adds `lifecycle-scheduling.test.ts` (26 pure-function tests).
+
+iOS: **TEST SUCCEEDED** on the full suite. Adds `JoinFlowFeatureTests.swift` (6), `HomeJoinFlowIntegrationTests.swift` (8), `HomeActivePhaseTests.swift` (5), `PaymentFeatureTests.swift` (7) — 26 new tests.
+
+Android: **BUILD SUCCESSFUL** on the full suite. Adds `HomeViewModelJoinFlowTest.kt` (8), `HomeActivePhaseTest.kt` (5), `PaymentViewModelCancelTest.kt` (6) — 19 new tests.
+
+### Deployment steps
+
+```bash
+cd functions && npm run build
+firebase deploy --only firestore:rules,functions --project pouleparty-ba586
+firebase deploy --only firestore:rules,functions --project pouleparty-prod
+```
+
+*Already applied* to staging + prod on 2026-04-23 during release prep.
+
+### Breaking / migration notes
+
+- No breaking changes. The new Firestore rule `!hasAny([creatorId])` only applies to new `hunterIds` writes; pre-existing docs are untouched.
+- Android legacy `PREF_DISMISSED_ACTIVE_GAME_ID` (single string) kept in `AppConstants.kt` for binary compat on install upgrades; superseded by the new `PREF_DISMISSED_ACTIVE_GAME_IDS` `StringSet`.
+
+---
+
 ## [1.10.0], 2026-04-22
 
 **iOS**: 1.10.0 (1) · **Android**: 1.10.0 (28) · **Functions**: full redeploy (stripe + index)
@@ -27,6 +112,7 @@ Defensive-code pass. No new features — a full codebase audit (iOS TCA, Android
 - **iOS parity — jammer bucketing on 32-bit Swift Int semantics.** `applyJammerNoise` used `Int(now.timeIntervalSince1970)` — on iOS `Int` is 64-bit in practice, but the Android sibling uses an explicit `Long` and the type-width coupling was load-bearing. Switched to explicit `Int64` for the bucket + XOR, removes any platform-dependent edge case.
 - **Android — 4 `payment_confirmed_*` keys in `values/strings.xml` had French values instead of English.** English-locale users saw "Partie créée !" / "Tu es inscrit !" on the payment success screen. All four (`payment_confirmed_title_creator`, `…_title_hunter`, `…_subtitle_creator`, `…_subtitle_hunter`) now carry English source values; the existing French + Dutch translations are unchanged.
 - **iOS — untranslated `Couldn't register your win…` alert copy.** Added FR + NL translations and flipped the `%@ %@:%@` format-string entry out of `state: "new"`. `Localizable.xcstrings` is back at 100 % coverage with zero pending review.
+- **iOS — location purpose strings were overridden by placeholder values shipped in `project.pbxproj`** (root cause of Apple's 1.9.0 rejection under guideline 5.1.1(ii), Submission ID 4e4dbb9c…). Xcode's `GENERATE_INFOPLIST_FILE = YES` was merging the descriptive "For example, …" strings from the physical `Info.plist` with `INFOPLIST_KEY_NSLocation*` entries in the project file that still carried legacy placeholders ("This app need your location to provide best feature based on location", "Need location"). The project-file values take precedence during the build, so all previous releases shipped the placeholder copy to the store despite the physical plist being correct since 1.8.1. 1.10.0 rewrites all four `INFOPLIST_KEY_NSLocation*` (Debug + Release × WhenInUse + Always + legacy iOS 10 keys) to match the intent-driven copy with a concrete in-app example, as guideline 5.1.1(ii) requires.
 
 ### Added
 

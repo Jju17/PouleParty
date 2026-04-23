@@ -140,9 +140,12 @@ export function sanitiseGamePayload(
   }
   const g = raw as Partial<PendingGamePayload>;
   if (typeof g.name !== "string") throw new HttpsError("invalid-argument", "name must be a string");
+  // Client allows an empty name — default gameplay shows "Game {code}" in that
+  // case — so we only enforce the upper bound, not a minimum. (Previously
+  // rejected empty strings, which broke Forfait creation with no chosen name.)
   const trimmedName = g.name.trim();
-  if (trimmedName.length === 0 || trimmedName.length > MAX_NAME_LENGTH) {
-    throw new HttpsError("invalid-argument", `name must be 1..${MAX_NAME_LENGTH} chars`);
+  if (trimmedName.length > MAX_NAME_LENGTH) {
+    throw new HttpsError("invalid-argument", `name must be at most ${MAX_NAME_LENGTH} chars`);
   }
   g.name = trimmedName;
   if (typeof g.maxPlayers !== "number" || !Number.isInteger(g.maxPlayers) || g.maxPlayers < 1 || g.maxPlayers > 100) {

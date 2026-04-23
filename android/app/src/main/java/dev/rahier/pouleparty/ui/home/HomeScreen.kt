@@ -256,9 +256,28 @@ fun HomeScreen(
                 .navigationBarsPadding(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Rejoin banner
+            // Active game banner (either "Partie en cours — Reprendre" or
+            // "Prochaine partie — Préparer/Rejoindre" depending on phase).
             val activeGame = state.activeGame
-            if (activeGame != null) {
+            val activePhase = state.activeGamePhase
+            val activeRole = state.activeGameRole
+            if (activeGame != null && activePhase != null && activeRole != null) {
+                val titleRes = when (activePhase) {
+                    dev.rahier.pouleparty.ui.gamelogic.GamePhase.IN_PROGRESS ->
+                        R.string.rejoin_game_in_progress
+                    dev.rahier.pouleparty.ui.gamelogic.GamePhase.UPCOMING ->
+                        R.string.upcoming_game_banner_title
+                }
+                val ctaRes = when (activePhase) {
+                    dev.rahier.pouleparty.ui.gamelogic.GamePhase.IN_PROGRESS -> R.string.rejoin
+                    dev.rahier.pouleparty.ui.gamelogic.GamePhase.UPCOMING ->
+                        when (activeRole) {
+                            dev.rahier.pouleparty.ui.gamelogic.PlayerRole.CHICKEN ->
+                                R.string.upcoming_game_cta_chicken
+                            dev.rahier.pouleparty.ui.gamelogic.PlayerRole.HUNTER ->
+                                R.string.upcoming_game_cta_hunter
+                        }
+                }
                 Box(
                     modifier = Modifier
                         .padding(horizontal = 24.dp)
@@ -272,7 +291,7 @@ fun HomeScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Text(
-                            stringResource(R.string.rejoin_game_in_progress),
+                            stringResource(titleRes),
                             fontFamily = GameBoyFont,
                             fontSize = 14.sp,
                             color = Color.White
@@ -289,7 +308,7 @@ fun HomeScreen(
                                 .border(3.dp, Color.White, RoundedCornerShape(10.dp))
                         ) {
                             Text(
-                                stringResource(R.string.rejoin),
+                                stringResource(ctaRes),
                                 fontFamily = GameBoyFont,
                                 fontSize = 16.sp,
                                 color = Color.White
@@ -387,6 +406,21 @@ fun HomeScreen(
             text = { Text(stringResource(R.string.game_not_found_message)) },
             confirmButton = {
                 TextButton(onClick = { viewModel.onIntent(HomeIntent.GameNotFoundDismissed) }) { Text(stringResource(R.string.ok)) }
+            }
+        )
+    }
+
+    // Payment verification failed alert (Caution deposit): the sheet completed
+    // but the Stripe webhook never created the registration doc within the
+    // verification window — tell the user their payment is safe and ask them
+    // to contact the organizer.
+    if (state.isShowingPaymentVerificationFailed) {
+        AlertDialog(
+            onDismissRequest = { viewModel.onIntent(HomeIntent.PaymentVerificationDismissed) },
+            title = { Text(stringResource(R.string.payment_verification_failed_title)) },
+            text = { Text(stringResource(R.string.payment_verification_failed_message)) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.onIntent(HomeIntent.PaymentVerificationDismissed) }) { Text(stringResource(R.string.ok)) }
             }
         )
     }

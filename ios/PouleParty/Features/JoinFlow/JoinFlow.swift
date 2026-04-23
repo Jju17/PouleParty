@@ -109,6 +109,13 @@ struct JoinFlowFeature {
                                 await send(.codeValidationFailed)
                                 return
                             }
+                            // Block hunters from joining their own chicken game:
+                            // they'd end up in both `creatorId` and `hunterIds`
+                            // and break the map.
+                            if !userId.isEmpty, game.creatorId == userId {
+                                await send(.codeValidationFailed)
+                                return
+                            }
                             if game.registration.required {
                                 if game.isRegistrationClosed {
                                     let registration = try await apiClient.findRegistration(game.id, userId)

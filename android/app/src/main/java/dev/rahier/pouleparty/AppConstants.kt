@@ -27,6 +27,17 @@ object AppConstants {
     const val PREF_PENDING_REGISTRATION_TEAM_NAME = "pendingRegistrationTeamName"
     const val PREF_PENDING_REGISTRATION_START_MS = "pendingRegistrationStartMs"
     const val PREF_PENDING_REGISTRATION_IS_FINISHED = "pendingRegistrationIsFinished"
+    /** Last game id the user explicitly dismissed from the "active game" Home
+     *  banner. Skipped in findActiveGame so the banner doesn't reappear on the
+     *  next onResume for a game the user actively hid. (Legacy single-value;
+     *  superseded by `PREF_DISMISSED_ACTIVE_GAME_IDS` — kept to avoid breaking
+     *  existing installs that still write here from older app versions.) */
+    const val PREF_DISMISSED_ACTIVE_GAME_ID = "dismissedActiveGameId"
+    /** Set of game ids the user explicitly dismissed from the Home banner.
+     *  Persisted cross-session so a dismiss sticks until the game ends or the
+     *  phase flips (e.g. upcoming → inProgress resurfaces the banner since we
+     *  clear on manual "Reprendre" tap). */
+    const val PREF_DISMISSED_ACTIVE_GAME_IDS = "dismissedActiveGameIds"
 
     // Time Intervals
     const val LOCATION_THROTTLE_MS = 5_000L

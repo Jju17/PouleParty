@@ -1,5 +1,142 @@
 # TODO PouleParty
 
+## 🚨 URGENT — auto-remplir `game.name` avec "Game {code}"
+
+### Contexte
+
+Découvert 2026-04-23 via un hotfix déployé à la 1.11.x : le field `game.name`
+n'est **jamais saisi** par l'utilisateur sur iOS ni Android (aucun
+`TextField` dans GameCreation / ChickenConfig / PaymentFeature), donc il
+arrive en `""` au serveur. La validation serveur 1.11.0 exigeait 1..80 chars
+et bloquait la création Forfait (promo 100 %-off notamment). Patché en
+urgence en relâchant la validation à `0..80` chars. Mais on veut quand même
+un nom sur chaque partie — plus tard on exposera un vrai UI pour le
+personnaliser (voir "moins urgent" ci-dessous).
+
+Décision : le client **doit** remplir `name = "Game {code}"` automatiquement
+avant d'envoyer le payload. Le serveur applique le même fallback si le nom
+reçu est `""` ou absent, en filet de sécurité.
+
+### Plan
+
+**Côté client (iOS + Android)** : au moment de sérialiser le payload vers
+Cloud Functions (création Forfait / Caution / Free) ou d'écrire le doc free
+en direct, si `game.name.isEmpty`, assigner `game.name = "Game \(gameCode)"`
+avant l'écriture. Ajouter un commentaire en tête du field dans `Game.swift`
+et `Game.kt` :
+
+```swift
+/// Display name of the game. Today the UI doesn't expose a text input, so
+/// the client auto-fills this with `"Game {gameCode}"` before writing to
+/// Firestore. A future release will let the chicken pick a custom name
+/// (see TODO.md "Laisser le chicken nommer la partie"). Server-side
+/// `sanitiseGamePayload` applies the same fallback if we ever forget.
+var name: String = ""
+```
+
+**Côté serveur (`functions/src/stripe.ts`)** : dans `sanitiseGamePayload`,
+remplacer l'acceptation silencieuse d'un nom vide par un fallback explicite
+basé sur le `foundCode` déjà validé :
+
+```ts
+const trimmedName = (g.name ?? "").trim();
+g.name = trimmedName.length > 0 ? trimmedName : `Game ${g.foundCode}`;
+if (g.name.length > MAX_NAME_LENGTH) { throw invalid-argument }
+```
+
+Note : à ce point on n'a pas encore le `gameCode` (il est dérivé côté serveur
+des 6 premiers chars du `gameId` auto-généré). Utiliser `foundCode` (4
+chiffres, affiché à tous les hunters pour valider la capture) est un bon
+proxy et évite un round-trip serveur. Alternative : stocker `""` et laisser
+le client appliquer le fallback à la lecture, mais ça duplique la logique
+partout dans la UI.
+
+**Tests à ajuster** :
+- `functions/test/stripe-zone.test.ts` → modifier les 2 tests "accepts empty
+  name" / "accepts whitespace-only name" pour vérifier que le résultat est
+  bien `"Game {foundCode}"`.
+- Ajouter un test : `name = "Custom name"` → round-trip inchangé.
+
+### Pourquoi URGENT
+
+- Les parties actuellement en base ont `name = ""`. Le fallback UI partout
+  affiche `"Game {code}"`, donc l'UX est déjà correcte. Le vrai gain est
+  d'avoir un doc Firestore **cohérent et auto-documenté** (la partie a
+  toujours un nom lisible), au lieu d'une string vide qui surprend les devs.
+- Évite qu'un dev futur ré-ajoute un check `length > 0` en oubliant que
+  c'est désactivé depuis le 1.11.x hotfix.
+
+---
+
+## Moins urgent — laisser le chicken nommer la partie
+
+### Contexte
+
+Aujourd'hui `game.name` est auto-rempli `"Game {code}"`. La Poule n'a pas
+de moyen de personnaliser le nom d'une partie. Exemple d'UX voulue :
+"EVG Quentin", "Anniv de Max", "Chicken Run Forêt de Soignes".
+
+### Plan
+
+1. **GameCreation wizard** (iOS `Features/GameCreation/` + Android
+   `ui/gamecreation/`) : ajouter une étape "Nom de la partie" au début du
+   wizard (avant Mode / Players), `TextField` optionnel, placeholder
+   `"Game {code}"`, max 80 chars, profanity filter réutilisé du nickname.
+   Si le user laisse vide, on garde le fallback auto.
+2. **Localizable** : ajouter les strings pour le label et le placeholder
+   dans les 3 locales (EN / FR / NL), pour iOS et Android.
+3. **Serveur** : déjà OK grâce au fallback auto (cf. section URGENT
+   ci-dessus). Ajuster juste la max-length si on veut autoriser plus que
+   80 chars (emojis compris).
+4. **Tests** : ajouter un test de saisie utilisateur + un test de profanity
+   sur le nom.
+
+### Pourquoi plus tard
+
+- Feature nouvelle, pas un fix. Peut attendre une release qui en regroupe
+  plusieurs.
+- Le fallback actuel `"Game {code}"` est tout à fait lisible pour l'UX
+  actuelle (les joueurs voient le code dans la bannière de toute façon).
+
+---
+
+## Home banner — cartes empilables / swipables (multi-games)
+
+### Contexte
+
+Aujourd'hui la bannière Home affiche **une seule** game à la fois (priorité
+par phase : `inProgress` > `upcoming(min startDate)`). Si un user a plusieurs
+games en même temps (rare mais légitime : chicken qui a créé 2 events pour
+le mois, ou hunter inscrit à une soirée + une autre la semaine suivante),
+seule la plus urgente apparaît. Les autres sont accessibles uniquement via
+Settings → My Games.
+
+### Idée
+
+Remplacer la bannière monocarte par une **pile de cards swipables** qui
+affiche toutes les games actives/upcoming, triées : inProgress en premier,
+puis upcoming par startDate ascendante. Swipe horizontal pour naviguer.
+Chaque card garde sa phase/CTA/couleur (IN_PROGRESS → Reprendre,
+UPCOMING chicken → Open, UPCOMING hunter → Join).
+
+### Plan high-level
+
+1. Étendre `findActiveGame` → `findActiveGames` qui retourne la liste
+   complète triée (pas juste la première).
+2. iOS : `TabView` avec `PageTabViewStyle`, ou composant maison avec
+   `HStack + scroll`.
+3. Android : `HorizontalPager` Compose.
+4. Étendre `dismissedActiveGameIds` Set pour que chaque card se dismiss
+   individuellement (déjà un Set cross-platform).
+5. Tests couvrant : tri par phase, tri par startDate, dismiss par card.
+
+### Pourquoi low priority
+
+- Cas actuel (1 game à la fois) couvre 95% des users.
+- Refactor non-trivial, peut attendre un redesign Home.
+
+---
+
 ## 1. Nouveaux power-ups
 
 ### Existants (6)

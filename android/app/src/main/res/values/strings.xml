@@ -14,8 +14,13 @@
     <string name="close">Close</string>
     <string name="game_not_found">Game not found</string>
     <string name="game_not_found_message">No active game found with this code. Check the code and try again.</string>
+    <string name="payment_verification_failed_title">Payment verification failed</string>
+    <string name="payment_verification_failed_message">We received your payment but couldn\'t confirm your registration. If you were charged, please contact the organizer — your deposit is safe.</string>
     <string name="rejoin_game_in_progress">Game in progress</string>
     <string name="rejoin">Rejoin</string>
+    <string name="upcoming_game_banner_title">Next game</string>
+    <string name="upcoming_game_cta_chicken">Open</string>
+    <string name="upcoming_game_cta_hunter">Join</string>
     <string name="location_required">Location Required</string>
     <string name="location_required_message">Location is the core of PouleParty! Your position is anonymous and only used during the game. Please enable location access to continue.</string>
 

@@ -3,7 +3,14 @@
 # in the Android SDK ProGuard configuration.
 
 # ── App models (Firebase Firestore deserialization) ──
+# Any data class passed to `DocumentSnapshot.toObject(T::class.java)` needs
+# its no-arg constructor preserved or Firestore's CustomClassMapper throws
+# "Class <obfuscated> does not define a no-argument constructor" (see the
+# 1.9.0 Crashlytics issue b050a0b8 on PowerUp in release builds — rule
+# covered `model.**` but `powerups.model.PowerUp` was outside that scope).
+# Keep every model package used by toObject.
 -keep class dev.rahier.pouleparty.model.** { *; }
+-keep class dev.rahier.pouleparty.powerups.model.** { *; }
 
 # ── Firebase ──
 -keep class com.google.firebase.** { *; }

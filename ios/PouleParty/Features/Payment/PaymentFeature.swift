@@ -85,6 +85,7 @@ struct PaymentFeature {
     }
 
     @Dependency(\.stripeClient) var stripeClient
+    @Dependency(\.apiClient) var apiClient
 
     var body: some Reducer<State, Action> {
         BindingReducer()
@@ -214,11 +215,30 @@ struct PaymentFeature {
                         return .send(.delegate(.hunterPaymentConfirmed))
                     }
                 case .canceled:
+                    // Creator Forfait pre-creates the game doc in `pending_payment`
+                    // before presenting the sheet. On cancel (including swipe-down),
+                    // delete the orphan so it doesn't linger in the creator's
+                    // My Games list as a "Paiement" ghost.
+                    let orphanGameId = state.paymentConfig?.gameId
                     state.paymentConfig = nil
+                    if case .creatorForfait = state.context, let gameId = orphanGameId {
+                        return .run { [apiClient] _ in
+                            try? await apiClient.deleteConfig(gameId)
+                        }
+                    }
                     return .none
                 case let .failed(message):
+                    let orphanGameId = state.paymentConfig?.gameId
                     state.paymentConfig = nil
                     state.completionError = message
+                    // Same cleanup as the cancel branch — a failed PaymentIntent
+                    // leaves the server-created doc in `payment_failed` or
+                    // `pending_payment`, which the creator can't join or use.
+                    if case .creatorForfait = state.context, let gameId = orphanGameId {
+                        return .run { [apiClient] _ in
+                            try? await apiClient.deleteConfig(gameId)
+                        }
+                    }
                     return .none
                 }
 

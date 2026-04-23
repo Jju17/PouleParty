@@ -1,11 +1,13 @@
 package dev.rahier.pouleparty.ui.payment
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dev.rahier.pouleparty.data.FirestoreRepository
 import dev.rahier.pouleparty.data.StripeRepository
 import dev.rahier.pouleparty.model.Game
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,6 +27,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 class PaymentViewModel @AssistedInject constructor(
     @Assisted private val context: PaymentContext,
     private val stripeRepository: StripeRepository,
+    private val firestoreRepository: FirestoreRepository,
 ) : ViewModel() {
 
     @AssistedFactory
@@ -205,11 +208,25 @@ class PaymentViewModel @AssistedInject constructor(
     }
 
     fun onSheetCancelled() {
+        // Creator Forfait pre-creates the game doc in `pending_payment` before
+        // the sheet opens. On cancel (including swipe-down), delete the orphan
+        // so it doesn't linger in My Games as a "Paiement" ghost.
+        deleteOrphanCreatorGame(_state.value.paymentConfig?.gameId)
         _state.update { it.copy(paymentConfig = null) }
     }
 
     fun onSheetFailed(message: String?) {
+        deleteOrphanCreatorGame(_state.value.paymentConfig?.gameId)
         _state.update { it.copy(paymentConfig = null, completionError = message) }
+    }
+
+    private fun deleteOrphanCreatorGame(gameId: String?) {
+        if (gameId.isNullOrEmpty()) return
+        if (_state.value.context !is PaymentContext.CreatorForfait) return
+        viewModelScope.launch {
+            runCatching { firestoreRepository.deleteConfig(gameId) }
+                .onFailure { Log.w("PaymentViewModel", "Failed to delete orphan pending_payment game $gameId", it) }
+        }
     }
 
     fun onDismissError() {

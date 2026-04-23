@@ -92,13 +92,14 @@ struct HomeFeatureTests {
             HomeFeature()
         } withDependencies: {
             $0.userClient.currentUserId = { "user-123" }
-            $0.apiClient.findActiveGame = { _ in (game, .hunter) }
+            $0.apiClient.findActiveGame = { _ in (game, GameRole.hunter, GamePhase.inProgress) }
         }
 
         await store.send(.onTask)
         await store.receive(\.activeGameFound) {
             $0.activeGame = game
             $0.activeGameRole = .hunter
+            $0.activeGamePhase = .inProgress
         }
     }
 
@@ -108,13 +109,14 @@ struct HomeFeatureTests {
             HomeFeature()
         } withDependencies: {
             $0.userClient.currentUserId = { "user-123" }
-            $0.apiClient.findActiveGame = { _ in (game, .chicken) }
+            $0.apiClient.findActiveGame = { _ in (game, GameRole.chicken, GamePhase.inProgress) }
         }
 
         await store.send(.onTask)
         await store.receive(\.activeGameFound) {
             $0.activeGame = game
             $0.activeGameRole = .chicken
+            $0.activeGamePhase = .inProgress
         }
     }
 
