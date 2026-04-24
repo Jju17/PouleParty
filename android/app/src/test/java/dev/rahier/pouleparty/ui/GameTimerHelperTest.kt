@@ -333,9 +333,17 @@ class GameTimerHelperTest {
     // ── Zone freeze ──────────────────────────────────
 
     @Test
-    fun `processRadiusUpdate returns null when zone is frozen`() {
+    fun `processRadiusUpdate when frozen keeps radius and advances nextUpdate`() {
+        // Regression for "zone freeze breaks hunter game timer". Earlier
+        // we returned null here, leaving state.nextRadiusUpdate stuck on
+        // a past date; the countdown stayed at 00:00 during freeze and
+        // then jumped to a future interval once a post-freeze tick
+        // processed, producing "Map update in: 3:00+" on the hunter
+        // side even after the chicken's game had ended. Advancing here
+        // keeps the countdown monotonic and in sync with findLastUpdate.
+        val pastShrink = Date(System.currentTimeMillis() - 1000)
         val result = processRadiusUpdate(
-            nextRadiusUpdate = Date(System.currentTimeMillis() - 1000),
+            nextRadiusUpdate = pastShrink,
             currentRadius = 1500,
             radiusDeclinePerUpdate = 100.0,
             radiusIntervalUpdate = 5.0,
@@ -344,7 +352,11 @@ class GameTimerHelperTest {
             currentCircleCenter = null,
             isZoneFrozen = true
         )
-        assertNull(result)
+        assertNotNull(result)
+        assertEquals(1500, result!!.newRadius)
+        assertFalse(result.isGameOver)
+        val expectedNext = pastShrink.time + 5 * 60 * 1000
+        assertEquals(expectedNext, result.newNextUpdate.time)
     }
 
     @Test

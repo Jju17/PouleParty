@@ -23,6 +23,7 @@ import dev.rahier.pouleparty.ui.gamelogic.checkZoneStatus
 import dev.rahier.pouleparty.ui.gamelogic.detectNewWinners
 import dev.rahier.pouleparty.ui.gamelogic.evaluateCountdown
 import dev.rahier.pouleparty.ui.map.BaseMapViewModel
+import dev.rahier.pouleparty.ui.gamelogic.deterministicDriftCenter
 import dev.rahier.pouleparty.ui.gamelogic.interpolateZoneCenter
 import dev.rahier.pouleparty.ui.gamelogic.processRadiusUpdate
 import dev.rahier.pouleparty.ui.gamelogic.seededRandom
@@ -75,6 +76,12 @@ data class HunterMapUiState(
     val previewCircle: Pair<Point, Double>? = null,
     val activatingPowerUpId: String? = null,
     val decoyLocation: Point? = null,
+    // Latest known Chicken position broadcasted via `chickenLocationFlow`.
+    // Tracked in every mode (not just followTheChicken) so Radar Ping has a
+    // fresh point to reveal the instant it's activated. HunterMapScreen
+    // gates marker visibility on `game.isRadarPingActive` — without that
+    // gate this would be a free locator.
+    val chickenLocation: Point? = null,
     val showRegistrationRequiredAlert: Boolean = false,
     val hasChallenges: Boolean = false,
     val winnerRegistrationFailed: Boolean = false,
@@ -430,20 +437,26 @@ class HunterMapViewModel @Inject constructor(
         if (delayMs > 0) delay(delayMs)
         firestoreRepository.chickenLocationFlow(gameId).collect { location ->
             if (location == null) return@collect
-            // Treating the chicken's broadcasted position as the zone center
-            // is correct in followTheChicken, but WRONG in stayInTheZone:
-            // the zone center there is the deterministic drifted center
-            // (set in streamGameConfig's initial pass and then advanced by
-            // processRadiusUpdate on each shrink). A stray chicken broadcast
-            // during a radar ping, or a stale chickenLocations/latest doc
-            // replayed on listener connect, must not overwrite it —
-            // otherwise the hunter's zone check fires against the chicken's
-            // position rather than the real zone and flags the hunter as
-            // "outside" even when they're standing inside the visible
-            // circle. Mirrors the gate iOS HunterMap applies on
+            // Always cache the latest Chicken position so Radar Ping has a
+            // fresh point to reveal — the UI gates rendering on
+            // `game.isRadarPingActive`, so this is not a free locator.
+            // Only update the zone centre (`circleCenter`) in
+            // followTheChicken: in stayInTheZone the centre is the
+            // deterministic drifted centre set by streamGameConfig +
+            // processRadiusUpdate, and a stray chicken broadcast (radar
+            // ping write, stale chickenLocations/latest replayed on
+            // listener connect) pulling it onto the Chicken would make
+            // the zone check fire against the Chicken's position and
+            // flag a hunter standing inside the visible circle as
+            // "outside". Mirrors the gate iOS HunterMap applies on
             // `.newLocationFetched`.
-            if (_uiState.value.game.gameModEnum == GameMod.STAY_IN_THE_ZONE) return@collect
-            _uiState.update { it.copy(circleCenter = location) }
+            val followsChicken = _uiState.value.game.gameModEnum != GameMod.STAY_IN_THE_ZONE
+            _uiState.update {
+                it.copy(
+                    chickenLocation = location,
+                    circleCenter = if (followsChicken) location else it.circleCenter,
+                )
+            }
         }
     }
 
@@ -571,6 +584,18 @@ class HunterMapViewModel @Inject constructor(
 
     private fun activatePowerUp(powerUp: PowerUp) {
         if (_uiState.value.activatingPowerUpId != null) return
+        // Guard against double activation of the same timed effect.
+        // `activatePowerUp` writes `powerUps.activeEffects.<field>` =
+        // now + duration, overwriting any existing timestamp. A second
+        // activation while the first is still running shifts the effect
+        // window mid-flight, which desyncs findLastUpdate between
+        // Chicken + Hunter. Same guard landed on iOS. Belt-and-braces
+        // in addition to the inventory UI button being disabled on
+        // `game.isActive(type)`.
+        if (_uiState.value.game.isActive(powerUp.typeEnum)) {
+            showNotification("${powerUp.typeEnum.title} is already active", powerUp.typeEnum)
+            return
+        }
         _uiState.update { it.copy(activatingPowerUpId = powerUp.id) }
         viewModelScope.launch {
             try {
@@ -584,13 +609,38 @@ class HunterMapViewModel @Inject constructor(
                 analyticsRepository.powerUpActivated(type = powerUp.type, role = "hunter")
 
                 if (powerUp.typeEnum == PowerUpType.ZONE_PREVIEW) {
-                    // Compute next zone preview (client-side only — no Firestore effect)
+                    // Compute NEXT zone boundary client-side. In
+                    // followTheChicken the zone recentres on the Chicken's
+                    // live GPS at each shrink, so the current centre is the
+                    // best approximation available right now. In
+                    // stayInTheZone the zone drifts deterministically — we
+                    // mirror exactly what `processRadiusUpdate` will apply
+                    // on the next tick (interpolate + drift), otherwise
+                    // the preview is concentric with the current circle
+                    // and misses the "where it moves to" information that
+                    // is the whole point of the power-up.
                     val state = _uiState.value
                     val nextRadius = state.radius - state.game.zone.shrinkMetersPerUpdate.toInt()
                     if (nextRadius > 0) {
-                        val center = state.circleCenter ?: state.game.initialLocation
+                        val currentCenter = state.circleCenter ?: state.game.initialLocation
+                        val previewCenter = if (state.game.gameModEnum == GameMod.STAY_IN_THE_ZONE) {
+                            val interpolated = interpolateZoneCenter(
+                                initialCenter = state.game.initialLocation,
+                                finalCenter = state.game.finalLocation,
+                                initialRadius = state.game.zone.radius,
+                                currentRadius = nextRadius.toDouble()
+                            )
+                            deterministicDriftCenter(
+                                basePoint = interpolated,
+                                oldRadius = state.radius.toDouble(),
+                                newRadius = nextRadius.toDouble(),
+                                driftSeed = state.game.zone.driftSeed
+                            )
+                        } else {
+                            currentCenter
+                        }
                         _uiState.update {
-                            it.copy(previewCircle = Pair(center, nextRadius.toDouble()))
+                            it.copy(previewCircle = Pair(previewCenter, nextRadius.toDouble()))
                         }
                     }
                 }

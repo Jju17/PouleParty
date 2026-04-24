@@ -230,6 +230,27 @@ struct ChickenMapFeature {
                 }
                 .cancellable(id: CancelID.powerUpNotificationDismiss, cancelInFlight: true)
             case let .powerUps(.delegate(.activated(powerUp))):
+                // Guard against double activation of the same timed effect.
+                // `activatePowerUp` writes `powerUps.activeEffects.<field>
+                // = now + duration`, overwriting any existing timestamp.
+                // A second zone-freeze while the first is still running
+                // shifts the freeze window start forward, which makes
+                // `findLastUpdate` skip a different set of shrinks on the
+                // Hunter vs the Chicken for the brief listener lag — a
+                // live-test report had a Hunter still "frozen" after the
+                // Chicken's game had ended. Reject the activation at the
+                // reducer layer; the inventory UI also disables the
+                // button based on the same `isActive(effectOf:)` check,
+                // this is belt-and-braces.
+                if state.game.isActive(effectOf: powerUp.type) {
+                    state.powerUps.notification = "\(powerUp.type.displayName) is already active"
+                    state.powerUps.lastActivatedType = powerUp.type
+                    return .run { send in
+                        try await clock.sleep(for: .seconds(2))
+                        await send(.powerUps(.notificationCleared))
+                    }
+                    .cancellable(id: CancelID.powerUpNotificationDismiss, cancelInFlight: true)
+                }
                 let gameId = state.game.id
                 let duration = powerUp.type.durationSeconds ?? 0
                 let expiresAt = Timestamp(date: .now.addingTimeInterval(duration))
@@ -486,31 +507,46 @@ struct ChickenMapFeature {
                         }
                     )
                 } else {
-                    // stayInTheZone: chicken needs GPS for zone check (no Firestore writes normally).
-                    // Radar Ping broadcasts are handled by a separate timer-driven effect below
-                    // because CoreLocation's 10 m distance filter means a stationary chicken would
-                    // never emit a new coordinate here, and therefore never trigger a ping write.
+                    // stayInTheZone: Chicken broadcasts its position continuously
+                    // (same cadence as followTheChicken) so Radar Ping can reveal a
+                    // fresh position to Hunters on demand. The earlier "only write
+                    // during a ping" gate left the Hunter seeing nothing when
+                    // Radar Ping fired (with a 3 s duration, any stale broadcast
+                    // window would be visible-for-nothing). Hunters don't see the
+                    // Chicken's marker client-side unless `game.isRadarPingActive`
+                    // is true — so the continuous write is purely "always have a
+                    // fresh last-known position ready" and the UI gates visibility.
                     effects.append(
                         .run { send in
                             let delay = startDate.timeIntervalSinceNow
                             if delay > 0 {
                                 try await clock.sleep(for: .seconds(delay))
                             }
+                            var lastWrite: Date = .distantPast
                             if let currentLocation = locationClient.lastLocation() {
                                 await send(.internal(.newLocationFetched(currentLocation)))
+                                let isInvisible = invisibilityUntil.value.map { Date.now < $0 } ?? false
+                                if !isInvisible {
+                                    let isJammed = jammerUntil.value.map { Date.now < $0 } ?? false
+                                    let sendCoordinate = isJammed ? applyJammerNoise(to: currentLocation, driftSeed: driftSeed) : currentLocation
+                                    do {
+                                        try apiClient.setChickenLocation(gameId, sendCoordinate)
+                                        lastWrite = .now
+                                    } catch {
+                                        logger.error("Failed to send initial chicken location: \(error)")
+                                    }
+                                }
                             }
-                            var lastWrite = Date.now
                             for await coordinate in locationClient.startTracking() {
                                 await send(.internal(.newLocationFetched(coordinate)))
-                                let isRadarPinged = radarPingUntil.value.map { Date.now < $0 } ?? false
                                 let isInvisible = invisibilityUntil.value.map { Date.now < $0 } ?? false
-                                if isRadarPinged && !isInvisible && Date.now.timeIntervalSince(lastWrite) >= AppConstants.locationThrottleSeconds {
+                                if !isInvisible && Date.now.timeIntervalSince(lastWrite) >= AppConstants.locationThrottleSeconds {
                                     let isJammed = jammerUntil.value.map { Date.now < $0 } ?? false
                                     let sendCoordinate = isJammed ? applyJammerNoise(to: coordinate, driftSeed: driftSeed) : coordinate
                                     do {
                                         try apiClient.setChickenLocation(gameId, sendCoordinate)
                                     } catch {
-                                        logger.error("Failed to send chicken location during radar ping: \(error)")
+                                        logger.error("Failed to send chicken location: \(error)")
                                     }
                                     lastWrite = .now
                                 }
@@ -518,17 +554,16 @@ struct ChickenMapFeature {
                         }
                     )
 
-                    // Radar Ping support for stayInTheZone: drives writes on a timer
-                    // so a stationary chicken still broadcasts while a ping is active.
-                    // Ticks every throttle period; no-ops when the ping is inactive
-                    // (or when invisibility is active — safety net; in practice
-                    // invisibility isn't spawned in stayInTheZone).
+                    // Timer-driven rebroadcast so a stationary chicken still
+                    // refreshes its Firestore position every throttle period —
+                    // otherwise CoreLocation's 10 m distance filter means a
+                    // chicken hiding in one spot stops updating after one
+                    // write, and Radar Ping's 3 s window can land between
+                    // broadcasts with nothing fresh to show.
                     effects.append(
                         .run { _ in
                             let tick = Duration.milliseconds(Int(AppConstants.locationThrottleSeconds * 1000))
                             for await _ in self.clock.timer(interval: tick) {
-                                let isRadarPinged = radarPingUntil.value.map { Date.now < $0 } ?? false
-                                guard isRadarPinged else { continue }
                                 let isInvisible = invisibilityUntil.value.map { Date.now < $0 } ?? false
                                 guard !isInvisible else { continue }
                                 guard let coordinate = locationClient.lastLocation() else { continue }
@@ -537,7 +572,7 @@ struct ChickenMapFeature {
                                 do {
                                     try apiClient.setChickenLocation(gameId, sendCoordinate)
                                 } catch {
-                                    logger.error("Failed to broadcast chicken location during radar ping: \(error)")
+                                    logger.error("Failed to rebroadcast chicken location: \(error)")
                                 }
                             }
                         }

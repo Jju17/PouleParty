@@ -129,8 +129,8 @@
     <string name="location_partial">Presque ! Le jeu doit suivre la Poule même quand l\'appli est en arrière-plan.\n\nAutorise la localisation en permanence.</string>
     <string name="location_denied">Sans ça, le jeu ne peut pas fonctionner.\nPas de localisation = pas de carte = pas de fun.\n\nTa position n\'est partagée avec les autres joueurs que pendant une partie en cours.</string>
     <string name="always_allowed">Toujours autorisée !</string>
-    <string name="allow_always">Autoriser en permanence</string>
-    <string name="allow_location_access">Autoriser la localisation</string>
+    <string name="allow_always">Continuer</string>
+    <string name="allow_location_access">Continuer</string>
     <string name="choose_nickname">Choisis ton pseudo</string>
     <string name="nickname_subtitle">C\'est comme ça que les autres joueurs\nte verront dans la partie.</string>
     <string name="your_nickname">Ton pseudo</string>

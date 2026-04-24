@@ -174,8 +174,14 @@
     <string name="report_player_success">Thanks — report submitted</string>
     <string name="report_player_error">Couldn\'t submit the report. Try again in a moment.</string>
     <string name="always_allowed">Always allowed!</string>
-    <string name="allow_always">Allow Always</string>
-    <string name="allow_location_access">Allow Location Access</string>
+    <!-- Button labels intentionally neutral ("Continue") instead of "Allow".
+         Apple rejected iOS 1.11.1 under guideline 5.1.1(iv) for using "Allow"
+         on an in-app button that precedes the system location prompt (seen
+         as pre-conditioning the user's answer). Keeping Android in sync
+         avoids cross-platform copy drift. Do not revert without re-reading
+         the 1.11.1 App Review notes. -->
+    <string name="allow_always">Continue</string>
+    <string name="allow_location_access">Continue</string>
     <string name="choose_nickname">Choose Your Nickname</string>
     <string name="nickname_subtitle">This is how other players\nwill see you in the game.</string>
     <string name="your_nickname">Your nickname</string>

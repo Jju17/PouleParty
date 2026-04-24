@@ -66,6 +66,21 @@ struct HunterMapContent: View {
                 .allowOverlap(true)
                 .allowOverlapWithPuck(true)
             }
+
+            // Radar Ping reveal: real Chicken marker, visible only while
+            // `powerUps.activeEffects.radarPing` is active. The Chicken
+            // broadcasts its position continuously so this marker shows
+            // the live point — the power-up is purely a visibility gate,
+            // not a trigger for the broadcast itself (a 3 s Radar Ping
+            // window is too short to rely on a fresh write landing
+            // exactly within it).
+            if store.game.isRadarPingActive, let chickenLocation = store.chickenLocation {
+                MapViewAnnotation(coordinate: chickenLocation) {
+                    ChickenMapMarker()
+                }
+                .allowOverlap(true)
+                .allowOverlapWithPuck(true)
+            }
         }
         .onCameraChanged { context in
             let newBearing = context.cameraState.bearing

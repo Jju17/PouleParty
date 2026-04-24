@@ -218,7 +218,24 @@ fun processRadiusUpdate(
     val nextUpdate = nextRadiusUpdate ?: return null
     val now = Date()
     if (!now.after(nextUpdate)) return null
-    if (isZoneFrozen) return null
+    // Zone Freeze: skip the radius reduction for THIS scheduled shrink but
+    // still advance `nextRadiusUpdate` to the following one. Previously we
+    // returned null here, which left the countdown target frozen on a past
+    // date — after freeze expired, one tick would process and jump the next
+    // update past `endDate`, producing a "Map update in: 3:00 / 4:59"
+    // countdown on the hunter side even after the chicken's game had ended.
+    // Advancing here keeps the countdown monotonic and in sync with
+    // findLastUpdate, which always returns lastUpdate + interval.
+    if (isZoneFrozen) {
+        val intervalMsFrozen = (radiusIntervalUpdate * 60 * 1000).toLong()
+        return RadiusUpdateResult(
+            newRadius = currentRadius,
+            newNextUpdate = Date(nextUpdate.time + intervalMsFrozen),
+            newCircleCenter = currentCircleCenter,
+            isGameOver = false,
+            gameOverMessage = null
+        )
+    }
 
     val newRadius = currentRadius - radiusDeclinePerUpdate.toInt()
     if (newRadius <= 0) {

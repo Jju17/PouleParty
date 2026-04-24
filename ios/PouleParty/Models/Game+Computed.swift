@@ -88,6 +88,25 @@ extension Game {
     var isJammerActive: Bool {
         powerUps.activeEffects.jammer.map { Date.now < $0.dateValue() } ?? false
     }
+
+    /// Whether the timed effect associated with this power-up type is
+    /// currently active on the game doc. Used to gate activation — a
+    /// second activation overwrites `powerUps.activeEffects.<field>`,
+    /// shifting the freeze window and desyncing `findLastUpdate`
+    /// between Chicken + Hunter (a 1.11.2 live-test report: the Hunter
+    /// kept seeing the zone frozen after the Chicken's game already
+    /// ended). Blocking the second activation at the UI + reducer
+    /// layer prevents that entirely.
+    func isActive(effectOf type: PowerUp.PowerUpType) -> Bool {
+        switch type {
+        case .invisibility: return isChickenInvisible
+        case .zoneFreeze:   return isZoneFrozen
+        case .radarPing:    return isRadarPingActive
+        case .decoy:        return isDecoyActive
+        case .jammer:       return isJammerActive
+        case .zonePreview:  return false // instant, no timed window
+        }
+    }
 }
 
 // MARK: - Heartbeat

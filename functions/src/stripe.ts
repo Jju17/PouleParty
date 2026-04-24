@@ -12,6 +12,35 @@ const STRIPE_API_VERSION: Stripe.LatestApiVersion = "2025-02-24.acacia";
 const STRIPE_SECRET_KEY = defineSecret("STRIPE_SECRET_KEY");
 const STRIPE_WEBHOOK_SECRET = defineSecret("STRIPE_WEBHOOK_SECRET");
 
+// Stripe enforces a per-currency minimum charge amount. For EUR it's 0.50 €
+// (50 cents). Creating a PaymentIntent below this throws
+// `StripeInvalidRequestError: Amount must be at least 50 cents` which the
+// Firebase runtime wraps as `HttpsError('internal', 'INTERNAL')` — the
+// client sees a useless "INTERNAL" alert and the game stays in
+// `pending_payment` limbo. We hit this in production with the Apple
+// Reviewer promo `APPLE_REVIEW_99` (99%-off) on a typical Forfait of
+// 6 × 3 € = 18 € — discounted to 18 cents, rejected by Stripe. Clamp to
+// the minimum whenever a coupon drops the amount below it. 100%-off is
+// still routed through `redeemFreeCreation` (handled separately).
+const STRIPE_MIN_CHARGE_CENTS_EUR = 50;
+
+/**
+ * Clamp a charge amount up to Stripe's EUR minimum (50 cents). Used on
+ * the discounted total returned by `applyPromoCode` before handing off
+ * to `paymentIntents.create`. Exported so `stripe-amount.test.ts` can
+ * pin the behaviour (regression from the Apple review cycle — an
+ * un-clamped 18-cent PaymentIntent on `APPLE_REVIEW_99` caused the
+ * Reviewer to see a bare "INTERNAL" alert when they tapped Payer).
+ *
+ * Amounts `≤ 0` pass through unchanged — the caller handles the
+ * 100 %-off path separately via `redeemFreeCreation`, and clamping a
+ * zero here would turn a free game into a charged one.
+ */
+export function clampToStripeMinimumCentsEur(amount: number): number {
+  if (amount <= 0) return amount;
+  return Math.max(amount, STRIPE_MIN_CHARGE_CENTS_EUR);
+}
+
 function stripe(): Stripe {
   return new Stripe(STRIPE_SECRET_KEY.value(), { apiVersion: STRIPE_API_VERSION });
 }
@@ -321,7 +350,20 @@ export const createCreatorPaymentSheet = onCall(
     if (promoCodeId) {
       const applied = await applyPromoCode(stripeClient, baseAmount, promoCodeId);
       finalAmount = applied.finalAmount;
-      promoInfo = { percentOff: applied.percentOff, amountOff: applied.amountOff };
+      // Build the promo info object with only the defined side of the
+      // coupon (percentOff XOR amountOff). Previously we wrote both keys
+      // unconditionally, which meant a percent-off coupon (e.g. the Apple
+      // Reviewer's `APPLE_REVIEW_99`) produced `{ percentOff: 99,
+      // amountOff: undefined }`. Firestore rejects `undefined` values at
+      // write time (`Cannot use "undefined" as a Firestore value`), the
+      // batch.set threw, and the Firebase runtime surfaced the opaque
+      // `HttpsError('internal', 'INTERNAL')` the Reviewer saw — even
+      // AFTER the Stripe-minimum clamp fix landed, because this write
+      // happens before we ever call Stripe.
+      const info: { percentOff?: number; amountOff?: number } = {};
+      if (applied.percentOff !== undefined) info.percentOff = applied.percentOff;
+      if (applied.amountOff !== undefined) info.amountOff = applied.amountOff;
+      promoInfo = info;
       if (finalAmount === 0) {
         // 100%-off — caller should use redeemFreeCreation instead.
         throw new HttpsError(
@@ -329,6 +371,19 @@ export const createCreatorPaymentSheet = onCall(
           "This promo code makes the game free. Call redeemFreeCreation instead of this function.",
         );
       }
+    }
+
+    // Clamp to Stripe's per-currency minimum. See the helper's comment —
+    // without this, `APPLE_REVIEW_99` on a small Forfait ends up at
+    // ~18 cents and Stripe rejects `paymentIntents.create` with
+    // `StripeInvalidRequestError`, which the runtime surfaces as the
+    // opaque `HttpsError('internal', 'INTERNAL')` the Reviewer saw.
+    const clampedAmount = clampToStripeMinimumCentsEur(finalAmount);
+    if (clampedAmount !== finalAmount) {
+      console.log(
+        `[createCreatorPaymentSheet] finalAmount ${finalAmount} below Stripe EUR minimum, clamping to ${clampedAmount} cents (promo: ${promoCodeId ?? "none"}, base: ${baseAmount})`,
+      );
+      finalAmount = clampedAmount;
     }
 
     // Pre-create the game doc in `pending_payment` status. Webhook flips to `waiting`.

@@ -199,7 +199,26 @@ func processRadiusUpdate(
 ) -> RadiusUpdateResult? {
     let now = Date.now
     guard let nextUpdate = nextRadiusUpdate, now >= nextUpdate else { return nil }
-    if isZoneFrozen { return nil }
+    // Zone Freeze: skip the radius reduction for THIS scheduled shrink but
+    // still advance `nextRadiusUpdate` to the following one. Previously we
+    // returned `nil` here, which left `state.nextRadiusUpdate` stuck on a
+    // past date — the "Map update in:" countdown then either showed `00:00`
+    // indefinitely or, after freeze expired and one tick processed, jumped
+    // to a date past `endDate` (one interval beyond the skipped shrink).
+    // On a hunter watching a game that was already over on the chicken side,
+    // this manifested as a countdown reading "Map update in: 3:00 / 4:59"
+    // even though the game had ended — which is exactly what the live-test
+    // caught. Advancing here keeps the countdown monotonic and in sync with
+    // `findLastUpdate`, which always returns `lastUpdate + interval`.
+    if isZoneFrozen {
+        return RadiusUpdateResult(
+            newRadius: currentRadius,
+            newNextUpdate: nextUpdate.addingTimeInterval(TimeInterval(radiusIntervalUpdate * 60)),
+            newCircle: currentCircle,
+            isGameOver: false,
+            gameOverMessage: nil
+        )
+    }
 
     let newRadius = currentRadius - Int(radiusDeclinePerUpdate)
 

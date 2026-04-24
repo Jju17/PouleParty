@@ -164,9 +164,15 @@ class ChickenMapViewModel @Inject constructor(
             streamJobs += viewModelScope.launch { streamGameConfig() }
             streamJobs += viewModelScope.launch { streamPowerUps() }
             streamJobs += viewModelScope.launch { sendHeartbeat(game) }
-            if (game.gameModEnum == GameMod.STAY_IN_THE_ZONE) {
-                streamJobs += viewModelScope.launch { radarPingBroadcastLoop(game) }
-            }
+            // Run the stationary-rebroadcast loop in BOTH modes. The Chicken
+            // broadcasts its position continuously so Radar Ping (3 s) has a
+            // fresh point to reveal; without this loop a non-moving Chicken
+            // only writes on its very first coord (CoreLocation / Fused
+            // Location's 10 m distance filter blocks subsequent emits), and
+            // a 3 s Ping landing after that first write would miss any
+            // update. Mirrors the `.run` block in iOS `ChickenMap.swift`
+            // that fires every `locationThrottleSeconds` regardless of mode.
+            streamJobs += viewModelScope.launch { chickenStationaryRebroadcastLoop(game) }
         }
     }
 
@@ -391,21 +397,22 @@ class ChickenMapViewModel @Inject constructor(
     }
 
     /**
-     * Timer-driven Radar Ping broadcaster for stayInTheZone mode. Ticks every
-     * throttle period and writes the last-known chicken location to Firestore
-     * while a radar ping is active. Needed because the location flow only fires
-     * on movement (≥10 m filter) — a stationary chicken would otherwise never
-     * broadcast during a ping.
+     * Timer-driven rebroadcaster for a stationary Chicken. Ticks every
+     * `LOCATION_THROTTLE_MS` and rewrites the last-known chicken position
+     * to Firestore so any Radar Ping (3 s) lands on a recent point. Needed
+     * because `locationFlow()` only emits on movement (≥10 m filter), so a
+     * non-moving Chicken would otherwise write once and then go silent.
+     * Not gated by Radar Ping anymore — the Chicken broadcasts
+     * continuously and the Hunter-side UI is what decides when to render
+     * the marker (gated on `game.isRadarPingActive`). Mirrors the iOS
+     * rebroadcast timer in `ChickenMap.swift`.
      */
-    private suspend fun radarPingBroadcastLoop(game: Game) {
+    private suspend fun chickenStationaryRebroadcastLoop(game: Game) {
         val delayMs = game.startDate.time - System.currentTimeMillis()
         if (delayMs > 0) delay(delayMs)
         while (true) {
             delay(AppConstants.LOCATION_THROTTLE_MS)
             val currentGame = _uiState.value.game
-            if (!currentGame.isRadarPingActive) continue
-            // Safety net: if invisibility somehow got activated (not spawned in
-            // stayInTheZone today, but future-proof), it wins over radar ping.
             if (currentGame.isChickenInvisible) continue
             val latLng = locationRepository.getLastLocation() ?: continue
             val sendLatLng = if (currentGame.isJammerActive) {
@@ -576,6 +583,20 @@ class ChickenMapViewModel @Inject constructor(
 
     private fun activatePowerUp(powerUp: PowerUp) {
         if (_uiState.value.activatingPowerUpId != null) return
+        // Guard against double activation of the same timed effect.
+        // `activatePowerUp` writes `powerUps.activeEffects.<field>` =
+        // now + duration, overwriting any existing timestamp. A second
+        // zone-freeze while the first is still running shifts the
+        // freeze-window start forward, which makes findLastUpdate skip
+        // a different set of shrinks on Hunter vs Chicken during the
+        // brief listener lag — reported as "Hunter still frozen after
+        // Chicken's game ended" in 1.11.2 live-test. Inventory UI
+        // also disables the button on `game.isActive(type)`, this is
+        // the defensive server-adjacent check.
+        if (_uiState.value.game.isActive(powerUp.typeEnum)) {
+            showNotification("${powerUp.typeEnum.title} is already active", powerUp.typeEnum)
+            return
+        }
         _uiState.update { it.copy(activatingPowerUpId = powerUp.id) }
         viewModelScope.launch {
             try {

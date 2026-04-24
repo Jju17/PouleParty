@@ -91,6 +91,26 @@ data class Game(
     val isJammerActive: Boolean
         get() = powerUps.activeEffects.jammer != null && Date().before(powerUps.activeEffects.jammer.toDate())
 
+    /**
+     * Whether the timed effect associated with [type] is currently active on
+     * the game doc. Used to gate activation — a second activation overwrites
+     * `powerUps.activeEffects.<field>`, shifting the freeze window and
+     * desyncing `findLastUpdate` between Chicken + Hunter (a 1.11.2
+     * live-test report: the Hunter kept seeing the zone frozen after the
+     * Chicken's game had already ended). Blocking the second activation at
+     * the UI + ViewModel layer prevents that entirely. Keep in lockstep
+     * with iOS `Game.isActive(effectOf:)`.
+     */
+    @Exclude
+    fun isActive(type: PowerUpType): Boolean = when (type) {
+        PowerUpType.INVISIBILITY -> isChickenInvisible
+        PowerUpType.ZONE_FREEZE -> isZoneFrozen
+        PowerUpType.RADAR_PING -> isRadarPingActive
+        PowerUpType.DECOY -> isDecoyActive
+        PowerUpType.JAMMER -> isJammerActive
+        PowerUpType.ZONE_PREVIEW -> false // instant, no timed window
+    }
+
     /** Returns true if the chicken's heartbeat is stale (>60s old), indicating disconnect. */
     @get:Exclude
     val isChickenDisconnected: Boolean

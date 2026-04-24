@@ -301,9 +301,19 @@ struct GameTimerLogicTests {
 
     // MARK: - Zone freeze
 
-    @Test func processRadiusUpdateReturnsNilWhenZoneFrozen() {
+    @Test func processRadiusUpdateWhenFrozenKeepsRadiusAndAdvancesNextUpdate() {
+        // Regression for "zone freeze breaks hunter game timer" — the
+        // earlier implementation returned `nil` here, which left
+        // `state.nextRadiusUpdate` stuck on a past date. The countdown
+        // stayed at 00:00 during the freeze and then jumped to a future
+        // interval once a post-freeze tick processed, producing the
+        // "Map update in: 3:00+" display on a Hunter screen even though
+        // the Chicken's game had already ended. The fix keeps the radius
+        // frozen but advances `newNextUpdate` by one interval, matching
+        // what `findLastUpdate` always returns.
+        let pastShrink = Date.now.addingTimeInterval(-1)
         let result = processRadiusUpdate(
-            nextRadiusUpdate: Date.now.addingTimeInterval(-1),
+            nextRadiusUpdate: pastShrink,
             currentRadius: 1500,
             radiusDeclinePerUpdate: 100,
             radiusIntervalUpdate: 5,
@@ -312,7 +322,11 @@ struct GameTimerLogicTests {
             currentCircle: nil,
             isZoneFrozen: true
         )
-        #expect(result == nil)
+        #expect(result != nil)
+        #expect(result!.newRadius == 1500)
+        #expect(result!.isGameOver == false)
+        let expectedNext = pastShrink.addingTimeInterval(5 * 60)
+        #expect(abs(result!.newNextUpdate.timeIntervalSince(expectedNext)) < 0.001)
     }
 
     @Test func processRadiusUpdateProceedsWhenNotFrozen() {

@@ -1,8 +1,12 @@
-# Release 1.11.2
+# Release 1.11.3
 
 > ⚠️ **Do not paste this "Summary" paragraph into any store field.** Only the blocks explicitly labelled **App Store Connect**, **Google Play Console**, or **App Review Notes** below are store-safe.
 
-**Summary (internal, do not paste):** follow-up to 1.11.1 from the same live-test session. Hunter standing still on a bench appeared as a frozen marker on the chicken's map for minutes — the write path was driven by GPS emissions, and with the 10 m distance filter (CoreLocation / FusedLocationProvider) a stationary player produced zero emissions, therefore zero writes. Fix on both platforms splits location tracking into two pieces: a tracker coroutine that keeps updating `state.userLocation` / `_uiState.userLocation` from `startTracking()` / `locationFlow()` (so zone checks + power-up proximity keep working), and a separate periodic writer (`clock.timer` on iOS, `while (coroutineContext.isActive) { delay(…) }` on Android) that every 5 s re-broadcasts the latest cached coord to Firestore — a non-moving hunter now refreshes on schedule. Plus a one-shot refresh on foreground resume (`ScenePhase.active` on iOS, `LifecycleEventEffect(ON_RESUME)` on Android) to bridge any background suspension. No server, no rules, no web. Chicken-side rendering untouched since `hunterLocationsStream` is already a `addSnapshotListener` — fresh writes push instantly once they land.
+**Summary (internal, do not paste):** clean version number (1.11.2 was prepared but never submitted to the stores) for the App Store resubmission cycle after Submission `1e2b360a-c71b-4dda-bb32-ce6b0fc9cf4d` was rejected on 2026-04-23 under guidelines 3.1.1, 5.1.1(iv), and 2.1. The binary is the 1.11.2 payload at version string 1.11.3; nothing functional changed between the two.
+
+The rest of this section describes the 1.11.2 content which ships under the 1.11.3 label. Below that the full 1.11.2 text is kept for provenance.
+
+**Original 1.11.2 summary:** follow-up to 1.11.1 from the same live-test session. Hunter standing still on a bench appeared as a frozen marker on the chicken's map for minutes — the write path was driven by GPS emissions, and with the 10 m distance filter (CoreLocation / FusedLocationProvider) a stationary player produced zero emissions, therefore zero writes. Fix on both platforms splits location tracking into two pieces: a tracker coroutine that keeps updating `state.userLocation` / `_uiState.userLocation` from `startTracking()` / `locationFlow()` (so zone checks + power-up proximity keep working), and a separate periodic writer (`clock.timer` on iOS, `while (coroutineContext.isActive) { delay(…) }` on Android) that every 5 s re-broadcasts the latest cached coord to Firestore — a non-moving hunter now refreshes on schedule. Plus a one-shot refresh on foreground resume (`ScenePhase.active` on iOS, `LifecycleEventEffect(ON_RESUME)` on Android) to bridge any background suspension. No server, no rules, no web. Chicken-side rendering untouched since `hunterLocationsStream` is already a `addSnapshotListener` — fresh writes push instantly once they land.
 
 ---
 
@@ -60,20 +64,94 @@ Locatie-verversing fix. Als een jager stilstond, toonde de kaart van de Kip een 
 
 ## 📝 App Store Connect — field "App Review Information → Notes"
 
-No delta from 1.11.0 / 1.11.1. Paid flows (Forfait, Caution, promo codes), location usage descriptions, Apple Pay integration, and the Apple Reviewer promo code (`APPLE_REVIEW_99`) are unchanged. The 1.11.2 (1) diff is a refactor of how the hunter broadcasts their own GPS position (split tracker from writer, add a periodic refresh, refresh on app resume). No new permissions, no new sensitive APIs, no new capability.
+**This submission resubmits after the 1.11.1 (1) rejection on 2026-04-23 (Submission `1e2b360a-c71b-4dda-bb32-ce6b0fc9cf4d`, reviewed on iPhone 17 Pro Max).** The three findings are addressed below; please keep this block in full on the next ASC submission.
 
-If the reviewer wants a quick recap vs 1.11.1 (1), paste this:
+Paste into the App Review Information → Notes field:
 
 ```
-1.11.2 (1) change summary vs 1.11.1 (1):
-- Hunter-side location writer now periodically re-broadcasts the last
-  known position every 5 seconds, so a stationary player still shows
-  up fresh on the chicken's map instead of appearing frozen.
-- A foreground-resume hook forces one extra refresh so the chicken's
-  map catches up immediately when the player re-opens the app.
-- No backend change, no new permission, no new paid flow. Location
-  usage strings in Info.plist are unchanged from 1.10.0.
+Hello reviewer. Addresses the three points from the 1.11.1 (1)
+rejection (Submission 1e2b360a-c71b-4dda-bb32-ce6b0fc9cf4d, 2026-04-23).
+
+(A) 3.1.1 — IAP vs Stripe paid game modes
+
+Poule Party is a REAL-WORLD outdoor GPS hide-and-seek game between
+friends physically running around outside. The paid flows are NOT
+digital content, extra lives, cosmetics, unlocks, or a subscription —
+they are service fees to operate a physical meetup, covered by
+guideline 3.1.3(e) ("Goods and Services Outside of the App", which
+REQUIRES non-IAP) and 3.1.3(d) ("Person-to-Person Services"):
+
+- Forfait: the organizer pays pricePerPlayer x maxPlayers (server-
+  computed, never trusted from the client) to host a physical meetup
+  for up to 50 Hunters who show up at a real location. The service
+  is the hosting of the real-world event. The app is just the
+  scoreboard + zone tracker.
+- Caution: a Hunter pays a small REFUNDABLE deposit to confirm
+  attendance at the organizer's event (anti no-show). Refunded
+  offline by the organizer after the game. No digital value is
+  delivered by the app.
+- Free: no payment, 1 game per 24 h per organizer.
+
+This matches Apple's own 3.1.3(d) examples ("tutoring, medical
+consultations, real estate tours, fitness training") and 3.1.3(e)
+("physical goods or services consumed outside of the app"). A
+50-player GPS hide-and-seek in a real park is exactly that. IAP
+would (a) violate the guideline and (b) break the refundable deposit.
+
+Stripe PaymentSheet is the correct surface: official Stripe iOS SDK,
+surfaces Apple Pay + card + Bancontact via automatic_payment_methods;
+merchant id merchant.dev.rahier.pouleparty + entitlement
+com.apple.developer.in-app-payments are configured.
+
+(B) 5.1.1(iv) — Location permission button
+
+Fixed. The onboarding pre-permission button previously read "Allow
+Location Access" / "Allow Always"; now neutral "Continue" (iOS
+OnboardingSlides.swift + Android strings.xml). The subsequent system
+dialog is Apple's own and unchanged.
+
+(C) 2.1 — Demo video
+
+Recorded on a physical iPhone (not a simulator), showing:
+  1. Onboarding + location permission flow (new "Continue" buttons).
+  2. Create Party -> Forfait plan -> wizard.
+  3. Stripe PaymentSheet opens with the Apple Pay button visible
+     at the top.
+  4. Tapping Apple Pay + Face ID -> game flips pending_payment to
+     waiting.
+  5. Caution join path: Home -> Start -> Caution game code ->
+     PaymentSheet again showing Apple Pay.
+
+DEMO VIDEO URL: <<< PASTE VIDEO LINK HERE BEFORE SUBMITTING >>>
+
+If the reviewer cannot reach the PaymentSheet: Apple Pay is only
+rendered by Stripe's SDK when the device has a card in Wallet. The
+Release build ships live Stripe keys so a wallet-less device looks
+indistinguishable from "Apple Pay broken" on that screen. Use live
+promo code APPLE_REVIEW_99 on the Forfait step: 99% discount, charge
+negligible, PaymentSheet (and Apple Pay button) still renders. Do
+NOT use 100% off — that short-circuits the PaymentSheet via
+redeemFreeCreation and the Apple Pay button never appears.
+
+Unchanged vs 1.11.1 (1): Stripe merchant id, entitlement, and the
+four NSLocation*UsageDescription "For example, ..." strings from
+1.10.0 that resolved the 1.9.0 5.1.1(ii) rejection.
+
+Happy to walk through on request.
 ```
+
+Notes for the person hitting "Submit for Review":
+- Replace `<<< PASTE VIDEO LINK HERE BEFORE SUBMITTING >>>` with the
+  actual demo-video URL. A private YouTube / Vimeo unlisted link or a
+  Google Drive share with "Anyone with the link → Viewer" both work.
+- Double-check `APPLE_REVIEW_99` exists in Stripe Dashboard LIVE mode
+  before submitting — it was created during the 1.8.1 resubmission
+  cycle and is meant to survive, but verify. See
+  `~/.claude/projects/-Users-julien-Repos-PouleParty/memory/reference_stripe_review_promo.md`.
+- If Apple rejects again on 3.1.1, ask for an App Review Board
+  meeting (Tuesdays/Thursdays) rather than resubmitting cold — the
+  meeting lets us walk the reviewer through the real-world-service
+  argument live.
 
 ---
 

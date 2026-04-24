@@ -55,7 +55,14 @@ struct PowerUp: Codable, Equatable, Identifiable {
 
         var durationSeconds: TimeInterval? {
             switch self {
-            case .radarPing: return 30
+            // 3 s is intentionally short: Radar Ping is now purely a
+            // "glimpse" mechanic that lets the Hunter see where the
+            // Chicken is right now, not a tracking window. The Chicken
+            // broadcasts continuously, so a longer window would turn
+            // this into a location stalker. Keep in lockstep with
+            // Android `PowerUpType.RADAR_PING` and the `.description`
+            // copy below.
+            case .radarPing: return 3
             case .invisibility: return 30
             case .zoneFreeze: return 120
             case .zonePreview: return nil
@@ -100,7 +107,7 @@ struct PowerUp: Codable, Equatable, Identifiable {
         var description: String {
             switch self {
             case .zonePreview: return "Shows the next zone boundary before it shrinks"
-            case .radarPing: return "Reveals the chicken's position for 30 seconds"
+            case .radarPing: return "Reveals the chicken's position for 3 seconds"
             case .invisibility: return "Hides the chicken from all hunters for 30 seconds"
             case .zoneFreeze: return "Freezes the zone, preventing it from shrinking for 2 minutes"
             case .decoy: return "Places a fake chicken signal on hunter maps for 20 seconds"

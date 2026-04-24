@@ -42,6 +42,13 @@ struct HunterMapFeature {
         var powerUps: MapPowerUpsFeature.State = .init()
         var previewCircle: CircleOverlay? = nil
         var decoyLocation: CLLocationCoordinate2D? = nil
+        // Latest known Chicken position broadcasted via
+        // `chickenLocationsStream`. Tracked in every mode (not just
+        // followTheChicken) so Radar Ping has a fresh point to reveal
+        // the moment it's activated. Hunter-map rendering gates
+        // visibility on `game.isRadarPingActive` — without that gate
+        // this would be a free locator.
+        var chickenLocation: CLLocationCoordinate2D? = nil
         var hasChallenges: Bool = false
         // Held between a failed `addWinner` write and a user-triggered retry,
         // so the retry keeps the original found-the-chicken timestamp + attempt
@@ -323,15 +330,59 @@ struct HunterMapFeature {
                 }
                 .cancellable(id: CancelID.powerUpNotificationDismiss, cancelInFlight: true)
             case let .powerUps(.delegate(.activated(powerUp))):
+                // Block a second activation of the same timed effect while
+                // the first is still running — otherwise the write
+                // overwrites `powerUps.activeEffects.<field>` and shifts
+                // the effect window mid-flight. See detailed comment in
+                // `ChickenMap.swift`. Mirrored here for Hunter-side
+                // effects (radarPing).
+                if state.game.isActive(effectOf: powerUp.type) {
+                    state.powerUps.notification = "\(powerUp.type.displayName) is already active"
+                    state.powerUps.lastActivatedType = powerUp.type
+                    return .run { send in
+                        try await clock.sleep(for: .seconds(2))
+                        await send(.powerUps(.notificationCleared))
+                    }
+                    .cancellable(id: CancelID.powerUpNotificationDismiss, cancelInFlight: true)
+                }
                 let gameId = state.game.id
                 let duration = powerUp.type.durationSeconds ?? 0
                 let expiresAt = Timestamp(date: .now.addingTimeInterval(duration))
 
-                // Zone Preview: compute next zone boundary client-side
+                // Zone Preview: compute the NEXT zone boundary client-side.
+                // In followTheChicken the zone tracks the Chicken's live GPS,
+                // so the next zone will recentre on wherever the Chicken is at
+                // shrink time — the best approximation we have right now is
+                // the current centre. In stayInTheZone the zone drifts
+                // deterministically from `driftSeed`, so we MUST apply the
+                // same drift + interpolation that `processRadiusUpdate`
+                // applies on the next tick — otherwise the preview shows a
+                // circle concentric with the current one, which is exactly
+                // the bug the live-test caught ("preview doesn't move").
                 if powerUp.type == .zonePreview {
                     let nextRadius = state.radius - Int(state.game.zone.shrinkMetersPerUpdate)
-                    if nextRadius > 0, let center = state.mapCircle?.center {
-                        state.previewCircle = CircleOverlay(center: center, radius: CLLocationDistance(nextRadius))
+                    if nextRadius > 0, let currentCenter = state.mapCircle?.center {
+                        let previewCenter: CLLocationCoordinate2D
+                        if state.game.gameMode == .stayInTheZone {
+                            let interpolated = interpolateZoneCenter(
+                                initialCenter: state.game.zone.center.toCLCoordinates,
+                                finalCenter: state.game.finalLocation,
+                                initialRadius: state.game.zone.radius,
+                                currentRadius: Double(nextRadius)
+                            )
+                            previewCenter = deterministicDriftCenter(
+                                basePoint: interpolated,
+                                oldRadius: Double(state.radius),
+                                newRadius: Double(nextRadius),
+                                driftSeed: state.game.zone.driftSeed
+                            )
+                        } else {
+                            previewCenter = currentCenter
+                        }
+                        state.previewCircle = CircleOverlay(
+                            center: previewCenter,
+                            radius: CLLocationDistance(nextRadius)
+                        )
                     }
                 }
 
@@ -466,11 +517,15 @@ struct HunterMapFeature {
             case let .internal(.newLocationFetched(location)):
                 // `location` here is the chicken's broadcasted position —
                 // `chickenLocationStream` is the only producer of this action.
-                // Treating it as the zone center is correct in
-                // `followTheChicken`, but wrong in `stayInTheZone`: the zone
-                // center there is the deterministic drifted center computed
-                // in `.gameUpdated` / `processRadiusUpdate`. A stray chicken
-                // broadcast (radar-ping write, or a stale
+                // Always cache it in `state.chickenLocation` so Radar Ping
+                // has a fresh point to reveal; the UI gates rendering on
+                // `game.isRadarPingActive`.
+                state.chickenLocation = location
+                // Treating the chicken's position as the zone center is
+                // correct in `followTheChicken`, but wrong in `stayInTheZone`:
+                // the zone center there is the deterministic drifted center
+                // computed in `.gameUpdated` / `processRadiusUpdate`. A stray
+                // chicken broadcast (radar-ping write, or a stale
                 // `chickenLocations/latest` doc the listener replays on
                 // connect) must not overwrite it — otherwise the hunter's
                 // zone check fires against the chicken's position rather

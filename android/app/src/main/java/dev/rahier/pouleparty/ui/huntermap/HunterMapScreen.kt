@@ -220,6 +220,21 @@ fun HunterMapScreen(
                     }
                 }
 
+                // Radar Ping reveal: real Chicken marker, visible only while
+                // `game.isRadarPingActive`. The Chicken broadcasts its
+                // position continuously so this marker shows the live point —
+                // the power-up is purely a visibility gate, not a trigger for
+                // the broadcast. Mirrors iOS `ChickenMapMarker` in
+                // `HunterMapContent.swift`.
+                if (state.game.isRadarPingActive) {
+                    state.chickenLocation?.let { chicken ->
+                        PointAnnotation(point = chicken) {
+                            textField = "🐔"
+                            textSize = 32.0
+                        }
+                    }
+                }
+
                 // Zone preview circle (from Zone Preview power-up)
                 state.previewCircle?.let { (center, radius) ->
                     val previewPoints = circlePolygonPoints(center, radius)

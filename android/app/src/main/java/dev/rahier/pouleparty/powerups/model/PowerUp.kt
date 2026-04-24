@@ -49,7 +49,12 @@ enum class PowerUpType(
     val description: String
 ) {
     ZONE_PREVIEW("zonePreview", "Zone Preview", null, true, "Shows the next zone boundary before it shrinks"),
-    RADAR_PING("radarPing", "Radar Ping", 30, true, "Reveals the chicken's position for 30 seconds"),
+    // 3 s is intentionally short: Radar Ping is a "glimpse" mechanic now —
+    // the Chicken broadcasts position continuously so the Hunter just sees
+    // where the Chicken is right now, not a tracking window. Longer would
+    // turn this into a location stalker. Keep in lockstep with iOS
+    // `PowerUpType.radarPing.durationSeconds`.
+    RADAR_PING("radarPing", "Radar Ping", 3, true, "Reveals the chicken's position for 3 seconds"),
     INVISIBILITY("invisibility", "Invisibility", 30, false, "Hides the chicken from all hunters for 30 seconds"),
     ZONE_FREEZE("zoneFreeze", "Zone Freeze", 120, false, "Freezes the zone, preventing it from shrinking for 2 minutes"),
     DECOY("decoy", "Decoy", 20, false, "Places a fake chicken signal on hunter maps for 20 seconds"),

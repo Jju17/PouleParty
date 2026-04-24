@@ -6,19 +6,44 @@ Format: [Keep a Changelog](https://keepachangelog.com/). Versions follow [Semant
 
 ---
 
-## [1.11.2], 2026-04-23
+## [1.11.3], 2026-04-23
 
-**iOS**: 1.11.2 (1) · **Android**: 1.11.2 (32) · **Functions**: unchanged · **Firestore rules**: unchanged
+**iOS**: 1.11.3 (1) · **Android**: 1.11.3 (33) · **Functions**: `createCreatorPaymentSheet` redeploy (staging + prod, 2026-04-23, landed in 1.11.2 cycle) · **Firestore rules**: unchanged
 
-Live-test follow-up: a hunter sitting still on a bench showed up frozen on
-the chicken's map for minutes at a time. Root cause was the same on both
-platforms — the location write was driven off each GPS emission, and the
-10 m distance filter (CoreLocation on iOS, `setMinUpdateDistanceMeters`
-on Android FusedLocation) means a non-moving player produces no emissions
-and therefore no writes. The chicken's `hunterLocationsStream` /
-`hunterLocationFlow` are already `addSnapshotListener`-based, so any
-fresh write propagates instantly — the fix is exclusively on the
-hunter-side write cadence.
+Same payload as the never-submitted 1.11.2 — clean version number for the
+App Store resubmission cycle after the 1.11.1 (1) rejection. No
+functional delta vs the 1.11.2 content already described below; this
+entry exists so the store binary and the CHANGELOG line up.
+
+Two tracks this release:
+
+1. **Live-test follow-up.** A hunter sitting still on a bench showed up
+   frozen on the chicken's map for minutes at a time. Root cause was
+   the same on both platforms — the location write was driven off
+   each GPS emission, and the 10 m distance filter (CoreLocation on
+   iOS, `setMinUpdateDistanceMeters` on Android FusedLocation) means
+   a non-moving player produces no emissions and therefore no writes.
+   The chicken's `hunterLocationsStream` / `hunterLocationFlow` are
+   already `addSnapshotListener`-based, so any fresh write propagates
+   instantly — the fix is exclusively on the hunter-side write
+   cadence.
+2. **App Store Connect 1.11.1 (1) rejection fallout** (Submission
+   `1e2b360a-c71b-4dda-bb32-ce6b0fc9cf4d`, reviewed 2026-04-23 on
+   iPhone 17 Pro Max). Three findings: (i) 3.1.1 IAP — Apple read the
+   Stripe paid game modes as "paid digital content"; the real answer
+   is 3.1.3(e) (physical real-world service consumed outside the app)
+   plus 3.1.3(d) (organizer ↔ player meetup). Stripe is the
+   *correct* flow here, no code change — addressed exclusively via
+   the App Review Notes rewrite in `RELEASE_NOTES.md` so a
+   re-review team can see the reasoning without opening the app.
+   (ii) 5.1.1(iv) — the pre-permission onboarding slide had a
+   custom "Allow Location Access" / "Allow Always" button that
+   precedes the system location prompt, which Apple reads as
+   pre-conditioning the user's answer. Relabelled to neutral
+   "Continue" on both platforms. (iii) 2.1 — Apple asked for a
+   physical-device demo video showing the Apple Pay button + purchase
+   flow. Delivered out-of-band as a screen recording, linked from the
+   updated App Review Notes.
 
 ### Fixed
 
@@ -48,6 +73,48 @@ hunter-side write cadence.
   in `HunterMapScreen` → new `HunterMapIntent.AppResumed` handler.
   Both paths are guarded on `chickenCanSeeHunters` + `hasGameStarted`
   + non-empty player id; any gate failure is a silent no-op.
+- **Onboarding location-permission button relabelled "Continue"
+  (iOS + Android).** Apple rejected 1.11.1 (1) under 5.1.1(iv) because
+  the custom in-app button preceding the system location prompt was
+  labelled "Allow Location Access" / "Allow Always" — reviewers
+  interpret that as pre-conditioning the user's answer to the system
+  dialog. iOS `OnboardingSlides.swift` + Android
+  `res/values*/strings.xml` (`allow_always`, `allow_location_access`
+  keys, kept as-is so the diff is value-only) now render "Continue" /
+  "Continuer" / "Doorgaan". Keys intentionally *not* renamed — the
+  button text is what App Review reads, the key only exists for
+  string lookups and changing it would churn every call site for no
+  review benefit. In-line comments flag the 1.11.1 rejection so this
+  doesn't get reverted in a later cleanup pass.
+- **Server — `createCreatorPaymentSheet` surfaced "INTERNAL" on two
+  separate paths when a promo code was applied.** Both reproduced with
+  `APPLE_REVIEW_99` on a default min Forfait (6 × 3 € = 18 €). Deployed
+  to both projects on 2026-04-23 ahead of the next App Store
+  resubmission so the reviewer can actually complete the flow shown
+  in the demo video.
+  - **Stripe EUR minimum.** After 99 %-off the total lands at 18 cents.
+    Stripe `paymentIntents.create` throws `StripeInvalidRequestError:
+    Amount must be at least 50 cents`, and the Firebase runtime wraps
+    the unhandled throw into `HttpsError('internal', 'INTERNAL')` so
+    the user sees a bare "INTERNAL" alert when tapping Payer. New
+    exported `clampToStripeMinimumCentsEur` helper floors any positive
+    amount below 50 cents to exactly 50 cents before the PaymentIntent
+    is created. 100 %-off still routes through `redeemFreeCreation`
+    (zero passes through the clamp unchanged). Covered by 5 new tests
+    in `functions/test/stripe-amount.test.ts`.
+  - **Firestore undefined-value rejection in `payment.promoDiscount`.**
+    Exposed by the clamp fix above — once the Stripe call no longer
+    failed first, the next write did: `applyPromoCode` returns
+    `{ finalAmount, percentOff?, amountOff? }` (one of the two is
+    always `undefined` depending on the coupon shape), and the
+    handler was building `promoInfo = { percentOff: applied.percentOff,
+    amountOff: applied.amountOff }` — for a percent-off coupon that
+    produces `{ percentOff: 99, amountOff: undefined }`, and
+    `gameRef.set(…)` throws `Cannot use "undefined" as a Firestore
+    value (found in field "payment.promoDiscount.amountOff")`. Fixed
+    by conditionally writing only the defined side of the XOR. The
+    `redeemFreeCreation` path already used `?? null` when writing the
+    same object so it was never affected.
 
 ### Notes
 

@@ -143,8 +143,8 @@
     <string name="location_partial">Bijna klaar! Het spel moet de Kip ook volgen als de app op de achtergrond draait.\n\nSta achtergrondlocatie toe.</string>
     <string name="location_denied">Zonder locatie werkt het spel niet.\nGeen locatie = geen kaart = geen plezier.\n\nJe locatie wordt alleen met andere spelers gedeeld terwijl een spel bezig is.</string>
     <string name="always_allowed">Altijd toegestaan!</string>
-    <string name="allow_always">Altijd toestaan</string>
-    <string name="allow_location_access">Locatietoegang toestaan</string>
+    <string name="allow_always">Doorgaan</string>
+    <string name="allow_location_access">Doorgaan</string>
     <string name="choose_nickname">Kies je bijnaam</string>
     <string name="nickname_subtitle">Zo zien andere spelers\nje in het spel.</string>
     <string name="your_nickname">Je bijnaam</string>
