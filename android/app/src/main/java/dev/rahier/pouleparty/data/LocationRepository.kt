@@ -69,17 +69,51 @@ class LocationRepository @Inject constructor(
     }
 
     /**
+     * Start the location foreground service.
+     *
+     * Must be called while the app is in the foreground (typically from a
+     * ViewModel's `init` block, synchronously). Android 12+ throws
+     * `ForegroundServiceStartNotAllowedException` when `startForegroundService`
+     * is invoked from the background — the `FOREGROUND_SERVICE_LOCATION`
+     * exemption only kicks in when `ACCESS_BACKGROUND_LOCATION` is granted at
+     * runtime, and many users grant only "while using the app". Keeping the
+     * start outside of [locationFlow] guarantees it doesn't fire after a
+     * suspended `delay()` (e.g. while waiting for the hunter head-start),
+     * which is exactly when the app may already be backgrounded.
+     *
+     * Wrapped in try/catch as a belt-and-braces — if the FGS can't start we
+     * log and carry on; foreground tracking still works, only the
+     * backgrounded-during-game case silently degrades instead of crashing.
+     */
+    fun startTrackingService() {
+        try {
+            LocationForegroundService.start(context)
+        } catch (e: Exception) {
+            android.util.Log.w(
+                "LocationRepository",
+                "Failed to start location foreground service",
+                e
+            )
+        }
+    }
+
+    /** Stop the location foreground service. Safe to call multiple times. */
+    fun stopTrackingService() {
+        LocationForegroundService.stop(context)
+    }
+
+    /**
      * Emit user location as Flow<Point>.
      * Uses distanceFilter ≈ 10m via smallestDisplacement to match iOS behaviour.
      *
-     * Starts a foreground service while the flow is being collected so Android 14+
-     * allows location updates to keep flowing if the user backgrounds the app during a game.
-     * Required because the app declares ACCESS_BACKGROUND_LOCATION.
+     * The foreground service is started/stopped separately via
+     * [startTrackingService] / [stopTrackingService] — not here — so the
+     * service goes up while the app is guaranteed to be in the foreground
+     * (ViewModel init), rather than after a suspended `delay()` that could
+     * straddle a backgrounding event.
      */
     @Suppress("MissingPermission")
     fun locationFlow(): Flow<Point> = callbackFlow {
-        LocationForegroundService.start(context)
-
         val locationRequest = LocationRequest.Builder(
             Priority.PRIORITY_HIGH_ACCURACY,
             AppConstants.LOCATION_UPDATE_INTERVAL_MS
@@ -103,7 +137,6 @@ class LocationRepository @Inject constructor(
 
         awaitClose {
             fusedLocationClient.removeLocationUpdates(callback)
-            LocationForegroundService.stop(context)
         }
     }.distinctUntilChanged()
 }

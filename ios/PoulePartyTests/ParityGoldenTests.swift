@@ -284,6 +284,106 @@ struct ParityGoldenTests {
         #expect(abs(out.longitude - 4.350282673772987) < Self.tolerance)
     }
 
+    // ─── finalCenter invariant (see functions/test/parity.test.ts) ─
+
+    /// Flat-earth distance in meters between two coordinates. Matches the
+    /// same conversion `deterministicDriftCenter` uses internally, so the
+    /// invariant check is self-consistent.
+    private func distMeters(
+        _ a: CLLocationCoordinate2D,
+        _ b: CLLocationCoordinate2D
+    ) -> Double {
+        let metersPerDegreeLat = 111_320.0
+        let metersPerDegreeLng = 111_320.0 * cos(a.latitude * .pi / 180.0)
+        let dLatM = (b.latitude - a.latitude) * metersPerDegreeLat
+        let dLngM = (b.longitude - a.longitude) * metersPerDegreeLng
+        return (dLatM * dLatM + dLngM * dLngM).squareRoot()
+    }
+
+    @Test func driftFinalCenterConstrainsDriftNearEdge() {
+        let final = CLLocationCoordinate2D(latitude: 50.86, longitude: 4.36)
+        let out = deterministicDriftCenter(
+            basePoint: CLLocationCoordinate2D(latitude: 50.85, longitude: 4.35),
+            oldRadius: 2000,
+            newRadius: 1400,
+            driftSeed: 12345,
+            finalCenter: final
+        )
+        #expect(abs(out.latitude - 50.84951207475732) < Self.tolerance)
+        #expect(abs(out.longitude - 4.349384165316106) < Self.tolerance)
+        #expect(distMeters(out, final) <= 1400)
+    }
+
+    @Test func driftMissingFinalLeavesExistingBehaviorUntouched() {
+        // Explicitly passing `finalCenter: nil` must produce the exact same
+        // output as omitting it — both must match the legacy golden.
+        let explicitNil = deterministicDriftCenter(
+            basePoint: CLLocationCoordinate2D(latitude: 50.85, longitude: 4.35),
+            oldRadius: 1500,
+            newRadius: 1400,
+            driftSeed: 12345,
+            finalCenter: nil
+        )
+        #expect(abs(explicitNil.latitude - 50.849704286836015) < Self.tolerance)
+        #expect(abs(explicitNil.longitude - 4.349626765727747) < Self.tolerance)
+    }
+
+    @Test func driftFinalCenterOutsideNewCircleReturnsBase() {
+        // finalCenter 150 m north of base, newRadius 100 → maxFromFinal
+        // clamps to 0, drift returns basePoint verbatim.
+        let base = CLLocationCoordinate2D(latitude: 50.85, longitude: 4.35)
+        let farFinal = CLLocationCoordinate2D(
+            latitude: 50.85 + 150.0 / 111_320.0,
+            longitude: 4.35
+        )
+        let out = deterministicDriftCenter(
+            basePoint: base,
+            oldRadius: 200,
+            newRadius: 100,
+            driftSeed: 12345,
+            finalCenter: farFinal
+        )
+        #expect(out.latitude == base.latitude)
+        #expect(out.longitude == base.longitude)
+    }
+
+    @Test func driftInvariantSweepFinalCenterInsideEveryCircle() {
+        // Exhaustive property sweep mirroring the TS parity test: 100 seeds
+        // × 7 finalCenter distances × 10 shrink steps. If the invariant
+        // breaks for any combination, the platform has drifted.
+        let initialCenter = CLLocationCoordinate2D(latitude: 50.85, longitude: 4.35)
+        let initialRadius = 1500.0
+        let finalDistancesM = [0.0, 100, 400, 700, 1000, 1300, 1499]
+        for dM in finalDistancesM {
+            let finalCenter = CLLocationCoordinate2D(
+                latitude: initialCenter.latitude + dM / 111_320.0,
+                longitude: initialCenter.longitude
+            )
+            for seed in 1...100 {
+                var radius = initialRadius
+                for _ in 0..<10 {
+                    let newRadius = radius - 100
+                    if newRadius <= 0 { break }
+                    let interpolated = interpolateZoneCenter(
+                        initialCenter: initialCenter,
+                        finalCenter: finalCenter,
+                        initialRadius: initialRadius,
+                        currentRadius: newRadius
+                    )
+                    let drifted = deterministicDriftCenter(
+                        basePoint: interpolated,
+                        oldRadius: radius,
+                        newRadius: newRadius,
+                        driftSeed: seed,
+                        finalCenter: finalCenter
+                    )
+                    #expect(distMeters(drifted, finalCenter) <= newRadius)
+                    radius = newRadius
+                }
+            }
+        }
+    }
+
     // ─── applyJammerNoise, iOS ↔ Android golden ─────────────
 
     @Test func jammerGolden_seed12345_now0() {

@@ -134,10 +134,25 @@ func interpolateZoneCenter(
 
 // MARK: - Deterministic Drift
 
+/// Extra meters carved out of the drift budget so floating-point error
+/// in the meters ↔ degrees conversion can never push `finalCenter`
+/// outside the new circle. The conversion is consistent (same `cos(lat)`
+/// used for the offset and for the distance check), so 1 m is plenty.
+let finalCenterSafetyMeters: Double = 1.0
+
 /// Computes a deterministic drifted center for stayInTheZone mode.
-/// The result is offset from `basePoint`, always within both:
-/// , `newRadius * 0.5` of basePoint (so basePoint stays well inside)
-/// , `(oldRadius, newRadius)` of any previous center that was also computed this way
+/// The result is offset from `basePoint`, always within:
+///  - `newRadius * 0.5` of basePoint (so basePoint stays well inside)
+///  - `(oldRadius − newRadius) * 0.5` so successive shrinks don't lurch
+///  - (when `finalCenter` is provided) `newRadius − dist(base, finalCenter) − margin`
+///    so the final collapse point is ALWAYS inside the drifted circle,
+///    regardless of how close `finalCenter` was chosen to the edge of
+///    the initial zone.
+///
+/// The third bound is what makes the geometric invariant
+/// `finalCenter ∈ circle(center_i, radius_i)` hold by construction at
+/// every shrink step — the first two alone don't guarantee it once
+/// `|initialCenter − finalCenter|` grows past `initialRadius / 2`.
 ///
 /// `driftSeed` is a random integer stored in the Game document so every
 /// client produces the exact same circle at each shrink step while each
@@ -146,11 +161,24 @@ func deterministicDriftCenter(
     basePoint: CLLocationCoordinate2D,
     oldRadius: Double,
     newRadius: Double,
-    driftSeed: Int
+    driftSeed: Int,
+    finalCenter: CLLocationCoordinate2D? = nil
 ) -> CLLocationCoordinate2D {
+    let metersPerDegreeLat = 111_320.0
+    let metersPerDegreeLng = 111_320.0 * cos(basePoint.latitude * .pi / 180.0)
+
     let maxFromBase = newRadius * 0.5
     let maxFromPrev = max(0, oldRadius - newRadius) * 0.5
-    let safeDrift = min(maxFromBase, maxFromPrev)
+
+    var maxFromFinal = Double.infinity
+    if let finalCenter {
+        let dLatM = (finalCenter.latitude - basePoint.latitude) * metersPerDegreeLat
+        let dLngM = (finalCenter.longitude - basePoint.longitude) * metersPerDegreeLng
+        let distBaseFinal = (dLatM * dLatM + dLngM * dLngM).squareRoot()
+        maxFromFinal = max(0, newRadius - distBaseFinal - finalCenterSafetyMeters)
+    }
+
+    let safeDrift = min(maxFromBase, maxFromPrev, maxFromFinal)
 
     guard safeDrift > 0 else { return basePoint }
 
@@ -160,9 +188,6 @@ func deterministicDriftCenter(
     let angle = Double(angleSeed % 36000) / 36000.0 * 2.0 * .pi
     let distFraction = Double(distSeed % 10000) / 10000.0
     let distance = safeDrift * distFraction.squareRoot()
-
-    let metersPerDegreeLat = 111_320.0
-    let metersPerDegreeLng = 111_320.0 * cos(basePoint.latitude * .pi / 180.0)
 
     let dLat = (distance * cos(angle)) / metersPerDegreeLat
     let dLng = (distance * sin(angle)) / metersPerDegreeLng
@@ -246,7 +271,8 @@ func processRadiusUpdate(
             basePoint: interpolated,
             oldRadius: Double(currentRadius),
             newRadius: Double(newRadius),
-            driftSeed: driftSeed
+            driftSeed: driftSeed,
+            finalCenter: finalCoordinates
         )
         newCircle = CircleOverlay(center: driftedCenter, radius: CLLocationDistance(newRadius))
     } else if let currentCircle {

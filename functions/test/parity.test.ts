@@ -352,6 +352,139 @@ describe("parity, large seeds don't blow up", () => {
   });
 });
 
+// ─── finalCenter invariant: the collapse point is always inside ──────
+//
+// The user-facing guarantee: once the zone has started shrinking, the
+// `finalCenter` (where the zone will land at collapse) must be inside
+// *every* subsequent drifted circle. Without the `finalCenter`-aware
+// bound, the drift was only constrained by `newRadius/2` and the shrink
+// step, which breaks the invariant once `|initialCenter − finalCenter|`
+// grows past `initialRadius / 2`.
+//
+// If these tests ever fail the geometry has diverged across platforms —
+// don't silence them, fix the formula.
+
+// Distance in meters between two lat/lng points using the same flat-earth
+// approximation `deterministicDriftCenterServer` uses internally. Plenty
+// accurate for the < 5 km radii we run.
+function distMeters(
+  a: { latitude: number; longitude: number },
+  b: { latitude: number; longitude: number }
+): number {
+  const metersPerDegreeLat = 111_320.0;
+  const metersPerDegreeLng = 111_320.0 * Math.cos((a.latitude * Math.PI) / 180.0);
+  const dLatM = (b.latitude - a.latitude) * metersPerDegreeLat;
+  const dLngM = (b.longitude - a.longitude) * metersPerDegreeLng;
+  return Math.sqrt(dLatM * dLatM + dLngM * dLngM);
+}
+
+describe("parity, finalCenter invariant", () => {
+  test("golden: finalCenter constrains drift when base is near the edge", () => {
+    // base at (50.85, 4.35), final ≈ 1316 m NE. newRadius 1400, so without
+    // the finalCenter bound drift would be up to 300 m (maxFromPrev = (2000−1400)/2).
+    // With the bound: maxFromFinal = 1400 − 1316 − 1 ≈ 83 m, drift reduced.
+    // Strict 1e-9 ° comparison (≈ 0.11 mm) — `toBeCloseTo(x, 1e-9)` in
+    // Vitest is actually ≈ 0.5 loose, so we use plain `Math.abs` to
+    // pin the cross-platform output to sub-millimetre precision.
+    const out = deterministicDriftCenterServer(
+      { latitude: 50.85, longitude: 4.35 },
+      2000,
+      1400,
+      12345,
+      { latitude: 50.86, longitude: 4.36 },
+    );
+    expect(Math.abs(out.latitude - 50.84951207475732)).toBeLessThan(TOL);
+    expect(Math.abs(out.longitude - 4.349384165316106)).toBeLessThan(TOL);
+    // Invariant: finalCenter must be inside the drifted circle.
+    expect(distMeters(out, { latitude: 50.86, longitude: 4.36 })).toBeLessThanOrEqual(1400);
+  });
+
+  test("golden: missing finalCenter leaves existing behavior untouched", () => {
+    // Exact same args as the `seed 12345, 1500→1400` golden above, with
+    // finalCenter omitted — output must match that pinned value bit-for-bit
+    // so the parity suite keeps passing on every platform.
+    const withoutFinal = deterministicDriftCenterServer(
+      { latitude: 50.85, longitude: 4.35 },
+      1500,
+      1400,
+      12345,
+    );
+    const explicitUndefined = deterministicDriftCenterServer(
+      { latitude: 50.85, longitude: 4.35 },
+      1500,
+      1400,
+      12345,
+      undefined,
+    );
+    expect(Math.abs(withoutFinal.latitude - 50.849704286836015)).toBeLessThan(TOL);
+    expect(Math.abs(withoutFinal.longitude - 4.349626765727747)).toBeLessThan(TOL);
+    expect(explicitUndefined).toEqual(withoutFinal);
+  });
+
+  test("finalCenter coinciding with base → safeDrift collapses, returns base", () => {
+    const base = { latitude: 50.85, longitude: 4.35 };
+    // distBaseFinal = 0, maxFromFinal = newRadius − 1 which is huge. But we
+    // want to test the *tight* case: finalCenter right at the edge of the
+    // new circle so maxFromFinal ≤ 0 and drift must be 0.
+    // At newRadius=100, finalCenter 150 m away → maxFromFinal = 100 − 150 − 1 < 0.
+    // The function clamps to 0 and returns basePoint unchanged.
+    const farFinal = { latitude: 50.85 + 150 / 111_320, longitude: 4.35 };
+    const out = deterministicDriftCenterServer(base, 200, 100, 12345, farFinal);
+    expect(out.latitude).toBe(base.latitude);
+    expect(out.longitude).toBe(base.longitude);
+  });
+
+  // Exhaustive property sweep: for a wide range of seeds, radii and final
+  // positions *inside the initial zone*, the drifted circle must always
+  // contain finalCenter. 100 × 7 = 700 samples per run; anything that
+  // breaks the invariant surfaces instantly.
+  test("invariant sweep: finalCenter stays inside drifted circle for any seed / shrink step", () => {
+    const initialCenter = { latitude: 50.85, longitude: 4.35 };
+    const initialRadius = 1500;
+    // finalCenter at various distances from the initial center, always
+    // within the initial zone so the invariant is defined.
+    const finalDistancesM = [0, 100, 400, 700, 1000, 1300, 1499];
+    for (const dM of finalDistancesM) {
+      const finalCenter = {
+        latitude: initialCenter.latitude + dM / 111_320,
+        longitude: initialCenter.longitude,
+      };
+      for (let seed = 1; seed <= 100; seed++) {
+        // Simulate 10 consecutive shrinks; the base point at each step is
+        // the interpolated center, which is what `processRadiusUpdate`
+        // passes in practice.
+        let radius = initialRadius;
+        for (let step = 0; step < 10; step++) {
+          const newRadius = radius - 100;
+          if (newRadius <= 0) break;
+          const interpolated = interpolateZoneCenterServer(
+            initialCenter,
+            finalCenter,
+            initialRadius,
+            newRadius,
+          );
+          const drifted = deterministicDriftCenterServer(
+            interpolated,
+            radius,
+            newRadius,
+            seed,
+            finalCenter,
+          );
+          const distToFinal = distMeters(drifted, finalCenter);
+          if (distToFinal > newRadius) {
+            throw new Error(
+              `invariant broken: seed=${seed} step=${step} ` +
+              `finalDist=${dM} distToFinal=${distToFinal.toFixed(3)} ` +
+              `newRadius=${newRadius}`,
+            );
+          }
+          radius = newRadius;
+        }
+      }
+    }
+  });
+});
+
 // ─── zone-freeze: shrink step is deterministic under freeze semantics ─
 //
 // When a zone-freeze power-up is active at spawn time, the server uses

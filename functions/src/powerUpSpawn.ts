@@ -70,19 +70,52 @@ export function interpolateZoneCenterServer(
 }
 
 /**
+ * Extra meters carved out of the drift budget so floating-point error in
+ * the meters ↔ degrees conversion can never push `finalCenter` outside
+ * the new circle. The conversion is consistent (same cos(lat) used for
+ * the offset and for the distance check), so 1 m is plenty.
+ */
+export const FINAL_CENTER_SAFETY_METERS = 1.0;
+
+/**
  * Deterministic drift center for stayInTheZone mode — ports
  * `deterministicDriftCenter` from the client. Drifts [basePoint] by a
- * seeded offset bounded by both the shrink step and the new radius.
+ * seeded offset bounded by:
+ *   - `newRadius * 0.5` of basePoint (so basePoint stays well inside)
+ *   - `(oldRadius - newRadius) * 0.5` so successive shrinks don't lurch
+ *   - (when [finalCenter] is provided) `newRadius − dist(base, finalCenter) − margin`
+ *     so the final collapse point is ALWAYS inside the drifted circle,
+ *     regardless of how close `finalCenter` was chosen to the edge of
+ *     the initial zone.
+ *
+ * The third bound is what makes the geometric invariant
+ * `finalCenter ∈ circle(center_i, radius_i)` hold by construction at
+ * every shrink step — the first two alone don't guarantee it once
+ * `|initialCenter - finalCenter|` grows past `initialRadius / 2`.
  */
 export function deterministicDriftCenterServer(
   basePoint: { latitude: number; longitude: number },
   oldRadius: number,
   newRadius: number,
-  driftSeed: number
+  driftSeed: number,
+  finalCenter?: { latitude: number; longitude: number }
 ): { latitude: number; longitude: number } {
+  const metersPerDegreeLat = 111_320.0;
+  const metersPerDegreeLng =
+    111_320.0 * Math.cos((basePoint.latitude * Math.PI) / 180.0);
+
   const maxFromBase = newRadius * 0.5;
   const maxFromPrev = Math.max(0, oldRadius - newRadius) * 0.5;
-  const safeDrift = Math.min(maxFromBase, maxFromPrev);
+
+  let maxFromFinal = Number.POSITIVE_INFINITY;
+  if (finalCenter) {
+    const dLatM = (finalCenter.latitude - basePoint.latitude) * metersPerDegreeLat;
+    const dLngM = (finalCenter.longitude - basePoint.longitude) * metersPerDegreeLng;
+    const distBaseFinal = Math.sqrt(dLatM * dLatM + dLngM * dLngM);
+    maxFromFinal = Math.max(0, newRadius - distBaseFinal - FINAL_CENTER_SAFETY_METERS);
+  }
+
+  const safeDrift = Math.min(maxFromBase, maxFromPrev, maxFromFinal);
   if (safeDrift <= 0) return basePoint;
 
   // Bitwise ops in JS are 32-bit. Values stay well below 2^31 for normal inputs.
@@ -92,10 +125,6 @@ export function deterministicDriftCenterServer(
   const angle = ((angleSeed % 36000) / 36000.0) * 2.0 * Math.PI;
   const distFraction = (distSeed % 10000) / 10000.0;
   const distance = safeDrift * Math.sqrt(distFraction);
-
-  const metersPerDegreeLat = 111_320.0;
-  const metersPerDegreeLng =
-    111_320.0 * Math.cos((basePoint.latitude * Math.PI) / 180.0);
 
   return {
     latitude:

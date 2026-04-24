@@ -304,6 +304,110 @@ class ParityGoldenTest {
         assertEquals(4.350282673772987, out.longitude(), tol)
     }
 
+    // ── finalCenter invariant (see functions/test/parity.test.ts) ─
+
+    /**
+     * Flat-earth distance in meters between two points using the same
+     * conversion `deterministicDriftCenter` applies internally, so the
+     * invariant check is self-consistent with the drift formula.
+     */
+    private fun distMeters(a: Point, b: Point): Double {
+        val metersPerDegreeLat = 111_320.0
+        val metersPerDegreeLng = 111_320.0 * kotlin.math.cos(a.latitude() * kotlin.math.PI / 180.0)
+        val dLatM = (b.latitude() - a.latitude()) * metersPerDegreeLat
+        val dLngM = (b.longitude() - a.longitude()) * metersPerDegreeLng
+        return kotlin.math.sqrt(dLatM * dLatM + dLngM * dLngM)
+    }
+
+    @Test
+    fun `drift finalCenter constrains drift when base is near the edge`() {
+        val finalCenter = Point.fromLngLat(4.36, 50.86)
+        val out = deterministicDriftCenter(
+            basePoint = Point.fromLngLat(4.35, 50.85),
+            oldRadius = 2000.0,
+            newRadius = 1400.0,
+            driftSeed = 12345,
+            finalCenter = finalCenter,
+        )
+        assertEquals(50.84951207475732, out.latitude(), tol)
+        assertEquals(4.349384165316106, out.longitude(), tol)
+        if (distMeters(out, finalCenter) > 1400.0) {
+            throw AssertionError("invariant broken: finalCenter not inside drifted circle")
+        }
+    }
+
+    @Test
+    fun `drift missing finalCenter leaves existing behavior untouched`() {
+        val explicitNull = deterministicDriftCenter(
+            basePoint = Point.fromLngLat(4.35, 50.85),
+            oldRadius = 1500.0,
+            newRadius = 1400.0,
+            driftSeed = 12345,
+            finalCenter = null,
+        )
+        assertEquals(50.849704286836015, explicitNull.latitude(), tol)
+        assertEquals(4.349626765727747, explicitNull.longitude(), tol)
+    }
+
+    @Test
+    fun `drift finalCenter outside new circle returns base`() {
+        val base = Point.fromLngLat(4.35, 50.85)
+        val farFinal = Point.fromLngLat(4.35, 50.85 + 150.0 / 111_320.0)
+        val out = deterministicDriftCenter(
+            basePoint = base,
+            oldRadius = 200.0,
+            newRadius = 100.0,
+            driftSeed = 12345,
+            finalCenter = farFinal,
+        )
+        assertEquals(base.latitude(), out.latitude(), 0.0)
+        assertEquals(base.longitude(), out.longitude(), 0.0)
+    }
+
+    @Test
+    fun `drift invariant sweep finalCenter inside every circle`() {
+        // Exhaustive property sweep mirroring the TS parity test: 100 seeds
+        // × 7 finalCenter distances × 10 shrink steps. If the invariant
+        // breaks for any combination, the platform has drifted.
+        val initialCenter = Point.fromLngLat(4.35, 50.85)
+        val initialRadius = 1500.0
+        val finalDistancesM = doubleArrayOf(0.0, 100.0, 400.0, 700.0, 1000.0, 1300.0, 1499.0)
+        for (dM in finalDistancesM) {
+            val finalCenter = Point.fromLngLat(
+                initialCenter.longitude(),
+                initialCenter.latitude() + dM / 111_320.0,
+            )
+            for (seed in 1..100) {
+                var radius = initialRadius
+                repeat(10) {
+                    val newRadius = radius - 100.0
+                    if (newRadius <= 0.0) return@repeat
+                    val interpolated = interpolateZoneCenter(
+                        initialCenter = initialCenter,
+                        finalCenter = finalCenter,
+                        initialRadius = initialRadius,
+                        currentRadius = newRadius,
+                    )
+                    val drifted = deterministicDriftCenter(
+                        basePoint = interpolated,
+                        oldRadius = radius,
+                        newRadius = newRadius,
+                        driftSeed = seed,
+                        finalCenter = finalCenter,
+                    )
+                    val d = distMeters(drifted, finalCenter)
+                    if (d > newRadius) {
+                        throw AssertionError(
+                            "invariant broken: seed=$seed finalDist=$dM " +
+                                "distToFinal=$d newRadius=$newRadius"
+                        )
+                    }
+                    radius = newRadius
+                }
+            }
+        }
+    }
+
     // ── applyJammerNoise, iOS ↔ Android golden ─────────────
 
     @Test

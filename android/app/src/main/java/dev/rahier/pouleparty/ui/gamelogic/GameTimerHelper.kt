@@ -148,10 +148,28 @@ fun interpolateZoneCenter(
 // ── Deterministic Drift ──────────────────────────────
 
 /**
+ * Extra meters carved out of the drift budget so floating-point error
+ * in the meters ↔ degrees conversion can never push [finalCenter]
+ * outside the new circle. The conversion is consistent (same
+ * `cos(lat)` used for the offset and for the distance check), so 1 m
+ * is plenty.
+ */
+const val FINAL_CENTER_SAFETY_METERS = 1.0
+
+/**
  * Computes a deterministic drifted center for stayInTheZone mode.
- * The result is offset from [basePoint], always within both:
+ * The result is offset from [basePoint], always within:
  *  - `newRadius * 0.5` of basePoint (so basePoint stays well inside)
- *  - `(oldRadius - newRadius)` of any previous center computed the same way
+ *  - `(oldRadius - newRadius) * 0.5` so successive shrinks don't lurch
+ *  - (when [finalCenter] is provided) `newRadius − dist(base, finalCenter) − margin`
+ *    so the final collapse point is ALWAYS inside the drifted circle,
+ *    regardless of how close `finalCenter` was chosen to the edge of
+ *    the initial zone.
+ *
+ * The third bound is what makes the geometric invariant
+ * `finalCenter ∈ circle(center_i, radius_i)` hold by construction at
+ * every shrink step — the first two alone don't guarantee it once
+ * `|initialCenter − finalCenter|` grows past `initialRadius / 2`.
  *
  * [driftSeed] is a random integer stored in the Game document so every
  * client produces the exact same circle at each shrink step while each
@@ -161,11 +179,25 @@ fun deterministicDriftCenter(
     basePoint: Point,
     oldRadius: Double,
     newRadius: Double,
-    driftSeed: Int
+    driftSeed: Int,
+    finalCenter: Point? = null
 ): Point {
+    val metersPerDegreeLat = 111_320.0
+    val metersPerDegreeLng = 111_320.0 * kotlin.math.cos(basePoint.latitude() * kotlin.math.PI / 180.0)
+
     val maxFromBase = newRadius * 0.5
     val maxFromPrev = maxOf(0.0, oldRadius - newRadius) * 0.5
-    val safeDrift = minOf(maxFromBase, maxFromPrev)
+
+    val maxFromFinal = if (finalCenter != null) {
+        val dLatM = (finalCenter.latitude() - basePoint.latitude()) * metersPerDegreeLat
+        val dLngM = (finalCenter.longitude() - basePoint.longitude()) * metersPerDegreeLng
+        val distBaseFinal = kotlin.math.sqrt(dLatM * dLatM + dLngM * dLngM)
+        maxOf(0.0, newRadius - distBaseFinal - FINAL_CENTER_SAFETY_METERS)
+    } else {
+        Double.POSITIVE_INFINITY
+    }
+
+    val safeDrift = minOf(maxFromBase, maxFromPrev, maxFromFinal)
 
     if (safeDrift <= 0) return basePoint
 
@@ -175,9 +207,6 @@ fun deterministicDriftCenter(
     val angle = (angleSeed % 36000) / 36000.0 * 2.0 * kotlin.math.PI
     val distFraction = (distSeed % 10000) / 10000.0
     val distance = safeDrift * kotlin.math.sqrt(distFraction)
-
-    val metersPerDegreeLat = 111_320.0
-    val metersPerDegreeLng = 111_320.0 * kotlin.math.cos(basePoint.latitude() * kotlin.math.PI / 180.0)
 
     val dLat = (distance * kotlin.math.cos(angle)) / metersPerDegreeLat
     val dLng = (distance * kotlin.math.sin(angle)) / metersPerDegreeLng
@@ -262,7 +291,8 @@ fun processRadiusUpdate(
             basePoint = interpolated,
             oldRadius = currentRadius.toDouble(),
             newRadius = newRadius.toDouble(),
-            driftSeed = driftSeed
+            driftSeed = driftSeed,
+            finalCenter = finalLocation
         )
     } else {
         currentCircleCenter

@@ -425,7 +425,8 @@ async function spawnBatchForGame(
       interpolated,
       previousRadius,
       currentRadius,
-      driftSeed
+      driftSeed,
+      finalCenter ? { latitude: finalCenter.latitude, longitude: finalCenter.longitude } : undefined
     );
   } else {
     // followTheChicken: the zone tracks the chicken's live GPS. Read the

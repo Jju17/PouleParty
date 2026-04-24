@@ -37,6 +37,18 @@ abstract class BaseMapViewModel(
     protected var notificationJob: Job? = null
     private val collectingPowerUpIds = java.util.Collections.synchronizedSet(mutableSetOf<String>())
 
+    init {
+        // Start the location foreground service *synchronously* when the VM
+        // is created — the screen is being composed, so the app is
+        // guaranteed to be in the foreground. Starting here (rather than
+        // lazily inside `locationRepository.locationFlow()`) avoids the
+        // ForegroundServiceStartNotAllowedException crash that fired when
+        // the hunter's `trackHunterSelfLocation` resumed from its
+        // head-start `delay(...)` while the app had been backgrounded in
+        // the meantime.
+        locationRepository.startTrackingService()
+    }
+
     /** The game document ID — provided by SavedStateHandle in each subclass. */
     abstract val gameId: String
 
@@ -75,6 +87,7 @@ abstract class BaseMapViewModel(
         cancelStreams()
         notificationJob?.cancel()
         notificationJob = null
+        locationRepository.stopTrackingService()
         super.onCleared()
     }
 
