@@ -1,3 +1,95 @@
+# Release 1.11.4
+
+> ⚠️ **Do not paste this "Summary" paragraph into any store field.** Only the blocks explicitly labelled **App Store Connect**, **Google Play Console**, or **App Review Notes** below are store-safe.
+
+**Summary (internal, do not paste):** two tracks. (1) Drift-center geometry rewrite for `stayInTheZone` — previous algo guaranteed `finalCenter ∈ disk(driftedCenter, r)` but said nothing about the 50 m glow disk *around* finalCenter, so late-game shrinks could drift far enough that the green safe-spot poked outside the active zone. New impl is rejection-sampling against `disk(initial, R₀ − rᵢ) ∩ disk(final, rᵢ − 50 − safety)` so the whole final-zone disk fits inside every shrunk circle by construction. Decoupled successive shrinks too: each candidate is sampled from the **initial** zone, not the previous drifted center. iOS + Android + server (functions/powerUpSpawn.ts) updated together; parity goldens cover rejection / fallback / no-shrink branches. (2) Android onboarding hotfix: on Android 11+, `RequestPermission(ACCESS_BACKGROUND_LOCATION)` is silently denied with no UI — the in-slide "Continue" did nothing and the Next button stayed grey, stranding users at the location step. Now opens App Settings on R+ (where "Allow all the time" actually exists) and the existing `ON_RESUME` observer picks up the grant on return. Also added `navigationBarsPadding` so bottom buttons clear the gesture bar. Plus internal long-press easter egg on the Create Party button → drops straight onto the chicken map with all future drifted circles rendered at once for QA. Functions need redeploy (staging + prod). No rules, no web changes.
+
+---
+
+## 📱 App Store Connect — field "What's New in This Version"
+
+**English (U.S.)**
+
+Polish to the shrinking-zone visuals. The little green safe spot (final zone) now stays fully inside every step of the shrinking circle right up to the end of the game — no more cases where the safe glow peeks out of the playable area in the last minute or two.
+
+**French**
+
+Polish des visuels de la zone qui rétrécit. Le petit halo vert (zone finale) reste maintenant entièrement à l'intérieur de chaque étape du cercle, jusqu'à la fin de la partie — fini les cas où le halo dépassait de la zone jouable dans les dernières minutes.
+
+**Dutch**
+
+Polish voor de krimpende zone. De kleine groene veilige plek (eindzone) blijft nu volledig binnen elke stap van de krimpende cirkel tot het einde van de partij — geen gevallen meer waar de groene gloed buiten het speelbare gebied uitstak in de laatste minuten.
+
+---
+
+## 📱 App Store Connect — field "Promotional Text"
+
+Unchanged from 1.9.1 onward. Only repaste if ASC lost the copy. See the 1.11.3 section below.
+
+---
+
+## 🤖 Google Play Console — field "Release notes"
+
+<en-US>
+Location onboarding fix on Android 11+: the "Continue" button after granting fine location now opens the app's Settings page so you can flip "Allow all the time" — previously it did nothing and left the Next button stuck on grey. Bottom buttons no longer clipped by the gesture bar. Polished the shrinking-zone visuals so the small green safe spot (final zone) stays fully inside every step of the circle right up to game end.
+</en-US>
+
+<fr-FR>
+Fix onboarding localisation sur Android 11+ : le bouton « Continuer » après la localisation précise ouvre les Paramètres de l'app pour activer « Toujours autoriser » — avant il ne faisait rien et bloquait Suivant en gris. Boutons du bas plus coupés par la barre de gestes. Visuels de la zone polis : le halo vert de la zone finale reste à l'intérieur du cercle jusqu'à la fin de partie.
+</fr-FR>
+
+<nl-NL>
+Locatie-onboarding fix op Android 11+: de "Doorgaan"-knop na het verlenen van precieze locatie opent nu de Instellingen van de app om "Altijd toestaan" aan te zetten — eerder deed hij niets en bleef de Volgende-knop grijs. Onderknoppen niet meer afgesneden door de gesture-balk. Krimpende-zone visueel verfijnd: de kleine groene veilige plek (eindzone) blijft volledig binnen elke stap van de cirkel tot het einde van de partij.
+</nl-NL>
+
+---
+
+## 📝 App Store Connect — field "App Review Information → Notes"
+
+Paste into the App Review Information → Notes field:
+
+```
+Hello reviewer. Routine update for 1.11.4 — no changes to permissions,
+paid flows, or App Store-relevant copy. Two tracks shipped:
+
+1. Geometry tweak to the shrinking-zone algorithm so the small "final
+   zone" green glow stays fully inside every step of the circle right
+   up to game end (was a visual edge case in the last 1–2 minutes of
+   long games where the glow could overlap the zone boundary).
+
+2. Internal-only debug tool to QA the zone visuals. Long-press on the
+   Create Party button on the home screen (≈ 800 ms) drops straight
+   onto the chicken map with a preset 1-hour `stayInTheZone` game
+   and renders every future shrunk circle at once in a rainbow
+   palette. Not advertised, no UI affordance — exists so we can
+   eyeball drift behaviour without playing through a full hour.
+   Reviewer can ignore.
+
+The paid Stripe flows are unchanged from 1.11.3. Reproduction kept
+for reference if needed:
+
+- Forfait: tap "Create Party" → choose "Forfait" → wizard → "Pay".
+  Stripe PaymentSheet appears with Apple Pay (when wallet present),
+  card, and Bancontact (EUR) via automatic_payment_methods.
+- Caution: tap "Start" → enter a Caution game code → "Pay". Same sheet.
+- Apple Pay button visibility is decided by the Stripe SDK based on
+  PassKit (PKPaymentAuthorizationViewController.canMakePayments) — on
+  a wallet-less reviewer device the button is intentionally hidden.
+  This is by design, not a bug.
+
+Promotion code APPLE_REVIEW_99 (99% off Forfait) is live in Stripe
+production for testing the PaymentSheet at a negligible amount without
+completing a real charge. 100%-off would short-circuit via
+redeemFreeCreation and skip the sheet, so 99% is the correct ratio.
+
+Merchant ID: merchant.dev.rahier.pouleparty
+Entitlement: com.apple.developer.in-app-payments
+
+Happy to provide a screen recording on request.
+```
+
+---
+
 # Release 1.11.3
 
 > ⚠️ **Do not paste this "Summary" paragraph into any store field.** Only the blocks explicitly labelled **App Store Connect**, **Google Play Console**, or **App Review Notes** below are store-safe.
