@@ -232,10 +232,16 @@ class ChickenMapViewModelBehaviorTest {
     }
 
     /**
-     * When the ping is inactive, the loop must not call `setChickenLocation`.
+     * The chicken stationary rebroadcaster runs continuously regardless of
+     * radar-ping state — gating it on ping landed us with a stale write
+     * window when the 3 s ping fired right after a long stationary period.
+     * The hunter-side UI is now what decides when to render the marker
+     * (`game.isRadarPingActive`). This test asserts the loop fires writes
+     * even when ping is inactive, because the next ping must hit a fresh
+     * point. See `chickenStationaryRebroadcastLoop` in `ChickenMapViewModel`.
      */
     @Test
-    fun `radarPingBroadcastLoop does not write when ping is inactive`() {
+    fun `chickenStationaryRebroadcastLoop writes regardless of ping state`() {
         val now = System.currentTimeMillis()
         val game = dev.rahier.pouleparty.model.Game(
             id = "test-id",
@@ -257,12 +263,11 @@ class ChickenMapViewModelBehaviorTest {
         val vm = createViewModel()
         testDispatcher.scheduler.runCurrent()
 
-        // Advance by 3 throttle periods — still nothing should be written.
         testDispatcher.scheduler.advanceTimeBy(3 * dev.rahier.pouleparty.AppConstants.LOCATION_THROTTLE_MS + 100)
         testDispatcher.scheduler.runCurrent()
 
-        io.mockk.coVerify(exactly = 0) {
-            firestoreRepository.setChickenLocation(any(), any())
+        io.mockk.coVerify(atLeast = 1) {
+            firestoreRepository.setChickenLocation(eq("test-id"), any())
         }
     }
 

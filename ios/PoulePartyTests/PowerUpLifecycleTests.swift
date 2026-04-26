@@ -292,8 +292,9 @@ struct PowerUpLifecycleTests {
     // MARK: - Zone Freeze Effect on Radius
 
     @Test func zoneFreezeSkipsRadiusShrink() {
+        let nextUpdate = Date.now.addingTimeInterval(-1)
         let result = processRadiusUpdate(
-            nextRadiusUpdate: Date.now.addingTimeInterval(-1),
+            nextRadiusUpdate: nextUpdate,
             currentRadius: 1000,
             radiusDeclinePerUpdate: 100,
             radiusIntervalUpdate: 5,
@@ -305,7 +306,14 @@ struct PowerUpLifecycleTests {
             ),
             isZoneFrozen: true
         )
-        #expect(result == nil)
+        // Returning nil left the countdown anchored on a past tick, which
+        // overshot endDate after freeze expired. The new contract is to
+        // keep `currentRadius` and roll `nextRadiusUpdate` forward by one
+        // interval so countdowns stay monotonic — see GameTimerLogic.swift.
+        #expect(result?.newRadius == 1000)
+        #expect(result?.isGameOver == false)
+        let expectedNext = nextUpdate.addingTimeInterval(5 * 60)
+        #expect(result?.newNextUpdate == expectedNext)
     }
 
     @Test func zoneFreezeDoesNotPreventUpdateWhenExpired() {

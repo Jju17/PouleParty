@@ -8,6 +8,7 @@
 import AVFAudio
 import ComposableArchitecture
 import CoreLocation
+import FirebaseFirestore
 import os
 import Sharing
 import SwiftUI
@@ -85,6 +86,15 @@ struct HomeFeature {
         case chickenGameStarted(Game)
         case completedGameFound(Game)
         case createPartyTapped
+        /// Long-press easter egg on the Create Party button. Skips the
+        /// whole wizard and drops the user straight onto the chicken map
+        /// with a preset game (stayInTheZone, starts in 1 min, 1 h long,
+        /// current loc or Brussels fallback for both start and final
+        /// center) so drift / shrink visuals can be eyeballed with every
+        /// future circle rendered at once.
+        case createPartyLongPressed
+        case launchDebugPreviewTapped
+        case chickenDebugGameStarted(Game)
         case dailyFreeLimitChecked(allowed: Bool)
         case destination(PresentationAction<Destination.Action>)
         case destinationDismissed
@@ -119,6 +129,7 @@ struct HomeFeature {
         @ObservableState
         enum State: Equatable {
             case alert(AlertState<Action.Alert>)
+            case debugMapConfig(ChickenMapConfigFeature.State)
             case gameCreation(GameCreationFeature.State)
             case gameRules
             case joinFlow(JoinFlowFeature.State)
@@ -128,6 +139,7 @@ struct HomeFeature {
 
         enum Action {
             case alert(Alert)
+            case debugMapConfig(ChickenMapConfigFeature.Action)
             case gameCreation(GameCreationFeature.Action)
             case joinFlow(JoinFlowFeature.Action)
             case planSelection(PlanSelectionFeature.Action)
@@ -141,6 +153,9 @@ struct HomeFeature {
 
         var body: some ReducerOf<Self> {
             EmptyReducer()
+                .ifCaseLet(\.debugMapConfig, action: \.debugMapConfig) {
+                    ChickenMapConfigFeature()
+                }
                 .ifCaseLet(\.gameCreation, action: \.gameCreation) {
                     GameCreationFeature()
                 }
@@ -199,6 +214,69 @@ struct HomeFeature {
                 MapWarmUp.warmUpIfNeeded()
                 state.destination = .planSelection(PlanSelectionFeature.State())
                 return .none
+            case .createPartyLongPressed:
+                let chickenLocStatus = locationClient.authorizationStatus()
+                guard chickenLocStatus == .authorizedAlways || chickenLocStatus == .authorizedWhenInUse else {
+                    return .send(.locationPermissionDenied)
+                }
+                guard let creatorId = userClient.currentUserId(), !creatorId.isEmpty else {
+                    Logger(category: "Home").error("Debug party: no current user id")
+                    return .none
+                }
+                let center = locationClient.lastLocation() ?? CLLocationCoordinate2D(
+                    latitude: AppConstants.defaultLatitude,
+                    longitude: AppConstants.defaultLongitude
+                )
+                MapWarmUp.warmUpIfNeeded()
+                // Seed just the fields the ChickenMapConfigView needs —
+                // gameMode (so the start/final pin picker shows both
+                // options), a default location and radius. Timing /
+                // seed / foundCode are finalized when the user taps
+                // "Launch Preview" so the countdown is always 60 s
+                // from launch time, no matter how long they spent
+                // dragging pins.
+                var game = Game(id: apiClient.newGameId())
+                game.name = "DEBUG PREVIEW"
+                game.creatorId = creatorId
+                game.gameMode = .stayInTheZone
+                game.maxPlayers = 1
+                game.initialLocation = center
+                game.finalLocation = center
+                game.zone.radius = 1500
+                game.powerUps.enabled = false
+                let sharedGame = Shared(value: game)
+                state.destination = .debugMapConfig(
+                    ChickenMapConfigFeature.State(game: sharedGame)
+                )
+                return .none
+            case .launchDebugPreviewTapped:
+                guard case let .debugMapConfig(configState) = state.destination else {
+                    return .none
+                }
+                var game = configState.game
+                game.foundCode = Game.generateFoundCode()
+                let start = Date.now.addingTimeInterval(60)
+                game.timing.start = Timestamp(date: start)
+                game.timing.end = Timestamp(date: start.addingTimeInterval(3600))
+                game.timing.headStartMinutes = 0
+                let (interval, decline) = calculateNormalModeSettings(
+                    initialRadius: game.zone.radius,
+                    gameDurationMinutes: 60
+                )
+                game.zone.shrinkIntervalMinutes = interval
+                game.zone.shrinkMetersPerUpdate = decline
+                game.zone.driftSeed = withRandomNumberGenerator { generator in
+                    Int.random(in: 1...999_999, using: &generator)
+                }
+                state.destination = nil
+                return .run { [game] send in
+                    do {
+                        try await apiClient.setConfig(game)
+                        await send(.chickenDebugGameStarted(game))
+                    } catch {
+                        Logger(category: "Home").error("Debug party: setConfig failed: \(error)")
+                    }
+                }
             case let .destination(.presented(.gameCreation(.gameCreated(game)))):
                 state.destination = nil
                 return .send(.chickenGameStarted(game))
@@ -341,6 +419,8 @@ struct HomeFeature {
                     await send(.initialLocationResolved(location))
                 }
             case .chickenGameStarted:
+                return .none
+            case .chickenDebugGameStarted:
                 return .none
             case .hunterGameJoined:
                 state.$pendingRegistration.withLock { $0 = nil }
@@ -732,6 +812,16 @@ struct HomeView: View {
                             )
                     }
                     .accessibilityLabel("Create a party")
+                    // Hidden debug easter egg: long-press the Create Party
+                    // button to skip the wizard and spawn a preset
+                    // stayInTheZone game with every future shrunk circle
+                    // rendered up front on the chicken map.
+                    .simultaneousGesture(
+                        LongPressGesture(minimumDuration: 1.5)
+                            .onEnded { _ in
+                                store.send(.createPartyLongPressed)
+                            }
+                    )
                     .padding()
                 }
             }
@@ -762,6 +852,18 @@ struct HomeView: View {
             GameCreationView(
                 store: creationStore,
                 onDismiss: { self.store.send(.destinationDismissed) }
+            )
+        }
+        .fullScreenCover(
+            item: $store.scope(
+                state: \.destination?.debugMapConfig,
+                action: \.destination.debugMapConfig
+            )
+        ) { configStore in
+            DebugMapSetupView(
+                store: configStore,
+                onLaunch: { self.store.send(.launchDebugPreviewTapped) },
+                onCancel: { self.store.send(.destinationDismissed) }
             )
         }
         .sheet(

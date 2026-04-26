@@ -35,6 +35,12 @@ struct ChickenMapFeature {
         var lastLiveActivityState: PoulePartyAttributes.ContentState?
         var powerUps: MapPowerUpsFeature.State = .init()
 
+        /// Long-press-on-Create-Party easter egg. When true,
+        /// `ChickenMapContent` draws every future shrunk circle on top
+        /// of the map at once, each with its own color. Not persisted.
+        var isDebugPreview: Bool = false
+        var debugCircles: [DebugShrinkCircle] = []
+
         // MARK: - MapFeatureState passthroughs (child → parent surface)
         var availablePowerUps: [PowerUp] { powerUps.available }
         var collectedPowerUps: [PowerUp] { powerUps.collected }

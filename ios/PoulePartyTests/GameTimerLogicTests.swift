@@ -194,9 +194,13 @@ struct GameTimerLogicTests {
         #expect(result!.gameOverMessage == "The zone has collapsed!")
     }
 
-    @Test func radiusUpdateUsesInitialCoordsForStayInTheZone() {
+    @Test func radiusUpdateDriftsInsideStartZoneForStayInTheZone() {
+        // After the per-shrink independent sampling rewrite,
+        // `processRadiusUpdate` passes `initialCoordinates` +
+        // `initialRadius` as the drift base (not previous center).
+        // The resulting circle must fit entirely inside the start
+        // zone — `|C_i − I| + r_i ≤ R₀`.
         let initialCoords = CLLocationCoordinate2D(latitude: 50.0, longitude: 4.0)
-        let currentCenter = CLLocationCoordinate2D(latitude: 51.0, longitude: 5.0)
         let result = processRadiusUpdate(
             nextRadiusUpdate: Date.now.addingTimeInterval(-1),
             currentRadius: 1500,
@@ -204,15 +208,15 @@ struct GameTimerLogicTests {
             radiusIntervalUpdate: 5,
             gameMod: .stayInTheZone,
             initialCoordinates: initialCoords,
-            currentCircle: CircleOverlay(center: currentCenter, radius: 1500),
-            driftSeed: 12345
+            currentCircle: CircleOverlay(center: initialCoords, radius: 1500),
+            driftSeed: 12345,
+            initialRadius: 1500
         )
         #expect(result != nil)
-        // With drift, center is close to initialCoords but not exactly equal
         let distance = CLLocation(latitude: result!.newCircle!.center.latitude, longitude: result!.newCircle!.center.longitude)
             .distance(from: CLLocation(latitude: initialCoords.latitude, longitude: initialCoords.longitude))
-        // Max drift = min(1400*0.5, 100*0.5) = 50m
-        #expect(distance < 60, "Drifted center should be within 60m of base point")
+        // R₀ − newR = 1500 − 1400 = 100m; drift sampled in disk(I, 100).
+        #expect(distance <= 100.01, "Drifted center should be within 100m of initial center")
     }
 
     // MARK: - deterministicDriftCenter
@@ -246,8 +250,9 @@ struct GameTimerLogicTests {
         let result = deterministicDriftCenter(basePoint: base, oldRadius: 1500, newRadius: 1400, driftSeed: 54321)
         let distance = CLLocation(latitude: result.latitude, longitude: result.longitude)
             .distance(from: CLLocation(latitude: base.latitude, longitude: base.longitude))
-        // safeDrift = min(1400*0.5, 100*0.5) = 50m
-        #expect(distance <= 50, "Drifted center must be within safeDrift of base")
+        // After the drift rewrite, bound = delta = oldR − newR = 100m
+        // (uniform sampling inside disk(basePoint, delta)).
+        #expect(distance <= 100.01, "Drifted center must be within delta of base")
     }
 
     @Test func driftCenterReturnsBaseWhenNoRoom() {
@@ -440,7 +445,7 @@ struct GameTimerLogicTests {
         )
         let distance = CLLocation(latitude: result.latitude, longitude: result.longitude)
             .distance(from: CLLocation(latitude: base.latitude, longitude: base.longitude))
-        #expect(distance <= 50, "Large seed must still produce valid drift within bounds")
+        #expect(distance <= 100.01, "Large seed must still produce valid drift within bounds")
     }
 
     @Test func driftCenterHandlesNegativeSeed() {
@@ -453,7 +458,7 @@ struct GameTimerLogicTests {
         )
         let distance = CLLocation(latitude: result.latitude, longitude: result.longitude)
             .distance(from: CLLocation(latitude: base.latitude, longitude: base.longitude))
-        #expect(distance <= 50, "Negative seed must still produce valid drift")
+        #expect(distance <= 100.01, "Negative seed must still produce valid drift")
     }
 
     // MARK: - evaluateCountdown with explicit now
@@ -601,7 +606,7 @@ struct GameTimerLogicTests {
         let result = deterministicDriftCenter(basePoint: base, oldRadius: 1500, newRadius: 1400, driftSeed: Int.max)
         let distance = CLLocation(latitude: result.latitude, longitude: result.longitude)
             .distance(from: CLLocation(latitude: base.latitude, longitude: base.longitude))
-        #expect(distance <= 50, "Int.max seed must produce valid drift")
+        #expect(distance <= 100.01, "Int.max seed must produce valid drift")
     }
 
     @Test func driftCenterMinIntSeed() {
@@ -609,16 +614,18 @@ struct GameTimerLogicTests {
         let result = deterministicDriftCenter(basePoint: base, oldRadius: 1500, newRadius: 1400, driftSeed: Int.min)
         let distance = CLLocation(latitude: result.latitude, longitude: result.longitude)
             .distance(from: CLLocation(latitude: base.latitude, longitude: base.longitude))
-        #expect(distance <= 50, "Int.min seed must produce valid drift")
+        #expect(distance <= 100.01, "Int.min seed must produce valid drift")
     }
 
     @Test func driftCenterVerySmallDifference() {
-        // oldRadius=1001, newRadius=1000 → maxFromPrev=0.5, maxFromBase=500 → safeDrift=0.5
+        // Tiny shrink step (oldR=1001, newR=1000 → delta=1) means
+        // tiny drift. The new algo samples uniformly in disk(C, 1m),
+        // so the drift is always within 1 m of base.
         let base = CLLocationCoordinate2D(latitude: 50.0, longitude: 4.0)
         let result = deterministicDriftCenter(basePoint: base, oldRadius: 1001, newRadius: 1000, driftSeed: 42)
         let distance = CLLocation(latitude: result.latitude, longitude: result.longitude)
             .distance(from: CLLocation(latitude: base.latitude, longitude: base.longitude))
-        #expect(distance <= 0.5, "Tiny drift for tiny radius difference")
+        #expect(distance <= 1.01, "Tiny drift for tiny radius difference")
     }
 
     @Test func driftCenterNearPole() {
@@ -863,13 +870,18 @@ struct GameTimerLogicTests {
     /// Hardcoded values verified against Android. If these break, parity is lost.
     @Test func driftCenterCrossPlatformParity() {
         let base = CLLocationCoordinate2D(latitude: 50.8466, longitude: 4.3528)
+        // Regenerated after the drift rewrite (rejection sampling
+        // inside `disk(prev, delta) ∩ disk(final, newRadius)` driven
+        // by splitmix64). Goldens must match the TS reference in
+        // `functions/test/parity.test.ts` and Android's
+        // `GameTimerHelperTest.kt::drift center cross-platform parity`.
         let tests: [(Double, Double, Int, Double, Double)] = [
-            (1500, 1400, 42,     50.846975022854906, 4.352811404529953),
-            (1500, 1400, 12345,  50.846304286836016, 4.35242679292988),
-            (1500, 1400, 999999, 50.846981166449616, 4.353113589623775),
-            (1000,  900, 42,     50.84699857089946,  4.352990826261173),
-            (2000, 1800, 54321,  50.84676052483228,  4.352177942909372),
-            ( 500,  400, 1,      50.846909360931114, 4.352834175494442),
+            (1500, 1400, 42,     50.84696960616928,   4.353846433636171),
+            (1500, 1400, 12345,  50.84583912478917,   4.352140612658659),
+            (1500, 1400, 999999, 50.84630221934297,   4.351924973242351),
+            (1000,  900, 42,     50.84611360923295,   4.351984011855909),
+            (2000, 1800, 54321,  50.84742746058778,   4.354741430644523),
+            ( 500,  400, 1,      50.845930021862166,  4.353238494648966),
         ]
         for (oldR, newR, seed, expectedLat, expectedLng) in tests {
             let r = deterministicDriftCenter(basePoint: base, oldRadius: oldR, newRadius: newR, driftSeed: seed)

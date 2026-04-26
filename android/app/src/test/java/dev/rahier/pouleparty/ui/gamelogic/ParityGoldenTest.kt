@@ -74,6 +74,12 @@ class ParityGoldenTest {
 
     // ── deterministicDriftCenter ────────────────────────────
 
+    // Goldens below were regenerated after the drift rewrite: rejection
+    // sampling in `disk(previousCenter, delta) ∩ disk(finalCenter,
+    // newRadius)` driven by splitmix64 (`seededRandom`), replacing the
+    // old linear `seed * 31 xor newRadius` scheme. The new algo is
+    // fully accumulative — basePoint is the previous drifted center —
+    // so successive circles form a genuinely meandering path.
     @Test
     fun `drift seed 12345 from 1500 to 1400`() {
         val out = deterministicDriftCenter(
@@ -82,8 +88,8 @@ class ParityGoldenTest {
             newRadius = 1400.0,
             driftSeed = 12345,
         )
-        assertEquals(50.849704286836015, out.latitude(), tol)
-        assertEquals(4.349626765727747, out.longitude(), tol)
+        assertEquals(50.84923912478917, out.latitude(), tol)
+        assertEquals(4.349340564597558, out.longitude(), tol)
     }
 
     @Test
@@ -94,8 +100,8 @@ class ParityGoldenTest {
             newRadius = 1800.0,
             driftSeed = 42,
         )
-        assertEquals(48.800889182782186, out.latitude(), tol)
-        assertEquals(2.3001280811249516, out.longitude(), tol)
+        assertEquals(48.798715703728135, out.latitude(), tol)
+        assertEquals(2.301415195768439, out.longitude(), tol)
     }
 
     @Test
@@ -288,8 +294,8 @@ class ParityGoldenTest {
             newRadius = 500.0,
             driftSeed = 777,
         )
-        assertEquals(50.849217523608516, out.latitude(), tol)
-        assertEquals(4.34728423145545, out.longitude(), tol)
+        assertEquals(50.84967128867958, out.latitude(), tol)
+        assertEquals(4.36869020942804, out.longitude(), tol)
     }
 
     @Test
@@ -300,8 +306,8 @@ class ParityGoldenTest {
             newRadius = 1400.0,
             driftSeed = -99,
         )
-        assertEquals(50.85023537723916, out.latitude(), tol)
-        assertEquals(4.350282673772987, out.longitude(), tol)
+        assertEquals(50.84948730902404, out.latitude(), tol)
+        assertEquals(4.349732389167928, out.longitude(), tol)
     }
 
     // ── finalCenter invariant (see functions/test/parity.test.ts) ─
@@ -329,10 +335,12 @@ class ParityGoldenTest {
             driftSeed = 12345,
             finalCenter = finalCenter,
         )
-        assertEquals(50.84951207475732, out.latitude(), tol)
-        assertEquals(4.349384165316106, out.longitude(), tol)
-        if (distMeters(out, finalCenter) > 1400.0) {
-            throw AssertionError("invariant broken: finalCenter not inside drifted circle")
+        assertEquals(50.851285969721935, out.latitude(), tol)
+        assertEquals(4.346931114967598, out.longitude(), tol)
+        // Invariant: the whole 50 m final-zone disk must fit inside
+        // the drifted circle, not just its centerpoint.
+        if (distMeters(out, finalCenter) + 50.0 > 1400.0) {
+            throw AssertionError("invariant broken: final-zone disk not inside drifted circle")
         }
     }
 
@@ -345,12 +353,19 @@ class ParityGoldenTest {
             driftSeed = 12345,
             finalCenter = null,
         )
-        assertEquals(50.849704286836015, explicitNull.latitude(), tol)
-        assertEquals(4.349626765727747, explicitNull.longitude(), tol)
+        assertEquals(50.84923912478917, explicitNull.latitude(), tol)
+        assertEquals(4.349340564597558, explicitNull.longitude(), tol)
     }
 
     @Test
-    fun `drift finalCenter outside new circle returns base`() {
+    fun `drift finalCenter outside new circle returns valid point`() {
+        // basePoint 150 m south of finalCenter, newRadius 100 m. The
+        // caller's inductive hypothesis is at its boundary here:
+        // `|base − final| + FINAL_ZONE_RADIUS = 150 + 50 = 200 =
+        // oldRadius`. The feasible candidate region collapses to a
+        // single ring, so all 32 rejection attempts miss and the
+        // deterministic fallback kicks in. Both invariants still
+        // hold on the boundary.
         val base = Point.fromLngLat(4.35, 50.85)
         val farFinal = Point.fromLngLat(4.35, 50.85 + 150.0 / 111_320.0)
         val out = deterministicDriftCenter(
@@ -360,8 +375,13 @@ class ParityGoldenTest {
             driftSeed = 12345,
             finalCenter = farFinal,
         )
-        assertEquals(base.latitude(), out.latitude(), 0.0)
-        assertEquals(base.longitude(), out.longitude(), 0.0)
+        if (distMeters(out, base) > 100.0 + 1e-6) {
+            throw AssertionError("candidate outside disk A")
+        }
+        // Invariant: full 50 m final zone inside the new circle.
+        if (distMeters(out, farFinal) + 50.0 > 100.0 + 1e-6) {
+            throw AssertionError("final-zone disk not inside drifted circle")
+        }
     }
 
     @Test
@@ -371,38 +391,47 @@ class ParityGoldenTest {
         // breaks for any combination, the platform has drifted.
         val initialCenter = Point.fromLngLat(4.35, 50.85)
         val initialRadius = 1500.0
-        val finalDistancesM = doubleArrayOf(0.0, 100.0, 400.0, 700.0, 1000.0, 1300.0, 1499.0)
+        // Caller's feasibility hypothesis: `|initial − final| +
+        // FINAL_ZONE_RADIUS ≤ initialRadius`. With
+        // FINAL_ZONE_RADIUS = 50, initialRadius = 1500, that caps
+        // finalDistance at 1450; use 1449 for 1 m of slack so the
+        // rejection path has a non-degenerate lens to sample from.
+        val finalDistancesM = doubleArrayOf(0.0, 100.0, 400.0, 700.0, 1000.0, 1300.0, 1449.0)
         for (dM in finalDistancesM) {
             val finalCenter = Point.fromLngLat(
                 initialCenter.longitude(),
                 initialCenter.latitude() + dM / 111_320.0,
             )
             for (seed in 1..100) {
-                var radius = initialRadius
-                repeat(10) {
-                    val newRadius = radius - 100.0
-                    if (newRadius <= 0.0) return@repeat
-                    val interpolated = interpolateZoneCenter(
-                        initialCenter = initialCenter,
-                        finalCenter = finalCenter,
-                        initialRadius = initialRadius,
-                        currentRadius = newRadius,
-                    )
+                // Drift is independent per shrink now — no state to
+                // track between iterations, just exercise a range
+                // of newRadius values.
+                for (step in 1..10) {
+                    val newRadius = initialRadius - step * 100.0
+                    if (newRadius <= 0.0) break
                     val drifted = deterministicDriftCenter(
-                        basePoint = interpolated,
-                        oldRadius = radius,
+                        basePoint = initialCenter,
+                        oldRadius = initialRadius,
                         newRadius = newRadius,
                         driftSeed = seed,
                         finalCenter = finalCenter,
                     )
-                    val d = distMeters(drifted, finalCenter)
-                    if (d > newRadius) {
+                    // Rule 1: drifted circle fits inside start zone.
+                    val distFromI = distMeters(drifted, initialCenter)
+                    if (distFromI + newRadius > initialRadius + 1e-6) {
                         throw AssertionError(
-                            "invariant broken: seed=$seed finalDist=$dM " +
-                                "distToFinal=$d newRadius=$newRadius"
+                            "rule 1 broken (outside start zone): seed=$seed step=$step " +
+                                "finalDist=$dM distFromI=$distFromI newRadius=$newRadius"
                         )
                     }
-                    radius = newRadius
+                    // Rule 2: full 50 m final zone inside drifted circle.
+                    val distFromF = distMeters(drifted, finalCenter)
+                    if (distFromF + 50.0 > newRadius + 1e-6) {
+                        throw AssertionError(
+                            "rule 2 broken (final zone outside): seed=$seed step=$step " +
+                                "finalDist=$dM distFromF=$distFromF newRadius=$newRadius"
+                        )
+                    }
                 }
             }
         }

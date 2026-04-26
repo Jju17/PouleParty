@@ -12,6 +12,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -75,9 +76,23 @@ fun OnboardingScreen(
         ActivityResultContracts.RequestPermission()
     ) { viewModel.onIntent(OnboardingIntent.RefreshPermissions) }
 
+    // Android 11+ silently denies ACCESS_BACKGROUND_LOCATION when requested
+    // via the runtime dialog — no UI appears, the launcher fires its result
+    // immediately with `false`, and the user is stranded with a Continue
+    // button that does nothing. The OS requires the user to flip "Allow all
+    // the time" from App Settings instead, so on R+ we open Settings and
+    // rely on the ON_RESUME observer to pick up the grant when they return.
     val backgroundLocationLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { viewModel.onIntent(OnboardingIntent.RefreshPermissions) }
+
+    val openAppSettings: () -> Unit = {
+        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = Uri.fromParts("package", context.packageName, null)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(intent)
+    }
 
     val notificationLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -123,8 +138,10 @@ fun OnboardingScreen(
                         fineLocationLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
                     },
                     onRequestBackgroundLocation = {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                            backgroundLocationLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+                        when {
+                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.R -> openAppSettings()
+                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ->
+                                backgroundLocationLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
                         }
                     }
                 )
@@ -145,11 +162,15 @@ fun OnboardingScreen(
             }
         }
 
-        // Bottom navigation overlay
+        // Bottom navigation overlay — `navigationBarsPadding` keeps the
+        // dots + Next button clear of the gesture/3-button system bar on
+        // devices that show one (without it, the buttons are clipped on
+        // phones with a tall nav bar).
         Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 40.dp),
+                .navigationBarsPadding()
+                .padding(bottom = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {

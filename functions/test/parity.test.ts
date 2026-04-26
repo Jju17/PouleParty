@@ -69,6 +69,12 @@ describe("parity, interpolateZoneCenter", () => {
 
 // ─── deterministicDriftCenter ─────────────────────────────────
 
+// Goldens below were regenerated after the drift rewrite: rejection
+// sampling in `disk(previousCenter, delta) ∩ disk(finalCenter, newRadius)`
+// driven by splitmix64 (`seededRandomServer`), replacing the old linear
+// `seed * 31 ^ newRadius` scheme. The new algo is fully accumulative —
+// basePoint is the previous drifted center — so successive circles form
+// a genuinely meandering path instead of hugging `finalCenter`.
 describe("parity, deterministicDriftCenter", () => {
   test("seed 12345, 1500→1400", () => {
     const out = deterministicDriftCenterServer(
@@ -77,8 +83,8 @@ describe("parity, deterministicDriftCenter", () => {
       1400,
       12345,
     );
-    expect(out.latitude).toBeCloseTo(50.849704286836015, TOL);
-    expect(out.longitude).toBeCloseTo(4.349626765727747, TOL);
+    expect(Math.abs(out.latitude - 50.84923912478917)).toBeLessThan(TOL);
+    expect(Math.abs(out.longitude - 4.349340564597558)).toBeLessThan(TOL);
   });
 
   test("seed 42, 2000→1800", () => {
@@ -88,8 +94,8 @@ describe("parity, deterministicDriftCenter", () => {
       1800,
       42,
     );
-    expect(out.latitude).toBeCloseTo(48.800889182782186, TOL);
-    expect(out.longitude).toBeCloseTo(2.3001280811249516, TOL);
+    expect(Math.abs(out.latitude - 48.798715703728135)).toBeLessThan(TOL);
+    expect(Math.abs(out.longitude - 2.301415195768439)).toBeLessThan(TOL);
   });
 
   test("newRadius == 0 returns basePoint", () => {
@@ -260,8 +266,8 @@ describe("parity, drift edges", () => {
       500,
       777,
     );
-    expect(out.latitude).toBeCloseTo(50.849217523608516, TOL);
-    expect(out.longitude).toBeCloseTo(4.34728423145545, TOL);
+    expect(Math.abs(out.latitude - 50.84967128867958)).toBeLessThan(TOL);
+    expect(Math.abs(out.longitude - 4.36869020942804)).toBeLessThan(TOL);
   });
 
   test("negative seed", () => {
@@ -271,8 +277,8 @@ describe("parity, drift edges", () => {
       1400,
       -99,
     );
-    expect(out.latitude).toBeCloseTo(50.85023537723916, TOL);
-    expect(out.longitude).toBeCloseTo(4.350282673772987, TOL);
+    expect(Math.abs(out.latitude - 50.84948730902404)).toBeLessThan(TOL);
+    expect(Math.abs(out.longitude - 4.349732389167928)).toBeLessThan(TOL);
   });
 });
 
@@ -380,12 +386,10 @@ function distMeters(
 
 describe("parity, finalCenter invariant", () => {
   test("golden: finalCenter constrains drift when base is near the edge", () => {
-    // base at (50.85, 4.35), final ≈ 1316 m NE. newRadius 1400, so without
-    // the finalCenter bound drift would be up to 300 m (maxFromPrev = (2000−1400)/2).
-    // With the bound: maxFromFinal = 1400 − 1316 − 1 ≈ 83 m, drift reduced.
-    // Strict 1e-9 ° comparison (≈ 0.11 mm) — `toBeCloseTo(x, 1e-9)` in
-    // Vitest is actually ≈ 0.5 loose, so we use plain `Math.abs` to
-    // pin the cross-platform output to sub-millimetre precision.
+    // base at (50.85, 4.35), final ≈ 1316 m NE. With the rewrite the
+    // output is drawn by rejection sampling in the A ∩ B intersection,
+    // not bounded-and-clipped, so the value differs dramatically from
+    // the pre-rewrite golden — but the invariant still holds.
     const out = deterministicDriftCenterServer(
       { latitude: 50.85, longitude: 4.35 },
       2000,
@@ -393,10 +397,12 @@ describe("parity, finalCenter invariant", () => {
       12345,
       { latitude: 50.86, longitude: 4.36 },
     );
-    expect(Math.abs(out.latitude - 50.84951207475732)).toBeLessThan(TOL);
-    expect(Math.abs(out.longitude - 4.349384165316106)).toBeLessThan(TOL);
-    // Invariant: finalCenter must be inside the drifted circle.
-    expect(distMeters(out, { latitude: 50.86, longitude: 4.36 })).toBeLessThanOrEqual(1400);
+    expect(Math.abs(out.latitude - 50.851285969721935)).toBeLessThan(TOL);
+    expect(Math.abs(out.longitude - 4.346931114967598)).toBeLessThan(TOL);
+    // Invariant #1: the whole final-zone disk (50 m glow the chicken
+    // sees on the map) must fit inside the drifted circle — not just
+    // its center.
+    expect(distMeters(out, { latitude: 50.86, longitude: 4.36 }) + 50).toBeLessThanOrEqual(1400);
   });
 
   test("golden: missing finalCenter leaves existing behavior untouched", () => {
@@ -416,22 +422,25 @@ describe("parity, finalCenter invariant", () => {
       12345,
       undefined,
     );
-    expect(Math.abs(withoutFinal.latitude - 50.849704286836015)).toBeLessThan(TOL);
-    expect(Math.abs(withoutFinal.longitude - 4.349626765727747)).toBeLessThan(TOL);
+    expect(Math.abs(withoutFinal.latitude - 50.84923912478917)).toBeLessThan(TOL);
+    expect(Math.abs(withoutFinal.longitude - 4.349340564597558)).toBeLessThan(TOL);
     expect(explicitUndefined).toEqual(withoutFinal);
   });
 
-  test("finalCenter coinciding with base → safeDrift collapses, returns base", () => {
+  test("finalCenter outside new circle: invariants still hold via rejection", () => {
+    // basePoint 150 m south of finalCenter, newRadius 100 m. The
+    // caller's inductive hypothesis is at its boundary here:
+    // `|base − final| + FINAL_ZONE_RADIUS = 150 + 50 = 200 = oldRadius`.
+    // For newRadius = 100, the feasible candidate region is a single
+    // ring of points at exactly 50 m from final along the base→final
+    // line, so all 32 rejection attempts miss and the deterministic
+    // fallback kicks in. Both invariants still hold on the boundary.
     const base = { latitude: 50.85, longitude: 4.35 };
-    // distBaseFinal = 0, maxFromFinal = newRadius − 1 which is huge. But we
-    // want to test the *tight* case: finalCenter right at the edge of the
-    // new circle so maxFromFinal ≤ 0 and drift must be 0.
-    // At newRadius=100, finalCenter 150 m away → maxFromFinal = 100 − 150 − 1 < 0.
-    // The function clamps to 0 and returns basePoint unchanged.
     const farFinal = { latitude: 50.85 + 150 / 111_320, longitude: 4.35 };
     const out = deterministicDriftCenterServer(base, 200, 100, 12345, farFinal);
-    expect(out.latitude).toBe(base.latitude);
-    expect(out.longitude).toBe(base.longitude);
+    expect(distMeters(out, base)).toBeLessThanOrEqual(100 + 1e-6); // in disk A
+    // Invariant: full 50 m final zone stays inside the new circle.
+    expect(distMeters(out, farFinal) + 50).toBeLessThanOrEqual(100 + 1e-6);
   });
 
   // Exhaustive property sweep: for a wide range of seeds, radii and final
@@ -443,42 +452,46 @@ describe("parity, finalCenter invariant", () => {
     const initialRadius = 1500;
     // finalCenter at various distances from the initial center, always
     // within the initial zone so the invariant is defined.
-    const finalDistancesM = [0, 100, 400, 700, 1000, 1300, 1499];
+    // Caller's inductive hypothesis: `|initial − final| + FINAL_ZONE_RADIUS
+    // ≤ initialRadius`. With FINAL_ZONE_RADIUS = 50 and initialRadius
+    // = 1500, that caps finalDistance at 1450; use 1449 to leave 1 m
+    // slack so the first shrink's rejection succeeds.
+    const finalDistancesM = [0, 100, 400, 700, 1000, 1300, 1449];
     for (const dM of finalDistancesM) {
       const finalCenter = {
         latitude: initialCenter.latitude + dM / 111_320,
         longitude: initialCenter.longitude,
       };
       for (let seed = 1; seed <= 100; seed++) {
-        // Simulate 10 consecutive shrinks; the base point at each step is
-        // the interpolated center, which is what `processRadiusUpdate`
-        // passes in practice.
-        let radius = initialRadius;
-        for (let step = 0; step < 10; step++) {
-          const newRadius = radius - 100;
+        // Drift is independent per shrink — just sweep newRadius.
+        for (let step = 1; step <= 10; step++) {
+          const newRadius = initialRadius - step * 100;
           if (newRadius <= 0) break;
-          const interpolated = interpolateZoneCenterServer(
-            initialCenter,
-            finalCenter,
-            initialRadius,
-            newRadius,
-          );
           const drifted = deterministicDriftCenterServer(
-            interpolated,
-            radius,
+            initialCenter,
+            initialRadius,
             newRadius,
             seed,
             finalCenter,
           );
-          const distToFinal = distMeters(drifted, finalCenter);
-          if (distToFinal > newRadius) {
+          // Rule 1: drifted circle fits inside start zone.
+          const distFromI = distMeters(drifted, initialCenter);
+          if (distFromI + newRadius > initialRadius + 1e-6) {
             throw new Error(
-              `invariant broken: seed=${seed} step=${step} ` +
-              `finalDist=${dM} distToFinal=${distToFinal.toFixed(3)} ` +
+              `rule 1 broken (outside start zone): seed=${seed} step=${step} ` +
+              `finalDist=${dM} distFromI=${distFromI.toFixed(3)} ` +
               `newRadius=${newRadius}`,
             );
           }
-          radius = newRadius;
+          // Rule 2: full 50 m final zone inside drifted circle.
+          const distFromF = distMeters(drifted, finalCenter);
+          if (distFromF + 50 > newRadius + 1e-6) {
+            throw new Error(
+              `rule 2 broken (final zone outside): seed=${seed} step=${step} ` +
+              `finalDist=${dM} distFromF=${distFromF.toFixed(3)} ` +
+              `newRadius=${newRadius}`,
+            );
+          }
         }
       }
     }

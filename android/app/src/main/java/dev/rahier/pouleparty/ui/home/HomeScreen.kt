@@ -9,6 +9,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.compose.foundation.background
@@ -44,12 +46,14 @@ import dev.rahier.pouleparty.ui.theme.*
 
 private enum class PendingPermissionAction { None, Start, CreateParty }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
     onNavigateToPlanSelection: () -> Unit,
     onNavigateToGameCreation: (gameId: String, pricingModel: String, numberOfPlayers: Int, pricePerPlayerCents: Int, depositAmountCents: Int) -> Unit,
     onNavigateToChickenMap: (String) -> Unit,
+    onNavigateToChickenMapDebug: (String) -> Unit = {},
+    onNavigateToDebugMapConfig: () -> Unit = {},
     onNavigateToHunterMap: (String, String) -> Unit,
     onNavigateToVictory: (String) -> Unit,
     onNavigateToSettings: () -> Unit = {},
@@ -64,6 +68,8 @@ fun HomeScreen(
         viewModel.effects.collect { effect ->
             when (effect) {
                 is HomeEffect.NavigateToChickenMap -> onNavigateToChickenMap(effect.gameId)
+                is HomeEffect.NavigateToChickenMapDebug -> onNavigateToChickenMapDebug(effect.gameId)
+                is HomeEffect.NavigateToDebugMapConfig -> onNavigateToDebugMapConfig()
                 is HomeEffect.NavigateToHunterMap -> onNavigateToHunterMap(effect.gameId, effect.hunterName)
                 is HomeEffect.NavigateToGameDone -> onNavigateToVictory(effect.gameId)
                 is HomeEffect.NavigateToPaymentConfirmed -> onNavigateToPaymentConfirmed(effect.gameId, effect.kind)
@@ -359,24 +365,34 @@ fun HomeScreen(
                         color = MaterialTheme.colorScheme.onBackground
                     )
                 }
-                TextButton(
-                    onClick = {
-                        if (viewModel.hasLocationPermission()) {
-                            isShowingPlanSelection = true
-                        } else {
-                            pendingPermissionAction = PendingPermissionAction.CreateParty
-                            locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-                        }
-                    },
+                // Hidden debug easter egg: long-press the Create Party
+                // button to skip the wizard and spawn a preset
+                // stayInTheZone game with every future shrunk circle
+                // rendered up front on the chicken map.
+                Box(
                     modifier = Modifier
                         .padding(16.dp)
                         .border(2.dp, MaterialTheme.colorScheme.onBackground, RoundedCornerShape(12.dp))
+                        .combinedClickable(
+                            onClick = {
+                                if (viewModel.hasLocationPermission()) {
+                                    isShowingPlanSelection = true
+                                } else {
+                                    pendingPermissionAction = PendingPermissionAction.CreateParty
+                                    locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                                }
+                            },
+                            onLongClick = {
+                                viewModel.onIntent(HomeIntent.CreatePartyLongPressed)
+                            }
+                        )
                 ) {
                     Text(
                         "Create Party",
                         fontFamily = GameBoyFont,
                         fontSize = 8.sp,
-                        color = MaterialTheme.colorScheme.onBackground
+                        color = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
                     )
                 }
             }

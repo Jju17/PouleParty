@@ -140,23 +140,50 @@ func interpolateZoneCenter(
 /// used for the offset and for the distance check), so 1 m is plenty.
 let finalCenterSafetyMeters: Double = 1.0
 
+/// Radius of the "final zone" the chicken sees as a green glow on the
+/// map — the whole disk, not just its center, must stay inside every
+/// drifted circle. Matches the hardcoded 50 m used by
+/// `finalZoneGlowContent` in `MapOverlays.swift` and the Android
+/// equivalent in `ChickenMapScreen`. Kept alongside the other drift
+/// constants so the drift algo and the UI can never disagree on what
+/// "final zone" means.
+let finalZoneRadiusMeters: Double = 50.0
+
+/// How many rejection-sampling attempts before falling back to the
+/// deterministic "pull toward finalCenter by `delta`" point. Each
+/// attempt costs one splitmix64 evaluation; 32 is plenty — the
+/// rejection rate only gets high near game end where
+/// `disk(C, delta)` sticks out past `disk(F, r)`, and even at 50 %
+/// rejection 32 attempts succeed with probability > 99.99 %.
+private let maxDriftAttempts = 32
+
 /// Computes a deterministic drifted center for stayInTheZone mode.
-/// The result is offset from `basePoint`, always within:
-///  - `newRadius * 0.5` of basePoint (so basePoint stays well inside)
-///  - `(oldRadius − newRadius) * 0.5` so successive shrinks don't lurch
-///  - (when `finalCenter` is provided) `newRadius − dist(base, finalCenter) − margin`
-///    so the final collapse point is ALWAYS inside the drifted circle,
-///    regardless of how close `finalCenter` was chosen to the edge of
-///    the initial zone.
+/// Picks the zone center for one shrink step as a pseudo-random
+/// point that simultaneously satisfies:
+///  A. `|candidate − basePoint| ≤ oldRadius − newRadius` → the new
+///     circle fits entirely inside `disk(basePoint, oldRadius)`.
+///  B. when `finalCenter` is provided, `|candidate − finalCenter| ≤
+///     newRadius − FINAL_ZONE_RADIUS − safety` → the final-zone
+///     disk (50 m glow) fits entirely inside the drifted circle.
 ///
-/// The third bound is what makes the geometric invariant
-/// `finalCenter ∈ circle(center_i, radius_i)` hold by construction at
-/// every shrink step — the first two alone don't guarantee it once
-/// `|initialCenter − finalCenter|` grows past `initialRadius / 2`.
+/// Caller contract: `basePoint` is the **initial** zone center and
+/// `oldRadius` is the **initial** zone radius — NOT the previous
+/// drifted center. Every shrink's candidate is drawn independently
+/// from `disk(initial, R₀ − rᵢ) ∩ disk(final, rᵢ − FINAL −
+/// safety)`, so successive circles can overlap each other freely as
+/// long as both constraints hold. This matches the product rules:
+/// no circle escapes the start zone, every circle contains the
+/// final zone, intermediate circles have no nesting constraint
+/// between them.
 ///
-/// `driftSeed` is a random integer stored in the Game document so every
-/// client produces the exact same circle at each shrink step while each
-/// game session has a unique drift pattern.
+/// Strategy: sample uniformly inside the *smaller* of disk A / disk
+/// B and reject against the larger. When one disk contains the
+/// other, the first sample is always valid. When they partially
+/// overlap, the lens/smaller-disk ratio is usually > 10 %, so 32
+/// splitmix64-seeded attempts succeed with overwhelming probability.
+/// When rejection exhausts, fall back to a deterministic point on
+/// the base→final line — always in the intersection whenever the
+/// disks overlap (caller invariant: final zone fits in start zone).
 func deterministicDriftCenter(
     basePoint: CLLocationCoordinate2D,
     oldRadius: Double,
@@ -164,38 +191,68 @@ func deterministicDriftCenter(
     driftSeed: Int,
     finalCenter: CLLocationCoordinate2D? = nil
 ) -> CLLocationCoordinate2D {
+    // No shrink → no drift. Frozen zones round-trip. Collapsed radius
+    // skips drift too.
+    guard newRadius < oldRadius, newRadius > 0 else { return basePoint }
+
+    let rA = oldRadius - newRadius
+    let rB: Double = finalCenter != nil
+        ? max(0, newRadius - finalZoneRadiusMeters - finalCenterSafetyMeters)
+        : .infinity
+
     let metersPerDegreeLat = 111_320.0
     let metersPerDegreeLng = 111_320.0 * cos(basePoint.latitude * .pi / 180.0)
 
-    let maxFromBase = newRadius * 0.5
-    let maxFromPrev = max(0, oldRadius - newRadius) * 0.5
+    let stepSeed = driftSeed ^ Int(newRadius)
 
-    var maxFromFinal = Double.infinity
-    if let finalCenter {
-        let dLatM = (finalCenter.latitude - basePoint.latitude) * metersPerDegreeLat
-        let dLngM = (finalCenter.longitude - basePoint.longitude) * metersPerDegreeLng
-        let distBaseFinal = (dLatM * dLatM + dLngM * dLngM).squareRoot()
-        maxFromFinal = max(0, newRadius - distBaseFinal - finalCenterSafetyMeters)
+    // No final constraint → sample uniformly in disk A.
+    guard let finalCenter else {
+        let angle = seededRandom(seed: stepSeed, index: 0) * 2.0 * .pi
+        let dist = rA * seededRandom(seed: stepSeed, index: 1).squareRoot()
+        return CLLocationCoordinate2D(
+            latitude: basePoint.latitude + (dist * sin(angle)) / metersPerDegreeLat,
+            longitude: basePoint.longitude + (dist * cos(angle)) / metersPerDegreeLng
+        )
     }
 
-    let safeDrift = min(maxFromBase, maxFromPrev, maxFromFinal)
+    // v = finalCenter − basePoint, in local flat-earth meters.
+    let vx = (finalCenter.longitude - basePoint.longitude) * metersPerDegreeLng
+    let vy = (finalCenter.latitude - basePoint.latitude) * metersPerDegreeLat
+    let vLen = (vx * vx + vy * vy).squareRoot()
 
-    guard safeDrift > 0 else { return basePoint }
+    // Sample from the smaller disk, reject against the larger.
+    let sampleFromA = rA <= rB
+    let sampleR = min(rA, rB)
 
-    let angleSeed = abs(Int(truncatingIfNeeded: Int64(driftSeed) &* 31) ^ Int(newRadius))
-    let distSeed = abs(Int(truncatingIfNeeded: Int64(driftSeed) &* 127) ^ Int(truncatingIfNeeded: Int64(Int(newRadius)) &* 37))
+    for k in 0..<maxDriftAttempts {
+        let angle = seededRandom(seed: stepSeed, index: 2 * k) * 2.0 * .pi
+        let dist = sampleR * seededRandom(seed: stepSeed, index: 2 * k + 1).squareRoot()
+        let ox = dist * cos(angle)
+        let oy = dist * sin(angle)
+        // Candidate offset from basePoint (caller's frame).
+        let cdx = sampleFromA ? ox : vx + ox
+        let cdy = sampleFromA ? oy : vy + oy
+        // Check: is candidate in the *other* disk?
+        let checkDx = sampleFromA ? cdx - vx : cdx
+        let checkDy = sampleFromA ? cdy - vy : cdy
+        let checkR = sampleFromA ? rB : rA
+        if (checkDx * checkDx + checkDy * checkDy).squareRoot() <= checkR {
+            return CLLocationCoordinate2D(
+                latitude: basePoint.latitude + cdy / metersPerDegreeLat,
+                longitude: basePoint.longitude + cdx / metersPerDegreeLng
+            )
+        }
+    }
 
-    let angle = Double(angleSeed % 36000) / 36000.0 * 2.0 * .pi
-    let distFraction = Double(distSeed % 10000) / 10000.0
-    let distance = safeDrift * distFraction.squareRoot()
-
-    let dLat = (distance * cos(angle)) / metersPerDegreeLat
-    let dLng = (distance * sin(angle)) / metersPerDegreeLng
-
-    return CLLocationCoordinate2D(
-        latitude: basePoint.latitude + dLat,
-        longitude: basePoint.longitude + dLng
-    )
+    // Deterministic fallback on the base→final line.
+    if vLen > 0 {
+        let pull = min(rA, vLen)
+        return CLLocationCoordinate2D(
+            latitude: basePoint.latitude + ((vy / vLen) * pull) / metersPerDegreeLat,
+            longitude: basePoint.longitude + ((vx / vLen) * pull) / metersPerDegreeLng
+        )
+    }
+    return basePoint
 }
 
 // MARK: - Radius Update
@@ -261,15 +318,15 @@ func processRadiusUpdate(
 
     let newCircle: CircleOverlay?
     if gameMod == .stayInTheZone {
-        let interpolated = interpolateZoneCenter(
-            initialCenter: initialCoordinates,
-            finalCenter: finalCoordinates,
-            initialRadius: initialRadius,
-            currentRadius: Double(newRadius)
-        )
+        // Drift is independent per shrink: candidate sampled from
+        // `disk(initial, R₀ − rᵢ) ∩ disk(final, rᵢ − FINAL −
+        // safety)`. That enforces both product rules directly — new
+        // circle inside start zone, final zone inside new circle —
+        // while leaving successive intermediate circles free to
+        // overlap each other.
         let driftedCenter = deterministicDriftCenter(
-            basePoint: interpolated,
-            oldRadius: Double(currentRadius),
+            basePoint: initialCoordinates,
+            oldRadius: initialRadius,
             newRadius: Double(newRadius),
             driftSeed: driftSeed,
             finalCenter: finalCoordinates
@@ -288,6 +345,59 @@ func processRadiusUpdate(
         isGameOver: false,
         gameOverMessage: nil
     )
+}
+
+// MARK: - Debug Preview (all shifted circles at once)
+
+/// A single preview circle entry returned by
+/// [`computeDebugShiftedCircles`] — the center and radius the zone will
+/// hold at each scheduled shrink, in order.
+struct DebugShrinkCircle: Equatable {
+    let center: CLLocationCoordinate2D
+    let radius: Double
+}
+
+/// Walks the zone shrink schedule forward from `hunterStartDate` through
+/// `endDate` using the same `interpolateZoneCenter` +
+/// `deterministicDriftCenter` the live timer invokes. Returns one entry
+/// per scheduled shrink, ordered from first to last, stopping early
+/// when the radius would collapse to zero.
+///
+/// Pure function — only used by the long-press debug preview on the
+/// chicken map to render every future circle simultaneously. Mirrors
+/// the Android `computeDebugShiftedCircles` sibling.
+func computeDebugShiftedCircles(game: Game) -> [DebugShrinkCircle] {
+    guard game.gameMode == .stayInTheZone else { return [] }
+    let initialRadius = game.zone.radius
+    guard initialRadius > 0, game.zone.shrinkIntervalMinutes > 0 else { return [] }
+
+    let initialCenter = game.initialLocation
+    let finalCenter = game.finalLocation
+    let driftSeed = game.zone.driftSeed
+    let declinePerUpdate = game.zone.shrinkMetersPerUpdate
+    let intervalSeconds = game.zone.shrinkIntervalMinutes * 60
+    let duration = game.endDate.timeIntervalSince(game.hunterStartDate)
+    guard duration > 0, intervalSeconds > 0 else { return [] }
+
+    let maxShrinks = Int(floor(duration / intervalSeconds))
+    var result: [DebugShrinkCircle] = []
+    var radius = initialRadius
+    // Drift is independent per shrink — every call uses the initial
+    // center/radius, no state between iterations.
+    for _ in 0..<maxShrinks {
+        let newRadius = radius - declinePerUpdate
+        if newRadius <= 0 { break }
+        let drifted = deterministicDriftCenter(
+            basePoint: initialCenter,
+            oldRadius: initialRadius,
+            newRadius: newRadius,
+            driftSeed: driftSeed,
+            finalCenter: finalCenter
+        )
+        result.append(DebugShrinkCircle(center: drifted, radius: newRadius))
+        radius = newRadius
+    }
+    return result
 }
 
 // MARK: - Winner Detection

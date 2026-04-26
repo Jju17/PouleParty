@@ -14,7 +14,6 @@ import {
   deterministicDriftCenterServer,
   filterEnabledTypesServer,
   generatePowerUpsServer,
-  interpolateZoneCenterServer,
   SpawnedPowerUp,
 } from "./powerUpSpawn";
 import { snapToRoad } from "./mapbox";
@@ -413,20 +412,19 @@ async function spawnBatchForGame(
     // (no drift, no chicken location yet).
     spawnCenter = { latitude: initialCenter.latitude, longitude: initialCenter.longitude };
   } else if (gameMode === "stayInTheZone") {
-    // Periodic shrink center = linear interpolation toward finalCenter + seeded drift.
-    const interpolated = interpolateZoneCenterServer(
-      { latitude: initialCenter.latitude, longitude: initialCenter.longitude },
-      finalCenter ? { latitude: finalCenter.latitude, longitude: finalCenter.longitude } : undefined,
-      initialRadius,
-      currentRadius
-    );
-    const previousRadius = currentRadius + shrinkMetersPerUpdate;
+    // Drift is now independent per shrink: the center for batch N is
+    // sampled directly from `disk(initial, R₀ − r_N) ∩ disk(final,
+    // r_N − FINAL − safety)` using only (seed, newRadius). No chain
+    // walk needed — callers don't know previous steps' centers either,
+    // because the algo no longer depends on them.
     spawnCenter = deterministicDriftCenterServer(
-      interpolated,
-      previousRadius,
+      { latitude: initialCenter.latitude, longitude: initialCenter.longitude },
+      initialRadius,
       currentRadius,
       driftSeed,
-      finalCenter ? { latitude: finalCenter.latitude, longitude: finalCenter.longitude } : undefined
+      finalCenter
+        ? { latitude: finalCenter.latitude, longitude: finalCenter.longitude }
+        : undefined
     );
   } else {
     // followTheChicken: the zone tracks the chicken's live GPS. Read the

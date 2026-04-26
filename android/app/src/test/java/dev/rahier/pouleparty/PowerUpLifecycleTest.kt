@@ -236,8 +236,9 @@ class PowerUpLifecycleTest {
 
     @Test
     fun `zone freeze skips radius shrink`() {
+        val nextUpdate = Date(System.currentTimeMillis() - 1000)
         val result = processRadiusUpdate(
-            nextRadiusUpdate = Date(System.currentTimeMillis() - 1000),
+            nextRadiusUpdate = nextUpdate,
             currentRadius = 1000,
             radiusDeclinePerUpdate = 100.0,
             radiusIntervalUpdate = 5.0,
@@ -246,7 +247,15 @@ class PowerUpLifecycleTest {
             currentCircleCenter = Point.fromLngLat(4.3528, 50.8466),
             isZoneFrozen = true
         )
-        assertNull(result)
+        // Returning null left the countdown anchored on a past tick, which
+        // overshot endDate after freeze expired. The new contract is to
+        // keep `currentRadius` and roll `nextRadiusUpdate` forward by one
+        // interval so countdowns stay monotonic — see GameTimerHelper.kt.
+        assertNotNull(result)
+        assertEquals(1000, result?.newRadius)
+        assertFalse(result?.isGameOver == true)
+        val expectedNext = Date(nextUpdate.time + (5.0 * 60 * 1000).toLong())
+        assertEquals(expectedNext, result?.newNextUpdate)
     }
 
     @Test

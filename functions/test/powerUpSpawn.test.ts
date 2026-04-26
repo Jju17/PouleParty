@@ -134,10 +134,13 @@ describe("deterministicDriftCenterServer", () => {
   });
 
   test("drift stays within safeDrift bound", () => {
-    const oldRadius = 1500;
+    // After the drift relaxation the bound is just `newRadius * 0.5`
+    // (the old `(oldRadius − newRadius) * 0.5` cap was dropped so
+    // successive circles actually wander). `finalCenter` is not
+    // passed here, so `maxFromFinal` is infinity and doesn't kick in.
     const newRadius = 1400;
-    const safeDrift = Math.min(newRadius * 0.5, (oldRadius - newRadius) * 0.5);
-    const result = deterministicDriftCenterServer(base, oldRadius, newRadius, 123);
+    const safeDrift = newRadius * 0.5;
+    const result = deterministicDriftCenterServer(base, 1500, newRadius, 123);
     const dist = haversineDistance(
       base.latitude,
       base.longitude,

@@ -6,6 +6,80 @@ Format: [Keep a Changelog](https://keepachangelog.com/). Versions follow [Semant
 
 ---
 
+## [1.11.4], 2026-04-26
+
+**iOS**: 1.11.4 (1) · **Android**: 1.11.4 (34) · **Functions**: `spawnPowerUpBatch` redeploy (staging + prod) — drift algo touches `interpolateZoneCenterServer` / `deterministicDriftCenterServer`, so power-up snap-to-roads must agree with the new circle math · **Firestore rules**: unchanged
+
+Two tracks this release: a geometry rewrite of the `stayInTheZone`
+drift center, and an Android-only onboarding hotfix that left users
+stranded on the location slide.
+
+### Fixed
+
+- **Android onboarding background-location loop (Android 11+).** On
+  API 30 and higher, `RequestPermission(ACCESS_BACKGROUND_LOCATION)`
+  is silently denied by the OS without showing any UI — the launcher
+  callback fires immediately with `false`, the screen state never
+  flips, and the in-slide "Continue" button does nothing. The Next
+  button stays grey because it's gated on `hasBackgroundLocation`,
+  so the user is permanently stuck. Now on R+ the button opens the
+  app's Settings page directly (where "Allow all the time" actually
+  exists); the `ON_RESUME` lifecycle observer already handled the
+  return trip, so no other plumbing changed. API 29 (Android 10)
+  still uses the runtime dialog because there it works.
+- **Android onboarding bottom buttons clipped by gesture bar.** The
+  screen uses `enableEdgeToEdge()` but the bottom controls Column
+  had no `navigationBarsPadding()`, so the dots + Next button were
+  partially hidden behind the system gesture / 3-button nav bar on
+  phones that show one. Added the inset and trimmed the static
+  bottom padding.
+- **Drift now keeps the final-zone disk inside every shrunk circle,
+  not just its center (iOS + Android + server).** The previous
+  `deterministicDriftCenter` implementation bounded the random
+  offset by `newRadius − dist(base, finalCenter) − safety`, which
+  guaranteed `finalCenter ∈ disk(driftedCenter, newRadius)` but said
+  nothing about the 50 m glow disk *around* `finalCenter`. Late-game
+  shrinks could drift far enough that the glow disk poked out of
+  the active zone, breaking the "the chicken's safe spot is always
+  inside the playable area" invariant the UI promises. Replaced
+  with rejection sampling against
+  `disk(initial, R₀ − rᵢ) ∩ disk(final, rᵢ − 50 − safety)` — the
+  whole final zone now fits inside every drifted circle by
+  construction. 32 splitmix64-seeded attempts, deterministic
+  fallback on the base→final line if rejection exhausts. Also
+  decoupled successive shrinks: each candidate is sampled relative
+  to the **initial** zone, not the previous drifted center, so
+  overlapping circles are now allowed (only the two product
+  invariants matter — inside start zone, contains final zone).
+
+### Added
+
+- **Debug map preview (iOS + Android, internal).** Long-press the
+  Create Party button on the home screen to skip the wizard and
+  drop straight onto the chicken map with a preset
+  `stayInTheZone` game (start in 1 min, 1 h long, current location
+  or Brussels fallback). Renders every future drifted circle at
+  once with a stable rainbow palette so drift / shrink visuals can
+  be eyeballed across the whole game in a single screen. Same
+  palette order on both platforms for side-by-side parity checks.
+  Not advertised to users; this is a dev tool that piggy-backs on
+  the existing `ChickenMapConfigFeature` (iOS) /
+  `DebugMapSetupScreen` (Android) so the QA loop is one tap, not
+  five wizard steps. New strings: "Debug Preview" / "Launch".
+
+### Changed
+
+- **`GameTimerHelper` / `GameTimerLogic` parity refresh.** The drift
+  rewrite forced a re-walk of every shrink-step computation; the
+  pure-logic helpers were normalized so iOS and Android share the
+  exact same call signatures and intermediate constants
+  (`finalZoneRadiusMeters` = 50, `maxDriftAttempts` = 32). Parity
+  golden tests updated accordingly — the new fixtures cover the
+  rejection branch, the fallback branch, and the
+  `newRadius ≥ oldRadius` no-drift branch.
+
+---
+
 ## [1.11.3], 2026-04-23
 
 **iOS**: 1.11.3 (1) · **Android**: 1.11.3 (33) · **Functions**: `createCreatorPaymentSheet` redeploy (staging + prod, 2026-04-23, landed in 1.11.2 cycle) · **Firestore rules**: unchanged

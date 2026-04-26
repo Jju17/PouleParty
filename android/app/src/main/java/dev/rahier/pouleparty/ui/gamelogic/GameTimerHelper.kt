@@ -157,23 +157,54 @@ fun interpolateZoneCenter(
 const val FINAL_CENTER_SAFETY_METERS = 1.0
 
 /**
+ * Radius of the "final zone" the chicken sees as a green glow on the
+ * map — the whole disk, not just its center, must stay inside every
+ * drifted circle. Matches the hardcoded 50 m used by the final-zone
+ * polyline block in `ChickenMapScreen.kt` and iOS'
+ * `finalZoneGlowContent`. Kept alongside the other drift constants
+ * so the drift algo and the UI can never disagree on what "final
+ * zone" means.
+ */
+const val FINAL_ZONE_RADIUS_METERS = 50.0
+
+/**
+ * How many rejection-sampling attempts before falling back to the
+ * deterministic "pull toward finalCenter by `delta`" point. Each
+ * attempt costs one splitmix64 evaluation; 32 is plenty — the
+ * rejection rate only gets high near game end where
+ * `disk(C, delta)` sticks out past `disk(F, r)`, and even at 50 %
+ * rejection 32 attempts succeed with probability > 99.99 %.
+ */
+private const val MAX_DRIFT_ATTEMPTS = 32
+
+/**
  * Computes a deterministic drifted center for stayInTheZone mode.
- * The result is offset from [basePoint], always within:
- *  - `newRadius * 0.5` of basePoint (so basePoint stays well inside)
- *  - `(oldRadius - newRadius) * 0.5` so successive shrinks don't lurch
- *  - (when [finalCenter] is provided) `newRadius − dist(base, finalCenter) − margin`
- *    so the final collapse point is ALWAYS inside the drifted circle,
- *    regardless of how close `finalCenter` was chosen to the edge of
- *    the initial zone.
+ * Picks the zone center for one shrink step as a pseudo-random
+ * point that simultaneously satisfies:
+ *  A. `|candidate − basePoint| ≤ oldRadius − newRadius` → the new
+ *     circle fits entirely inside `disk(basePoint, oldRadius)`.
+ *  B. when [finalCenter] is provided, `|candidate − finalCenter| ≤
+ *     newRadius − FINAL_ZONE_RADIUS − safety` → the final-zone
+ *     disk (50 m glow) fits entirely inside the drifted circle.
  *
- * The third bound is what makes the geometric invariant
- * `finalCenter ∈ circle(center_i, radius_i)` hold by construction at
- * every shrink step — the first two alone don't guarantee it once
- * `|initialCenter − finalCenter|` grows past `initialRadius / 2`.
+ * Caller contract: [basePoint] is the **initial** zone center and
+ * [oldRadius] is the **initial** zone radius — NOT the previous
+ * drifted center. Every shrink's candidate is drawn independently
+ * from `disk(initial, R₀ − rᵢ) ∩ disk(final, rᵢ − FINAL −
+ * safety)`, so successive circles can overlap each other freely as
+ * long as both constraints hold. This matches the product rules:
+ * no circle escapes the start zone, every circle contains the
+ * final zone, intermediate circles have no nesting constraint
+ * between them.
  *
- * [driftSeed] is a random integer stored in the Game document so every
- * client produces the exact same circle at each shrink step while each
- * game session has a unique drift pattern.
+ * Strategy: sample uniformly inside the *smaller* of disk A / disk
+ * B and reject against the larger. When one disk contains the
+ * other, the first sample is always valid. When they partially
+ * overlap, the lens/smaller-disk ratio is usually > 10 %, so 32
+ * splitmix64-seeded attempts succeed with overwhelming probability.
+ * When rejection exhausts, fall back to a deterministic point on
+ * the base→final line — always in the intersection whenever the
+ * disks overlap (caller invariant: final zone fits in start zone).
  */
 fun deterministicDriftCenter(
     basePoint: Point,
@@ -182,39 +213,62 @@ fun deterministicDriftCenter(
     driftSeed: Int,
     finalCenter: Point? = null
 ): Point {
-    val metersPerDegreeLat = 111_320.0
-    val metersPerDegreeLng = 111_320.0 * kotlin.math.cos(basePoint.latitude() * kotlin.math.PI / 180.0)
+    if (newRadius >= oldRadius || newRadius <= 0) return basePoint
 
-    val maxFromBase = newRadius * 0.5
-    val maxFromPrev = maxOf(0.0, oldRadius - newRadius) * 0.5
-
-    val maxFromFinal = if (finalCenter != null) {
-        val dLatM = (finalCenter.latitude() - basePoint.latitude()) * metersPerDegreeLat
-        val dLngM = (finalCenter.longitude() - basePoint.longitude()) * metersPerDegreeLng
-        val distBaseFinal = kotlin.math.sqrt(dLatM * dLatM + dLngM * dLngM)
-        maxOf(0.0, newRadius - distBaseFinal - FINAL_CENTER_SAFETY_METERS)
+    val rA = oldRadius - newRadius
+    val rB = if (finalCenter != null) {
+        maxOf(0.0, newRadius - FINAL_ZONE_RADIUS_METERS - FINAL_CENTER_SAFETY_METERS)
     } else {
         Double.POSITIVE_INFINITY
     }
 
-    val safeDrift = minOf(maxFromBase, maxFromPrev, maxFromFinal)
+    val metersPerDegreeLat = 111_320.0
+    val metersPerDegreeLng = 111_320.0 * kotlin.math.cos(basePoint.latitude() * kotlin.math.PI / 180.0)
 
-    if (safeDrift <= 0) return basePoint
+    val stepSeed = driftSeed.toLong() xor newRadius.toLong()
 
-    val angleSeed = kotlin.math.abs((driftSeed.toLong() * 31).toInt() xor newRadius.toInt())
-    val distSeed = kotlin.math.abs((driftSeed.toLong() * 127).toInt() xor (newRadius.toInt().toLong() * 37).toInt())
+    if (finalCenter == null) {
+        val angle = seededRandom(stepSeed, 0) * 2.0 * kotlin.math.PI
+        val dist = rA * kotlin.math.sqrt(seededRandom(stepSeed, 1))
+        return Point.fromLngLat(
+            basePoint.longitude() + (dist * kotlin.math.cos(angle)) / metersPerDegreeLng,
+            basePoint.latitude() + (dist * kotlin.math.sin(angle)) / metersPerDegreeLat,
+        )
+    }
 
-    val angle = (angleSeed % 36000) / 36000.0 * 2.0 * kotlin.math.PI
-    val distFraction = (distSeed % 10000) / 10000.0
-    val distance = safeDrift * kotlin.math.sqrt(distFraction)
+    val vx = (finalCenter.longitude() - basePoint.longitude()) * metersPerDegreeLng
+    val vy = (finalCenter.latitude() - basePoint.latitude()) * metersPerDegreeLat
+    val vLen = kotlin.math.sqrt(vx * vx + vy * vy)
 
-    val dLat = (distance * kotlin.math.cos(angle)) / metersPerDegreeLat
-    val dLng = (distance * kotlin.math.sin(angle)) / metersPerDegreeLng
+    val sampleFromA = rA <= rB
+    val sampleR = minOf(rA, rB)
 
-    return Point.fromLngLat(
-        basePoint.longitude() + dLng,
-        basePoint.latitude() + dLat
-    )
+    for (k in 0 until MAX_DRIFT_ATTEMPTS) {
+        val angle = seededRandom(stepSeed, 2 * k) * 2.0 * kotlin.math.PI
+        val dist = sampleR * kotlin.math.sqrt(seededRandom(stepSeed, 2 * k + 1))
+        val ox = dist * kotlin.math.cos(angle)
+        val oy = dist * kotlin.math.sin(angle)
+        val cdx = if (sampleFromA) ox else vx + ox
+        val cdy = if (sampleFromA) oy else vy + oy
+        val checkDx = if (sampleFromA) cdx - vx else cdx
+        val checkDy = if (sampleFromA) cdy - vy else cdy
+        val checkR = if (sampleFromA) rB else rA
+        if (kotlin.math.sqrt(checkDx * checkDx + checkDy * checkDy) <= checkR) {
+            return Point.fromLngLat(
+                basePoint.longitude() + cdx / metersPerDegreeLng,
+                basePoint.latitude() + cdy / metersPerDegreeLat,
+            )
+        }
+    }
+
+    if (vLen > 0) {
+        val pull = minOf(rA, vLen)
+        return Point.fromLngLat(
+            basePoint.longitude() + ((vx / vLen) * pull) / metersPerDegreeLng,
+            basePoint.latitude() + ((vy / vLen) * pull) / metersPerDegreeLat,
+        )
+    }
+    return basePoint
 }
 
 // ── Radius update ────────────────────────────────────
@@ -281,15 +335,15 @@ fun processRadiusUpdate(
     val newNextUpdate = Date(nextUpdate.time + intervalMs)
 
     val newCenter = if (gameMod == GameMod.STAY_IN_THE_ZONE) {
-        val interpolated = interpolateZoneCenter(
-            initialCenter = initialLocation,
-            finalCenter = finalLocation,
-            initialRadius = initialRadius,
-            currentRadius = newRadius.toDouble()
-        )
+        // Drift is independent per shrink: candidate sampled from
+        // `disk(initial, R₀ − rᵢ) ∩ disk(final, rᵢ − FINAL −
+        // safety)`. That enforces both product rules directly — new
+        // circle inside start zone, final zone inside new circle —
+        // while leaving successive intermediate circles free to
+        // overlap each other.
         deterministicDriftCenter(
-            basePoint = interpolated,
-            oldRadius = currentRadius.toDouble(),
+            basePoint = initialLocation,
+            oldRadius = initialRadius,
             newRadius = newRadius.toDouble(),
             driftSeed = driftSeed,
             finalCenter = finalLocation
@@ -305,6 +359,63 @@ fun processRadiusUpdate(
         isGameOver = false,
         gameOverMessage = null
     )
+}
+
+// ── Debug Preview (all shifted circles at once) ──────
+
+/**
+ * A single preview circle entry returned by [computeDebugShiftedCircles]
+ * — the center and radius the zone will hold at each scheduled shrink,
+ * in order.
+ */
+data class DebugShrinkCircle(
+    val center: Point,
+    val radius: Double,
+)
+
+/**
+ * Walks the zone shrink schedule forward from `hunterStartDate` through
+ * `endDate` using the same [interpolateZoneCenter] +
+ * [deterministicDriftCenter] the live timer invokes. Returns one entry
+ * per scheduled shrink, ordered from first to last, stopping early
+ * when the radius would collapse to zero.
+ *
+ * Pure function — only used by the long-press debug preview on the
+ * chicken map to render every future circle simultaneously. Mirrors
+ * the iOS `computeDebugShiftedCircles` sibling.
+ */
+fun computeDebugShiftedCircles(game: dev.rahier.pouleparty.model.Game): List<DebugShrinkCircle> {
+    if (game.gameModEnum != GameMod.STAY_IN_THE_ZONE) return emptyList()
+    val initialRadius = game.zone.radius
+    if (initialRadius <= 0 || game.zone.shrinkIntervalMinutes <= 0) return emptyList()
+
+    val initialCenter = game.initialLocation
+    val finalCenter = game.finalLocation
+    val driftSeed = game.zone.driftSeed
+    val declinePerUpdate = game.zone.shrinkMetersPerUpdate
+    val intervalSeconds = game.zone.shrinkIntervalMinutes * 60.0
+    val duration = (game.endDate.time - game.hunterStartDate.time) / 1000.0
+    if (duration <= 0 || intervalSeconds <= 0) return emptyList()
+
+    val maxShrinks = kotlin.math.floor(duration / intervalSeconds).toInt()
+    val result = mutableListOf<DebugShrinkCircle>()
+    var radius = initialRadius
+    // Drift is independent per shrink — every call uses the initial
+    // center/radius, no state between iterations.
+    for (i in 0 until maxShrinks) {
+        val newRadius = radius - declinePerUpdate
+        if (newRadius <= 0) break
+        val drifted = deterministicDriftCenter(
+            basePoint = initialCenter,
+            oldRadius = initialRadius,
+            newRadius = newRadius,
+            driftSeed = driftSeed,
+            finalCenter = finalCenter,
+        )
+        result.add(DebugShrinkCircle(center = drifted, radius = newRadius))
+        radius = newRadius
+    }
+    return result
 }
 
 // ── Winner detection ─────────────────────────────────

@@ -216,9 +216,13 @@ class GameTimerHelperTest {
     }
 
     @Test
-    fun `radius update uses initial location for stayInTheZone`() {
+    fun `radius update drifts inside start zone for stayInTheZone`() {
+        // After the per-shrink independent sampling rewrite,
+        // `processRadiusUpdate` passes `initialLocation` +
+        // `initialRadius` as the drift base (not previous center).
+        // The resulting circle must fit entirely inside the start
+        // zone — `|C_i − I| + r_i ≤ R₀`.
         val initialLocation = Point.fromLngLat(4.0, 50.0)
-        val currentCenter = Point.fromLngLat(5.0, 51.0)
         val result = processRadiusUpdate(
             nextRadiusUpdate = Date(System.currentTimeMillis() - 1000),
             currentRadius = 1500,
@@ -226,17 +230,18 @@ class GameTimerHelperTest {
             radiusIntervalUpdate = 5.0,
             gameMod = GameMod.STAY_IN_THE_ZONE,
             initialLocation = initialLocation,
-            currentCircleCenter = currentCenter,
-            driftSeed = 12345
+            currentCircleCenter = initialLocation,
+            driftSeed = 12345,
+            initialRadius = 1500.0
         )
         assertNotNull(result)
-        // With drift, center is close to initialLocation but not exactly equal
         val center = result!!.newCircleCenter!!
         val dLat = Math.abs(center.latitude() - initialLocation.latitude()) * 111_320
-        val dLng = Math.abs(center.longitude() - initialLocation.longitude()) * 111_320 * Math.cos(Math.toRadians(initialLocation.latitude()))
+        val dLng = Math.abs(center.longitude() - initialLocation.longitude()) * 111_320 *
+            Math.cos(Math.toRadians(initialLocation.latitude()))
         val distance = Math.sqrt(dLat * dLat + dLng * dLng)
-        // Max drift = min(1400*0.5, 100*0.5) = 50m
-        assertTrue("Drifted center should be within 60m of base point, was ${distance}m", distance < 60)
+        // R₀ − newR = 1500 − 1400 = 100m; drift sampled in disk(I, 100).
+        assertTrue("Drifted center should be within 100m of initial center, was ${distance}m", distance <= 100.01)
     }
 
     // ── deterministicDriftCenter ────────────────────
@@ -275,8 +280,9 @@ class GameTimerHelperTest {
         val dLat = Math.abs(result.latitude() - base.latitude()) * 111_320
         val dLng = Math.abs(result.longitude() - base.longitude()) * 111_320 * Math.cos(Math.toRadians(base.latitude()))
         val distance = Math.sqrt(dLat * dLat + dLng * dLng)
-        // safeDrift = min(1400*0.5, 100*0.5) = 50m
-        assertTrue("Drifted center must be within safeDrift of base, was ${distance}m", distance <= 50.01)
+        // After the drift rewrite, bound = delta = oldR − newR = 100m
+        // (uniform sampling inside disk(basePoint, delta)).
+        assertTrue("Drifted center must be within delta of base, was ${distance}m", distance <= 100.01)
     }
 
     @Test
@@ -455,7 +461,7 @@ class GameTimerHelperTest {
         val dLat = Math.abs(result.latitude() - base.latitude()) * 111_320
         val dLng = Math.abs(result.longitude() - base.longitude()) * 111_320 * Math.cos(Math.toRadians(base.latitude()))
         val distance = Math.sqrt(dLat * dLat + dLng * dLng)
-        assertTrue("Large seed must produce valid drift within bounds, was ${distance}m", distance <= 50.01)
+        assertTrue("Large seed must produce valid drift within bounds, was ${distance}m", distance <= 100.01)
     }
 
     @Test
@@ -465,7 +471,7 @@ class GameTimerHelperTest {
         val dLat = Math.abs(result.latitude() - base.latitude()) * 111_320
         val dLng = Math.abs(result.longitude() - base.longitude()) * 111_320 * Math.cos(Math.toRadians(base.latitude()))
         val distance = Math.sqrt(dLat * dLat + dLng * dLng)
-        assertTrue("Negative seed must produce valid drift, was ${distance}m", distance <= 50.01)
+        assertTrue("Negative seed must produce valid drift, was ${distance}m", distance <= 100.01)
     }
 
     // ── evaluateCountdown with explicit now ──────────
@@ -596,7 +602,7 @@ class GameTimerHelperTest {
         val dLat = Math.abs(result.latitude() - base.latitude()) * 111_320
         val dLng = Math.abs(result.longitude() - base.longitude()) * 111_320 * Math.cos(Math.toRadians(base.latitude()))
         val distance = Math.sqrt(dLat * dLat + dLng * dLng)
-        assertTrue("Int.MAX seed must produce valid drift, was ${distance}m", distance <= 50.01)
+        assertTrue("Int.MAX seed must produce valid drift, was ${distance}m", distance <= 100.01)
     }
 
     @Test
@@ -606,7 +612,7 @@ class GameTimerHelperTest {
         val dLat = Math.abs(result.latitude() - base.latitude()) * 111_320
         val dLng = Math.abs(result.longitude() - base.longitude()) * 111_320 * Math.cos(Math.toRadians(base.latitude()))
         val distance = Math.sqrt(dLat * dLat + dLng * dLng)
-        assertTrue("Int.MIN seed must produce valid drift, was ${distance}m", distance <= 50.01)
+        assertTrue("Int.MIN seed must produce valid drift, was ${distance}m", distance <= 100.01)
     }
 
     @Test
@@ -616,7 +622,10 @@ class GameTimerHelperTest {
         val dLat = Math.abs(result.latitude() - base.latitude()) * 111_320
         val dLng = Math.abs(result.longitude() - base.longitude()) * 111_320 * Math.cos(Math.toRadians(base.latitude()))
         val distance = Math.sqrt(dLat * dLat + dLng * dLng)
-        assertTrue("Tiny drift for tiny radius difference, was ${distance}m", distance <= 0.51)
+        // Tiny shrink step (oldR=1001, newR=1000 → delta=1) means
+        // tiny drift. The new algo samples uniformly in disk(C, 1m),
+        // so the drift is always within 1m of base.
+        assertTrue("Tiny drift for tiny radius difference, was ${distance}m", distance <= 1.01)
     }
 
     @Test
@@ -825,13 +834,18 @@ class GameTimerHelperTest {
     fun `drift center cross-platform parity`() {
         val base = Point.fromLngLat(4.3528, 50.8466)
         data class DriftTest(val oldR: Double, val newR: Double, val seed: Int, val eLat: Double, val eLng: Double)
+        // Regenerated after the drift rewrite (rejection sampling
+        // inside `disk(prev, delta) ∩ disk(final, newRadius)` driven
+        // by splitmix64). Goldens must match the TS reference in
+        // `functions/test/parity.test.ts` and iOS' equivalent block
+        // in `GameTimerLogicTests.swift::driftCenterCrossPlatform…`.
         val tests = listOf(
-            DriftTest(1500.0, 1400.0, 42,     50.846975022854906, 4.352811404529953),
-            DriftTest(1500.0, 1400.0, 12345,  50.846304286836016, 4.35242679292988),
-            DriftTest(1500.0, 1400.0, 999999, 50.846981166449616, 4.353113589623775),
-            DriftTest(1000.0,  900.0, 42,     50.84699857089946,  4.352990826261173),
-            DriftTest(2000.0, 1800.0, 54321,  50.84676052483228,  4.352177942909372),
-            DriftTest( 500.0,  400.0, 1,      50.846909360931114, 4.352834175494442),
+            DriftTest(1500.0, 1400.0, 42,     50.84696960616928,   4.353846433636171),
+            DriftTest(1500.0, 1400.0, 12345,  50.84583912478917,   4.352140612658659),
+            DriftTest(1500.0, 1400.0, 999999, 50.84630221934297,   4.351924973242351),
+            DriftTest(1000.0,  900.0, 42,     50.84611360923295,   4.351984011855909),
+            DriftTest(2000.0, 1800.0, 54321,  50.84742746058778,   4.354741430644523),
+            DriftTest( 500.0,  400.0, 1,      50.845930021862166,  4.353238494648966),
         )
         for (t in tests) {
             val r = deterministicDriftCenter(base, t.oldR, t.newR, t.seed)

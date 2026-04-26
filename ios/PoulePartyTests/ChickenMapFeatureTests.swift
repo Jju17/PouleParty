@@ -283,11 +283,15 @@ struct ChickenMapFeatureTests {
         store.exhaustivity = .off
 
         let newRadius = 500 - Int(game.zone.shrinkMetersPerUpdate)
+        // After the per-shrink independent sampling rewrite,
+        // `processRadiusUpdate` passes (initialCenter, initialRadius)
+        // as the drift base, not (currentCenter, currentRadius).
         let expectedCenter = deterministicDriftCenter(
             basePoint: game.zone.center.toCLCoordinates,
-            oldRadius: 500,
+            oldRadius: game.zone.radius,
             newRadius: Double(newRadius),
-            driftSeed: game.zone.driftSeed
+            driftSeed: game.zone.driftSeed,
+            finalCenter: game.finalLocation
         )
         await store.send(.internal(.timerTicked)) {
             $0.radius = newRadius

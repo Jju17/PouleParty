@@ -40,7 +40,13 @@ object Routes {
     const val HOME = "home"
     const val PLAN_SELECTION = "plan_selection"
     const val GAME_CREATION = "game_creation/{gameId}/{pricingModel}/{numberOfPlayers}/{pricePerPlayerCents}/{depositAmountCents}"
-    const val CHICKEN_MAP = "chicken_map/{gameId}"
+    // `debug` is an optional query-style arg: defaults to false so every
+    // existing navigate-to-chicken-map call site keeps working unchanged.
+    // The long-press easter egg flips it on via [chickenMapDebug].
+    const val CHICKEN_MAP = "chicken_map/{gameId}?debug={debug}"
+    /** Long-press easter egg: hosts [DebugMapSetupScreen] which lets the
+     * user place start + final pins before creating the preview game. */
+    const val DEBUG_MAP_CONFIG = "debug_map_config"
     const val HUNTER_MAP = "hunter_map/{gameId}/{hunterName}"
     const val VICTORY = "victory/{gameId}/{hunterName}/{hunterId}/{isChicken}"
     const val SETTINGS = "settings"
@@ -48,7 +54,8 @@ object Routes {
 
     fun gameCreation(gameId: String, pricingModel: String = "free", numberOfPlayers: Int = 5, pricePerPlayerCents: Int = 0, depositAmountCents: Int = 0) =
         "game_creation/$gameId/$pricingModel/$numberOfPlayers/$pricePerPlayerCents/$depositAmountCents"
-    fun chickenMap(gameId: String) = "chicken_map/$gameId"
+    fun chickenMap(gameId: String) = "chicken_map/$gameId?debug=false"
+    fun chickenMapDebug(gameId: String) = "chicken_map/$gameId?debug=true"
     fun hunterMap(gameId: String, hunterName: String) = "hunter_map/$gameId/${Uri.encode(hunterName)}"
     fun victory(gameId: String, hunterName: String, hunterId: String, isChicken: Boolean = false) =
         "victory/$gameId/${Uri.encode(hunterName)}/${Uri.encode(hunterId)}/$isChicken"
@@ -183,6 +190,14 @@ fun AppNavigation() {
                         popUpTo(Routes.HOME) { inclusive = false }
                     }
                 },
+                onNavigateToChickenMapDebug = { gameId ->
+                    navController.navigate(Routes.chickenMapDebug(gameId)) {
+                        popUpTo(Routes.HOME) { inclusive = false }
+                    }
+                },
+                onNavigateToDebugMapConfig = {
+                    navController.navigate(Routes.DEBUG_MAP_CONFIG)
+                },
                 onNavigateToHunterMap = { gameId, hunterName ->
                     navController.navigate(Routes.hunterMap(gameId, hunterName)) {
                         popUpTo(Routes.HOME) { inclusive = false }
@@ -258,7 +273,13 @@ fun AppNavigation() {
 
         composable(
             route = Routes.CHICKEN_MAP,
-            arguments = listOf(navArgument("gameId") { type = NavType.StringType })
+            arguments = listOf(
+                navArgument("gameId") { type = NavType.StringType },
+                navArgument("debug") {
+                    type = NavType.BoolType
+                    defaultValue = false
+                }
+            )
         ) {
             ChickenMapScreen(
                 onGoToMenu = {
@@ -271,6 +292,17 @@ fun AppNavigation() {
                         popUpTo(Routes.HOME) { inclusive = false }
                     }
                 }
+            )
+        }
+
+        composable(route = Routes.DEBUG_MAP_CONFIG) {
+            dev.rahier.pouleparty.ui.debugpreview.DebugMapSetupScreen(
+                onCancel = { navController.popBackStack() },
+                onLaunched = { gameId ->
+                    navController.navigate(Routes.chickenMapDebug(gameId)) {
+                        popUpTo(Routes.HOME) { inclusive = false }
+                    }
+                },
             )
         }
 

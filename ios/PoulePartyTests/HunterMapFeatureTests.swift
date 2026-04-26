@@ -23,7 +23,8 @@ struct HunterMapFeatureTests {
     @Test func newLocationFetchedUpdatesMapCircleInFollowTheChicken() async {
         // In `followTheChicken`, the zone center IS the chicken's live
         // position, so `chickenLocationStream` → `.newLocationFetched`
-        // must move `mapCircle.center`.
+        // must move `mapCircle.center`. `chickenLocation` is also cached
+        // unconditionally so Radar Ping has a fresh point to reveal.
         var game = Game.mock
         game.gameMode = .followTheChicken
         let store = TestStore(initialState: HunterMapFeature.State(game: game)) {
@@ -32,6 +33,7 @@ struct HunterMapFeatureTests {
 
         let location = CLLocationCoordinate2D(latitude: 50.0, longitude: 4.0)
         await store.send(.internal(.newLocationFetched(location))) {
+            $0.chickenLocation = location
             $0.mapCircle = CircleOverlay(
                 center: location,
                 radius: CLLocationDistance($0.radius)
@@ -60,10 +62,13 @@ struct HunterMapFeatureTests {
         }
 
         // A chicken broadcast arrives 2 km away — this MUST NOT become
-        // the zone center in stayInTheZone.
+        // the zone center in stayInTheZone, but it IS cached in
+        // `chickenLocation` so Radar Ping has a fresh point to reveal.
         let farAwayChicken = CLLocationCoordinate2D(latitude: 50.87, longitude: 4.37)
-        await store.send(.internal(.newLocationFetched(farAwayChicken)))
-        // No state change asserted ⇒ `mapCircle` stays at `driftCenter`.
+        await store.send(.internal(.newLocationFetched(farAwayChicken))) {
+            $0.chickenLocation = farAwayChicken
+        }
+        // `mapCircle` is intentionally not in the asserted change ⇒ stays at `driftCenter`.
     }
 
     @Test func gameConfigUpdatedUpdatesState() async {
@@ -140,11 +145,15 @@ struct HunterMapFeatureTests {
         store.exhaustivity = .off
 
         let newRadius = 500 - Int(game.zone.shrinkMetersPerUpdate)
+        // After the per-shrink independent sampling rewrite,
+        // `processRadiusUpdate` passes (initialCenter, initialRadius)
+        // as the drift base, not (currentCenter, currentRadius).
         let expectedCenter = deterministicDriftCenter(
             basePoint: game.zone.center.toCLCoordinates,
-            oldRadius: 500,
+            oldRadius: game.zone.radius,
             newRadius: Double(newRadius),
-            driftSeed: game.zone.driftSeed
+            driftSeed: game.zone.driftSeed,
+            finalCenter: game.finalLocation
         )
         await store.send(.internal(.timerTicked)) {
             $0.radius = newRadius

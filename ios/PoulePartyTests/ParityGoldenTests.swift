@@ -78,8 +78,8 @@ struct ParityGoldenTests {
             newRadius: 1400,
             driftSeed: 12345
         )
-        #expect(abs(out.latitude - 50.849704286836015) < Self.tolerance)
-        #expect(abs(out.longitude - 4.349626765727747) < Self.tolerance)
+        #expect(abs(out.latitude - 50.84923912478917) < Self.tolerance)
+        #expect(abs(out.longitude - 4.349340564597558) < Self.tolerance)
     }
 
     @Test func driftSeed42_2000to1800() {
@@ -89,8 +89,8 @@ struct ParityGoldenTests {
             newRadius: 1800,
             driftSeed: 42
         )
-        #expect(abs(out.latitude - 48.800889182782186) < Self.tolerance)
-        #expect(abs(out.longitude - 2.3001280811249516) < Self.tolerance)
+        #expect(abs(out.latitude - 48.798715703728135) < Self.tolerance)
+        #expect(abs(out.longitude - 2.301415195768439) < Self.tolerance)
     }
 
     @Test func driftNewRadiusZeroReturnsBase() {
@@ -269,8 +269,8 @@ struct ParityGoldenTests {
             newRadius: 500,
             driftSeed: 777
         )
-        #expect(abs(out.latitude - 50.849217523608516) < Self.tolerance)
-        #expect(abs(out.longitude - 4.34728423145545) < Self.tolerance)
+        #expect(abs(out.latitude - 50.84967128867958) < Self.tolerance)
+        #expect(abs(out.longitude - 4.36869020942804) < Self.tolerance)
     }
 
     @Test func driftNegativeSeed() {
@@ -280,8 +280,8 @@ struct ParityGoldenTests {
             newRadius: 1400,
             driftSeed: -99
         )
-        #expect(abs(out.latitude - 50.85023537723916) < Self.tolerance)
-        #expect(abs(out.longitude - 4.350282673772987) < Self.tolerance)
+        #expect(abs(out.latitude - 50.84948730902404) < Self.tolerance)
+        #expect(abs(out.longitude - 4.349732389167928) < Self.tolerance)
     }
 
     // ─── finalCenter invariant (see functions/test/parity.test.ts) ─
@@ -309,9 +309,11 @@ struct ParityGoldenTests {
             driftSeed: 12345,
             finalCenter: final
         )
-        #expect(abs(out.latitude - 50.84951207475732) < Self.tolerance)
-        #expect(abs(out.longitude - 4.349384165316106) < Self.tolerance)
-        #expect(distMeters(out, final) <= 1400)
+        #expect(abs(out.latitude - 50.851285969721935) < Self.tolerance)
+        #expect(abs(out.longitude - 4.346931114967598) < Self.tolerance)
+        // Invariant: the whole 50 m final-zone disk must fit inside
+        // the drifted circle, not just its centerpoint.
+        #expect(distMeters(out, final) + 50 <= 1400)
     }
 
     @Test func driftMissingFinalLeavesExistingBehaviorUntouched() {
@@ -324,13 +326,18 @@ struct ParityGoldenTests {
             driftSeed: 12345,
             finalCenter: nil
         )
-        #expect(abs(explicitNil.latitude - 50.849704286836015) < Self.tolerance)
-        #expect(abs(explicitNil.longitude - 4.349626765727747) < Self.tolerance)
+        #expect(abs(explicitNil.latitude - 50.84923912478917) < Self.tolerance)
+        #expect(abs(explicitNil.longitude - 4.349340564597558) < Self.tolerance)
     }
 
-    @Test func driftFinalCenterOutsideNewCircleReturnsBase() {
-        // finalCenter 150 m north of base, newRadius 100 → maxFromFinal
-        // clamps to 0, drift returns basePoint verbatim.
+    @Test func driftFinalCenterOutsideNewCircleReturnsValidPoint() {
+        // basePoint 150 m south of finalCenter, newRadius 100 m. The
+        // caller's inductive hypothesis is at its boundary here:
+        // `|base − final| + FINAL_ZONE_RADIUS = 150 + 50 = 200 =
+        // oldRadius`. The feasible candidate region collapses to a
+        // single ring, so all 32 rejection attempts miss and the
+        // deterministic fallback kicks in. Both invariants still hold
+        // on the boundary.
         let base = CLLocationCoordinate2D(latitude: 50.85, longitude: 4.35)
         let farFinal = CLLocationCoordinate2D(
             latitude: 50.85 + 150.0 / 111_320.0,
@@ -343,8 +350,9 @@ struct ParityGoldenTests {
             driftSeed: 12345,
             finalCenter: farFinal
         )
-        #expect(out.latitude == base.latitude)
-        #expect(out.longitude == base.longitude)
+        #expect(distMeters(out, base) <= 100 + 1e-6)
+        // Invariant: full 50 m final zone inside the new circle.
+        #expect(distMeters(out, farFinal) + 50 <= 100 + 1e-6)
     }
 
     @Test func driftInvariantSweepFinalCenterInsideEveryCircle() {
@@ -353,32 +361,35 @@ struct ParityGoldenTests {
         // breaks for any combination, the platform has drifted.
         let initialCenter = CLLocationCoordinate2D(latitude: 50.85, longitude: 4.35)
         let initialRadius = 1500.0
-        let finalDistancesM = [0.0, 100, 400, 700, 1000, 1300, 1499]
+        // Caller's feasibility hypothesis: `|initial − final| +
+        // FINAL_ZONE_RADIUS ≤ initialRadius`. With
+        // FINAL_ZONE_RADIUS = 50, initialRadius = 1500, that caps
+        // finalDistance at 1450; use 1449 for 1 m of slack so the
+        // rejection path has a non-degenerate lens to sample from.
+        let finalDistancesM = [0.0, 100, 400, 700, 1000, 1300, 1449]
         for dM in finalDistancesM {
             let finalCenter = CLLocationCoordinate2D(
                 latitude: initialCenter.latitude + dM / 111_320.0,
                 longitude: initialCenter.longitude
             )
             for seed in 1...100 {
-                var radius = initialRadius
-                for _ in 0..<10 {
-                    let newRadius = radius - 100
+                // Drift is independent per shrink now — no state to
+                // track between iterations, just exercise a range
+                // of newRadius values.
+                for step in 1...10 {
+                    let newRadius = initialRadius - Double(step) * 100
                     if newRadius <= 0 { break }
-                    let interpolated = interpolateZoneCenter(
-                        initialCenter: initialCenter,
-                        finalCenter: finalCenter,
-                        initialRadius: initialRadius,
-                        currentRadius: newRadius
-                    )
                     let drifted = deterministicDriftCenter(
-                        basePoint: interpolated,
-                        oldRadius: radius,
+                        basePoint: initialCenter,
+                        oldRadius: initialRadius,
                         newRadius: newRadius,
                         driftSeed: seed,
                         finalCenter: finalCenter
                     )
-                    #expect(distMeters(drifted, finalCenter) <= newRadius)
-                    radius = newRadius
+                    // Rule 1: drifted circle fits inside start zone.
+                    #expect(distMeters(drifted, initialCenter) + newRadius <= initialRadius + 1e-6)
+                    // Rule 2: full 50 m final zone inside drifted circle.
+                    #expect(distMeters(drifted, finalCenter) + 50 <= newRadius + 1e-6)
                 }
             }
         }

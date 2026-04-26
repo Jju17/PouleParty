@@ -14,6 +14,14 @@ sealed interface HomeIntent {
     object LocationRequiredDismissed : HomeIntent
     object LocationPermissionDenied : HomeIntent
     object CreatePartyTapped : HomeIntent
+    /**
+     * Long-press easter egg on the Create Party button. Spawns a preset
+     * stayInTheZone game (1 min start, 1 h long, current location or
+     * Brussels fallback as both start and final center) and drops the
+     * user straight onto the chicken map with every future shrunk circle
+     * pre-rendered in its own color for side-by-side drift inspection.
+     */
+    object CreatePartyLongPressed : HomeIntent
     object JoinSheetDismissed : HomeIntent
     object ToggleMusic : HomeIntent
     object ActiveGameDismissed : HomeIntent

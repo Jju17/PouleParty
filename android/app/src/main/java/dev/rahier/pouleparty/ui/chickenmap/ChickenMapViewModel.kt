@@ -74,7 +74,14 @@ data class ChickenMapUiState(
     override val powerUpNotification: String? = null,
     override val lastActivatedPowerUpType: PowerUpType? = null,
     val activatingPowerUpId: String? = null,
-    val shouldNavigateToVictory: Boolean = false
+    val shouldNavigateToVictory: Boolean = false,
+    /**
+     * Long-press-on-Create-Party easter egg. When true,
+     * [ChickenMapScreen] draws every future shrunk circle on top of the
+     * map at once, each with its own palette color. Not persisted.
+     */
+    val isDebugPreview: Boolean = false,
+    val debugCircles: List<dev.rahier.pouleparty.ui.gamelogic.DebugShrinkCircle> = emptyList(),
 ) : dev.rahier.pouleparty.ui.map.MapUiState
 
 @HiltViewModel
@@ -87,11 +94,12 @@ class ChickenMapViewModel @Inject constructor(
 ) : BaseMapViewModel(firestoreRepository, locationRepository, analyticsRepository, auth) {
 
     override val gameId: String = savedStateHandle["gameId"] ?: ""
+    private val isDebugPreview: Boolean = savedStateHandle.get<Boolean>("debug") ?: false
     override val playerId: String = auth.currentUser?.uid ?: ""
     override val analyticsRole: String = "chicken"
     override val logTag: String = "ChickenMapVM"
 
-    private val _uiState = MutableStateFlow(ChickenMapUiState())
+    private val _uiState = MutableStateFlow(ChickenMapUiState(isDebugPreview = isDebugPreview))
     val uiState: StateFlow<ChickenMapUiState> = _uiState.asStateFlow()
 
     private val _effects = Channel<ChickenMapEffect>(Channel.BUFFERED)
@@ -140,12 +148,18 @@ class ChickenMapViewModel @Inject constructor(
                 initialRadius = game.zone.radius,
                 currentRadius = lastRadius.toDouble()
             )
+            val debugCircles = if (isDebugPreview) {
+                dev.rahier.pouleparty.ui.gamelogic.computeDebugShiftedCircles(game)
+            } else {
+                emptyList()
+            }
             _uiState.update {
                 it.copy(
                     game = game,
                     radius = lastRadius,
                     nextRadiusUpdate = lastUpdate,
-                    circleCenter = interpolatedCenter
+                    circleCenter = interpolatedCenter,
+                    debugCircles = debugCircles,
                 )
             }
 

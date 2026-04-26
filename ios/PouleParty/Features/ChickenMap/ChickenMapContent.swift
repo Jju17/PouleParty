@@ -40,6 +40,14 @@ struct ChickenMapContent: View {
                 zoneOverlayContent(circle: circle, overlayColor: overlayColor)
             }
 
+            // Debug easter egg: long-press on Create Party populates
+            // `debugCircles` with every future shrunk circle so the
+            // chicken can see the whole drift/shrink sequence at once,
+            // each stroked in its own palette color.
+            if store.isDebugPreview {
+                debugPreviewCirclesContent(circles: store.debugCircles)
+            }
+
             // Final zone glow (always visible for chicken)
             if let finalLocation = store.game.finalLocation {
                 finalZoneGlowContent(center: finalLocation)

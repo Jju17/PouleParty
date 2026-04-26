@@ -3,18 +3,26 @@ package dev.rahier.pouleparty.ui.home
 import android.content.SharedPreferences
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.GeoPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.rahier.pouleparty.AppConstants
 import dev.rahier.pouleparty.data.FirestoreRepository
 import dev.rahier.pouleparty.data.LocationRepository
 import dev.rahier.pouleparty.model.Game
+import dev.rahier.pouleparty.model.GameMod
+import dev.rahier.pouleparty.model.GamePowerUps
 import dev.rahier.pouleparty.model.GameStatus
 import dev.rahier.pouleparty.model.PricingModel
 import dev.rahier.pouleparty.model.Registration
+import dev.rahier.pouleparty.model.Timing
+import dev.rahier.pouleparty.model.Zone
+import dev.rahier.pouleparty.model.calculateNormalModeSettings
 import dev.rahier.pouleparty.ui.gamelogic.PlayerRole
 import dev.rahier.pouleparty.ui.payment.PaymentContext
 import dev.rahier.pouleparty.util.getTrimmedString
+import java.util.Date
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -86,6 +94,7 @@ class HomeViewModel @Inject constructor(
             HomeIntent.LocationRequiredDismissed -> onLocationRequiredDismissed()
             HomeIntent.LocationPermissionDenied -> onLocationPermissionDenied()
             HomeIntent.CreatePartyTapped -> { /* host handles — see [canCreateParty] */ }
+            HomeIntent.CreatePartyLongPressed -> onCreatePartyLongPressed()
             HomeIntent.JoinSheetDismissed -> onJoinSheetDismissed()
             HomeIntent.ToggleMusic -> toggleMusicMuted()
             HomeIntent.ActiveGameDismissed -> dismissActiveGame()
@@ -547,6 +556,25 @@ class HomeViewModel @Inject constructor(
             return false
         }
         return true
+    }
+
+    /**
+     * Debug easter egg: long-press on the Create Party button. Routes
+     * to [DebugMapSetupScreen] where the user places start + final
+     * pins and picks a radius — the actual game creation happens from
+     * that screen's Launch button so timing/seed can be finalized
+     * after the user is done dragging pins.
+     */
+    private fun onCreatePartyLongPressed() {
+        if (!locationRepository.hasFineLocationPermission()) {
+            _uiState.update { it.copy(isShowingLocationRequired = true) }
+            return
+        }
+        if (auth.currentUser?.uid.isNullOrEmpty()) {
+            android.util.Log.e("HomeViewModel", "Debug party: no current user id")
+            return
+        }
+        viewModelScope.launch { _effects.send(HomeEffect.NavigateToDebugMapConfig) }
     }
 
     // ── Pending registration persistence ──────────────────
