@@ -6,6 +6,47 @@ Format: [Keep a Changelog](https://keepachangelog.com/). Versions follow [Semant
 
 ---
 
+## [1.11.5], 2026-05-09
+
+**iOS**: 1.11.5 (1) · **Android**: 1.11.5 (35) · **Functions**: `sendGameNotification` redeploy (staging + prod) for the post-`endDate` notification gate · **Firestore rules**: unchanged
+
+Three bug fixes from the In Progress queue. No new features.
+
+### Fixed
+
+- **Android challenges list scrolls cleanly inside the bottom sheet
+  again (PP-38).** The Material3 `ModalBottomSheet` auto-wires its
+  `NestedScrollConnection` to the nearest scrollable descendant, so a
+  `Box` wrapper between the sheet and the `LazyColumn` was breaking
+  the path: the sheet ate the scroll gestures and a swipe near the
+  bottom sometimes dismissed instead of scrolling. Removed the wrapper
+  and dropped the `fillMaxHeight(0.95f)` trick (the unused 5 % at the
+  bottom of the sheet was a phantom drag area for swipe-to-dismiss).
+  Modifier passes through to the `LazyColumn` directly now. Same fix
+  applied to the Leaderboard tab.
+- **Background music actually pauses when the app loses focus (iOS +
+  Android, PP-39).** iOS used `AVAudioSession.ambient` (correct: not a
+  background-audio app) but had no `scenePhase` observer, so the
+  player kept ticking down a session that was already silenced.
+  Android used `MediaPlayer` without a lifecycle observer for the
+  same reason. Both platforms now pause on backgrounding and resume
+  on foregrounding (respecting the existing mute toggle). Android
+  uses `ON_STOP` / `ON_START`, not `ON_PAUSE` / `ON_RESUME` — the
+  latter pair fires every time the notification shade is pulled and
+  would cut the music for nothing.
+- **Last-tick `zone_shrink` notifications no longer fire after the
+  game is over (PP-40).** `transitionGameStatus` is itself a Cloud
+  Task scheduled at `timing.end`. When a `zone_shrink` task happened
+  to fire at the same instant, the notif handler saw `status` still
+  `"inProgress"` (the transition hadn't run yet) and went out
+  milliseconds after the user already saw "Game Over". Added an
+  `endTimestamp <= now` gate alongside the existing `status === "done"`
+  check. PP-84 (Sprint 2) will rework Cloud Task scheduling with
+  deterministic IDs + cancel-on-cleanup; this is the immediate
+  defensive guard.
+
+---
+
 ## [1.11.4], 2026-04-26
 
 **iOS**: 1.11.4 (1) · **Android**: 1.11.4 (34) · **Functions**: `spawnPowerUpBatch` redeploy (staging + prod) — drift algo touches `interpolateZoneCenterServer` / `deterministicDriftCenterServer`, so power-up snap-to-roads must agree with the new circle math · **Firestore rules**: unchanged

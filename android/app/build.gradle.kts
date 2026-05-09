@@ -24,8 +24,8 @@ android {
         applicationId = "dev.rahier.pouleparty2"
         minSdk = 26
         targetSdk = 35
-        versionCode = 34
-        versionName = "1.11.4"
+        versionCode = 35
+        versionName = "1.11.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

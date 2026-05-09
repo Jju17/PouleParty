@@ -1,3 +1,81 @@
+# Release 1.11.5
+
+> ⚠️ **Do not paste this "Summary" paragraph into any store field.** Only the blocks explicitly labelled **App Store Connect**, **Google Play Console**, or **App Review Notes** below are store-safe.
+
+**Summary (internal, do not paste):** patch release. Three bug fixes lifted from the In Progress queue in PP. (1) PP-38, Android — challenges list now scrolls cleanly inside its `ModalBottomSheet`. The sheet eats the scroll gestures when the `LazyColumn` is wrapped in a `Box` because Material3 only auto-wires its `NestedScrollConnection` to the nearest scrollable descendant. Removed the wrapper, dropped the `fillMaxHeight(0.95f)` trick (the unused 5 % at the bottom of the sheet was a phantom drag area for swipe-to-dismiss), passed the modifier through to the `LazyColumn` directly. Same fix on the Leaderboard tab. (2) PP-39, iOS + Android — background music actually pauses when the app loses focus. iOS adds a `scenePhase` observer; Android adds `LifecycleEventEffect(ON_STOP / ON_START)` (not `ON_PAUSE` / `ON_RESUME`, those fire every time the notification shade is pulled). Mute toggle still authoritative. (3) PP-40, Functions — last-tick `zone_shrink` notification no longer fires after `timing.end`. `transitionGameStatus` is itself a Cloud Task scheduled at end, and a concurrent `zone_shrink` could fire milliseconds before the transition committed, see `status: "inProgress"`, and ship a notif right after the user already saw "Game Over". Added an `endTimestamp <= now` gate alongside the existing `status === "done"` check. PP-84 (Sprint 2) will rework Cloud Task scheduling with deterministic IDs + cancel-on-cleanup; this is the immediate guard. Functions need redeploy (staging + prod). No rules, no web changes.
+
+---
+
+## 📱 App Store Connect — field "What's New in This Version"
+
+**English (U.S.)**
+
+Three small bug fixes. The challenges list now scrolls properly on Android, the background music pauses when you switch away from the app, and the zone-shrink notification stops firing the instant the game ends. No new features.
+
+**French**
+
+Trois petits fixes. La liste des défis scroll correctement sur Android, la musique d'ambiance se met en pause quand l'app passe en arrière-plan, et la notif « la zone se réduit » ne tombe plus juste après la fin de la partie. Pas de nouveautés.
+
+**Dutch**
+
+Drie kleine fixes. De uitdagingenlijst scrollt nu correct op Android, de achtergrondmuziek pauzeert wanneer je naar een andere app gaat, en de "zone krimpt"-melding valt niet meer net na het einde van de partij. Geen nieuwe features.
+
+---
+
+## 📱 App Store Connect — field "Promotional Text"
+
+Unchanged from 1.9.1 onward. Only repaste if ASC lost the copy. See the 1.11.3 section below.
+
+---
+
+## 🤖 Google Play Console — field "Release notes"
+
+<en-US>
+Three bug fixes. The challenges list scrolls properly inside its sheet again (the sheet was eating gestures and sometimes dismissing on a swipe). Background music pauses when the app loses focus and resumes when you come back, respecting the mute toggle. The "zone is shrinking" notification no longer fires for a beat after the game has actually ended.
+</en-US>
+
+<fr-FR>
+Trois fixes. La liste des défis scroll correctement dans son sheet (le sheet capturait les gestes et fermait parfois sur un swipe). La musique d'ambiance se met en pause quand l'app passe en arrière-plan et reprend au retour, en respectant le toggle muet. La notif « la zone se réduit » ne tombe plus juste après la fin de partie.
+</fr-FR>
+
+<nl-NL>
+Drie fixes. De uitdagingenlijst scrollt weer correct in zijn sheet (de sheet ving de gestures en sloot soms bij een swipe). De achtergrondmuziek pauzeert wanneer de app naar de achtergrond gaat en hervat bij terugkeer, met respect voor de mute-knop. De "zone krimpt"-melding valt niet meer net na het einde van de partij.
+</nl-NL>
+
+---
+
+## 📝 App Store Connect — field "App Review Information → Notes"
+
+Paste into the App Review Information → Notes field:
+
+```
+Hello reviewer. Routine patch for 1.11.5 — three bug fixes, no changes
+to permissions, paid flows, or App Store-relevant copy:
+
+1. Android-only: scroll behaviour inside a Material3 bottom sheet.
+2. Both platforms: pause background music when the app loses focus.
+3. Backend: a server-side guard against a last-tick notification
+   firing after the game has already ended.
+
+The paid Stripe flows are unchanged from 1.11.3. Reproduction kept
+for reference if needed:
+
+- Forfait: tap "Create Party" → choose "Forfait" → wizard → "Pay".
+  Stripe PaymentSheet appears with Apple Pay (when wallet present),
+  card, and Bancontact (EUR) via automatic_payment_methods.
+- Caution: tap "Start" → enter a Caution game code → "Pay". Same sheet.
+- Apple Pay button visibility is decided by the Stripe SDK based on
+  PassKit (PKPaymentAuthorizationViewController.canMakePayments) — on
+  a wallet-less reviewer device the button is intentionally hidden.
+  This is by design, not a bug.
+
+Promotion code APPLE_REVIEW_99 (99% off Forfait) is live in Stripe
+production for reviewer use. Merchant ID merchant.dev.rahier.pouleparty,
+entitlement com.apple.developer.in-app-payments.
+```
+
+---
+
 # Release 1.11.4
 
 > ⚠️ **Do not paste this "Summary" paragraph into any store field.** Only the blocks explicitly labelled **App Store Connect**, **Google Play Console**, or **App Review Notes** below are store-safe.
