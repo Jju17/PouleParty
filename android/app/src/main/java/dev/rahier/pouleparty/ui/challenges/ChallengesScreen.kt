@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -77,14 +77,17 @@ fun ChallengesSheet(
         sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.background
     ) {
+        // Fill the sheet entirely. Don't use fillMaxHeight(0.95f): the 5% of
+        // empty space at the bottom belongs to the sheet and hijacks vertical
+        // drags as swipe-to-dismiss. Don't wrap the LazyColumn in a Box either:
+        // ModalBottomSheet auto-wires its NestedScrollConnection to the nearest
+        // scrollable descendant, and a Box wrapper breaks that path on
+        // Material3 (PP-38).
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.95f)
+                .fillMaxSize()
                 .navigationBarsPadding()
         ) {
-            // Title bar — title left, close button right. The ModalBottomSheet's
-            // default drag handle renders above this row and signals swipe-to-dismiss.
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -107,22 +110,18 @@ fun ChallengesSheet(
             }
             HorizontalDivider()
 
-            // Scrollable content area
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-            ) {
-                when (state.selectedTab) {
-                    ChallengesTab.CHALLENGES -> ChallengesTabContent(
-                        state = state,
-                        onValidateTapped = { viewModel.onIntent(ChallengesIntent.ValidateTapped(it)) }
-                    )
-                    ChallengesTab.LEADERBOARD -> LeaderboardTabContent(state = state)
-                }
+            when (state.selectedTab) {
+                ChallengesTab.CHALLENGES -> ChallengesTabContent(
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    state = state,
+                    onValidateTapped = { viewModel.onIntent(ChallengesIntent.ValidateTapped(it)) }
+                )
+                ChallengesTab.LEADERBOARD -> LeaderboardTabContent(
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    state = state
+                )
             }
 
-            // Fixed-bottom segmented picker
             SegmentedTabBar(
                 selected = state.selectedTab,
                 onSelected = { viewModel.onIntent(ChallengesIntent.TabSelected(it)) }
@@ -193,12 +192,13 @@ private fun SegmentedTabBar(
 
 @Composable
 private fun ChallengesTabContent(
+    modifier: Modifier = Modifier,
     state: ChallengesUiState,
     onValidateTapped: (Challenge) -> Unit
 ) {
     if (state.challenges.isEmpty()) {
         Box(
-            modifier = Modifier.fillMaxWidth().padding(32.dp),
+            modifier = modifier.padding(32.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(
@@ -211,6 +211,7 @@ private fun ChallengesTabContent(
     }
     val completedIds = state.completedIdsForCurrentHunter
     LazyColumn(
+        modifier = modifier,
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -300,11 +301,14 @@ private fun ChallengeRow(
 }
 
 @Composable
-private fun LeaderboardTabContent(state: ChallengesUiState) {
+private fun LeaderboardTabContent(
+    modifier: Modifier = Modifier,
+    state: ChallengesUiState
+) {
     val entries = state.leaderboardEntries
     if (entries.isEmpty()) {
         Box(
-            modifier = Modifier.fillMaxWidth().padding(32.dp),
+            modifier = modifier.padding(32.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(
@@ -318,6 +322,7 @@ private fun LeaderboardTabContent(state: ChallengesUiState) {
     val topThree = entries.take(3)
     val others = entries.drop(3)
     LazyColumn(
+        modifier = modifier,
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {

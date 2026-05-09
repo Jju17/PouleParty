@@ -658,6 +658,7 @@ struct HomeFeature {
 
 struct HomeView: View {
     @Bindable var store: StoreOf<HomeFeature>
+    @Environment(\.scenePhase) private var scenePhase
     @State private var isVisible = true
     @State private var audioPlayer: AVAudioPlayer?
     @State private var musicButtonScale: CGFloat = 1.0
@@ -836,6 +837,18 @@ struct HomeView: View {
                 self.audioPlayer?.pause()
             } else {
                 self.audioPlayer?.play()
+            }
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            switch newPhase {
+            case .background, .inactive:
+                self.audioPlayer?.pause()
+            case .active:
+                if !store.musicMuted {
+                    self.audioPlayer?.play()
+                }
+            @unknown default:
+                break
             }
         }
         .task {

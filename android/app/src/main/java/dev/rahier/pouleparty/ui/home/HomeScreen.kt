@@ -110,6 +110,15 @@ fun HomeScreen(
         }
     }
 
+    // PP-39: pause on backgrounding, resume on foregrounding (respecting mute).
+    // ON_STOP fires when the app goes to background; ON_START when it returns.
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
+        if (mediaPlayer.isPlaying) mediaPlayer.pause()
+    }
+    LifecycleEventEffect(Lifecycle.Event.ON_START) {
+        if (!state.isMusicMuted && !mediaPlayer.isPlaying) mediaPlayer.start()
+    }
+
     var isPendingBannerCollapsed by remember { mutableStateOf(false) }
     var isShowingPlanSelection by remember { mutableStateOf(false) }
     var pendingPermissionAction by remember { mutableStateOf<PendingPermissionAction>(PendingPermissionAction.None) }

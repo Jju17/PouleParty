@@ -192,6 +192,13 @@ export const sendGameNotification = onTaskDispatched(
 
     const game = doc.data()!;
     if (game.status === "done") return;
+    // PP-40: catch the race where transitionGameStatus is itself a Cloud Task
+    // scheduled at timing.end and a concurrent zone_shrink (or last-tick
+    // notif) fires at the same instant. Without this gate, the notif sees
+    // status === "inProgress" (transition hasn't run yet) and goes out
+    // milliseconds after the user already saw "Game Over".
+    const endTimestamp = (game.timing as { end?: Timestamp } | undefined)?.end?.toDate();
+    if (endTimestamp && endTimestamp.getTime() <= Date.now()) return;
 
     let userIds: string[];
 

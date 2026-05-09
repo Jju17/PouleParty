@@ -1,5 +1,101 @@
 # TODO PouleParty
 
+## 🛡 Audit complet 2026-05-08 — résumé
+
+Audit transverse code + backlog Jira lancé le 8 mai. Tous les findings sont
+trackés dans l'epic **PP-78 (Hardening sécurité)** et ses 7 sous-tickets.
+Cible code freeze : sam 24 mai (fin Sprint 3). Cible D-Day : sam 6 juin.
+
+Voir aussi `project_jira_review_state.md` pour l'état complet du backlog.
+
+### Critique (à fermer avant code freeze)
+
+* **PP-79** Hardening field-level `firestore.rules`. Sept failles exploitables
+  par un hunter authentifié : forge de winners sans `foundCode`, activation
+  `zoneFreeze` sans collecte, lecture `chickenLocations` en `stayInTheZone`,
+  hunters qui se voient entre eux quand `chickenCanSeeHunters=false`,
+  `challengeCompletions.totalPoints` writable sans bornes, `gameCode` et
+  `payment` mutables côté creator, logique inverse line 40, et le check
+  `request.time < timing.end` manquant sur `challengeSubmissions.create`.
+* **PP-80** Auth + App Check sur `registerForEvent` + `getRegistrationCount`.
+  Endpoints publics sans auth, spam direct possible, cap `MAX_REGISTRATIONS`
+  pas re-vérifié dans la transaction. PP-52 va bientôt envoyer du trafic
+  réel sur ces endpoints.
+* **PP-84** Cloud Tasks idempotence via `taskId` déterministe. Probable racine
+  de **PP-40** (notif zone post-done). Closes PP-40 via le lien Blocks créé.
+* **PP-85** Composite indexes Firestore explicites. `firestore.indexes.json`
+  est vide, le code lance au moins 3 requêtes composites. Risque de
+  `FAILED_PRECONDITION` au cold-start D-Day en prod.
+
+### Élevé
+
+* **PP-83** Suppression `service-account.json` du bundle Cloud Functions. ADC
+  suffit en prod, ce fichier voyage dans tous les déploiements.
+* **PP-81** `redeemFreeCreation` atomique (transaction + lock `promoCodeId`).
+  **Caduque si PP-9 (suppression Stripe) ferme avant.**
+* **PP-82** Validation `pi.amount_received` dans le webhook Stripe. **Caduque
+  si PP-9 ferme avant.**
+
+### Drifts iOS / Android non couverts par les goldens
+
+À ajouter en post-launch ou en backlog (pas dans PP-78, pas critique D-Day) :
+
+* `findLastUpdate` jamais pinnée par golden cross-platform. C'est exactement
+  la fonction qui a cassé en 1.11.2.
+* `processRadiusUpdate`, `calculateNormalModeSettings`, `evaluateCountdown`,
+  `computeDebugShiftedCircles` : aucun golden parité non plus.
+* `evaluateCountdown` Android filtre `number > 0`, iOS non. Aligner par
+  symétrie.
+* `generatePowerUps` Android `Int` 32 bits → wrap silencieux pour `driftSeed`
+  au-delà de ~7×10⁷. Pas critique en runtime depuis que le spawn est
+  server-authoritative, mais le mirror parity-test peut diverger.
+
+### Race conditions Cloud Functions (non bloquant D-Day)
+
+* `transitionGameStatus` non transactionnel (`functions/src/index.ts:265-275`).
+  Race avec un cancel client peut écraser `done` en `inProgress`.
+* Dedupe winners par `update` (`functions/src/index.ts:757-850`) peut
+  écraser des écritures concurrentes.
+* `cleanupAbandonedPendingGames` ne supprime pas les sous-collections. Fuite
+  de stockage Firestore au fil des mois.
+* `getOrCreateCustomer` race (`functions/src/stripe.ts:283-299`). Caduque
+  après PP-9.
+
+### Cohérence Jira ↔ code
+
+* **PP-73** marqué Done mais le cleanup post-Stripe n'a PAS eu lieu.
+  CLAUDE.md a encore 11 occurrences "Stripe", `firestore.rules` 5,
+  le module CF entier intact. À rouvrir ou clarifier que c'est PP-43 / PP-44 /
+  PP-47 qui s'en chargent.
+* Renommage `completedChallengeIds` → `validatedChallengeIds` mentionné par
+  PP-25 / PP-27 / PP-66 / PP-68 sans ticket de migration explicite. Risque de
+  half-merge.
+* 9 issue links Jira inversés : PP-66, PP-68, PP-37, PP-19, PP-72, PP-77,
+  PP-13, PP-14, PP-71 ont des liens "Blocks" dans le mauvais sens. Le board
+  affiche les blocages à l'envers. À flipper en `is blocked by` (10 min UI).
+* Drift doc CLAUDE.md : champ FCM appelé `fcmToken` dans la doc mais `token`
+  dans le code (iOS + Android + CF). Pas de bug runtime.
+* `reports` collection présente dans rules + iOS code mais absente de
+  CLAUDE.md.
+
+### Charge Sprint 3 infaisable telle quelle
+
+Sprint 3 (17-24 mai, code freeze 24 mai à la fin du sprint) compte 16
+tickets dev pour un solo dev sur 8 jours = ~1 ticket/jour. Tendu mais
+faisable sans descope. Pas de retrait de scope tant que la cadence Sprint 2
+ne dérape pas.
+
+* **PP-32** Gating UI 80% (cosmétique pure)
+* **PP-33** Page web imprimable challenges (un PDF statique suffit)
+* **PP-65** + **PP-68** Tests UI snapshot
+* **PP-21** Mécanisme de rappel local 2-tap
+
+À garder absolument : **PP-2** chain (gameOver UX), **PP-25** (validation
+challenges, indispensable pour bars), **PP-71** (LAUNCH GAME, demande
+métier explicite).
+
+---
+
 ## 🚨 URGENT — auto-remplir `game.name` avec "Game {code}"
 
 ### Contexte

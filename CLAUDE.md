@@ -161,6 +161,7 @@ See `firestore.rules`. Key principle: the creator has full control over their ga
 - Color palette: CRBeige, CROrange (#FE6A00), CRPink (#EF0778) — consistent hex values across platforms
 - Dark mode: fully supported everywhere
 - Profanity filter on nicknames (FR + EN, with leetspeak detection)
+- **Player identifiers**: `teamName` is the label displayed everywhere in gameplay (map markers, leaderboard, submissions, GameMaster drawer, validation queue). `nickname` (= username) is an internal identifier for settings, profile, and auth — never displayed in gameplay. Every hunter must have a teamName (registration required, or teamName defaults to nickname if not provided).
 - Game codes: 6 chars, found codes: 4 digits
 - All Firestore write operations use retry logic (3 attempts, exponential backoff)
 - When adding a new feature, keep parity between iOS and Android implementations
