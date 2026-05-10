@@ -12,9 +12,7 @@ import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameMod
 import dev.rahier.pouleparty.model.GamePowerUps
 import dev.rahier.pouleparty.model.GameRegistration
-import dev.rahier.pouleparty.model.Pricing
 import dev.rahier.pouleparty.powerups.model.PowerUpType
-import dev.rahier.pouleparty.ui.payment.PaymentContext
 import dev.rahier.pouleparty.model.Timing
 import dev.rahier.pouleparty.model.Zone
 import dev.rahier.pouleparty.model.calculateNormalModeSettings
@@ -42,8 +40,6 @@ data class GameCreationUiState(
     val alertMessage: String = "",
     val codeCopied: Boolean = false,
     val goingForward: Boolean = true,
-    /** Non-null when the Forfait creator payment screen should be shown as an overlay. */
-    val paymentContext: PaymentContext? = null,
     /** PP-42: lifts the maxPlayers stepper from `2..5` (Free standard) to
      *  `2..500`. Always `false` in PP-42; PP-45 will flip it via the
      *  `jujurahier` admin code modal. */
@@ -126,10 +122,6 @@ class GameCreationViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val gameId: String = savedStateHandle["gameId"] ?: ""
-    private val pricingModel: String = savedStateHandle["pricingModel"] ?: "free"
-    private val numberOfPlayers: Int = savedStateHandle["numberOfPlayers"] ?: 5
-    private val pricePerPlayerCents: Int = savedStateHandle["pricePerPlayerCents"] ?: 0
-    private val depositAmountCents: Int = savedStateHandle["depositAmountCents"] ?: 0
     private val isAdminCreation: Boolean = savedStateHandle["isAdminCreation"] ?: false
 
     private val _uiState = MutableStateFlow(
@@ -138,7 +130,7 @@ class GameCreationViewModel @Inject constructor(
             game = Game(
                 id = gameId,
                 name = "",
-                maxPlayers = numberOfPlayers,
+                maxPlayers = 5,
                 zone = Zone(
                     radius = 1500.0,
                     shrinkIntervalMinutes = 5.0,
@@ -150,15 +142,7 @@ class GameCreationViewModel @Inject constructor(
                 ),
                 gameMode = GameMod.STAY_IN_THE_ZONE.firestoreValue,
                 foundCode = Game.generateFoundCode(),
-                creatorId = auth.currentUser?.uid ?: "",
-                pricing = Pricing(
-                    model = pricingModel,
-                    pricePerPlayer = pricePerPlayerCents,
-                    deposit = depositAmountCents
-                ),
-                registration = GameRegistration(
-                    required = pricingModel == "deposit"
-                )
+                creatorId = auth.currentUser?.uid ?: ""
             )
         )
     )
@@ -344,8 +328,6 @@ class GameCreationViewModel @Inject constructor(
 
     private fun toggleRequiresRegistration(value: Boolean) {
         _uiState.update { state ->
-            // Deposit games always require registration
-            if (state.game.pricing.model == "deposit" && !value) return@update state
             val updatedGame = state.game.copy(
                 registration = state.game.registration.copy(
                     required = value,
@@ -433,7 +415,6 @@ class GameCreationViewModel @Inject constructor(
                 analyticsRepository.gameCreated(
                     gameMode = finalGame.gameMode,
                     maxPlayers = finalGame.maxPlayers,
-                    pricingModel = finalGame.pricing.model,
                     powerUpsEnabled = finalGame.powerUps.enabled
                 )
                 _effects.send(GameCreationEffect.GameStarted(finalGame.id))
@@ -446,24 +427,5 @@ class GameCreationViewModel @Inject constructor(
                 }
             }
         }
-    }
-
-    fun onCreatorPaymentCompleted(gameId: String) {
-        val finalGame = _uiState.value.game
-        analyticsRepository.gameCreated(
-            gameMode = finalGame.gameMode,
-            maxPlayers = finalGame.maxPlayers,
-            pricingModel = finalGame.pricing.model,
-            powerUpsEnabled = finalGame.powerUps.enabled
-        )
-        _uiState.update { it.copy(paymentContext = null) }
-        // Forfait game is created server-side in `pending_payment`. Dismiss creation
-        // UI and surface a soft toast — the game appears in Settings > My Games
-        // once the webhook flips status to `waiting` (a second or two later).
-        viewModelScope.launch { _effects.send(GameCreationEffect.PaidGameCreated(gameId)) }
-    }
-
-    fun onPaymentCancelled() {
-        _uiState.update { it.copy(paymentContext = null) }
     }
 }

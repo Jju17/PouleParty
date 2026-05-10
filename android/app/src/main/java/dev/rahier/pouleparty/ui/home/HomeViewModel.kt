@@ -14,13 +14,11 @@ import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameMod
 import dev.rahier.pouleparty.model.GamePowerUps
 import dev.rahier.pouleparty.model.GameStatus
-import dev.rahier.pouleparty.model.PricingModel
 import dev.rahier.pouleparty.model.Registration
 import dev.rahier.pouleparty.model.Timing
 import dev.rahier.pouleparty.model.Zone
 import dev.rahier.pouleparty.model.calculateNormalModeSettings
 import dev.rahier.pouleparty.ui.gamelogic.PlayerRole
-import dev.rahier.pouleparty.ui.payment.PaymentContext
 import dev.rahier.pouleparty.util.getTrimmedString
 import java.util.Date
 import kotlinx.coroutines.channels.Channel
@@ -38,13 +36,6 @@ data class HomeUiState(
     val isShowingGameRules: Boolean = false,
     val isShowingGameNotFound: Boolean = false,
     val isShowingLocationRequired: Boolean = false,
-    /**
-     * The Stripe PaymentSheet confirmed a deposit but no matching
-     * `registrations/{uid}` doc appeared within the verification window —
-     * surface an error so the user can contact the organizer instead of
-     * showing a ghost "pending" banner indefinitely.
-     */
-    val isShowingPaymentVerificationFailed: Boolean = false,
     val isMusicMuted: Boolean = false,
     val gameCode: String = "",
     val teamName: String = "",
@@ -55,8 +46,6 @@ data class HomeUiState(
      *  (UPCOMING) for the Home banner copy + CTA. Null when no active game. */
     val activeGamePhase: dev.rahier.pouleparty.ui.gamelogic.GamePhase? = null,
     val pendingRegistration: PendingRegistration? = null,
-    /** Non-null when the hunter Caution payment screen should be shown as an overlay. */
-    val paymentContext: PaymentContext? = null,
 ) {
     val isCodeValid: Boolean
         get() {
@@ -104,7 +93,6 @@ class HomeViewModel @Inject constructor(
             HomeIntent.JoinValidatedGameTapped -> joinValidatedGame()
             HomeIntent.PendingRegistrationJoinTapped -> joinPendingRegistration()
             HomeIntent.RefreshActiveGame -> checkForActiveGame()
-            HomeIntent.PaymentVerificationDismissed -> _uiState.update { it.copy(isShowingPaymentVerificationFailed = false) }
             HomeIntent.AdminModeTapped -> { /* PP-45 fills in the admin code modal. */ }
             HomeIntent.WebCreatePartyTapped -> { /* PP-46 fills in the localized web CTA. */ }
             is HomeIntent.GameCodeChanged -> onGameCodeChanged(intent.code)
@@ -231,14 +219,14 @@ class HomeViewModel @Inject constructor(
         val savedNickname = prefs.getTrimmedString(AppConstants.PREF_USER_NICKNAME)
         val hunterName = savedNickname.ifEmpty { "Hunter" }
         viewModelScope.launch {
-            // Refetch to catch games that transitioned to done / pending_payment
-            // between the banner being shown and the tap. Falls back to the
-            // cached game if the refetch fails (better UX than freezing on a
-            // transient network error).
+            // Refetch to catch games that transitioned to done between the
+            // banner being shown and the tap. Falls back to the cached game
+            // if the refetch fails (better UX than freezing on a transient
+            // network error).
             val fresh = runCatching { firestoreRepository.getConfig(cachedGame.id) }.getOrNull()
             val game = fresh ?: cachedGame
             when (game.gameStatusEnum) {
-                GameStatus.PENDING_PAYMENT, GameStatus.PAYMENT_FAILED, GameStatus.DONE -> {
+                GameStatus.DONE -> {
                     _uiState.update { it.copy(isShowingGameNotFound = true) }
                     return@launch
                 }
@@ -365,22 +353,13 @@ class HomeViewModel @Inject constructor(
         val userId = auth.currentUser?.uid ?: return
         if (userId.isEmpty()) return
         val game = step.game
-
-        // Caution: registration is created server-side by the Stripe webhook after
-        // a successful deposit PaymentIntent. Client must never set `paid: true` —
-        // rules block it. Route through the PaymentScreen overlay instead.
-        if (game.pricingModelEnum == PricingModel.DEPOSIT) {
-            _uiState.update { it.copy(paymentContext = PaymentContext.HunterCaution(gameId = game.id)) }
-            return
-        }
-
         val teamName = _uiState.value.teamName.trim()
         _uiState.update { it.copy(joinStep = JoinFlowStep.SubmittingRegistration(game)) }
         viewModelScope.launch {
             try {
                 val registration = Registration(userId = userId, teamName = teamName, paid = false)
                 firestoreRepository.createRegistration(game.id, registration)
-                analyticsRepository.registrationCompleted(pricingModel = game.pricing.model)
+                analyticsRepository.registrationCompleted()
                 val pending = PendingRegistration(
                     gameId = game.id,
                     gameCode = game.gameCode,
@@ -403,92 +382,10 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun onHunterPaymentCompleted() {
-        val step = _uiState.value.joinStep
-        val game = (step as? JoinFlowStep.Registering)?.game ?: return
-        val teamName = _uiState.value.teamName.trim()
-        analyticsRepository.registrationCompleted(pricingModel = game.pricing.model)
-        // Optimistic UI: show the pending banner right away so the user gets
-        // feedback, but kick off a verification task to confirm the Stripe
-        // webhook actually wrote the registration doc. If the webhook never
-        // fires (network / Cloud Tasks failure / rotated secret), clear the
-        // banner + surface an error instead of leaving a ghost pending.
-        val pending = PendingRegistration(
-            gameId = game.id,
-            gameCode = game.gameCode,
-            teamName = teamName,
-            startMs = game.startDate.time
-        )
-        savePendingRegistration(pending)
-        _uiState.update {
-            it.copy(
-                paymentContext = null,
-                pendingRegistration = pending,
-                isShowingJoinSheet = false,
-                gameCode = "",
-                teamName = "",
-                joinStep = JoinFlowStep.EnteringCode,
-            )
-        }
-        val userId = auth.currentUser?.uid
-        viewModelScope.launch {
-            _effects.send(HomeEffect.NavigateToPaymentConfirmed(game.id, "hunter_caution"))
-            if (userId.isNullOrEmpty()) return@launch
-            val confirmed = verifyHunterRegistrationPaid(game.id, userId)
-            if (!confirmed) {
-                clearPendingRegistration()
-                _uiState.update { it.copy(pendingRegistration = null, isShowingPaymentVerificationFailed = true) }
-            }
-        }
-    }
-
-    /**
-     * Polls `findRegistration(gameId, uid)` every `POLL_INTERVAL_MS` until it
-     * returns `paid=true` or the `TOTAL_TIMEOUT_MS` budget is exhausted.
-     * Returns true iff the Stripe webhook confirmed the deposit. The polling
-     * runs as a background coroutine — the caller controls the UI.
-     */
-    private suspend fun verifyHunterRegistrationPaid(gameId: String, userId: String): Boolean {
-        val POLL_INTERVAL_MS = 3_000L
-        val TOTAL_TIMEOUT_MS = 30_000L
-        val start = System.currentTimeMillis()
-        while (System.currentTimeMillis() - start < TOTAL_TIMEOUT_MS) {
-            val registration = runCatching {
-                firestoreRepository.findRegistration(gameId, userId)
-            }.getOrNull()
-            if (registration != null && registration.paid) {
-                return true
-            }
-            kotlinx.coroutines.delay(POLL_INTERVAL_MS)
-        }
-        return false
-    }
-
-    fun onPaymentCancelled() {
-        _uiState.update { it.copy(paymentContext = null) }
-    }
-
     private fun joinValidatedGame() {
         val step = _uiState.value.joinStep
         if (step !is JoinFlowStep.CodeValidated) return
         if (step.game.registration.required && !step.alreadyRegistered) return
-
-        // Bail out loudly for payment-limbo games: previously we fell through
-        // to `return@launch`, dropping the user back on Home with no feedback
-        // while their tap silently did nothing.
-        if (step.game.gameStatusEnum == GameStatus.PENDING_PAYMENT ||
-            step.game.gameStatusEnum == GameStatus.PAYMENT_FAILED) {
-            _uiState.update {
-                it.copy(
-                    isShowingJoinSheet = false,
-                    gameCode = "",
-                    teamName = "",
-                    joinStep = JoinFlowStep.EnteringCode,
-                    isShowingGameNotFound = true,
-                )
-            }
-            return
-        }
 
         val savedNickname = prefs.getTrimmedString(AppConstants.PREF_USER_NICKNAME)
         val hunterName = savedNickname.ifEmpty { "Hunter" }
@@ -506,7 +403,6 @@ class HomeViewModel @Inject constructor(
             val effect = when (step.game.gameStatusEnum) {
                 GameStatus.WAITING, GameStatus.IN_PROGRESS -> HomeEffect.NavigateToHunterMap(step.game.id, hunterName)
                 GameStatus.DONE -> HomeEffect.NavigateToGameDone(step.game.id)
-                GameStatus.PENDING_PAYMENT, GameStatus.PAYMENT_FAILED -> return@launch
             }
             _effects.send(effect)
         }
@@ -527,10 +423,6 @@ class HomeViewModel @Inject constructor(
             val effect = when (game.gameStatusEnum) {
                 GameStatus.WAITING, GameStatus.IN_PROGRESS -> HomeEffect.NavigateToHunterMap(game.id, hunterName)
                 GameStatus.DONE -> HomeEffect.NavigateToGameDone(game.id)
-                GameStatus.PENDING_PAYMENT, GameStatus.PAYMENT_FAILED -> {
-                    _uiState.update { it.copy(isShowingGameNotFound = true) }
-                    return@launch
-                }
             }
             _effects.send(effect)
         }

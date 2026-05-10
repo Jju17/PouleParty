@@ -121,26 +121,6 @@ fun RecapStep(
                         value = if (game.chickenCanSeeHunters) "Yes" else "No"
                     )
                 }
-                if (game.isPaid) {
-                    HorizontalDivider()
-                    RecapRow(
-                        label = stringResource(R.string.pricing),
-                        value = game.pricingModelEnum.title
-                    )
-                    HorizontalDivider()
-                    val totalCents = game.pricing.pricePerPlayer * game.maxPlayers
-                    RecapRow(
-                        label = stringResource(R.string.total_price),
-                        value = String.format("%.2f€", totalCents / 100.0)
-                    )
-                    if (game.pricing.deposit > 0) {
-                        HorizontalDivider()
-                        RecapRow(
-                            label = stringResource(R.string.deposit),
-                            value = String.format("%.2f€", game.pricing.deposit / 100.0)
-                        )
-                    }
-                }
                 HorizontalDivider()
                 RecapRow(
                     label = stringResource(R.string.registration),

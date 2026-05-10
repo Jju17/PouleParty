@@ -4,7 +4,6 @@
     <string name="start">START</string>
     <string name="press_start">Druk op start om te spelen</string>
     <string name="rules">Regels</string>
-    <string name="continue_label">Doorgaan</string>
     <string name="join_game">Meedoen aan spel</string>
     <string name="join">Deelnemen</string>
     <string name="cancel">Annuleren</string>
@@ -12,8 +11,6 @@
     <string name="close">Sluiten</string>
     <string name="game_not_found">Spel niet gevonden</string>
     <string name="game_not_found_message">Geen actief spel gevonden met deze code. Controleer de code en probeer opnieuw.</string>
-    <string name="payment_verification_failed_title">Betalingsverificatie mislukt</string>
-    <string name="payment_verification_failed_message">We hebben je betaling ontvangen, maar konden je inschrijving niet bevestigen. Als je bent afgeschreven, neem dan contact op met de organisator — je borg is veilig.</string>
     <string name="rejoin_game_in_progress">Spel bezig</string>
     <string name="rejoin">Hervatten</string>
     <string name="upcoming_game_banner_title">Volgende spel</string>
@@ -28,9 +25,7 @@
     <string name="network_error_please_try_again">Netwerkfout. Probeer opnieuw.</string>
     <string name="register">Inschrijven</string>
     <string name="sign_up">Aanmelden</string>
-    <string name="pay">Betalen</string>
     <string name="team_name">Teamnaam</string>
-    <string name="hunter_payment_will_be_available_soon">Betaling voor jagers komt binnenkort beschikbaar.</string>
     <string name="registered_to_game">Ingeschreven voor het spel</string>
     <string name="collapse">Inklappen</string>
     <string name="expand_registered_game_banner">Toon registratiebanner</string>
@@ -49,7 +44,6 @@
     <string name="do_hunters_need_to_register_before_joining">Moeten jagers zich registreren voordat ze meedoen?</string>
     <string name="registration_required">Inschrijving vereist</string>
     <string name="open_join">Open toegang</string>
-    <string name="registration_required_for_paid_deposit_games">Inschrijving is verplicht voor betaalde spellen (borg).</string>
     <string name="registration_closes">Inschrijving sluit om</string>
     <string name="at_game_start">Bij aanvang van het spel</string>
     <string name="fifteen_min_before">15 min voor</string>
@@ -84,9 +78,6 @@
     <string name="admin_mode">Adminmodus</string>
     <string name="want_to_create_a_party">Een feest organiseren?</string>
     <string name="active_types">Actieve types</string>
-    <string name="pricing">Prijsmodel</string>
-    <string name="total_price">Totaalprijs</string>
-    <string name="deposit">Borg</string>
     <string name="zone_radius">Zonestraal</string>
     <string name="start_zone">Startzone</string>
     <string name="final_zone">Eindzone</string>
@@ -250,10 +241,6 @@
 
     <!-- Plan Selection -->
     <string name="create_party">Spel aanmaken</string>
-    <string name="choose_your_plan">Kies je plan</string>
-    <string name="daily_limit_reached">Dagelijkse limiet bereikt</string>
-    <string name="daily_limit_message">Je kunt maar 1 gratis spel per dag maken. Upgrade naar een betaald plan voor onbeperkte spellen.</string>
-    <string name="failed_to_load_pricing">Laden van prijzen mislukt</string>
     <string name="retry">Opnieuw proberen</string>
 
     <!-- Power-Up Dialogs -->
@@ -294,19 +281,6 @@
     <string name="safety_banner_text">Let op het verkeer. Respecteer privéterrein. Ren niet op plekken waar je dat normaal niet zou doen. PouleParty is niet verantwoordelijk voor verwondingen of schade.</string>
 
     <!-- Payment confirmation screen -->
-    <string name="payment_confirmed_title_creator">Spel aangemaakt!</string>
-    <string name="payment_confirmed_title_hunter">Je bent ingeschreven!</string>
-    <string name="payment_confirmed_subtitle_creator">Je vast bedrag is goed ontvangen. Deel de code zodat jagers kunnen meedoen.</string>
-    <string name="payment_confirmed_subtitle_hunter">Je waarborg is goed ontvangen. Tot op de speeldag — je waarborg krijg je erna terug.</string>
-    <string name="payment_confirmed_game_code">Spelcode</string>
-    <string name="payment_confirmed_starts_in">Het spel begint over</string>
-    <string name="payment_confirmed_status_waiting">Wachten op spelers</string>
-    <string name="payment_confirmed_status_in_progress">Spel bezig</string>
-    <string name="payment_confirmed_status_done">Spel beëindigd</string>
-    <string name="payment_confirmed_status_pending_payment">Betaling valideren…</string>
-    <string name="payment_confirmed_status_payment_failed">Betaling mislukt</string>
-    <string name="payment_confirmed_share">Deel de code</string>
-    <string name="payment_confirmed_back_home">Terug naar home</string>
 
     <!-- Player reporting (UGC moderation) -->
     <string name="report_player_cd">Rapporteer %1$s</string>

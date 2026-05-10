@@ -56,7 +56,6 @@ fun HomeScreen(
     onNavigateToHunterMap: (String, String) -> Unit,
     onNavigateToVictory: (String) -> Unit,
     onNavigateToSettings: () -> Unit = {},
-    onNavigateToPaymentConfirmed: (gameId: String, kind: String) -> Unit = { _, _ -> },
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -71,21 +70,8 @@ fun HomeScreen(
                 is HomeEffect.NavigateToDebugMapConfig -> onNavigateToDebugMapConfig()
                 is HomeEffect.NavigateToHunterMap -> onNavigateToHunterMap(effect.gameId, effect.hunterName)
                 is HomeEffect.NavigateToGameDone -> onNavigateToVictory(effect.gameId)
-                is HomeEffect.NavigateToPaymentConfirmed -> onNavigateToPaymentConfirmed(effect.gameId, effect.kind)
             }
         }
-    }
-
-    // Caution hunter payment overlay
-    state.paymentContext?.let { ctx ->
-        androidx.activity.compose.BackHandler { viewModel.onPaymentCancelled() }
-        dev.rahier.pouleparty.ui.payment.PaymentScreen(
-            context = ctx,
-            onCreatorPaid = { /* not used from hunter flow */ },
-            onHunterPaid = { viewModel.onHunterPaymentCompleted() },
-            onCancelled = { viewModel.onPaymentCancelled() },
-        )
-        return
     }
 
     // Music playback
@@ -404,7 +390,7 @@ fun HomeScreen(
                         )
                 ) {
                     Text(
-                        "Create Party",
+                        stringResource(R.string.create_party),
                         fontFamily = GameBoyFont,
                         fontSize = 8.sp,
                         color = MaterialTheme.colorScheme.onBackground,
@@ -468,21 +454,6 @@ fun HomeScreen(
             text = { Text(stringResource(R.string.game_not_found_message)) },
             confirmButton = {
                 TextButton(onClick = { viewModel.onIntent(HomeIntent.GameNotFoundDismissed) }) { Text(stringResource(R.string.ok)) }
-            }
-        )
-    }
-
-    // Payment verification failed alert (Caution deposit): the sheet completed
-    // but the Stripe webhook never created the registration doc within the
-    // verification window — tell the user their payment is safe and ask them
-    // to contact the organizer.
-    if (state.isShowingPaymentVerificationFailed) {
-        AlertDialog(
-            onDismissRequest = { viewModel.onIntent(HomeIntent.PaymentVerificationDismissed) },
-            title = { Text(stringResource(R.string.payment_verification_failed_title)) },
-            text = { Text(stringResource(R.string.payment_verification_failed_message)) },
-            confirmButton = {
-                TextButton(onClick = { viewModel.onIntent(HomeIntent.PaymentVerificationDismissed) }) { Text(stringResource(R.string.ok)) }
             }
         )
     }

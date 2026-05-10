@@ -6,7 +6,6 @@
     <string name="start">START</string>
     <string name="press_start">Press start to play</string>
     <string name="rules">Rules</string>
-    <string name="continue_label">Continue</string>
     <string name="join_game">Join Game</string>
     <string name="join">Join</string>
     <string name="cancel">Cancel</string>
@@ -14,8 +13,6 @@
     <string name="close">Close</string>
     <string name="game_not_found">Game not found</string>
     <string name="game_not_found_message">No active game found with this code. Check the code and try again.</string>
-    <string name="payment_verification_failed_title">Payment verification failed</string>
-    <string name="payment_verification_failed_message">We received your payment but couldn\'t confirm your registration. If you were charged, please contact the organizer — your deposit is safe.</string>
     <string name="rejoin_game_in_progress">Game in progress</string>
     <string name="rejoin">Rejoin</string>
     <string name="upcoming_game_banner_title">Next game</string>
@@ -30,9 +27,7 @@
     <string name="network_error_please_try_again">Network error. Please try again.</string>
     <string name="register">Register</string>
     <string name="sign_up">Sign up</string>
-    <string name="pay">Pay</string>
     <string name="team_name">Team name</string>
-    <string name="hunter_payment_will_be_available_soon">Hunter payment will be available soon.</string>
     <string name="registered_to_game">Registered to game</string>
     <string name="collapse">Collapse</string>
     <string name="expand_registered_game_banner">Expand registered game banner</string>
@@ -51,7 +46,6 @@
     <string name="do_hunters_need_to_register_before_joining">Do hunters need to register before joining?</string>
     <string name="registration_required">Registration required</string>
     <string name="open_join">Open join</string>
-    <string name="registration_required_for_paid_deposit_games">Registration is required for paid (deposit) games.</string>
     <string name="registration_closes">Registration closes</string>
     <string name="at_game_start">At game start</string>
     <string name="fifteen_min_before">15 min before</string>
@@ -86,9 +80,6 @@
     <string name="admin_mode">Admin mode</string>
     <string name="want_to_create_a_party">Want to create a party?</string>
     <string name="active_types">Active types</string>
-    <string name="pricing">Pricing</string>
-    <string name="total_price">Total price</string>
-    <string name="deposit">Deposit</string>
     <string name="zone_radius">Zone radius</string>
     <string name="start_zone">Start zone</string>
     <string name="final_zone">Final zone</string>
@@ -159,19 +150,6 @@
     <string name="safety_banner_text">Watch for traffic. Respect private property. Don\'t run where you wouldn\'t normally run. PouleParty is not responsible for injuries or damage.</string>
 
     <!-- Payment confirmation screen (shown after successful Forfait/Caution/promo) -->
-    <string name="payment_confirmed_title_creator">Game created!</string>
-    <string name="payment_confirmed_title_hunter">You\'re in!</string>
-    <string name="payment_confirmed_subtitle_creator">Your package has been charged. Share the code so hunters can join.</string>
-    <string name="payment_confirmed_subtitle_hunter">Your deposit has been received. See you on the day — it will be refunded after the game.</string>
-    <string name="payment_confirmed_game_code">Game code</string>
-    <string name="payment_confirmed_starts_in">Game starts in</string>
-    <string name="payment_confirmed_status_waiting">Waiting for players</string>
-    <string name="payment_confirmed_status_in_progress">Game in progress</string>
-    <string name="payment_confirmed_status_done">Game finished</string>
-    <string name="payment_confirmed_status_pending_payment">Validating payment…</string>
-    <string name="payment_confirmed_status_payment_failed">Payment failed</string>
-    <string name="payment_confirmed_share">Share the code</string>
-    <string name="payment_confirmed_back_home">Back to home</string>
 
     <!-- Player reporting (UGC moderation) -->
     <string name="report_player_cd">Report %1$s</string>
@@ -287,10 +265,6 @@
 
     <!-- Plan Selection -->
     <string name="create_party">Create Party</string>
-    <string name="choose_your_plan">Choose your plan</string>
-    <string name="daily_limit_reached">Daily limit reached</string>
-    <string name="daily_limit_message">You can only create 1 free game per day. Upgrade to a paid plan for unlimited games.</string>
-    <string name="failed_to_load_pricing">Failed to load pricing</string>
     <string name="retry">Retry</string>
 
     <!-- Power-Up Dialogs -->

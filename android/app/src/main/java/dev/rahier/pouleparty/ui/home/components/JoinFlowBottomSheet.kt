@@ -170,9 +170,6 @@ private fun RegisterFormContent(
     onTeamNameChanged: (String) -> Unit,
     onSubmit: () -> Unit
 ) {
-    val isDeposit = game.pricing.model == "deposit"
-    val buttonLabel = if (isDeposit) stringResource(R.string.pay) else stringResource(R.string.sign_up)
-
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -200,14 +197,6 @@ private fun RegisterFormContent(
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
-        if (isDeposit) {
-            Text(
-                stringResource(R.string.hunter_payment_will_be_available_soon),
-                fontFamily = GameBoyFont,
-                fontSize = 8.sp,
-                color = MaterialTheme.colorScheme.error
-            )
-        }
         Spacer(Modifier.height(8.dp))
         TextButton(
             onClick = onSubmit,
@@ -226,7 +215,7 @@ private fun RegisterFormContent(
                 )
             } else {
                 Text(
-                    buttonLabel,
+                    stringResource(R.string.sign_up),
                     fontFamily = GameBoyFont,
                     fontSize = 18.sp,
                     color = Color.Black

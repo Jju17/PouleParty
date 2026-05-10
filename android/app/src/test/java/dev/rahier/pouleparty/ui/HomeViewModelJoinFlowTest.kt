@@ -29,9 +29,8 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * End-to-end MVI tests pinning the Wave 1/2/3 join-flow fixes:
+ * End-to-end MVI tests pinning the join-flow fixes:
  *  - Self-join (hunter taps own chicken code) → CodeNotFound
- *  - pending_payment / payment_failed code → `isShowingGameNotFound` on Join tap
  *  - rejoinActiveGame refetches and routes to GameNotFound for stale done games
  *  - dismissActiveGame persists and hides subsequent banner
  *  - validateCode cancels the previous in-flight job on re-type
@@ -126,47 +125,6 @@ class HomeViewModelJoinFlowTest {
         testDispatcher.scheduler.advanceUntilIdle()
 
         assertTrue(vm.uiState.value.joinStep is JoinFlowStep.CodeValidated)
-    }
-
-    // ── pending_payment / payment_failed Join rejection ───
-
-    @Test
-    fun `tapping Join on pending_payment game sets isShowingGameNotFound`() {
-        mockAuthUser("user-xyz")
-        val game = Game.mock.copy(creatorId = "other", status = "pending_payment")
-        coEvery { firestoreRepository.findGameByCode("ABC123") } returns game
-
-        val vm = createViewModel()
-        testDispatcher.scheduler.advanceUntilIdle()
-
-        vm.onIntent(HomeIntent.StartButtonTapped)
-        vm.onIntent(HomeIntent.GameCodeChanged("ABC123"))
-        testDispatcher.scheduler.advanceUntilIdle()
-        // Even though it reached CodeValidated (the validator doesn't gate
-        // on status), tapping Join must route through the alert path.
-        vm.onIntent(HomeIntent.JoinValidatedGameTapped)
-        testDispatcher.scheduler.advanceUntilIdle()
-
-        assertTrue(vm.uiState.value.isShowingGameNotFound)
-        assertTrue(vm.uiState.value.joinStep is JoinFlowStep.EnteringCode)
-    }
-
-    @Test
-    fun `tapping Join on payment_failed game sets isShowingGameNotFound`() {
-        mockAuthUser("user-xyz")
-        val game = Game.mock.copy(creatorId = "other", status = "payment_failed")
-        coEvery { firestoreRepository.findGameByCode("ABC123") } returns game
-
-        val vm = createViewModel()
-        testDispatcher.scheduler.advanceUntilIdle()
-
-        vm.onIntent(HomeIntent.StartButtonTapped)
-        vm.onIntent(HomeIntent.GameCodeChanged("ABC123"))
-        testDispatcher.scheduler.advanceUntilIdle()
-        vm.onIntent(HomeIntent.JoinValidatedGameTapped)
-        testDispatcher.scheduler.advanceUntilIdle()
-
-        assertTrue(vm.uiState.value.isShowingGameNotFound)
     }
 
     // ── rejoinActiveGame with stale status ────────────────

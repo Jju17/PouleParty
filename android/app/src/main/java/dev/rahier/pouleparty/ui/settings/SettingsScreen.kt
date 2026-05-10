@@ -33,7 +33,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.model.GameMod
 import dev.rahier.pouleparty.model.GameStatus
-import dev.rahier.pouleparty.model.PricingModel
 import dev.rahier.pouleparty.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -543,8 +542,6 @@ private fun GameStatusBadge(status: GameStatus) {
         GameStatus.WAITING -> "Waiting" to CROrange
         GameStatus.IN_PROGRESS -> "Live" to Success
         GameStatus.DONE -> "Done" to MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f)
-        GameStatus.PENDING_PAYMENT -> "Paiement" to CROrange.copy(alpha = 0.5f)
-        GameStatus.PAYMENT_FAILED -> "Échec" to Color.Red
     }
     Text(
         label,
@@ -611,11 +608,6 @@ private fun GameDetailDialog(
             // Info
             DetailRow("Game Code", game.gameCode)
             DetailRow("Found Code", game.foundCode)
-            DetailRow("Pricing", game.pricingModelEnum.title)
-            if (game.isPaid) {
-                if (game.pricing.pricePerPlayer > 0) DetailRow("Price/Player", "${game.pricing.pricePerPlayer / 100}€")
-                if (game.pricing.deposit > 0) DetailRow("Deposit", "${game.pricing.deposit / 100}€")
-            }
 
             HorizontalDivider()
 

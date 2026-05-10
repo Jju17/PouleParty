@@ -60,10 +60,6 @@ class GameCreationViewModelTest {
 
     private fun createViewModel(
         gameId: String = "test-game-id",
-        pricingModel: String = "free",
-        numberOfPlayers: Int = 5,
-        pricePerPlayerCents: Int = 0,
-        depositAmountCents: Int = 0,
         isAdminCreation: Boolean = false
     ): GameCreationViewModel {
         return GameCreationViewModel(
@@ -74,10 +70,6 @@ class GameCreationViewModelTest {
             savedStateHandle = SavedStateHandle(
                 mapOf(
                     "gameId" to gameId,
-                    "pricingModel" to pricingModel,
-                    "numberOfPlayers" to numberOfPlayers,
-                    "pricePerPlayerCents" to pricePerPlayerCents,
-                    "depositAmountCents" to depositAmountCents,
                     "isAdminCreation" to isAdminCreation
                 )
             )
@@ -98,29 +90,16 @@ class GameCreationViewModelTest {
     }
 
     @Test
-    fun `initial game has values from savedStateHandle`() {
-        val vm = createViewModel(
-            gameId = "custom-id",
-            pricingModel = "flat",
-            numberOfPlayers = 20,
-            pricePerPlayerCents = 500
-        )
+    fun `initial game has gameId from savedStateHandle`() {
+        val vm = createViewModel(gameId = "custom-id")
         val game = vm.uiState.value.game
         assertEquals("custom-id", game.id)
-        assertEquals(20, game.maxPlayers)
-        assertEquals("flat", game.pricing.model)
-        assertEquals(500, game.pricing.pricePerPlayer)
+        assertEquals(5, game.maxPlayers)
     }
 
     @Test
-    fun `deposit pricing requires registration by default`() {
-        val vm = createViewModel(pricingModel = "deposit")
-        assertTrue(vm.uiState.value.game.registration.required)
-    }
-
-    @Test
-    fun `free pricing does not require registration by default`() {
-        val vm = createViewModel(pricingModel = "free")
+    fun `default state does not require registration`() {
+        val vm = createViewModel()
         assertFalse(vm.uiState.value.game.registration.required)
     }
 
@@ -338,7 +317,7 @@ class GameCreationViewModelTest {
 
     @Test
     fun `toggleRequiresRegistration enables and sets default deadline`() {
-        val vm = createViewModel(pricingModel = "free")
+        val vm = createViewModel()
         vm.onIntent(GameCreationIntent.RequiresRegistrationToggled(true))
         assertTrue(vm.uiState.value.game.registration.required)
         assertEquals(15, vm.uiState.value.game.registration.closesMinutesBefore)
@@ -346,18 +325,11 @@ class GameCreationViewModelTest {
 
     @Test
     fun `toggleRequiresRegistration disables and clears deadline`() {
-        val vm = createViewModel(pricingModel = "free")
+        val vm = createViewModel()
         vm.onIntent(GameCreationIntent.RequiresRegistrationToggled(true))
         vm.onIntent(GameCreationIntent.RequiresRegistrationToggled(false))
         assertFalse(vm.uiState.value.game.registration.required)
         assertNull(vm.uiState.value.game.registration.closesMinutesBefore)
-    }
-
-    @Test
-    fun `toggleRequiresRegistration cannot disable for deposit pricing`() {
-        val vm = createViewModel(pricingModel = "deposit")
-        vm.onIntent(GameCreationIntent.RequiresRegistrationToggled(false))
-        assertTrue("Deposit games must require registration", vm.uiState.value.game.registration.required)
     }
 
     @Test
@@ -523,7 +495,7 @@ class GameCreationViewModelTest {
         val effect = vm.effects.first() as dev.rahier.pouleparty.ui.gamecreation.GameCreationEffect.GameStarted
         assertEquals("test-game-id", effect.gameId)
         coVerify { firestoreRepository.setConfig(any()) }
-        coVerify { analyticsRepository.gameCreated(any(), any(), any(), any()) }
+        coVerify { analyticsRepository.gameCreated(any(), any(), any()) }
     }
 
     @Test
@@ -943,7 +915,6 @@ class GameCreationViewModelTest {
             analyticsRepository.gameCreated(
                 gameMode = GameMod.STAY_IN_THE_ZONE.firestoreValue,
                 maxPlayers = any(),
-                pricingModel = any(),
                 powerUpsEnabled = any()
             )
         }
@@ -960,23 +931,22 @@ class GameCreationViewModelTest {
             analyticsRepository.gameCreated(
                 gameMode = any(),
                 maxPlayers = any(),
-                pricingModel = any(),
                 powerUpsEnabled = true
             )
         }
     }
 
     @Test
-    fun `startGame analytics uses maxPlayers from pricing params`() = runTest(testDispatcher) {
-        val vm = createViewModel(numberOfPlayers = 25)
+    fun `startGame analytics carries maxPlayers from current state`() = runTest(testDispatcher) {
+        val vm = createViewModel()
+        vm.onIntent(GameCreationIntent.MaxPlayersChanged(4))
         coEvery { firestoreRepository.setConfig(any()) } returns Unit
         vm.onIntent(GameCreationIntent.StartGameTapped)
         advanceUntilIdle()
         coVerify {
             analyticsRepository.gameCreated(
                 gameMode = any(),
-                maxPlayers = 25,
-                pricingModel = any(),
+                maxPlayers = 4,
                 powerUpsEnabled = any()
             )
         }
@@ -1038,28 +1008,6 @@ class GameCreationViewModelTest {
         val vm = createViewModel()
         vm.onIntent(GameCreationIntent.StartTimeChanged(15, 30))
         assertFalse(vm.uiState.value.showTimePicker)
-    }
-
-    // ── Deposit game invariants ──
-
-    @Test
-    fun `deposit game registration stays required after start`() = runTest(testDispatcher) {
-        val vm = createViewModel(pricingModel = "deposit")
-        // Try all kinds of tricks to disable it
-        vm.onIntent(GameCreationIntent.RequiresRegistrationToggled(false))
-        vm.onIntent(GameCreationIntent.RequiresRegistrationToggled(false))
-        vm.onIntent(GameCreationIntent.RegistrationClosesBeforeStartChanged(null))
-        assertTrue("Deposit must keep registration required", vm.uiState.value.game.registration.required)
-    }
-
-    @Test
-    fun `deposit game startGame preserves registration required`() = runTest(testDispatcher) {
-        val vm = createViewModel(pricingModel = "deposit")
-        vm.onIntent(GameCreationIntent.RequiresRegistrationToggled(false)) // ignored
-        coEvery { firestoreRepository.setConfig(any()) } returns Unit
-        vm.onIntent(GameCreationIntent.StartGameTapped)
-        advanceUntilIdle()
-        assertTrue(vm.uiState.value.game.registration.required)
     }
 
     // ── Game code and ID ──
@@ -1148,7 +1096,7 @@ class GameCreationViewModelTest {
         vm.onIntent(GameCreationIntent.StartGameTapped)
         advanceUntilIdle()
         coVerify(exactly = 0) {
-            analyticsRepository.gameCreated(any(), any(), any(), any())
+            analyticsRepository.gameCreated(any(), any(), any())
         }
     }
 
@@ -1159,7 +1107,7 @@ class GameCreationViewModelTest {
         vm.onIntent(GameCreationIntent.StartGameTapped)
         advanceUntilIdle()
         coVerify(exactly = 1) {
-            analyticsRepository.gameCreated(any(), any(), any(), any())
+            analyticsRepository.gameCreated(any(), any(), any())
         }
     }
 }

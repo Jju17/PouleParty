@@ -15,7 +15,6 @@ import dev.rahier.pouleparty.model.ChallengeCompletion
 import dev.rahier.pouleparty.model.ChickenLocation
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameStatus
-import dev.rahier.pouleparty.model.PartyPlansConfig
 import dev.rahier.pouleparty.model.HunterLocation
 import dev.rahier.pouleparty.powerups.model.PowerUp
 import dev.rahier.pouleparty.model.Registration
@@ -530,7 +529,6 @@ class FirestoreRepository @Inject constructor(
 
             val snapshot = firestore.collection(AppConstants.COLLECTION_GAMES)
                 .whereEqualTo("creatorId", userId)
-                .whereEqualTo("pricing.model", "free")
                 .whereGreaterThanOrEqualTo("timing.start", startOfDay)
                 .get()
                 .await()
@@ -564,18 +562,8 @@ class FirestoreRepository @Inject constructor(
         val result = mutableListOf<dev.rahier.pouleparty.model.MyGame>()
         val seenIds = mutableSetOf<String>()
 
-        // Hide payment-limbo docs from the My Games list. The Forfait flow
-        // pre-creates the game in `pending_payment` before the Stripe sheet;
-        // if the user cancels, the client delete + the scheduled server purge
-        // should clean them up, but this filter is the last line of defence.
-        fun isVisibleInMyGames(status: GameStatus): Boolean = when (status) {
-            GameStatus.PENDING_PAYMENT, GameStatus.PAYMENT_FAILED -> false
-            GameStatus.WAITING, GameStatus.IN_PROGRESS, GameStatus.DONE -> true
-        }
-
         for (doc in createdSnap.documents) {
             val game = safeToObject<Game>(doc, "fetchMyGames created")?.copy(id = doc.id) ?: continue
-            if (!isVisibleInMyGames(game.gameStatusEnum)) continue
             if (seenIds.add(game.id)) {
                 result.add(dev.rahier.pouleparty.model.MyGame(game, dev.rahier.pouleparty.model.MyGameRole.CREATOR))
             }
@@ -583,7 +571,6 @@ class FirestoreRepository @Inject constructor(
 
         for (doc in joinedSnap.documents) {
             val game = safeToObject<Game>(doc, "fetchMyGames joined")?.copy(id = doc.id) ?: continue
-            if (!isVisibleInMyGames(game.gameStatusEnum)) continue
             // Creator takes precedence if the user is both creator and hunter on the same game.
             if (seenIds.add(game.id)) {
                 result.add(dev.rahier.pouleparty.model.MyGame(game, dev.rahier.pouleparty.model.MyGameRole.HUNTER))
@@ -593,17 +580,6 @@ class FirestoreRepository @Inject constructor(
         return result
             .sortedByDescending { it.game.startDate.time }
             .take(20)
-    }
-
-    suspend fun fetchPartyPlansConfig(): PartyPlansConfig {
-        val doc = withTimeoutOrNull(READ_TIMEOUT_MS) {
-            firestore.collection("config")
-                .document("partyPlans")
-                .get()
-                .await()
-        } ?: throw IllegalStateException("Party plans config fetch timed out after ${READ_TIMEOUT_MS}ms")
-        return safeToObject<PartyPlansConfig>(doc, "fetchPartyPlansConfig")
-            ?: throw IllegalStateException("Party plans config document is missing or malformed")
     }
 
     // ── Challenges ───────────────────────────────────────

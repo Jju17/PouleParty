@@ -5,7 +5,6 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import com.google.firebase.FirebaseApp
 import com.mapbox.common.MapboxOptions
-import com.stripe.android.PaymentConfiguration
 import dagger.hilt.android.HiltAndroidApp
 
 @HiltAndroidApp
@@ -14,7 +13,6 @@ class PoulePartyApp : Application() {
         super.onCreate()
         FirebaseApp.initializeApp(this)
         configureMapbox()
-        configureStripe()
         createNotificationChannels()
     }
 
@@ -31,14 +29,6 @@ class PoulePartyApp : Application() {
      */
     private fun configureMapbox() {
         MapboxOptions.accessToken = getString(R.string.mapbox_access_token)
-    }
-
-    private fun configureStripe() {
-        val key = BuildConfig.STRIPE_PUBLISHABLE_KEY
-        require(key.startsWith("pk_")) {
-            "STRIPE_PUBLISHABLE_KEY missing — set it per product flavor in app/build.gradle.kts"
-        }
-        PaymentConfiguration.init(applicationContext, key)
     }
 
     private fun createNotificationChannels() {

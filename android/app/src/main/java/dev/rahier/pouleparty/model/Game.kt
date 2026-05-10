@@ -25,13 +25,6 @@ data class Zone(
     val driftSeed: Int = 0
 )
 
-data class Pricing(
-    val model: String = PricingModel.FREE.firestoreValue,
-    val pricePerPlayer: Int = 0,
-    val deposit: Int = 0,
-    val commission: Double = 15.0
-)
-
 data class GameRegistration(
     val required: Boolean = false,
     val closesMinutesBefore: Int? = 15
@@ -64,7 +57,6 @@ data class Game(
     val creatorId: String = "",
     val timing: Timing = Timing(),
     val zone: Zone = Zone(),
-    val pricing: Pricing = Pricing(),
     val registration: GameRegistration = GameRegistration(),
     val powerUps: GamePowerUps = GamePowerUps(),
     val lastHeartbeat: Timestamp? = null
@@ -143,14 +135,6 @@ data class Game(
     @get:Exclude
     val gameStatusEnum: GameStatus
         get() = GameStatus.fromFirestore(status)
-
-    @get:Exclude
-    val pricingModelEnum: PricingModel
-        get() = PricingModel.fromFirestore(pricing.model)
-
-    @get:Exclude
-    val isPaid: Boolean
-        get() = pricingModelEnum != PricingModel.FREE
 
     @get:Exclude
     val registrationDeadline: Date?

@@ -34,7 +34,6 @@ import dev.rahier.pouleparty.ui.theme.gameboyStyle
 @Composable
 fun RegistrationStep(
     requiresRegistration: Boolean,
-    isDepositPlan: Boolean,
     registrationClosesBeforeStartMinutes: Int?,
     onToggle: (Boolean) -> Unit,
     onDeadlineChanged: (Int?) -> Unit
@@ -47,22 +46,14 @@ fun RegistrationStep(
             text = stringResource(R.string.open_join),
             emoji = "\uD83D\uDEAA",
             isSelected = !requiresRegistration,
-            onClick = { if (!isDepositPlan) onToggle(false) }
+            onClick = { onToggle(false) }
         )
         OptionCard(
             text = stringResource(R.string.registration_required),
             emoji = "\uD83D\uDCDD",
             isSelected = requiresRegistration,
-            onClick = { if (!isDepositPlan) onToggle(true) }
+            onClick = { onToggle(true) }
         )
-        if (isDepositPlan) {
-            Text(
-                text = stringResource(R.string.registration_required_for_paid_deposit_games),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-                modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
-            )
-        }
 
         AnimatedVisibility(
             visible = requiresRegistration,

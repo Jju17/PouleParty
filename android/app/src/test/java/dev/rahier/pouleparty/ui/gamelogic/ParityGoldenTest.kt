@@ -489,7 +489,7 @@ class ParityGoldenTest {
 
     @Test
     fun `jammer golden realtime bucket`() {
-        // Realistic Stripe-era timestamp, catches 64-bit XOR drift.
+        // Realistic 2025-era timestamp, catches 64-bit XOR drift.
         val out = applyJammerNoise(Point.fromLngLat(4.35, 50.85), 777, 1_700_000_000_000L)
         assertEquals(50.85092634988487, out.latitude(), tol)
         assertEquals(4.3504428176455745, out.longitude(), tol)

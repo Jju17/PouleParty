@@ -4,7 +4,6 @@
     <string name="start">START</string>
     <string name="press_start">Appuie sur start pour jouer</string>
     <string name="rules">Règles</string>
-    <string name="continue_label">Continuer</string>
     <string name="join_game">Rejoindre</string>
     <string name="join">Rejoindre</string>
     <string name="cancel">Annuler</string>
@@ -12,8 +11,6 @@
     <string name="close">Fermer</string>
     <string name="game_not_found">Partie introuvable</string>
     <string name="game_not_found_message">Aucune partie trouvée avec ce code. Vérifie le code et réessaie.</string>
-    <string name="payment_verification_failed_title">Vérification du paiement échouée</string>
-    <string name="payment_verification_failed_message">Ton paiement a été reçu mais ton inscription n\'a pas pu être confirmée. Si tu as été débité, contacte l\'organisateur — ta caution est en sécurité.</string>
     <string name="rejoin_game_in_progress">Partie en cours</string>
     <string name="rejoin">Reprendre</string>
     <string name="upcoming_game_banner_title">Prochaine partie</string>
@@ -28,9 +25,7 @@
     <string name="network_error_please_try_again">Erreur réseau. Réessaie.</string>
     <string name="register">S\'inscrire</string>
     <string name="sign_up">S\'inscrire</string>
-    <string name="pay">Payer</string>
     <string name="team_name">Nom d\'équipe</string>
-    <string name="hunter_payment_will_be_available_soon">Le paiement pour les chasseurs sera bientôt disponible.</string>
     <string name="registered_to_game">Inscrit à la partie</string>
     <string name="collapse">Réduire</string>
     <string name="expand_registered_game_banner">Afficher la bannière d\'inscription</string>
@@ -49,7 +44,6 @@
     <string name="do_hunters_need_to_register_before_joining">Les chasseurs doivent-ils s\'inscrire avant de rejoindre ?</string>
     <string name="registration_required">Inscription requise</string>
     <string name="open_join">Accès libre</string>
-    <string name="registration_required_for_paid_deposit_games">L\'inscription est obligatoire pour les parties payantes (caution).</string>
     <string name="registration_closes">L\'inscription ferme</string>
     <string name="at_game_start">Au début du jeu</string>
     <string name="fifteen_min_before">15 min avant</string>
@@ -230,9 +224,6 @@
     <string name="admin_mode">Mode admin</string>
     <string name="want_to_create_a_party">Envie de créer une partie ?</string>
     <string name="active_types">Types actifs</string>
-    <string name="pricing">Tarification</string>
-    <string name="total_price">Prix total</string>
-    <string name="deposit">Caution</string>
     <string name="zone_radius">Rayon de la zone</string>
     <string name="set_start_zone">Place une zone de départ pour commencer</string>
     <string name="set_start_and_final_zone">Place la zone de départ et la zone finale pour commencer</string>
@@ -254,10 +245,6 @@
 
     <!-- Plan Selection -->
     <string name="create_party">Créer une partie</string>
-    <string name="choose_your_plan">Choisis ton plan</string>
-    <string name="daily_limit_reached">Limite quotidienne atteinte</string>
-    <string name="daily_limit_message">Tu ne peux créer qu\'une seule partie gratuite par jour. Passe à un plan payant pour des parties illimitées.</string>
-    <string name="failed_to_load_pricing">Échec du chargement des prix</string>
     <string name="retry">Réessayer</string>
 
     <!-- Power-Up Dialogs -->
@@ -298,19 +285,6 @@
     <string name="safety_banner_text">Fais attention à la circulation. Respecte la propriété privée. Ne cours pas là où tu ne le ferais pas normalement. PouleParty n\'est pas responsable des blessures ou dommages.</string>
 
     <!-- Payment confirmation screen -->
-    <string name="payment_confirmed_title_creator">Partie créée !</string>
-    <string name="payment_confirmed_title_hunter">Tu es inscrit !</string>
-    <string name="payment_confirmed_subtitle_creator">Ton forfait est bien encaissé. Partage le code pour que les chasseurs rejoignent.</string>
-    <string name="payment_confirmed_subtitle_hunter">Ta caution est bien reçue. Rendez-vous le jour J — elle te sera remboursée après la partie.</string>
-    <string name="payment_confirmed_game_code">Code de partie</string>
-    <string name="payment_confirmed_starts_in">La partie commence dans</string>
-    <string name="payment_confirmed_status_waiting">En attente des joueurs</string>
-    <string name="payment_confirmed_status_in_progress">Partie en cours</string>
-    <string name="payment_confirmed_status_done">Partie terminée</string>
-    <string name="payment_confirmed_status_pending_payment">Validation du paiement…</string>
-    <string name="payment_confirmed_status_payment_failed">Paiement échoué</string>
-    <string name="payment_confirmed_share">Partager le code</string>
-    <string name="payment_confirmed_back_home">Retour à l\'accueil</string>
 
     <!-- Player reporting (UGC moderation) -->
     <string name="report_player_cd">Signaler %1$s</string>

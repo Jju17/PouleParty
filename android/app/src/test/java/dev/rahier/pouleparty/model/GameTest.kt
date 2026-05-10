@@ -276,67 +276,6 @@ class GameTest {
         }
     }
 
-    // MARK: - Pricing Model
-
-    @Test
-    fun `PricingModel firestoreValue roundtrip`() {
-        PricingModel.entries.forEach { model ->
-            assertEquals(model, PricingModel.fromFirestore(model.firestoreValue))
-        }
-    }
-
-    @Test
-    fun `PricingModel fromFirestore defaults to FREE for unknown value`() {
-        assertEquals(PricingModel.FREE, PricingModel.fromFirestore("unknown"))
-    }
-
-    @Test
-    fun `default game has free pricing model`() {
-        val game = Game(id = "test")
-        assertEquals("free", game.pricing.model)
-        assertEquals(PricingModel.FREE, game.pricingModelEnum)
-    }
-
-    @Test
-    fun `isPaid is false for free games`() {
-        val game = Game(id = "test", pricing = Pricing(model = "free"))
-        assertFalse(game.isPaid)
-    }
-
-    @Test
-    fun `isPaid is true for flat games`() {
-        val game = Game(id = "test", pricing = Pricing(model = "flat"))
-        assertTrue(game.isPaid)
-    }
-
-    @Test
-    fun `isPaid is true for deposit games`() {
-        val game = Game(id = "test", pricing = Pricing(model = "deposit"))
-        assertTrue(game.isPaid)
-    }
-
-    @Test
-    fun `pricing fields have correct defaults`() {
-        val game = Game(id = "test")
-        assertEquals(0, game.pricing.pricePerPlayer)
-        assertEquals(0, game.pricing.deposit)
-        assertEquals(15.0, game.pricing.commission, 0.001)
-    }
-
-    @Test
-    fun `flat game stores price per player`() {
-        val game = Game(id = "test", pricing = Pricing(model = "flat", pricePerPlayer = 300), maxPlayers = 15)
-        assertEquals(300, game.pricing.pricePerPlayer)
-        assertEquals(15, game.maxPlayers)
-    }
-
-    @Test
-    fun `deposit game stores deposit and price`() {
-        val game = Game(id = "test", pricing = Pricing(model = "deposit", deposit = 1000, pricePerPlayer = 500))
-        assertEquals(1000, game.pricing.deposit)
-        assertEquals(500, game.pricing.pricePerPlayer)
-    }
-
     // ── Enum edge cases ──
 
     @Test
@@ -353,11 +292,6 @@ class GameTest {
     @Test
     fun `PowerUpType fromFirestore empty string defaults to ZONE_PREVIEW`() {
         assertEquals(PowerUpType.ZONE_PREVIEW, PowerUpType.fromFirestore(""))
-    }
-
-    @Test
-    fun `PricingModel fromFirestore empty string defaults to FREE`() {
-        assertEquals(PricingModel.FREE, PricingModel.fromFirestore(""))
     }
 
     // ── Found code generation ──
@@ -427,13 +361,6 @@ class GameTest {
     }
 
     @Test
-    fun `default pricing is free`() {
-        val game = Game(id = "test")
-        assertEquals(PricingModel.FREE, game.pricingModelEnum)
-        assertFalse(game.isPaid)
-    }
-
-    @Test
     fun `default registration not required`() {
         val game = Game(id = "test")
         assertFalse(game.registration.required)
@@ -493,20 +420,6 @@ class GameTest {
     fun `isRegistrationClosed false when no deadline`() {
         val game = Game(id = "test", registration = GameRegistration(required = true, closesMinutesBefore = null))
         assertFalse(game.isRegistrationClosed)
-    }
-
-    // ── isPaid ──
-
-    @Test
-    fun `isPaid true for flat`() {
-        val game = Game(id = "test", pricing = Pricing(model = PricingModel.FLAT.firestoreValue))
-        assertTrue(game.isPaid)
-    }
-
-    @Test
-    fun `isPaid true for deposit`() {
-        val game = Game(id = "test", pricing = Pricing(model = PricingModel.DEPOSIT.firestoreValue))
-        assertTrue(game.isPaid)
     }
 
     // ── findLastUpdate edge cases ──

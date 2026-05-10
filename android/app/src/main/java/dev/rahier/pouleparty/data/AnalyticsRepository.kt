@@ -13,11 +13,10 @@ import javax.inject.Singleton
 class AnalyticsRepository @Inject constructor(
     private val firebaseAnalytics: FirebaseAnalytics
 ) {
-    fun gameCreated(gameMode: String, maxPlayers: Int, pricingModel: String, powerUpsEnabled: Boolean) {
+    fun gameCreated(gameMode: String, maxPlayers: Int, powerUpsEnabled: Boolean) {
         firebaseAnalytics.logEvent("game_created") {
             param("game_mode", gameMode)
             param("max_players", maxPlayers.toLong())
-            param("pricing_model", pricingModel)
             param("power_ups_enabled", if (powerUpsEnabled) 1L else 0L)
         }
     }
@@ -68,10 +67,8 @@ class AnalyticsRepository @Inject constructor(
         }
     }
 
-    fun registrationCompleted(pricingModel: String) {
-        firebaseAnalytics.logEvent("registration_completed") {
-            param("pricing_model", pricingModel)
-        }
+    fun registrationCompleted() {
+        firebaseAnalytics.logEvent("registration_completed", null)
     }
 
     fun onboardingCompleted() {
