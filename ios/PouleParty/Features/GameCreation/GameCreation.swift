@@ -124,11 +124,6 @@ struct GameCreationFeature {
         case configSaveFailed
         case destination(PresentationAction<Destination.Action>)
         case gameCreated(Game)
-        /// Forfait flow: server created the game doc (in `.pendingPayment`) via
-        /// the Stripe webhook path. Parent should dismiss creation UI and leave
-        /// the user on Home — the game will appear under `My Games` once the
-        /// webhook flips status to `.waiting` (a second or two).
-        case paidGameCreated(game: Game)
         case gameDurationChanged(Double)
         case gameModChanged(Game.GameMode)
         case initialRadiusChanged(Double)
@@ -149,21 +144,16 @@ struct GameCreationFeature {
         @ObservableState
         enum State: Equatable {
             case alert(AlertState<Action.Alert>)
-            case payment(PaymentFeature.State)
         }
 
         enum Action {
             case alert(Alert)
-            case payment(PaymentFeature.Action)
 
             enum Alert: Equatable { }
         }
 
         var body: some ReducerOf<Self> {
             EmptyReducer()
-                .ifCaseLet(\.payment, action: \.payment) {
-                    PaymentFeature()
-                }
         }
     }
 
@@ -232,28 +222,6 @@ struct GameCreationFeature {
                         TextState("Could not create the game. Please check your connection and try again.")
                     }
                 )
-                return .none
-
-            case let .destination(.presented(.payment(.delegate(.creatorPaymentConfirmed(gameId))))):
-                state.destination = nil
-                analyticsClient.gameCreated(
-                    gameMode: state.game.gameMode.rawValue,
-                    maxPlayers: state.game.maxPlayers,
-                    pricingModel: state.game.pricing.model.rawValue,
-                    powerUpsEnabled: state.game.powerUps.enabled
-                )
-                // The Cloud Function `createCreatorPaymentSheet` ignores any
-                // client-supplied id and writes the game doc at its own Firestore
-                // auto-ID (see `functions/src/stripe.ts:195`). Patch the local
-                // game snapshot with the authoritative server id before handing
-                // it to the confirmation screen, otherwise its `gameConfigStream`
-                // subscribes to the orphan client-side id and never sees the
-                // webhook flip `pending_payment → waiting`.
-                state.$game.withLock { $0.id = gameId }
-                return .send(.paidGameCreated(game: state.game))
-
-            case .destination(.presented(.payment(.delegate(.cancelled)))):
-                state.destination = nil
                 return .none
 
             case .destination:
@@ -356,7 +324,6 @@ struct GameCreationFeature {
                         analyticsClient.gameCreated(
                             gameMode: state.game.gameMode.rawValue,
                             maxPlayers: state.game.maxPlayers,
-                            pricingModel: state.game.pricing.model.rawValue,
                             powerUpsEnabled: state.game.powerUps.enabled
                         )
                         await send(.gameCreated(state.game))
@@ -365,7 +332,7 @@ struct GameCreationFeature {
                     }
                 }
 
-            case .gameCreated, .paidGameCreated:
+            case .gameCreated:
                 return .none
             }
         }
@@ -450,11 +417,6 @@ struct GameCreationView: View {
                 action: \.destination.alert
             )
         )
-        .sheet(
-            item: $store.scope(state: \.destination?.payment, action: \.destination.payment)
-        ) { paymentStore in
-            PaymentView(store: paymentStore)
-        }
     }
 
     // MARK: - Bottom Bar

@@ -49,7 +49,6 @@ struct ApiClient {
     var powerUpsStream: (String) -> AsyncStream<[PowerUp]>
     var updateHeartbeat: (String) async throws -> Void
     var countFreeGamesToday: (String) async throws -> Int
-    var fetchPartyPlansConfig: () async throws -> PartyPlansConfig
     var fetchMyGames: (String) async throws -> [MyGame]
     var findRegistration: (String, String) async throws -> Registration?
     var createRegistration: (String, Registration) async throws -> Void
@@ -62,10 +61,7 @@ struct ApiClient {
     /// Writes a doc to `/reports/{autoId}` which is readable only by the admin SDK.
     var reportPlayer: (_ gameId: String, _ reportedUserId: String, _ reportedNickname: String) async throws -> Void
     /// Generate a new Firestore-style auto-ID (20-char alphanumeric) for a
-    /// brand-new game doc. Used by the free-game client path so all game IDs
-    /// in Firestore look consistent with the server-side auto-IDs produced by
-    /// Cloud Functions for Forfait / promo creations, no more mix of UUIDs
-    /// (client) and auto-IDs (server).
+    /// brand-new game doc.
     var newGameId: () -> String
 }
 
@@ -135,7 +131,6 @@ extension ApiClient: TestDependencyKey {
         powerUpsStream: { _ in AsyncStream { _ in } },
         updateHeartbeat: { _ in },
         countFreeGamesToday: { _ in 0 },
-        fetchPartyPlansConfig: { PartyPlansConfig() },
         fetchMyGames: { _ in [] },
         findRegistration: { _, _ in nil },
         createRegistration: { _, _ in },
@@ -508,17 +503,10 @@ extension ApiClient: DependencyKey {
 
             let snapshot = try await db.collection(gamesCollection)
                 .whereField("creatorId", isEqualTo: userId)
-                .whereField("pricing.model", isEqualTo: Game.PricingModel.free.rawValue)
                 .whereField("timing.start", isGreaterThanOrEqualTo: startTimestamp)
                 .getDocuments()
 
             return snapshot.documents.count
-        },
-        fetchPartyPlansConfig: {
-            try await Firestore.firestore()
-                .collection("config")
-                .document("partyPlans")
-                .getDocument(as: PartyPlansConfig.self)
         },
         fetchMyGames: { userId in
             // Run two queries in parallel: games I created + games I joined as a hunter.
@@ -540,21 +528,8 @@ extension ApiClient: DependencyKey {
             var result: [MyGame] = []
             var seenIds = Set<String>()
 
-            // Hide payment-limbo docs from the My Games list. The Forfait flow
-            // pre-creates the game in `pending_payment` before the Stripe sheet;
-            // if the user cancels, the client `deleteConfig` + the scheduled
-            // server purge should clean them up, but this filter is the last
-            // line of defence so a ghost never shows up as a "Paiement" pill.
-            func isVisibleInMyGames(_ status: Game.GameStatus) -> Bool {
-                switch status {
-                case .pendingPayment, .paymentFailed: return false
-                case .waiting, .inProgress, .done: return true
-                }
-            }
-
             for doc in created.documents {
                 guard let game = try? doc.data(as: Game.self) else { continue }
-                if !isVisibleInMyGames(game.status) { continue }
                 if seenIds.insert(game.id).inserted {
                     result.append(MyGame(game: game, role: .chicken))
                 }
@@ -562,7 +537,6 @@ extension ApiClient: DependencyKey {
 
             for doc in joined.documents {
                 guard let game = try? doc.data(as: Game.self) else { continue }
-                if !isVisibleInMyGames(game.status) { continue }
                 // Creator takes precedence if the same user is both creator and hunter.
                 if seenIds.insert(game.id).inserted {
                     result.append(MyGame(game: game, role: .hunter))

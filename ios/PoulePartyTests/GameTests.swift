@@ -367,62 +367,6 @@ struct GameTests {
         }
     }
 
-    // MARK: - Pricing Model
-
-    @Test func defaultGameHasFreePricingModel() {
-        let game = Game(id: "test")
-        #expect(game.pricing.model == .free)
-    }
-
-    @Test func isPaidIsFalseForFreeGames() {
-        var game = Game(id: "test")
-        game.pricing.model = .free
-        #expect(game.isPaid == false)
-    }
-
-    @Test func isPaidIsTrueForFlatGames() {
-        var game = Game(id: "test")
-        game.pricing.model = .flat
-        #expect(game.isPaid == true)
-    }
-
-    @Test func isPaidIsTrueForDepositGames() {
-        var game = Game(id: "test")
-        game.pricing.model = .deposit
-        #expect(game.isPaid == true)
-    }
-
-    @Test func pricingFieldsHaveCorrectDefaults() {
-        let game = Game(id: "test")
-        #expect(game.pricing.pricePerPlayer == 0)
-        #expect(game.pricing.deposit == 0)
-        #expect(game.pricing.commission == 15.0)
-    }
-
-    @Test func flatGameStoresPricePerPlayer() {
-        var game = Game(id: "test")
-        game.pricing.model = .flat
-        game.pricing.pricePerPlayer = 300
-        game.maxPlayers = 15
-        #expect(game.pricing.pricePerPlayer == 300)
-        #expect(game.maxPlayers == 15)
-    }
-
-    @Test func depositGameStoresDepositAndPrice() {
-        var game = Game(id: "test")
-        game.pricing.model = .deposit
-        game.pricing.deposit = 1000
-        game.pricing.pricePerPlayer = 500
-        #expect(game.pricing.deposit == 1000)
-        #expect(game.pricing.pricePerPlayer == 500)
-    }
-
-    @Test func pricingModelRawValues() {
-        #expect(Game.PricingModel.free.rawValue == "free")
-        #expect(Game.PricingModel.flat.rawValue == "flat")
-        #expect(Game.PricingModel.deposit.rawValue == "deposit")
-    }
-
     // MARK: - Enum safe decoding (unknown values → safe defaults)
 
     @Test func gameStatusDecodesUnknownToWaiting() throws {
@@ -452,11 +396,6 @@ struct GameTests {
         let siz = try JSONDecoder().decode(Game.GameMode.self, from: #""stayInTheZone""#.data(using: .utf8)!)
         #expect(ftc == .followTheChicken)
         #expect(siz == .stayInTheZone)
-    }
-
-    @Test func pricingModelDecodesUnknownToFree() throws {
-        let decoded = try JSONDecoder().decode(Game.PricingModel.self, from: #""subscription""#.data(using: .utf8)!)
-        #expect(decoded == .free)
     }
 
     // MARK: - Profanity filter
@@ -557,12 +496,6 @@ struct GameTests {
         #expect(game.status == .waiting)
     }
 
-    @Test func defaultPricingIsFree() {
-        let game = Game(id: "test")
-        #expect(game.pricing.model == .free)
-        #expect(game.isPaid == false)
-    }
-
     @Test func defaultRegistrationNotRequired() {
         let game = Game(id: "test")
         #expect(game.registration.required == false)
@@ -627,20 +560,6 @@ struct GameTests {
         game.registration.required = true
         game.registration.closesMinutesBefore = nil
         #expect(game.isRegistrationClosed == false)
-    }
-
-    // MARK: - isPaid
-
-    @Test func isPaidTrueForFlat() {
-        var game = Game(id: "test")
-        game.pricing.model = .flat
-        #expect(game.isPaid == true)
-    }
-
-    @Test func isPaidTrueForDeposit() {
-        var game = Game(id: "test")
-        game.pricing.model = .deposit
-        #expect(game.isPaid == true)
     }
 
     // MARK: - findLastUpdate edge cases

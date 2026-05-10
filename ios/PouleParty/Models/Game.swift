@@ -10,11 +10,6 @@ import Foundation
 import FirebaseFirestore
 
 struct Game: Codable, Equatable, Identifiable {
-    // `var` (not `let`) because the Forfait paid-creation flow has to patch
-    // the locally-built game with the server-authoritative Firestore auto-ID
-    // returned by `createCreatorPaymentSheet`, otherwise the confirmation
-    // screen streams an orphan doc that never sees the `pending_payment →
-    // waiting` webhook flip. See GameCreation.swift#creatorPaymentConfirmed.
     var id: String
     var name: String = ""
     var maxPlayers: Int = 10
@@ -28,12 +23,9 @@ struct Game: Codable, Equatable, Identifiable {
 
     var timing: Timing = Timing()
     var zone: Zone = Zone()
-    var pricing: Pricing = Pricing()
     var registration: GameRegistration = GameRegistration()
     var powerUps: GamePowerUps = GamePowerUps()
     var lastHeartbeat: Timestamp?
-
-    var isPaid: Bool { pricing.model != .free }
 
     var registrationDeadline: Date? {
         guard let minutes = registration.closesMinutesBefore else { return nil }
@@ -66,13 +58,6 @@ struct Game: Codable, Equatable, Identifiable {
         var driftSeed: Int = 0
     }
 
-    struct Pricing: Codable, Equatable {
-        var model: PricingModel = .free
-        var pricePerPlayer: Int = 0
-        var deposit: Int = 0
-        var commission: Double = 15.0
-    }
-
     struct GameRegistration: Codable, Equatable {
         var required: Bool = false
         var closesMinutesBefore: Int? = 15
@@ -96,35 +81,10 @@ struct Game: Codable, Equatable, Identifiable {
         case waiting
         case inProgress
         case done
-        // Transient states for Stripe-paid Forfait creation: the doc is created
-        // via `createCreatorPaymentSheet` in `pending_payment`, then flipped to
-        // `waiting` by the Stripe webhook on `payment_intent.succeeded`, or to
-        // `payment_failed` on `payment_intent.payment_failed`.
-        case pendingPayment = "pending_payment"
-        case paymentFailed = "payment_failed"
 
         init(from decoder: Decoder) throws {
             let rawValue = try decoder.singleValueContainer().decode(String.self)
             self = GameStatus(rawValue: rawValue) ?? .waiting
-        }
-    }
-
-    enum PricingModel: String, CaseIterable, Equatable, Codable {
-        case free
-        case flat
-        case deposit
-
-        var title: String {
-            switch self {
-            case .free: return "Free"
-            case .flat: return "Forfait"
-            case .deposit: return "Caution + %"
-            }
-        }
-
-        init(from decoder: Decoder) throws {
-            let rawValue = try decoder.singleValueContainer().decode(String.self)
-            self = PricingModel(rawValue: rawValue) ?? .free
         }
     }
 

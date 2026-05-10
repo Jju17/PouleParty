@@ -13,11 +13,10 @@ struct AnalyticsClient {
 extension AnalyticsClient {
     // MARK: - Convenience methods
 
-    func gameCreated(gameMode: String, maxPlayers: Int, pricingModel: String, powerUpsEnabled: Bool) {
+    func gameCreated(gameMode: String, maxPlayers: Int, powerUpsEnabled: Bool) {
         logEvent("game_created", [
             "game_mode": gameMode,
             "max_players": maxPlayers,
-            "pricing_model": pricingModel,
             "power_ups_enabled": powerUpsEnabled,
         ])
     }
@@ -62,8 +61,8 @@ extension AnalyticsClient {
         ])
     }
 
-    func registrationCompleted(pricingModel: String) {
-        logEvent("registration_completed", ["pricing_model": pricingModel])
+    func registrationCompleted() {
+        logEvent("registration_completed", [:])
     }
 
     func onboardingCompleted() {
