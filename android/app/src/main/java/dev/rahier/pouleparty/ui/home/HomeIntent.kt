@@ -32,6 +32,10 @@ sealed interface HomeIntent {
     object PendingRegistrationJoinTapped : HomeIntent
     object RefreshActiveGame : HomeIntent
     object PaymentVerificationDismissed : HomeIntent
+    /** Placeholder for the future admin-mode entry point. Wired in PP-45. */
+    object AdminModeTapped : HomeIntent
+    /** Placeholder for the "Envie de créer une partie ?" web CTA. Wired in PP-46. */
+    object WebCreatePartyTapped : HomeIntent
     data class GameCodeChanged(val code: String) : HomeIntent
     data class TeamNameChanged(val name: String) : HomeIntent
 }

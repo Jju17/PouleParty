@@ -42,6 +42,7 @@ import dev.rahier.pouleparty.ui.gamecreation.steps.ChickenSelectionStep
 import dev.rahier.pouleparty.ui.gamecreation.steps.DurationStep
 import dev.rahier.pouleparty.ui.gamecreation.steps.GameModeStep
 import dev.rahier.pouleparty.ui.gamecreation.steps.HeadStartStep
+import dev.rahier.pouleparty.ui.gamecreation.steps.MaxPlayersStep
 import dev.rahier.pouleparty.ui.gamecreation.steps.ParticipationStep
 import dev.rahier.pouleparty.ui.gamecreation.steps.PowerUpsStep
 import dev.rahier.pouleparty.ui.gamecreation.steps.RecapStep
@@ -151,6 +152,11 @@ fun GameCreationScreen(
                         onSelect = { viewModel.onIntent(GameCreationIntent.ParticipatingChanged(it)) }
                     )
                     GameCreationStep.CHICKEN_SELECTION -> ChickenSelectionStep()
+                    GameCreationStep.MAX_PLAYERS -> MaxPlayersStep(
+                        maxPlayers = state.game.maxPlayers,
+                        range = state.maxPlayersRange,
+                        onValueChange = { viewModel.onIntent(GameCreationIntent.MaxPlayersChanged(it)) }
+                    )
                     GameCreationStep.GAME_MODE -> GameModeStep(
                         selectedMode = state.game.gameModEnum,
                         onSelect = { viewModel.onIntent(GameCreationIntent.GameModeChanged(it)) }

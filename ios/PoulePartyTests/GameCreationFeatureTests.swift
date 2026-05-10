@@ -69,15 +69,16 @@ struct GameCreationFeatureTests {
         let state = makeState()
         let steps = state.steps
         #expect(steps[0] == .participation)
-        #expect(steps[1] == .gameMode)
-        #expect(steps[2] == .zoneSetup)
-        #expect(steps[3] == .registration)
-        #expect(steps[4] == .startTime)
-        #expect(steps[5] == .duration)
-        #expect(steps[6] == .headStart)
-        #expect(steps[7] == .powerUps)
-        #expect(steps[8] == .chickenSeesHunters)
-        #expect(steps[9] == .recap)
+        #expect(steps[1] == .maxPlayers)
+        #expect(steps[2] == .gameMode)
+        #expect(steps[3] == .zoneSetup)
+        #expect(steps[4] == .registration)
+        #expect(steps[5] == .startTime)
+        #expect(steps[6] == .duration)
+        #expect(steps[7] == .headStart)
+        #expect(steps[8] == .powerUps)
+        #expect(steps[9] == .chickenSeesHunters)
+        #expect(steps[10] == .recap)
     }
 
     @Test func stepsIncludeChickenSelectionWhenNotParticipating() {
@@ -86,8 +87,60 @@ struct GameCreationFeatureTests {
         let steps = state.steps
         #expect(steps[0] == .participation)
         #expect(steps[1] == .chickenSelection)
-        #expect(steps[2] == .gameMode)
-        #expect(steps.count == 11)
+        #expect(steps[2] == .maxPlayers)
+        #expect(steps[3] == .gameMode)
+        #expect(steps.count == 12)
+    }
+
+    @Test func maxPlayersStepFollowsParticipation() {
+        let state = makeState()
+        let participationIndex = state.steps.firstIndex(of: .participation)!
+        let maxPlayersIndex = state.steps.firstIndex(of: .maxPlayers)!
+        #expect(maxPlayersIndex == participationIndex + 1)
+    }
+
+    // MARK: - Max players (PP-42)
+
+    @Test func defaultMaxPlayersRangeIs2To5() {
+        let state = makeState()
+        #expect(state.isAdminCreation == false)
+        #expect(state.maxPlayersRange == 2...5)
+    }
+
+    @Test func adminCreationMaxPlayersRangeIs2To500() {
+        var state = makeState()
+        state.isAdminCreation = true
+        #expect(state.maxPlayersRange == 2...500)
+    }
+
+    @Test func maxPlayersChangedWithinRangeUpdatesGame() async {
+        let store = makeStore()
+        await store.send(.maxPlayersChanged(3)) {
+            $0.$game.withLock { $0.maxPlayers = 3 }
+        }
+    }
+
+    @Test func maxPlayersChangedClampsToUpperBoundForStandardCreation() async {
+        let store = makeStore()
+        await store.send(.maxPlayersChanged(50)) {
+            $0.$game.withLock { $0.maxPlayers = 5 }
+        }
+    }
+
+    @Test func maxPlayersChangedClampsToLowerBound() async {
+        let store = makeStore()
+        await store.send(.maxPlayersChanged(0)) {
+            $0.$game.withLock { $0.maxPlayers = 2 }
+        }
+    }
+
+    @Test func maxPlayersChangedAcceptsLargeValueWhenAdminCreation() async {
+        var state = makeState()
+        state.isAdminCreation = true
+        let store = makeStore(state: state)
+        await store.send(.maxPlayersChanged(250)) {
+            $0.$game.withLock { $0.maxPlayers = 250 }
+        }
     }
 
     @Test func registrationComesBeforeStartTimeInSteps() {

@@ -222,6 +222,13 @@
     <string name="ends_at">Fin à</string>
     <string name="role">Rôle</string>
     <string name="max_players">Joueurs max</string>
+    <string name="number_of_players">Nombre de joueurs</string>
+    <string name="how_many_hunters_can_join">Combien de chasseurs peuvent rejoindre ?</string>
+    <string name="between_x_and_y_hunters">Entre %1$d et %2$d chasseurs</string>
+    <string name="decrease_max_players">Diminuer le nombre de chasseurs</string>
+    <string name="increase_max_players">Augmenter le nombre de chasseurs</string>
+    <string name="admin_mode">Mode admin</string>
+    <string name="want_to_create_a_party">Envie de créer une partie ?</string>
     <string name="active_types">Types actifs</string>
     <string name="pricing">Tarification</string>
     <string name="total_price">Prix total</string>

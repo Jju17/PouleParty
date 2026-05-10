@@ -13,7 +13,6 @@ import dev.rahier.pouleparty.model.GameMod
 import dev.rahier.pouleparty.model.GamePowerUps
 import dev.rahier.pouleparty.model.GameRegistration
 import dev.rahier.pouleparty.model.Pricing
-import dev.rahier.pouleparty.model.PricingModel
 import dev.rahier.pouleparty.powerups.model.PowerUpType
 import dev.rahier.pouleparty.ui.payment.PaymentContext
 import dev.rahier.pouleparty.model.Timing
@@ -45,6 +44,10 @@ data class GameCreationUiState(
     val goingForward: Boolean = true,
     /** Non-null when the Forfait creator payment screen should be shown as an overlay. */
     val paymentContext: PaymentContext? = null,
+    /** PP-42: lifts the maxPlayers stepper from `2..5` (Free standard) to
+     *  `2..500`. Always `false` in PP-42; PP-45 will flip it via the
+     *  `jujurahier` admin code modal. */
+    val isAdminCreation: Boolean = false,
 ) {
     val steps: List<GameCreationStep>
         get() {
@@ -55,6 +58,7 @@ data class GameCreationUiState(
                 base.add(GameCreationStep.CHICKEN_SELECTION)
             }
             base.addAll(listOf(
+                GameCreationStep.MAX_PLAYERS,
                 GameCreationStep.GAME_MODE,
                 GameCreationStep.ZONE_SETUP,
                 GameCreationStep.REGISTRATION,
@@ -67,6 +71,11 @@ data class GameCreationUiState(
             base.add(GameCreationStep.RECAP)
             return base
         }
+
+    /** Closed range allowed by the current Stepper. PP-45 plumbs through
+     *  `isAdminCreation = true` to unlock the wider range. */
+    val maxPlayersRange: IntRange
+        get() = if (isAdminCreation) 2..500 else 2..5
 
     val currentStep: GameCreationStep
         get() = steps.getOrElse(currentStepIndex) { GameCreationStep.PARTICIPATION }
@@ -121,9 +130,11 @@ class GameCreationViewModel @Inject constructor(
     private val numberOfPlayers: Int = savedStateHandle["numberOfPlayers"] ?: 5
     private val pricePerPlayerCents: Int = savedStateHandle["pricePerPlayerCents"] ?: 0
     private val depositAmountCents: Int = savedStateHandle["depositAmountCents"] ?: 0
+    private val isAdminCreation: Boolean = savedStateHandle["isAdminCreation"] ?: false
 
     private val _uiState = MutableStateFlow(
         GameCreationUiState(
+            isAdminCreation = isAdminCreation,
             game = Game(
                 id = gameId,
                 name = "",
@@ -176,6 +187,7 @@ class GameCreationViewModel @Inject constructor(
             is GameCreationIntent.DurationChanged -> updateDuration(intent.minutes)
             is GameCreationIntent.HeadStartChanged -> updateHeadStart(intent.minutes)
             is GameCreationIntent.InitialRadiusChanged -> updateInitialRadius(intent.radius)
+            is GameCreationIntent.MaxPlayersChanged -> updateMaxPlayers(intent.value)
             is GameCreationIntent.PowerUpsToggled -> togglePowerUps(intent.enabled)
             is GameCreationIntent.PowerUpTypeToggled -> togglePowerUpType(intent.type)
             is GameCreationIntent.ChickenCanSeeHuntersToggled -> toggleChickenCanSeeHunters(intent.value)
@@ -297,6 +309,14 @@ class GameCreationViewModel @Inject constructor(
         recalculateNormalMode()
     }
 
+    private fun updateMaxPlayers(value: Int) {
+        _uiState.update { state ->
+            val range = state.maxPlayersRange
+            val clamped = value.coerceIn(range.first, range.last)
+            state.copy(game = state.game.copy(maxPlayers = clamped))
+        }
+    }
+
     private fun togglePowerUps(enabled: Boolean) {
         _uiState.update { it.copy(game = it.game.copy(powerUps = it.game.powerUps.copy(enabled = enabled))) }
     }
@@ -406,15 +426,6 @@ class GameCreationViewModel @Inject constructor(
         val state = _uiState.value
         val endDate = Date(game.startDate.time + (state.gameDurationMinutes * 60 * 1000).toLong())
         val finalGame = game.withEndDate(endDate)
-
-        // Forfait: creator pays upfront — defer the Firestore write until the Stripe
-        // webhook flips the server-created game doc from `pending_payment` to `waiting`.
-        // Free and Caution modes still go through the direct client write path (Caution
-        // creator doesn't pay right now; only hunters pay a deposit at registration).
-        if (finalGame.pricingModelEnum == PricingModel.FLAT) {
-            _uiState.update { it.copy(paymentContext = PaymentContext.CreatorForfait(finalGame)) }
-            return
-        }
 
         viewModelScope.launch {
             try {

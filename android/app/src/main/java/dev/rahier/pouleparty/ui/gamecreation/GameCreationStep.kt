@@ -3,6 +3,7 @@ package dev.rahier.pouleparty.ui.gamecreation
 enum class GameCreationStep {
     PARTICIPATION,
     CHICKEN_SELECTION,
+    MAX_PLAYERS,
     GAME_MODE,
     ZONE_SETUP,
     START_TIME,

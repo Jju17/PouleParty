@@ -31,6 +31,9 @@ final class GameCreationSnapshotTests: XCTestCase {
     ) -> StoreOf<GameCreationFeature> {
         var game = Game(id: "snapshot-test")
         game.foundCode = "1234"
+        // Match the production seed Home.swift writes when opening the
+        // wizard: Free, default to the Free cap (5).
+        game.maxPlayers = 5
         // Fixed date to avoid snapshot diffs from time changes
         game.timing.start = .init(date: Date(timeIntervalSince1970: 1_800_000_000)) // 2027-01-15 08:00 UTC
         game.gameMode = gameMod
@@ -69,6 +72,12 @@ final class GameCreationSnapshotTests: XCTestCase {
 
     // MARK: - Step Snapshots
 
+    // Indices below match `GameCreationFeature.State.steps` for the
+    // participating-chicken flow as of PP-42:
+    //   0 participation, 1 maxPlayers, 2 gameMode, 3 zoneSetup,
+    //   4 registration, 5 startTime, 6 duration, 7 headStart,
+    //   8 powerUps, 9 chickenSeesHunters, 10 recap.
+
     func testParticipationStep() {
         let vc = makeVC(store: makeStore(step: 0))
         assertSnapshot(of: vc, as: .image(size: CGSize(width: 393, height: 852)))
@@ -79,63 +88,68 @@ final class GameCreationSnapshotTests: XCTestCase {
         assertSnapshot(of: vc, as: .image(size: CGSize(width: 393, height: 852)))
     }
 
-    func testGameModeStep() {
+    func testMaxPlayersStep() {
         let vc = makeVC(store: makeStore(step: 1))
         assertSnapshot(of: vc, as: .image(size: CGSize(width: 393, height: 852)))
     }
 
-    func testStartTimeStep() {
-        let vc = makeVC(store: makeStore(step: 3))
-        assertSnapshot(of: vc, as: .image(size: CGSize(width: 393, height: 852)))
-    }
-
-    func testDurationStep() {
-        let vc = makeVC(store: makeStore(step: 4))
-        assertSnapshot(of: vc, as: .image(size: CGSize(width: 393, height: 852)))
-    }
-
-    func testHeadStartStep() {
-        let vc = makeVC(store: makeStore(step: 5))
-        assertSnapshot(of: vc, as: .image(size: CGSize(width: 393, height: 852)))
-    }
-
-    func testPowerUpsStepDisabled() {
-        let vc = makeVC(store: makeStore(step: 6, powerUpsEnabled: false))
-        assertSnapshot(of: vc, as: .image(size: CGSize(width: 393, height: 852)))
-    }
-
-    func testPowerUpsStepEnabled() {
-        let vc = makeVC(store: makeStore(step: 6, powerUpsEnabled: true))
-        assertSnapshot(of: vc, as: .image(size: CGSize(width: 393, height: 852)))
-    }
-
-    func testChickenSeesHuntersStep() {
-        let vc = makeVC(store: makeStore(step: 7, gameMod: .followTheChicken))
+    func testGameModeStep() {
+        let vc = makeVC(store: makeStore(step: 2))
         assertSnapshot(of: vc, as: .image(size: CGSize(width: 393, height: 852)))
     }
 
     func testRegistrationStepOpenJoin() {
-        let vc = makeVC(store: makeStore(step: 8))
+        let vc = makeVC(store: makeStore(step: 4))
         assertSnapshot(of: vc, as: .image(size: CGSize(width: 393, height: 852)))
     }
 
     func testRegistrationStepRequired() {
-        let vc = makeVC(store: makeStore(step: 8, requiresRegistration: true))
+        let vc = makeVC(store: makeStore(step: 4, requiresRegistration: true))
         assertSnapshot(of: vc, as: .image(size: CGSize(width: 393, height: 852)))
     }
 
-    func testRecapStepStayInZone() {
-        let vc = makeVC(store: makeStore(step: 9))
+    func testStartTimeStep() {
+        let vc = makeVC(store: makeStore(step: 5))
         assertSnapshot(of: vc, as: .image(size: CGSize(width: 393, height: 852)))
     }
 
-    func testRecapStepFollowChicken() {
+    func testDurationStep() {
+        let vc = makeVC(store: makeStore(step: 6))
+        assertSnapshot(of: vc, as: .image(size: CGSize(width: 393, height: 852)))
+    }
+
+    func testHeadStartStep() {
+        let vc = makeVC(store: makeStore(step: 7))
+        assertSnapshot(of: vc, as: .image(size: CGSize(width: 393, height: 852)))
+    }
+
+    func testPowerUpsStepDisabled() {
+        let vc = makeVC(store: makeStore(step: 8, powerUpsEnabled: false))
+        assertSnapshot(of: vc, as: .image(size: CGSize(width: 393, height: 852)))
+    }
+
+    func testPowerUpsStepEnabled() {
+        let vc = makeVC(store: makeStore(step: 8, powerUpsEnabled: true))
+        assertSnapshot(of: vc, as: .image(size: CGSize(width: 393, height: 852)))
+    }
+
+    func testChickenSeesHuntersStep() {
         let vc = makeVC(store: makeStore(step: 9, gameMod: .followTheChicken))
         assertSnapshot(of: vc, as: .image(size: CGSize(width: 393, height: 852)))
     }
 
+    func testRecapStepStayInZone() {
+        let vc = makeVC(store: makeStore(step: 10))
+        assertSnapshot(of: vc, as: .image(size: CGSize(width: 393, height: 852)))
+    }
+
+    func testRecapStepFollowChicken() {
+        let vc = makeVC(store: makeStore(step: 10, gameMod: .followTheChicken))
+        assertSnapshot(of: vc, as: .image(size: CGSize(width: 393, height: 852)))
+    }
+
     func testRecapStepWithRegistration() {
-        let vc = makeVC(store: makeStore(step: 9, requiresRegistration: true))
+        let vc = makeVC(store: makeStore(step: 10, requiresRegistration: true))
         assertSnapshot(of: vc, as: .image(size: CGSize(width: 393, height: 852)))
     }
 }

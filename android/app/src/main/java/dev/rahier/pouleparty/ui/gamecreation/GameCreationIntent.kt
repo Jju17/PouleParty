@@ -27,6 +27,7 @@ sealed interface GameCreationIntent {
     data class DurationChanged(val minutes: Double) : GameCreationIntent
     data class HeadStartChanged(val minutes: Double) : GameCreationIntent
     data class InitialRadiusChanged(val radius: Double) : GameCreationIntent
+    data class MaxPlayersChanged(val value: Int) : GameCreationIntent
     data class PowerUpsToggled(val enabled: Boolean) : GameCreationIntent
     data class PowerUpTypeToggled(val type: PowerUpType) : GameCreationIntent
     data class ChickenCanSeeHuntersToggled(val value: Boolean) : GameCreationIntent

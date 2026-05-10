@@ -14,6 +14,7 @@ import SwiftUI
 enum GameCreationStep: Equatable {
     case participation
     case chickenSelection
+    case maxPlayers
     case gameMode
     case zoneSetup
     case startTime
@@ -40,6 +41,10 @@ struct GameCreationFeature {
         var showPowerUpSelection: Bool = false
         var mapConfigState: ChickenMapConfigFeature.State
         var goingForward: Bool = true
+        /// PP-42: lifts the maxPlayers stepper from `2...5` (Free standard)
+        /// to `2...500`. Always `false` in PP-42; PP-45 will flip it via the
+        /// `jujurahier` admin code modal.
+        var isAdminCreation: Bool = false
 
         var steps: [GameCreationStep] {
             var result: [GameCreationStep] = [.participation]
@@ -47,6 +52,7 @@ struct GameCreationFeature {
                 result.append(.chickenSelection)
             }
             result.append(contentsOf: [
+                .maxPlayers,
                 .gameMode,
                 .zoneSetup,
                 .registration,
@@ -58,6 +64,12 @@ struct GameCreationFeature {
             result.append(.chickenSeesHunters)
             result.append(.recap)
             return result
+        }
+
+        /// Closed range allowed by the current Stepper. PP-45 plumbs through
+        /// `isAdminCreation = true` to unlock the wider range.
+        var maxPlayersRange: ClosedRange<Int> {
+            isAdminCreation ? 2...500 : 2...5
         }
 
         var currentStep: GameCreationStep {
@@ -121,6 +133,7 @@ struct GameCreationFeature {
         case gameModChanged(Game.GameMode)
         case initialRadiusChanged(Double)
         case mapConfig(ChickenMapConfigFeature.Action)
+        case maxPlayersChanged(Int)
         case nextTapped
         case participationChanged(Bool)
         case powerUpsToggled(Bool)
@@ -271,6 +284,11 @@ struct GameCreationFeature {
             case .mapConfig:
                 return .none
 
+            case let .maxPlayersChanged(value):
+                let clamped = min(max(value, state.maxPlayersRange.lowerBound), state.maxPlayersRange.upperBound)
+                state.$game.withLock { $0.maxPlayers = clamped }
+                return .none
+
             case .nextTapped:
                 let maxIndex = state.steps.count - 1
                 if state.currentStepIndex < maxIndex {
@@ -332,13 +350,6 @@ struct GameCreationFeature {
                     game.endDate = game.startDate.addingTimeInterval(state.gameDurationMinutes * 60)
                 }
                 recalculateNormalMode(state: &state)
-                // Forfait requires an up-front creator payment. Rest of the flow
-                // (free / caution) stays client-created: for caution the creator
-                // doesn't pay right now — only hunters do, at registration.
-                if state.game.pricing.model == .flat {
-                    state.destination = .payment(PaymentFeature.State(context: .creatorForfait(gameConfig: state.game)))
-                    return .none
-                }
                 return .run { [state = state, analyticsClient] send in
                     do {
                         try await apiClient.setConfig(state.game)
@@ -518,6 +529,7 @@ struct GameCreationView: View {
         switch step {
         case .participation:       ParticipationStep(store: store)
         case .chickenSelection:    ChickenSelectionStep(store: store)
+        case .maxPlayers:          MaxPlayersStep(store: store)
         case .gameMode:            GameModeStep(store: store)
         case .zoneSetup:           ZoneSetupStep(store: store)
         case .startTime:           StartTimeStep(store: store)

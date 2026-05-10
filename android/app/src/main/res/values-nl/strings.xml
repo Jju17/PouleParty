@@ -76,6 +76,13 @@
     <string name="ends_at">Eindigt om</string>
     <string name="role">Rol</string>
     <string name="max_players">Max spelers</string>
+    <string name="number_of_players">Aantal spelers</string>
+    <string name="how_many_hunters_can_join">Hoeveel jagers mogen meedoen?</string>
+    <string name="between_x_and_y_hunters">Tussen %1$d en %2$d jagers</string>
+    <string name="decrease_max_players">Aantal jagers verlagen</string>
+    <string name="increase_max_players">Aantal jagers verhogen</string>
+    <string name="admin_mode">Adminmodus</string>
+    <string name="want_to_create_a_party">Een feest organiseren?</string>
     <string name="active_types">Actieve types</string>
     <string name="pricing">Prijsmodel</string>
     <string name="total_price">Totaalprijs</string>

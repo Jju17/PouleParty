@@ -78,6 +78,13 @@
     <string name="ends_at">Ends at</string>
     <string name="role">Role</string>
     <string name="max_players">Max players</string>
+    <string name="number_of_players">Number of players</string>
+    <string name="how_many_hunters_can_join">How many hunters can join?</string>
+    <string name="between_x_and_y_hunters">Between %1$d and %2$d hunters</string>
+    <string name="decrease_max_players">Decrease number of hunters</string>
+    <string name="increase_max_players">Increase number of hunters</string>
+    <string name="admin_mode">Admin mode</string>
+    <string name="want_to_create_a_party">Want to create a party?</string>
     <string name="active_types">Active types</string>
     <string name="pricing">Pricing</string>
     <string name="total_price">Total price</string>

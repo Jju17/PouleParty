@@ -49,8 +49,7 @@ private enum class PendingPermissionAction { None, Start, CreateParty }
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
-    onNavigateToPlanSelection: () -> Unit,
-    onNavigateToGameCreation: (gameId: String, pricingModel: String, numberOfPlayers: Int, pricePerPlayerCents: Int, depositAmountCents: Int) -> Unit,
+    onNavigateToCreateParty: (gameId: String, isAdminCreation: Boolean) -> Unit,
     onNavigateToChickenMap: (String) -> Unit,
     onNavigateToChickenMapDebug: (String) -> Unit = {},
     onNavigateToDebugMapConfig: () -> Unit = {},
@@ -120,8 +119,18 @@ fun HomeScreen(
     }
 
     var isPendingBannerCollapsed by remember { mutableStateOf(false) }
-    var isShowingPlanSelection by remember { mutableStateOf(false) }
     var pendingPermissionAction by remember { mutableStateOf<PendingPermissionAction>(PendingPermissionAction.None) }
+
+    // PP-42: Forms a fresh Firestore-style auto-ID, then navigates straight
+    // into the Free wizard. PlanSelection is gone; the cap (5) lives in the
+    // wizard's Stepper. The admin entry point (PP-45) will pass `true` here.
+    fun launchCreateParty(isAdminCreation: Boolean) {
+        val gameId = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+            .collection("games")
+            .document()
+            .id
+        onNavigateToCreateParty(gameId, isAdminCreation)
+    }
 
     // Location permission launcher — triggered when Start or Create Party is tapped without
     // permission. If user grants in the system dialog, we re-attempt the original action.
@@ -133,9 +142,7 @@ fun HomeScreen(
         if (granted) {
             when (action) {
                 PendingPermissionAction.Start -> viewModel.onIntent(HomeIntent.StartButtonTapped)
-                PendingPermissionAction.CreateParty -> {
-                    isShowingPlanSelection = true
-                }
+                PendingPermissionAction.CreateParty -> launchCreateParty(isAdminCreation = false)
                 PendingPermissionAction.None -> {}
             }
         } else {
@@ -385,7 +392,7 @@ fun HomeScreen(
                         .combinedClickable(
                             onClick = {
                                 if (viewModel.hasLocationPermission()) {
-                                    isShowingPlanSelection = true
+                                    launchCreateParty(isAdminCreation = false)
                                 } else {
                                     pendingPermissionAction = PendingPermissionAction.CreateParty
                                     locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
@@ -402,6 +409,36 @@ fun HomeScreen(
                         fontSize = 8.sp,
                         color = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+                    )
+                }
+            }
+
+            // PP-42 placeholders: visible buttons whose behavior lands in
+            // PP-45 (admin mode unlock) and PP-46 (web CTA).
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.padding(bottom = 12.dp)
+            ) {
+                TextButton(
+                    onClick = { viewModel.onIntent(HomeIntent.AdminModeTapped) }
+                ) {
+                    Text(
+                        stringResource(R.string.admin_mode),
+                        fontFamily = GameBoyFont,
+                        fontSize = 8.sp,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                    )
+                }
+                TextButton(
+                    onClick = { viewModel.onIntent(HomeIntent.WebCreatePartyTapped) }
+                ) {
+                    Text(
+                        stringResource(R.string.want_to_create_a_party),
+                        fontFamily = GameBoyFont,
+                        fontSize = 8.sp,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                        textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline
                     )
                 }
             }
@@ -477,36 +514,5 @@ fun HomeScreen(
         GameRulesOverlay(onDismiss = { viewModel.onIntent(HomeIntent.RulesDismissed) })
     }
 
-    // Plan selection bottom sheet
-    if (isShowingPlanSelection) {
-        val planSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-        ModalBottomSheet(
-            onDismissRequest = { isShowingPlanSelection = false },
-            sheetState = planSheetState,
-            containerColor = MaterialTheme.colorScheme.background
-        ) {
-            Box(modifier = Modifier.fillMaxHeight(0.65f)) {
-            dev.rahier.pouleparty.ui.planselection.PlanSelectionScreen(
-                onPlanSelected = { params ->
-                    isShowingPlanSelection = false
-                    // Firestore-style auto-ID (20-char alphanumeric) so free-game
-                    // IDs match the Cloud Function format used for Forfait games.
-                    val gameId = com.google.firebase.firestore.FirebaseFirestore.getInstance()
-                        .collection("games")
-                        .document()
-                        .id
-                    onNavigateToGameCreation(
-                        gameId,
-                        params.pricingModel,
-                        params.numberOfPlayers,
-                        params.pricePerPlayerCents,
-                        params.depositAmountCents
-                    )
-                },
-                onBack = { isShowingPlanSelection = false }
-            )
-            }
-        }
-    }
 }
 

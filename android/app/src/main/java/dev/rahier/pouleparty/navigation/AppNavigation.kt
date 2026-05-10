@@ -29,8 +29,6 @@ import dev.rahier.pouleparty.ui.huntermap.HunterMapScreen
 import dev.rahier.pouleparty.ui.onboarding.OnboardingScreen
 import dev.rahier.pouleparty.ui.home.HomeScreen
 import dev.rahier.pouleparty.ui.paymentconfirmation.PaymentConfirmationScreen
-import dev.rahier.pouleparty.ui.planselection.PlanSelectionScreen
-import dev.rahier.pouleparty.ui.planselection.PricingParams
 import dev.rahier.pouleparty.ui.settings.SettingsScreen
 import dev.rahier.pouleparty.ui.victory.VictoryScreen
 import dev.rahier.pouleparty.util.getTrimmedString
@@ -38,8 +36,10 @@ import dev.rahier.pouleparty.util.getTrimmedString
 object Routes {
     const val ONBOARDING = "onboarding"
     const val HOME = "home"
-    const val PLAN_SELECTION = "plan_selection"
-    const val GAME_CREATION = "game_creation/{gameId}/{pricingModel}/{numberOfPlayers}/{pricePerPlayerCents}/{depositAmountCents}"
+    // PP-42: PlanSelection retired, route signature simplified — only the
+    // gameId + isAdminCreation flag remain. Pricing model is hardcoded to
+    // Free; PP-43 will retire the residual `pricingModel` plumbing.
+    const val GAME_CREATION = "game_creation/{gameId}?isAdminCreation={isAdminCreation}"
     // `debug` is an optional query-style arg: defaults to false so every
     // existing navigate-to-chicken-map call site keeps working unchanged.
     // The long-press easter egg flips it on via [chickenMapDebug].
@@ -52,8 +52,8 @@ object Routes {
     const val SETTINGS = "settings"
     const val PAYMENT_CONFIRMED = "payment_confirmed/{gameId}/{kind}"
 
-    fun gameCreation(gameId: String, pricingModel: String = "free", numberOfPlayers: Int = 5, pricePerPlayerCents: Int = 0, depositAmountCents: Int = 0) =
-        "game_creation/$gameId/$pricingModel/$numberOfPlayers/$pricePerPlayerCents/$depositAmountCents"
+    fun gameCreation(gameId: String, isAdminCreation: Boolean = false) =
+        "game_creation/$gameId?isAdminCreation=$isAdminCreation"
     fun chickenMap(gameId: String) = "chicken_map/$gameId?debug=false"
     fun chickenMapDebug(gameId: String) = "chicken_map/$gameId?debug=true"
     fun hunterMap(gameId: String, hunterName: String) = "hunter_map/$gameId/${Uri.encode(hunterName)}"
@@ -148,40 +148,10 @@ fun AppNavigation() {
             )
         }
 
-        composable(Routes.PLAN_SELECTION) {
-            PlanSelectionScreen(
-                onPlanSelected = { params ->
-                    // Firestore-style auto-ID (20-char alphanumeric) so free-game
-                    // IDs match the Cloud Function format used for Forfait games.
-                    val gameId = FirebaseFirestore.getInstance()
-                        .collection("games")
-                        .document()
-                        .id
-                    navController.navigate(
-                        Routes.gameCreation(
-                            gameId,
-                            params.pricingModel,
-                            params.numberOfPlayers,
-                            params.pricePerPlayerCents,
-                            params.depositAmountCents
-                        )
-                    ) {
-                        popUpTo(Routes.PLAN_SELECTION) { inclusive = true }
-                    }
-                },
-                onBack = { navController.popBackStack() }
-            )
-        }
-
         composable(Routes.HOME) {
             HomeScreen(
-                onNavigateToPlanSelection = {
-                    navController.navigate(Routes.PLAN_SELECTION)
-                },
-                onNavigateToGameCreation = { gameId, pricingModel, numberOfPlayers, pricePerPlayerCents, depositAmountCents ->
-                    navController.navigate(
-                        Routes.gameCreation(gameId, pricingModel, numberOfPlayers, pricePerPlayerCents, depositAmountCents)
-                    ) {
+                onNavigateToCreateParty = { gameId, isAdminCreation ->
+                    navController.navigate(Routes.gameCreation(gameId, isAdminCreation)) {
                         popUpTo(Routes.HOME) { inclusive = false }
                     }
                 },
@@ -229,10 +199,7 @@ fun AppNavigation() {
             route = Routes.GAME_CREATION,
             arguments = listOf(
                 navArgument("gameId") { type = NavType.StringType },
-                navArgument("pricingModel") { type = NavType.StringType; defaultValue = "free" },
-                navArgument("numberOfPlayers") { type = NavType.IntType; defaultValue = 5 },
-                navArgument("pricePerPlayerCents") { type = NavType.IntType; defaultValue = 0 },
-                navArgument("depositAmountCents") { type = NavType.IntType; defaultValue = 0 }
+                navArgument("isAdminCreation") { type = NavType.BoolType; defaultValue = false }
             )
         ) {
             GameCreationScreen(

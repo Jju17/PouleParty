@@ -105,6 +105,8 @@ class HomeViewModel @Inject constructor(
             HomeIntent.PendingRegistrationJoinTapped -> joinPendingRegistration()
             HomeIntent.RefreshActiveGame -> checkForActiveGame()
             HomeIntent.PaymentVerificationDismissed -> _uiState.update { it.copy(isShowingPaymentVerificationFailed = false) }
+            HomeIntent.AdminModeTapped -> { /* PP-45 fills in the admin code modal. */ }
+            HomeIntent.WebCreatePartyTapped -> { /* PP-46 fills in the localized web CTA. */ }
             is HomeIntent.GameCodeChanged -> onGameCodeChanged(intent.code)
             is HomeIntent.TeamNameChanged -> onTeamNameChanged(intent.name)
         }

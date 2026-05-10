@@ -14,13 +14,6 @@ import Sharing
 import SwiftUI
 import UIKit
 
-struct PlanSelectionResult: Equatable {
-    let model: Game.PricingModel
-    let numberOfPlayers: Int
-    let pricePerPlayerCents: Int
-    let depositAmountCents: Int
-}
-
 struct PendingRegistration: Codable, Equatable {
     let gameId: String
     let gameCode: String
@@ -74,13 +67,14 @@ struct HomeFeature {
         /// partie" (upcoming, `.waiting`) so the banner copy + CTA matches
         /// the game state. Nil when no active game.
         var activeGamePhase: GamePhase? = nil
-        var pendingPlanResult: PlanSelectionResult? = nil
     }
 
     enum Action: BindableAction {
         case accountDeletionCompleted
         case activeGameBannerDismissed
         case activeGameFound(Game, GameRole, GamePhase)
+        /// Placeholder for the future admin-mode entry point. Wired in PP-45.
+        case adminModeTapped
         case binding(BindingAction<State>)
         case chickenConfigLocationRequested
         case chickenGameStarted(Game)
@@ -122,6 +116,8 @@ struct HomeFeature {
         case rulesButtonTapped
         case settingsButtonTapped
         case startButtonTapped
+        /// Placeholder for the "Envie de créer une partie ?" web CTA. Wired in PP-46.
+        case webCreatePartyTapped
     }
 
     @Reducer
@@ -133,7 +129,6 @@ struct HomeFeature {
             case gameCreation(GameCreationFeature.State)
             case gameRules
             case joinFlow(JoinFlowFeature.State)
-            case planSelection(PlanSelectionFeature.State)
             case settings(SettingsFeature.State)
         }
 
@@ -142,7 +137,6 @@ struct HomeFeature {
             case debugMapConfig(ChickenMapConfigFeature.Action)
             case gameCreation(GameCreationFeature.Action)
             case joinFlow(JoinFlowFeature.Action)
-            case planSelection(PlanSelectionFeature.Action)
             case settings(SettingsFeature.Action)
 
             enum Alert: Equatable {
@@ -161,9 +155,6 @@ struct HomeFeature {
                 }
                 .ifCaseLet(\.joinFlow, action: \.joinFlow) {
                     JoinFlowFeature()
-                }
-                .ifCaseLet(\.planSelection, action: \.planSelection) {
-                    PlanSelectionFeature()
                 }
                 .ifCaseLet(\.settings, action: \.settings) {
                     SettingsFeature()
@@ -212,7 +203,20 @@ struct HomeFeature {
                     return .send(.locationPermissionDenied)
                 }
                 MapWarmUp.warmUpIfNeeded()
-                state.destination = .planSelection(PlanSelectionFeature.State())
+                return .run { [userClient, apiClient] send in
+                    guard let userId = userClient.currentUserId() else { return }
+                    let count = (try? await apiClient.countFreeGamesToday(userId)) ?? 0
+                    await send(.dailyFreeLimitChecked(allowed: count < 1))
+                }
+            case .adminModeTapped:
+                // PP-45 fills in: modal asking for the `jujurahier` admin code,
+                // then opens the wizard with `isAdminCreation = true` to lift
+                // the maxPlayers cap. Until then this button is a visible
+                // placeholder per PP-42.
+                return .none
+            case .webCreatePartyTapped:
+                // PP-46 fills in: opens the localized "create a party" landing
+                // page in the device browser.
                 return .none
             case .createPartyLongPressed:
                 let chickenLocStatus = locationClient.authorizationStatus()
@@ -281,32 +285,14 @@ struct HomeFeature {
                 state.destination = nil
                 return .send(.chickenGameStarted(game))
             case let .destination(.presented(.gameCreation(.paidGameCreated(game)))):
-                // Forfait game was created server-side in `.pendingPayment`; webhook
-                // flips to `.waiting` within a couple of seconds. Route to the
-                // confirmation screen so the creator gets immediate feedback
-                // instead of being dumped back on Home.
+                // Legacy Forfait completion path. PP-42 retired the in-app
+                // creator payment flow, but the action remains on the
+                // GameCreation reducer for backwards compat with any
+                // pre-existing `.flat` games sliced through TestStores. This
+                // handler is now effectively unreachable from the wizard;
+                // PP-43 will delete the action entirely.
                 state.destination = nil
                 return .send(.paymentConfirmationRequested(game: game, kind: .creatorForfait))
-            case let .destination(.presented(.planSelection(.planSelected(pricingModel, numberOfPlayers, pricePerPlayerCents, depositAmountCents)))):
-                state.destination = nil
-                state.pendingPlanResult = PlanSelectionResult(
-                    model: pricingModel,
-                    numberOfPlayers: numberOfPlayers,
-                    pricePerPlayerCents: pricePerPlayerCents,
-                    depositAmountCents: depositAmountCents
-                )
-                if pricingModel == .free {
-                    return .run { [userClient] send in
-                        try? await Task.sleep(for: .milliseconds(150))
-                        guard let userId = userClient.currentUserId() else { return }
-                        let count = (try? await apiClient.countFreeGamesToday(userId)) ?? 0
-                        await send(.dailyFreeLimitChecked(allowed: count < 1))
-                    }
-                }
-                return .run { send in
-                    try? await Task.sleep(for: .milliseconds(150))
-                    await send(.chickenConfigLocationRequested)
-                }
             case .destination(.presented(.alert(.openSettings))):
                 state.destination = nil
                 return .run { _ in
@@ -430,32 +416,26 @@ struct HomeFeature {
             case .completedGameFound:
                 return .none
             case let .initialLocationResolved(location):
-                guard let config = state.pendingPlanResult else { return .none }
-                // Use a Firestore-style auto-ID so free-game IDs match the
-                // format Cloud Functions produce for Forfait games.
+                guard let creatorId = userClient.currentUserId(), !creatorId.isEmpty else {
+                    Logger(category: "Home").error("Cannot create game: no current user id (auth not ready)")
+                    return .none
+                }
+                // Free is the only client-creatable mode since PP-42 (the
+                // Forfait/Caution flows were retired with PP-9). The maxPlayers
+                // default seeds the wizard's stepper at the Free cap; the user
+                // can dial it down to 2 from there.
                 var game = Game(id: apiClient.newGameId())
                 game.foundCode = Game.generateFoundCode()
                 game.timing.headStartMinutes = 5
-                guard let creatorId = userClient.currentUserId(), !creatorId.isEmpty else {
-                    Logger(category: "Home").error("Cannot create game: no current user id (auth not ready)")
-                    state.pendingPlanResult = nil
-                    return .none
-                }
                 game.creatorId = creatorId
-                game.pricing.model = config.model
-                game.maxPlayers = config.numberOfPlayers
-                game.pricing.pricePerPlayer = config.pricePerPlayerCents
-                game.pricing.deposit = config.depositAmountCents
-                if config.model == .deposit {
-                    game.registration.required = true
-                }
+                game.pricing.model = .free
+                game.maxPlayers = 5
                 game.zone.driftSeed = withRandomNumberGenerator { generator in
                     Int.random(in: 1...999_999, using: &generator)
                 }
                 if let location {
                     game.initialLocation = location
                 }
-                state.pendingPlanResult = nil
                 let sharedGame = Shared(value: game)
                 let mapConfig = ChickenMapConfigFeature.State(game: sharedGame)
                 state.destination = .gameCreation(
@@ -825,6 +805,30 @@ struct HomeView: View {
                     )
                     .padding()
                 }
+
+                // PP-42 placeholders: visible buttons whose behavior lands in
+                // PP-45 (admin mode unlock) and PP-46 (web CTA).
+                VStack(spacing: 8) {
+                    Button {
+                        store.send(.adminModeTapped)
+                    } label: {
+                        Text("Admin mode")
+                            .font(.gameboy(size: 8))
+                            .foregroundStyle(Color.onBackground.opacity(0.6))
+                    }
+                    .accessibilityLabel("Admin mode")
+
+                    Button {
+                        store.send(.webCreatePartyTapped)
+                    } label: {
+                        Text("Want to create a party?")
+                            .font(.gameboy(size: 8))
+                            .foregroundStyle(Color.onBackground.opacity(0.6))
+                            .underline()
+                    }
+                    .accessibilityLabel("Want to create a party?")
+                }
+                .padding(.bottom, 12)
             }
 
         }
@@ -878,20 +882,6 @@ struct HomeView: View {
                 onLaunch: { self.store.send(.launchDebugPreviewTapped) },
                 onCancel: { self.store.send(.destinationDismissed) }
             )
-        }
-        .sheet(
-            isPresented: Binding(
-                get: { if case .planSelection = store.destination { true } else { false } },
-                set: { if !$0 { store.send(.destinationDismissed) } }
-            )
-        ) {
-            if let planStore = store.scope(
-                state: \.destination?.planSelection,
-                action: \.destination.planSelection
-            ) {
-                PlanSelectionView(store: planStore)
-                    .presentationDetents([.medium])
-            }
         }
         .sheet(
             isPresented: Binding(

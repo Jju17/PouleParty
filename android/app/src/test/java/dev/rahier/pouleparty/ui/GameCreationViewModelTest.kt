@@ -63,7 +63,8 @@ class GameCreationViewModelTest {
         pricingModel: String = "free",
         numberOfPlayers: Int = 5,
         pricePerPlayerCents: Int = 0,
-        depositAmountCents: Int = 0
+        depositAmountCents: Int = 0,
+        isAdminCreation: Boolean = false
     ): GameCreationViewModel {
         return GameCreationViewModel(
             firestoreRepository = firestoreRepository,
@@ -76,7 +77,8 @@ class GameCreationViewModelTest {
                     "pricingModel" to pricingModel,
                     "numberOfPlayers" to numberOfPlayers,
                     "pricePerPlayerCents" to pricePerPlayerCents,
-                    "depositAmountCents" to depositAmountCents
+                    "depositAmountCents" to depositAmountCents,
+                    "isAdminCreation" to isAdminCreation
                 )
             )
         )
@@ -129,15 +131,16 @@ class GameCreationViewModelTest {
         val vm = createViewModel()
         val steps = vm.uiState.value.steps
         assertEquals(GameCreationStep.PARTICIPATION, steps[0])
-        assertEquals(GameCreationStep.GAME_MODE, steps[1])
-        assertEquals(GameCreationStep.ZONE_SETUP, steps[2])
-        assertEquals(GameCreationStep.REGISTRATION, steps[3])
-        assertEquals(GameCreationStep.START_TIME, steps[4])
-        assertEquals(GameCreationStep.DURATION, steps[5])
-        assertEquals(GameCreationStep.HEAD_START, steps[6])
-        assertEquals(GameCreationStep.POWER_UPS, steps[7])
-        assertEquals(GameCreationStep.CHICKEN_SEES_HUNTERS, steps[8])
-        assertEquals(GameCreationStep.RECAP, steps[9])
+        assertEquals(GameCreationStep.MAX_PLAYERS, steps[1])
+        assertEquals(GameCreationStep.GAME_MODE, steps[2])
+        assertEquals(GameCreationStep.ZONE_SETUP, steps[3])
+        assertEquals(GameCreationStep.REGISTRATION, steps[4])
+        assertEquals(GameCreationStep.START_TIME, steps[5])
+        assertEquals(GameCreationStep.DURATION, steps[6])
+        assertEquals(GameCreationStep.HEAD_START, steps[7])
+        assertEquals(GameCreationStep.POWER_UPS, steps[8])
+        assertEquals(GameCreationStep.CHICKEN_SEES_HUNTERS, steps[9])
+        assertEquals(GameCreationStep.RECAP, steps[10])
     }
 
     @Test
@@ -147,8 +150,62 @@ class GameCreationViewModelTest {
         val steps = vm.uiState.value.steps
         assertEquals(GameCreationStep.PARTICIPATION, steps[0])
         assertEquals(GameCreationStep.CHICKEN_SELECTION, steps[1])
-        assertEquals(GameCreationStep.GAME_MODE, steps[2])
-        assertEquals(11, steps.size) // 10 + chickenSelection
+        assertEquals(GameCreationStep.MAX_PLAYERS, steps[2])
+        assertEquals(GameCreationStep.GAME_MODE, steps[3])
+        assertEquals(12, steps.size) // 11 + chickenSelection
+    }
+
+    @Test
+    fun `max players step follows participation`() {
+        val vm = createViewModel()
+        val steps = vm.uiState.value.steps
+        val participationIndex = steps.indexOf(GameCreationStep.PARTICIPATION)
+        val maxPlayersIndex = steps.indexOf(GameCreationStep.MAX_PLAYERS)
+        assertEquals(participationIndex + 1, maxPlayersIndex)
+    }
+
+    // ── Max players (PP-42) ──
+
+    @Test
+    fun `default max players range is 2 to 5`() {
+        val vm = createViewModel()
+        assertFalse(vm.uiState.value.isAdminCreation)
+        assertEquals(2..5, vm.uiState.value.maxPlayersRange)
+    }
+
+    @Test
+    fun `admin creation max players range is 2 to 500`() {
+        val vm = createViewModel(isAdminCreation = true)
+        assertTrue(vm.uiState.value.isAdminCreation)
+        assertEquals(2..500, vm.uiState.value.maxPlayersRange)
+    }
+
+    @Test
+    fun `max players changed within range updates game`() {
+        val vm = createViewModel()
+        vm.onIntent(GameCreationIntent.MaxPlayersChanged(3))
+        assertEquals(3, vm.uiState.value.game.maxPlayers)
+    }
+
+    @Test
+    fun `max players changed clamps to upper bound for standard creation`() {
+        val vm = createViewModel()
+        vm.onIntent(GameCreationIntent.MaxPlayersChanged(50))
+        assertEquals(5, vm.uiState.value.game.maxPlayers)
+    }
+
+    @Test
+    fun `max players changed clamps to lower bound`() {
+        val vm = createViewModel()
+        vm.onIntent(GameCreationIntent.MaxPlayersChanged(0))
+        assertEquals(2, vm.uiState.value.game.maxPlayers)
+    }
+
+    @Test
+    fun `max players changed accepts large value when admin creation`() {
+        val vm = createViewModel(isAdminCreation = true)
+        vm.onIntent(GameCreationIntent.MaxPlayersChanged(250))
+        assertEquals(250, vm.uiState.value.game.maxPlayers)
     }
 
     @Test
@@ -566,14 +623,14 @@ class GameCreationViewModelTest {
     @Test
     fun `toggling participation multiple times keeps step list in sync`() {
         val vm = createViewModel()
-        assertEquals(10, vm.uiState.value.steps.size)
-        vm.onIntent(GameCreationIntent.ParticipatingChanged(false))
         assertEquals(11, vm.uiState.value.steps.size)
+        vm.onIntent(GameCreationIntent.ParticipatingChanged(false))
+        assertEquals(12, vm.uiState.value.steps.size)
         vm.onIntent(GameCreationIntent.ParticipatingChanged(true))
-        assertEquals(10, vm.uiState.value.steps.size)
+        assertEquals(11, vm.uiState.value.steps.size)
         vm.onIntent(GameCreationIntent.ParticipatingChanged(false))
         vm.onIntent(GameCreationIntent.ParticipatingChanged(false)) // no-op
-        assertEquals(11, vm.uiState.value.steps.size)
+        assertEquals(12, vm.uiState.value.steps.size)
     }
 
     @Test
