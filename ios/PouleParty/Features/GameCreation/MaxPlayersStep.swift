@@ -22,31 +22,37 @@ struct MaxPlayersStep: GameCreationStepView {
             )
 
             VStack(spacing: 12) {
+                // Both views are always mounted so `@FocusState` can transfer
+                // focus onto the TextField — `if isFocused { TextField } else
+                // { BangerText }` would unmount the field before focus can
+                // land. Opacity flips the visible one. The TextField uses the
+                // raw Bangers font (skipping BangerText's last-char kerning
+                // because Text-style rendering is what TextField needs).
                 ZStack {
-                    // Editable: TextField only mounted while focused so the
-                    // BangerText kerning trick stays in charge of the static
-                    // display (per the project's Bangers-rendering rule).
-                    if isFocused {
-                        TextField("", text: $inputText)
-                            .keyboardType(.numberPad)
-                            .multilineTextAlignment(.center)
-                            .font(.banger(size: 64))
-                            .foregroundStyle(Color.CROrange)
-                            .focused($isFocused)
-                            .frame(maxWidth: 220)
-                    } else {
-                        BangerText("\(store.currentGame.maxPlayers)", size: 64)
-                            .foregroundStyle(Color.CROrange)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                inputText = "\(store.currentGame.maxPlayers)"
-                                isFocused = true
-                            }
-                            .accessibilityAddTraits(.isButton)
-                            .accessibilityHint("Tap to edit the number of players")
-                    }
+                    BangerText("\(store.currentGame.maxPlayers)", size: 64)
+                        .foregroundStyle(Color.CROrange)
+                        .opacity(isFocused ? 0 : 1)
+                        .allowsHitTesting(!isFocused)
+
+                    TextField("", text: $inputText)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.center)
+                        .font(.banger(size: 64))
+                        .foregroundStyle(Color.CROrange)
+                        .focused($isFocused)
+                        .opacity(isFocused ? 1 : 0)
+                        .frame(maxWidth: 220)
                 }
                 .frame(height: 80)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    if !isFocused {
+                        inputText = "\(store.currentGame.maxPlayers)"
+                        isFocused = true
+                    }
+                }
+                .accessibilityAddTraits(.isButton)
+                .accessibilityHint("Tap to edit the number of players")
                 .toolbar {
                     ToolbarItemGroup(placement: .keyboard) {
                         Spacer()

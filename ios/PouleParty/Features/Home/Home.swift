@@ -850,7 +850,7 @@ struct HomeView: View {
             "Admin mode",
             isPresented: $store.isShowingAdminCodeAlert
         ) {
-            TextField("Admin code", text: $store.adminCodeInput)
+            SecureField("Admin code", text: $store.adminCodeInput)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
             Button("Validate") { store.send(.adminCodeValidateTapped) }

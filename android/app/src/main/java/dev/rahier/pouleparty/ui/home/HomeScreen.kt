@@ -497,6 +497,11 @@ fun HomeScreen(
                         value = state.adminCodeInput,
                         onValueChange = { viewModel.onIntent(HomeIntent.AdminCodeChanged(it)) },
                         singleLine = true,
+                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                            keyboardType = androidx.compose.ui.text.input.KeyboardType.Password,
+                            autoCorrectEnabled = false
+                        ),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
