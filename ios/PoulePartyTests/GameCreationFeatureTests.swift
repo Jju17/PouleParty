@@ -137,6 +137,58 @@ struct GameCreationFeatureTests {
         }
     }
 
+    @Test func maxPlayersChangedBoundaryValuesPassThroughForStandard() async {
+        // Both `2` and `5` (the inclusive bounds of the standard range)
+        // must round-trip without clamping when typed via the editable
+        // field — the user can pick exactly the cap.
+        let store = makeStore()
+        await store.send(.maxPlayersChanged(2)) {
+            $0.$game.withLock { $0.maxPlayers = 2 }
+        }
+        await store.send(.maxPlayersChanged(5)) {
+            $0.$game.withLock { $0.maxPlayers = 5 }
+        }
+    }
+
+    @Test func maxPlayersChangedBoundaryValuesPassThroughForAdmin() async {
+        var state = makeState()
+        state.isAdminCreation = true
+        let store = makeStore(state: state)
+        await store.send(.maxPlayersChanged(2)) {
+            $0.$game.withLock { $0.maxPlayers = 2 }
+        }
+        await store.send(.maxPlayersChanged(500)) {
+            $0.$game.withLock { $0.maxPlayers = 500 }
+        }
+    }
+
+    @Test func maxPlayersChangedClampsAdminUpperOverflow() async {
+        var state = makeState()
+        state.isAdminCreation = true
+        let store = makeStore(state: state)
+        // The view caps text input at 3 digits but a paste / future API
+        // change could still hand us 9999 — the reducer must clamp anyway.
+        await store.send(.maxPlayersChanged(9999)) {
+            $0.$game.withLock { $0.maxPlayers = 500 }
+        }
+    }
+
+    @Test func maxPlayersChangedClampsNegativeToLowerBound() async {
+        // Possible if the view ever lets a `-` through (e.g. external API).
+        // The reducer must clamp.
+        let store = makeStore()
+        await store.send(.maxPlayersChanged(-10)) {
+            $0.$game.withLock { $0.maxPlayers = 2 }
+        }
+    }
+
+    @Test func maxPlayersChangedJustAboveStandardCapClampsToFive() async {
+        let store = makeStore()
+        await store.send(.maxPlayersChanged(6)) {
+            $0.$game.withLock { $0.maxPlayers = 5 }
+        }
+    }
+
     @Test func registrationComesBeforeStartTimeInSteps() {
         let state = makeState()
         let regIndex = state.steps.firstIndex(of: .registration)!

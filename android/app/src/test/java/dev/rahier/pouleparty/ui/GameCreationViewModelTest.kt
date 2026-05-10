@@ -188,6 +188,45 @@ class GameCreationViewModelTest {
     }
 
     @Test
+    fun `max players boundary values pass through for standard creation`() {
+        val vm = createViewModel()
+        vm.onIntent(GameCreationIntent.MaxPlayersChanged(2))
+        assertEquals(2, vm.uiState.value.game.maxPlayers)
+        vm.onIntent(GameCreationIntent.MaxPlayersChanged(5))
+        assertEquals(5, vm.uiState.value.game.maxPlayers)
+    }
+
+    @Test
+    fun `max players boundary values pass through for admin creation`() {
+        val vm = createViewModel(isAdminCreation = true)
+        vm.onIntent(GameCreationIntent.MaxPlayersChanged(2))
+        assertEquals(2, vm.uiState.value.game.maxPlayers)
+        vm.onIntent(GameCreationIntent.MaxPlayersChanged(500))
+        assertEquals(500, vm.uiState.value.game.maxPlayers)
+    }
+
+    @Test
+    fun `max players changed clamps admin upper overflow to 500`() {
+        val vm = createViewModel(isAdminCreation = true)
+        vm.onIntent(GameCreationIntent.MaxPlayersChanged(9999))
+        assertEquals(500, vm.uiState.value.game.maxPlayers)
+    }
+
+    @Test
+    fun `max players changed clamps negative to lower bound`() {
+        val vm = createViewModel()
+        vm.onIntent(GameCreationIntent.MaxPlayersChanged(-10))
+        assertEquals(2, vm.uiState.value.game.maxPlayers)
+    }
+
+    @Test
+    fun `max players changed just above standard cap clamps to five`() {
+        val vm = createViewModel()
+        vm.onIntent(GameCreationIntent.MaxPlayersChanged(6))
+        assertEquals(5, vm.uiState.value.game.maxPlayers)
+    }
+
+    @Test
     fun `registration comes before start time in steps`() {
         val vm = createViewModel()
         val steps = vm.uiState.value.steps
