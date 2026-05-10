@@ -23,7 +23,6 @@ struct JoinFlowFeature {
     @ObservableState
     struct State: Equatable {
         @Shared(.appStorage(AppConstants.prefUserNickname)) var savedNickname = ""
-        @Presents var destination: Destination.State?
         var code: String = ""
         var teamName: String = ""
         var step: Step = .enteringCode
@@ -39,32 +38,12 @@ struct JoinFlowFeature {
         }
     }
 
-    @Reducer
-    struct Destination {
-        @ObservableState
-        enum State: Equatable {
-            case payment(PaymentFeature.State)
-        }
-
-        enum Action {
-            case payment(PaymentFeature.Action)
-        }
-
-        var body: some ReducerOf<Self> {
-            EmptyReducer()
-                .ifCaseLet(\.payment, action: \.payment) {
-                    PaymentFeature()
-                }
-        }
-    }
-
     enum Action: BindableAction {
         case binding(BindingAction<State>)
         case codeChanged(String)
         case codeValidationFailed
         case codeValidationSucceeded(Game, alreadyRegistered: Bool)
         case delegate(Delegate)
-        case destination(PresentationAction<Destination.Action>)
         case joinTapped
         case networkErrorOccurred
         case registrationDeadlinePassed(Game)
@@ -184,45 +163,18 @@ struct JoinFlowFeature {
                 let teamName = state.teamName.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !userId.isEmpty else { return .none }
 
-                // Caution mode: registration is created server-side by the Stripe
-                // webhook after a successful deposit PaymentIntent. Client must never
-                // write `paid: true` — rules block it anyway.
-                if game.pricing.model == .deposit {
-                    state.destination = .payment(PaymentFeature.State(context: .hunterCaution(gameId: game.id)))
-                    return .none
-                }
-
                 state.step = .submittingRegistration(game)
                 let registration = Registration(userId: userId, teamName: teamName, paid: false)
-                let pricingModel = game.pricing.model.rawValue
                 return .run { [analyticsClient] send in
                     do {
                         try await apiClient.createRegistration(game.id, registration)
-                        analyticsClient.registrationCompleted(pricingModel: pricingModel)
+                        analyticsClient.registrationCompleted()
                         await send(.registrationSubmitted(game, teamName: teamName))
                     } catch {
                         await send(.networkErrorOccurred)
                     }
                 }
-
-            case .destination(.presented(.payment(.delegate(.hunterPaymentConfirmed)))):
-                state.destination = nil
-                guard case let .registering(game) = state.step else { return .none }
-                let teamName = state.teamName.trimmingCharacters(in: .whitespacesAndNewlines)
-                analyticsClient.registrationCompleted(pricingModel: game.pricing.model.rawValue)
-                return .send(.registrationSubmitted(game, teamName: teamName))
-
-            case .destination(.presented(.payment(.delegate(.cancelled)))),
-                 .destination(.presented(.payment(.delegate(.creatorPaymentConfirmed)))):
-                state.destination = nil
-                return .none
-
-            case .destination:
-                return .none
             }
-        }
-        .ifLet(\.$destination, action: \.destination) {
-            Destination()
         }
     }
 }
@@ -255,11 +207,6 @@ struct JoinFlowView: View {
         .task {
             try? await Task.sleep(for: .milliseconds(300))
             isCodeFieldFocused = true
-        }
-        .sheet(
-            item: $store.scope(state: \.destination?.payment, action: \.destination.payment)
-        ) { paymentStore in
-            PaymentView(store: paymentStore)
         }
     }
 
@@ -386,7 +333,6 @@ struct JoinFlowView: View {
     // MARK: - Registration Form
 
     private func registrationForm(game: Game, isSubmitting: Bool) -> some View {
-        let isDeposit = game.pricing.model == .deposit
         return VStack(spacing: 20) {
             Spacer().frame(height: 8)
             BangerText(String(localized: "Register"), size: 28)
@@ -415,14 +361,6 @@ struct JoinFlowView: View {
             }
             .padding(.horizontal, 24)
 
-            if isDeposit {
-                Text(String(localized: "Caution: \(String(format: "%.2f €", Double(game.pricing.deposit) / 100))"))
-                    .font(.gameboy(size: 9))
-                    .foregroundStyle(Color.onBackground.opacity(0.75))
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 24)
-            }
-
             Button {
                 store.send(.submitRegistrationTapped)
             } label: {
@@ -431,7 +369,7 @@ struct JoinFlowView: View {
                         ProgressView()
                             .tint(.black)
                     } else {
-                        BangerText(isDeposit ? String(localized: "Pay") : String(localized: "Sign up"), size: 22)
+                        BangerText(String(localized: "Sign up"), size: 22)
                             .foregroundStyle(.black)
                     }
                 }

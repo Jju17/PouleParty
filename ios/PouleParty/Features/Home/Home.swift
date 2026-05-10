@@ -101,17 +101,9 @@ struct HomeFeature {
         case networkRequestFailed
         case noActiveGameFound
         case onTask
-        /// Emitted after a successful Forfait or Caution payment. Caught by
-        /// `AppFeature` to swap root state to `.paymentConfirmed(...)`.
-        case paymentConfirmationRequested(game: Game, kind: PaymentConfirmationFeature.Kind)
         case pendingRegistrationDismissed
         case pendingRegistrationRefreshed(PendingRegistration?)
         case pendingRegistrationRejoinTapped
-        /// Background result from `verifyHunterRegistrationPaid` — fires
-        /// after the Stripe PaymentSheet completed to confirm the webhook
-        /// actually wrote the registration doc. When `false`, the optimistic
-        /// pending banner is cleared + an alert surfaces.
-        case hunterRegistrationVerified(gameId: String, confirmed: Bool)
         case rejoinGameTapped
         case rulesButtonTapped
         case settingsButtonTapped
@@ -284,15 +276,6 @@ struct HomeFeature {
             case let .destination(.presented(.gameCreation(.gameCreated(game)))):
                 state.destination = nil
                 return .send(.chickenGameStarted(game))
-            case let .destination(.presented(.gameCreation(.paidGameCreated(game)))):
-                // Legacy Forfait completion path. PP-42 retired the in-app
-                // creator payment flow, but the action remains on the
-                // GameCreation reducer for backwards compat with any
-                // pre-existing `.flat` games sliced through TestStores. This
-                // handler is now effectively unreachable from the wizard;
-                // PP-43 will delete the action entirely.
-                state.destination = nil
-                return .send(.paymentConfirmationRequested(game: game, kind: .creatorForfait))
             case .destination(.presented(.alert(.openSettings))):
                 state.destination = nil
                 return .run { _ in
@@ -312,23 +295,6 @@ struct HomeFeature {
                     return .send(.hunterGameJoined(game, hunterName))
                 case .done:
                     return .send(.completedGameFound(game))
-                case .pendingPayment, .paymentFailed:
-                    // Paid-creator game whose Stripe webhook hasn't flipped to
-                    // `waiting` (or was cancelled). Surface a visible alert
-                    // instead of silently returning — previously the user was
-                    // dropped back on Home with no feedback.
-                    state.destination = .alert(
-                        AlertState {
-                            TextState("Game not ready")
-                        } actions: {
-                            ButtonState(role: .cancel) {
-                                TextState("OK")
-                            }
-                        } message: {
-                            TextState("This game is still awaiting payment. Try again in a few moments, or contact the organizer.")
-                        }
-                    )
-                    return .none
                 }
             case let .destination(.presented(.joinFlow(.delegate(.registered(game, teamName))))):
                 state.destination = nil
@@ -340,29 +306,7 @@ struct HomeFeature {
                         startDate: game.startDate
                     )
                 }
-                let gameId = game.id
-                let userId = userClient.currentUserId() ?? ""
-                // Show the confirmation screen optimistically, and kick off a
-                // background verification that the Stripe webhook actually
-                // wrote the registration doc. If it never appears (webhook
-                // failure, rotated secret, etc.), clear the pending banner and
-                // alert the user instead of leaving a ghost entry.
-                return .merge(
-                    .send(.paymentConfirmationRequested(game: game, kind: .hunterCaution)),
-                    .run { [apiClient, clock] send in
-                        guard !userId.isEmpty else { return }
-                        let deadline = Date().addingTimeInterval(30)
-                        while Date() < deadline {
-                            if let registration = try? await apiClient.findRegistration(gameId, userId),
-                               registration.paid {
-                                await send(.hunterRegistrationVerified(gameId: gameId, confirmed: true))
-                                return
-                            }
-                            do { try await clock.sleep(for: .seconds(3)) } catch { return }
-                        }
-                        await send(.hunterRegistrationVerified(gameId: gameId, confirmed: false))
-                    }
-                )
+                return .none
             case .destination:
                 return .none
             case .activeGameBannerDismissed:
@@ -428,7 +372,6 @@ struct HomeFeature {
                 game.foundCode = Game.generateFoundCode()
                 game.timing.headStartMinutes = 5
                 game.creatorId = creatorId
-                game.pricing.model = .free
                 game.maxPlayers = 5
                 game.zone.driftSeed = withRandomNumberGenerator { generator in
                     Int.random(in: 1...999_999, using: &generator)
@@ -481,9 +424,6 @@ struct HomeFeature {
                 state.activeGame = nil
                 state.activeGameRole = nil
                 state.activeGamePhase = nil
-                return .none
-            case .paymentConfirmationRequested:
-                // Terminal — `AppFeature` catches this and swaps root state.
                 return .none
             case .onTask:
                 let userId = userClient.currentUserId()
@@ -572,30 +512,6 @@ struct HomeFeature {
                 state.$pendingRegistration.withLock { $0 = updated }
                 return .none
 
-            case let .hunterRegistrationVerified(gameId, confirmed):
-                guard !confirmed else { return .none }
-                // Webhook never wrote the registration within the window — the
-                // user paid but the server never recorded them. Clear the
-                // optimistic pending banner so it doesn't look like we
-                // silently registered them, and surface an alert.
-                state.$pendingRegistration.withLock { current in
-                    if current?.gameId == gameId {
-                        current = nil
-                    }
-                }
-                state.destination = .alert(
-                    AlertState {
-                        TextState("Payment verification failed")
-                    } actions: {
-                        ButtonState(role: .cancel) {
-                            TextState("OK")
-                        }
-                    } message: {
-                        TextState("We received your payment but couldn't confirm your registration. If you were charged, please contact the organizer — your deposit is safe.")
-                    }
-                )
-                return .none
-
             case .pendingRegistrationRejoinTapped:
                 guard let pending = state.pendingRegistration else { return .none }
                 let savedNickname = state.savedNickname.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -612,8 +528,6 @@ struct HomeFeature {
                             await send(.hunterGameJoined(game, finalName))
                         case .done:
                             await send(.completedGameFound(game))
-                        case .pendingPayment, .paymentFailed:
-                            await send(.gameNotFound)
                         }
                     } catch {
                         await send(.networkRequestFailed)

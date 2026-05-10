@@ -94,12 +94,6 @@ struct GameZoneCodableTests {
                 "shrinkMetersPerUpdate": 100.0,
                 "driftSeed": 42,
             ] as [String: Any],
-            "pricing": [
-                "model": "flat",
-                "pricePerPlayer": 500,
-                "deposit": 0,
-                "commission": 15.0,
-            ] as [String: Any],
             "registration": [
                 "required": false,
             ] as [String: Any],

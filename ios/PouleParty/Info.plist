@@ -4,8 +4,6 @@
 <dict>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
-	<key>NSCameraUsageDescription</key>
-	<string>Poule Party may ask for camera access to scan your payment card when you pay for a game. The camera is never used otherwise.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Poule Party uses your location during an active game to place you on the map, keep the Chicken inside the shrinking game zone, and spawn nearby power-ups for you to collect. For example, when you join a game as a Hunter, your team sees the Chicken's live position within the zone so you can chase them in the real world.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
@@ -25,21 +23,6 @@
 	<array>
 		<string>location</string>
 		<string>remote-notification</string>
-	</array>
-	<key>StripePublishableKey</key>
-	<string>$(STRIPE_PUBLISHABLE_KEY)</string>
-	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
-			<key>CFBundleURLName</key>
-			<string>dev.rahier.pouleparty.stripe</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>pouleparty</string>
-			</array>
-		</dict>
 	</array>
 </dict>
 </plist>

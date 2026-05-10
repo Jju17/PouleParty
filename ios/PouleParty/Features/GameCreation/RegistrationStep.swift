@@ -11,7 +11,6 @@ struct RegistrationStep: GameCreationStepView {
     @Bindable var store: StoreOf<GameCreationFeature>
 
     var body: some View {
-        let isDepositPlan = store.currentGame.pricing.model == .deposit
         let showDeadline = store.currentGame.registration.required
         return VStack(spacing: 0) {
             Spacer()
@@ -30,13 +29,10 @@ struct RegistrationStep: GameCreationStepView {
                     isSelected: !store.currentGame.registration.required,
                     gradient: Color.gradientHunter
                 ) {
-                    if !isDepositPlan {
-                        _ = withAnimation(.easeOut(duration: 0.3)) {
-                            store.send(.requiresRegistrationChanged(false))
-                        }
+                    _ = withAnimation(.easeOut(duration: 0.3)) {
+                        store.send(.requiresRegistrationChanged(false))
                     }
                 }
-                .opacity(isDepositPlan ? 0.4 : 1)
                 .compositingGroup()
 
                 SelectionCard(
@@ -46,21 +42,11 @@ struct RegistrationStep: GameCreationStepView {
                     isSelected: store.currentGame.registration.required,
                     gradient: Color.gradientFire
                 ) {
-                    if !isDepositPlan {
-                        _ = withAnimation(.easeOut(duration: 0.3)) {
-                            store.send(.requiresRegistrationChanged(true))
-                        }
+                    _ = withAnimation(.easeOut(duration: 0.3)) {
+                        store.send(.requiresRegistrationChanged(true))
                     }
                 }
                 .compositingGroup()
-
-                if isDepositPlan {
-                    Text("Registration is required for paid (deposit) games.")
-                        .font(.gameboy(size: 8))
-                        .foregroundStyle(Color.onBackground.opacity(0.6))
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 24)
-                }
             }
             .padding(.horizontal, 24)
             .zIndex(1) // cards stay on top

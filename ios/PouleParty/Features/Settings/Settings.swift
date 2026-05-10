@@ -296,8 +296,6 @@ private struct GameStatusBadge: View {
         case .waiting: "Waiting"
         case .inProgress: "Live"
         case .done: "Done"
-        case .pendingPayment: "Paiement"
-        case .paymentFailed: "Échec"
         }
     }
 
@@ -306,8 +304,6 @@ private struct GameStatusBadge: View {
         case .waiting: .CROrange
         case .inProgress: Color(hex: 0x16A34A)
         case .done: .onBackground.opacity(0.3)
-        case .pendingPayment: .CROrange.opacity(0.5)
-        case .paymentFailed: .red
         }
     }
 }
@@ -390,15 +386,6 @@ struct GameDetailView: View {
         VStack(spacing: 8) {
             detailRow("Game Code", value: game.gameCode)
             detailRow("Found Code", value: game.foundCode)
-            detailRow("Pricing", value: game.pricing.model.title)
-            if game.isPaid {
-                if game.pricing.pricePerPlayer > 0 {
-                    detailRow("Price/Player", value: "\(game.pricing.pricePerPlayer / 100)€")
-                }
-                if game.pricing.deposit > 0 {
-                    detailRow("Deposit", value: "\(game.pricing.deposit / 100)€")
-                }
-            }
         }
         .settingsCard()
     }

@@ -2,8 +2,6 @@
 //  SelectionButton.swift
 //  PouleParty
 //
-//  Created by Julien Rahier on 03/04/2024.
-//
 
 import SwiftUI
 
@@ -38,7 +36,6 @@ struct SelectionButton: View {
 #Preview {
     ZStack {
         SelectionButton(" Sign up ") {
-
         }
         .frame(width: 300, height: 90)
     }

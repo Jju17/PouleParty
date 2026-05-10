@@ -15,14 +15,13 @@ struct GameCreationFeatureTests {
     // MARK: - Helpers
 
     private func makeState(
-        pricingModel: Game.PricingModel = .free,
         gameId: String = "test-game-id",
-        maxPlayers: Int = 5
+        maxPlayers: Int = 5,
+        registrationRequired: Bool = false
     ) -> GameCreationFeature.State {
         var game = Game(id: gameId)
         game.maxPlayers = maxPlayers
-        game.pricing.model = pricingModel
-        if pricingModel == .deposit {
+        if registrationRequired {
             game.registration.required = true
             game.registration.closesMinutesBefore = 15
         }
@@ -53,13 +52,8 @@ struct GameCreationFeatureTests {
         #expect(state.goingForward == true)
     }
 
-    @Test func depositPricingRequiresRegistrationByDefault() {
-        let state = makeState(pricingModel: .deposit)
-        #expect(state.game.registration.required == true)
-    }
-
-    @Test func freePricingDoesNotRequireRegistrationByDefault() {
-        let state = makeState(pricingModel: .free)
+    @Test func defaultStateDoesNotRequireRegistration() {
+        let state = makeState()
         #expect(state.game.registration.required == false)
     }
 
@@ -735,10 +729,10 @@ struct GameCreationFeatureTests {
         #expect(abs(store.state.game.zone.shrinkMetersPerUpdate - 2772.22) < 0.1)
     }
 
-    // MARK: - Deposit game invariants
+    // MARK: - Registration invariants
 
-    @Test func depositGameRegistrationStaysRequiredAfterStart() async {
-        var state = makeState(pricingModel: .deposit)
+    @Test func registrationRequiredGameStaysRequiredAfterStart() async {
+        var state = makeState(registrationRequired: true)
         state.$game.withLock {
             $0.zone.center = GeoPoint(latitude: 50.9, longitude: 4.4)
             $0.gameMode = .followTheChicken

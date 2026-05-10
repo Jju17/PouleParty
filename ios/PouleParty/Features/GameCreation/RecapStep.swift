@@ -89,17 +89,6 @@ struct RecapStep: GameCreationStepView {
                 Divider()
                 RecapRow(label: "Chicken sees hunters", value: store.currentGame.chickenCanSeeHunters ? "Yes" : "No")
             }
-            if store.currentGame.isPaid {
-                Divider()
-                RecapRow(label: "Pricing", value: store.currentGame.pricing.model.title)
-                Divider()
-                let totalCents = store.currentGame.pricing.pricePerPlayer * store.currentGame.maxPlayers
-                RecapRow(label: "Total price", value: String(format: "%.2f€", Double(totalCents) / 100.0))
-                if store.currentGame.pricing.deposit > 0 {
-                    Divider()
-                    RecapRow(label: "Deposit", value: String(format: "%.2f€", Double(store.currentGame.pricing.deposit) / 100.0))
-                }
-            }
             Divider()
             RecapRow(label: "Registration", value: store.currentGame.registration.required ? "Required" : "Open")
             if store.currentGame.registration.required, let minutes = store.currentGame.registration.closesMinutesBefore {
