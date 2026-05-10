@@ -31,10 +31,15 @@ sealed interface HomeIntent {
     object JoinValidatedGameTapped : HomeIntent
     object PendingRegistrationJoinTapped : HomeIntent
     object RefreshActiveGame : HomeIntent
-    /** Placeholder for the future admin-mode entry point. Wired in PP-45. */
+    /** PP-45: opens the admin-code dialog on Home. */
     object AdminModeTapped : HomeIntent
+    /** PP-45: user dismissed the admin-code dialog (Cancel). */
+    object AdminCodeDismissed : HomeIntent
+    /** PP-45: user dismissed the wrong-code error alert. */
+    object AdminCodeErrorDismissed : HomeIntent
     /** Placeholder for the "Envie de créer une partie ?" web CTA. Wired in PP-46. */
     object WebCreatePartyTapped : HomeIntent
     data class GameCodeChanged(val code: String) : HomeIntent
     data class TeamNameChanged(val name: String) : HomeIntent
+    data class AdminCodeChanged(val code: String) : HomeIntent
 }

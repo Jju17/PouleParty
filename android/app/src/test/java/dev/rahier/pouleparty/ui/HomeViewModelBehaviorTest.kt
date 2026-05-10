@@ -297,4 +297,64 @@ class HomeViewModelBehaviorTest {
         assertNull(vm.uiState.value.activeGame)
         assertNull(vm.uiState.value.activeGameRole)
     }
+
+    // ── PP-45: admin code dialog ──
+
+    @Test
+    fun `AdminModeTapped without location shows location required alert and not dialog`() {
+        every { locationRepository.hasFineLocationPermission() } returns false
+        val vm = createViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+        vm.onIntent(HomeIntent.AdminModeTapped)
+        assertTrue(vm.uiState.value.isShowingLocationRequired)
+        assertFalse(vm.uiState.value.isShowingAdminCodeDialog)
+    }
+
+    @Test
+    fun `AdminModeTapped with location opens admin code dialog`() {
+        every { locationRepository.hasFineLocationPermission() } returns true
+        val vm = createViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+        vm.onIntent(HomeIntent.AdminModeTapped)
+        assertTrue(vm.uiState.value.isShowingAdminCodeDialog)
+        assertEquals("", vm.uiState.value.adminCodeInput)
+    }
+
+    @Test
+    fun `validateAdminCode with correct code returns true and clears state`() {
+        every { locationRepository.hasFineLocationPermission() } returns true
+        val vm = createViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+        vm.onIntent(HomeIntent.AdminModeTapped)
+        vm.onIntent(HomeIntent.AdminCodeChanged(dev.rahier.pouleparty.model.AdminCode.VALUE))
+        assertTrue(vm.validateAdminCode())
+        assertFalse(vm.uiState.value.isShowingAdminCodeDialog)
+        assertEquals("", vm.uiState.value.adminCodeInput)
+        assertFalse(vm.uiState.value.isShowingAdminCodeError)
+    }
+
+    @Test
+    fun `validateAdminCode with wrong code returns false and surfaces error`() {
+        every { locationRepository.hasFineLocationPermission() } returns true
+        val vm = createViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+        vm.onIntent(HomeIntent.AdminModeTapped)
+        vm.onIntent(HomeIntent.AdminCodeChanged("nope"))
+        assertFalse(vm.validateAdminCode())
+        assertFalse(vm.uiState.value.isShowingAdminCodeDialog)
+        assertEquals("", vm.uiState.value.adminCodeInput)
+        assertTrue(vm.uiState.value.isShowingAdminCodeError)
+    }
+
+    @Test
+    fun `AdminCodeDismissed clears dialog state`() {
+        every { locationRepository.hasFineLocationPermission() } returns true
+        val vm = createViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+        vm.onIntent(HomeIntent.AdminModeTapped)
+        vm.onIntent(HomeIntent.AdminCodeChanged("abc"))
+        vm.onIntent(HomeIntent.AdminCodeDismissed)
+        assertFalse(vm.uiState.value.isShowingAdminCodeDialog)
+        assertEquals("", vm.uiState.value.adminCodeInput)
+    }
 }

@@ -142,7 +142,8 @@ class GameCreationViewModel @Inject constructor(
                 ),
                 gameMode = GameMod.STAY_IN_THE_ZONE.firestoreValue,
                 foundCode = Game.generateFoundCode(),
-                creatorId = auth.currentUser?.uid ?: ""
+                creatorId = auth.currentUser?.uid ?: "",
+                isAdminCreation = isAdminCreation
             )
         )
     )

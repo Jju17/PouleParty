@@ -68,13 +68,75 @@ struct HomeFeatureTests {
         await store.receive(\.dailyFreeLimitChecked)
     }
 
-    @Test func adminModeTappedIsANoOpUntilPP45() async {
-        // PP-42: the "Mode admin" button is a UI placeholder; PP-45 fills in
-        // the modal asking for the `jujurahier` code.
+    @Test func adminModeTappedOpensCodeAlert() async {
         let store = TestStore(initialState: HomeFeature.State()) {
             HomeFeature()
+        } withDependencies: {
+            $0.locationClient.authorizationStatus = { .authorizedWhenInUse }
         }
+        await store.send(.adminModeTapped) {
+            $0.adminCodeInput = ""
+            $0.isShowingAdminCodeAlert = true
+        }
+    }
+
+    @Test func adminModeTappedWithoutLocationFailsBeforeOpeningAlert() async {
+        let store = TestStore(initialState: HomeFeature.State()) {
+            HomeFeature()
+        } withDependencies: {
+            $0.locationClient.authorizationStatus = { .denied }
+        }
+        store.exhaustivity = .off
         await store.send(.adminModeTapped)
+        await store.receive(\.locationPermissionDenied)
+        #expect(store.state.isShowingAdminCodeAlert == false)
+    }
+
+    @Test func adminCodeValidateWithCorrectCodeKicksOffLocationFlow() async {
+        var state = HomeFeature.State()
+        state.isShowingAdminCodeAlert = true
+        state.adminCodeInput = AdminCode.value
+        let store = TestStore(initialState: state) {
+            HomeFeature()
+        }
+        store.exhaustivity = .off
+        await store.send(.adminCodeValidateTapped) {
+            $0.isShowingAdminCodeAlert = false
+            $0.adminCodeInput = ""
+            $0.pendingIsAdminCreation = true
+        }
+        await store.receive(\.chickenConfigLocationRequested)
+    }
+
+    @Test func adminCodeValidateWithWrongCodeShowsAlertAndDoesNotProceed() async {
+        var state = HomeFeature.State()
+        state.isShowingAdminCodeAlert = true
+        state.adminCodeInput = "nope"
+        let store = TestStore(initialState: state) {
+            HomeFeature()
+        }
+        store.exhaustivity = .off
+        await store.send(.adminCodeValidateTapped)
+        #expect(store.state.isShowingAdminCodeAlert == false)
+        #expect(store.state.pendingIsAdminCreation == false)
+        if case .alert = store.state.destination {
+            // OK — the wrong-code alert is presented.
+        } else {
+            Issue.record("Expected wrong-code alert destination")
+        }
+    }
+
+    @Test func adminCodeDismissedClearsState() async {
+        var state = HomeFeature.State()
+        state.isShowingAdminCodeAlert = true
+        state.adminCodeInput = "abc"
+        let store = TestStore(initialState: state) {
+            HomeFeature()
+        }
+        await store.send(.adminCodeDismissed) {
+            $0.isShowingAdminCodeAlert = false
+            $0.adminCodeInput = ""
+        }
     }
 
     @Test func webCreatePartyTappedIsANoOpUntilPP46() async {

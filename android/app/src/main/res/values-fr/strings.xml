@@ -222,6 +222,8 @@
     <string name="decrease_max_players">Diminuer le nombre de chasseurs</string>
     <string name="increase_max_players">Augmenter le nombre de chasseurs</string>
     <string name="admin_mode">Mode admin</string>
+    <string name="enter_the_admin_code">Entre le code admin</string>
+    <string name="validate">Valider</string>
     <string name="want_to_create_a_party">Envie de créer une partie ?</string>
     <string name="active_types">Types actifs</string>
     <string name="zone_radius">Rayon de la zone</string>

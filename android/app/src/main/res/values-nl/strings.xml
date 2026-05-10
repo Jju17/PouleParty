@@ -76,6 +76,8 @@
     <string name="decrease_max_players">Aantal jagers verlagen</string>
     <string name="increase_max_players">Aantal jagers verhogen</string>
     <string name="admin_mode">Adminmodus</string>
+    <string name="enter_the_admin_code">Voer de admincode in</string>
+    <string name="validate">Valideren</string>
     <string name="want_to_create_a_party">Een feest organiseren?</string>
     <string name="active_types">Actieve types</string>
     <string name="zone_radius">Zonestraal</string>

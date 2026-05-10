@@ -3777,6 +3777,38 @@
           }
         }
       }
+    },
+    "Admin code": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Code admin"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Admincode"
+          }
+        }
+      }
+    },
+    "Enter the admin code": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entre le code admin"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voer de admincode in"
+          }
+        }
+      }
     }
   },
   "version": "1.1"

@@ -59,7 +59,13 @@ data class Game(
     val zone: Zone = Zone(),
     val registration: GameRegistration = GameRegistration(),
     val powerUps: GamePowerUps = GamePowerUps(),
-    val lastHeartbeat: Timestamp? = null
+    val lastHeartbeat: Timestamp? = null,
+    /**
+     * Lifts the `maxPlayers` cap from 5 to 500 for parties created via the
+     * admin code (`jujurahier`). Garde-fou client only — see PP-45 and the
+     * firestore.rules `allow create` clause.
+     */
+    val isAdminCreation: Boolean = false
 ) {
     // ── Power-Up Active Effects ────────────────────────
 

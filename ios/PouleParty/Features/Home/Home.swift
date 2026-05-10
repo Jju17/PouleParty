@@ -67,13 +67,23 @@ struct HomeFeature {
         /// partie" (upcoming, `.waiting`) so the banner copy + CTA matches
         /// the game state. Nil when no active game.
         var activeGamePhase: GamePhase? = nil
+        /// PP-45 admin code modal state. The admin button on Home opens an
+        /// alert with a TextField; on Validate, `adminCodeInput` is checked
+        /// against `AdminCode.value` and either opens the wizard with
+        /// `isAdminCreation = true` or surfaces a `wrongCode` alert.
+        var isShowingAdminCodeAlert: Bool = false
+        var adminCodeInput: String = ""
+        /// True between `.adminModeTapped` and `.initialLocationResolved`,
+        /// so the seeded Game gets `isAdminCreation = true`.
+        var pendingIsAdminCreation: Bool = false
     }
 
     enum Action: BindableAction {
         case accountDeletionCompleted
         case activeGameBannerDismissed
         case activeGameFound(Game, GameRole, GamePhase)
-        /// Placeholder for the future admin-mode entry point. Wired in PP-45.
+        case adminCodeDismissed
+        case adminCodeValidateTapped
         case adminModeTapped
         case binding(BindingAction<State>)
         case chickenConfigLocationRequested
@@ -201,11 +211,34 @@ struct HomeFeature {
                     await send(.dailyFreeLimitChecked(allowed: count < 1))
                 }
             case .adminModeTapped:
-                // PP-45 fills in: modal asking for the `jujurahier` admin code,
-                // then opens the wizard with `isAdminCreation = true` to lift
-                // the maxPlayers cap. Until then this button is a visible
-                // placeholder per PP-42.
+                let chickenLocStatus = locationClient.authorizationStatus()
+                guard chickenLocStatus == .authorizedAlways || chickenLocStatus == .authorizedWhenInUse else {
+                    return .send(.locationPermissionDenied)
+                }
+                state.adminCodeInput = ""
+                state.isShowingAdminCodeAlert = true
                 return .none
+            case .adminCodeDismissed:
+                state.isShowingAdminCodeAlert = false
+                state.adminCodeInput = ""
+                return .none
+            case .adminCodeValidateTapped:
+                let entered = state.adminCodeInput.trimmingCharacters(in: .whitespaces)
+                state.isShowingAdminCodeAlert = false
+                state.adminCodeInput = ""
+                guard entered == AdminCode.value else {
+                    state.destination = .alert(
+                        AlertState {
+                            TextState("Wrong code")
+                        } actions: {
+                            ButtonState(role: .cancel) { TextState("OK") }
+                        }
+                    )
+                    return .none
+                }
+                state.pendingIsAdminCreation = true
+                MapWarmUp.warmUpIfNeeded()
+                return .send(.chickenConfigLocationRequested)
             case .webCreatePartyTapped:
                 // PP-46 fills in: opens the localized "create a party" landing
                 // page in the device browser.
@@ -368,11 +401,14 @@ struct HomeFeature {
                 // Forfait/Caution flows were retired with PP-9). The maxPlayers
                 // default seeds the wizard's stepper at the Free cap; the user
                 // can dial it down to 2 from there.
+                let isAdmin = state.pendingIsAdminCreation
+                state.pendingIsAdminCreation = false
                 var game = Game(id: apiClient.newGameId())
                 game.foundCode = Game.generateFoundCode()
                 game.timing.headStartMinutes = 5
                 game.creatorId = creatorId
                 game.maxPlayers = 5
+                game.isAdminCreation = isAdmin
                 game.zone.driftSeed = withRandomNumberGenerator { generator in
                     Int.random(in: 1...999_999, using: &generator)
                 }
@@ -381,9 +417,9 @@ struct HomeFeature {
                 }
                 let sharedGame = Shared(value: game)
                 let mapConfig = ChickenMapConfigFeature.State(game: sharedGame)
-                state.destination = .gameCreation(
-                    GameCreationFeature.State(game: sharedGame, mapConfigState: mapConfig)
-                )
+                var creationState = GameCreationFeature.State(game: sharedGame, mapConfigState: mapConfig)
+                creationState.isAdminCreation = isAdmin
+                state.destination = .gameCreation(creationState)
                 return .none
             case .joinGameButtonTapped:
                 return .none
@@ -809,6 +845,18 @@ struct HomeView: View {
             ) {
                 JoinFlowView(store: joinStore)
             }
+        }
+        .alert(
+            "Admin mode",
+            isPresented: $store.isShowingAdminCodeAlert
+        ) {
+            TextField("Admin code", text: $store.adminCodeInput)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+            Button("Validate") { store.send(.adminCodeValidateTapped) }
+            Button("Cancel", role: .cancel) { store.send(.adminCodeDismissed) }
+        } message: {
+            Text("Enter the admin code")
         }
         .alert(
             $store.scope(

@@ -8,22 +8,24 @@ service cloud.firestore {
       allow read: if request.auth != null;
 
       // Any authenticated user can create a game (must include creatorId matching their uid).
-      // Forfait games (pricing.model == 'flat') can ONLY be created via the
-      // `createCreatorPaymentSheet` / `redeemFreeCreation` Cloud Functions (admin SDK
-      // bypasses rules). Free and Caution games are client-created (for Caution the
-      // creator doesn't pay right now — only hunters pay a deposit at registration,
-      // which goes through `createHunterPaymentSheet`).
+      // PP-45 cap: standard parties are limited to 5 players client-side; the
+      // admin-mode wizard (gated by the `jujurahier` code) flips
+      // `isAdminCreation = true` to lift the cap up to 500. The flag itself
+      // is client-trusted (obfuscation, not real auth — see PP-9).
       allow create: if request.auth != null
                     && request.resource.data.creatorId == request.auth.uid
                     && request.resource.data.status == 'waiting'
                     && request.resource.data.zone.radius > 0
                     && request.resource.data.zone.radius <= 50000
-                    && request.resource.data.maxPlayers >= 1
-                    && request.resource.data.maxPlayers <= 50
+                    && request.resource.data.maxPlayers >= 2
+                    && (
+                      request.resource.data.maxPlayers <= 5
+                      || (request.resource.data.get('isAdminCreation', false) == true
+                          && request.resource.data.maxPlayers <= 500)
+                    )
                     && request.resource.data.timing.start < request.resource.data.timing.end
                     && request.resource.data.timing.headStartMinutes >= 0
-                    && request.resource.data.zone.shrinkIntervalMinutes >= 1
-                    && request.resource.data.get('pricing', {}).get('model', 'free') != 'flat';
+                    && request.resource.data.zone.shrinkIntervalMinutes >= 1;
 
       // Any player can update hunterIds and winners (join game, submit winner)
       // If the game requires registration, the joining user must already have a registration doc.

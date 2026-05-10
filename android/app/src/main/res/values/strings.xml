@@ -78,6 +78,8 @@
     <string name="decrease_max_players">Decrease number of hunters</string>
     <string name="increase_max_players">Increase number of hunters</string>
     <string name="admin_mode">Admin mode</string>
+    <string name="enter_the_admin_code">Enter the admin code</string>
+    <string name="validate">Validate</string>
     <string name="want_to_create_a_party">Want to create a party?</string>
     <string name="active_types">Active types</string>
     <string name="zone_radius">Zone radius</string>

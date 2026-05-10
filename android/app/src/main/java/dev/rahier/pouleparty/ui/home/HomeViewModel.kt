@@ -46,6 +46,10 @@ data class HomeUiState(
      *  (UPCOMING) for the Home banner copy + CTA. Null when no active game. */
     val activeGamePhase: dev.rahier.pouleparty.ui.gamelogic.GamePhase? = null,
     val pendingRegistration: PendingRegistration? = null,
+    /** PP-45: admin-code dialog open / current input / wrong-code error. */
+    val isShowingAdminCodeDialog: Boolean = false,
+    val adminCodeInput: String = "",
+    val isShowingAdminCodeError: Boolean = false,
 ) {
     val isCodeValid: Boolean
         get() {
@@ -93,10 +97,45 @@ class HomeViewModel @Inject constructor(
             HomeIntent.JoinValidatedGameTapped -> joinValidatedGame()
             HomeIntent.PendingRegistrationJoinTapped -> joinPendingRegistration()
             HomeIntent.RefreshActiveGame -> checkForActiveGame()
-            HomeIntent.AdminModeTapped -> { /* PP-45 fills in the admin code modal. */ }
+            HomeIntent.AdminModeTapped -> onAdminModeTapped()
+            HomeIntent.AdminCodeDismissed -> _uiState.update { it.copy(isShowingAdminCodeDialog = false, adminCodeInput = "") }
+            HomeIntent.AdminCodeErrorDismissed -> _uiState.update { it.copy(isShowingAdminCodeError = false) }
             HomeIntent.WebCreatePartyTapped -> { /* PP-46 fills in the localized web CTA. */ }
             is HomeIntent.GameCodeChanged -> onGameCodeChanged(intent.code)
             is HomeIntent.TeamNameChanged -> onTeamNameChanged(intent.name)
+            is HomeIntent.AdminCodeChanged -> _uiState.update { it.copy(adminCodeInput = intent.code) }
+        }
+    }
+
+    private fun onAdminModeTapped() {
+        if (!locationRepository.hasFineLocationPermission()) {
+            _uiState.update { it.copy(isShowingLocationRequired = true) }
+            return
+        }
+        _uiState.update { it.copy(isShowingAdminCodeDialog = true, adminCodeInput = "") }
+    }
+
+    /**
+     * Validates the entered admin code against [AdminCode.VALUE]. Returns
+     * true if the user should be navigated to the GameCreation wizard with
+     * `isAdminCreation = true`. On false, surfaces the wrong-code alert via
+     * `isShowingAdminCodeError`. The screen calls this directly (rather than
+     * through [onIntent]) because nav has to react to the boolean result.
+     */
+    fun validateAdminCode(): Boolean {
+        val entered = _uiState.value.adminCodeInput.trim()
+        return if (entered == dev.rahier.pouleparty.model.AdminCode.VALUE) {
+            _uiState.update { it.copy(isShowingAdminCodeDialog = false, adminCodeInput = "") }
+            true
+        } else {
+            _uiState.update {
+                it.copy(
+                    isShowingAdminCodeDialog = false,
+                    adminCodeInput = "",
+                    isShowingAdminCodeError = true,
+                )
+            }
+            false
         }
     }
 

@@ -485,5 +485,49 @@ fun HomeScreen(
         GameRulesOverlay(onDismiss = { viewModel.onIntent(HomeIntent.RulesDismissed) })
     }
 
+    // Admin code dialog (PP-45)
+    if (state.isShowingAdminCodeDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.onIntent(HomeIntent.AdminCodeDismissed) },
+            title = { Text(stringResource(R.string.admin_mode)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.enter_the_admin_code))
+                    OutlinedTextField(
+                        value = state.adminCodeInput,
+                        onValueChange = { viewModel.onIntent(HomeIntent.AdminCodeChanged(it)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (viewModel.validateAdminCode()) {
+                        launchCreateParty(isAdminCreation = true)
+                    }
+                }) { Text(stringResource(R.string.validate)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.onIntent(HomeIntent.AdminCodeDismissed) }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
+    // Wrong admin code error
+    if (state.isShowingAdminCodeError) {
+        AlertDialog(
+            onDismissRequest = { viewModel.onIntent(HomeIntent.AdminCodeErrorDismissed) },
+            title = { Text(stringResource(R.string.wrong_code)) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.onIntent(HomeIntent.AdminCodeErrorDismissed) }) {
+                    Text(stringResource(R.string.ok))
+                }
+            }
+        )
+    }
+
 }
 
