@@ -6,6 +6,29 @@ Format: [Keep a Changelog](https://keepachangelog.com/). Versions follow [Semant
 
 ---
 
+## [1.12.0], 2026-05-12
+
+**iOS**: 1.12.0 (1) · **Android**: 1.12.0 (36) · **Functions**: full purge (Stripe deletes + index redeploy, staging + prod) · **Firestore rules**: redeploy (staging + prod)
+
+Closes the **PP-9 epic**. Stripe paid plans and every artefact around them are gone from the codebase, both clients, the backend, the security rules, the Apple entitlements, and Google Secret Manager. PouleParty is now free for every party, with an opt-in admin mode for organizers who need larger games. Plus a smoother game creation flow on both platforms.
+
+### Added
+
+- **Admin mode for parties up to 500 players (PP-45).** A new "Mode admin" entry point on Home opens a secure input (SecureField on iOS, `PasswordVisualTransformation` on Android). Entering the hardcoded `jujurahier` code unlocks a wizard variant that lifts the `maxPlayers` cap from 5 to 500. The flag (`isAdminCreation`) is written to the Game doc and enforced server-side by the new `firestore.rules` create clause: `maxPlayers <= 5 || (isAdminCreation == true && maxPlayers <= 500)`. No real auth; obfuscation only.
+- **Tap-to-edit player count in the game creation wizard (PP-45).** The MaxPlayers step was previously a hold-down stepper, hostile for the 500-player range. iOS uses a `ZStack` with an overlapping `BangerText` (non-hit-testable while the field has focus) and a `TextField` always mounted underneath. Android uses a `BasicTextField` controlled by a `KeyboardType.Number` field. Both clamp to the active range and fall back to the previous value on invalid input.
+- **Localized "Want to create a party?" landing pages on the web (PP-46).** Three new routes (`/create-a-party`, `/creer-une-partie`, `/een-feestje-organiseren`), one per locale. The locale is pinned by the URL slug via a `useEffect` that overrides `setLocale()` based on `useLocation().pathname`, ignoring the visitor's stored preference. The mobile apps build the URL from the device language (`Locale.current.language.languageCode` on iOS, `Locale.getDefault().language` on Android) and open it in the system browser via the new Home "Envie de créer une partie ?" button.
+
+### Removed
+
+- **All Stripe paid game modes (PP-9 epic: PP-42 through PP-47).** Both clients no longer ship the Stripe SDK, `PaymentSheet`, `PaymentConfiguration`, the promo redemption path, or the post-payment confirmation screen. The Cloud Functions `createCreatorPaymentSheet`, `createHunterPaymentSheet`, `validatePromoCode`, `redeemFreeCreation`, `stripeWebhook`, and `cleanupAbandonedPendingGames` are deleted from staging and prod (`functions:delete` then `deploy --only functions`). `functions/src/stripe.ts` and 5 Stripe test files are gone; the `stripe` npm dependency is uninstalled. Firestore rules drop the `paymentEvents` and `rateLimits` collections, the `stripeCustomerId` field on `/users`, the `pending_payment` and `payment_failed` status branches, the `paid` field on `Registration`, and the `pricing` block on Game. Secret Manager `STRIPE_SECRET_KEY` (latest) and `STRIPE_WEBHOOK_SECRET` (latest + v1) destroyed on both `pouleparty-ba586` and `pouleparty-prod`. The `com.apple.developer.in-app-payments` entitlement, the `merchant.dev.rahier.pouleparty` merchant ID, the `NSCameraUsageDescription` purpose string (only ever used for Stripe card scan), the `StripePublishableKey` Info.plist entry, and the `pouleparty://` `CFBundleURLTypes` (Bancontact redirect) are all gone. The Privacy policy + Terms of use lose the `thirdPartyStripe*` keys, the entire `Pricing & Payments` section, and "Stripe customer reference" / "Payment records" from the data-deleted / data-kept lists, in all three locales. `lastUpdated` bumped to 2026-05-12.
+- **Web event registration form (PP-46).** The `/register` page for the April 23 in-person event is gone now that the event has passed (345 lines, `web/src/pages/Register.tsx`). The new "create a party" pages replace the entry point.
+
+### Changed
+
+- **`onGameCreated` / `onGameUpdated` Cloud Functions simplified.** With no more `pending_payment` status to chase, `onGameCreated` always schedules lifecycle tasks unconditionally, and `onGameUpdated` drops the entire `pending_payment → waiting` Stripe webhook branch. The `shouldScheduleOnCreate`, `shouldScheduleOnUpdate`, and `selectStaleGamesForPurge` helpers that wrapped the old conditional logic are deleted. Unused `firebase-functions/v2` imports (`onCall`, `HttpsError`, `onSchedule`, `logger`, `defineString`) removed.
+
+---
+
 ## [1.11.5], 2026-05-09
 
 **iOS**: 1.11.5 (1) · **Android**: 1.11.5 (35) · **Functions**: `sendGameNotification` redeploy (staging + prod) for the post-`endDate` notification gate · **Firestore rules**: unchanged

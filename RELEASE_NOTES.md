@@ -1,3 +1,94 @@
+# Release 1.12.0
+
+> ⚠️ **Do not paste this "Summary" paragraph into any store field.** Only the blocks explicitly labelled **App Store Connect**, **Google Play Console**, or **App Review Notes** below are store-safe.
+
+**Summary (internal, do not paste):** big cleanup release that closes the PP-9 epic. Stripe paid modes (Forfait + Caution) and everything around them are removed from both clients, the Cloud Functions, the Firestore rules, the iOS entitlements, the Info.plist, the web Privacy + Terms, and Secret Manager. The `com.apple.developer.in-app-payments` entitlement, the `merchant.dev.rahier.pouleparty` merchant ID, the `NSCameraUsageDescription` purpose string, the `StripePublishableKey` Info.plist entry, and the `pouleparty://` `CFBundleURLTypes` deep link are all gone. Two user-visible additions: (1) an admin mode on Home (passcode `jujurahier`) that lifts the maxPlayers cap from 5 to 500, server-enforced by the `firestore.rules` create clause; (2) the maxPlayers step in the game creation wizard is now tap-to-edit (was hold-down stepper), iOS uses a ZStack with overlapping BangerText + TextField, Android uses a `BasicTextField` with `KeyboardType.Number`. Plus three new localized "Want to create a party?" pages on the web (`/create-a-party`, `/creer-une-partie`, `/een-feestje-organiseren`), opened from the mobile Home button. Functions + rules redeployed to staging + prod on 2026-05-10 as part of PP-47.
+
+---
+
+## 📱 App Store Connect — field "What's New in This Version"
+
+**English (U.S.)**
+
+PouleParty is now free for every party. The paid options have been retired. We've also added an admin mode on Home for organizers running larger events, and the game creation wizard now lets you tap the player count to type a number directly instead of holding a button.
+
+**French**
+
+PouleParty est maintenant gratuit pour toutes les parties. Les options payantes ont été retirées. On a aussi ajouté un mode admin sur l'accueil pour les organisateurs de plus gros événements, et la création de partie te laisse maintenant taper directement sur le nombre de joueurs pour le saisir au clavier, au lieu de tenir un bouton.
+
+**Dutch**
+
+PouleParty is nu gratis voor elke partij. De betaalde opties zijn verwijderd. We hebben ook een admin-modus op het startscherm toegevoegd voor organisatoren van grotere events, en in de partij-aanmaak kun je nu rechtstreeks op het aantal spelers tikken om het getal in te typen, in plaats van een knop ingedrukt te houden.
+
+---
+
+## 📱 App Store Connect — field "Promotional Text"
+
+Unchanged from 1.9.1 onward. Only repaste if ASC lost the copy. See the 1.11.3 section below.
+
+---
+
+## 🤖 Google Play Console — field "Release notes"
+
+<en-US>
+PouleParty is now free for every party. The paid options have been retired. We've added an admin mode on Home for organizers running bigger events, and the game creation wizard now lets you tap the player count to type a number directly instead of holding a button. Plenty of plumbing cleaned up under the hood, with no behavior changes for regular play.
+</en-US>
+
+<fr-FR>
+PouleParty est maintenant gratuit pour toutes les parties. Les options payantes ont été retirées. On a ajouté un mode admin sur l'accueil pour les organisateurs de plus gros événements, et la création de partie te laisse taper directement sur le nombre de joueurs pour le saisir au clavier, au lieu de tenir un bouton. Beaucoup de plomberie nettoyée en interne, rien ne change pour les parties classiques.
+</fr-FR>
+
+<nl-NL>
+PouleParty is nu gratis voor elke partij. De betaalde opties zijn verwijderd. We hebben een admin-modus op het startscherm toegevoegd voor organisatoren van grotere events, en in de partij-aanmaak kun je nu rechtstreeks op het aantal spelers tikken om het getal in te typen, in plaats van een knop ingedrukt te houden. Veel opruimwerk onder de motorkap, geen veranderingen voor gewone partijen.
+</nl-NL>
+
+---
+
+## 📝 App Store Connect — field "App Review Information → Notes"
+
+Paste into the App Review Information → Notes field:
+
+```
+Hello reviewer. 1.12.0 is a major cleanup release. The biggest change is
+that all Stripe paid game modes (Forfait and Caution) are completely
+removed from the app. PouleParty is now free for everyone, no payment
+screens anywhere.
+
+Concrete changes affecting review:
+
+1. The com.apple.developer.in-app-payments entitlement has been removed.
+   The merchant ID merchant.dev.rahier.pouleparty is no longer used.
+2. NSCameraUsageDescription has been removed from Info.plist. It only
+   ever existed for Stripe card scanning, which is gone.
+3. The Stripe iOS SDK and PaymentSheet are removed from the target.
+4. The CFBundleURLTypes entry for the pouleparty:// URL scheme (used by
+   the Bancontact redirect during Stripe checkout) is removed.
+5. The APPLE_REVIEW_99 promo code is no longer valid. The Stripe
+   production account secrets in Firebase Secret Manager have been
+   destroyed (STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET), and the
+   server-side payment Cloud Functions are deleted.
+
+No new permissions, no new entitlements, no new third-party SDKs. The
+only sensitive permissions left are NSLocationWhenInUseUsageDescription
+and NSLocationAlwaysAndWhenInUseUsageDescription, unchanged in wording
+and behavior since 1.11.4. Location tracking remains gated to active
+game sessions and stops automatically when the game ends.
+
+Two user-visible additions in this build:
+
+A. Admin mode for larger parties. From the Home screen, tap "Mode
+   admin", then enter the passcode "jujurahier". This unlocks a wizard
+   variant that lets organizers create games with up to 500 players
+   instead of the regular 5-player cap. This is an internal
+   organizational tool with no identity check (obfuscation only); the
+   server enforces the cap via the firestore.rules create clause.
+B. Tap-to-edit player count in the game creation wizard. The MaxPlayers
+   step now accepts direct keyboard input. Tap the number, type a value,
+   it clamps to the active range.
+```
+
+---
+
 # Release 1.11.5
 
 > ⚠️ **Do not paste this "Summary" paragraph into any store field.** Only the blocks explicitly labelled **App Store Connect**, **Google Play Console**, or **App Review Notes** below are store-safe.
