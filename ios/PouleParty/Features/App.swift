@@ -92,7 +92,7 @@ struct AppFeature {
             case let .home(.chickenDebugGameStarted(game)):
                 var chickenState = ChickenMapFeature.State(game: game)
                 chickenState.isDebugPreview = true
-                chickenState.debugCircles = computeDebugShiftedCircles(game: game)
+                chickenState.zonePreviewCircles = computeDebugShiftedCircles(game: game)
                 state = AppFeature.State.chickenMap(chickenState)
                 return .none
             case .hunterMap(.delegate(.returnedToMenu)):

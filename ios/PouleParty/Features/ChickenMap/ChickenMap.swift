@@ -39,7 +39,7 @@ struct ChickenMapFeature {
         /// `ChickenMapContent` draws every future shrunk circle on top
         /// of the map at once, each with its own color. Not persisted.
         var isDebugPreview: Bool = false
-        var debugCircles: [DebugShrinkCircle] = []
+        var zonePreviewCircles: [DebugShrinkCircle] = []
 
         // MARK: - MapFeatureState passthroughs (child → parent surface)
         var availablePowerUps: [PowerUp] { powerUps.available }

@@ -152,22 +152,22 @@ func zoneOverlayContent(circle: CircleOverlay, overlayColor: UIColor) -> some Ma
 /// successive shrinks are visually distinguishable. Intentionally
 /// stable (not random) so iOS and Android produce the exact same
 /// color at each step, making it easy to cross-check side-by-side.
-private let debugPreviewPalette: [Color] = [
+private let zonePreviewPalette: [Color] = [
     .red, .orange, .yellow, .green, .mint, .teal, .cyan,
     .blue, .indigo, .purple, .pink, .brown
 ]
 
-func debugPreviewColor(forIndex index: Int) -> Color {
-    debugPreviewPalette[((index % debugPreviewPalette.count) + debugPreviewPalette.count) % debugPreviewPalette.count]
+func zonePreviewColor(forIndex index: Int) -> Color {
+    zonePreviewPalette[((index % zonePreviewPalette.count) + zonePreviewPalette.count) % zonePreviewPalette.count]
 }
 
 /// Draws every future shrunk circle stacked on top of the map. Used
 /// only by the long-press-on-Create-Party easter egg so drift/shrink
 /// parity between iOS and Android can be eyeballed at a glance.
 @MapContentBuilder
-func debugPreviewCirclesContent(circles: [DebugShrinkCircle]) -> some MapContent {
+func zonePreviewCirclesContent(circles: [DebugShrinkCircle]) -> some MapContent {
     ForEvery(Array(circles.enumerated()), id: \.offset) { pair in
-        let color = debugPreviewColor(forIndex: pair.offset)
+        let color = zonePreviewColor(forIndex: pair.offset)
         let ring = Polygon(center: pair.element.center, radius: pair.element.radius, vertices: 96)
         PolylineAnnotation(lineCoordinates: ring.outerRing.coordinates)
             .lineColor(StyleColor(UIColor(color).withAlphaComponent(0.95)))

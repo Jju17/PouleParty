@@ -9,9 +9,9 @@ import kotlin.math.*
  * successive shrinks are visually distinguishable. Intentionally
  * stable (not random) so iOS and Android produce the exact same color
  * at each step, making it easy to cross-check side-by-side. Must match
- * the iOS `debugPreviewPalette` order.
+ * the iOS `zonePreviewPalette` order.
  */
-private val debugPreviewPalette: List<Color> = listOf(
+private val zonePreviewPalette: List<Color> = listOf(
     Color(0xFFFF0000), // red
     Color(0xFFFF9500), // orange
     Color(0xFFFFCC00), // yellow
@@ -26,9 +26,9 @@ private val debugPreviewPalette: List<Color> = listOf(
     Color(0xFFA2845E), // brown
 )
 
-fun debugPreviewColor(index: Int): Color {
-    val size = debugPreviewPalette.size
-    return debugPreviewPalette[((index % size) + size) % size]
+fun zonePreviewColor(index: Int): Color {
+    val size = zonePreviewPalette.size
+    return zonePreviewPalette[((index % size) + size) % size]
 }
 
 /**

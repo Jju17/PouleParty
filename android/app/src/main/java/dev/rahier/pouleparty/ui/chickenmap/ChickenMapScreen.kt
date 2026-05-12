@@ -36,7 +36,7 @@ import com.mapbox.maps.extension.compose.annotation.generated.PolylineAnnotation
 import com.mapbox.maps.plugin.locationcomponent.location
 import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.ui.components.circlePolygonPoints
-import dev.rahier.pouleparty.ui.components.debugPreviewColor
+import dev.rahier.pouleparty.ui.components.zonePreviewColor
 import dev.rahier.pouleparty.ui.components.outerBoundsPoints
 import dev.rahier.pouleparty.ui.components.zoomForRadius
 import dev.rahier.pouleparty.ui.components.CountdownView
@@ -199,12 +199,12 @@ fun ChickenMapScreen(
             }
 
             // Debug easter egg: long-press on Create Party populates
-            // `debugCircles` with every future shrunk circle so the
+            // `zonePreviewCircles` with every future shrunk circle so the
             // chicken can see the whole drift/shrink sequence at once,
             // each stroked in its own palette color.
             if (state.isDebugPreview) {
-                state.debugCircles.forEachIndexed { index, circle ->
-                    val color = debugPreviewColor(index)
+                state.zonePreviewCircles.forEachIndexed { index, circle ->
+                    val color = zonePreviewColor(index)
                     val points = circlePolygonPoints(circle.center, circle.radius)
                     PolylineAnnotation(points = points + listOf(points.first())) {
                         lineColor = color.copy(alpha = 0.95f)

@@ -81,7 +81,7 @@ data class ChickenMapUiState(
      * map at once, each with its own palette color. Not persisted.
      */
     val isDebugPreview: Boolean = false,
-    val debugCircles: List<dev.rahier.pouleparty.ui.gamelogic.DebugShrinkCircle> = emptyList(),
+    val zonePreviewCircles: List<dev.rahier.pouleparty.ui.gamelogic.DebugShrinkCircle> = emptyList(),
 ) : dev.rahier.pouleparty.ui.map.MapUiState
 
 @HiltViewModel
@@ -148,7 +148,7 @@ class ChickenMapViewModel @Inject constructor(
                 initialRadius = game.zone.radius,
                 currentRadius = lastRadius.toDouble()
             )
-            val debugCircles = if (isDebugPreview) {
+            val zonePreviewCircles = if (isDebugPreview) {
                 dev.rahier.pouleparty.ui.gamelogic.computeDebugShiftedCircles(game)
             } else {
                 emptyList()
@@ -159,7 +159,7 @@ class ChickenMapViewModel @Inject constructor(
                     radius = lastRadius,
                     nextRadiusUpdate = lastUpdate,
                     circleCenter = interpolatedCenter,
-                    debugCircles = debugCircles,
+                    zonePreviewCircles = zonePreviewCircles,
                 )
             }
 
