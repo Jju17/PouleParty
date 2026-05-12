@@ -97,7 +97,7 @@ class HomeViewModelJoinFlowTest {
     fun `typing own chicken game code ends in CodeNotFound`() {
         val myUid = "user-abc"
         mockAuthUser(myUid)
-        val ownGame = Game.mock.copy(creatorId = myUid)
+        val ownGame = Game.mock.copy(creatorId = myUid, chickenId = myUid)
         coEvery { firestoreRepository.findGameByCode("ABC123") } returns ownGame
 
         val vm = createViewModel()

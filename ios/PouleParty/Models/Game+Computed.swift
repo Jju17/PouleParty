@@ -10,6 +10,13 @@ import FirebaseFirestore
 // MARK: - Coordinate & Date Accessors
 
 extension Game {
+    /// True when [userId] is the player designated as the chicken
+    /// (PP-26). Use this instead of `creatorId == userId` everywhere
+    /// the question is "who runs and hides".
+    func isChicken(_ userId: String) -> Bool {
+        !userId.isEmpty && chickenId == userId
+    }
+
     var initialLocation: CLLocationCoordinate2D {
         get {
             self.zone.center.toCLCoordinates

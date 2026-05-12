@@ -153,9 +153,11 @@ class FirestoreRepository @Inject constructor(
                 if (game != null) candidates.add(Pair(game, dev.rahier.pouleparty.ui.gamelogic.PlayerRole.HUNTER))
             }
 
-            // Check if user is the chicken (creator) of active games
+            // Check if user is the chicken of active games (PP-26: query
+            // `chickenId` instead of `creatorId` so a GM-designated chicken
+            // resumes correctly).
             val chickenSnapshot = firestore.collection(AppConstants.COLLECTION_GAMES)
-                .whereEqualTo("creatorId", userId)
+                .whereEqualTo("chickenId", userId)
                 .whereIn("status", activeStatuses)
                 .get()
                 .await()

@@ -56,6 +56,13 @@ data class Game(
     val status: String = GameStatus.WAITING.firestoreValue,
     val winners: List<Winner> = emptyList(),
     val creatorId: String = "",
+    /**
+     * The player who runs and hides. Set to `creatorId` at game creation,
+     * can be re-designated to any registered hunter by a GameMaster while
+     * `status == waiting` (PP-26). Distinct from `creatorId`, which stays
+     * the game's admin owner.
+     */
+    val chickenId: String = "",
     val timing: Timing = Timing(),
     val zone: Zone = Zone(),
     val registration: GameRegistration = GameRegistration(),
@@ -68,6 +75,17 @@ data class Game(
      */
     val isAdminCreation: Boolean = false
 ) {
+    // ── Chicken Role (PP-26) ───────────────────────────
+
+    /**
+     * True when [userId] is the player designated as the chicken
+     * (PP-26). Use this instead of `creatorId == userId` everywhere
+     * the question is "who runs and hides".
+     */
+    @Exclude
+    fun isChicken(userId: String): Boolean =
+        userId.isNotEmpty() && chickenId == userId
+
     // ── Power-Up Active Effects ────────────────────────
 
     @get:Exclude

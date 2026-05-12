@@ -23,6 +23,7 @@ struct JoinFlowFeatureTests {
         let myUid = "user-abc"
         var ownGame = Game.mock
         ownGame.creatorId = myUid
+        ownGame.chickenId = myUid
         ownGame.status = .waiting
 
         let store = TestStore(initialState: JoinFlowFeature.State()) {

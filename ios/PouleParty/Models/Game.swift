@@ -21,6 +21,11 @@ struct Game: Codable, Equatable, Identifiable {
     var status: GameStatus = .waiting
     var winners: [Winner] = []
     var creatorId: String = ""
+    /// The player who runs and hides. Set to `creatorId` at game creation,
+    /// can be re-designated to any registered hunter by a GameMaster while
+    /// `status == waiting` (PP-26). Distinct from `creatorId`, which stays
+    /// the game's admin owner.
+    var chickenId: String = ""
 
     var timing: Timing = Timing()
     var zone: Zone = Zone()

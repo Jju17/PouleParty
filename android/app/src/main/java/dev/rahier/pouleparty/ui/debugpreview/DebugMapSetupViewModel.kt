@@ -116,6 +116,7 @@ class DebugMapSetupViewModel @Inject constructor(
                 gameMode = GameMod.STAY_IN_THE_ZONE.firestoreValue,
                 foundCode = Game.generateFoundCode(),
                 creatorId = creatorId,
+                chickenId = creatorId,
                 timing = Timing(
                     start = Timestamp(Date(startMs)),
                     end = Timestamp(Date(endMs)),

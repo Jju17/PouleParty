@@ -1,0 +1,35 @@
+[debug] [2026-05-12T18:30:20.913Z] ----------------------------------------------------------------------
+[debug] [2026-05-12T18:30:20.915Z] Command:       /Users/julien/.nvm/versions/node/v22.22.2/bin/node /Users/julien/.nvm/versions/node/v22.22.2/bin/firebase deploy --only firestore:rules --project pouleparty-prod
+[debug] [2026-05-12T18:30:20.915Z] CLI Version:   15.15.0
+[debug] [2026-05-12T18:30:20.915Z] Platform:      darwin
+[debug] [2026-05-12T18:30:20.915Z] Node Version:  v22.22.2
+[debug] [2026-05-12T18:30:20.915Z] Time:          Tue May 12 2026 20:30:20 GMT+0200 (Central European Summer Time)
+[debug] [2026-05-12T18:30:20.915Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-05-12T18:30:21.480Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-05-12T18:30:21.480Z] > authorizing via signed-in user (julien@rahier.dev)
+[debug] [2026-05-12T18:30:21.480Z] [iam] checking project pouleparty-prod for permissions ["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]
+[debug] [2026-05-12T18:30:21.480Z] Checked if tokens are valid: true, expires at: 1778614211096
+[debug] [2026-05-12T18:30:21.480Z] Checked if tokens are valid: true, expires at: 1778614211096
+[debug] [2026-05-12T18:30:21.481Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/pouleparty-prod:testIamPermissions [none]
+[debug] [2026-05-12T18:30:21.481Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/pouleparty-prod:testIamPermissions  x-goog-user-project=pouleparty-prod
+[debug] [2026-05-12T18:30:21.481Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/pouleparty-prod:testIamPermissions {"permissions":["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]}
+[debug] [2026-05-12T18:30:21.733Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/pouleparty-prod:testIamPermissions 200
+[debug] [2026-05-12T18:30:21.733Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/pouleparty-prod:testIamPermissions {"permissions":["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]}
+[info] 
+[info] === Deploying to 'pouleparty-prod'...
+[info] 
+[info] i  deploying firestore 
+[info] i  firestore: ensuring required API firestore.googleapis.com is enabled... 
+[info] i  firestore: ensuring required API firestore.googleapis.com is enabled... 
+[debug] [2026-05-12T18:30:21.735Z] Checked if tokens are valid: true, expires at: 1778614211096
+[debug] [2026-05-12T18:30:21.735Z] Checked if tokens are valid: true, expires at: 1778614211096
+[debug] [2026-05-12T18:30:21.735Z] >>> [apiv2][query] GET https://firestore.googleapis.com/v1/projects/pouleparty-prod/databases/(default) [none]
+[debug] [2026-05-12T18:30:21.947Z] <<< [apiv2][status] GET https://firestore.googleapis.com/v1/projects/pouleparty-prod/databases/(default) 200
+[debug] [2026-05-12T18:30:21.947Z] <<< [apiv2][body] GET https://firestore.googleapis.com/v1/projects/pouleparty-prod/databases/(default) {"name":"projects/pouleparty-prod/databases/(default)","uid":"bdb09930-ad8b-44a6-9e94-11da33164f6c","createTime":"2026-02-28T17:55:44.868881Z","updateTime":"2026-02-28T17:55:44.868881Z","locationId":"eur3","type":"FIRESTORE_NATIVE","concurrencyMode":"PESSIMISTIC","versionRetentionPeriod":"3600s","earliestVersionTime":"2026-05-12T17:30:21.934396Z","appEngineIntegrationMode":"DISABLED","keyPrefix":"e","pointInTimeRecoveryEnablement":"POINT_IN_TIME_RECOVERY_DISABLED","deleteProtectionState":"DELETE_PROTECTION_DISABLED","databaseEdition":"STANDARD","freeTier":true,"realtimeUpdatesMode":"REALTIME_UPDATES_MODE_ENABLED","etag":"IPrOwfKwtJQDMNHkm8SdvZMD"}
+[info] i  firestore: reading indexes from firestore.indexes.json... 
+[info] i  cloud.firestore: checking firestore.rules for compilation errors... 
+[debug] [2026-05-12T18:30:21.950Z] Checked if tokens are valid: true, expires at: 1778614211096
+[debug] [2026-05-12T18:30:21.950Z] Checked if tokens are valid: true, expires at: 1778614211096
+[debug] [2026-05-12T18:30:21.951Z] >>> [apiv2][query] POST https://firebaserules.googleapis.com/v1/projects/pouleparty-prod:test [none]
+[debug] [2026-05-12T18:30:21.951Z] >>> [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/pouleparty-prod:test [omitted]

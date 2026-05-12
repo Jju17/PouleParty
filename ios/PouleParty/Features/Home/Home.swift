@@ -269,6 +269,7 @@ struct HomeFeature {
                 var game = Game(id: apiClient.newGameId())
                 game.name = "DEBUG PREVIEW"
                 game.creatorId = creatorId
+                game.chickenId = creatorId
                 game.gameMode = .stayInTheZone
                 game.maxPlayers = 1
                 game.initialLocation = center
@@ -409,6 +410,7 @@ struct HomeFeature {
                 game.foundCode = Game.generateFoundCode()
                 game.timing.headStartMinutes = 5
                 game.creatorId = creatorId
+                game.chickenId = creatorId
                 game.maxPlayers = 5
                 game.isAdminCreation = isAdmin
                 game.zone.driftSeed = withRandomNumberGenerator { generator in

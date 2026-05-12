@@ -29,18 +29,24 @@ service cloud.firestore {
                     // GameMasters are only added by `joinAsGameMaster` (PP-70).
                     // Force the create payload's `gameMasterIds` to be empty so
                     // a malicious client can't pre-populate it.
-                    && request.resource.data.get('gameMasterIds', []).size() == 0;
+                    && request.resource.data.get('gameMasterIds', []).size() == 0
+                    // At creation the chicken must be the creator. The GM
+                    // can re-designate from the "Désigner la poule" screen
+                    // once hunters have registered (PP-26).
+                    && request.resource.data.chickenId == request.resource.data.creatorId;
 
       // Any player can update hunterIds and winners (join game, submit winner)
       // If the game requires registration, the joining user must already have a registration doc.
-      // A creator can never be in their own hunterIds — enforced here so the
-      // mobile clients + server stay consistent on "creator can't self-join".
+      // The current chicken is never in `hunterIds`: at creation the chicken
+      // is the creator (PP-26 sets `chickenId == creatorId`); a GM-led
+      // re-designation runs through the dedicated update rule below and
+      // pulls the newly-designated hunter out of `hunterIds` atomically.
       allow update: if request.auth != null
                     && request.resource.data.diff(resource.data).affectedKeys()
                         .hasOnly(['hunterIds', 'winners'])
                     && request.resource.data.hunterIds.size() <= resource.data.maxPlayers
                     && request.resource.data.winners.size() <= resource.data.maxPlayers
-                    && !request.resource.data.hunterIds.hasAny([resource.data.creatorId])
+                    && !request.resource.data.hunterIds.hasAny([resource.data.chickenId])
                     && (
                       resource.data.get('registration', {}).get('required', false) == false
                       || !request.resource.data.hunterIds.hasAny([request.auth.uid])
@@ -49,20 +55,38 @@ service cloud.firestore {
 
       // Only game participants can update power-up active effect fields.
       // `gameMasterIds` is admin-SDK only — the chicken can't self-promote
-      // a GM via this path. See PP-23.
+      // a GM via this path (PP-23). `chickenId` is gated by a dedicated
+      // rule below (PP-26).
       allow update: if request.auth != null
                     && (request.auth.uid == resource.data.creatorId
                         || request.auth.uid in resource.data.hunterIds)
                     && !request.resource.data.diff(resource.data).affectedKeys()
-                        .hasAny(['gameMasterIds']);
+                        .hasAny(['gameMasterIds', 'chickenId']);
+
+      // GameMaster (or the creator as a fallback when no GM has joined
+      // yet) re-designates the chicken before the game starts. Single
+      // field, `status == waiting` only — once the game is `inProgress`
+      // or `done`, the role is frozen. Used by the "Désigner la poule"
+      // screen (PP-26). hunterIds may be edited in the same write so the
+      // newly-designated hunter can be removed from the hunter pool.
+      allow update: if request.auth != null
+                    && resource.data.status == 'waiting'
+                    && (request.auth.uid == resource.data.creatorId
+                        || request.auth.uid in resource.data.get('gameMasterIds', []))
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['chickenId', 'hunterIds'])
+                    && request.resource.data.chickenId is string
+                    && request.resource.data.chickenId.size() > 0
+                    && !request.resource.data.hunterIds.hasAny([request.resource.data.chickenId]);
 
       // Only the creator can update other game settings. `gameMasterIds`
       // is admin-SDK only — `joinAsGameMaster` (PP-70) is the only path
-      // that mutates it.
+      // that mutates it. `chickenId` is gated by the dedicated PP-26
+      // rule above.
       allow update: if request.auth != null
                     && resource.data.creatorId == request.auth.uid
                     && !request.resource.data.diff(resource.data).affectedKeys()
-                        .hasAny(['gameMasterIds']);
+                        .hasAny(['gameMasterIds', 'chickenId']);
 
       // Only the creator can delete, and only while still in `waiting`.
       allow delete: if request.auth != null
@@ -79,14 +103,16 @@ service cloud.firestore {
       // Chicken locations subcollection. GameMasters (PP-23) read the
       // chicken's location regardless of `gameMode` — they need it for
       // the validator carte, even in `stayInTheZone` where hunters are
-      // blind to it.
+      // blind to it. Writes are gated by the dedicated `chickenId`
+      // (PP-26): the chicken is the player designated by that field,
+      // not necessarily the creator.
       match /chickenLocations/{docId} {
         allow read: if request.auth != null
                     && (request.auth.uid == get(/databases/$(database)/documents/games/$(gameId)).data.creatorId
                         || request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.hunterIds
                         || request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.get('gameMasterIds', []));
         allow create, update: if request.auth != null
-                      && get(/databases/$(database)/documents/games/$(gameId)).data.creatorId == request.auth.uid
+                      && request.auth.uid == get(/databases/$(database)/documents/games/$(gameId)).data.chickenId
                       && request.resource.data.keys().hasAll(['location', 'timestamp']);
         allow delete: if false;
       }

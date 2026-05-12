@@ -11,9 +11,10 @@ There's also a **web** landing page (React/Vite) and **Cloud Functions** backend
 ## Game Concepts
 
 ### Roles
-- **Chicken** (creator): Creates the game, defines the zone, runs and hides. Shows a 4-digit "found code" to hunters who physically find them.
-- **Hunters**: Join via a 6-character game code. Must physically find the chicken and enter the found code to win.
-- **GameMasters** (PP-23, PP-70): 0..N validators distinct from the chicken and the hunters. The chicken sets a 4-digit `gameMasterPassword` at game creation; anyone with the code calls `joinAsGameMaster` to land in `gameMasterIds`. Validators see the chicken and every hunter on a dedicated map (even in `stayInTheZone`), validate photo challenge submissions, and never write their own GPS. The password lives in `/games/{gameId}/private/` (admin-SDK-only); only `gameMasterIds` is on the public Game doc.
+- **Creator** (admin owner): Creates the game, owns it (`creatorId`), can delete or reconfigure it while `status == waiting`. By default also starts as the chicken (`chickenId == creatorId` at create) but a GameMaster can re-designate someone else (PP-26).
+- **Chicken** (`chickenId`): The single player who runs and hides. Shows the 4-digit `foundCode` to hunters who physically find them. Distinct from the creator: a GameMaster can swap the chicken to any registered hunter while `status == waiting`. Use `game.isChicken(userId)` for the "is this user the chicken" check.
+- **Hunters**: Join via the 6-character game code. Must physically find the chicken and enter the `foundCode` to win.
+- **GameMasters** (PP-23, PP-70): 0..N validators distinct from the chicken and the hunters. The creator sets a 4-digit `gameMasterPassword` at game creation; anyone with the code calls `joinAsGameMaster` to land in `gameMasterIds`. Validators see the chicken and every hunter on a dedicated map (even in `stayInTheZone`), validate photo challenge submissions, and never write their own GPS. The password lives in `/games/{gameId}/private/` (admin-SDK-only); only `gameMasterIds` is on the public Game doc.
 
 ### Game Modes
 - **Follow the Chicken** (`followTheChicken`): The zone circle follows the chicken's live GPS. Hunters see where the chicken is (within the zone). Chicken doesn't see hunters unless `chickenCanSeeHunters` is enabled.
@@ -94,7 +95,7 @@ cd web && npm run dev
 ```
 /games/{gameId}
   ├── id, name, maxPlayers, gameMode, chickenCanSeeHunters, isAdminCreation
-  ├── foundCode, hunterIds, gameMasterIds, status, winners, creatorId, lastHeartbeat
+  ├── foundCode, hunterIds, gameMasterIds, status, winners, creatorId, chickenId, lastHeartbeat
   ├── timing: { start, end, headStartMinutes }
   ├── zone: { center, finalCenter, radius, shrinkIntervalMinutes, shrinkMetersPerUpdate, driftSeed }
   ├── registration: { required, closesMinutesBefore }

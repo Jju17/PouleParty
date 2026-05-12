@@ -350,10 +350,11 @@ class HomeViewModel @Inject constructor(
                     _uiState.update { it.copy(joinStep = JoinFlowStep.CodeNotFound) }
                     return@launch
                 }
-                // Block hunters from joining their own chicken game: if they
-                // do, they'd end up in both `creatorId` and `hunterIds`, which
-                // breaks the map (who sees whose position?).
-                if (game.creatorId == userId && userId.isNotEmpty()) {
+                // Block the chicken from joining their own game as a hunter:
+                // they'd end up in both `chickenId` and `hunterIds` and
+                // break the map (PP-26 — the chicken may be any designated
+                // user, not just the creator).
+                if (game.isChicken(userId)) {
                     _uiState.update { it.copy(joinStep = JoinFlowStep.CodeNotFound) }
                     return@launch
                 }

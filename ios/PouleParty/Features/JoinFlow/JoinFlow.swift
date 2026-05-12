@@ -89,10 +89,12 @@ struct JoinFlowFeature {
                                 await send(.codeValidationFailed)
                                 return
                             }
-                            // Block hunters from joining their own chicken game:
-                            // they'd end up in both `creatorId` and `hunterIds`
-                            // and break the map.
-                            if !userId.isEmpty, game.creatorId == userId {
+                            // Block the chicken from joining their own game as
+                            // a hunter: they'd end up in both `chickenId` and
+                            // `hunterIds` and break the map (PP-26 — the
+                            // chicken may now be any designated user, not
+                            // just the creator).
+                            if game.isChicken(userId) {
                                 await send(.codeValidationFailed)
                                 return
                             }

@@ -264,7 +264,7 @@ The game has two distinct roles. The UI subtly shifts to immerse the player:
 ```
 /games/{gameId}
 ├── id, name, maxPlayers, gameMode, chickenCanSeeHunters, isAdminCreation
-├── foundCode, hunterIds, gameMasterIds, status, winners, creatorId
+├── foundCode, hunterIds, gameMasterIds, status, winners, creatorId, chickenId
 ├── timing: { start, end, headStartMinutes }
 ├── zone: { center, finalCenter, radius, shrinkIntervalMinutes, shrinkMetersPerUpdate, driftSeed }
 ├── registration: { required, closesMinutesBefore }

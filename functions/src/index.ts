@@ -198,14 +198,16 @@ export const sendGameNotification = onTaskDispatched(
 
     switch (notificationType) {
       case "chicken_start":
-        userIds = game.creatorId ? [game.creatorId] : [];
+        // Notifies the player currently designated as the chicken
+        // (PP-26 — may be a hunter the GM picked, not the creator).
+        userIds = game.chickenId ? [game.chickenId as string] : [];
         break;
       case "hunter_start":
         userIds = (game.hunterIds as string[]) ?? [];
         break;
       case "zone_shrink":
         userIds = [
-          ...(game.creatorId ? [game.creatorId] : []),
+          ...(game.chickenId ? [game.chickenId as string] : []),
           ...((game.hunterIds as string[]) ?? []),
         ];
         break;
@@ -747,8 +749,10 @@ export const onGameUpdated = onDocumentUpdated(
     const totalHunters = ((after.hunterIds as string[]) ?? []).length;
     const remainingCount = Math.max(0, totalHunters - winnersAfter.length);
 
+    // Notify the chicken + all hunters when a hunter finds the chicken
+    // (PP-26: the chicken may be any designated player, not the creator).
     const allUserIds = [
-      ...(after.creatorId ? [after.creatorId] : []),
+      ...(after.chickenId ? [after.chickenId as string] : []),
       ...((after.hunterIds as string[]) ?? []),
     ];
     const tokens = await getTokensForUserIds(allUserIds);

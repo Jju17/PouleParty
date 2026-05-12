@@ -82,6 +82,7 @@ struct GameZoneCodableTests {
             "status": "waiting",
             "winners": [],
             "creatorId": "user-1",
+            "chickenId": "user-1",
             "timing": [
                 "start": Timestamp(seconds: 1_700_000_000, nanoseconds: 0),
                 "end": Timestamp(seconds: 1_700_003_600, nanoseconds: 0),

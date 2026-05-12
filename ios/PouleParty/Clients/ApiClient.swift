@@ -167,20 +167,22 @@ extension ApiClient: DependencyKey {
                 logger.error("findActiveGame hunter query failed: \(error.localizedDescription)")
             }
 
-            // Query 2: Is the user the chicken/creator?
+            // Query 2: Is the user the chicken? Compares against
+            // `chickenId` since PP-26 — the chicken may be a hunter the
+            // GM re-designated, not necessarily the creator.
             do {
-                let creatorSnapshot = try await db.collection(gamesCollection)
-                    .whereField("creatorId", isEqualTo: userId)
+                let chickenSnapshot = try await db.collection(gamesCollection)
+                    .whereField("chickenId", isEqualTo: userId)
                     .whereField("status", in: activeStatuses)
                     .getDocuments()
 
-                for doc in creatorSnapshot.documents {
+                for doc in chickenSnapshot.documents {
                     if let game = try? doc.data(as: Game.self) {
                         candidates.append((game, .chicken))
                     }
                 }
             } catch {
-                logger.error("findActiveGame creator query failed: \(error.localizedDescription)")
+                logger.error("findActiveGame chicken query failed: \(error.localizedDescription)")
             }
 
             // Filter out games whose end time has already passed (status may
