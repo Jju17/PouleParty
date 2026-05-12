@@ -9,8 +9,8 @@ import Home from "./pages/Home";
 import Privacy from "./pages/Privacy";
 import Support from "./pages/Support";
 import Terms from "./pages/Terms";
-import Register from "./pages/Register";
 import DeleteAccount from "./pages/DeleteAccount";
+import CreateParty from "./pages/CreateParty";
 
 const rootElement = document.getElementById("root");
 if (!rootElement) {
@@ -29,11 +29,17 @@ ReactDOM.createRoot(rootElement).render(
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Home />} />
-              <Route path="/register" element={<Register />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/support" element={<Support />} />
               <Route path="/delete-account" element={<DeleteAccount />} />
+              {/* PP-46: localized "create a party" landing pages. The mobile
+                  apps pick the URL based on device language; this page also
+                  pins the i18n locale via the URL slug regardless of the
+                  visitor's stored preference. */}
+              <Route path="/creer-une-partie" element={<CreateParty />} />
+              <Route path="/create-a-party" element={<CreateParty />} />
+              <Route path="/een-feestje-organiseren" element={<CreateParty />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </BrowserRouter>

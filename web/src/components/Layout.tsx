@@ -39,13 +39,6 @@ export default function Layout({ children }: { children: ReactNode }) {
           Poule Party
         </Link>
         <nav className="flex items-center gap-2">
-          <Link
-            to="/register"
-            className="px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-bold text-white shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300 whitespace-nowrap"
-            style={{ backgroundImage: "linear-gradient(to right, #FE6A00, #EF0778)" }}
-          >
-            {t.nav.register}
-          </Link>
           <button
             onClick={() => {
               const next = locale === "en" ? "fr" : locale === "fr" ? "nl" : "en";

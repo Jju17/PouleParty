@@ -1,6 +1,5 @@
 export default {
   nav: {
-    register: "Inscription",
     privacy: "Confidentialité",
     terms: "CGU",
     support: "Support",
@@ -8,7 +7,6 @@ export default {
   home: {
     tagline:
       "Un cache-cache GPS grandeur nature ! Un joueur est la Poule, les autres sont Chasseurs. La zone rétrécit, la traque s'intensifie !",
-    cta: "Prochain event : 23 avril !",
     appComingSoon: "Application bientôt disponible...",
     downloadApp: "Télécharge l'application !",
     appStore: "App Store",
@@ -17,7 +15,7 @@ export default {
   },
   privacy: {
     title: "Politique de confidentialité",
-    lastUpdated: "Dernière mise à jour : 4 mars 2026",
+    lastUpdated: "Dernière mise à jour : 12 mai 2026",
     overview: "Responsable du traitement",
     overviewText:
       "Poule Party (\"nous\", \"notre\", \"l'application\") est un jeu mobile de géolocalisation. Le responsable du traitement de vos données personnelles est :",
@@ -56,9 +54,6 @@ export default {
     thirdPartyCrashlyticsUrl: "https://firebase.google.com/support/privacy/",
     thirdPartyMapbox: "Mapbox",
     thirdPartyMapboxUrl: "https://www.mapbox.com/legal/privacy",
-    thirdPartyStripe: "Stripe",
-    thirdPartyStripeUrl: "https://stripe.com/privacy",
-    thirdPartyStripeText: "pour les paiements des parties payantes (forfait créateur, caution joueur). Nous n'avons jamais accès à vos données bancaires : elles sont transmises directement à Stripe qui les traite en tant que responsable de traitement indépendant.",
     dataSharing: "Partage des données",
     dataSharingText:
       "Nous ne vendons, n'échangeons ni ne partageons vos données personnelles avec des tiers à des fins commerciales. Les données de localisation sont uniquement partagées avec les autres joueurs de la même session pendant le jeu.",
@@ -119,35 +114,18 @@ export default {
   },
   terms: {
     title: "Conditions d'utilisation",
-    lastUpdated: "Dernière mise à jour : 22 avril 2026",
+    lastUpdated: "Dernière mise à jour : 12 mai 2026",
     acceptance: "Acceptation des conditions",
     acceptanceText:
       "En téléchargeant, installant ou utilisant Poule Party, vous acceptez ces conditions d'utilisation. Si vous n'êtes pas d'accord, veuillez ne pas utiliser l'application.",
     description: "Description du service",
     descriptionText:
-      "Poule Party est un jeu mobile basé sur la géolocalisation dans lequel un joueur (la Poule) se cache tandis que les autres joueurs (les Chasseurs) tentent de la trouver à l'aide d'une carte en temps réel avec une zone qui rétrécit. L'application est gratuite ; certaines parties peuvent être organisées avec un forfait créateur ou une caution remboursable (voir Tarification ci-dessous).",
+      "Poule Party est un jeu mobile gratuit basé sur la géolocalisation dans lequel un joueur (la Poule) se cache tandis que les autres joueurs (les Chasseurs) tentent de la trouver à l'aide d'une carte en temps réel avec une zone qui rétrécit.",
     userConduct: "Comportement des utilisateurs",
     conduct1: "Utilisez l'application uniquement dans le cadre prévu (jouer au jeu).",
     conduct2: "Ne tentez pas de tricher, pirater ou rétro-ingéniérer l'application.",
     conduct3: "Respectez les autres joueurs et jouez dans des lieux publics et sûrs.",
     conduct4: "Vous êtes responsable de votre propre sécurité pendant le jeu.",
-    pricing: "Tarification & paiements",
-    pricingIntro:
-      "Poule Party propose trois modes de tarification, choisis par le créateur de la partie :",
-    pricingFree: "Parties gratuites :",
-    pricingFreeText:
-      "Aucun paiement n'est requis. Créateur et Chasseurs jouent sans frais.",
-    pricingFlat: "Forfait créateur :",
-    pricingFlatText:
-      "Le créateur paie un montant fixe à la création pour le service d'organisation et d'hébergement d'un événement réel (minuterie, gestion de zone, notifications, support). Il s'agit d'un forfait de service pour une activité physique et il n'est pas remboursable une fois la partie lancée. Un code promo peut être appliqué si vous en avez reçu un.",
-    pricingDeposit: "Caution remboursable :",
-    pricingDepositText:
-      "Chaque Chasseur paie une caution à l'inscription. La caution est conservée par notre prestataire de paiement (Stripe) et est remboursable à chaque participant après la partie, quel que soit le résultat. La caution n'est pas une mise, pas un pot de jeu, et n'est jamais redistribuée aux gagnants. Poule Party ne prend aucune commission sur la caution.",
-    pricingNoGambling: "Pas de jeu d'argent, pas de gain :",
-    pricingNoGamblingText:
-      "Poule Party est un jeu physique basé sur l'habileté. Gagner une partie ne donne droit à aucun gain en argent ni bien numérique. Nous n'organisons pas de jeu de hasard et ne distribuons aucun prix en espèces.",
-    pricingPayments:
-      "Tous les paiements sont traités par Stripe. Nous ne voyons jamais et ne stockons jamais vos coordonnées bancaires. Pour demander le remboursement de ta caution après la partie, envoie un email à julien@rahier.dev en précisant le code de la partie et l'adresse email utilisée à l'inscription — nous effectuons le remboursement via Stripe sur le moyen de paiement d'origine en quelques jours ouvrés.",
     location: "Données de localisation",
     locationText:
       "L'application nécessite l'accès à la localisation pour fonctionner. Votre position est partagée avec les autres joueurs de votre session uniquement pendant le jeu. Consultez notre politique de confidentialité pour plus de détails.",
@@ -172,72 +150,11 @@ export default {
     contact: "Contact",
     contactText: "Si vous avez des questions concernant ces conditions, contactez-nous à",
   },
-  register: {
-    date: "23 avril 2026 à 19h00",
-    intro:
-      "Prépare-toi pour une expérience totalement insolite : une chasse à la poule grandeur nature, en plein cœur de la ville.",
-    description:
-      "Inspirée du concept de jeu urbain façon \"cache-cache + jeu de piste\", la Poule Party est une aventure collective où stratégie, rapidité et créativité feront toute la différence.",
-    conceptTitle: "🎯 Le concept",
-    conceptText:
-      "Une \"Poule\" est lâchée dans la ville avec quelques minutes d'avance…",
-    mission: "Ta mission ? La retrouver avant les autres équipes.",
-    zoneText:
-      "Grâce à un système de localisation évolutif, une zone autour de la Poule apparaît et se réduit progressivement… À toi de te rapprocher, d'enquêter et de foncer au bon moment.",
-    butWait: "Mais ce n'est pas tout 👇",
-    pointsTitle: "🏆 Gagne des points (et la gloire)",
-    pointsList: [
-      "🧭 Retrouve la Poule avant les autres",
-      "📸 Réalise des défis fun et décalés",
-      "🎭 Fais preuve de créativité (et d'audace)",
-      "😈 (Optionnel) Sabote les autres équipes",
-    ],
-    pointsOutro:
-      "Chaque action te rapporte des points… et à la fin, une seule équipe sera sacrée gagnante.",
-    whyTitle: "🎉 Pourquoi participer ?",
-    whyList: [
-      "Une activité originale et ultra fun",
-      "Parfait pour rencontrer du monde",
-      "Accessible à tous (pas besoin d'être sportif)",
-      "Des souvenirs mémorables (et souvent très drôles)",
-    ],
-    infoTitle: "📅 Infos pratiques",
-    infoList: [
-      "📆 Date : 23 avril à 19h",
-      "👥 Places limitées : 35 participants",
-      "🎮 Format : équipes + jeu en extérieur",
-      "⏱ Durée : ± 2h de jeu",
-      "📍 Lieu de départ : communiqué après inscription",
-    ],
-    spotsLeft: "{0}/{1} inscrits",
-    formTitle: "Inscription",
-    firstNameLabel: "Prénom",
-    firstNamePlaceholder: "Jean",
-    lastNameLabel: "Nom",
-    lastNamePlaceholder: "Dupont",
-    emailLabel: "Email",
-    emailHint: "📱 Sur Android, mets ton adresse Play Store : c'est celle-là qui te donnera accès à l'app (test fermé)",
-    emailPlaceholder: "jean@example.com",
-    gsmLabel: "GSM",
-    gsmHint: "Pour t'ajouter au groupe WhatsApp de l'event",
-    gsmPlaceholder: "+32 470 12 34 56",
-    emailError: "Adresse email invalide",
-    gsmTooShort: "Il manque {0} chiffre(s)",
-    gsmTooLong: "Il y a {0} chiffre(s) en trop",
-    gsmFormatError: "Le numéro doit commencer par + ou 0",
-    willingToPayLabel: "Combien serais-tu prêt à payer pour participer ?",
-    willingToPayPlaceholder: "Ex : 5€, 10€, gratuit…",
-    commentLabel: "Un commentaire ? (optionnel)",
-    commentHint: "Idées, suggestions, recommandations…",
-    commentPlaceholder: "Ex : idée de power-up, question sur l'event…",
-    submitButton: "Je m'inscris !",
-    submitting: "Inscription en cours…",
-    duplicateText: "Cet email est déjà inscrit ! Si c'est une erreur, contacte-nous à julien@rahier.dev.",
-    fullText: "Désolé, toutes les places sont prises !",
-    errorText: "Une erreur est survenue. Réessaye !",
-    successTitle: "Inscription confirmée !",
-    successText:
-      "Tu recevras un email avec tous les détails avant l'événement. Prépare-toi pour la chasse !",
+  createParty: {
+    title: "Envie de créer une partie ?",
+    body: "PouleParty est en version beta. Pour organiser ou créer une partie, contacte Julien — on met ça en place ensemble.",
+    contactEmailLabel: "Email :",
+    contactWhatsAppLabel: "WhatsApp :",
   },
   footer: {
     rights: "Tous droits réservés.",
@@ -249,14 +166,13 @@ export default {
     dataDeletedTitle: "Ce qui est supprimé",
     dataDeleted: [
       "Ton identifiant Firebase anonyme",
-      "Ton pseudo, ta référence client Stripe et ton token de notifications push",
+      "Ton pseudo et ton token de notifications push",
       "Toutes les données de profil stockées sous /users/{ton-id}",
     ],
     dataKeptTitle: "Ce qui est conservé",
     dataKept: [
       "Les parties créées ou rejointes sont conservées pour que les autres participants voient encore les résultats. Ton pseudo est remplacé par un libellé générique.",
       "Les analytics et rapports de crash anonymes (agrégés, non liés à ton identité).",
-      "Les enregistrements de paiement que Stripe et notre comptabilité doivent légalement conserver (en général 7–10 ans en Belgique).",
     ],
     howTitle: "Comment demander la suppression",
     howText:

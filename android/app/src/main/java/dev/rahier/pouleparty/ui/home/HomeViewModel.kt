@@ -100,11 +100,17 @@ class HomeViewModel @Inject constructor(
             HomeIntent.AdminModeTapped -> onAdminModeTapped()
             HomeIntent.AdminCodeDismissed -> _uiState.update { it.copy(isShowingAdminCodeDialog = false, adminCodeInput = "") }
             HomeIntent.AdminCodeErrorDismissed -> _uiState.update { it.copy(isShowingAdminCodeError = false) }
-            HomeIntent.WebCreatePartyTapped -> { /* PP-46 fills in the localized web CTA. */ }
+            HomeIntent.WebCreatePartyTapped -> onWebCreatePartyTapped()
             is HomeIntent.GameCodeChanged -> onGameCodeChanged(intent.code)
             is HomeIntent.TeamNameChanged -> onTeamNameChanged(intent.name)
             is HomeIntent.AdminCodeChanged -> _uiState.update { it.copy(adminCodeInput = intent.code) }
         }
+    }
+
+    private fun onWebCreatePartyTapped() {
+        val lang = java.util.Locale.getDefault().language
+        val url = dev.rahier.pouleparty.model.CreatePartyUrl.forLanguage(lang)
+        viewModelScope.launch { _effects.send(HomeEffect.OpenWebUrl(url)) }
     }
 
     private fun onAdminModeTapped() {
@@ -396,7 +402,7 @@ class HomeViewModel @Inject constructor(
         _uiState.update { it.copy(joinStep = JoinFlowStep.SubmittingRegistration(game)) }
         viewModelScope.launch {
             try {
-                val registration = Registration(userId = userId, teamName = teamName, paid = false)
+                val registration = Registration(userId = userId, teamName = teamName)
                 firestoreRepository.createRegistration(game.id, registration)
                 analyticsRepository.registrationCompleted()
                 val pending = PendingRegistration(

@@ -164,7 +164,7 @@ struct JoinFlowFeature {
                 guard !userId.isEmpty else { return .none }
 
                 state.step = .submittingRegistration(game)
-                let registration = Registration(userId: userId, teamName: teamName, paid: false)
+                let registration = Registration(userId: userId, teamName: teamName)
                 return .run { [analyticsClient] send in
                     do {
                         try await apiClient.createRegistration(game.id, registration)

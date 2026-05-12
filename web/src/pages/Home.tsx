@@ -1,4 +1,3 @@
-import { Link } from "react-router-dom";
 import Layout from "../components/Layout";
 import ClickableChicken from "../components/ClickableChicken";
 import { useI18n } from "../i18n";
@@ -22,17 +21,7 @@ export default function Home() {
           {t.home.tagline}
         </p>
 
-        <div className="mt-10 animate-fade-in-up stagger-3">
-          <Link
-            to="/register"
-            className="inline-block px-8 py-4 rounded-full text-white font-bold text-lg animate-pulse-glow hover:scale-105 hover:shadow-xl transition-all duration-300"
-            style={{ fontFamily: "Bangers, cursive", letterSpacing: "0.08em", backgroundImage: "linear-gradient(to right, #FE6A00, #EF0778)" }}
-          >
-            {t.home.cta}
-          </Link>
-        </div>
-
-        <div className="mt-12 animate-fade-in-up stagger-4">
+        <div className="mt-12 animate-fade-in-up stagger-3">
           <p
             className="text-xl text-[#EF0778] dark:text-[#F54D9E] mb-3"
             style={{ fontFamily: "Bangers, cursive" }}

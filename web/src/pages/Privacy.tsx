@@ -63,12 +63,6 @@ export default function Privacy() {
                 {t.privacy.thirdPartyMapbox}
               </a>
             </li>
-            <li>
-              <a href={t.privacy.thirdPartyStripeUrl} target="_blank" rel="noopener noreferrer" className="text-[#FE6A00] underline">
-                {t.privacy.thirdPartyStripe}
-              </a>
-              <span> — {t.privacy.thirdPartyStripeText}</span>
-            </li>
           </ul>
         </section>
 

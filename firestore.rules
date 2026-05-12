@@ -46,23 +46,16 @@ service cloud.firestore {
       // Only game participants can update power-up active effect fields
       allow update: if request.auth != null
                     && (request.auth.uid == resource.data.creatorId
-                        || request.auth.uid in resource.data.hunterIds)
-                    && request.resource.data.diff(resource.data).affectedKeys()
-                        .hasOnly(['powerUps']);
+                        || request.auth.uid in resource.data.hunterIds);
 
-      // Only the creator can update status, gameCode, or other game settings
+      // Only the creator can update other game settings
       allow update: if request.auth != null
                     && resource.data.creatorId == request.auth.uid;
 
-      // Only the creator can delete, and only while still waiting OR while the
-      // game is stuck in a payment-limbo state (pending_payment / payment_failed).
-      // The Forfait flow pre-creates the doc in `pending_payment` before
-      // presenting Stripe PaymentSheet — if the user swipes down the sheet
-      // without paying, the doc would otherwise linger as a ghost in the
-      // creator's My Games list until a server-side scheduled purge runs.
+      // Only the creator can delete, and only while still in `waiting`.
       allow delete: if request.auth != null
                     && resource.data.creatorId == request.auth.uid
-                    && resource.data.status in ['waiting', 'pending_payment', 'payment_failed'];
+                    && resource.data.status == 'waiting';
 
       // Chicken locations subcollection (only the creator can write)
       match /chickenLocations/{docId} {
@@ -93,10 +86,8 @@ service cloud.firestore {
         allow delete: if false;
       }
 
-      // Registrations subcollection — hunters register before joining a game that requires it.
-      // For Caution-mode games (pricing.model == 'deposit'), client creation is blocked —
-      // registrations are created server-side by `createHunterPaymentSheet` + webhook only
-      // after a successful deposit PaymentIntent. Client can never mark `paid: true`.
+      // Registrations subcollection — hunters register before joining a game
+      // that requires it. Simple client-side write keyed by user UID.
       match /registrations/{visitorId} {
         allow read: if request.auth != null
                     && (visitorId == request.auth.uid
@@ -104,11 +95,9 @@ service cloud.firestore {
         allow create: if request.auth != null
                       && visitorId == request.auth.uid
                       && request.resource.data.userId == request.auth.uid
-                      && request.resource.data.keys().hasAll(['userId', 'teamName', 'paid', 'joinedAt'])
+                      && request.resource.data.keys().hasAll(['userId', 'teamName', 'joinedAt'])
                       && request.resource.data.teamName is string
                       && request.resource.data.teamName.size() > 0
-                      && request.resource.data.paid == false
-                      && get(/databases/$(database)/documents/games/$(gameId)).data.get('pricing', {}).get('model', 'free') != 'deposit'
                       // Enforce registration deadline if set
                       && (
                         get(/databases/$(database)/documents/games/$(gameId)).data.get('registration', {}).get('closesMinutesBefore', null) == null
@@ -117,8 +106,7 @@ service cloud.firestore {
                       );
         allow update: if request.auth != null
                       && visitorId == request.auth.uid
-                      && request.resource.data.userId == request.auth.uid
-                      && request.resource.data.paid == resource.data.paid;
+                      && request.resource.data.userId == request.auth.uid;
         allow delete: if false;
       }
 
@@ -162,33 +150,8 @@ service cloud.firestore {
     }
 
     // User profiles (nickname, FCM token, platform) — each user can only read/write their own document.
-    // `stripeCustomerId` is admin-SDK-only: clients must not be able to preload a spoofed
-    // value that would cause the server to reuse someone else's customer for PaymentIntents.
     match /users/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
-      allow create: if request.auth != null
-                    && request.auth.uid == userId
-                    && !('stripeCustomerId' in request.resource.data);
-      allow update: if request.auth != null
-                    && request.auth.uid == userId
-                    && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['stripeCustomerId']);
-      allow delete: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Stripe webhook event dedupe — admin-SDK only (writes) and no client reads.
-    match /paymentEvents/{eventId} {
-      allow read, write: if false;
-    }
-
-    // Per-user rate limit counters (e.g. promo code validation). Admin-SDK only.
-    match /rateLimits/{docId} {
-      allow read, write: if false;
-    }
-
-    // Admin config — read-only for authenticated users, write only via admin SDK
-    match /config/{docId} {
-      allow read: if request.auth != null;
-      allow write: if false;
+      allow read, create, update, delete: if request.auth != null && request.auth.uid == userId;
     }
 
     // Global challenges catalog — populated by devs via the Firebase Console.
@@ -196,11 +159,6 @@ service cloud.firestore {
     match /challenges/{challengeId} {
       allow read: if request.auth != null;
       allow write: if false;
-    }
-
-    // Event registrations — fully locked, only Cloud Functions (admin SDK) can read/write
-    match /registrations/{docId} {
-      allow read, write: if false;
     }
 
     // Player reports — created by authenticated users from the in-app "Report player"

@@ -240,9 +240,11 @@ struct HomeFeature {
                 MapWarmUp.warmUpIfNeeded()
                 return .send(.chickenConfigLocationRequested)
             case .webCreatePartyTapped:
-                // PP-46 fills in: opens the localized "create a party" landing
-                // page in the device browser.
-                return .none
+                let lang = Locale.current.language.languageCode?.identifier
+                guard let url = CreatePartyURL.url(for: lang) else { return .none }
+                return .run { _ in
+                    await MainActor.run { UIApplication.shared.open(url) }
+                }
             case .createPartyLongPressed:
                 let chickenLocStatus = locationClient.authorizationStatus()
                 guard chickenLocStatus == .authorizedAlways || chickenLocStatus == .authorizedWhenInUse else {

@@ -4,12 +4,7 @@ import { getFunctions } from "firebase-admin/functions";
 import { getMessaging } from "firebase-admin/messaging";
 import { onDocumentCreated, onDocumentUpdated } from "firebase-functions/v2/firestore";
 import { onTaskDispatched } from "firebase-functions/v2/tasks";
-import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { onSchedule } from "firebase-functions/v2/scheduler";
-import { defineString, defineSecret } from "firebase-functions/params";
-import { logger } from "firebase-functions/v2";
-import { createHash } from "crypto";
-import { google } from "googleapis";
+import { defineSecret } from "firebase-functions/params";
 import {
   deterministicDriftCenterServer,
   filterEnabledTypesServer,
@@ -25,7 +20,6 @@ initializeApp({ credential: cert(serviceAccount) });
 const REGION = "europe-west1";
 const db = getFirestore();
 
-const REGISTRATION_SHEET_ID = defineString("REGISTRATION_SHEET_ID");
 const MAPBOX_ACCESS_TOKEN = defineSecret("MAPBOX_ACCESS_TOKEN");
 
 const POWER_UP_INITIAL_BATCH_SIZE = 5;
@@ -513,63 +507,8 @@ export const spawnPowerUpBatch = onTaskDispatched(
  *      `spawnPowerUpBatch` task per zone shrink.
  */
 /**
- * Decides whether `onGameCreated` should schedule lifecycle tasks right now.
- * Only games created directly in `waiting` status are playable immediately
- * (free mode + redeemFreeCreation 100%-off). Forfait games start in
- * `pending_payment` and are scheduled later by `onGameUpdated` when the
- * Stripe webhook flips them to `waiting`.
- *
- * Exported so unit tests can pin the gating rule without booting Firestore.
- */
-export function shouldScheduleOnCreate(status: string | undefined): boolean {
-  return status === "waiting";
-}
-
-/**
- * Decides whether `onGameUpdated` should trigger lifecycle task scheduling.
- * Returns true only on a transition from a payment-limbo status to
- * `waiting` — i.e. when a Forfait game becomes playable after a successful
- * Stripe webhook (`pending_payment → waiting`) or a successful retry after a
- * failed PaymentIntent (`payment_failed → waiting`).
- *
- * Exported so unit tests can pin the transition rule without booting Firestore.
- */
-export function shouldScheduleOnUpdate(
-  beforeStatus: string | undefined,
-  afterStatus: string | undefined,
-): boolean {
-  if (afterStatus !== "waiting") return false;
-  return beforeStatus === "pending_payment" || beforeStatus === "payment_failed";
-}
-
-/**
- * Pure helper: given a list of game doc refs + their data, return those
- * eligible for purge under a scheduled cleanup job. A game is eligible if
- * its status is in `staleStatuses` AND its `lastHeartbeat` is older than
- * `cutoffMs`. Exported for unit tests.
- */
-export function selectStaleGamesForPurge(
-  games: Array<{ id: string; status?: string; lastHeartbeatMs?: number }>,
-  staleStatuses: ReadonlyArray<string>,
-  cutoffMs: number,
-): string[] {
-  return games
-    .filter(
-      (g) =>
-        typeof g.status === "string" &&
-        staleStatuses.includes(g.status) &&
-        typeof g.lastHeartbeatMs === "number" &&
-        g.lastHeartbeatMs < cutoffMs,
-    )
-    .map((g) => g.id);
-}
-
-/**
  * Enqueues all lifecycle Cloud Tasks (status transitions, notifications,
- * power-up batches) for a game that is ready to be played. Extracted so both
- * `onGameCreated` (for free / 100%-off-redeemed games, which land directly
- * in `waiting`) and `onGameUpdated` (for Forfait games whose Stripe webhook
- * just flipped `pending_payment → waiting`) can call the exact same path.
+ * power-up batches) for a game that is ready to be played.
  *
  * Returns true if tasks were scheduled, false if the game was rejected due
  * to a validation error (timing past, etc.).
@@ -730,19 +669,6 @@ export const onGameCreated = onDocumentCreated(
 
     const data = snap.data();
     const gameId = event.params.gameId;
-    const status = data.status as string | undefined;
-
-    // Forfait games are created in `pending_payment` and only become playable
-    // after the Stripe webhook flips them to `waiting` — don't schedule
-    // anything yet. `onGameUpdated` catches the transition and schedules at
-    // that point. This avoids burning ~10-100 no-op Cloud Tasks per game
-    // whose PaymentSheet is cancelled.
-    if (!shouldScheduleOnCreate(status)) {
-      logger.info(
-        `onGameCreated: game ${gameId} created in status "${status}", deferring task scheduling until it becomes "waiting"`,
-      );
-      return;
-    }
 
     try {
       await scheduleGameLifecycleTasks(gameId, data);
@@ -767,25 +693,6 @@ export const onGameUpdated = onDocumentUpdated(
     const before = event.data?.before.data();
     const after = event.data?.after.data();
     if (!before || !after) return;
-
-    const gameId = event.params.gameId;
-
-    // Stripe webhook flipped the game from `pending_payment` (or
-    // `payment_failed` retry) to `waiting` — this is the point at which the
-    // game actually becomes playable, so this is when we schedule its
-    // lifecycle Cloud Tasks. Scheduling earlier (in `onGameCreated`) would
-    // burn queue slots for games that get cancelled.
-    const beforeStatus = before.status as string | undefined;
-    const afterStatus = after.status as string | undefined;
-    if (shouldScheduleOnUpdate(beforeStatus, afterStatus)) {
-      try {
-        await scheduleGameLifecycleTasks(gameId, after);
-        logger.info(`onGameUpdated: scheduled lifecycle tasks for game ${gameId} after payment confirmation`);
-      } catch (error) {
-        console.error(`Failed to schedule tasks for paid game ${gameId}:`, error);
-        throw error;
-      }
-    }
 
     type WinnerShape = { hunterId?: string; hunterName?: string; timestamp?: unknown };
     const winnersBefore = (before.winners as Array<WinnerShape>) ?? [];
@@ -856,189 +763,3 @@ export const onGameUpdated = onDocumentUpdated(
   }
 );
 
-// ---------------------------------------------------------------------------
-// Callable: register for an event (server-side validation, dedup, anti-spam)
-// ---------------------------------------------------------------------------
-
-const MAX_REGISTRATIONS = 35;
-
-export const registerForEvent = onCall(
-  { region: REGION },
-  async (request) => {
-    const { firstName, lastName, email, gsm, willingToPay, comment } = request.data as {
-      firstName?: string;
-      lastName?: string;
-      email?: string;
-      gsm?: string;
-      willingToPay?: string;
-      comment?: string;
-    };
-
-    // --- Validation ---
-    if (
-      !firstName?.trim() ||
-      !lastName?.trim() ||
-      !email?.trim() ||
-      !gsm?.trim() ||
-      !willingToPay?.trim()
-    ) {
-      throw new HttpsError("invalid-argument", "All fields are required.");
-    }
-
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    if (!emailRegex.test(email.trim())) {
-      throw new HttpsError("invalid-argument", "Invalid email format.");
-    }
-
-    const gsmRegex = /^(\+\d{1,4}|0)\s*[1-9][\d\s.\-]{6,}$/;
-    if (!gsmRegex.test(gsm.trim())) {
-      throw new HttpsError("invalid-argument", "Invalid phone number format.");
-    }
-
-    const cleanFirst = firstName.trim();
-    const cleanLast = lastName.trim();
-    const cleanEmail = email.trim();
-    const rawGsm = gsm.trim().startsWith("0")
-      ? "+32" + gsm.trim().slice(1)
-      : gsm.trim();
-    const cleanGsm = "+" + rawGsm.replace(/[^\d]/g, "");
-    const cleanWTP = willingToPay.trim();
-    const cleanComment = (comment ?? "").trim();
-
-    // --- Atomic duplicate + capacity check ---
-    const docId = createHash("sha256").update(cleanEmail.toLowerCase()).digest("hex");
-    const ref = db.collection("registrations").doc(docId);
-    const now = new Date();
-
-    await db.runTransaction(async (transaction) => {
-      const existingDoc = await transaction.get(ref);
-      if (existingDoc.exists) {
-        throw new HttpsError("already-exists", "This email is already registered.");
-      }
-
-      transaction.set(ref, {
-        firstName: cleanFirst,
-        lastName: cleanLast,
-        email: cleanEmail,
-        gsm: cleanGsm,
-        willingToPay: cleanWTP,
-        comment: cleanComment,
-        event: "2026-04-23",
-        createdAt: now,
-      });
-    });
-
-    // --- Append to Google Sheet ---
-    const auth = new google.auth.GoogleAuth({
-      scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-    });
-    const sheets = google.sheets({ version: "v4", auth });
-
-    try {
-      await sheets.spreadsheets.values.append({
-        spreadsheetId: REGISTRATION_SHEET_ID.value(),
-        range: "A:H",
-        valueInputOption: "USER_ENTERED",
-        requestBody: {
-          values: [[cleanFirst, cleanLast, cleanEmail, cleanGsm, cleanWTP, cleanComment, "2026-04-23", now.toISOString()]],
-        },
-      });
-    } catch (error) {
-      console.error("Failed to append registration to Google Sheet:", error);
-      // Firestore write succeeded, so don't throw — but log for manual reconciliation
-    }
-
-    return { success: true };
-  }
-);
-
-// ---------------------------------------------------------------------------
-// Callable: get registration count
-// ---------------------------------------------------------------------------
-
-export const getRegistrationCount = onCall(
-  { region: REGION },
-  async () => {
-    const countSnap = await db.collection("registrations").count().get();
-    return { count: countSnap.data().count, max: MAX_REGISTRATIONS };
-  }
-);
-
-// ---------------------------------------------------------------------------
-// Stripe (creator/hunter payments, promo codes, webhook)
-// ---------------------------------------------------------------------------
-
-export {
-  createCreatorPaymentSheet,
-  createHunterPaymentSheet,
-  validatePromoCode,
-  redeemFreeCreation,
-  stripeWebhook,
-} from "./stripe";
-
-// ---------------------------------------------------------------------------
-// Scheduled: purge abandoned pending_payment games
-// ---------------------------------------------------------------------------
-
-/**
- * Forfait games are pre-created server-side in `pending_payment` status,
- * then flipped to `waiting` by the Stripe webhook handler. If the webhook
- * never arrives (Stripe outage, dropped event, signature mismatch caused
- * by a rotated secret, etc.), the game doc is stranded in `pending_payment`
- * forever. Users can't join, the creator can't see a failure, and these
- * docs accumulate silently.
- *
- * Run daily, delete games that have been `pending_payment` for more than
- * 24 h. 24 h is a generous window: Stripe retries webhooks for up to 3
- * days, but a real delivery happens in seconds. A game still pending after
- * 24 h is either truly abandoned (user never completed the sheet) or
- * broken (webhook permanently lost).
- *
- * Idempotent by construction: each call requeries + deletes the same set
- * if re-run.
- */
-export const cleanupAbandonedPendingGames = onSchedule(
-  {
-    schedule: "every 24 hours",
-    region: REGION,
-    timeZone: "Europe/Brussels",
-  },
-  async () => {
-    const cutoff = Timestamp.fromMillis(Date.now() - 24 * 60 * 60 * 1000);
-
-    // Purge both `pending_payment` AND `payment_failed` orphans. Both states
-    // are terminal-limbo for the client: the game can never transition to
-    // `waiting` without a successful webhook, and the user has no way to
-    // resume from them in the UI. 24 h covers Stripe retry delivery while
-    // leaving a comfortable margin for a genuinely-resumed payment flow.
-    async function purge(status: "pending_payment" | "payment_failed") {
-      const snap = await db
-        .collection("games")
-        .where("status", "==", status)
-        .where("lastHeartbeat", "<", cutoff)
-        .limit(500)
-        .get();
-
-      if (snap.empty) return 0;
-
-      const batch = db.batch();
-      for (const doc of snap.docs) {
-        batch.delete(doc.ref);
-      }
-      await batch.commit();
-      return snap.size;
-    }
-
-    const deletedPending = await purge("pending_payment");
-    const deletedFailed = await purge("payment_failed");
-    const total = deletedPending + deletedFailed;
-
-    if (total === 0) {
-      logger.info("cleanupAbandonedPendingGames: nothing to delete");
-      return;
-    }
-    logger.info(
-      `cleanupAbandonedPendingGames: deleted ${deletedPending} pending_payment + ${deletedFailed} payment_failed games`,
-    );
-  },
-);

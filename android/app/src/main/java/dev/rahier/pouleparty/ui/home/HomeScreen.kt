@@ -70,6 +70,12 @@ fun HomeScreen(
                 is HomeEffect.NavigateToDebugMapConfig -> onNavigateToDebugMapConfig()
                 is HomeEffect.NavigateToHunterMap -> onNavigateToHunterMap(effect.gameId, effect.hunterName)
                 is HomeEffect.NavigateToGameDone -> onNavigateToVictory(effect.gameId)
+                is HomeEffect.OpenWebUrl -> {
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(effect.url)).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(intent)
+                }
             }
         }
     }

@@ -1,6 +1,5 @@
 export default {
   nav: {
-    register: "Register",
     privacy: "Privacy",
     terms: "Terms",
     support: "Support",
@@ -8,7 +7,6 @@ export default {
   home: {
     tagline:
       "A real-world GPS hide-and-seek game. One player is the Chicken, the rest are Hunters. The zone shrinks, the hunt intensifies!",
-    cta: "Next event: April 23!",
     appComingSoon: "App coming soon...",
     downloadApp: "Download the app!",
     appStore: "App Store",
@@ -17,7 +15,7 @@ export default {
   },
   privacy: {
     title: "Privacy Policy",
-    lastUpdated: "Last updated: March 4, 2026",
+    lastUpdated: "Last updated: May 12, 2026",
     overview: "Data Controller",
     overviewText:
       'Poule Party ("we", "our", "the app") is a location-based mobile game. The data controller responsible for your personal data is:',
@@ -56,9 +54,6 @@ export default {
     thirdPartyCrashlyticsUrl: "https://firebase.google.com/support/privacy/",
     thirdPartyMapbox: "Mapbox",
     thirdPartyMapboxUrl: "https://www.mapbox.com/legal/privacy",
-    thirdPartyStripe: "Stripe",
-    thirdPartyStripeUrl: "https://stripe.com/privacy",
-    thirdPartyStripeText: "for paid-game payments (creator flat fee, hunter deposit). We never have access to your bank details: they are transmitted directly to Stripe, which processes them as an independent data controller.",
     dataSharing: "Data Sharing",
     dataSharingText:
       "We do not sell, trade, or share your personal data with third parties for marketing purposes. Location data is only shared with other players in the same game session during active gameplay.",
@@ -119,35 +114,18 @@ export default {
   },
   terms: {
     title: "Terms of Use",
-    lastUpdated: "Last updated: April 22, 2026",
+    lastUpdated: "Last updated: May 12, 2026",
     acceptance: "Acceptance of Terms",
     acceptanceText:
       "By downloading, installing or using Poule Party, you agree to these Terms of Use. If you do not agree, please do not use the app.",
     description: "Description of the Service",
     descriptionText:
-      "Poule Party is a location-based mobile game where one player (the Chicken) hides while other players (Hunters) try to find them using a real-time map with a shrinking zone. The app is free; some games may optionally be organized with a creator fee or a refundable deposit (see Pricing below).",
+      "Poule Party is a free location-based mobile game where one player (the Chicken) hides while other players (Hunters) try to find them using a real-time map with a shrinking zone.",
     userConduct: "User Conduct",
     conduct1: "Use the app only for its intended purpose (playing the game).",
     conduct2: "Do not attempt to cheat, hack, or reverse-engineer the app.",
     conduct3: "Respect other players and play in safe, public locations.",
     conduct4: "You are responsible for your own safety while playing.",
-    pricing: "Pricing & Payments",
-    pricingIntro:
-      "Poule Party supports three pricing modes, chosen by the game creator at creation time:",
-    pricingFree: "Free games:",
-    pricingFreeText:
-      "No payment is involved. Creators and Hunters play at no cost.",
-    pricingFlat: "Creator fee (\"Forfait\"):",
-    pricingFlatText:
-      "The creator pays a fixed amount at creation time for the service of organizing and hosting a real-world event (timing, zone management, notifications, support). This is a service fee for real-world activity and is not refundable once the game starts. Creators may use a promo code if one has been issued to them.",
-    pricingDeposit: "Refundable deposit (\"Caution\"):",
-    pricingDepositText:
-      "Each Hunter pays a deposit at registration. The deposit is held by our payment processor (Stripe) and is refundable to every participant after the game ends, regardless of the result. The deposit is not a prize pool, not a wager, and is never redistributed to winners. Poule Party takes no commission on the deposit.",
-    pricingNoGambling: "No gambling, no prize money:",
-    pricingNoGamblingText:
-      "Poule Party is a skill-based physical game. Winning a game does not entitle a player to any money or digital goods. We do not run games of chance and do not offer cash prizes.",
-    pricingPayments:
-      "All payments are processed by Stripe. We never see or store your card details. To request a deposit refund after your game ends, email julien@rahier.dev with the game code and the email used at registration — we issue the refund on the original payment method via Stripe within a few business days.",
     location: "Location Data",
     locationText:
       "The app requires location access to function. Your location is shared with other players in your game session only during active gameplay. See our Privacy Policy for details.",
@@ -172,72 +150,11 @@ export default {
     contact: "Contact",
     contactText: "If you have questions about these terms, please contact us at",
   },
-  register: {
-    date: "April 23, 2026 at 7:00 PM",
-    intro:
-      "Get ready for a totally unique experience: a life-size chicken hunt, right in the heart of the city.",
-    description:
-      "Inspired by urban games like \"hide-and-seek meets treasure hunt\", Poule Party is a collective adventure where strategy, speed, and creativity make all the difference.",
-    conceptTitle: "🎯 The concept",
-    conceptText:
-      "A \"Chicken\" is released into the city with a few minutes head start…",
-    mission: "Your mission? Find it before the other teams.",
-    zoneText:
-      "Thanks to an evolving location system, a zone around the Chicken appears and gradually shrinks… It's up to you to get closer, investigate, and strike at the right moment.",
-    butWait: "But that's not all 👇",
-    pointsTitle: "🏆 Earn points (and glory)",
-    pointsList: [
-      "🧭 Find the Chicken before the others",
-      "📸 Complete fun and quirky challenges",
-      "🎭 Show creativity (and boldness)",
-      "😈 (Optional) Sabotage the other teams",
-    ],
-    pointsOutro:
-      "Every action earns you points… and in the end, only one team will be crowned the winner.",
-    whyTitle: "🎉 Why participate?",
-    whyList: [
-      "A unique and super fun activity",
-      "Perfect for meeting new people",
-      "Accessible to everyone (no need to be athletic)",
-      "Unforgettable memories (and often hilarious ones)",
-    ],
-    infoTitle: "📅 Practical info",
-    infoList: [
-      "📆 Date: April 23 at 7 PM",
-      "👥 Limited spots: 35 participants",
-      "🎮 Format: teams + outdoor game",
-      "⏱ Duration: ± 2 hours of gameplay",
-      "📍 Starting point: shared after registration",
-    ],
-    spotsLeft: "{0}/{1} registered",
-    formTitle: "Register",
-    firstNameLabel: "First name",
-    firstNamePlaceholder: "John",
-    lastNameLabel: "Last name",
-    lastNamePlaceholder: "Doe",
-    emailLabel: "Email",
-    emailHint: "📱 On Android, use your Play Store email: that's the one that unlocks the app (closed testing)",
-    emailPlaceholder: "john@example.com",
-    gsmLabel: "Phone number",
-    gsmHint: "To add you to the event's WhatsApp group",
-    gsmPlaceholder: "+32 470 12 34 56",
-    emailError: "Invalid email address",
-    gsmTooShort: "{0} digit(s) missing",
-    gsmTooLong: "{0} digit(s) too many",
-    gsmFormatError: "Number must start with + or 0",
-    willingToPayLabel: "How much would you be willing to pay to participate?",
-    willingToPayPlaceholder: "E.g. 5€, 10€, free…",
-    commentLabel: "Any comments? (optional)",
-    commentHint: "Ideas, suggestions, recommendations…",
-    commentPlaceholder: "E.g. power-up idea, question about the event…",
-    submitButton: "Sign me up!",
-    submitting: "Registering…",
-    duplicateText: "This email is already registered! If this is a mistake, contact us at julien@rahier.dev.",
-    fullText: "Sorry, all spots are taken!",
-    errorText: "Something went wrong. Please try again!",
-    successTitle: "Registration confirmed!",
-    successText:
-      "You'll receive an email with all the details before the event. Get ready for the hunt!",
+  createParty: {
+    title: "Want to create a party?",
+    body: "PouleParty is in beta. To organize or create a party, contact Julien — we'll set it up together.",
+    contactEmailLabel: "Email:",
+    contactWhatsAppLabel: "WhatsApp:",
   },
   footer: {
     rights: "All rights reserved.",
@@ -249,14 +166,13 @@ export default {
     dataDeletedTitle: "What is deleted",
     dataDeleted: [
       "Your anonymous Firebase user ID",
-      "Your nickname, Stripe customer reference, and push notification token",
+      "Your nickname and push notification token",
       "Any user profile data stored under /users/{your-id}",
     ],
     dataKeptTitle: "What is kept",
     dataKept: [
       "Games you created or joined are kept so other participants can still see final results. Your nickname is replaced with a generic label.",
       "Anonymous analytics and crash reports (aggregated, not tied to your identity).",
-      "Payment records that Stripe and our accounting are legally required to retain (usually 7–10 years in Belgium).",
     ],
     howTitle: "How to request deletion",
     howText:

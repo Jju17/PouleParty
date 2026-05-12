@@ -34,24 +34,14 @@ The zone is a circle that shrinks periodically. The shrink interval and amount a
 5. Hunters who find the chicken enter the found code → added to `winners` array
 6. Game ends when time runs out, zone collapses, chicken cancels, or all hunters find the chicken
 
-### Pricing Modes (Stripe)
+### Admin mode
 
-Three pricing modes drive when money changes hands:
-
-| Mode | Value | Creator pays | Hunters pay | Promo codes | Where created |
-|------|-------|--------------|-------------|-------------|---------------|
-| **Free** | `free` | ❌ | ❌ | ❌ | Client (direct Firestore write) |
-| **Forfait** | `flat` | ✅ `pricePerPlayer × maxPlayers` at creation | ❌ | ✅ (creator-applied at payment) | Server-only via `createCreatorPaymentSheet` / `redeemFreeCreation`; webhook flips `pending_payment` → `waiting` |
-| **Caution** | `deposit` | ❌ *(for now — creator fee deferred)* | ✅ `pricing.deposit` at registration (mandatory) | ❌ | Game doc: client. Registration: server-only via `createHunterPaymentSheet` + webhook |
-
-**Stripe integration**:
-- Mobile SDKs: `StripePaymentSheet` (iOS SPM), `com.stripe:stripe-android` (Android). Drop-in UI supports **Bancontact + card** for EUR/BE via `automatic_payment_methods`.
-- Debug/Release publishable keys: iOS build settings (`STRIPE_PUBLISHABLE_KEY` in pbxproj, exposed via Info.plist); Android `buildConfigField` per `staging` / `production` flavor.
-- Secrets (server-side): Firebase secrets `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET`, separate values per project (`pouleparty-ba586` test, `pouleparty-prod` live).
-- Bancontact redirect: iOS URL scheme `pouleparty://stripe-redirect` in Info.plist + `StripeAPI.handleURLCallback` in AppDelegate; Android handled automatically by the SDK.
-- Promo codes: created in Stripe Dashboard, validated server-side via `validatePromoCode` (rate-limited per user). 100%-off codes skip PaymentSheet entirely and create the game via `redeemFreeCreation`.
-- Webhook dedup: `paymentEvents/{eventId}` Firestore doc; retries are idempotent.
-- Firestore rules enforce: Forfait games only creatable via admin SDK; Caution registrations only creatable via admin SDK; `users.stripeCustomerId` is admin-SDK-only; `paymentEvents` / `rateLimits` are fully locked.
+All in-app games are **Free**. The wizard caps `maxPlayers` at 5 by default; the
+admin entry point on Home (gated by the hardcoded `AdminCode.value =
+"jujurahier"` constant — obfuscation only, no real auth) lifts the cap to 500
+via `state.isAdminCreation = true`. The same flag is written to the Game doc
+and enforced server-side by the `firestore.rules` `allow create` clause:
+`maxPlayers <= 5 || isAdminCreation == true && maxPlayers <= 500`. See PP-45.
 
 ## Build & run
 
@@ -102,26 +92,21 @@ cd web && npm run dev
 
 ```
 /games/{gameId}
-  ├── id, name, maxPlayers, gameMode, chickenCanSeeHunters
+  ├── id, name, maxPlayers, gameMode, chickenCanSeeHunters, isAdminCreation
   ├── foundCode, hunterIds, status, winners, creatorId, lastHeartbeat
   ├── timing: { start, end, headStartMinutes }
   ├── zone: { center, finalCenter, radius, shrinkIntervalMinutes, shrinkMetersPerUpdate, driftSeed }
-  ├── pricing: { model, pricePerPlayer, deposit, commission }
   ├── registration: { required, closesMinutesBefore }
   ├── powerUps: { enabled, enabledTypes, activeEffects: { invisibility, zoneFreeze, radarPing, decoy, jammer } }
-  ├── payment: { provider, amountCents, currency, promoCodeId, baseAmountCents, paymentIntentId, paidAt }
-  │                                  → Only for Forfait games (created server-side)
   ├── /chickenLocations/latest     → Single doc, overwritten each position update
   ├── /hunterLocations/{hunterId}  → One doc per hunter, overwritten
   ├── /powerUps/{powerUpId}        → One doc per spawned power-up (collected/activated state)
-  ├── /registrations/{userId}      → One doc per registered hunter (teamName, paid, joinedAt)
+  ├── /registrations/{userId}      → One doc per registered hunter (teamName, joinedAt)
   └── /challengeCompletions/{hunterId} → One doc per hunter who has completed at least one challenge (completedChallengeIds, totalPoints, teamName)
 
 /challenges/{challengeId}          → Global, dev-managed challenge catalog (title, body, points, lastUpdated)
-/users/{userId}                    → User profile (nickname, FCM token, platform, updatedAt, stripeCustomerId [admin-only])
-/registrations/{docId}             → Event registration (admin-only, used by web)
-/paymentEvents/{eventId}           → Stripe webhook dedupe (admin-only)
-/rateLimits/{key}                  → Server-side rate-limit counters, e.g. `promo_{uid}` (admin-only)
+/users/{userId}                    → User profile (nickname, FCM token, platform, updatedAt)
+/reports/{reportId}                → Player reports (admin-only, in-app moderation)
 ```
 
 The `gameCode` is derived from the document ID (first 6 chars, uppercased).
@@ -195,18 +180,15 @@ When asked to prepare a release or create a build:
    - **App Store Connect — "Promotional Text"** — iOS-only field, **170 characters max per locale**, editable anytime without a new submission. Keep it evergreen (the game pitch), swap for campaigns. Always verify the length with `python3 -c "print(len('...'))"` before committing.
    - **Google Play Console** — **"Release notes" field** uses the multi-locale tag format `<en-US>…</en-US>` / `<fr-FR>…</fr-FR>` / `<nl-NL>…</nl-NL>`, **all three in the same field**. Android mentions are fine here. **500 characters max per locale** — Google Play rejects the upload (not the release, the upload itself) when a locale block exceeds 500 chars. Verify every `<xx-YY>…</xx-YY>` block before pasting with `awk '/<en-US>/{in=1;next} in && /<\/en-US>/{exit} in{printf "%s",$0}' RELEASE_NOTES.md | wc -c` (repeat for each locale). Target ≤ 450 to keep margin for a one-word tweak later.
    - **RELEASE_NOTES.md structure** (since 1.8.1, do not revert): each release section starts with a `> ⚠️ Do not paste the Summary paragraph` warning, then an internal `**Summary (internal, do not paste):**` paragraph, then labelled paste targets with headers that name the exact store + field (`## 📱 App Store Connect — field "What's New in This Version"`, `## 📱 App Store Connect — field "Promotional Text"`, `## 🤖 Google Play Console — field "Release notes"`, `## 📝 App Store Connect — field "App Review Information → Notes"`). The old `## What's New` header was ambiguous and got pasted into ASC — do not reintroduce it.
-6. **Write App Review Notes** (App Store Connect, "App Review Information → Notes" field) — **mandatory whenever the release touches the paid flows (Forfait / Caution / promo codes) or new sensitive permissions**. Always include:
-   - Step-by-step reproduction to reach the Stripe PaymentSheet so the reviewer can verify Apple Pay integration: "tap Create Party → choose Forfait → complete wizard → Pay"; "tap Start → enter a Caution game code → Pay".
-   - The fact that the Apple Pay button is hidden by the Stripe SDK when the device has no Apple Pay wallet (by design, not a bug) — reviewers occasionally test on a wallet-less device.
-   - A working **99 %-off promotion code** (`APPLE_REVIEW_99`, see `.claude/rules/ios.md`) so the reviewer can reach the PaymentSheet for a negligible amount without completing a real charge. **Do not offer 100 %-off** — that short-circuits the sheet via `redeemFreeCreation` and the reviewer can never see the Apple Pay button.
-   - Merchant ID (`merchant.dev.rahier.pouleparty`) and entitlement (`com.apple.developer.in-app-payments`) for reference.
+6. **Write App Review Notes** (App Store Connect, "App Review Information → Notes" field) — **mandatory whenever the release touches sensitive permissions** (location, camera, push). Always include:
    - For changes to `NSLocation*UsageDescription`, a one-liner explaining what the new strings say and that tracking stops when the game ends.
+   - If a new permission is added, an in-app reproduction path so the reviewer can land on the prompt without guessing.
 7. **Deploy server-side changes.** This is part of the release, not something to leave for the user: a mobile build that hits an un-deployed backend handler will 404 or crash in prod. Check diffs and deploy what moved:
    - `git diff HEAD functions/src/` → if non-empty, `cd functions && npm run build && firebase deploy --only functions --project pouleparty-ba586 && firebase deploy --only functions --project pouleparty-prod`. Both projects, always, staging first so a bad change is caught before prod.
    - `git diff HEAD firestore.rules` → if non-empty, `firebase deploy --only firestore:rules --project pouleparty-ba586 && firebase deploy --only firestore:rules --project pouleparty-prod`.
    - `git diff HEAD web/` → if non-empty and touching user-facing copy (Terms, Privacy), deploy web hosting per `.claude/rules/web.md`.
    - Skip silently when the diff is empty. No-op deploys are not worth the confirmation.
-8. **List next steps.** Only truly manual things remain: upload the iOS archive from Organizer to App Store Connect, upload the AAB to Play Console production, paste the per-locale blocks from `RELEASE_NOTES.md` into each store field, and (first paid release only) create the `APPLE_REVIEW_99` coupon in Stripe Dashboard if it doesn't exist yet.
+8. **List next steps.** Only truly manual things remain: upload the iOS archive from Organizer to App Store Connect, upload the AAB to Play Console production, and paste the per-locale blocks from `RELEASE_NOTES.md` into each store field.
 
 ### Zero Warnings Policy
 

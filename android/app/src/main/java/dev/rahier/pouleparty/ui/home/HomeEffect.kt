@@ -28,4 +28,10 @@ sealed interface HomeEffect {
     data class NavigateToHunterMap(val gameId: String, val hunterName: String) : HomeEffect
     /** Navigate to the post-game screen when the joined game is DONE. */
     data class NavigateToGameDone(val gameId: String) : HomeEffect
+    /**
+     * Open an external URL in the system browser. Used for the PP-46
+     * "Want to create a party?" CTA which routes to the localized
+     * landing page on `pouleparty.be`.
+     */
+    data class OpenWebUrl(val url: String) : HomeEffect
 }

@@ -1,6 +1,5 @@
 export default {
   nav: {
-    register: "Inschrijven",
     privacy: "Privacy",
     terms: "Voorwaarden",
     support: "Support",
@@ -8,7 +7,6 @@ export default {
   home: {
     tagline:
       "Een GPS-verstoppertje op ware grootte! Eén speler is de Kip, de rest zijn Jagers. De zone krimpt, de jacht wordt heftiger!",
-    cta: "Volgend event: 23 april!",
     appComingSoon: "App binnenkort beschikbaar...",
     downloadApp: "Download de app!",
     appStore: "App Store",
@@ -18,7 +16,7 @@ export default {
   },
   privacy: {
     title: "Privacybeleid",
-    lastUpdated: "Laatst bijgewerkt: 4 maart 2026",
+    lastUpdated: "Laatst bijgewerkt: 12 mei 2026",
     overview: "Verwerkingsverantwoordelijke",
     overviewText:
       "Poule Party (\"wij\", \"ons\", \"de app\") is een mobiele game op basis van locatie. De verwerkingsverantwoordelijke voor uw persoonsgegevens is:",
@@ -61,9 +59,6 @@ export default {
     thirdPartyCrashlyticsUrl: "https://firebase.google.com/support/privacy/",
     thirdPartyMapbox: "Mapbox",
     thirdPartyMapboxUrl: "https://www.mapbox.com/legal/privacy",
-    thirdPartyStripe: "Stripe",
-    thirdPartyStripeUrl: "https://stripe.com/privacy",
-    thirdPartyStripeText: "voor betalingen van betaalde games (forfait voor de organisator, borg voor de speler). Wij hebben nooit toegang tot uw bankgegevens: deze worden rechtstreeks naar Stripe verzonden, dat ze verwerkt als onafhankelijke verwerkingsverantwoordelijke.",
     dataSharing: "Delen van gegevens",
     dataSharingText:
       "We verkopen, ruilen of delen uw persoonsgegevens niet met derden voor marketingdoeleinden. Locatiegegevens worden uitsluitend gedeeld met andere spelers in dezelfde spelsessie tijdens het actieve spel.",
@@ -133,35 +128,18 @@ export default {
   },
   terms: {
     title: "Gebruiksvoorwaarden",
-    lastUpdated: "Laatst bijgewerkt: 22 april 2026",
+    lastUpdated: "Laatst bijgewerkt: 12 mei 2026",
     acceptance: "Aanvaarding van de voorwaarden",
     acceptanceText:
       "Door Poule Party te downloaden, installeren of gebruiken gaat u akkoord met deze gebruiksvoorwaarden. Als u niet akkoord gaat, gebruik de app dan niet.",
     description: "Beschrijving van de dienst",
     descriptionText:
-      "Poule Party is een mobiele game op basis van locatie, waarbij één speler (de Kip) zich verstopt terwijl andere spelers (Jagers) haar proberen te vinden via een realtime kaart met een krimpende zone. De app is gratis; sommige spellen kunnen georganiseerd worden met een makersvergoeding of een terugbetaalbare waarborg (zie Tarieven hieronder).",
+      "Poule Party is een gratis mobiele game op basis van locatie, waarbij één speler (de Kip) zich verstopt terwijl andere spelers (Jagers) haar proberen te vinden via een realtime kaart met een krimpende zone.",
     userConduct: "Gedrag van gebruikers",
     conduct1: "Gebruik de app uitsluitend voor het beoogde doel (het spelen van de game).",
     conduct2: "Probeer niet te valsspelen, te hacken of de app te reverse-engineeren.",
     conduct3: "Respecteer andere spelers en speel op veilige, openbare plekken.",
     conduct4: "U bent zelf verantwoordelijk voor uw veiligheid tijdens het spelen.",
-    pricing: "Tarieven & betalingen",
-    pricingIntro:
-      "Poule Party ondersteunt drie tariefmodi die door de maker van het spel worden gekozen:",
-    pricingFree: "Gratis spellen:",
-    pricingFreeText:
-      "Er is geen betaling nodig. Makers en Jagers spelen gratis.",
-    pricingFlat: "Makersvergoeding (\"Forfait\"):",
-    pricingFlatText:
-      "De maker betaalt bij de creatie een vast bedrag voor de dienst van het organiseren en hosten van een reëel evenement (timing, zonebeheer, meldingen, ondersteuning). Dit is een servicevergoeding voor een fysieke activiteit en is niet terugbetaalbaar zodra het spel begint. Makers kunnen een promotiecode gebruiken als die aan hen is verstrekt.",
-    pricingDeposit: "Terugbetaalbare waarborg (\"Caution\"):",
-    pricingDepositText:
-      "Elke Jager betaalt bij de registratie een waarborg. De waarborg wordt bewaard door onze betalingsprovider (Stripe) en is na afloop van het spel terugbetaalbaar aan elke deelnemer, ongeacht het resultaat. De waarborg is geen inzet, geen prijzenpot en wordt nooit naar winnaars herverdeeld. Poule Party neemt geen enkele commissie op de waarborg.",
-    pricingNoGambling: "Geen gokken, geen geldprijzen:",
-    pricingNoGamblingText:
-      "Poule Party is een fysiek spel op basis van vaardigheid. Een spel winnen geeft geen recht op geld of digitale goederen. We organiseren geen kansspelen en keren geen geldprijzen uit.",
-    pricingPayments:
-      "Alle betalingen worden verwerkt door Stripe. We zien of bewaren je kaartgegevens nooit. Om je waarborg na een spel terug te krijgen, mail julien@rahier.dev met de spelcode en het e-mailadres dat je bij de registratie gebruikte — we doen de terugbetaling binnen enkele werkdagen via Stripe op de oorspronkelijke betaalmethode.",
     location: "Locatiegegevens",
     locationText:
       "De app heeft toegang tot de locatie nodig om te functioneren. Uw locatie wordt uitsluitend gedeeld met andere spelers in uw spelsessie tijdens het actieve spel. Zie ons privacybeleid voor meer details.",
@@ -187,74 +165,11 @@ export default {
     contactText:
       "Als u vragen heeft over deze voorwaarden, neem dan contact met ons op via",
   },
-  register: {
-    date: "23 april 2026 om 19.00 uur",
-    intro:
-      "Maak je klaar voor een totaal unieke ervaring: een kippenjacht op ware grootte, middenin de stad.",
-    description:
-      "Geïnspireerd op stadsspellen in de stijl van \"verstoppertje + speurtocht\" is Poule Party een collectief avontuur waarbij strategie, snelheid en creativiteit het verschil maken.",
-    conceptTitle: "🎯 Het concept",
-    conceptText:
-      "Een \"Kip\" wordt met een paar minuten voorsprong in de stad losgelaten…",
-    mission: "Jouw missie? Haar vinden vóór de andere teams.",
-    zoneText:
-      "Dankzij een evoluerend locatiesysteem verschijnt er een zone rond de Kip die geleidelijk krimpt… Aan jou om dichterbij te komen, te speuren en op het juiste moment toe te slaan.",
-    butWait: "Maar dat is nog niet alles 👇",
-    pointsTitle: "🏆 Verdien punten (en glorie)",
-    pointsList: [
-      "🧭 Vind de Kip vóór de anderen",
-      "📸 Voer leuke en geschifte challenges uit",
-      "🎭 Toon creativiteit (en lef)",
-      "😈 (Optioneel) Saboteer de andere teams",
-    ],
-    pointsOutro:
-      "Elke actie levert punten op… en uiteindelijk wordt slechts één team tot winnaar gekroond.",
-    whyTitle: "🎉 Waarom meedoen?",
-    whyList: [
-      "Een unieke en super leuke activiteit",
-      "Perfect om nieuwe mensen te leren kennen",
-      "Voor iedereen toegankelijk (sportief zijn is niet nodig)",
-      "Onvergetelijke (en vaak hilarische) herinneringen",
-    ],
-    infoTitle: "📅 Praktische info",
-    infoList: [
-      "📆 Datum: 23 april om 19u",
-      "👥 Beperkt aantal plaatsen: 35 deelnemers",
-      "🎮 Formaat: teams + buitenspel",
-      "⏱ Duur: ± 2u speeltijd",
-      "📍 Vertrekpunt: wordt na inschrijving gedeeld",
-    ],
-    spotsLeft: "{0}/{1} ingeschreven",
-    formTitle: "Inschrijven",
-    firstNameLabel: "Voornaam",
-    firstNamePlaceholder: "Jan",
-    lastNameLabel: "Achternaam",
-    lastNamePlaceholder: "Janssens",
-    emailLabel: "E-mail",
-    emailHint:
-      "📱 Op Android: gebruik je Play Store-e-mailadres — dat is het adres dat toegang geeft tot de app (gesloten test)",
-    emailPlaceholder: "jan@example.com",
-    gsmLabel: "GSM",
-    gsmHint: "Om je toe te voegen aan de WhatsApp-groep van het event",
-    gsmPlaceholder: "+32 470 12 34 56",
-    emailError: "Ongeldig e-mailadres",
-    gsmTooShort: "Er ontbreken {0} cijfer(s)",
-    gsmTooLong: "Er zijn {0} cijfer(s) te veel",
-    gsmFormatError: "Het nummer moet beginnen met + of 0",
-    willingToPayLabel: "Hoeveel zou je willen betalen om mee te doen?",
-    willingToPayPlaceholder: "Bv. 5€, 10€, gratis…",
-    commentLabel: "Een opmerking? (optioneel)",
-    commentHint: "Ideeën, suggesties, aanbevelingen…",
-    commentPlaceholder: "Bv. idee voor een power-up, vraag over het event…",
-    submitButton: "Schrijf me in!",
-    submitting: "Bezig met inschrijven…",
-    duplicateText:
-      "Dit e-mailadres is al ingeschreven! Klopt dat niet? Contacteer ons op julien@rahier.dev.",
-    fullText: "Sorry, alle plaatsen zijn bezet!",
-    errorText: "Er ging iets mis. Probeer het opnieuw!",
-    successTitle: "Inschrijving bevestigd!",
-    successText:
-      "Je krijgt voor het event een e-mail met alle details. Maak je klaar voor de jacht!",
+  createParty: {
+    title: "Een feestje organiseren?",
+    body: "PouleParty zit nog in beta. Wil je een spel organiseren of aanmaken? Contacteer Julien — we zetten het samen op poten.",
+    contactEmailLabel: "E-mail:",
+    contactWhatsAppLabel: "WhatsApp:",
   },
   footer: {
     rights: "Alle rechten voorbehouden.",
@@ -266,14 +181,13 @@ export default {
     dataDeletedTitle: "Wat wordt verwijderd",
     dataDeleted: [
       "Je anonieme Firebase-gebruikers-ID",
-      "Je nickname, Stripe-klantreferentie en push-token",
+      "Je nickname en push-token",
       "Alle profielgegevens onder /users/{jouw-id}",
     ],
     dataKeptTitle: "Wat blijft bewaard",
     dataKept: [
       "Spellen die je hebt aangemaakt of waaraan je meedeed blijven bewaard zodat andere deelnemers de resultaten nog kunnen zien. Je nickname wordt vervangen door een algemeen label.",
       "Anonieme analytics en crash-rapporten (geaggregeerd, niet gekoppeld aan jouw identiteit).",
-      "Betalingsgegevens die Stripe en onze boekhouding wettelijk moeten bewaren (meestal 7–10 jaar in België).",
     ],
     howTitle: "Hoe een verwijdering aanvragen",
     howText:

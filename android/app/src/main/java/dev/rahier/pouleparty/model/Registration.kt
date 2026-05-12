@@ -6,6 +6,5 @@ import java.util.Date
 data class Registration(
     val userId: String = "",
     val teamName: String = "",
-    val paid: Boolean = false,
     val joinedAt: Timestamp = Timestamp(Date())
 )

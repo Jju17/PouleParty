@@ -16,6 +16,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -356,5 +357,26 @@ class HomeViewModelBehaviorTest {
         vm.onIntent(HomeIntent.AdminCodeDismissed)
         assertFalse(vm.uiState.value.isShowingAdminCodeDialog)
         assertEquals("", vm.uiState.value.adminCodeInput)
+    }
+
+    // ── PP-46: web CTA ──
+
+    @Test
+    fun `WebCreatePartyTapped emits OpenWebUrl effect with localized URL`() = kotlinx.coroutines.test.runTest(testDispatcher) {
+        val vm = createViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+        vm.onIntent(HomeIntent.WebCreatePartyTapped)
+        val effect = vm.effects.first()
+        assertTrue(effect is dev.rahier.pouleparty.ui.home.HomeEffect.OpenWebUrl)
+        // Verify the URL points at one of the 3 known PP-46 routes —
+        // which exact one depends on the test JVM's `Locale.getDefault()`
+        // (`fr` on Julien's mac, `en` on CI).
+        val url = (effect as dev.rahier.pouleparty.ui.home.HomeEffect.OpenWebUrl).url
+        val expected = setOf(
+            "https://pouleparty.be/creer-une-partie",
+            "https://pouleparty.be/create-a-party",
+            "https://pouleparty.be/een-feestje-organiseren",
+        )
+        assertTrue("URL `$url` not in $expected", expected.contains(url))
     }
 }
