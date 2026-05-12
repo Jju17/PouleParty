@@ -25,7 +25,11 @@ service cloud.firestore {
                     )
                     && request.resource.data.timing.start < request.resource.data.timing.end
                     && request.resource.data.timing.headStartMinutes >= 0
-                    && request.resource.data.zone.shrinkIntervalMinutes >= 1;
+                    && request.resource.data.zone.shrinkIntervalMinutes >= 1
+                    // GameMasters are only added by `joinAsGameMaster` (PP-70).
+                    // Force the create payload's `gameMasterIds` to be empty so
+                    // a malicious client can't pre-populate it.
+                    && request.resource.data.get('gameMasterIds', []).size() == 0;
 
       // Any player can update hunterIds and winners (join game, submit winner)
       // If the game requires registration, the joining user must already have a registration doc.
@@ -43,36 +47,58 @@ service cloud.firestore {
                       || exists(/databases/$(database)/documents/games/$(gameId)/registrations/$(request.auth.uid))
                     );
 
-      // Only game participants can update power-up active effect fields
+      // Only game participants can update power-up active effect fields.
+      // `gameMasterIds` is admin-SDK only — the chicken can't self-promote
+      // a GM via this path. See PP-23.
       allow update: if request.auth != null
                     && (request.auth.uid == resource.data.creatorId
-                        || request.auth.uid in resource.data.hunterIds);
+                        || request.auth.uid in resource.data.hunterIds)
+                    && !request.resource.data.diff(resource.data).affectedKeys()
+                        .hasAny(['gameMasterIds']);
 
-      // Only the creator can update other game settings
+      // Only the creator can update other game settings. `gameMasterIds`
+      // is admin-SDK only — `joinAsGameMaster` (PP-70) is the only path
+      // that mutates it.
       allow update: if request.auth != null
-                    && resource.data.creatorId == request.auth.uid;
+                    && resource.data.creatorId == request.auth.uid
+                    && !request.resource.data.diff(resource.data).affectedKeys()
+                        .hasAny(['gameMasterIds']);
 
       // Only the creator can delete, and only while still in `waiting`.
       allow delete: if request.auth != null
                     && resource.data.creatorId == request.auth.uid
                     && resource.data.status == 'waiting';
 
-      // Chicken locations subcollection (only the creator can write)
+      // Private namespace for fields a client must never read or write.
+      // Currently used by `joinAsGameMaster` (PP-70) to store the
+      // GameMaster password. Admin SDK bypasses these rules.
+      match /private/{docId} {
+        allow read, write: if false;
+      }
+
+      // Chicken locations subcollection. GameMasters (PP-23) read the
+      // chicken's location regardless of `gameMode` — they need it for
+      // the validator carte, even in `stayInTheZone` where hunters are
+      // blind to it.
       match /chickenLocations/{docId} {
         allow read: if request.auth != null
                     && (request.auth.uid == get(/databases/$(database)/documents/games/$(gameId)).data.creatorId
-                        || request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.hunterIds);
+                        || request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.hunterIds
+                        || request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.get('gameMasterIds', []));
         allow create, update: if request.auth != null
                       && get(/databases/$(database)/documents/games/$(gameId)).data.creatorId == request.auth.uid
                       && request.resource.data.keys().hasAll(['location', 'timestamp']);
         allow delete: if false;
       }
 
-      // Hunter locations subcollection
+      // Hunter locations subcollection. GameMasters read every hunter's
+      // location for the validator carte; only the hunter themselves can
+      // write their own doc.
       match /hunterLocations/{visitorId} {
         allow read: if request.auth != null
                     && (request.auth.uid == get(/databases/$(database)/documents/games/$(gameId)).data.creatorId
-                        || request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.hunterIds);
+                        || request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.hunterIds
+                        || request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.get('gameMasterIds', []));
         allow create: if request.auth != null
                       && visitorId == request.auth.uid
                       && request.resource.data.hunterId == request.auth.uid

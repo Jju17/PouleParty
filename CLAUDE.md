@@ -13,6 +13,7 @@ There's also a **web** landing page (React/Vite) and **Cloud Functions** backend
 ### Roles
 - **Chicken** (creator): Creates the game, defines the zone, runs and hides. Shows a 4-digit "found code" to hunters who physically find them.
 - **Hunters**: Join via a 6-character game code. Must physically find the chicken and enter the found code to win.
+- **GameMasters** (PP-23, PP-70): 0..N validators distinct from the chicken and the hunters. The chicken sets a 4-digit `gameMasterPassword` at game creation; anyone with the code calls `joinAsGameMaster` to land in `gameMasterIds`. Validators see the chicken and every hunter on a dedicated map (even in `stayInTheZone`), validate photo challenge submissions, and never write their own GPS. The password lives in `/games/{gameId}/private/` (admin-SDK-only); only `gameMasterIds` is on the public Game doc.
 
 ### Game Modes
 - **Follow the Chicken** (`followTheChicken`): The zone circle follows the chicken's live GPS. Hunters see where the chicken is (within the zone). Chicken doesn't see hunters unless `chickenCanSeeHunters` is enabled.
@@ -93,7 +94,7 @@ cd web && npm run dev
 ```
 /games/{gameId}
   ├── id, name, maxPlayers, gameMode, chickenCanSeeHunters, isAdminCreation
-  ├── foundCode, hunterIds, status, winners, creatorId, lastHeartbeat
+  ├── foundCode, hunterIds, gameMasterIds, status, winners, creatorId, lastHeartbeat
   ├── timing: { start, end, headStartMinutes }
   ├── zone: { center, finalCenter, radius, shrinkIntervalMinutes, shrinkMetersPerUpdate, driftSeed }
   ├── registration: { required, closesMinutesBefore }
@@ -102,7 +103,8 @@ cd web && npm run dev
   ├── /hunterLocations/{hunterId}  → One doc per hunter, overwritten
   ├── /powerUps/{powerUpId}        → One doc per spawned power-up (collected/activated state)
   ├── /registrations/{userId}      → One doc per registered hunter (teamName, joinedAt)
-  └── /challengeCompletions/{hunterId} → One doc per hunter who has completed at least one challenge (completedChallengeIds, totalPoints, teamName)
+  ├── /challengeCompletions/{hunterId} → One doc per hunter who has completed at least one challenge (completedChallengeIds, totalPoints, teamName)
+  └── /private/{docId}             → Admin-SDK-only subcollection. Holds the `gameMasterPassword` (PP-23) and any future field that must never be client-readable. Rules: `read, write: if false`.
 
 /challenges/{challengeId}          → Global, dev-managed challenge catalog (title, body, points, lastUpdated)
 /users/{userId}                    → User profile (nickname, FCM token, platform, updatedAt)

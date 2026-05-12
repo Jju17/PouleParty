@@ -264,7 +264,7 @@ The game has two distinct roles. The UI subtly shifts to immerse the player:
 ```
 /games/{gameId}
 ├── id, name, maxPlayers, gameMode, chickenCanSeeHunters, isAdminCreation
-├── foundCode, hunterIds, status, winners, creatorId
+├── foundCode, hunterIds, gameMasterIds, status, winners, creatorId
 ├── timing: { start, end, headStartMinutes }
 ├── zone: { center, finalCenter, radius, shrinkIntervalMinutes, shrinkMetersPerUpdate, driftSeed }
 ├── registration: { required, closesMinutesBefore }
@@ -272,7 +272,8 @@ The game has two distinct roles. The UI subtly shifts to immerse the player:
 ├── /chickenLocations/latest
 ├── /hunterLocations/{hunterId}
 ├── /powerUps/{powerUpId}
-└── /registrations/{userId}
+├── /registrations/{userId}
+└── /private/{docId}                   (admin-SDK-only, holds gameMasterPassword)
 
 /users/{userId}                     (nickname, fcmToken, platform)
 /challenges/{challengeId}           (global challenge catalog)

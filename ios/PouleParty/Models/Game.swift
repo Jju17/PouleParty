@@ -17,6 +17,7 @@ struct Game: Codable, Equatable, Identifiable {
     var chickenCanSeeHunters: Bool = false
     var foundCode: String = ""
     var hunterIds: [String] = []
+    var gameMasterIds: [String] = []
     var status: GameStatus = .waiting
     var winners: [Winner] = []
     var creatorId: String = ""

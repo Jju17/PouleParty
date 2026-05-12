@@ -52,6 +52,7 @@ data class Game(
     val chickenCanSeeHunters: Boolean = false,
     val foundCode: String = "",
     val hunterIds: List<String> = emptyList(),
+    val gameMasterIds: List<String> = emptyList(),
     val status: String = GameStatus.WAITING.firestoreValue,
     val winners: List<Winner> = emptyList(),
     val creatorId: String = "",

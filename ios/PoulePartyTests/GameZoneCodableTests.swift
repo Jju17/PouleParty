@@ -78,6 +78,7 @@ struct GameZoneCodableTests {
             "chickenCanSeeHunters": false,
             "foundCode": "1234",
             "hunterIds": [],
+            "gameMasterIds": [],
             "status": "waiting",
             "winners": [],
             "creatorId": "user-1",
