@@ -435,8 +435,18 @@ class HunterMapViewModel @Inject constructor(
     private suspend fun streamChickenLocation(game: Game) {
         val delayMs = game.hunterStartDate.time - System.currentTimeMillis()
         if (delayMs > 0) delay(delayMs)
-        firestoreRepository.chickenLocationFlow(gameId).collect { location ->
-            if (location == null) return@collect
+        firestoreRepository.chickenLocationFlow(gameId).collect { chickenLoc ->
+            if (chickenLoc == null || chickenLoc.invisible) {
+                // PP-87: doc missing OR Invisibility active. Clear the
+                // cached marker so the hunter sees no chicken (same
+                // behavior as pre-PP-87 absence-of-doc).
+                _uiState.update { it.copy(chickenLocation = null) }
+                return@collect
+            }
+            val point = com.mapbox.geojson.Point.fromLngLat(
+                chickenLoc.location.longitude,
+                chickenLoc.location.latitude,
+            )
             // Always cache the latest Chicken position so Radar Ping has a
             // fresh point to reveal — the UI gates rendering on
             // `game.isRadarPingActive`, so this is not a free locator.
@@ -453,8 +463,8 @@ class HunterMapViewModel @Inject constructor(
             val followsChicken = _uiState.value.game.gameModEnum != GameMod.STAY_IN_THE_ZONE
             _uiState.update {
                 it.copy(
-                    chickenLocation = location,
-                    circleCenter = if (followsChicken) location else it.circleCenter,
+                    chickenLocation = point,
+                    circleCenter = if (followsChicken) point else it.circleCenter,
                 )
             }
         }

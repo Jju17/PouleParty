@@ -133,10 +133,10 @@ Anonymous Firebase Auth. Users don't create accounts — a UID is generated on f
 ## Location tracking
 
 - 10m minimum distance filter, 5s write throttle to Firestore
-- Chicken writes to `chickenLocations/latest` (simple overwrite, not a growing collection)
-- Hunter writes only when `chickenCanSeeHunters` is enabled
+- Chicken writes to `chickenLocations/latest` (simple overwrite, not a growing collection). The doc carries an `invisible: Bool` flag (PP-87): the chicken keeps writing during Invisibility with the flag set; hunters filter the marker out client-side; the GameMaster (PP-24) ignores the flag.
+- Hunter writes when `chickenCanSeeHunters` is enabled OR when a GameMaster has joined (`game.gameMasterIds.isNotEmpty()`, PP-24 Phase B).
 - Location tracking is gated behind game start times (no early position leaking)
-- Power-ups affect location: Invisibility stops writes, Jammer adds ~200m noise, Radar Ping forces writes even in stayInTheZone
+- Power-ups affect location: Jammer adds ~200m noise, Radar Ping reveals the chicken in `stayInTheZone` (client-side gating), Invisibility flips the `invisible` flag on writes (PP-87, replaces the pre-PP-87 "stop writing" gate).
 
 ## Security rules
 

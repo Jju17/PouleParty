@@ -26,6 +26,12 @@ struct Game: Codable, Equatable, Identifiable {
     /// `status == waiting` (PP-26). Distinct from `creatorId`, which stays
     /// the game's admin owner.
     var chickenId: String = ""
+    /// True when the creator has enabled the GameMaster role and set a
+    /// password. The actual password lives in
+    /// `/games/{gameId}/private/security` (admin-SDK only, PP-23) — this
+    /// flag is the public signal so JoinFlow can show / hide the "Join
+    /// as GameMaster" CTA without leaking the password (PP-70).
+    var hasGameMasterPassword: Bool = false
 
     var timing: Timing = Timing()
     var zone: Zone = Zone()

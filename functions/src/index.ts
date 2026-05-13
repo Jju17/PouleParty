@@ -13,6 +13,14 @@ import {
 } from "./powerUpSpawn";
 import { snapToRoad } from "./mapbox";
 
+// Re-export the GameMaster Cloud Functions (PP-70) so they get deployed
+// alongside `index.ts` via `firebase deploy --only functions`.
+export {
+  setGameMasterPassword,
+  clearGameMasterPassword,
+  joinAsGameMaster,
+} from "./gameMaster";
+
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const serviceAccount = require("../service-account.json");
 initializeApp({ credential: cert(serviceAccount) });

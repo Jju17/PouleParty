@@ -126,6 +126,10 @@ struct HunterMapFeature {
             case countdownDismissed
             case gameConfigUpdated(Game)
             case newLocationFetched(CLLocationCoordinate2D)
+            /// PP-87: the chicken kept writing its position but with
+            /// `invisible: true`. Treat client-side as "no doc" so the
+            /// marker disappears for hunters.
+            case chickenLocationMasked
             case powerUpCollected(PowerUp)
             case powerUpsUpdated([PowerUp])
             case registrationRequiredDetected
@@ -539,6 +543,9 @@ struct HunterMapFeature {
                     )
                 }
                 return .none
+            case .internal(.chickenLocationMasked):
+                state.chickenLocation = nil
+                return .none
             case .view(.onTask):
                 let rawUid = userClient.currentUserId()
                 let gameId = state.game.id
@@ -626,9 +633,18 @@ struct HunterMapFeature {
                         if delay > 0 {
                             try await clock.sleep(for: .seconds(delay))
                         }
-                        for await location in apiClient.chickenLocationStream(gameId) {
-                            if let location {
-                                await send(.internal(.newLocationFetched(location)))
+                        for await chickenLoc in apiClient.chickenLocationStream(gameId) {
+                            if let chickenLoc, !(chickenLoc.invisible ?? false) {
+                                let coordinate = CLLocationCoordinate2D(
+                                    latitude: chickenLoc.location.latitude,
+                                    longitude: chickenLoc.location.longitude
+                                )
+                                await send(.internal(.newLocationFetched(coordinate)))
+                            } else {
+                                // PP-87: doc missing OR `invisible: true`.
+                                // Mask the marker so the hunter sees no
+                                // chicken (preserves pre-PP-87 behavior).
+                                await send(.internal(.chickenLocationMasked))
                             }
                         }
                     }

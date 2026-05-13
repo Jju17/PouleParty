@@ -321,23 +321,27 @@ class ChickenMapViewModel @Inject constructor(
         if (delayMs > 0) delay(delayMs)
 
         if (game.gameModEnum == GameMod.STAY_IN_THE_ZONE) {
-            // stayInTheZone: track location for zone check only
-            // When radar ping is active, force-write location so hunters can see the chicken
+            // stayInTheZone (PP-24, PP-87): chicken broadcasts its
+            // position continuously, with the `invisible` flag set
+            // when Invisibility is active. Hunters gate visibility on
+            // `game.isRadarPingActive`; GameMaster reads the doc
+            // directly. The continuous write keeps the last-known
+            // position fresh for Radar Ping windows.
             locationRepository.getLastLocation()?.let { latLng ->
                 _uiState.update { it.copy(userLocation = latLng) }
             }
-            var lastWrite = Date()
+            var lastWrite = Date(0L)
             locationRepository.locationFlow().collect { latLng ->
                 _uiState.update { it.copy(userLocation = latLng) }
                 val currentGame = _uiState.value.game
-                if (currentGame.isRadarPingActive
-                    && Date().time - lastWrite.time >= AppConstants.LOCATION_THROTTLE_MS) {
+                val isInvisible = currentGame.isChickenInvisible
+                if (Date().time - lastWrite.time >= AppConstants.LOCATION_THROTTLE_MS) {
                     val sendLatLng = if (currentGame.isJammerActive) {
                         applyJammerNoise(latLng, currentGame.zone.driftSeed)
                     } else {
                         latLng
                     }
-                    firestoreRepository.setChickenLocation(gameId, sendLatLng)
+                    firestoreRepository.setChickenLocation(gameId, sendLatLng, isInvisible)
                     lastWrite = Date()
                 }
             }
@@ -371,11 +375,11 @@ class ChickenMapViewModel @Inject constructor(
                     userLocation = latLng,
                 )
             }
-            firestoreRepository.setChickenLocation(gameId, latLng)
+            val initialIsInvisible = _uiState.value.game.isChickenInvisible
+            firestoreRepository.setChickenLocation(gameId, latLng, initialIsInvisible)
             lastWrite = Date()
         }
 
-        var wasInvisible = false
         locationRepository.locationFlow().collect { latLng ->
             _uiState.update {
                 it.copy(
@@ -384,27 +388,19 @@ class ChickenMapViewModel @Inject constructor(
                 )
             }
 
-            // Throttle Firestore writes (skip when invisible)
+            // PP-87: chicken always broadcasts its position — hunters
+            // filter the marker out on the `invisible: true` flag,
+            // GameMaster ignores the flag. Throttled the same way as
+            // before; no more invisibility gate around the write.
             val liveGame = _uiState.value.game
             val isInvisible = liveGame.isChickenInvisible
-            // Detect invisibility expiring: by the time the next tick
-            // arrives the last broadcast position can be up to 5 s stale
-            // (throttle) plus any time spent invisible. Reset the throttle
-            // window so the very next coord is broadcast immediately —
-            // otherwise hunters keep seeing a ghost at the chicken's last
-            // pre-invisibility position for up to LOCATION_THROTTLE_MS.
-            if (wasInvisible && !isInvisible) {
-                lastWrite = Date(0L)
-            }
-            wasInvisible = isInvisible
-            if (Date().time - lastWrite.time >= AppConstants.LOCATION_THROTTLE_MS
-                && !isInvisible) {
+            if (Date().time - lastWrite.time >= AppConstants.LOCATION_THROTTLE_MS) {
                 val sendLatLng = if (liveGame.isJammerActive) {
                     applyJammerNoise(latLng, liveGame.zone.driftSeed)
                 } else {
                     latLng
                 }
-                firestoreRepository.setChickenLocation(gameId, sendLatLng)
+                firestoreRepository.setChickenLocation(gameId, sendLatLng, isInvisible)
                 lastWrite = Date()
             }
         }
@@ -427,14 +423,16 @@ class ChickenMapViewModel @Inject constructor(
         while (true) {
             delay(AppConstants.LOCATION_THROTTLE_MS)
             val currentGame = _uiState.value.game
-            if (currentGame.isChickenInvisible) continue
             val latLng = locationRepository.getLastLocation() ?: continue
+            // PP-87: keep ticking during Invisibility, just flag the
+            // doc. Lets GameMaster always render a fresh chicken pin.
+            val isInvisible = currentGame.isChickenInvisible
             val sendLatLng = if (currentGame.isJammerActive) {
                 applyJammerNoise(latLng, currentGame.zone.driftSeed)
             } else {
                 latLng
             }
-            firestoreRepository.setChickenLocation(gameId, sendLatLng)
+            firestoreRepository.setChickenLocation(gameId, sendLatLng, isInvisible)
         }
     }
 

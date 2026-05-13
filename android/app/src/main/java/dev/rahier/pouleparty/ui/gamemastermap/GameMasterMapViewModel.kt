@@ -129,8 +129,19 @@ class GameMasterMapViewModel @Inject constructor(
             }
         }
         streamJobs += viewModelScope.launch {
-            firestoreRepository.chickenLocationFlow(gameId).collect { point ->
-                _uiState.update { it.copy(chickenLocation = point) }
+            firestoreRepository.chickenLocationFlow(gameId).collect { chickenLoc ->
+                // PP-87: GM always shows the chicken regardless of the
+                // `invisible` flag, but surfaces the flag so the marker
+                // can render in a distinct "hidden" style.
+                val point = chickenLoc?.let {
+                    Point.fromLngLat(it.location.longitude, it.location.latitude)
+                }
+                _uiState.update {
+                    it.copy(
+                        chickenLocation = point,
+                        chickenIsInvisible = chickenLoc?.invisible ?: false,
+                    )
+                }
             }
         }
         streamJobs += viewModelScope.launch {

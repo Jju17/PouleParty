@@ -67,7 +67,7 @@ struct GameMasterMapFeature {
         @CasePathable
         enum Internal {
             case gameUpdated(Game)
-            case chickenLocationUpdated(CLLocationCoordinate2D?)
+            case chickenLocationUpdated(CLLocationCoordinate2D?, isInvisible: Bool)
             case hunterLocationsUpdated([HunterLocation])
             case powerUpsUpdated([PowerUp])
             case timerTicked
@@ -107,8 +107,14 @@ struct GameMasterMapFeature {
                         }
                     },
                     .run { send in
-                        for await location in apiClient.chickenLocationStream(gameId) {
-                            await send(.internal(.chickenLocationUpdated(location)))
+                        for await chickenLoc in apiClient.chickenLocationStream(gameId) {
+                            // PP-87: GM always renders the chicken's
+                            // position regardless of the `invisible` flag;
+                            // the flag is surfaced separately so the
+                            // marker can render in a distinct style.
+                            let coordinate = chickenLoc.map { CLLocationCoordinate2D(latitude: $0.location.latitude, longitude: $0.location.longitude) }
+                            let isInvisible = chickenLoc?.invisible ?? false
+                            await send(.internal(.chickenLocationUpdated(coordinate, isInvisible: isInvisible)))
                         }
                     },
                     .run { send in
@@ -152,8 +158,9 @@ struct GameMasterMapFeature {
                 }
                 state.previousWinnersCount = game.winners.count
                 return .none
-            case let .internal(.chickenLocationUpdated(coord)):
+            case let .internal(.chickenLocationUpdated(coord, isInvisible)):
                 state.chickenLocation = coord
+                state.chickenIsInvisible = isInvisible
                 return .none
             case let .internal(.hunterLocationsUpdated(hunters)):
                 let sorted = hunters.sorted { $0.hunterId < $1.hunterId }

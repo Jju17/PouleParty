@@ -339,10 +339,11 @@ class FirestoreRepository @Inject constructor(
 
     // ── Chicken location ──────────────────────────────────
 
-    fun setChickenLocation(gameId: String, point: Point) {
+    fun setChickenLocation(gameId: String, point: Point, invisible: Boolean = false) {
         val data = ChickenLocation(
             location = GeoPoint(point.latitude(), point.longitude()),
-            timestamp = Timestamp.now()
+            timestamp = Timestamp.now(),
+            invisible = invisible
         )
         firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
             .collection(AppConstants.SUBCOLLECTION_CHICKEN_LOCATIONS)
@@ -351,7 +352,7 @@ class FirestoreRepository @Inject constructor(
             .addOnFailureListener { e -> Log.e(TAG, "Failed to set chicken location for game $gameId", e) }
     }
 
-    fun chickenLocationFlow(gameId: String): Flow<Point?> = callbackFlow {
+    fun chickenLocationFlow(gameId: String): Flow<ChickenLocation?> = callbackFlow {
         val listener = firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
             .collection(AppConstants.SUBCOLLECTION_CHICKEN_LOCATIONS)
             .orderBy("timestamp", Query.Direction.DESCENDING)
@@ -370,16 +371,7 @@ class FirestoreRepository @Inject constructor(
                 val chickenLocation = doc?.let {
                     safeToObject<ChickenLocation>(it, "Chicken location (game $gameId)")
                 }
-                if (chickenLocation != null) {
-                    trySend(
-                        Point.fromLngLat(
-                            chickenLocation.location.longitude,
-                            chickenLocation.location.latitude
-                        )
-                    )
-                } else {
-                    trySend(null)
-                }
+                trySend(chickenLocation)
             }
 
         awaitClose { listener.remove() }

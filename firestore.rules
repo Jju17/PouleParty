@@ -213,6 +213,15 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // GameMaster rate-limit counters (PP-70). One doc per
+    // `{userId}_{gameId}` key, written exclusively by the
+    // `joinAsGameMaster` Cloud Function via admin SDK. Clients can
+    // neither read (no probing the lock) nor write (no resetting their
+    // own counter).
+    match /gmRateLimits/{docId} {
+      allow read, write: if false;
+    }
+
     // Player reports — created by authenticated users from the in-app "Report player"
     // button on leaderboards. Reads and mutations are admin-SDK-only so reporters can't
     // see each other's reports and reportees can't delete reports about them.

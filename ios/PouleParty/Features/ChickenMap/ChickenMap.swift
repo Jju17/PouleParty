@@ -476,34 +476,28 @@ struct ChickenMapFeature {
                             var lastWrite: Date = .distantPast
                             if let currentLocation = locationClient.lastLocation() {
                                 await send(.internal(.newLocationFetched(currentLocation)))
+                                let isInvisible = invisibilityUntil.value.map { Date.now < $0 } ?? false
                                 do {
-                                    try apiClient.setChickenLocation(gameId, currentLocation)
+                                    try apiClient.setChickenLocation(gameId, currentLocation, isInvisible)
                                     lastWrite = .now
                                 } catch {
                                     logger.error("Failed to send initial chicken location: \(error)")
                                 }
                             }
-                            var wasInvisible = false
                             for await coordinate in locationClient.startTracking() {
                                 await send(.internal(.newLocationFetched(coordinate)))
+                                // PP-87: chicken always writes its position
+                                // — hunters filter the marker out on the
+                                // `invisible: true` flag. GameMaster ignores
+                                // the flag. Keeps the doc fresh so the
+                                // moment Invisibility ends, hunters get the
+                                // current location without a throttle gap.
                                 let isInvisible = invisibilityUntil.value.map { Date.now < $0 } ?? false
-                                // Detect invisibility expiring: by the time the
-                                // next tick arrives the last broadcast position
-                                // can be up to 5 s stale (throttle) plus any
-                                // time spent invisible. Reset the throttle so
-                                // the very next coord is broadcast immediately
-                                // and hunters see the fresh position instead of
-                                // a ghost at the chicken's last pre-invisibility
-                                // location.
-                                if wasInvisible && !isInvisible {
-                                    lastWrite = .distantPast
-                                }
-                                wasInvisible = isInvisible
-                                if Date.now.timeIntervalSince(lastWrite) >= AppConstants.locationThrottleSeconds && !isInvisible {
+                                if Date.now.timeIntervalSince(lastWrite) >= AppConstants.locationThrottleSeconds {
                                     let isJammed = jammerUntil.value.map { Date.now < $0 } ?? false
                                     let sendCoordinate = isJammed ? applyJammerNoise(to: coordinate, driftSeed: driftSeed) : coordinate
                                     do {
-                                        try apiClient.setChickenLocation(gameId, sendCoordinate)
+                                        try apiClient.setChickenLocation(gameId, sendCoordinate, isInvisible)
                                     } catch {
                                         logger.error("Failed to send chicken location: \(error)")
                                     }
@@ -532,25 +526,23 @@ struct ChickenMapFeature {
                             if let currentLocation = locationClient.lastLocation() {
                                 await send(.internal(.newLocationFetched(currentLocation)))
                                 let isInvisible = invisibilityUntil.value.map { Date.now < $0 } ?? false
-                                if !isInvisible {
-                                    let isJammed = jammerUntil.value.map { Date.now < $0 } ?? false
-                                    let sendCoordinate = isJammed ? applyJammerNoise(to: currentLocation, driftSeed: driftSeed) : currentLocation
-                                    do {
-                                        try apiClient.setChickenLocation(gameId, sendCoordinate)
-                                        lastWrite = .now
-                                    } catch {
-                                        logger.error("Failed to send initial chicken location: \(error)")
-                                    }
+                                let isJammed = jammerUntil.value.map { Date.now < $0 } ?? false
+                                let sendCoordinate = isJammed ? applyJammerNoise(to: currentLocation, driftSeed: driftSeed) : currentLocation
+                                do {
+                                    try apiClient.setChickenLocation(gameId, sendCoordinate, isInvisible)
+                                    lastWrite = .now
+                                } catch {
+                                    logger.error("Failed to send initial chicken location: \(error)")
                                 }
                             }
                             for await coordinate in locationClient.startTracking() {
                                 await send(.internal(.newLocationFetched(coordinate)))
                                 let isInvisible = invisibilityUntil.value.map { Date.now < $0 } ?? false
-                                if !isInvisible && Date.now.timeIntervalSince(lastWrite) >= AppConstants.locationThrottleSeconds {
+                                if Date.now.timeIntervalSince(lastWrite) >= AppConstants.locationThrottleSeconds {
                                     let isJammed = jammerUntil.value.map { Date.now < $0 } ?? false
                                     let sendCoordinate = isJammed ? applyJammerNoise(to: coordinate, driftSeed: driftSeed) : coordinate
                                     do {
-                                        try apiClient.setChickenLocation(gameId, sendCoordinate)
+                                        try apiClient.setChickenLocation(gameId, sendCoordinate, isInvisible)
                                     } catch {
                                         logger.error("Failed to send chicken location: \(error)")
                                     }
@@ -565,18 +557,19 @@ struct ChickenMapFeature {
                     // otherwise CoreLocation's 10 m distance filter means a
                     // chicken hiding in one spot stops updating after one
                     // write, and Radar Ping's 3 s window can land between
-                    // broadcasts with nothing fresh to show.
+                    // broadcasts with nothing fresh to show. PP-87: keeps
+                    // ticking during Invisibility too so the GameMaster
+                    // always has a fresh chicken position to render.
                     effects.append(
                         .run { _ in
                             let tick = Duration.milliseconds(Int(AppConstants.locationThrottleSeconds * 1000))
                             for await _ in self.clock.timer(interval: tick) {
-                                let isInvisible = invisibilityUntil.value.map { Date.now < $0 } ?? false
-                                guard !isInvisible else { continue }
                                 guard let coordinate = locationClient.lastLocation() else { continue }
+                                let isInvisible = invisibilityUntil.value.map { Date.now < $0 } ?? false
                                 let isJammed = jammerUntil.value.map { Date.now < $0 } ?? false
                                 let sendCoordinate = isJammed ? applyJammerNoise(to: coordinate, driftSeed: driftSeed) : coordinate
                                 do {
-                                    try apiClient.setChickenLocation(gameId, sendCoordinate)
+                                    try apiClient.setChickenLocation(gameId, sendCoordinate, isInvisible)
                                 } catch {
                                     logger.error("Failed to rebroadcast chicken location: \(error)")
                                 }

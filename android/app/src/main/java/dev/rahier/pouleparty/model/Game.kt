@@ -63,6 +63,14 @@ data class Game(
      * the game's admin owner.
      */
     val chickenId: String = "",
+    /**
+     * True when the creator has enabled the GameMaster role and set a
+     * password. The actual password lives in
+     * `/games/{gameId}/private/security` (admin-SDK only, PP-23) — this
+     * flag is the public signal so JoinFlow can show / hide the "Join
+     * as GameMaster" CTA without leaking the password (PP-70).
+     */
+    val hasGameMasterPassword: Boolean = false,
     val timing: Timing = Timing(),
     val zone: Zone = Zone(),
     val registration: GameRegistration = GameRegistration(),

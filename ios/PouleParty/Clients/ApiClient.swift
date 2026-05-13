@@ -9,6 +9,7 @@ import ComposableArchitecture
 import CoreLocation
 import FirebaseAuth
 import FirebaseFirestore
+import FirebaseFunctions
 import os
 
 /// Phase of an active game, used by the Home banner to pick the right
@@ -33,10 +34,10 @@ struct ApiClient {
     var findGameByCode: (String) async throws -> Game?
     var registerHunter: (String, String) async throws -> Void
     var updateGameStatus: (String, Game.GameStatus) async throws -> Void
-    var chickenLocationStream: (String) -> AsyncStream<CLLocationCoordinate2D?>
+    var chickenLocationStream: (String) -> AsyncStream<ChickenLocation?>
     var gameConfigStream: (String) -> AsyncStream<Game?>
     var hunterLocationsStream: (String) -> AsyncStream<[HunterLocation]>
-    var setChickenLocation: (String, CLLocationCoordinate2D) throws -> Void
+    var setChickenLocation: (_ gameId: String, _ coordinate: CLLocationCoordinate2D, _ invisible: Bool) throws -> Void
     var setConfig: (Game) async throws -> Void
     var setHunterLocation: (String, String, CLLocationCoordinate2D) throws -> Void
     var collectPowerUp: (String, String, String) async throws -> Void
@@ -63,6 +64,25 @@ struct ApiClient {
     /// Generate a new Firestore-style auto-ID (20-char alphanumeric) for a
     /// brand-new game doc.
     var newGameId: () -> String
+    // MARK: - GameMaster (PP-70)
+    /// Sets / replaces the 4-digit GameMaster password on a game.
+    /// Only the creator can call this; the CF flips
+    /// `Game.hasGameMasterPassword` to `true` and stores the password in
+    /// `/games/{gameId}/private/security` (admin-SDK only).
+    var setGameMasterPassword: (_ gameId: String, _ password: String) async throws -> Void
+    /// Clears the GameMaster password. Already-joined GMs in
+    /// `gameMasterIds` stay.
+    var clearGameMasterPassword: (_ gameId: String) async throws -> Void
+    /// Attempts to join as a GameMaster. Rate-limited (5 tries → 5 min
+    /// lock). Returns `attemptsRemaining` for wrong passwords and a
+    /// `lockedUntilMs` when the lock kicked in.
+    var joinAsGameMaster: (_ gameId: String, _ password: String) async throws -> JoinAsGameMasterResult
+}
+
+struct JoinAsGameMasterResult: Equatable {
+    let success: Bool
+    let attemptsRemaining: Int
+    let lockedUntilMs: Int?
 }
 
 private let logger = Logger(category: "ApiClient")
@@ -123,7 +143,7 @@ extension ApiClient: TestDependencyKey {
         chickenLocationStream: { _ in AsyncStream { _ in } },
         gameConfigStream: { _ in AsyncStream { _ in } },
         hunterLocationsStream: { _ in AsyncStream { _ in } },
-        setChickenLocation: { _, _ in },
+        setChickenLocation: { _, _, _ in },
         setConfig: { _ in },
         setHunterLocation: { _, _, _ in },
         collectPowerUp: { _, _, _ in },
@@ -140,7 +160,10 @@ extension ApiClient: TestDependencyKey {
         markChallengeCompleted: { _, _, _, _, _ in },
         fetchUserNicknames: { _ in [:] },
         reportPlayer: { _, _, _ in },
-        newGameId: { "test-game-id" }
+        newGameId: { "test-game-id" },
+        setGameMasterPassword: { _, _ in },
+        clearGameMasterPassword: { _ in },
+        joinAsGameMaster: { _, _ in JoinAsGameMasterResult(success: true, attemptsRemaining: 5, lockedUntilMs: nil) }
     )
 }
 
@@ -320,11 +343,7 @@ extension ApiClient: DependencyKey {
                             continuation.yield(nil)
                             return
                         }
-                        let coordinate = CLLocationCoordinate2D(
-                            latitude: chickenLocation.location.latitude,
-                            longitude: chickenLocation.location.longitude
-                        )
-                        continuation.yield(coordinate)
+                        continuation.yield(chickenLocation)
                     }
 
                 continuation.onTermination = { _ in
@@ -396,10 +415,11 @@ extension ApiClient: DependencyKey {
                 }
             }
         },
-        setChickenLocation: { gameId, coordinate in
+        setChickenLocation: { gameId, coordinate, invisible in
             let chickenLocation = ChickenLocation(
                 location: GeoPoint(latitude: coordinate.latitude, longitude: coordinate.longitude),
-                timestamp: Timestamp(date: .now)
+                timestamp: Timestamp(date: .now),
+                invisible: invisible
             )
 
             let ref = Firestore.firestore()
@@ -741,6 +761,30 @@ extension ApiClient: DependencyKey {
             // auto-ID client-side. Same 20-char alphanumeric format as the
             // Cloud Function's `db().collection("games").doc()`.
             Firestore.firestore().collection(gamesCollection).document().documentID
+        },
+        setGameMasterPassword: { gameId, password in
+            let functions = Functions.functions(region: "europe-west1")
+            _ = try await functions
+                .httpsCallable("setGameMasterPassword")
+                .call(["gameId": gameId, "password": password])
+        },
+        clearGameMasterPassword: { gameId in
+            let functions = Functions.functions(region: "europe-west1")
+            _ = try await functions
+                .httpsCallable("clearGameMasterPassword")
+                .call(["gameId": gameId])
+        },
+        joinAsGameMaster: { gameId, password in
+            let functions = Functions.functions(region: "europe-west1")
+            let result = try await functions
+                .httpsCallable("joinAsGameMaster")
+                .call(["gameId": gameId, "password": password])
+            let dict = result.data as? [String: Any] ?? [:]
+            return JoinAsGameMasterResult(
+                success: (dict["success"] as? Bool) ?? false,
+                attemptsRemaining: (dict["attemptsRemaining"] as? Int) ?? 0,
+                lockedUntilMs: dict["lockedUntil"] as? Int
+            )
         }
     )
 }

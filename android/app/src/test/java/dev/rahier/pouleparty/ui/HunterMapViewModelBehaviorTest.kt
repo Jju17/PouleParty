@@ -578,8 +578,12 @@ class HunterMapViewModelBehaviorTest {
         // Emit a chicken position 2 km away — this MUST NOT become the
         // zone center in stayInTheZone.
         val strayChicken = com.mapbox.geojson.Point.fromLngLat(4.3700, 50.8700)
+        val strayChickenLoc = dev.rahier.pouleparty.model.ChickenLocation(
+            location = com.google.firebase.firestore.GeoPoint(strayChicken.latitude(), strayChicken.longitude()),
+            timestamp = com.google.firebase.Timestamp.now(),
+        )
         io.mockk.every { firestoreRepository.chickenLocationFlow(any()) } returns
-            kotlinx.coroutines.flow.flowOf(strayChicken)
+            kotlinx.coroutines.flow.flowOf(strayChickenLoc)
 
         val vm = createViewModel()
         testDispatcher.scheduler.runCurrent() // let init launch children
@@ -617,8 +621,12 @@ class HunterMapViewModelBehaviorTest {
         io.mockk.coEvery { firestoreRepository.getConfig(any()) } returns game
 
         val chickenPos = com.mapbox.geojson.Point.fromLngLat(4.3700, 50.8700)
+        val chickenLoc = dev.rahier.pouleparty.model.ChickenLocation(
+            location = com.google.firebase.firestore.GeoPoint(chickenPos.latitude(), chickenPos.longitude()),
+            timestamp = com.google.firebase.Timestamp.now(),
+        )
         io.mockk.every { firestoreRepository.chickenLocationFlow(any()) } returns
-            kotlinx.coroutines.flow.flowOf(chickenPos)
+            kotlinx.coroutines.flow.flowOf(chickenLoc)
 
         val vm = createViewModel()
         testDispatcher.scheduler.runCurrent()
