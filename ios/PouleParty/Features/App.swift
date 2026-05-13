@@ -17,6 +17,7 @@ struct AppFeature {
         case onboarding(OnboardingFeature.State)
         case chickenMap(ChickenMapFeature.State)
         case hunterMap(HunterMapFeature.State)
+        case gameMasterMap(GameMasterMapFeature.State)
         case home(HomeFeature.State)
         case victory(VictoryFeature.State)
     }
@@ -26,6 +27,7 @@ struct AppFeature {
         case newUserSignedIn
         case chickenMap(ChickenMapFeature.Action)
         case hunterMap(HunterMapFeature.Action)
+        case gameMasterMap(GameMasterMapFeature.Action)
         case onboarding(OnboardingFeature.Action)
         case home(HomeFeature.Action)
         case victory(VictoryFeature.Action)
@@ -89,6 +91,12 @@ struct AppFeature {
             case let .home(.chickenGameStarted(game)):
                 state = AppFeature.State.chickenMap(ChickenMapFeature.State(game: game))
                 return .none
+            case let .home(.gameMasterGameStarted(game)):
+                state = AppFeature.State.gameMasterMap(GameMasterMapFeature.State(game: game))
+                return .none
+            case .gameMasterMap(.delegate(.returnedToMenu)):
+                state = AppFeature.State.home(HomeFeature.State())
+                return .none
             case let .home(.chickenDebugGameStarted(game)):
                 var chickenState = ChickenMapFeature.State(game: game)
                 chickenState.isDebugPreview = true
@@ -122,7 +130,7 @@ struct AppFeature {
             case .home(.accountDeletionCompleted):
                 state = .onboarding(OnboardingFeature.State())
                 return .none
-            case .chickenMap, .hunterMap, .home, .victory:
+            case .chickenMap, .hunterMap, .gameMasterMap, .home, .victory:
                 return .none
             }
         }
@@ -134,6 +142,9 @@ struct AppFeature {
         }
         .ifCaseLet(\.hunterMap, action: \.hunterMap) {
             HunterMapFeature()
+        }
+        .ifCaseLet(\.gameMasterMap, action: \.gameMasterMap) {
+            GameMasterMapFeature()
         }
         .ifCaseLet(\.home, action: \.home) {
             HomeFeature()
@@ -161,6 +172,10 @@ struct AppView: View {
             case .hunterMap:
                 if let store = store.scope(state: \.hunterMap, action: \.hunterMap) {
                     HunterMapView(store: store)
+                }
+            case .gameMasterMap:
+                if let store = store.scope(state: \.gameMasterMap, action: \.gameMasterMap) {
+                    GameMasterMapView(store: store)
                 }
             case .home:
                 if let store = store.scope(state: \.home, action: \.home) {

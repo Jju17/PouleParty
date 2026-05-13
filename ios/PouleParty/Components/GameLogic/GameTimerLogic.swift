@@ -20,6 +20,7 @@ import Foundation
 enum GameRole: Equatable {
     case chicken
     case hunter
+    case gameMaster
 }
 
 struct ZoneCheckResult: Equatable {
@@ -28,7 +29,9 @@ struct ZoneCheckResult: Equatable {
 }
 
 /// Whether this role should be zone-checked under the given game mode.
+/// GameMaster (PP-24) is a pure spectator and is never zone-checked.
 func shouldCheckZone(role: GameRole, gameMod: Game.GameMode) -> Bool {
+    if role == .gameMaster { return false }
     switch gameMod {
     case .stayInTheZone:
         return true // both chicken and hunters are checked

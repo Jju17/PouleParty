@@ -280,6 +280,7 @@ class HomeViewModel @Inject constructor(
             when (role) {
                 PlayerRole.CHICKEN -> _effects.send(HomeEffect.NavigateToChickenMap(game.id))
                 PlayerRole.HUNTER -> _effects.send(HomeEffect.NavigateToHunterMap(game.id, hunterName))
+                PlayerRole.GAME_MASTER -> _effects.send(HomeEffect.NavigateToGameMasterMap(game.id))
             }
         }
     }

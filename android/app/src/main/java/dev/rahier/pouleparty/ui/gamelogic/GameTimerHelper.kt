@@ -18,7 +18,7 @@ import java.util.Date
 
 // ── Zone Check ───────────────────────────────────────
 
-enum class PlayerRole { CHICKEN, HUNTER }
+enum class PlayerRole { CHICKEN, HUNTER, GAME_MASTER }
 
 /**
  * Phase of an active game, used by the Home banner to pick the right
@@ -37,10 +37,16 @@ data class ZoneCheckResult(
     val distanceToCenter: Float
 )
 
-/** Whether this role should be zone-checked under the given game mode. */
-fun shouldCheckZone(role: PlayerRole, gameMod: GameMod): Boolean = when (gameMod) {
-    GameMod.STAY_IN_THE_ZONE -> true
-    GameMod.FOLLOW_THE_CHICKEN -> role == PlayerRole.HUNTER
+/**
+ * Whether this role should be zone-checked under the given game mode.
+ * GameMaster (PP-24) is a pure spectator and is never zone-checked.
+ */
+fun shouldCheckZone(role: PlayerRole, gameMod: GameMod): Boolean {
+    if (role == PlayerRole.GAME_MASTER) return false
+    return when (gameMod) {
+        GameMod.STAY_IN_THE_ZONE -> true
+        GameMod.FOLLOW_THE_CHICKEN -> role == PlayerRole.HUNTER
+    }
 }
 
 /** Pure check: is the user outside the zone? */

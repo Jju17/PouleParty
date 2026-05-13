@@ -54,6 +54,7 @@ fun HomeScreen(
     onNavigateToChickenMapDebug: (String) -> Unit = {},
     onNavigateToDebugMapConfig: () -> Unit = {},
     onNavigateToHunterMap: (String, String) -> Unit,
+    onNavigateToGameMasterMap: (String) -> Unit = {},
     onNavigateToVictory: (String) -> Unit,
     onNavigateToSettings: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
@@ -69,6 +70,7 @@ fun HomeScreen(
                 is HomeEffect.NavigateToChickenMapDebug -> onNavigateToChickenMapDebug(effect.gameId)
                 is HomeEffect.NavigateToDebugMapConfig -> onNavigateToDebugMapConfig()
                 is HomeEffect.NavigateToHunterMap -> onNavigateToHunterMap(effect.gameId, effect.hunterName)
+                is HomeEffect.NavigateToGameMasterMap -> onNavigateToGameMasterMap(effect.gameId)
                 is HomeEffect.NavigateToGameDone -> onNavigateToVictory(effect.gameId)
                 is HomeEffect.OpenWebUrl -> {
                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(effect.url)).apply {
@@ -289,6 +291,8 @@ fun HomeScreen(
                             dev.rahier.pouleparty.ui.gamelogic.PlayerRole.CHICKEN ->
                                 R.string.upcoming_game_cta_chicken
                             dev.rahier.pouleparty.ui.gamelogic.PlayerRole.HUNTER ->
+                                R.string.upcoming_game_cta_hunter
+                            dev.rahier.pouleparty.ui.gamelogic.PlayerRole.GAME_MASTER ->
                                 R.string.upcoming_game_cta_hunter
                         }
                 }

@@ -480,7 +480,11 @@ class HunterMapViewModel @Inject constructor(
      * suspended the writer coroutine during a deep background.
      */
     private suspend fun trackHunterSelfLocation(game: Game) {
-        val shouldWrite = game.chickenCanSeeHunters
+        // PP-24: hunters always broadcast their position when at least
+        // one GameMaster has joined, so the GM observer map can render
+        // them even in `stayInTheZone`. Other hunters cannot read this
+        // collection (Firestore rules), so privacy is preserved.
+        val shouldWrite = game.chickenCanSeeHunters || game.gameMasterIds.isNotEmpty()
 
         val delayMs = game.hunterStartDate.time - System.currentTimeMillis()
         if (delayMs > 0) delay(delayMs)
@@ -545,7 +549,7 @@ class HunterMapViewModel @Inject constructor(
      */
     private fun onAppResumed() {
         val state = _uiState.value
-        if (!state.game.chickenCanSeeHunters) return
+        if (!state.game.chickenCanSeeHunters && state.game.gameMasterIds.isEmpty()) return
         if (hunterId.isEmpty()) return
         if (!state.hasGameStarted) return
         viewModelScope.launch {

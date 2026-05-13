@@ -185,6 +185,27 @@ extension ApiClient: DependencyKey {
                 logger.error("findActiveGame chicken query failed: \(error.localizedDescription)")
             }
 
+            // Query 3: Is the user a GameMaster (PP-24)? GMs join via
+            // PP-70's password flow which atomically appends their UID
+            // to `gameMasterIds`. The chicken/hunter queries above take
+            // priority if the same UID ends up in multiple buckets
+            // (defense in depth — the create rule + the GM join CF
+            // already prevent that, see PP-23).
+            do {
+                let gmSnapshot = try await db.collection(gamesCollection)
+                    .whereField("gameMasterIds", arrayContains: userId)
+                    .whereField("status", in: activeStatuses)
+                    .getDocuments()
+
+                for doc in gmSnapshot.documents {
+                    if let game = try? doc.data(as: Game.self) {
+                        candidates.append((game, .gameMaster))
+                    }
+                }
+            } catch {
+                logger.error("findActiveGame gameMaster query failed: \(error.localizedDescription)")
+            }
+
             // Filter out games whose end time has already passed (status may
             // not have been updated to DONE yet due to network/Cloud Task lag)
             let stillActive = candidates.filter { $0.0.endDate > .now }

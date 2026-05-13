@@ -26,6 +26,7 @@ import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.ui.gamecreation.GameCreationScreen
 import dev.rahier.pouleparty.ui.chickenmap.ChickenMapScreen
 import dev.rahier.pouleparty.ui.huntermap.HunterMapScreen
+import dev.rahier.pouleparty.ui.gamemastermap.GameMasterMapScreen
 import dev.rahier.pouleparty.ui.onboarding.OnboardingScreen
 import dev.rahier.pouleparty.ui.home.HomeScreen
 import dev.rahier.pouleparty.ui.settings.SettingsScreen
@@ -44,6 +45,7 @@ object Routes {
      * user place start + final pins before creating the preview game. */
     const val DEBUG_MAP_CONFIG = "debug_map_config"
     const val HUNTER_MAP = "hunter_map/{gameId}/{hunterName}"
+    const val GAME_MASTER_MAP = "game_master_map/{gameId}"
     const val VICTORY = "victory/{gameId}/{hunterName}/{hunterId}/{isChicken}"
     const val SETTINGS = "settings"
     fun gameCreation(gameId: String, isAdminCreation: Boolean = false) =
@@ -51,6 +53,7 @@ object Routes {
     fun chickenMap(gameId: String) = "chicken_map/$gameId?debug=false"
     fun chickenMapDebug(gameId: String) = "chicken_map/$gameId?debug=true"
     fun hunterMap(gameId: String, hunterName: String) = "hunter_map/$gameId/${Uri.encode(hunterName)}"
+    fun gameMasterMap(gameId: String) = "game_master_map/$gameId"
     fun victory(gameId: String, hunterName: String, hunterId: String, isChicken: Boolean = false) =
         "victory/$gameId/${Uri.encode(hunterName)}/${Uri.encode(hunterId)}/$isChicken"
 }
@@ -166,6 +169,11 @@ fun AppNavigation() {
                         popUpTo(Routes.HOME) { inclusive = false }
                     }
                 },
+                onNavigateToGameMasterMap = { gameId ->
+                    navController.navigate(Routes.gameMasterMap(gameId)) {
+                        popUpTo(Routes.HOME) { inclusive = false }
+                    }
+                },
                 onNavigateToVictory = { gameId ->
                     navController.navigate(Routes.victory(gameId, "", "", isChicken = false)) {
                         popUpTo(Routes.HOME) { inclusive = false }
@@ -253,6 +261,19 @@ fun AppNavigation() {
                 onVictory = { gameId, hunterName, hunterId ->
                     navController.navigate(Routes.victory(gameId, hunterName, hunterId, isChicken = false)) {
                         popUpTo(Routes.HOME) { inclusive = false }
+                    }
+                }
+            )
+        }
+
+        composable(
+            route = Routes.GAME_MASTER_MAP,
+            arguments = listOf(navArgument("gameId") { type = NavType.StringType })
+        ) {
+            GameMasterMapScreen(
+                onGoToMenu = {
+                    navController.navigate(Routes.HOME) {
+                        popUpTo(Routes.HOME) { inclusive = true }
                     }
                 }
             )

@@ -34,3 +34,4 @@ protocol MapFeatureState: Equatable {
 
 extension ChickenMapFeature.State: MapFeatureState {}
 extension HunterMapFeature.State: MapFeatureState {}
+extension GameMasterMapFeature.State: MapFeatureState {}

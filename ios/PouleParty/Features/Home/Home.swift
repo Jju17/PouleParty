@@ -88,6 +88,7 @@ struct HomeFeature {
         case binding(BindingAction<State>)
         case chickenConfigLocationRequested
         case chickenGameStarted(Game)
+        case gameMasterGameStarted(Game)
         case completedGameFound(Game)
         case createPartyTapped
         /// Long-press easter egg on the Create Party button. Skips the
@@ -388,6 +389,8 @@ struct HomeFeature {
                 return .none
             case .chickenDebugGameStarted:
                 return .none
+            case .gameMasterGameStarted:
+                return .none
             case .hunterGameJoined:
                 state.$pendingRegistration.withLock { $0 = nil }
                 return .none
@@ -537,6 +540,8 @@ struct HomeFeature {
                     let savedNickname = state.savedNickname.trimmingCharacters(in: .whitespacesAndNewlines)
                     let finalName = savedNickname.isEmpty ? "Hunter" : savedNickname
                     return .send(.hunterGameJoined(game, finalName))
+                case .gameMaster:
+                    return .send(.gameMasterGameStarted(game))
                 }
             case .rulesButtonTapped:
                 state.destination = .gameRules

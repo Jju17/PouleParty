@@ -166,6 +166,20 @@ class FirestoreRepository @Inject constructor(
                 if (game != null) candidates.add(Pair(game, dev.rahier.pouleparty.ui.gamelogic.PlayerRole.CHICKEN))
             }
 
+            // Check if user is a GameMaster of active games (PP-24).
+            // The chicken / hunter buckets take priority if the same UID
+            // ends up in multiple lists (defense in depth — the create
+            // rule + the GM join CF already prevent that, see PP-23).
+            val gmSnapshot = firestore.collection(AppConstants.COLLECTION_GAMES)
+                .whereArrayContains("gameMasterIds", userId)
+                .whereIn("status", activeStatuses)
+                .get()
+                .await()
+            gmSnapshot.documents.forEach { doc ->
+                val game = safeToObject<Game>(doc, "findActiveGame gm")?.copy(id = doc.id)
+                if (game != null) candidates.add(Pair(game, dev.rahier.pouleparty.ui.gamelogic.PlayerRole.GAME_MASTER))
+            }
+
             val now = Date()
             // Priority 1: games already in progress (most urgent). Filter out
             // those whose endDate has passed (transition Cloud Task delayed).

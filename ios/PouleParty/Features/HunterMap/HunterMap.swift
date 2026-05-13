@@ -200,7 +200,7 @@ struct HunterMapFeature {
                 // failing is a silent no-op.
                 let gameId = state.game.id
                 let hunterId = state.hunterId
-                guard state.game.chickenCanSeeHunters,
+                guard state.game.chickenCanSeeHunters || !state.game.gameMasterIds.isEmpty,
                       !hunterId.isEmpty,
                       state.hasGameStarted else {
                     return .none
@@ -656,7 +656,13 @@ struct HunterMapFeature {
                 // A separate `.view(.appBecameActive)` handler writes one
                 // immediate refresh on every foreground resume in case
                 // iOS suspended the writer during background.
+                // PP-24: hunters also write their position when at least
+                // one GameMaster has joined, so the GM observer map can
+                // render them even in `stayInTheZone`. Firestore rules
+                // restrict hunter location reads to creator + chicken +
+                // hunters + gameMasters, so privacy is preserved.
                 let shouldWriteLocation = state.game.chickenCanSeeHunters
+                    || !state.game.gameMasterIds.isEmpty
                 let latestLocation = LockIsolated<CLLocationCoordinate2D?>(locationClient.lastLocation())
                 effects.append(
                     .run { send in

@@ -131,6 +131,7 @@ struct RejoinGameBanner: View {
         case (.inProgress, _): return String(localized: "Rejoin")
         case (.upcoming, .chicken): return String(localized: "Open")
         case (.upcoming, .hunter): return String(localized: "Join")
+        case (.upcoming, .gameMaster): return String(localized: "Watch")
         }
     }
 

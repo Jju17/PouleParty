@@ -26,6 +26,8 @@ sealed interface HomeEffect {
     object NavigateToDebugMapConfig : HomeEffect
     /** Navigate to the hunter map for a live game. */
     data class NavigateToHunterMap(val gameId: String, val hunterName: String) : HomeEffect
+    /** Navigate to the GameMaster observer map (PP-24). */
+    data class NavigateToGameMasterMap(val gameId: String) : HomeEffect
     /** Navigate to the post-game screen when the joined game is DONE. */
     data class NavigateToGameDone(val gameId: String) : HomeEffect
     /**
