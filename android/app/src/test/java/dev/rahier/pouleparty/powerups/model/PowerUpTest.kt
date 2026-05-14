@@ -2,6 +2,9 @@ package dev.rahier.pouleparty.powerups.model
 
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.GeoPoint
+import dev.rahier.pouleparty.model.GameMod
+import dev.rahier.pouleparty.model.GamePowerUps
+import dev.rahier.pouleparty.ui.gamelogic.availablePowerUpTypes
 import org.junit.Assert.*
 import org.junit.Test
 import java.util.Date
@@ -119,5 +122,57 @@ class PowerUpTest {
         )
         val afterCopy = fromServer.copy(id = "pu-0-0-1529788")
         assertEquals("pu-0-0-1529788", afterCopy.id)
+    }
+
+    // MARK: PP-35 availablePowerUpTypes helper
+
+    /**
+     * `FOLLOW_THE_CHICKEN` keeps every power-up type. Ordering must match the
+     * enum declaration so the wizard and the iOS sibling render the cards
+     * in the same order.
+     */
+    @Test
+    fun `availablePowerUpTypes for FOLLOW_THE_CHICKEN includes every type`() {
+        val expected = listOf(
+            PowerUpType.ZONE_PREVIEW,
+            PowerUpType.RADAR_PING,
+            PowerUpType.INVISIBILITY,
+            PowerUpType.ZONE_FREEZE,
+            PowerUpType.DECOY,
+            PowerUpType.JAMMER,
+        )
+        assertEquals(expected, availablePowerUpTypes(GameMod.FOLLOW_THE_CHICKEN))
+    }
+
+    /**
+     * `STAY_IN_THE_ZONE` strips the positional power-ups (invisibility /
+     * decoy / jammer) because the chicken does not broadcast its position.
+     * Order must mirror the Kotlin enum declaration AND the iOS sibling.
+     */
+    @Test
+    fun `availablePowerUpTypes for STAY_IN_THE_ZONE strips positional types`() {
+        val expected = listOf(
+            PowerUpType.ZONE_PREVIEW,
+            PowerUpType.RADAR_PING,
+            PowerUpType.ZONE_FREEZE,
+        )
+        assertEquals(expected, availablePowerUpTypes(GameMod.STAY_IN_THE_ZONE))
+    }
+
+    /**
+     * Defaults shipped to players: only `zoneFreeze` (chicken) and
+     * `zonePreview` (hunter). Keep this golden in lockstep with the iOS
+     * sibling so a one-platform regression never sneaks in.
+     */
+    @Test
+    fun `default enabledTypes are narrow`() {
+        val defaults = GamePowerUps().enabledTypes
+        assertEquals(
+            listOf(
+                PowerUpType.ZONE_FREEZE.firestoreValue,
+                PowerUpType.ZONE_PREVIEW.firestoreValue,
+            ),
+            defaults,
+        )
     }
 }

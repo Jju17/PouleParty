@@ -421,11 +421,11 @@ struct GameCreationFeature {
             case let .powerUpTypeToggled(type):
                 state.$game.withLock { game in
                     if let index = game.powerUps.enabledTypes.firstIndex(of: type.rawValue) {
-                        let unavailableRaw: Set<String> = game.gameMode == .stayInTheZone
-                            ? [PowerUp.PowerUpType.invisibility.rawValue, PowerUp.PowerUpType.decoy.rawValue, PowerUp.PowerUpType.jammer.rawValue]
-                            : []
-                        let availableEnabledCount = game.powerUps.enabledTypes.filter { !unavailableRaw.contains($0) }.count
-                        let isAvailable = !unavailableRaw.contains(type.rawValue)
+                        // PP-35: lean on the strict availability helper so
+                        // we don't drift from the UI's filter rules.
+                        let availableRaw = Set(availablePowerUpTypes(for: game.gameMode).map(\.rawValue))
+                        let availableEnabledCount = game.powerUps.enabledTypes.filter { availableRaw.contains($0) }.count
+                        let isAvailable = availableRaw.contains(type.rawValue)
                         if !isAvailable || availableEnabledCount > 1 {
                             game.powerUps.enabledTypes.remove(at: index)
                         }

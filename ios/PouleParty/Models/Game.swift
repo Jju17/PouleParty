@@ -77,7 +77,16 @@ struct Game: Codable, Equatable, Identifiable {
 
     struct GamePowerUps: Codable, Equatable {
         var enabled: Bool = false
-        var enabledTypes: [String] = PowerUp.PowerUpType.allCases.map(\.rawValue)
+        /// PP-35: defaults shipped to players are intentionally narrow.
+        /// Only `zoneFreeze` (chicken) and `zonePreview` (hunter) ship
+        /// enabled, so a brand-new party never spawns the noisy
+        /// positional power-ups. The other types stay in the enum +
+        /// spawner so we can flip them back on per-game from Firestore
+        /// without a release.
+        var enabledTypes: [String] = [
+            PowerUp.PowerUpType.zoneFreeze.rawValue,
+            PowerUp.PowerUpType.zonePreview.rawValue,
+        ]
         var activeEffects: ActiveEffects = ActiveEffects()
     }
 

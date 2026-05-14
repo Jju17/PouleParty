@@ -282,7 +282,6 @@
     <!-- Power-Up Dialogs -->
     <string name="no_power_ups_collected">No power-ups collected yet</string>
     <string name="activate">Activate</string>
-    <string name="not_available_in_this_mode">Not available in this mode</string>
     <string name="instant">Instant</string>
 
     <!-- My Games -->

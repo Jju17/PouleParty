@@ -206,7 +206,10 @@ extension Game {
             ),
             powerUps: GamePowerUps(
                 enabled: false,
-                enabledTypes: PowerUp.PowerUpType.allCases.map(\.rawValue),
+                enabledTypes: [
+                    PowerUp.PowerUpType.zoneFreeze.rawValue,
+                    PowerUp.PowerUpType.zonePreview.rawValue,
+                ],
                 activeEffects: ActiveEffects()
             )
         )

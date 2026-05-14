@@ -17,21 +17,19 @@ struct PowerUpSelectionView: View {
         GridItem(.flexible(), spacing: 12),
     ]
 
-    /// Power-ups that have no effect in stayInTheZone (no position sharing)
-    private static let unavailableInZone: Set<PowerUp.PowerUpType> = [
-        .invisibility, .decoy, .jammer
-    ]
-
-    private func isUnavailable(_ type: PowerUp.PowerUpType) -> Bool {
-        gameMode == .stayInTheZone && Self.unavailableInZone.contains(type)
+    /// PP-35: strict mode filter. Only power-ups that work in the current
+    /// game mode appear at all. No greyed-out "Not available in this mode"
+    /// cards.
+    private var availableTypes: [PowerUp.PowerUpType] {
+        availablePowerUpTypes(for: gameMode)
     }
 
     private var chickenPowerUps: [PowerUp.PowerUpType] {
-        PowerUp.PowerUpType.allCases.filter { !$0.isHunterPowerUp }
+        availableTypes.filter { !$0.isHunterPowerUp }
     }
 
     private var hunterPowerUps: [PowerUp.PowerUpType] {
-        PowerUp.PowerUpType.allCases.filter { $0.isHunterPowerUp }
+        availableTypes.filter { $0.isHunterPowerUp }
     }
 
     var body: some View {
@@ -39,25 +37,27 @@ struct PowerUpSelectionView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     // Chicken section
-                    sectionHeader(title: "Chicken Power-Ups", emoji: "🐔", gradient: Color.gradientChicken, textColor: .black)
-                    LazyVGrid(columns: columns, spacing: 12) {
-                        ForEach(chickenPowerUps, id: \.self) { type in
-                            let unavailable = isUnavailable(type)
-                            let isEnabled = !unavailable && enabledTypes.contains(type.rawValue)
-                            PowerUpCard(type: type, isEnabled: isEnabled, unavailable: unavailable) {
-                                if !unavailable { onToggle(type) }
+                    if !chickenPowerUps.isEmpty {
+                        sectionHeader(title: "Chicken Power-Ups", emoji: "🐔", gradient: Color.gradientChicken, textColor: .black)
+                        LazyVGrid(columns: columns, spacing: 12) {
+                            ForEach(chickenPowerUps, id: \.self) { type in
+                                let isEnabled = enabledTypes.contains(type.rawValue)
+                                PowerUpCard(type: type, isEnabled: isEnabled) {
+                                    onToggle(type)
+                                }
                             }
                         }
                     }
 
                     // Hunter section
-                    sectionHeader(title: "Hunter Power-Ups", emoji: "🎯", gradient: Color.gradientHunter)
-                    LazyVGrid(columns: columns, spacing: 12) {
-                        ForEach(hunterPowerUps, id: \.self) { type in
-                            let unavailable = isUnavailable(type)
-                            let isEnabled = !unavailable && enabledTypes.contains(type.rawValue)
-                            PowerUpCard(type: type, isEnabled: isEnabled, unavailable: unavailable) {
-                                if !unavailable { onToggle(type) }
+                    if !hunterPowerUps.isEmpty {
+                        sectionHeader(title: "Hunter Power-Ups", emoji: "🎯", gradient: Color.gradientHunter)
+                        LazyVGrid(columns: columns, spacing: 12) {
+                            ForEach(hunterPowerUps, id: \.self) { type in
+                                let isEnabled = enabledTypes.contains(type.rawValue)
+                                PowerUpCard(type: type, isEnabled: isEnabled) {
+                                    onToggle(type)
+                                }
                             }
                         }
                     }
@@ -95,7 +95,6 @@ struct PowerUpSelectionView: View {
 private struct PowerUpCard: View {
     let type: PowerUp.PowerUpType
     let isEnabled: Bool
-    var unavailable: Bool = false
     let onTap: () -> Void
 
     // Darker variant of the power-up color for the gradient
@@ -120,25 +119,17 @@ private struct PowerUpCard: View {
                     Text(type.emoji)
                         .font(.system(size: 36))
                         .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
-                        .grayscale(unavailable ? 1 : 0)
 
                     BangerText(type.displayName, size: 18)
                         .foregroundStyle(isEnabled ? type.textColor : .secondary)
                         .shadow(color: isEnabled ? .black.opacity(0.2) : .clear, radius: 2, y: 1)
 
-                    if unavailable {
-                        Text("Not available in this mode")
-                            .font(.system(size: 8, weight: .medium))
-                            .foregroundStyle(.secondary.opacity(0.7))
-                            .multilineTextAlignment(.center)
-                    } else {
-                        Text(type.description)
-                            .font(.system(size: 9))
-                            .foregroundStyle(isEnabled ? type.textColor.opacity(0.8) : .secondary)
-                            .multilineTextAlignment(.center)
-                            .lineLimit(3)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+                    Text(type.description)
+                        .font(.system(size: 9))
+                        .foregroundStyle(isEnabled ? type.textColor.opacity(0.8) : .secondary)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(3)
+                        .fixedSize(horizontal: false, vertical: true)
 
                     if let duration = type.durationSeconds {
                         Text("\(Int(duration))s")
@@ -165,8 +156,6 @@ private struct PowerUpCard: View {
             .clipShape(RoundedRectangle(cornerRadius: 18))
             .shadow(color: isEnabled ? type.color.opacity(0.5) : .clear, radius: 7, y: 0)
             .shadow(color: .black.opacity(isEnabled ? 0.2 : 0.05), radius: 4, y: 4)
-            .opacity(unavailable ? 0.5 : 1)
         }
-        .disabled(unavailable)
     }
 }

@@ -258,7 +258,6 @@
     <!-- Power-Up Dialogs -->
     <string name="no_power_ups_collected">Nog geen power-ups verzameld</string>
     <string name="activate">Activeren</string>
-    <string name="not_available_in_this_mode">Niet beschikbaar in deze modus</string>
     <string name="instant">Direct</string>
 
     <!-- Challenges -->

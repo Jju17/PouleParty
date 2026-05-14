@@ -135,4 +135,44 @@ struct PowerUpTests {
             _ = try Firestore.Decoder().decode(PowerUp.self, from: data)
         }
     }
+
+    // MARK: PP-35 availablePowerUpTypes helper
+
+    /// `followTheChicken` keeps every power-up type. Ordering must match the
+    /// enum declaration so the wizard and the Android sibling render the
+    /// cards in the same order.
+    @Test func availablePowerUpTypesForFollowTheChicken() {
+        let expected: [PowerUp.PowerUpType] = [
+            .zonePreview,
+            .radarPing,
+            .invisibility,
+            .zoneFreeze,
+            .decoy,
+            .jammer,
+        ]
+        #expect(availablePowerUpTypes(for: .followTheChicken) == expected)
+    }
+
+    /// `stayInTheZone` strips the positional power-ups (invisibility / decoy
+    /// / jammer) because the chicken does not broadcast its position. Order
+    /// must mirror the iOS enum declaration AND the Android sibling.
+    @Test func availablePowerUpTypesForStayInTheZone() {
+        let expected: [PowerUp.PowerUpType] = [
+            .zonePreview,
+            .radarPing,
+            .zoneFreeze,
+        ]
+        #expect(availablePowerUpTypes(for: .stayInTheZone) == expected)
+    }
+
+    /// Defaults shipped to players: only `zoneFreeze` (chicken) and
+    /// `zonePreview` (hunter). Keep this golden in lockstep with the
+    /// Android sibling so a one-platform regression never sneaks in.
+    @Test func defaultEnabledTypesAreNarrow() {
+        let defaults = Game.GamePowerUps().enabledTypes
+        #expect(defaults == [
+            PowerUp.PowerUpType.zoneFreeze.rawValue,
+            PowerUp.PowerUpType.zonePreview.rawValue,
+        ])
+    }
 }

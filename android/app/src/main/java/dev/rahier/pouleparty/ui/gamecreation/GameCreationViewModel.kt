@@ -15,6 +15,7 @@ import dev.rahier.pouleparty.powerups.model.PowerUpType
 import dev.rahier.pouleparty.model.Timing
 import dev.rahier.pouleparty.model.Zone
 import dev.rahier.pouleparty.model.calculateNormalModeSettings
+import dev.rahier.pouleparty.ui.gamelogic.availablePowerUpTypes
 import dev.rahier.pouleparty.util.calendarAt
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -450,12 +451,14 @@ class GameCreationViewModel @Inject constructor(
     private fun togglePowerUpType(type: PowerUpType) {
         _uiState.update { state ->
             val current = state.game.powerUps.enabledTypes
-            val unavailable = if (state.game.gameModEnum == GameMod.STAY_IN_THE_ZONE) {
-                setOf(PowerUpType.INVISIBILITY.firestoreValue, PowerUpType.DECOY.firestoreValue, PowerUpType.JAMMER.firestoreValue)
-            } else emptySet()
+            // PP-35: lean on the strict availability helper so we don't
+            // drift from the UI's filter rules.
+            val availableRaw = availablePowerUpTypes(state.game.gameModEnum)
+                .map { it.firestoreValue }
+                .toSet()
             val newList = if (current.contains(type.firestoreValue)) {
-                val availableEnabledCount = current.count { it !in unavailable }
-                val isAvailable = type.firestoreValue !in unavailable
+                val availableEnabledCount = current.count { it in availableRaw }
+                val isAvailable = type.firestoreValue in availableRaw
                 if (!isAvailable || availableEnabledCount > 1) current - type.firestoreValue else current
             } else {
                 current + type.firestoreValue
