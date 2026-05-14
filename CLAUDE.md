@@ -147,6 +147,8 @@ Anonymous Firebase Auth. Users don't create accounts — a UID is generated on f
 
 See `firestore.rules`. Key principle: the creator has full control over their game, hunters can only update `hunterIds`, `winners`, and `powerUps` (active effects) fields. Subcollection writes are restricted by role. **Power-up creation is denied to all clients** (`allow create: if false`) — only the Cloud Function (which bypasses rules via admin SDK) can spawn them. Power-up collection uses transactions to prevent double-collection.
 
+No `@firebase/rules-unit-testing` harness is wired in yet. Rules coverage lives in `firestore.rules.gamemaster-tests.md` as a manual emulator checklist (PP-66) plus the platform unit tests that mirror the rule expectations in pure Swift / Kotlin (`Game.isChicken`, `markChallengeCompleted` transaction shape). A real harness is scheduled to land with PP-25.
+
 ## Conventions
 
 - **Design assets**: All design work must use the assets from `/Assets` (fonts, images). A design direction (DA) reference page is available at `/Assets/index.html` — always consult it for visual guidelines.

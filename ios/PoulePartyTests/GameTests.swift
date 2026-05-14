@@ -496,10 +496,7 @@ struct GameTests {
         #expect(game.status == .waiting)
     }
 
-    @Test func defaultRegistrationNotRequired() {
-        let game = Game(id: "test")
-        #expect(game.registration.required == false)
-    }
+    // PP-90 retired `Game.registration` — registration-required no longer exists.
 
     @Test func defaultPowerUpsDisabled() {
         let game = Game(id: "test")
@@ -534,33 +531,10 @@ struct GameTests {
     }
 
     // MARK: - Registration deadline
-
-    @Test func registrationDeadlineNilWhenNoMinutes() {
-        var game = Game(id: "test")
-        game.registration.closesMinutesBefore = nil
-        #expect(game.registrationDeadline == nil)
-    }
-
-    @Test func registrationDeadlineCorrect() {
-        var game = Game(id: "test")
-        game.registration.closesMinutesBefore = 15
-        let deadline = game.registrationDeadline!
-        let expected = game.startDate.addingTimeInterval(-15 * 60)
-        #expect(abs(deadline.timeIntervalSince(expected)) < 0.001)
-    }
-
-    @Test func isRegistrationClosedFalseWhenNotRequired() {
-        var game = Game(id: "test")
-        game.registration.required = false
-        #expect(game.isRegistrationClosed == false)
-    }
-
-    @Test func isRegistrationClosedFalseWhenNoDeadline() {
-        var game = Game(id: "test")
-        game.registration.required = true
-        game.registration.closesMinutesBefore = nil
-        #expect(game.isRegistrationClosed == false)
-    }
+    //
+    // PP-90 retired the `Game.registration` / `registrationDeadline` /
+    // `isRegistrationClosed` surface. The pre-PP-90 tests have nothing
+    // to assert against and are removed wholesale.
 
     // MARK: - findLastUpdate edge cases
 
@@ -821,7 +795,7 @@ struct GameTests {
 
     @Test func startDateNotClampedWhenAboveMinimum() {
         var game = Game(id: "test")
-        game.registration.required = false
+        // PP-90 retired `Game.registration` — registration is now unconditional.
         // Set start date to 1 hour from now (well above 5 min minimum)
         game.startDate = .now.addingTimeInterval(3600)
         let minimum = computeMinimumStartDate(required: false, deadlineMinutes: nil)

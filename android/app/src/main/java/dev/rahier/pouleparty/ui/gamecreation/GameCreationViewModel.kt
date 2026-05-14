@@ -323,6 +323,15 @@ class GameCreationViewModel @Inject constructor(
         }
     }
 
+    /**
+     * PP-66 hotfix: `clampStartDateToMinimum` was the pre-PP-90
+     * registration-deadline guard. PP-90 retired registration, so the
+     * helper got removed but a few legacy call sites still reference
+     * it. Re-introducing a no-op stub keeps the main source compiling
+     * (PP-64 territory will clean this up properly).
+     */
+    private fun clampStartDateToMinimum() = Unit
+
     private fun next() {
         val state = _uiState.value
         val nextIndex = state.currentStepIndex + 1

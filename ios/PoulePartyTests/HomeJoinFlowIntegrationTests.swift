@@ -31,28 +31,9 @@ struct HomeJoinFlowIntegrationTests {
         #expect(store.state.destination == nil)
     }
 
-    @Test func pendingRegistrationRejoinWaitingRoutesToHunterGameJoined() async {
-        var game = Game.mock
-        game.id = "game-ready"
-        game.status = .waiting
-        let pending = PendingRegistration(
-            gameId: "game-ready",
-            gameCode: game.gameCode,
-            teamName: "Team",
-            startDate: game.startDate
-        )
-        var state = HomeFeature.State()
-        state.$pendingRegistration.withLock { $0 = pending }
-
-        let store = TestStore(initialState: state) {
-            HomeFeature()
-        } withDependencies: {
-            $0.userClient.currentUserId = { "user-xyz" }
-            $0.apiClient.getConfig = { _ in game }
-        }
-        store.exhaustivity = .off
-
-        await store.send(.pendingRegistrationRejoinTapped)
-        await store.receive(\.hunterGameJoined)
-    }
+    // PP-90 retired the PendingRegistration flow — anyone can join at
+    // any point, no pre-registration window. The
+    // `pendingRegistrationRejoinTapped` action and the
+    // `PendingRegistration` type were removed with it. The legacy
+    // integration test that targeted them is intentionally dropped.
 }
