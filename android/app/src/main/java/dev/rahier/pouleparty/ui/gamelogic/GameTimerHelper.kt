@@ -482,3 +482,23 @@ fun seededRandom(seed: Long, index: Int): Double {
     z = z xor (z ushr 31)
     return (z ushr 1).toDouble() / Long.MAX_VALUE.toDouble()
 }
+
+// ── PP-17 Overtime formatter ────────────────────────────────────
+
+/**
+ * Renders the `+MM:SS` (or `+HH:MM:SS` past one hour) overtime
+ * delta shown on the gameOver countdown bar. Negative deltas
+ * (i.e. `now < endDate`) clamp to `+00:00`. Mirrors the Swift
+ * `formatOvertime` so the two platforms produce identical strings.
+ */
+fun formatOvertime(now: java.util.Date, endDate: java.util.Date): String {
+    val seconds = ((now.time - endDate.time) / 1000L).coerceAtLeast(0L).toInt()
+    val hours = seconds / 3600
+    val minutes = (seconds % 3600) / 60
+    val secs = seconds % 60
+    return if (hours > 0) {
+        "+%02d:%02d:%02d".format(hours, minutes, secs)
+    } else {
+        "+%02d:%02d".format(minutes, secs)
+    }
+}

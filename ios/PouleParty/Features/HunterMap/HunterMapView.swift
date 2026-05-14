@@ -9,6 +9,9 @@ import SwiftUI
 struct HunterMapView: View {
     @Bindable var store: StoreOf<HunterMapFeature>
     @State private var selectedPowerUp: PowerUp?
+    /// PP-18: manual leaderboard CTA — sheet stays closed by default
+    /// at gameOver so the hunter keeps the map view.
+    @State private var showLeaderboard: Bool = false
     /// Observes the app's scene phase so we can fire an immediate
     /// hunter-location refresh when the player re-opens the app.
     /// See `.view(.appBecameActive)` in `HunterMapFeature` — iOS can
@@ -39,10 +42,14 @@ struct HunterMapView: View {
             .safeAreaInset(edge: .bottom) {
                 MapBottomBar(
                     state: store.state,
+                    // PP-18: hunter keeps FOUND active at gameOver so a
+                    // straggler can still close the loop. CTA shows next
+                    // to it instead of replacing it.
                     isActionButtonVisible: store.hasGameStarted,
                     actionAccessibilityLabel: "I found the chicken",
                     onActionTapped: { store.send(.view(.foundButtonTapped)) },
                     onInventoryTapped: { store.send(.powerUps(.inventoryTapped)) },
+                    onLeaderboardTapped: { showLeaderboard = true },
                     isChicken: false
                 )
             }
@@ -110,6 +117,10 @@ struct HunterMapView: View {
                 onInventoryDismiss: { store.send(.powerUps(.inventoryDismissed)) },
                 onActivatePowerUp: { store.send(.powerUps(.activateTapped($0))) }
             )
+            // PP-18 — manual leaderboard CTA at gameOver.
+            .sheet(isPresented: $showLeaderboard) {
+                GameLeaderboardSheet(game: store.game)
+            }
     }
 }
 

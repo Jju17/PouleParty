@@ -120,6 +120,9 @@ class HunterMapViewModel @Inject constructor(
     /** Public alias kept for external callers (e.g. HunterMapScreen). */
     val hunterId: String get() = playerId
 
+    /** PP-18: exposed for the leaderboard sheet so it can highlight the current user's row. */
+    fun currentUserId(): String = playerId
+
     private val _uiState = MutableStateFlow(HunterMapUiState())
     val uiState: StateFlow<HunterMapUiState> = _uiState.asStateFlow()
 

@@ -30,6 +30,10 @@ protocol MapFeatureState: Equatable {
     /// `true` once the player's effective start time has passed.
     /// Chicken uses `game.startDate`, hunter uses `game.hunterStartDate`.
     var hasGameStarted: Bool { get }
+    /// PP-16 — flipped to `true` at gameOver. PP-18 exposes the
+    /// "View leaderboard" CTA based on this; PP-17's red overtime
+    /// timer is driven by `endDate` and doesn't need this flag.
+    var isGameOver: Bool { get }
 }
 
 extension ChickenMapFeature.State: MapFeatureState {}
