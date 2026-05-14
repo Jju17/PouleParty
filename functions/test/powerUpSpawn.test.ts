@@ -270,6 +270,35 @@ describe("generatePowerUpsServer", () => {
     expect(result).toHaveLength(5);
     result.forEach((pu) => expect(pu.type).toBe("radarPing"));
   });
+
+  // PP-37 follow-up to PP-35: locks the narrowed client defaults
+  // through the server spawner. The two types iOS and Android ship by
+  // default in `Game.GamePowerUps().enabledTypes` are zoneFreeze +
+  // zonePreview — both non-positional, so they must spawn happily in
+  // either game mode. If a future refactor reintroduces a positional
+  // type into the default set, this test fires and forces a parity
+  // review across the three platforms.
+  test("PP-37: client defaults [zoneFreeze, zonePreview] spawn in followTheChicken", () => {
+    const clientDefaults = ["zoneFreeze", "zonePreview"];
+    const filtered = filterEnabledTypesServer(clientDefaults, "followTheChicken");
+    const result = generatePowerUpsServer(center, radius, 6, 42, 0, filtered, fixedNow);
+    expect(result).toHaveLength(6);
+    for (const pu of result) {
+      expect(clientDefaults).toContain(pu.type);
+    }
+  });
+
+  test("PP-37: client defaults [zoneFreeze, zonePreview] spawn in stayInTheZone", () => {
+    const clientDefaults = ["zoneFreeze", "zonePreview"];
+    const filtered = filterEnabledTypesServer(clientDefaults, "stayInTheZone");
+    // Neither default is positional → stayInTheZone keeps both.
+    expect(filtered).toEqual(clientDefaults);
+    const result = generatePowerUpsServer(center, radius, 6, 42, 0, filtered, fixedNow);
+    expect(result).toHaveLength(6);
+    for (const pu of result) {
+      expect(clientDefaults).toContain(pu.type);
+    }
+  });
 });
 
 // ─── haversineDistance ────────────────────────────────────────

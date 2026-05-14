@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   deterministicDriftCenterServer,
+  filterEnabledTypesServer,
   generatePowerUpsServer,
   interpolateZoneCenterServer,
 } from "../src/powerUpSpawn";
@@ -518,5 +519,107 @@ describe("parity, zone freeze doesn't shift PRNG seeding", () => {
     // match identically even though the radii differ.
     expect(unfrozen.map((p) => p.id)).toEqual(frozen.map((p) => p.id));
     expect(unfrozen.map((p) => p.type)).toEqual(frozen.map((p) => p.type));
+  });
+});
+
+// ─── PP-37: filterEnabledTypesServer parity ───────────────────
+//
+// Mirrors the iOS `availablePowerUpTypes(for:)` and Android
+// `availablePowerUpTypes(GameMod)` helpers. The server filter must
+// agree with both platforms on what spawns in each mode — a drift
+// would make the wizard render power-ups that the server then refuses
+// to spawn, or vice versa.
+//
+// iOS sibling: `PowerUpTests.availablePowerUpTypes*` (PP-35 + PP-37).
+// Android sibling: `PowerUpTest.\`availablePowerUpTypes for *\`` (PP-35
+// + PP-37).
+
+describe("parity, filterEnabledTypesServer (PP-37)", () => {
+  // The defaults shipped by both clients — keep in lockstep with iOS
+  // `Game.GamePowerUps().enabledTypes` and Android
+  // `GamePowerUps().enabledTypes`. PP-35 narrowed this to two types.
+  const CLIENT_DEFAULTS = ["zoneFreeze", "zonePreview"];
+
+  test("client defaults pass through followTheChicken unchanged", () => {
+    expect(
+      filterEnabledTypesServer(CLIENT_DEFAULTS, "followTheChicken"),
+    ).toEqual(CLIENT_DEFAULTS);
+  });
+
+  test("client defaults pass through stayInTheZone unchanged", () => {
+    // Neither default is positional, so stayInTheZone shouldn't strip
+    // anything. Pins the invariant: a player who keeps the defaults in
+    // stayInTheZone still gets both power-up types spawning.
+    expect(
+      filterEnabledTypesServer(CLIENT_DEFAULTS, "stayInTheZone"),
+    ).toEqual(CLIENT_DEFAULTS);
+  });
+
+  test("stayInTheZone strips positional types even when explicitly enabled", () => {
+    // A creator (or an admin override) explicitly turning on every type
+    // must still see invisibility / decoy / jammer disappear in
+    // stayInTheZone — the server doesn't trust the client to do this
+    // correctly. Mirrors the iOS + Android strict-filter goldens.
+    const everyType = [
+      "zonePreview",
+      "radarPing",
+      "invisibility",
+      "zoneFreeze",
+      "decoy",
+      "jammer",
+    ];
+    const filtered = filterEnabledTypesServer(everyType, "stayInTheZone");
+    expect(filtered).not.toContain("invisibility");
+    expect(filtered).not.toContain("decoy");
+    expect(filtered).not.toContain("jammer");
+    // Order is preserved — only positional types are removed.
+    expect(filtered).toEqual(["zonePreview", "radarPing", "zoneFreeze"]);
+  });
+
+  test("followTheChicken keeps every explicitly enabled type", () => {
+    const everyType = [
+      "zonePreview",
+      "radarPing",
+      "invisibility",
+      "zoneFreeze",
+      "decoy",
+      "jammer",
+    ];
+    expect(filterEnabledTypesServer(everyType, "followTheChicken")).toEqual(
+      everyType,
+    );
+  });
+
+  test("stayInTheZone strips a single positional type when alone", () => {
+    expect(filterEnabledTypesServer(["invisibility"], "stayInTheZone")).toEqual([]);
+    expect(filterEnabledTypesServer(["decoy"], "stayInTheZone")).toEqual([]);
+    expect(filterEnabledTypesServer(["jammer"], "stayInTheZone")).toEqual([]);
+  });
+
+  test("matrix matches iOS + Android availablePowerUpTypes goldens", () => {
+    // Direct parity assertion: feeding the server the universe of
+    // enum cases (in the same order iOS and Android declare them)
+    // must produce the same ordered list the clients render.
+    const allCases = [
+      "zonePreview",
+      "radarPing",
+      "invisibility",
+      "zoneFreeze",
+      "decoy",
+      "jammer",
+    ];
+    expect(filterEnabledTypesServer(allCases, "followTheChicken")).toEqual([
+      "zonePreview",
+      "radarPing",
+      "invisibility",
+      "zoneFreeze",
+      "decoy",
+      "jammer",
+    ]);
+    expect(filterEnabledTypesServer(allCases, "stayInTheZone")).toEqual([
+      "zonePreview",
+      "radarPing",
+      "zoneFreeze",
+    ]);
   });
 });

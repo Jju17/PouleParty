@@ -175,4 +175,79 @@ struct PowerUpTests {
             PowerUp.PowerUpType.zonePreview.rawValue,
         ])
     }
+
+    // MARK: PP-37 parity goldens (PP-35 follow-up)
+
+    /// Strict count parity: 6 types in followTheChicken vs 3 in stayInTheZone.
+    /// Mirrors the Android `availablePowerUpTypes counts match parity matrix`
+    /// test — a silent enum addition that bypassed the positional filter
+    /// would fail this on one platform without the other and surface the
+    /// divergence loudly.
+    @Test func availablePowerUpTypesCountsMatchParityMatrix() {
+        #expect(availablePowerUpTypes(for: .followTheChicken).count == 6)
+        #expect(availablePowerUpTypes(for: .stayInTheZone).count == 3)
+    }
+
+    /// `stayInTheZone` MUST NOT contain any positional power-up — the
+    /// chicken does not broadcast its position in that mode so spawning
+    /// invisibility / decoy / jammer is wasted. Mirrors the Android
+    /// `STAY_IN_THE_ZONE excludes every positional power-up` test.
+    @Test func availablePowerUpTypesStayInTheZoneExcludesEveryPositionalType() {
+        let stay = availablePowerUpTypes(for: .stayInTheZone)
+        #expect(!stay.contains(.invisibility))
+        #expect(!stay.contains(.decoy))
+        #expect(!stay.contains(.jammer))
+    }
+
+    /// `stayInTheZone` MUST contain every non-positional power-up. Mirrors
+    /// the Android `STAY_IN_THE_ZONE keeps every non-positional power-up`
+    /// test.
+    @Test func availablePowerUpTypesStayInTheZoneIncludesEveryNonPositionalType() {
+        let stay = availablePowerUpTypes(for: .stayInTheZone)
+        #expect(stay.contains(.zonePreview))
+        #expect(stay.contains(.radarPing))
+        #expect(stay.contains(.zoneFreeze))
+    }
+
+    /// `followTheChicken` is a passthrough — every enum case lands in the
+    /// returned list. Mirrors the Android
+    /// `FOLLOW_THE_CHICKEN is a passthrough of every enum case` test.
+    @Test func availablePowerUpTypesFollowTheChickenIsPassthrough() {
+        let follow = availablePowerUpTypes(for: .followTheChicken)
+        for type in PowerUp.PowerUpType.allCases {
+            #expect(follow.contains(type), "Expected \(type) in followTheChicken")
+        }
+    }
+
+    /// The Firestore wire format for `enabledTypes` is a `[String]` of raw
+    /// values. The strings used by iOS, Android and the TS server MUST
+    /// match exactly — a typo on one platform silently breaks the
+    /// `stayInTheZone` filter on the server. Locks the wire contract.
+    @Test func powerUpTypeRawValuesMatchFirestoreWireContract() {
+        let expected: [(PowerUp.PowerUpType, String)] = [
+            (.zonePreview, "zonePreview"),
+            (.radarPing, "radarPing"),
+            (.invisibility, "invisibility"),
+            (.zoneFreeze, "zoneFreeze"),
+            (.decoy, "decoy"),
+            (.jammer, "jammer"),
+        ]
+        for (type, raw) in expected {
+            #expect(type.rawValue == raw, "Wire raw value drift on \(type)")
+        }
+    }
+
+    /// The defaults shipped to players (`zoneFreeze` + `zonePreview`)
+    /// must be available in BOTH modes — a player who keeps the defaults
+    /// in `stayInTheZone` should still see both power-up types spawn.
+    /// Guards against a future filter change that would accidentally
+    /// strip a default type.
+    @Test func defaultEnabledTypesAreAvailableInBothModes() {
+        let follow = availablePowerUpTypes(for: .followTheChicken)
+        let stay = availablePowerUpTypes(for: .stayInTheZone)
+        #expect(follow.contains(.zoneFreeze))
+        #expect(follow.contains(.zonePreview))
+        #expect(stay.contains(.zoneFreeze))
+        #expect(stay.contains(.zonePreview))
+    }
 }
