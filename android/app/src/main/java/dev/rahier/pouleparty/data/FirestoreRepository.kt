@@ -299,7 +299,7 @@ class FirestoreRepository @Inject constructor(
     }
 
     /**
-     * Live stream of `/games/{gameId}/registrations/*`. Used by the
+     * Live stream of `/games/{gameId}/registrations`. Used by the
      * GameMaster map (PP-86) so the hunter counter + drawer team-name
      * list refresh the moment a new hunter joins, instead of staying
      * frozen on the snapshot loaded once at screen entry.
@@ -875,6 +875,103 @@ class FirestoreRepository @Inject constructor(
             success = (raw["success"] as? Boolean) ?: false,
             attemptsRemaining = (raw["attemptsRemaining"] as? Number)?.toInt() ?: 0,
             lockedUntilMs = (raw["lockedUntil"] as? Number)?.toLong()
+        )
+    }
+
+    // ── Zone configuration (PP-69) ────────────────────────
+
+    /**
+     * Latitude/longitude pair shared by the zone-configuration callable
+     * input + output. Kept separate from `com.mapbox.geojson.Point` so
+     * the repository layer can stay independent of the Mapbox SDK.
+     */
+    data class ZoneLatLng(val lat: Double, val lng: Double)
+
+    /** One circle in the precomputed shrink schedule returned by the CF. */
+    data class ZoneCircle(val radiusMeters: Double, val center: ZoneLatLng)
+
+    /** Input payload for [computeZoneConfiguration]. */
+    data class ComputeZoneConfigurationInput(
+        val startPoint: ZoneLatLng,
+        val finalPoint: ZoneLatLng?,
+        val gameMode: String,
+        // 500 / 1000 / 2000 m. Required in followTheChicken.
+        val radiusHint: Double?,
+        val gameDurationMinutes: Double,
+        // `true` from the Shuffle button (PP-14 Phase 2).
+        val forceNewSeed: Boolean = false,
+        // Pins the returned `driftSeed` when set.
+        val existingSeed: Int? = null,
+    )
+
+    /** Output of [computeZoneConfiguration]. */
+    data class ComputeZoneConfigurationOutput(
+        val initialRadius: Double,
+        val validatedFinal: ZoneLatLng?,
+        val driftSeed: Int,
+        val finalZoneRadius: Double,
+        val interiorMargin: Double,
+        val shrinkIntervalMinutes: Double,
+        val shrinkMetersPerUpdate: Double,
+        val circles: List<ZoneCircle>,
+    )
+
+    /**
+     * Calls the `computeZoneConfiguration` Cloud Function (PP-69). The
+     * CF is the single source of truth for the radius, drift seed and
+     * shrink schedule used by the wizard recap (PP-13) and Shuffle
+     * button (PP-14). Once the client-side `computeZoneRadius` /
+     * `deterministicDriftCenter` mirrors are deleted in PP-13 Phase 2 /
+     * PP-14 Phase 2, this wrapper becomes the only path the recap step
+     * walks.
+     */
+    suspend fun computeZoneConfiguration(
+        input: ComputeZoneConfigurationInput,
+    ): ComputeZoneConfigurationOutput {
+        val payload = HashMap<String, Any?>()
+        payload["startPoint"] = mapOf("lat" to input.startPoint.lat, "lng" to input.startPoint.lng)
+        payload["finalPoint"] = input.finalPoint?.let { mapOf("lat" to it.lat, "lng" to it.lng) }
+        payload["gameMode"] = input.gameMode
+        payload["radiusHint"] = input.radiusHint
+        payload["gameDurationMinutes"] = input.gameDurationMinutes
+        payload["forceNewSeed"] = input.forceNewSeed
+        if (input.existingSeed != null) payload["existingSeed"] = input.existingSeed
+
+        val callable = functions
+            .getHttpsCallable("computeZoneConfiguration")
+            .call(payload)
+            .await()
+        @Suppress("UNCHECKED_CAST")
+        val raw = callable.getData() as? Map<String, Any?>
+            ?: throw IllegalStateException("computeZoneConfiguration: malformed response")
+
+        fun asDouble(value: Any?): Double? = (value as? Number)?.toDouble()
+        fun asInt(value: Any?): Int? = (value as? Number)?.toInt()
+        fun asLatLng(value: Any?): ZoneLatLng? {
+            @Suppress("UNCHECKED_CAST")
+            val map = value as? Map<String, Any?> ?: return null
+            val lat = asDouble(map["lat"]) ?: return null
+            val lng = asDouble(map["lng"]) ?: return null
+            return ZoneLatLng(lat, lng)
+        }
+
+        @Suppress("UNCHECKED_CAST")
+        val rawCircles = (raw["circles"] as? List<Map<String, Any?>>).orEmpty()
+        val circles = rawCircles.mapNotNull { entry ->
+            val radius = asDouble(entry["radiusMeters"]) ?: return@mapNotNull null
+            val center = asLatLng(entry["center"]) ?: return@mapNotNull null
+            ZoneCircle(radius, center)
+        }
+
+        return ComputeZoneConfigurationOutput(
+            initialRadius = asDouble(raw["initialRadius"]) ?: 0.0,
+            validatedFinal = asLatLng(raw["validatedFinal"]),
+            driftSeed = asInt(raw["driftSeed"]) ?: 1,
+            finalZoneRadius = asDouble(raw["finalZoneRadius"]) ?: 50.0,
+            interiorMargin = asDouble(raw["interiorMargin"]) ?: 200.0,
+            shrinkIntervalMinutes = asDouble(raw["shrinkIntervalMinutes"]) ?: 5.0,
+            shrinkMetersPerUpdate = asDouble(raw["shrinkMetersPerUpdate"]) ?: 0.0,
+            circles = circles,
         )
     }
 }

@@ -21,6 +21,11 @@ export {
   joinAsGameMaster,
 } from "./gameMaster";
 
+// Re-export the zone-configuration callable (PP-69) so the wizard
+// recap step can fetch a server-computed zone instead of recomputing
+// it client-side.
+export { computeZoneConfiguration } from "./zoneCalculation";
+
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const serviceAccount = require("../service-account.json");
 initializeApp({ credential: cert(serviceAccount) });
