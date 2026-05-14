@@ -52,7 +52,7 @@ struct JoinFlowFeatureTests {
         var game = Game.mock
         game.creatorId = "other-creator"
         game.status = .waiting
-        game.registration.required = false
+        // PP-90 retired `Game.registration`; any user can now join at any time.
 
         let store = TestStore(initialState: JoinFlowFeature.State()) {
             JoinFlowFeature()
@@ -73,7 +73,7 @@ struct JoinFlowFeatureTests {
         var game = Game.mock
         game.creatorId = "someone-else"
         game.status = .waiting
-        game.registration.required = false
+        // PP-90 retired `Game.registration`.
 
         let seenCodes = LockIsolated<[String]>([])
         let store = TestStore(initialState: JoinFlowFeature.State()) {
@@ -102,7 +102,7 @@ struct JoinFlowFeatureTests {
         game.id = "abc123xyz9999999999"  // gameCode = "ABC123"
         game.creatorId = "someone-else"
         game.status = .waiting
-        game.registration.required = false
+        // PP-90 retired `Game.registration`.
 
         let callCount = LockIsolated(0)
         let store = TestStore(initialState: JoinFlowFeature.State()) {
@@ -124,28 +124,21 @@ struct JoinFlowFeatureTests {
         #expect(callCount.value == 1)
     }
 
-    // MARK: - joinTapped rejects non-final states
+    // MARK: - joinAsHunterTapped rejects non-final states
 
-    @Test func joinTappedIgnoredWhenStillValidating() async {
+    @Test func joinAsHunterTappedIgnoredWhenStillValidating() async {
         var state = JoinFlowFeature.State()
         state.step = .validating
         let store = TestStore(initialState: state) {
             JoinFlowFeature()
         }
-        await store.send(.joinTapped)
+        await store.send(.joinAsHunterTapped)
         // No action received — silent no-op.
     }
 
-    @Test func joinTappedIgnoredWhenRegistrationRequiredButNotRegistered() async {
-        var game = Game.mock
-        game.registration.required = true
-        var state = JoinFlowFeature.State()
-        state.step = .codeValidated(game, alreadyRegistered: false)
-        let store = TestStore(initialState: state) {
-            JoinFlowFeature()
-        }
-        await store.send(.joinTapped)
-    }
+    // PP-90 retired the registration-required flow — anyone can join
+    // at any time, so `joinTappedIgnoredWhenRegistrationRequiredButNotRegistered`
+    // no longer has a matching production path. The legacy test is dropped.
 }
 
 #endif

@@ -44,10 +44,11 @@ final class GameCreationSnapshotTests: XCTestCase {
         game.gameMode = gameMod
         game.powerUps.enabled = powerUpsEnabled
         game.chickenCanSeeHunters = chickenCanSeeHunters
-        game.registration.required = requiresRegistration
-        if requiresRegistration {
-            game.registration.closesMinutesBefore = 15
-        }
+        // PP-90 retired `Game.registration` — registration is now
+        // unconditional. The `requiresRegistration` knob is kept on
+        // the test helper signature so existing call sites compile;
+        // the parameter is currently a no-op.
+        _ = requiresRegistration
         game.timing.headStartMinutes = 5
 
         let shared = Shared(value: game)

@@ -299,10 +299,10 @@ class FirestoreRepository @Inject constructor(
     }
 
     /**
-     * Live stream of `/games/{gameId}/registrations`. Used by the
-     * GameMaster map (PP-86) so the hunter counter + drawer team-name
-     * list refresh the moment a new hunter joins, instead of staying
-     * frozen on the snapshot loaded once at screen entry.
+     * Live stream of every doc under `/games/{gameId}/registrations`. Used by
+     * the GameMaster map (PP-86) so the hunter counter + drawer team-name
+     * list refresh the moment a new hunter joins, instead of staying frozen
+     * on the snapshot loaded once at screen entry.
      */
     fun registrationsFlow(gameId: String): Flow<List<Registration>> = callbackFlow {
         val listener = firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)

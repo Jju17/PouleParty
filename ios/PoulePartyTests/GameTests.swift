@@ -496,15 +496,7 @@ struct GameTests {
         #expect(game.status == .waiting)
     }
 
-    // PP-19: `Game.registration` was removed by PP-90. The test below
-    // references the deleted API and is disabled at the compiler level
-    // pending a PP-64 cleanup pass.
-    #if false
-    @Test func defaultRegistrationNotRequired() {
-        let game = Game(id: "test")
-        #expect(game.registration.required == false)
-    }
-    #endif
+    // PP-90 retired `Game.registration` — registration-required no longer exists.
 
     @Test func defaultPowerUpsDisabled() {
         let game = Game(id: "test")
@@ -539,37 +531,10 @@ struct GameTests {
     }
 
     // MARK: - Registration deadline
-
-    // PP-19: the registration deadline block was removed by PP-90;
-    // tests below are disabled at compiler level pending PP-64.
-    #if false
-    @Test func registrationDeadlineNilWhenNoMinutes() {
-        var game = Game(id: "test")
-        game.registration.closesMinutesBefore = nil
-        #expect(game.registrationDeadline == nil)
-    }
-
-    @Test func registrationDeadlineCorrect() {
-        var game = Game(id: "test")
-        game.registration.closesMinutesBefore = 15
-        let deadline = game.registrationDeadline!
-        let expected = game.startDate.addingTimeInterval(-15 * 60)
-        #expect(abs(deadline.timeIntervalSince(expected)) < 0.001)
-    }
-
-    @Test func isRegistrationClosedFalseWhenNotRequired() {
-        var game = Game(id: "test")
-        game.registration.required = false
-        #expect(game.isRegistrationClosed == false)
-    }
-
-    @Test func isRegistrationClosedFalseWhenNoDeadline() {
-        var game = Game(id: "test")
-        game.registration.required = true
-        game.registration.closesMinutesBefore = nil
-        #expect(game.isRegistrationClosed == false)
-    }
-    #endif
+    //
+    // PP-90 retired the `Game.registration` / `registrationDeadline` /
+    // `isRegistrationClosed` surface. The pre-PP-90 tests have nothing
+    // to assert against and are removed wholesale.
 
     // MARK: - findLastUpdate edge cases
 
@@ -833,7 +798,7 @@ struct GameTests {
     #if false
     @Test func startDateNotClampedWhenAboveMinimum() {
         var game = Game(id: "test")
-        game.registration.required = false
+        // PP-90 retired `Game.registration` — registration is now unconditional.
         // Set start date to 1 hour from now (well above 5 min minimum)
         game.startDate = .now.addingTimeInterval(3600)
         let minimum = computeMinimumStartDate(required: false, deadlineMinutes: nil)
