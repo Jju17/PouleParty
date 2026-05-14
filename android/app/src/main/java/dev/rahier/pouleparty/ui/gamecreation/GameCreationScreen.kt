@@ -3,6 +3,7 @@ package dev.rahier.pouleparty.ui.gamecreation
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -105,16 +106,38 @@ fun GameCreationScreen(
                 .padding(padding)
                 .fillMaxSize()
         ) {
-            // Progress bar
-            LinearProgressIndicator(
-                progress = { state.progress },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(4.dp),
-                color = CROrange,
-                trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                drawStopIndicator = {},
-            )
+            // Progress bar + PP-15 step counter. Y reflects the
+            // currently-active step subset so steps that skip (e.g.
+            // FINAL_ZONE_SETUP in followTheChicken or
+            // CHICKEN_SELECTION when the chicken is participating)
+            // don't inflate the denominator.
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            ) {
+                Text(
+                    text = "${state.currentStepIndex + 1} / ${state.steps.size}",
+                    style = gameboyStyle(8),
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 6.dp, bottom = 2.dp),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.End,
+                )
+                val animatedProgress by animateFloatAsState(
+                    targetValue = state.progress,
+                    animationSpec = tween(durationMillis = 250),
+                    label = "wizard-progress",
+                )
+                LinearProgressIndicator(
+                    progress = { animatedProgress },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(4.dp),
+                    color = CROrange,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                    drawStopIndicator = {},
+                )
+            }
 
             // Step content
             AnimatedContent(

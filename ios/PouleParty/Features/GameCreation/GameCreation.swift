@@ -611,10 +611,25 @@ struct GameCreationView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Fixed header: progress bar + dismiss button
-            HStack {
-                ProgressView(value: store.progress)
-                    .tint(Color.CROrange)
+            // Fixed header: progress bar + step counter + dismiss button
+            // PP-15: the `X / Y` counter sits on top of the bar; Y is
+            // the count of the currently-active step subset so steps
+            // that skip (e.g. `finalZoneSetup` in followTheChicken or
+            // `chickenSelection` when the chicken is participating)
+            // don't inflate the denominator.
+            HStack(spacing: 12) {
+                VStack(spacing: 4) {
+                    HStack {
+                        Spacer()
+                        Text("\(store.currentStepIndex + 1) / \(store.steps.count)")
+                            .font(.gameboy(size: 8))
+                            .foregroundStyle(Color.onBackground.opacity(0.6))
+                            .monospacedDigit()
+                    }
+                    ProgressView(value: store.progress)
+                        .tint(Color.CROrange)
+                        .animation(.easeInOut(duration: 0.25), value: store.progress)
+                }
                 if let onDismiss {
                     Button(action: onDismiss) {
                         Image(systemName: "xmark")
