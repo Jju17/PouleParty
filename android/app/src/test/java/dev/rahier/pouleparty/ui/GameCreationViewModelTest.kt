@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui
 
+import android.location.Location
 import androidx.lifecycle.SavedStateHandle
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
@@ -16,6 +17,8 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -25,6 +28,11 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.pow
+import kotlin.math.sin
+import kotlin.math.sqrt
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -51,11 +59,29 @@ class GameCreationViewModelTest {
         val mockUser = mockk<FirebaseUser>()
         every { mockUser.uid } returns "user-abc"
         every { auth.currentUser } returns mockUser
+
+        // Mock `Location.distanceBetween` with a JVM-side Haversine so
+        // PP-12 `isFinalZoneConfigured` (≥ 100 m) is computable without
+        // an Android runtime. Mirrors `ChickenMapConfigViewModelTest`.
+        mockkStatic(Location::class)
+        every { Location.distanceBetween(any(), any(), any(), any(), any()) } answers {
+            val lat1 = Math.toRadians(arg<Double>(0))
+            val lon1 = Math.toRadians(arg<Double>(1))
+            val lat2 = Math.toRadians(arg<Double>(2))
+            val lon2 = Math.toRadians(arg<Double>(3))
+            val results = arg<FloatArray>(4)
+            val dlat = lat2 - lat1
+            val dlon = lon2 - lon1
+            val a = sin(dlat / 2).pow(2) + cos(lat1) * cos(lat2) * sin(dlon / 2).pow(2)
+            val c = 2 * atan2(sqrt(a), sqrt(1 - a))
+            results[0] = (6_371_000.0 * c).toFloat()
+        }
     }
 
     @After
     fun tearDown() {
         Dispatchers.resetMain()
+        unmockkStatic(Location::class)
     }
 
     private fun createViewModel(
@@ -151,10 +177,18 @@ class GameCreationViewModelTest {
         assertEquals(GameCreationStep.PARTICIPATION, steps[0])
         assertEquals(GameCreationStep.CHICKEN_SELECTION, steps[1])
         assertEquals(GameCreationStep.MAX_PLAYERS, steps[2])
-        assertEquals(GameCreationStep.GAME_MODE, steps[3])
-        // PP-11 / PP-12 / PP-13 split ZONE_SETUP into 3 sub-steps in
-        // stayInTheZone (default), so total grows to 14 with
-        // chickenSelection.
+        // Wizard order (PP-11..15): timing trio precedes the zone block,
+        // so chickenSelection slots in right after PARTICIPATION and
+        // pushes every step down by one. GAME_MODE is steps[6].
+        assertEquals(GameCreationStep.START_TIME, steps[3])
+        assertEquals(GameCreationStep.DURATION, steps[4])
+        assertEquals(GameCreationStep.HEAD_START, steps[5])
+        assertEquals(GameCreationStep.GAME_MODE, steps[6])
+        assertEquals(GameCreationStep.START_ZONE_SETUP, steps[7])
+        assertEquals(GameCreationStep.FINAL_ZONE_SETUP, steps[8])
+        assertEquals(GameCreationStep.ZONES_RECAP, steps[9])
+        // PP-13 + PP-88: base 13 (stayInTheZone, participating) +1 for
+        // CHICKEN_SELECTION when the chicken is not playing.
         assertEquals(14, steps.size)
     }
 
@@ -595,16 +629,18 @@ class GameCreationViewModelTest {
 
     @Test
     fun `toggling participation multiple times keeps step list in sync`() {
-        // PP-88 added GAME_MASTER_PASSWORD → base 12, +1 for chickenSelection.
+        // PP-11..13 split zone setup into 3 sub-steps + PP-88 added
+        // GAME_MASTER_PASSWORD → base 13 (stayInTheZone, participating),
+        // +1 for chickenSelection when not participating.
         val vm = createViewModel()
-        assertEquals(12, vm.uiState.value.steps.size)
-        vm.onIntent(GameCreationIntent.ParticipatingChanged(false))
         assertEquals(13, vm.uiState.value.steps.size)
+        vm.onIntent(GameCreationIntent.ParticipatingChanged(false))
+        assertEquals(14, vm.uiState.value.steps.size)
         vm.onIntent(GameCreationIntent.ParticipatingChanged(true))
-        assertEquals(12, vm.uiState.value.steps.size)
+        assertEquals(13, vm.uiState.value.steps.size)
         vm.onIntent(GameCreationIntent.ParticipatingChanged(false))
         vm.onIntent(GameCreationIntent.ParticipatingChanged(false)) // no-op
-        assertEquals(13, vm.uiState.value.steps.size)
+        assertEquals(14, vm.uiState.value.steps.size)
     }
 
     @Test
@@ -683,11 +719,29 @@ class GameCreationViewModelTest {
 
     // ── Power-up toggle constraints ──
 
+    /** Helper: bring `enabledTypes` to a known "every-type-enabled" baseline. PP-35
+     *  shrunk the default to `[ZONE_FREEZE, ZONE_PREVIEW]`, so toggling the missing
+     *  ones flips them ON. The `togglePowerUpType` constraint guard prevents
+     *  removing the last *available* type so we have to seed explicitly. */
+    private fun GameCreationViewModel.enableAllPowerUpTypes() {
+        val current = uiState.value.game.powerUps.enabledTypes
+        PowerUpType.entries.forEach { type ->
+            if (type.firestoreValue !in current) {
+                onIntent(GameCreationIntent.PowerUpTypeToggled(type))
+            }
+        }
+    }
+
     @Test
     fun `togglePowerUpType cannot remove last available type in followTheChicken`() {
         val vm = createViewModel()
         vm.onIntent(GameCreationIntent.GameModeChanged(GameMod.FOLLOW_THE_CHICKEN))
-        // Start with all types enabled, remove all but one
+        // PP-35 default ships only ZONE_FREEZE + ZONE_PREVIEW. Enable every
+        // type first so the guard below trips on the LAST one.
+        vm.enableAllPowerUpTypes()
+        assertEquals(PowerUpType.entries.size, vm.uiState.value.game.powerUps.enabledTypes.size)
+        // Remove every type except the tail one. In followTheChicken every
+        // type is available, so the guard only kicks in at exactly 1.
         val allTypes = PowerUpType.entries
         for (type in allTypes.dropLast(1)) {
             vm.onIntent(GameCreationIntent.PowerUpTypeToggled(type))
@@ -704,9 +758,15 @@ class GameCreationViewModelTest {
     fun `togglePowerUpType can remove unavailable type in stayInTheZone`() {
         val vm = createViewModel()
         vm.onIntent(GameCreationIntent.GameModeChanged(GameMod.STAY_IN_THE_ZONE))
-        // INVISIBILITY is unavailable in stayInTheZone — should be removable even if "last"
-        val before = vm.uiState.value.game.powerUps.enabledTypes.contains(PowerUpType.INVISIBILITY.firestoreValue)
-        assertTrue("INVISIBILITY should be enabled by default", before)
+        // Force INVISIBILITY enabled — PP-35 default only ships ZONE_FREEZE + ZONE_PREVIEW.
+        vm.onIntent(GameCreationIntent.PowerUpTypeToggled(PowerUpType.INVISIBILITY))
+        assertTrue(
+            "INVISIBILITY should be enabled after seed toggle",
+            vm.uiState.value.game.powerUps.enabledTypes.contains(PowerUpType.INVISIBILITY.firestoreValue)
+        )
+        // INVISIBILITY is unavailable in stayInTheZone — removable even if it
+        // were the only enabled type, since the guard counts only AVAILABLE
+        // enabled types (PP-35 strict filter).
         vm.onIntent(GameCreationIntent.PowerUpTypeToggled(PowerUpType.INVISIBILITY))
         assertFalse(vm.uiState.value.game.powerUps.enabledTypes.contains(PowerUpType.INVISIBILITY.firestoreValue))
     }
@@ -715,6 +775,9 @@ class GameCreationViewModelTest {
     fun `togglePowerUpType re-adds unavailable type`() {
         val vm = createViewModel()
         vm.onIntent(GameCreationIntent.GameModeChanged(GameMod.STAY_IN_THE_ZONE))
+        // INVISIBILITY is not in the PP-35 default set, so first toggle ADDS,
+        // second toggle REMOVES, third toggle ADDS again.
+        vm.onIntent(GameCreationIntent.PowerUpTypeToggled(PowerUpType.INVISIBILITY))
         vm.onIntent(GameCreationIntent.PowerUpTypeToggled(PowerUpType.INVISIBILITY))
         vm.onIntent(GameCreationIntent.PowerUpTypeToggled(PowerUpType.INVISIBILITY))
         assertTrue(vm.uiState.value.game.powerUps.enabledTypes.contains(PowerUpType.INVISIBILITY.firestoreValue))
@@ -724,11 +787,13 @@ class GameCreationViewModelTest {
     fun `togglePowerUpType last available type in stayInTheZone counts only available ones`() {
         val vm = createViewModel()
         vm.onIntent(GameCreationIntent.GameModeChanged(GameMod.STAY_IN_THE_ZONE))
-        // Available in stayInTheZone: ZONE_PREVIEW, RADAR_PING, ZONE_FREEZE (3 available, 3 unavailable)
-        // Remove 2 available to leave only 1 available enabled
+        // Available in stayInTheZone: ZONE_PREVIEW, RADAR_PING, ZONE_FREEZE.
+        // Seed RADAR_PING ON so we start with all 3 available enabled.
+        vm.onIntent(GameCreationIntent.PowerUpTypeToggled(PowerUpType.RADAR_PING))
+        // Remove 2 of the 3 available → 1 available left.
         vm.onIntent(GameCreationIntent.PowerUpTypeToggled(PowerUpType.ZONE_PREVIEW))
         vm.onIntent(GameCreationIntent.PowerUpTypeToggled(PowerUpType.RADAR_PING))
-        // ZONE_FREEZE is the last available enabled → cannot be removed
+        // ZONE_FREEZE is the last available enabled → guard must block removal.
         val before = vm.uiState.value.game.powerUps.enabledTypes.size
         vm.onIntent(GameCreationIntent.PowerUpTypeToggled(PowerUpType.ZONE_FREEZE))
         val after = vm.uiState.value.game.powerUps.enabledTypes.size

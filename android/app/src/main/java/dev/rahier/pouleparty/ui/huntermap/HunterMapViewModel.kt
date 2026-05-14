@@ -23,6 +23,7 @@ import dev.rahier.pouleparty.ui.gamelogic.checkZoneStatus
 import dev.rahier.pouleparty.ui.gamelogic.detectNewWinners
 import dev.rahier.pouleparty.ui.gamelogic.evaluateCountdown
 import dev.rahier.pouleparty.ui.map.BaseMapViewModel
+import kotlinx.coroutines.flow.catch
 import dev.rahier.pouleparty.ui.gamelogic.deterministicDriftCenter
 import dev.rahier.pouleparty.ui.gamelogic.interpolateZoneCenter
 import dev.rahier.pouleparty.ui.gamelogic.processRadiusUpdate
@@ -184,9 +185,17 @@ class HunterMapViewModel @Inject constructor(
 
     private fun observeChallengesAvailability() {
         viewModelScope.launch {
-            firestoreRepository.challengesStream().collect { list ->
-                _uiState.update { it.copy(hasChallenges = list.isNotEmpty()) }
-            }
+            firestoreRepository.challengesStream()
+                .catch { e ->
+                    // PP-64: a synchronous flow error (offline / rules
+                    // hiccup) should not crash the hunter map. Mirror the
+                    // iOS `try? await` semantics: leave `hasChallenges`
+                    // at its last value and log for telemetry.
+                    Log.w(TAG, "challengesStream error — leaving hasChallenges as-is", e)
+                }
+                .collect { list ->
+                    _uiState.update { it.copy(hasChallenges = list.isNotEmpty()) }
+                }
         }
     }
 

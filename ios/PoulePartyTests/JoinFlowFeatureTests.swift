@@ -2,19 +2,15 @@
 //  JoinFlowFeatureTests.swift
 //  PoulePartyTests
 //
-//  Pins the defensive behaviour of the Join flow:
+//  Pins the defensive behaviour of the post-PP-90 Join flow:
 //   - Self-join (hunter taps their own chicken code) is rejected
-//   - pending_payment / payment_failed rejection in the joinGame delegate
-//     (handled by HomeFeature) — tested here via the delegate contract
-//   - Code normalization doesn't double-fire validation on repeated taps
+//   - Code normalization (uppercase, length, allowed chars) and dedup
+//     (re-typing the same code doesn't re-query)
+//   - `joinAsHunterTapped` is a silent no-op outside of `codeValidated`
 //
-//  PP-19 note: these tests target a registration-required join flow that
-//  no longer exists post-PP-90 (`Game.registration` was deleted and the
-//  `JoinFlowFeature.Action.joinTapped` was renamed). The whole suite is
-//  disabled at the compiler level so the test target still builds; the
-//  file will be rewritten or deleted in a follow-up cleanup ticket.
-
-#if false
+//  PP-64: re-enabled after PP-90 retired `Game.registration` and the
+//  registration-required gate. The reducer surface tested below is the
+//  one in `Features/JoinFlow/JoinFlow.swift` as of 2026-05-14.
 
 import ComposableArchitecture
 import Foundation
@@ -38,7 +34,6 @@ struct JoinFlowFeatureTests {
         } withDependencies: {
             $0.userClient.currentUserId = { myUid }
             $0.apiClient.findGameByCode = { _ in ownGame }
-            $0.apiClient.findRegistration = { _, _ in nil }
         }
         store.exhaustivity = .off
 
@@ -51,15 +46,14 @@ struct JoinFlowFeatureTests {
     @Test func hunterTypingOtherCreatorCodeIsAccepted() async {
         var game = Game.mock
         game.creatorId = "other-creator"
+        game.chickenId = "other-creator"
         game.status = .waiting
-        // PP-90 retired `Game.registration`; any user can now join at any time.
 
         let store = TestStore(initialState: JoinFlowFeature.State()) {
             JoinFlowFeature()
         } withDependencies: {
             $0.userClient.currentUserId = { "user-xyz" }
             $0.apiClient.findGameByCode = { _ in game }
-            $0.apiClient.findRegistration = { _, _ in nil }
         }
         store.exhaustivity = .off
 
@@ -72,8 +66,8 @@ struct JoinFlowFeatureTests {
     @Test func codeChangeUppercasesAndValidates() async {
         var game = Game.mock
         game.creatorId = "someone-else"
+        game.chickenId = "someone-else"
         game.status = .waiting
-        // PP-90 retired `Game.registration`.
 
         let seenCodes = LockIsolated<[String]>([])
         let store = TestStore(initialState: JoinFlowFeature.State()) {
@@ -84,7 +78,6 @@ struct JoinFlowFeatureTests {
                 seenCodes.withValue { $0.append(code) }
                 return game
             }
-            $0.apiClient.findRegistration = { _, _ in nil }
         }
         store.exhaustivity = .off
 
@@ -101,8 +94,8 @@ struct JoinFlowFeatureTests {
         var game = Game.mock
         game.id = "abc123xyz9999999999"  // gameCode = "ABC123"
         game.creatorId = "someone-else"
+        game.chickenId = "someone-else"
         game.status = .waiting
-        // PP-90 retired `Game.registration`.
 
         let callCount = LockIsolated(0)
         let store = TestStore(initialState: JoinFlowFeature.State()) {
@@ -113,7 +106,6 @@ struct JoinFlowFeatureTests {
                 callCount.withValue { $0 += 1 }
                 return game
             }
-            $0.apiClient.findRegistration = { _, _ in nil }
         }
         store.exhaustivity = .off
 
@@ -135,10 +127,4 @@ struct JoinFlowFeatureTests {
         await store.send(.joinAsHunterTapped)
         // No action received — silent no-op.
     }
-
-    // PP-90 retired the registration-required flow — anyone can join
-    // at any time, so `joinTappedIgnoredWhenRegistrationRequiredButNotRegistered`
-    // no longer has a matching production path. The legacy test is dropped.
 }
-
-#endif

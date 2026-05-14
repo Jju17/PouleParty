@@ -793,18 +793,14 @@ struct GameTests {
 
     // MARK: - Start date clamping behavior
 
-    // PP-19: `Game.registration` reference removed; test disabled
-    // pending PP-64 cleanup.
-    #if false
     @Test func startDateNotClampedWhenAboveMinimum() {
         var game = Game(id: "test")
-        // PP-90 retired `Game.registration` — registration is now unconditional.
-        // Set start date to 1 hour from now (well above 5 min minimum)
+        // PP-90: registration removed → minimum = now + 1 min.
+        // 1 hour from now is comfortably above that.
         game.startDate = .now.addingTimeInterval(3600)
         let minimum = computeMinimumStartDate(required: false, deadlineMinutes: nil)
         #expect(game.startDate > minimum, "Start date should be above minimum")
     }
-    #endif
 
     @Test func switchingToRegistrationIncreasesMinimum() {
         let openMin = computeMinimumStartDate(required: false, deadlineMinutes: nil)

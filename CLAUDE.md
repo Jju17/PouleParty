@@ -130,6 +130,7 @@ The `gameCode` is derived from the document ID (first 6 chars, uppercased).
 - **Seeded random**: Uses splitmix64-style PRNG with unsigned shifts (used at runtime for jammer noise)
 - **Game timer logic**: Countdown, zone check, winner detection, power-up activation detection
 - **Normal mode settings**: `calculateNormalModeSettings()` — auto-computes shrink params from duration
+- **Wizard zone helpers (PP-13 / PP-14, Phase 1 reference mirrors)**: `computeZoneRadius`, `generateDriftSeed`, `pickInitialZoneCenter` in iOS `Models/GameSettings.swift` and Android `model/GameSettings.kt`. These mirror `functions/src/zoneCalculation.ts` (PP-69 source of truth). Pinned by `ZoneCalculationTests.swift` + `ZoneCalculationTest.kt` + `functions/test/zoneCalculation.test.ts` (golden distances 50 m / 500 m / 1 km / 2 km / 10 km, interior-margin invariant, lens-containment invariant). Scheduled for removal in PP-13 Phase 2 / PP-14 Phase 2.
 - **Power-up spawning reference**: `generatePowerUps()` exists on iOS + Android as a reference mirror of the authoritative TS implementation in `functions/src/powerUpSpawn.ts`. Not called at runtime but kept so parity tests catch accidental drift. The TS port — `generatePowerUpsServer`, `interpolateZoneCenterServer`, `deterministicDriftCenterServer`, `filterEnabledTypesServer` — has its own unit tests under `functions/test/`.
 
 When modifying any of these, **always update both platforms** (and the TS version when applicable) and verify with unit tests that outputs match for the same inputs.

@@ -1,11 +1,12 @@
 package dev.rahier.pouleparty.ui.gamemastermap
 
 import dev.rahier.pouleparty.model.ChallengeCompletion
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -27,6 +28,7 @@ import org.junit.Test
  * each time). The simulator below mirrors the iOS equivalent so any
  * regression surfaces on both platforms.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class GameMasterValidationTest {
 
     private fun makeCompletion(
@@ -101,7 +103,7 @@ class GameMasterValidationTest {
     // ── Anti-doublon under concurrency (oneShot semantics) ────────
 
     @Test
-    fun `concurrent validations on the same challenge credit exactly once`() = runTest(StandardTestDispatcher()) {
+    fun `concurrent validations on the same challenge credit exactly once`() = runTest(UnconfinedTestDispatcher()) {
         // Two GMs tap "validate" at the same instant. Mirrors the
         // Firestore-transaction read-then-write loop so the test
         // proves the model contract, not just the happy path.
@@ -117,7 +119,7 @@ class GameMasterValidationTest {
     }
 
     @Test
-    fun `multiple distinct challenges validated concurrently each credit once`() = runTest(StandardTestDispatcher()) {
+    fun `multiple distinct challenges validated concurrently each credit once`() = runTest(UnconfinedTestDispatcher()) {
         // Same test but for two DIFFERENT challenges — both should
         // credit. Pins the "no false positive idempotency" half of
         // the contract.

@@ -1,14 +1,51 @@
 package dev.rahier.pouleparty.model
 
+import android.location.Location
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.GeoPoint
 import dev.rahier.pouleparty.powerups.model.PowerUpType
+import io.mockk.every
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
+import org.junit.After
 import org.junit.Assert.*
+import org.junit.Before
 import org.junit.Test
 import java.util.Date
 import java.util.UUID
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.pow
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 class GameTest {
+
+    /** PP-13 / PP-69: `computeZoneRadius` calls `Location.distanceBetween` which
+     *  is an Android stub on the JVM. Mock it with a JVM-side Haversine so the
+     *  parity tests below can drive real distances. Mirrors the iOS
+     *  `CLLocation.distance(from:)` semantics: returns metres. */
+    @Before
+    fun mockLocationDistance() {
+        mockkStatic(Location::class)
+        every { Location.distanceBetween(any(), any(), any(), any(), any()) } answers {
+            val lat1 = Math.toRadians(arg<Double>(0))
+            val lon1 = Math.toRadians(arg<Double>(1))
+            val lat2 = Math.toRadians(arg<Double>(2))
+            val lon2 = Math.toRadians(arg<Double>(3))
+            val results = arg<FloatArray>(4)
+            val dlat = lat2 - lat1
+            val dlon = lon2 - lon1
+            val a = sin(dlat / 2).pow(2) + cos(lat1) * cos(lat2) * sin(dlon / 2).pow(2)
+            val c = 2 * atan2(sqrt(a), sqrt(1 - a))
+            results[0] = (6_371_000.0 * c).toFloat()
+        }
+    }
+
+    @After
+    fun unmockLocationDistance() {
+        unmockkStatic(Location::class)
+    }
 
     @Test
     fun `gameCode is first 6 chars uppercased`() {
