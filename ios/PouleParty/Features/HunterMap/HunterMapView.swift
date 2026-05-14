@@ -96,6 +96,18 @@ struct HunterMapView: View {
                 Text("Enter the 4-digit code shown by the chicken.")
             }
             .mapCommonOverlays(store.state)
+            .overlay(alignment: .top) {
+                // PP-36: the "-1 point / 5 s" pill sits just below the
+                // red "Return to the zone!" banner. Phase gates mirror
+                // the reducer's penalty gate so the indicator and the
+                // actual writes can't disagree.
+                if store.isOutsideZone,
+                   store.hasGameStarted,
+                   !store.isGameOver,
+                   !store.isDebugPreview {
+                    OutOfZonePenaltyOverlay()
+                }
+            }
             .overlay {
                 if !store.hasGameStarted {
                     PreGameOverlay(

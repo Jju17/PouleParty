@@ -432,6 +432,28 @@ fun HunterMapScreen(
                         .padding(horizontal = 24.dp, vertical = 12.dp)
                 )
             }
+
+            // PP-36: "-1 point / 5 s" pill sits just below the red
+            // "Return to the zone!" banner. Phase gates mirror the
+            // ViewModel's penalty gate so indicator and writes can't
+            // disagree.
+            if (state.isOutsideZone &&
+                state.hasGameStarted &&
+                !state.isGameOver &&
+                !state.isDebugPreview
+            ) {
+                Text(
+                    text = stringResource(R.string.out_of_zone_losing_points),
+                    color = Color.White,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 192.dp)
+                        .background(ZoneDanger.copy(alpha = 0.75f), RoundedCornerShape(percent = 50))
+                        .padding(horizontal = 14.dp, vertical = 8.dp)
+                )
+            }
         }
     }
 

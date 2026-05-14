@@ -4042,6 +4042,29 @@
           }
         }
       }
+    },
+    "⚠️ Out of zone: losing points" : {
+      "comment" : "PP-36 hunter map pill shown below the red zone-warning banner, surfacing the -1 point / 5 s penalty.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⚠️ Out of zone: losing points"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⚠️ Hors zone : tu perds des points"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⚠️ Buiten de zone: je verliest punten"
+          }
+        }
+      }
     }
   },
   "version" : "1.1"

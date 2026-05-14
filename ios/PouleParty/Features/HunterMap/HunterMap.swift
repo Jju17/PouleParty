@@ -70,6 +70,21 @@ struct HunterMapFeature {
         /// `hunterLocations` writes).
         var isGameOver: Bool = false
 
+        /// PP-36: mirrors the chicken-side `isDebugPreview` flag —
+        /// when the hunter map is being driven by a previewer (Xcode
+        /// canvas, debug tools, snapshot tests) the out-of-zone
+        /// penalty must not fire. Live runs always leave this `false`.
+        var isDebugPreview: Bool = false
+
+        /// PP-36: timestamp of the last out-of-zone penalty tick.
+        /// The 1 s timer fires the decrement only when the previous
+        /// tick was ≥ `outOfZonePenaltyIntervalSeconds` ago, so the
+        /// penalty is exactly -1 point per 5 s while the hunter
+        /// stays outside. Reset to `nil` whenever the hunter is
+        /// inside the zone, so re-exit starts a fresh 5 s window
+        /// rather than firing immediately on re-cross.
+        var lastPenaltyAt: Date? = nil
+
         // MARK: - MapFeatureState passthroughs (child → parent surface)
         var availablePowerUps: [PowerUp] { powerUps.available }
         var collectedPowerUps: [PowerUp] { powerUps.collected }
@@ -1009,6 +1024,43 @@ struct HunterMapFeature {
                         zoneRadius: circle.radius
                     )
                     state.isOutsideZone = zoneResult.isOutsideZone
+                }
+
+                // PP-36: out-of-zone penalty (-1 point / 5 s).
+                // Phase gates: only while the hunt is actually running.
+                // `hasGameStarted` (hunter start passed) is already
+                // checked above; we additionally exclude `isGameOver`
+                // and the chicken's debug preview screen. The
+                // `lastPenaltyAt` guard is computed against `nowDate`
+                // so the very first out-of-zone tick fires after a
+                // full 5 s, not immediately on re-cross — matches the
+                // 4 s → 0 / 12 s → -2 acceptance criteria.
+                if state.isOutsideZone,
+                   !state.isGameOver,
+                   !state.isDebugPreview,
+                   !state.hunterId.isEmpty {
+                    let now = state.nowDate
+                    let dueAt = state.lastPenaltyAt
+                        .map { $0.addingTimeInterval(AppConstants.outOfZonePenaltyIntervalSeconds) }
+                    if dueAt == nil {
+                        // First out-of-zone tick: start the 5 s window.
+                        state.lastPenaltyAt = now
+                    } else if let due = dueAt, now >= due {
+                        state.lastPenaltyAt = now
+                        let gameId = state.game.id
+                        let hunterId = state.hunterId
+                        return .run { _ in
+                            do {
+                                try await apiClient.decrementTotalPoints(gameId, hunterId)
+                            } catch {
+                                logger.error("Out-of-zone penalty write failed: \(error.localizedDescription)")
+                            }
+                        }
+                    }
+                } else if !state.isOutsideZone, state.lastPenaltyAt != nil {
+                    // Back inside the zone → reset the window so the
+                    // next exit starts a fresh 5 s countdown.
+                    state.lastPenaltyAt = nil
                 }
 
                 // Update Live Activity only when state meaningfully changes

@@ -62,6 +62,12 @@ struct ApiClient {
     var challengesStream: () -> AsyncStream<[Challenge]>
     var challengeCompletionsStream: (String) -> AsyncStream<[ChallengeCompletion]>
     var markChallengeCompleted: (String, String, String, String, Int) async throws -> Void
+    /// PP-36: decrement the hunter's `totalPoints` by 1 atomically.
+    /// Used by the out-of-zone penalty timer (-1 point every 5 s while
+    /// the hunter is outside the zone). Transactional so concurrent
+    /// writes can't lose updates; idempotent in the sense that the
+    /// reducer's `lastPenaltyAt` guard prevents double-tick decrements.
+    var decrementTotalPoints: (_ gameId: String, _ hunterId: String) async throws -> Void
     var fetchUserNicknames: ([String]) async throws -> [String: String]
     /// Submit a report against another player (user-generated-content moderation).
     /// Writes a doc to `/reports/{autoId}` which is readable only by the admin SDK.
@@ -171,6 +177,7 @@ extension ApiClient: TestDependencyKey {
         challengesStream: { AsyncStream { _ in } },
         challengeCompletionsStream: { _ in AsyncStream { _ in } },
         markChallengeCompleted: { _, _, _, _, _ in },
+        decrementTotalPoints: { _, _ in },
         fetchUserNicknames: { _ in [:] },
         reportPlayer: { _, _, _ in },
         newGameId: { "test-game-id" },
@@ -749,6 +756,43 @@ extension ApiClient: DependencyKey {
                         "completedChallengeIds": existing.completedChallengeIds + [challengeId],
                         "totalPoints": existing.totalPoints + points,
                         "teamName": teamName
+                    ]
+                    transaction.setData(payload, forDocument: docRef)
+                    return nil
+                }
+            }
+        },
+        decrementTotalPoints: { gameId, hunterId in
+            // PP-36: out-of-zone penalty. Read the existing completion doc,
+            // subtract 1, write back — all inside a Firestore transaction so
+            // a concurrent `markChallengeCompleted` from a parallel challenge
+            // submission can't clobber the decrement (or vice versa).
+            // If no doc exists yet (the hunter has never completed a
+            // challenge), we still seed one at -1 so the leaderboard reflects
+            // the penalty. firestore.rules permits the hunter to write their
+            // own doc as long as `totalPoints` is monotonically non-increasing
+            // — see the PP-36 rule update.
+            guard !gameId.isEmpty, !hunterId.isEmpty else {
+                logger.warning("decrementTotalPoints skipped — gameId: '\(gameId)', hunterId: '\(hunterId)'")
+                return
+            }
+            try await withRetry("decrementTotalPoints(\(gameId), \(hunterId))") {
+                let db = Firestore.firestore()
+                let docRef = db.collection(gamesCollection).document(gameId)
+                    .collection(challengeCompletionsSubcollection).document(hunterId)
+                _ = try await db.runTransaction { transaction, errorPointer in
+                    let snapshot: DocumentSnapshot
+                    do {
+                        snapshot = try transaction.getDocument(docRef)
+                    } catch let error as NSError {
+                        errorPointer?.pointee = error
+                        return nil
+                    }
+                    let existing = (try? snapshot.data(as: ChallengeCompletion.self)) ?? ChallengeCompletion()
+                    let payload: [String: Any] = [
+                        "completedChallengeIds": existing.completedChallengeIds,
+                        "totalPoints": existing.totalPoints - 1,
+                        "teamName": existing.teamName
                     ]
                     transaction.setData(payload, forDocument: docRef)
                     return nil

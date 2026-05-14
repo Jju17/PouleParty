@@ -67,6 +67,12 @@ object AppConstants {
 
     // Zone — grace period disabled, kept for future game mode
     // const val OUTSIDE_ZONE_GRACE_PERIOD_SECONDS = 30
+    /**
+     * PP-36: how often the hunter loses a point while outside the zone.
+     * Mirrors iOS `AppConstants.outOfZonePenaltyIntervalSeconds` — both
+     * platforms must tick at the same cadence.
+     */
+    const val OUT_OF_ZONE_PENALTY_INTERVAL_MS = 5_000L
 
     // Power-Ups
     const val JAMMER_NOISE_DEGREES = 0.0036 // ~200m noise for jammer power-up
