@@ -84,6 +84,14 @@
     <string name="start_zone">Startzone</string>
     <string name="final_zone">Eindzone</string>
     <string name="final_zone_hint">Tik in de startzone om het centrum van de eindzone te plaatsen</string>
+    <!-- PP-11 grootteknop (followTheChicken). -->
+    <string name="zone_size_small">Klein</string>
+    <string name="zone_size_medium">Middel</string>
+    <string name="zone_size_large">Groot</string>
+    <string name="start_zone_step_subtitle_stay">Plaats het vertrek. De zonegrootte wordt in de volgende stap berekend.</string>
+    <string name="start_zone_step_subtitle_follow">Plaats het vertrek, kies daarna een zonegrootte.</string>
+    <string name="final_zone_step_subtitle">Plaats het eindpunt op minstens 100 m van het vertrek.</string>
+    <string name="final_zone_step_subtitle_done">Tik op de kaart om de eindzone aan te passen.</string>
 
     <!-- Chicken Map -->
     <string name="you_are_chicken">Jij bent de 🐔</string>

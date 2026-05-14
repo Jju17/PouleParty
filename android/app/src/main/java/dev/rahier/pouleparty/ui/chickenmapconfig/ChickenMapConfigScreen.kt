@@ -46,6 +46,12 @@ fun ChickenMapConfigScreen(
     onFinalLocationSelected: (Point?) -> Unit,
     onRadiusChanged: (Double) -> Unit,
     isFollowMode: Boolean = false,
+    /**
+     * PP-11 / PP-12: the step view forces this so the user can only
+     * edit the pin owned by the active step. Defaults to `START` for
+     * the legacy callers that haven't been migrated.
+     */
+    forcedPinMode: MapConfigPinMode = MapConfigPinMode.START,
     viewModel: ChickenMapConfigViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -56,6 +62,10 @@ fun ChickenMapConfigScreen(
 
     LaunchedEffect(isFollowMode) {
         viewModel.setFollowMode(isFollowMode)
+    }
+
+    LaunchedEffect(forcedPinMode) {
+        viewModel.setPinMode(forcedPinMode)
     }
 
     val mapViewportState = rememberMapViewportState {
@@ -101,23 +111,29 @@ fun ChickenMapConfigScreen(
                 }
             }
 
-            // Initial zone circle — neon glow (4 layers like iOS)
-            val circlePoints = circlePolygonPoints(state.markerPosition, state.radius)
-            PolylineAnnotation(points = circlePoints + listOf(circlePoints.first())) {
-                lineColor = CROrange.copy(alpha = 0.08f)
-                lineWidth = 16.0
-            }
-            PolylineAnnotation(points = circlePoints + listOf(circlePoints.first())) {
-                lineColor = CROrange.copy(alpha = 0.15f)
-                lineWidth = 8.0
-            }
-            PolylineAnnotation(points = circlePoints + listOf(circlePoints.first())) {
-                lineColor = CROrange.copy(alpha = 0.35f)
-                lineWidth = 4.0
-            }
-            PolylineAnnotation(points = circlePoints + listOf(circlePoints.first())) {
-                lineColor = CROrange.copy(alpha = 0.9f)
-                lineWidth = 2.5
+            // PP-11: preview circle only when the radius is actually
+            // user-controlled — i.e. followTheChicken's 3-button size
+            // picker. In stayInTheZone the radius is recomputed at the
+            // recap step (PP-13), so showing a stale default circle
+            // would mislead the user.
+            if (isFollowMode && state.pinMode == MapConfigPinMode.START) {
+                val circlePoints = circlePolygonPoints(state.markerPosition, state.radius)
+                PolylineAnnotation(points = circlePoints + listOf(circlePoints.first())) {
+                    lineColor = CROrange.copy(alpha = 0.08f)
+                    lineWidth = 16.0
+                }
+                PolylineAnnotation(points = circlePoints + listOf(circlePoints.first())) {
+                    lineColor = CROrange.copy(alpha = 0.15f)
+                    lineWidth = 8.0
+                }
+                PolylineAnnotation(points = circlePoints + listOf(circlePoints.first())) {
+                    lineColor = CROrange.copy(alpha = 0.35f)
+                    lineWidth = 4.0
+                }
+                PolylineAnnotation(points = circlePoints + listOf(circlePoints.first())) {
+                    lineColor = CROrange.copy(alpha = 0.9f)
+                    lineWidth = 2.5
+                }
             }
 
             // Start center pin
@@ -221,70 +237,68 @@ fun ChickenMapConfigScreen(
             }
         }
 
-        // Bottom bar: hint + radius slider + pin mode picker
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.BottomCenter)
-                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.92f))
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            // Hint text
-            if (state.pinMode == MapConfigPinMode.FINAL) {
-                Text(
-                    text = stringResource(R.string.final_zone_hint),
-                    style = gameboyStyle(8),
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                )
-            }
-
-            // Radius slider
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+        // PP-11 / PP-12: bottom bar is step-specific.
+        // - START in followTheChicken → 3-button size picker
+        // - START in stayInTheZone → empty (radius computed at recap)
+        // - FINAL → empty (final pin is map-tap only)
+        if (state.pinMode == MapConfigPinMode.START && isFollowMode) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter)
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.92f))
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(stringResource(R.string.zone_radius), style = gameboyStyle(9))
-                Text(
-                    stringResource(R.string.meters_format, state.radius.toInt()),
-                    style = gameboyStyle(9),
-                    color = CROrange
+                ZoneSizePicker(
+                    selectedRadius = state.radius,
+                    onSelect = {
+                        viewModel.updateRadius(it)
+                        onRadiusChanged(it)
+                    },
                 )
-            }
-            Slider(
-                value = state.radius.toFloat(),
-                onValueChange = {
-                    viewModel.updateRadius(it.toDouble())
-                    onRadiusChanged(it.toDouble())
-                },
-                valueRange = 500f..2000f,
-                steps = 14,
-                colors = SliderDefaults.colors(thumbColor = CROrange, activeTrackColor = CROrange)
-            )
-
-            // Pin mode segmented control — only relevant for Stay in the Zone mode.
-            // In Follow the Chicken, the final zone is the chicken's live position.
-            if (!isFollowMode) {
-                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    SegmentedButton(
-                        selected = state.pinMode == MapConfigPinMode.START,
-                        onClick = { viewModel.setPinMode(MapConfigPinMode.START) },
-                        shape = SegmentedButtonDefaults.itemShape(0, 2)
-                    ) {
-                        Text(stringResource(R.string.start_zone))
-                    }
-                    SegmentedButton(
-                        selected = state.pinMode == MapConfigPinMode.FINAL,
-                        onClick = { viewModel.setPinMode(MapConfigPinMode.FINAL) },
-                        shape = SegmentedButtonDefaults.itemShape(1, 2)
-                    ) {
-                        Text(stringResource(R.string.final_zone))
-                    }
-                }
             }
         }
 
+    }
+}
+
+/**
+ * PP-11 — 3-button size picker shown on the `startZoneSetup` step in
+ * followTheChicken mode. Mirrors the iOS `zoneSizePicker` so both
+ * platforms surface the same Small / Medium / Large preset choices.
+ */
+@Composable
+private fun ZoneSizePicker(
+    selectedRadius: Double,
+    onSelect: (Double) -> Unit,
+) {
+    val sizes = listOf(
+        Triple(stringResource(R.string.zone_size_small), 500.0, "500 m"),
+        Triple(stringResource(R.string.zone_size_medium), 1000.0, "1000 m"),
+        Triple(stringResource(R.string.zone_size_large), 2000.0, "2000 m"),
+    )
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        sizes.forEach { (label, meters, subtitle) ->
+            val isSelected = selectedRadius == meters
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(
+                        if (isSelected) CROrange.copy(alpha = 0.95f)
+                        else MaterialTheme.colorScheme.surface
+                    )
+                    .clickable { onSelect(meters) }
+                    .padding(vertical = 10.dp),
+            ) {
+                Text(label, style = gameboyStyle(10), color = if (isSelected) Color.Black else MaterialTheme.colorScheme.onBackground)
+                Text(subtitle, style = gameboyStyle(7), color = (if (isSelected) Color.Black else MaterialTheme.colorScheme.onBackground).copy(alpha = 0.7f))
+            }
+        }
     }
 }

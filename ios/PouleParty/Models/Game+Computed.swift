@@ -27,6 +27,20 @@ extension Game {
         }
     }
 
+    /// PP-11 / PP-13 — user-placed start pin. Distinct from `zone.center`
+    /// (the geometric center of the shrinking disc, computed by PP-13).
+    /// Falls back to `zone.center` for legacy games written before the
+    /// `startPin` field existed, so existing readers keep working.
+    var startPinLocation: CLLocationCoordinate2D {
+        get {
+            (self.zone.startPin ?? self.zone.center).toCLCoordinates
+        }
+        set {
+            let newCoordinates = newValue
+            self.zone.startPin = GeoPoint(latitude: newCoordinates.latitude, longitude: newCoordinates.longitude)
+        }
+    }
+
     var finalLocation: CLLocationCoordinate2D? {
         get {
             self.zone.finalCenter?.toCLCoordinates

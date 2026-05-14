@@ -17,7 +17,22 @@ data class Timing(
 )
 
 data class Zone(
+    /**
+     * Initial geometric center of the shrinking zone disc. PP-13
+     * recomputes this on the recap step so the first circle
+     * contains BOTH `startPin` and `finalCenter` without being
+     * centered on either.
+     */
     val center: GeoPoint = GeoPoint(AppConstants.DEFAULT_LATITUDE, AppConstants.DEFAULT_LONGITUDE),
+    /**
+     * PP-11 / PP-13: user-placed start pin. Decoupled from
+     * `center` so the recap can pick a non-centered initial disc
+     * while keeping the visual start marker exactly where the
+     * chicken dropped it. `null` for legacy games written before
+     * the split — readers fall back to `center` (see
+     * `Game.startPinPoint`).
+     */
+    val startPin: GeoPoint? = null,
     val finalCenter: GeoPoint? = null,
     val radius: Double = 1500.0,
     val shrinkIntervalMinutes: Double = 5.0,
@@ -144,6 +159,16 @@ data class Game(
     val initialLocation: Point
         get() = Point.fromLngLat(zone.center.longitude, zone.center.latitude)
 
+    /** PP-11 / PP-13 — user-placed start pin. Falls back to
+     *  `zone.center` for legacy games written before the `startPin`
+     *  field existed, so existing readers keep working. */
+    @get:Exclude
+    val startPinPoint: Point
+        get() {
+            val pin = zone.startPin ?: zone.center
+            return Point.fromLngLat(pin.longitude, pin.latitude)
+        }
+
     @get:Exclude
     val finalLocation: Point?
         get() = zone.finalCenter?.let { Point.fromLngLat(it.longitude, it.latitude) }
@@ -201,6 +226,16 @@ data class Game(
     fun withEndDate(date: Date): Game = copy(timing = timing.copy(end = Timestamp(date)))
     fun withInitialLocation(point: Point): Game = copy(
         zone = zone.copy(center = GeoPoint(point.latitude(), point.longitude()))
+    )
+
+    /** PP-11 / PP-13 — write the user-placed start pin AND mirror it
+     *  into `zone.center` so the PP-11 preview circle stays anchored
+     *  on the pin until PP-13 picks a non-centered computed center. */
+    fun withStartPin(point: Point): Game = copy(
+        zone = zone.copy(
+            startPin = GeoPoint(point.latitude(), point.longitude()),
+            center = GeoPoint(point.latitude(), point.longitude()),
+        )
     )
     fun withFinalLocation(point: Point?): Game = copy(
         zone = zone.copy(finalCenter = point?.let { GeoPoint(it.latitude(), it.longitude()) })

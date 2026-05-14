@@ -37,4 +37,16 @@ sealed interface GameCreationIntent {
     data class GameMasterEnabledChanged(val enabled: Boolean) : GameCreationIntent
     /** PP-88: chicken typed into the 4-digit GameMaster password field. */
     data class GameMasterPasswordChanged(val password: String) : GameCreationIntent
+    /**
+     * PP-13 phase 1 — fired when the wizard enters `ZONES_RECAP`.
+     * Recomputes `Game.zone.radius` from the placed pins (via the
+     * client-side `computeZoneRadius` mirror of PP-69) and allocates a
+     * fresh `driftSeed` if none is set.
+     */
+    object ZonesRecapEntered : GameCreationIntent
+    /**
+     * PP-14 phase 1 — Shuffle button on the recap step regenerates the
+     * drift seed; preview circles redraw deterministically.
+     */
+    object ShuffleDriftSeed : GameCreationIntent
 }

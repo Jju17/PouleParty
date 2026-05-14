@@ -86,6 +86,14 @@
     <string name="start_zone">Start zone</string>
     <string name="final_zone">Final zone</string>
     <string name="final_zone_hint">Tap inside the start zone to place the final zone center</string>
+    <!-- PP-11 zone size picker (followTheChicken). -->
+    <string name="zone_size_small">Small</string>
+    <string name="zone_size_medium">Medium</string>
+    <string name="zone_size_large">Large</string>
+    <string name="start_zone_step_subtitle_stay">Place the start. The zone size will be computed on the next step.</string>
+    <string name="start_zone_step_subtitle_follow">Place the start, then pick a zone size.</string>
+    <string name="final_zone_step_subtitle">Place the final pin at least 100 m from the start.</string>
+    <string name="final_zone_step_subtitle_done">Tap the map to adjust the final zone.</string>
 
     <!-- Chicken Map -->
     <string name="you_are_chicken">You are the 🐔</string>

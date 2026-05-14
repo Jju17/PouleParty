@@ -148,26 +148,29 @@ func zoneOverlayContent(circle: CircleOverlay, overlayColor: UIColor) -> some Ma
 
 // MARK: - Debug preview (all shrunk circles at once)
 
-/// Rainbow palette cycled over the debug-preview circle index so
-/// successive shrinks are visually distinguishable. Intentionally
-/// stable (not random) so iOS and Android produce the exact same
-/// color at each step, making it easy to cross-check side-by-side.
-private let zonePreviewPalette: [Color] = [
-    .red, .orange, .yellow, .green, .mint, .teal, .cyan,
-    .blue, .indigo, .purple, .pink, .brown
-]
-
-func zonePreviewColor(forIndex index: Int) -> Color {
-    zonePreviewPalette[((index % zonePreviewPalette.count) + zonePreviewPalette.count) % zonePreviewPalette.count]
+/// Wide HSV hue sweep so successive shrink circles are as distinct
+/// as possible visually while staying on a coherent monotonic curve.
+/// Goes orange (~28°) → yellow → green → cyan → blue → purple →
+/// magenta (~332°) — every neighbouring pair differs by enough hue
+/// for the chicken to read the shrink order at a glance, no matter
+/// how many circles the schedule produces. Stable across iOS +
+/// Android by matching the Kotlin `zonePreviewColor` HSV formula.
+func zonePreviewColor(forIndex index: Int, totalCount: Int) -> Color {
+    guard totalCount > 1 else { return Color.CROrange }
+    let t = max(0, min(1, Double(index) / Double(totalCount - 1)))
+    // Hue values are SwiftUI's [0, 1] fraction (× 360 = degrees).
+    let hue = 0.08 + t * (0.92 - 0.08)
+    return Color(hue: hue, saturation: 0.95, brightness: 0.95)
 }
 
 /// Draws every future shrunk circle stacked on top of the map. Used
-/// only by the long-press-on-Create-Party easter egg so drift/shrink
-/// parity between iOS and Android can be eyeballed at a glance.
+/// by both the wizard recap step and the long-press-on-Create-Party
+/// debug preview.
 @MapContentBuilder
 func zonePreviewCirclesContent(circles: [DebugShrinkCircle]) -> some MapContent {
+    let total = circles.count
     ForEvery(Array(circles.enumerated()), id: \.offset) { pair in
-        let color = zonePreviewColor(forIndex: pair.offset)
+        let color = zonePreviewColor(forIndex: pair.offset, totalCount: total)
         let ring = Polygon(center: pair.element.center, radius: pair.element.radius, vertices: 96)
         PolylineAnnotation(lineCoordinates: ring.outerRing.coordinates)
             .lineColor(StyleColor(UIColor(color).withAlphaComponent(0.95)))

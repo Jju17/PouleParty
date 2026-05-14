@@ -100,21 +100,47 @@ class GameCreationViewModelTest {
     // ── Steps flow ──
 
     @Test
-    fun `steps are in correct order when participating`() {
+    fun `steps are in correct order when participating in stayInTheZone`() {
         val vm = createViewModel()
         val steps = vm.uiState.value.steps
         assertEquals(GameCreationStep.PARTICIPATION, steps[0])
         assertEquals(GameCreationStep.MAX_PLAYERS, steps[1])
-        assertEquals(GameCreationStep.GAME_MODE, steps[2])
-        // PP-88: GAME_MASTER_PASSWORD lands right after GAME_MODE.
-        assertEquals(GameCreationStep.GAME_MASTER_PASSWORD, steps[3])
-        assertEquals(GameCreationStep.ZONE_SETUP, steps[4])
-        assertEquals(GameCreationStep.START_TIME, steps[5])
-        assertEquals(GameCreationStep.DURATION, steps[6])
-        assertEquals(GameCreationStep.HEAD_START, steps[7])
-        assertEquals(GameCreationStep.POWER_UPS, steps[8])
-        assertEquals(GameCreationStep.CHICKEN_SEES_HUNTERS, steps[9])
-        assertEquals(GameCreationStep.RECAP, steps[10])
+        // Wizard order: When → How long → Mode → Where → Rules.
+        // GAME_MODE sits right before the zone block (it decides
+        // whether FINAL_ZONE_SETUP exists), and the timing trio
+        // comes earlier so PP-13's recap has a valid duration
+        // window for the shrink schedule.
+        assertEquals(GameCreationStep.START_TIME, steps[2])
+        assertEquals(GameCreationStep.DURATION, steps[3])
+        assertEquals(GameCreationStep.HEAD_START, steps[4])
+        assertEquals(GameCreationStep.GAME_MODE, steps[5])
+        // PP-11 / PP-12 / PP-13: zone setup as three consecutive
+        // sub-steps in stayInTheZone (default mode).
+        assertEquals(GameCreationStep.START_ZONE_SETUP, steps[6])
+        assertEquals(GameCreationStep.FINAL_ZONE_SETUP, steps[7])
+        assertEquals(GameCreationStep.ZONES_RECAP, steps[8])
+        // PP-70 / PP-88: GameMaster password sits with the other
+        // modifier toggles at the tail of the wizard.
+        assertEquals(GameCreationStep.GAME_MASTER_PASSWORD, steps[9])
+        assertEquals(GameCreationStep.POWER_UPS, steps[10])
+        assertEquals(GameCreationStep.CHICKEN_SEES_HUNTERS, steps[11])
+        assertEquals(GameCreationStep.RECAP, steps[12])
+        assertEquals(13, steps.size)
+    }
+
+    @Test
+    fun `steps skip FINAL_ZONE_SETUP in followTheChicken`() {
+        val vm = createViewModel()
+        vm.onIntent(GameCreationIntent.GameModeChanged(dev.rahier.pouleparty.model.GameMod.FOLLOW_THE_CHICKEN))
+        val steps = vm.uiState.value.steps
+        // PP-12: no `finalCenter` in followTheChicken — the zone
+        // tracks the chicken's live position, so FINAL_ZONE_SETUP is
+        // dropped from the sequence (forward + back). The recap step
+        // (PP-13) stays — it shows a single circle.
+        assertTrue(GameCreationStep.START_ZONE_SETUP in steps)
+        assertFalse(GameCreationStep.FINAL_ZONE_SETUP in steps)
+        assertTrue(GameCreationStep.ZONES_RECAP in steps)
+        assertEquals(12, steps.size)
     }
 
     @Test
@@ -126,8 +152,10 @@ class GameCreationViewModelTest {
         assertEquals(GameCreationStep.CHICKEN_SELECTION, steps[1])
         assertEquals(GameCreationStep.MAX_PLAYERS, steps[2])
         assertEquals(GameCreationStep.GAME_MODE, steps[3])
-        // PP-90 removed REGISTRATION step (11 base + chickenSelection).
-        assertEquals(12, steps.size)
+        // PP-11 / PP-12 / PP-13 split ZONE_SETUP into 3 sub-steps in
+        // stayInTheZone (default), so total grows to 14 with
+        // chickenSelection.
+        assertEquals(14, steps.size)
     }
 
     @Test
@@ -337,6 +365,36 @@ class GameCreationViewModelTest {
         vm.onIntent(GameCreationIntent.GameModeChanged(GameMod.FOLLOW_THE_CHICKEN))
         vm.onIntent(GameCreationIntent.LocationSelected(Point.fromLngLat(4.4, 50.9)))
         assertTrue(vm.uiState.value.isZoneConfigured)
+    }
+
+    @Test
+    fun `isFinalZoneConfigured false when final is closer than 100 m to start`() {
+        val vm = createViewModel()
+        vm.onIntent(GameCreationIntent.GameModeChanged(GameMod.STAY_IN_THE_ZONE))
+        vm.onIntent(GameCreationIntent.LocationSelected(Point.fromLngLat(4.4, 50.9)))
+        // ~10 m offset: roughly 0.00009° in latitude near 51°N.
+        vm.onIntent(GameCreationIntent.FinalLocationSelected(Point.fromLngLat(4.4, 50.90009)))
+        assertFalse("Final < 100 m from start should not satisfy PP-12", vm.uiState.value.isFinalZoneConfigured)
+        assertFalse(vm.uiState.value.isZoneConfigured)
+    }
+
+    @Test
+    fun `isFinalZoneConfigured true when final is far enough`() {
+        val vm = createViewModel()
+        vm.onIntent(GameCreationIntent.GameModeChanged(GameMod.STAY_IN_THE_ZONE))
+        vm.onIntent(GameCreationIntent.LocationSelected(Point.fromLngLat(4.4, 50.9)))
+        // ~150 m offset: a hair over PP-12's threshold.
+        vm.onIntent(GameCreationIntent.FinalLocationSelected(Point.fromLngLat(4.4, 50.9015)))
+        assertTrue(vm.uiState.value.isFinalZoneConfigured)
+        assertTrue(vm.uiState.value.isZoneConfigured)
+    }
+
+    @Test
+    fun `isStartZoneConfigured tracks start pin only`() {
+        val vm = createViewModel()
+        assertFalse(vm.uiState.value.isStartZoneConfigured)
+        vm.onIntent(GameCreationIntent.LocationSelected(Point.fromLngLat(4.4, 50.9)))
+        assertTrue(vm.uiState.value.isStartZoneConfigured)
     }
 
     // ── Minimum start date ──

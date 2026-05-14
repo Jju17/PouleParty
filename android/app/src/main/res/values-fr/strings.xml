@@ -232,6 +232,14 @@
     <string name="start_zone">Zone de départ</string>
     <string name="final_zone">Zone finale</string>
     <string name="final_zone_hint">Appuie dans la zone de départ pour placer le centre de la zone finale</string>
+    <!-- PP-11 picker de taille (followTheChicken). -->
+    <string name="zone_size_small">Petite</string>
+    <string name="zone_size_medium">Moyenne</string>
+    <string name="zone_size_large">Grande</string>
+    <string name="start_zone_step_subtitle_stay">Place le départ. La taille de la zone sera calculée à l\'étape suivante.</string>
+    <string name="start_zone_step_subtitle_follow">Place le départ, puis choisis une taille de zone.</string>
+    <string name="final_zone_step_subtitle">Place le pin final à au moins 100 m du départ.</string>
+    <string name="final_zone_step_subtitle_done">Tape sur la carte pour ajuster la zone finale.</string>
 
     <!-- Map Config -->
     <string name="search_address">Chercher une adresse</string>

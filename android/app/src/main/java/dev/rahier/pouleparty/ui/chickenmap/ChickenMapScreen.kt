@@ -201,8 +201,9 @@ fun ChickenMapScreen(
             // chicken can see the whole drift/shrink sequence at once,
             // each stroked in its own palette color.
             if (state.isDebugPreview) {
+                val total = state.zonePreviewCircles.size
                 state.zonePreviewCircles.forEachIndexed { index, circle ->
-                    val color = zonePreviewColor(index)
+                    val color = zonePreviewColor(index, total)
                     val points = circlePolygonPoints(circle.center, circle.radius)
                     PolylineAnnotation(points = points + listOf(points.first())) {
                         lineColor = color.copy(alpha = 0.95f)

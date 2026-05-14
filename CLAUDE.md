@@ -23,6 +23,12 @@ There's also a **web** landing page (React/Vite) and **Cloud Functions** backend
 ### Zone Mechanics
 The zone is a circle that shrinks periodically. The shrink interval and amount are configurable. In "Stay in the Zone" mode, the center drifts deterministically using a seed stored in the game document — every client computes the same drift. There's also a "final zone" point: as the radius shrinks, the center interpolates linearly from start to final position.
 
+### Zone Setup Wizard (PP-11 / PP-12)
+The game-creation wizard splits zone setup into two dedicated sub-steps:
+
+- **`startZoneSetup`** (iOS `case .startZoneSetup`, Android `START_ZONE_SETUP`): the chicken places the **start pin**. In `stayInTheZone` the radius slider is hidden — the radius is recomputed at the recap step (PP-13) from the two pins. In `followTheChicken` a 3-button **size picker** (Small 500m / Medium 1000m / Large 2000m) sets `Game.zone.radius` inline. Next is gated by `isStartZoneConfigured` (start ≠ default Brussels).
+- **`finalZoneSetup`** (iOS `case .finalZoneSetup`, Android `FINAL_ZONE_SETUP`): `stayInTheZone` only — skipped entirely (forward and back) in `followTheChicken`. The start pin renders as a read-only reference; the user can only edit the final pin. Next is gated by `isFinalZoneConfigured` (final ≠ null AND haversine ≥ 100 m from start). Tapping the start pin away on PP-11 within 100 m of an existing final clears the final so PP-12 forces a re-placement.
+
 ### Power-Ups
 6 types, split between chicken and hunter. **Server-authoritative spawning** (since April 2026): a Cloud Function (`spawnPowerUpBatch`) generates deterministically from the game's `zone.driftSeed`, snaps to nearest roads via Mapbox API, and writes docs directly — clients only consume via `powerUpsStream`. Initial batch (5) fires at `timing.start`; periodic batches (2) fire at each zone shrink. Collected by proximity (30m). Some have timed effects tracked as timestamps in `powerUps.activeEffects` on the game document. In `stayInTheZone` mode, position-dependent chicken power-ups (invisibility, decoy, jammer) are automatically disabled server-side.
 

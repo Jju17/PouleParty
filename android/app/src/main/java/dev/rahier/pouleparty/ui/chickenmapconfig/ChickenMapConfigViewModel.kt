@@ -108,53 +108,38 @@ class ChickenMapConfigViewModel @Inject constructor(
 
     fun onMapTapped(point: Point) {
         val state = _uiState.value
-        if (state.pinMode == MapConfigPinMode.FINAL) {
-            // Validate: final point must be within initial circle
-            val results = FloatArray(1)
-            Location.distanceBetween(
-                state.markerPosition.latitude(), state.markerPosition.longitude(),
-                point.latitude(), point.longitude(),
-                results
-            )
-            if (results[0] > state.radius) {
-                // Outside zone: treat as new start zone placement
+        // PP-11 / PP-12: each step owns one pinMode, forced via
+        // `setPinMode` by `StartZoneSetupStep` / `FinalZoneSetupStep`.
+        // The recap step (PP-13) will recompute the radius from the two
+        // pins, so we no longer constrain final to fit inside an
+        // arbitrary slider-controlled radius — only the ≥ 100 m
+        // minimum, enforced when Next is tapped via
+        // `isFinalZoneConfigured`.
+        when (state.pinMode) {
+            MapConfigPinMode.FINAL -> {
+                _uiState.update { it.copy(finalMarkerPosition = point) }
+            }
+            MapConfigPinMode.START -> {
                 val zoom = zoomForRadius(state.radius, point.latitude()).toFloat()
                 _uiState.update {
                     it.copy(
                         markerPosition = point,
                         cameraCenter = point,
                         cameraZoom = zoom,
-                        finalMarkerPosition = null,
-                        pinMode = if (state.isFollowMode) MapConfigPinMode.START else MapConfigPinMode.FINAL
                     )
                 }
-                return
-            }
-
-            _uiState.update { it.copy(finalMarkerPosition = point) }
-        } else {
-            val zoom = zoomForRadius(state.radius, point.latitude()).toFloat()
-            _uiState.update {
-                it.copy(
-                    markerPosition = point,
-                    cameraCenter = point,
-                    cameraZoom = zoom,
-                    // Auto-switch to final mode after placing start, but only in
-                    // Stay in the Zone mode. Follow the Chicken doesn't use a manual final zone.
-                    pinMode = if (state.isFollowMode) MapConfigPinMode.START else MapConfigPinMode.FINAL
-                )
-            }
-
-            // Validate existing final zone — clear if now outside new start zone
-            _uiState.value.finalMarkerPosition?.let { finalPos ->
-                val results = FloatArray(1)
-                Location.distanceBetween(
-                    point.latitude(), point.longitude(),
-                    finalPos.latitude(), finalPos.longitude(),
-                    results
-                )
-                if (results[0] > state.radius) {
-                    _uiState.update { it.copy(finalMarkerPosition = null) }
+                // If the new start is < 100 m from the existing final,
+                // clear final so PP-12 forces the user to re-place.
+                _uiState.value.finalMarkerPosition?.let { finalPos ->
+                    val results = FloatArray(1)
+                    Location.distanceBetween(
+                        point.latitude(), point.longitude(),
+                        finalPos.latitude(), finalPos.longitude(),
+                        results
+                    )
+                    if (results[0] < 100f) {
+                        _uiState.update { it.copy(finalMarkerPosition = null) }
+                    }
                 }
             }
         }
@@ -176,14 +161,10 @@ class ChickenMapConfigViewModel @Inject constructor(
     fun onSearchResultSelected(result: SearchResult) {
         val point = Point.fromLngLat(result.longitude, result.latitude)
         val state = _uiState.value
-        if (state.pinMode == MapConfigPinMode.FINAL) {
-            val results = FloatArray(1)
-            Location.distanceBetween(
-                state.markerPosition.latitude(), state.markerPosition.longitude(),
-                point.latitude(), point.longitude(),
-                results
-            )
-            if (results[0] <= state.radius) {
+        // PP-11 / PP-12: same logic as `onMapTapped` — each step owns
+        // one pinMode, no in-place mode flip from the search bar.
+        when (state.pinMode) {
+            MapConfigPinMode.FINAL -> {
                 _uiState.update {
                     it.copy(
                         finalMarkerPosition = point,
@@ -192,16 +173,17 @@ class ChickenMapConfigViewModel @Inject constructor(
                     )
                 }
             }
-        } else {
-            val zoom = zoomForRadius(state.radius, result.latitude).toFloat()
-            _uiState.update {
-                it.copy(
-                    markerPosition = point,
-                    cameraCenter = point,
-                    cameraZoom = zoom,
-                    searchQuery = result.title,
-                    searchResults = emptyList()
-                )
+            MapConfigPinMode.START -> {
+                val zoom = zoomForRadius(state.radius, result.latitude).toFloat()
+                _uiState.update {
+                    it.copy(
+                        markerPosition = point,
+                        cameraCenter = point,
+                        cameraZoom = zoom,
+                        searchQuery = result.title,
+                        searchResults = emptyList()
+                    )
+                }
             }
         }
     }

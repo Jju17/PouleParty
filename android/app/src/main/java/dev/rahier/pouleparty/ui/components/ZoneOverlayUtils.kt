@@ -2,33 +2,23 @@ package dev.rahier.pouleparty.ui.components
 
 import androidx.compose.ui.graphics.Color
 import com.mapbox.geojson.Point
+import dev.rahier.pouleparty.ui.theme.CROrange
 import kotlin.math.*
 
 /**
- * Rainbow palette cycled over the debug-preview circle index so
- * successive shrinks are visually distinguishable. Intentionally
- * stable (not random) so iOS and Android produce the exact same color
- * at each step, making it easy to cross-check side-by-side. Must match
- * the iOS `zonePreviewPalette` order.
+ * Wide HSV hue sweep so successive shrink circles are as distinct as
+ * possible visually while staying on a coherent monotonic curve.
+ * Goes orange (~28°) → yellow → green → cyan → blue → purple →
+ * magenta (~332°) — every neighbouring pair differs by enough hue
+ * for the chicken to read the shrink order at a glance. Stable
+ * across iOS + Android by matching the Swift `zonePreviewColor`
+ * HSV formula.
  */
-private val zonePreviewPalette: List<Color> = listOf(
-    Color(0xFFFF0000), // red
-    Color(0xFFFF9500), // orange
-    Color(0xFFFFCC00), // yellow
-    Color(0xFF34C759), // green
-    Color(0xFF00C7BE), // mint
-    Color(0xFF30B0C7), // teal
-    Color(0xFF32ADE6), // cyan
-    Color(0xFF007AFF), // blue
-    Color(0xFF5856D6), // indigo
-    Color(0xFFAF52DE), // purple
-    Color(0xFFFF2D55), // pink
-    Color(0xFFA2845E), // brown
-)
-
-fun zonePreviewColor(index: Int): Color {
-    val size = zonePreviewPalette.size
-    return zonePreviewPalette[((index % size) + size) % size]
+fun zonePreviewColor(index: Int, totalCount: Int): Color {
+    if (totalCount <= 1) return CROrange
+    val t = (index.toFloat() / (totalCount - 1).toFloat()).coerceIn(0f, 1f)
+    val hue = 28f + t * (332f - 28f)
+    return Color.hsv(hue = hue, saturation = 0.95f, value = 0.95f)
 }
 
 /**

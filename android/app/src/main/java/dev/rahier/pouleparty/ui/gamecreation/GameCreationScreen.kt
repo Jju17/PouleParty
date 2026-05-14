@@ -48,7 +48,9 @@ import dev.rahier.pouleparty.ui.gamecreation.steps.ParticipationStep
 import dev.rahier.pouleparty.ui.gamecreation.steps.PowerUpsStep
 import dev.rahier.pouleparty.ui.gamecreation.steps.RecapStep
 import dev.rahier.pouleparty.ui.gamecreation.steps.StartTimeStep
-import dev.rahier.pouleparty.ui.gamecreation.steps.ZoneSetupStep
+import dev.rahier.pouleparty.ui.gamecreation.steps.FinalZoneSetupStep
+import dev.rahier.pouleparty.ui.gamecreation.steps.StartZoneSetupStep
+import dev.rahier.pouleparty.ui.gamecreation.steps.ZonesRecapStep
 import dev.rahier.pouleparty.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -148,12 +150,21 @@ fun GameCreationScreen(
                         onEnabledChanged = { viewModel.onIntent(GameCreationIntent.GameMasterEnabledChanged(it)) },
                         onPasswordChanged = { viewModel.onIntent(GameCreationIntent.GameMasterPasswordChanged(it)) },
                     )
-                    GameCreationStep.ZONE_SETUP -> ZoneSetupStep(
+                    GameCreationStep.START_ZONE_SETUP -> StartZoneSetupStep(
                         game = state.game,
-                        isZoneConfigured = state.isZoneConfigured,
+                        isStartZoneConfigured = state.isStartZoneConfigured,
                         onLocationSelected = { viewModel.onIntent(GameCreationIntent.LocationSelected(it)) },
-                        onFinalLocationSelected = { viewModel.onIntent(GameCreationIntent.FinalLocationSelected(it)) },
                         onRadiusChanged = { viewModel.onIntent(GameCreationIntent.InitialRadiusChanged(it)) }
+                    )
+                    GameCreationStep.FINAL_ZONE_SETUP -> FinalZoneSetupStep(
+                        game = state.game,
+                        isFinalZoneConfigured = state.isFinalZoneConfigured,
+                        onFinalLocationSelected = { viewModel.onIntent(GameCreationIntent.FinalLocationSelected(it)) },
+                    )
+                    GameCreationStep.ZONES_RECAP -> ZonesRecapStep(
+                        game = state.game,
+                        onEntered = { viewModel.onIntent(GameCreationIntent.ZonesRecapEntered) },
+                        onShuffle = { viewModel.onIntent(GameCreationIntent.ShuffleDriftSeed) },
                     )
                     GameCreationStep.START_TIME -> StartTimeStep(
                         startDate = state.game.startDate,
@@ -229,8 +240,13 @@ private fun BottomBar(
     onStartGame: () -> Unit
 ) {
     val isRecap = state.currentStep == GameCreationStep.RECAP
-    val isZoneStep = state.currentStep == GameCreationStep.ZONE_SETUP
-    val canProceed = if (isZoneStep) state.isZoneConfigured else true
+    // PP-11 / PP-12: each map step has its own validation gate (start
+    // pin placed for PP-11, final pin ≥ 100 m from start for PP-12).
+    val canProceed = when (state.currentStep) {
+        GameCreationStep.START_ZONE_SETUP -> state.isStartZoneConfigured
+        GameCreationStep.FINAL_ZONE_SETUP -> state.isFinalZoneConfigured
+        else -> true
+    }
 
     Row(
         modifier = Modifier

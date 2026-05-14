@@ -18,24 +18,26 @@ import androidx.compose.ui.unit.dp
 import com.mapbox.geojson.Point
 import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.model.Game
-import dev.rahier.pouleparty.model.GameMod
 import dev.rahier.pouleparty.ui.chickenmapconfig.ChickenMapConfigScreen
+import dev.rahier.pouleparty.ui.chickenmapconfig.MapConfigPinMode
 import dev.rahier.pouleparty.ui.theme.CROrange
 import dev.rahier.pouleparty.ui.theme.bangerStyle
 import dev.rahier.pouleparty.ui.theme.gameboyStyle
 
+/**
+ * PP-12 — final pin step. Only shown in `stayInTheZone` (skipped
+ * entirely in `followTheChicken`). The start pin is rendered as a
+ * read-only reference; the user can only edit the final pin. Next is
+ * gated by `state.isFinalZoneConfigured` (distance ≥ 100 m).
+ */
 @Composable
-fun ZoneSetupStep(
+fun FinalZoneSetupStep(
     game: Game,
-    isZoneConfigured: Boolean,
-    onLocationSelected: (Point) -> Unit,
+    isFinalZoneConfigured: Boolean,
     onFinalLocationSelected: (Point?) -> Unit,
-    onRadiusChanged: (Double) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
-        modifier = modifier.fillMaxSize()
-    ) {
+    Column(modifier = modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -43,28 +45,25 @@ fun ZoneSetupStep(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Configure la zone",
+                text = stringResource(R.string.final_zone),
                 style = bangerStyle(28),
                 color = MaterialTheme.colorScheme.onBackground,
                 textAlign = TextAlign.Center
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                text = if (game.gameModEnum == GameMod.STAY_IN_THE_ZONE)
-                    "Place la zone de depart et la zone finale"
+                text = if (isFinalZoneConfigured)
+                    stringResource(R.string.final_zone_step_subtitle_done)
                 else
-                    "Place la zone de depart",
+                    stringResource(R.string.final_zone_step_subtitle),
                 style = gameboyStyle(9),
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                 textAlign = TextAlign.Center
             )
-            if (!isZoneConfigured) {
+            if (!isFinalZoneConfigured) {
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = if (game.gameModEnum == GameMod.STAY_IN_THE_ZONE)
-                        stringResource(R.string.set_start_and_final_zone)
-                    else
-                        stringResource(R.string.set_start_zone),
+                    text = stringResource(R.string.set_start_and_final_zone),
                     style = gameboyStyle(8),
                     color = CROrange,
                     textAlign = TextAlign.Center
@@ -80,10 +79,11 @@ fun ZoneSetupStep(
             ChickenMapConfigScreen(
                 initialRadius = game.zone.radius,
                 finalMarker = game.finalLocation,
-                onLocationSelected = onLocationSelected,
+                onLocationSelected = { /* PP-12 never edits the start */ },
                 onFinalLocationSelected = onFinalLocationSelected,
-                onRadiusChanged = onRadiusChanged,
-                isFollowMode = game.gameModEnum == GameMod.FOLLOW_THE_CHICKEN
+                onRadiusChanged = { /* No slider on PP-12 */ },
+                isFollowMode = false,
+                forcedPinMode = MapConfigPinMode.FINAL,
             )
         }
     }

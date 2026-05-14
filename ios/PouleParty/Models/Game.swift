@@ -55,7 +55,19 @@ struct Game: Codable, Equatable, Identifiable {
     }
 
     struct Zone: Codable, Equatable {
+        /// Initial geometric center of the shrinking zone disc. PP-13
+        /// recomputes this on the recap step so the first circle
+        /// contains BOTH `startPin` and `finalCenter` without being
+        /// centered on either — the user-placed start pin sits inside
+        /// the disc as a marker, not as its center.
         var center: GeoPoint = .init(latitude: AppConstants.defaultLatitude, longitude: AppConstants.defaultLongitude)
+        /// PP-11 / PP-13: user-placed start pin. Decoupled from
+        /// `center` so the recap can pick a non-centered initial disc
+        /// while keeping the visual start marker exactly where the
+        /// chicken dropped it. `nil` for legacy games created before
+        /// the split — readers fall back to `center` (see
+        /// `Game.startPinOrCenter`).
+        var startPin: GeoPoint?
         var finalCenter: GeoPoint?
         var radius: Double = 1500
         var shrinkIntervalMinutes: Double = 5
