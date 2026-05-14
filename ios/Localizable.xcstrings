@@ -2346,22 +2346,6 @@
         }
       }
     },
-    "Not available in this mode" : {
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Non disponible dans ce mode"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Niet beschikbaar in deze modus"
-          }
-        }
-      }
-    },
     "notif_chicken_start_body" : {
       "comment" : "Push notification body shown to the chicken when the game starts.",
       "extractionState" : "manual",

@@ -264,7 +264,6 @@
     <!-- Power-Up Dialogs -->
     <string name="no_power_ups_collected">Aucun power-up collecté</string>
     <string name="activate">Activer</string>
-    <string name="not_available_in_this_mode">Indisponible dans ce mode</string>
     <string name="instant">Instantané</string>
 
     <!-- Challenges -->

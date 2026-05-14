@@ -38,7 +38,7 @@ android/app/src/main/java/dev/rahier/pouleparty/
 ├── model/
 │   ├── Game.kt                      # Nested data classes (Timing, Zone, Pricing, etc.)
 │   ├── GameMod.kt, GameStatus.kt, PricingModel.kt  # Enums with firestoreValue
-│   ├── PowerUp.kt                   # PowerUp + PowerUpType enum (6 types)
+│   ├── PowerUp.kt                   # PowerUp + PowerUpType enum (6 types: zonePreview, radarPing, invisibility, zoneFreeze, decoy, jammer)
 │   ├── Registration.kt, Winner.kt, ChickenLocation.kt, HunterLocation.kt
 │   └── GameSettings.kt              # calculateNormalModeSettings()
 ├── navigation/

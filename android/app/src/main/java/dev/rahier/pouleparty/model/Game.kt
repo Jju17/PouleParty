@@ -50,7 +50,17 @@ data class ActiveEffects(
 
 data class GamePowerUps(
     val enabled: Boolean = false,
-    val enabledTypes: List<String> = PowerUpType.entries.map { it.firestoreValue },
+    /**
+     * PP-35: defaults shipped to players are intentionally narrow. Only
+     * `zoneFreeze` (chicken) and `zonePreview` (hunter) ship enabled, so
+     * a brand-new party never spawns the noisy positional power-ups.
+     * The other types stay in the enum + spawner so we can flip them
+     * back on per-game from Firestore without a release.
+     */
+    val enabledTypes: List<String> = listOf(
+        PowerUpType.ZONE_FREEZE.firestoreValue,
+        PowerUpType.ZONE_PREVIEW.firestoreValue,
+    ),
     val activeEffects: ActiveEffects = ActiveEffects()
 )
 

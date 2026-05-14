@@ -25,8 +25,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.model.GameMod
-import dev.rahier.pouleparty.powerups.model.PowerUpType
 import dev.rahier.pouleparty.ui.gamecreation.StepContainer
+import dev.rahier.pouleparty.ui.gamelogic.availablePowerUpTypes
 import dev.rahier.pouleparty.ui.theme.CROrange
 import dev.rahier.pouleparty.ui.theme.bangerStyle
 import dev.rahier.pouleparty.ui.theme.gameboyStyle
@@ -70,15 +70,12 @@ fun PowerUpsStep(
         }
 
         if (powerUpsEnabled) {
-            val unavailable = if (gameMod == GameMod.STAY_IN_THE_ZONE) {
-                setOf(
-                    PowerUpType.INVISIBILITY.firestoreValue,
-                    PowerUpType.DECOY.firestoreValue,
-                    PowerUpType.JAMMER.firestoreValue
-                )
-            } else emptySet()
-            val enabledCount = enabledPowerUpTypes.count { it !in unavailable }
-            val totalCount = PowerUpType.entries.count { it.firestoreValue !in unavailable }
+            // PP-35: strict filter. Only count and offer power-ups that
+            // actually work in the current game mode.
+            val available = availablePowerUpTypes(gameMod)
+            val availableRaw = available.map { it.firestoreValue }.toSet()
+            val enabledCount = enabledPowerUpTypes.count { it in availableRaw }
+            val totalCount = available.size
 
             Card(
                 modifier = Modifier

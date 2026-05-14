@@ -18,7 +18,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -31,6 +30,7 @@ import dev.rahier.pouleparty.R
 import androidx.compose.ui.unit.sp
 import dev.rahier.pouleparty.model.GameMod
 import dev.rahier.pouleparty.powerups.model.PowerUpType
+import dev.rahier.pouleparty.ui.gamelogic.availablePowerUpTypes
 import dev.rahier.pouleparty.ui.theme.*
 
 fun powerUpColor(type: PowerUpType): Color = when (type) {
@@ -76,10 +76,6 @@ fun powerUpEmoji(type: PowerUpType): String = when (type) {
     PowerUpType.JAMMER -> "📶"
 }
 
-private val unavailableInZone = setOf(
-    PowerUpType.INVISIBILITY, PowerUpType.DECOY, PowerUpType.JAMMER
-)
-
 @Composable
 fun PowerUpSelectionScreen(
     enabledTypes: List<String>,
@@ -87,8 +83,12 @@ fun PowerUpSelectionScreen(
     onToggle: (PowerUpType) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val chickenPowerUps = PowerUpType.entries.filter { !it.isHunterPowerUp }
-    val hunterPowerUps = PowerUpType.entries.filter { it.isHunterPowerUp }
+    // PP-35: strict mode filter. Only power-ups that work in the current
+    // game mode appear at all. No greyed-out "Not available in this mode"
+    // cards.
+    val available = availablePowerUpTypes(gameMod)
+    val chickenPowerUps = available.filter { !it.isHunterPowerUp }
+    val hunterPowerUps = available.filter { it.isHunterPowerUp }
 
     Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).statusBarsPadding().navigationBarsPadding()) {
         // Top bar
@@ -109,34 +109,36 @@ fun PowerUpSelectionScreen(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Chicken section header
-            item(span = { GridItemSpan(2) }) {
-                SectionHeader(
-                    title = "Chicken Power-Ups",
-                    emoji = "🐔",
-                    gradient = GradientChicken,
-                    textColor = Color.Black
-                )
-            }
-            items(chickenPowerUps) { type ->
-                val unavailable = gameMod == GameMod.STAY_IN_THE_ZONE && type in unavailableInZone
-                val isEnabled = !unavailable && enabledTypes.contains(type.firestoreValue)
-                PowerUpCard(type = type, isEnabled = isEnabled, unavailable = unavailable, onClick = { if (!unavailable) onToggle(type) })
+            if (chickenPowerUps.isNotEmpty()) {
+                // Chicken section header
+                item(span = { GridItemSpan(2) }) {
+                    SectionHeader(
+                        title = "Chicken Power-Ups",
+                        emoji = "🐔",
+                        gradient = GradientChicken,
+                        textColor = Color.Black
+                    )
+                }
+                items(chickenPowerUps) { type ->
+                    val isEnabled = enabledTypes.contains(type.firestoreValue)
+                    PowerUpCard(type = type, isEnabled = isEnabled, onClick = { onToggle(type) })
+                }
             }
 
-            // Hunter section header
-            item(span = { GridItemSpan(2) }) {
-                Spacer(Modifier.height(8.dp))
-                SectionHeader(
-                    title = "Hunter Power-Ups",
-                    emoji = "🎯",
-                    gradient = GradientHunter
-                )
-            }
-            items(hunterPowerUps) { type ->
-                val unavailable = gameMod == GameMod.STAY_IN_THE_ZONE && type in unavailableInZone
-                val isEnabled = !unavailable && enabledTypes.contains(type.firestoreValue)
-                PowerUpCard(type = type, isEnabled = isEnabled, unavailable = unavailable, onClick = { if (!unavailable) onToggle(type) })
+            if (hunterPowerUps.isNotEmpty()) {
+                // Hunter section header
+                item(span = { GridItemSpan(2) }) {
+                    Spacer(Modifier.height(8.dp))
+                    SectionHeader(
+                        title = "Hunter Power-Ups",
+                        emoji = "🎯",
+                        gradient = GradientHunter
+                    )
+                }
+                items(hunterPowerUps) { type ->
+                    val isEnabled = enabledTypes.contains(type.firestoreValue)
+                    PowerUpCard(type = type, isEnabled = isEnabled, onClick = { onToggle(type) })
+                }
             }
         }
     }
@@ -161,7 +163,6 @@ private fun SectionHeader(title: String, emoji: String, gradient: Brush, textCol
 private fun PowerUpCard(
     type: PowerUpType,
     isEnabled: Boolean,
-    unavailable: Boolean = false,
     onClick: () -> Unit
 ) {
     val color = powerUpColor(type)
@@ -185,7 +186,6 @@ private fun PowerUpCard(
 
     Card(
         onClick = onClick,
-        enabled = !unavailable,
         modifier = Modifier
             .fillMaxWidth()
             .height(200.dp)
@@ -196,8 +196,7 @@ private fun PowerUpCard(
                     ambientColor = color.copy(alpha = 0.5f),
                     spotColor = color.copy(alpha = 0.5f)
                 ) else Modifier.shadow(4.dp, shape, ambientColor = Color.Black.copy(alpha = 0.05f))
-            )
-            .then(if (unavailable) Modifier.alpha(0.5f) else Modifier),
+            ),
         shape = shape,
         colors = CardDefaults.cardColors(
             containerColor = if (isEnabled) Color.Transparent else MaterialTheme.colorScheme.surfaceVariant
@@ -224,22 +223,13 @@ private fun PowerUpCard(
                     style = bangerStyle(18),
                     color = if (isEnabled) textColor else MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                if (unavailable) {
-                    Text(
-                        stringResource(R.string.not_available_in_this_mode),
-                        fontSize = 8.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                        textAlign = TextAlign.Center
-                    )
-                } else {
-                    Text(
-                        type.description,
-                        fontSize = 9.sp,
-                        color = if (isEnabled) textColor.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                        textAlign = TextAlign.Center,
-                        maxLines = 3
-                    )
-                }
+                Text(
+                    type.description,
+                    fontSize = 9.sp,
+                    color = if (isEnabled) textColor.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    textAlign = TextAlign.Center,
+                    maxLines = 3
+                )
                 type.durationSeconds?.let { duration ->
                     Text(
                         "${duration}s",
