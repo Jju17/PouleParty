@@ -1084,4 +1084,53 @@ struct GameTimerLogicTests {
         #expect(zoom.isFinite)
         #expect(zoom > 8 && zoom < 18)
     }
+
+    // MARK: - PP-19 formatOvertime cross-platform parity
+    //
+    // The strings produced by `formatOvertime` are rendered byte-for-byte
+    // on the gameOver countdown bar (iOS) and the Compose CountdownView
+    // (Android). The Android mirror in `GameTimerHelperTest.kt` asserts
+    // the same inputs map to the same outputs.
+
+    @Test func formatOvertimeClampsNegativeDeltaToZero() {
+        // now < endDate → past the clamp, should still produce "+00:00".
+        let endDate = Date(timeIntervalSince1970: 1_000_000)
+        let now = endDate.addingTimeInterval(-5)
+        #expect(formatOvertime(now: now, endDate: endDate) == "+00:00")
+    }
+
+    @Test func formatOvertimeAtZeroSeconds() {
+        let endDate = Date(timeIntervalSince1970: 1_000_000)
+        #expect(formatOvertime(now: endDate, endDate: endDate) == "+00:00")
+    }
+
+    @Test func formatOvertimeAt30Seconds() {
+        let endDate = Date(timeIntervalSince1970: 1_000_000)
+        let now = endDate.addingTimeInterval(30)
+        #expect(formatOvertime(now: now, endDate: endDate) == "+00:30")
+    }
+
+    @Test func formatOvertimeAt5Minutes12Seconds() {
+        let endDate = Date(timeIntervalSince1970: 1_000_000)
+        let now = endDate.addingTimeInterval(5 * 60 + 12)
+        #expect(formatOvertime(now: now, endDate: endDate) == "+05:12")
+    }
+
+    @Test func formatOvertimeAt59Minutes59Seconds() {
+        let endDate = Date(timeIntervalSince1970: 1_000_000)
+        let now = endDate.addingTimeInterval(59 * 60 + 59)
+        #expect(formatOvertime(now: now, endDate: endDate) == "+59:59")
+    }
+
+    @Test func formatOvertimeAt1Hour() {
+        let endDate = Date(timeIntervalSince1970: 1_000_000)
+        let now = endDate.addingTimeInterval(3600)
+        #expect(formatOvertime(now: now, endDate: endDate) == "+01:00:00")
+    }
+
+    @Test func formatOvertimeAt1Hour20Minutes() {
+        let endDate = Date(timeIntervalSince1970: 1_000_000)
+        let now = endDate.addingTimeInterval(3600 + 20 * 60)
+        #expect(formatOvertime(now: now, endDate: endDate) == "+01:20:00")
+    }
 }

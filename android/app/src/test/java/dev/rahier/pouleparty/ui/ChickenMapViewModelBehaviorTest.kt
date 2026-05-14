@@ -271,6 +271,120 @@ class ChickenMapViewModelBehaviorTest {
         }
     }
 
+    // MARK: - PP-19 end-game stays on map
+    //
+    // The map must stay mounted at gameOver — `isGameOver` flips to
+    // true, no auto-transition to Victory. The GPS write loop stops
+    // (no `setChickenLocation` writes after gameOver). Mirrors iOS
+    // `ChickenMapFeatureTests` PP-19 block.
+
+    /** Scenario 1 (chicken): timeout — `nowDate >= endDate` flips
+     *  `isGameOver` and `showGameOverAlert`. No auto-transition to
+     *  Victory; map stays mounted. */
+    @Test
+    fun `pp19 timeout flips isGameOver and shows alert without transition`() {
+        val now = System.currentTimeMillis()
+        val game = dev.rahier.pouleparty.model.Game(
+            id = "test-id",
+            gameMode = dev.rahier.pouleparty.model.GameMod.FOLLOW_THE_CHICKEN.firestoreValue,
+            status = dev.rahier.pouleparty.model.GameStatus.IN_PROGRESS.firestoreValue,
+            timing = dev.rahier.pouleparty.model.Timing(
+                start = com.google.firebase.Timestamp(java.util.Date(now - 3_600_000)),
+                end = com.google.firebase.Timestamp(java.util.Date(now - 1_000))
+            )
+        )
+        io.mockk.coEvery { firestoreRepository.getConfig(any()) } returns game
+
+        val vm = createViewModel()
+        // Let loadGame land + the first timer delay(1000) elapse so the
+        // checkGameOverByTime branch fires.
+        testDispatcher.scheduler.advanceTimeBy(1_500)
+        testDispatcher.scheduler.runCurrent()
+
+        assertTrue("isGameOver must flip true on timeout", vm.uiState.value.isGameOver)
+        assertTrue("gameOver alert must show", vm.uiState.value.showGameOverAlert)
+        // The map is still mounted — no NavigateToVictory effect was
+        // dispatched (effect emission is not asserted unit-level; the
+        // post-condition is `isGameOver = true`, screen stays put).
+    }
+
+    /** Scenario 2 (chicken): zone collapse → `isGameOver` flips,
+     *  `gameOverMessage` reflects the collapse reason. No auto-transition. */
+    @Test
+    fun `pp19 zone collapse flips isGameOver and stops streams`() {
+        val now = System.currentTimeMillis()
+        // Radius is small enough that the very first shrink reaches 0,
+        // tripping `processRadiusUpdate.isGameOver`.
+        val game = dev.rahier.pouleparty.model.Game(
+            id = "test-id",
+            gameMode = dev.rahier.pouleparty.model.GameMod.FOLLOW_THE_CHICKEN.firestoreValue,
+            status = dev.rahier.pouleparty.model.GameStatus.IN_PROGRESS.firestoreValue,
+            timing = dev.rahier.pouleparty.model.Timing(
+                start = com.google.firebase.Timestamp(java.util.Date(now - 3_600_000)),
+                end = com.google.firebase.Timestamp(java.util.Date(now + 3_600_000))
+            ),
+            zone = dev.rahier.pouleparty.model.Zone(
+                center = com.google.firebase.firestore.GeoPoint(50.8466, 4.3528),
+                radius = 100.0,
+                shrinkIntervalMinutes = 0.0,           // shrink is overdue immediately
+                shrinkMetersPerUpdate = 100.0
+            )
+        )
+        io.mockk.coEvery { firestoreRepository.getConfig(any()) } returns game
+
+        val vm = createViewModel()
+        testDispatcher.scheduler.advanceTimeBy(1_500)
+        testDispatcher.scheduler.runCurrent()
+
+        assertTrue("isGameOver must flip true on zone collapse", vm.uiState.value.isGameOver)
+        assertTrue("gameOver alert must show", vm.uiState.value.showGameOverAlert)
+        assertEquals("The zone has collapsed!", vm.uiState.value.gameOverMessage)
+    }
+
+    /** Scenario 5 (chicken): once `isGameOver` is set, no further
+     *  `setChickenLocation` calls fire. The streams are cancelled the
+     *  moment `cancelStreams` runs alongside the `isGameOver` flip. */
+    @Test
+    fun `pp19 GPS writes stop after isGameOver flips on timeout`() {
+        val now = System.currentTimeMillis()
+        val game = dev.rahier.pouleparty.model.Game(
+            id = "test-id",
+            gameMode = dev.rahier.pouleparty.model.GameMod.FOLLOW_THE_CHICKEN.firestoreValue,
+            status = dev.rahier.pouleparty.model.GameStatus.IN_PROGRESS.firestoreValue,
+            timing = dev.rahier.pouleparty.model.Timing(
+                start = com.google.firebase.Timestamp(java.util.Date(now - 3_600_000)),
+                end = com.google.firebase.Timestamp(java.util.Date(now - 1_000))
+            )
+        )
+        io.mockk.coEvery { firestoreRepository.getConfig(any()) } returns game
+        // No cached fix → no pre-timer initial write. The first write
+        // would only come from the location flow, which we emit
+        // post-gameOver to prove the collector has been cancelled.
+        io.mockk.coEvery { locationRepository.getLastLocation() } returns null
+
+        val locationFlow = kotlinx.coroutines.flow.MutableSharedFlow<com.mapbox.geojson.Point>(replay = 0)
+        io.mockk.every { locationRepository.locationFlow() } returns locationFlow
+
+        val vm = createViewModel()
+        // Let the timer tick once → isGameOver flips → cancelStreams cancels
+        // the trackLocation coroutine.
+        testDispatcher.scheduler.advanceTimeBy(1_500)
+        testDispatcher.scheduler.runCurrent()
+        assertTrue("Precondition: isGameOver true", vm.uiState.value.isGameOver)
+
+        // Now try to push a fresh coord through the cancelled flow —
+        // the collector is gone, so setChickenLocation must NOT fire.
+        kotlinx.coroutines.runBlocking {
+            locationFlow.emit(com.mapbox.geojson.Point.fromLngLat(4.3600, 50.8500))
+        }
+        testDispatcher.scheduler.advanceTimeBy(100)
+        testDispatcher.scheduler.runCurrent()
+
+        io.mockk.coVerify(exactly = 0) {
+            firestoreRepository.setChickenLocation(any(), any())
+        }
+    }
+
     /**
      * In followTheChicken mode, the dedicated radar-ping loop must not be scheduled —
      * writes are already driven by the main locationFlow. We assert that by using a

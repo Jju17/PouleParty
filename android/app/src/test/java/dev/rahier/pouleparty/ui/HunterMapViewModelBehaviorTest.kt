@@ -642,6 +642,204 @@ class HunterMapViewModelBehaviorTest {
     // hunter was moving. Fix: keep `lastWrite` at epoch until the first
     // successful write, so the first `locationFlow` emit triggers an
     // unthrottled write.
+    // MARK: - PP-19 end-game stays on map
+    //
+    // Hunter mirror of `ChickenMapViewModelBehaviorTest` PP-19 block.
+    // The map stays mounted at gameOver; `isGameOver` flips to true;
+    // GPS writes stop. Only `winnerRegistered` (scenario 4) keeps the
+    // Victory transition. The found code stays active after gameOver
+    // (scenario 6, per PP-2).
+
+    /** Scenario 1 (hunter): timeout — `nowDate >= endDate` flips
+     *  `isGameOver` and shows the alert. No auto-transition. */
+    @Test
+    fun `pp19 timeout flips isGameOver and shows alert without transition`() {
+        val now = System.currentTimeMillis()
+        val game = dev.rahier.pouleparty.model.Game(
+            id = "test-id",
+            gameMode = dev.rahier.pouleparty.model.GameMod.FOLLOW_THE_CHICKEN.firestoreValue,
+            status = dev.rahier.pouleparty.model.GameStatus.IN_PROGRESS.firestoreValue,
+            timing = dev.rahier.pouleparty.model.Timing(
+                start = com.google.firebase.Timestamp(java.util.Date(now - 3_600_000)),
+                end = com.google.firebase.Timestamp(java.util.Date(now - 1_000))
+            )
+        )
+        io.mockk.coEvery { firestoreRepository.getConfig(any()) } returns game
+
+        val vm = createViewModel()
+        testDispatcher.scheduler.advanceTimeBy(1_500)
+        testDispatcher.scheduler.runCurrent()
+
+        assertTrue("isGameOver must flip true on timeout", vm.uiState.value.isGameOver)
+        assertTrue("gameOver alert must show", vm.uiState.value.showGameOverAlert)
+        assertFalse("must NOT auto-transition to Victory", vm.uiState.value.shouldNavigateToVictory)
+    }
+
+    /** Scenario 2 (hunter): zone collapse flips `isGameOver`. No
+     *  auto-transition; `gameOverMessage` reflects the collapse. */
+    @Test
+    fun `pp19 zone collapse flips isGameOver and stops streams`() {
+        val now = System.currentTimeMillis()
+        val game = dev.rahier.pouleparty.model.Game(
+            id = "test-id",
+            gameMode = dev.rahier.pouleparty.model.GameMod.FOLLOW_THE_CHICKEN.firestoreValue,
+            status = dev.rahier.pouleparty.model.GameStatus.IN_PROGRESS.firestoreValue,
+            timing = dev.rahier.pouleparty.model.Timing(
+                start = com.google.firebase.Timestamp(java.util.Date(now - 3_600_000)),
+                end = com.google.firebase.Timestamp(java.util.Date(now + 3_600_000))
+            ),
+            zone = dev.rahier.pouleparty.model.Zone(
+                center = com.google.firebase.firestore.GeoPoint(50.8466, 4.3528),
+                radius = 100.0,
+                shrinkIntervalMinutes = 0.0,
+                shrinkMetersPerUpdate = 100.0
+            )
+        )
+        io.mockk.coEvery { firestoreRepository.getConfig(any()) } returns game
+
+        val vm = createViewModel()
+        testDispatcher.scheduler.advanceTimeBy(1_500)
+        testDispatcher.scheduler.runCurrent()
+
+        assertTrue("isGameOver must flip true on zone collapse", vm.uiState.value.isGameOver)
+        assertTrue("gameOver alert must show", vm.uiState.value.showGameOverAlert)
+        assertEquals("The zone has collapsed!", vm.uiState.value.gameOverMessage)
+        assertFalse("must NOT auto-transition to Victory", vm.uiState.value.shouldNavigateToVictory)
+    }
+
+    /** Scenario 3 (hunter side): all hunters found → `isGameOver`
+     *  flips locally (chicken is authoritative for the DONE write,
+     *  but hunter still recognises the end-state). */
+    @Test
+    fun `pp19 all hunters found flips isGameOver on hunter side`() {
+        val now = System.currentTimeMillis()
+        // Two hunters, both already in winners → all-hunters-found path.
+        val winners = listOf(
+            dev.rahier.pouleparty.model.Winner(
+                hunterId = "hunter-123",
+                hunterName = "Me",
+                timestamp = com.google.firebase.Timestamp.now()
+            ),
+            dev.rahier.pouleparty.model.Winner(
+                hunterId = "other-hunter",
+                hunterName = "Other",
+                timestamp = com.google.firebase.Timestamp.now()
+            )
+        )
+        val game = dev.rahier.pouleparty.model.Game(
+            id = "test-id",
+            gameMode = dev.rahier.pouleparty.model.GameMod.FOLLOW_THE_CHICKEN.firestoreValue,
+            status = dev.rahier.pouleparty.model.GameStatus.IN_PROGRESS.firestoreValue,
+            hunterIds = listOf("hunter-123", "other-hunter"),
+            winners = winners,
+            timing = dev.rahier.pouleparty.model.Timing(
+                start = com.google.firebase.Timestamp(java.util.Date(now - 3_600_000)),
+                end = com.google.firebase.Timestamp(java.util.Date(now + 3_600_000))
+            )
+        )
+        io.mockk.coEvery { firestoreRepository.getConfig(any()) } returns game
+        // Push the same game through gameConfigFlow so the all-hunters-found
+        // branch in streamGameConfig fires.
+        io.mockk.every { firestoreRepository.gameConfigFlow(any()) } returns
+            kotlinx.coroutines.flow.flowOf(game)
+
+        val vm = createViewModel()
+        testDispatcher.scheduler.advanceTimeBy(100)
+        testDispatcher.scheduler.runCurrent()
+
+        assertTrue("isGameOver must flip when winners ≥ hunterIds", vm.uiState.value.isGameOver)
+        assertFalse("must NOT auto-transition to Victory", vm.uiState.value.shouldNavigateToVictory)
+    }
+
+    /** Scenario 4 (PP-16 exception): an individual hunter entering the
+     *  correct found code triggers the transition to Victory — the
+     *  personal-win path is preserved. */
+    @Test
+    fun `pp19 winnerRegistered keeps the Victory transition`() {
+        val vm = createViewModel()
+        vm.onIntent(HunterMapIntent.EnteredCodeChanged("1234"))
+        vm.onIntent(HunterMapIntent.SubmitFoundCode)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertTrue("Personal win still navigates to Victory", vm.uiState.value.shouldNavigateToVictory)
+    }
+
+    /** Scenario 6 (PP-2): the FOUND code stays active for the hunter
+     *  even after `isGameOver` is set, so a straggler can still close
+     *  the loop. */
+    @Test
+    fun `pp19 found code still works after isGameOver flips`() {
+        val now = System.currentTimeMillis()
+        val game = dev.rahier.pouleparty.model.Game(
+            id = "test-id",
+            foundCode = "1234",
+            gameMode = dev.rahier.pouleparty.model.GameMod.FOLLOW_THE_CHICKEN.firestoreValue,
+            status = dev.rahier.pouleparty.model.GameStatus.IN_PROGRESS.firestoreValue,
+            timing = dev.rahier.pouleparty.model.Timing(
+                start = com.google.firebase.Timestamp(java.util.Date(now - 3_600_000)),
+                end = com.google.firebase.Timestamp(java.util.Date(now - 1_000))
+            )
+        )
+        io.mockk.coEvery { firestoreRepository.getConfig(any()) } returns game
+
+        val vm = createViewModel()
+        testDispatcher.scheduler.advanceTimeBy(1_500)
+        testDispatcher.scheduler.runCurrent()
+        assertTrue("Precondition: isGameOver true", vm.uiState.value.isGameOver)
+
+        // Late entry of the found code still records the winner.
+        vm.onIntent(HunterMapIntent.EnteredCodeChanged("1234"))
+        vm.onIntent(HunterMapIntent.SubmitFoundCode)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // The submit path is NOT gated on isGameOver — addWinner is
+        // dispatched and the hunter heads to Victory (their personal win
+        // path stays open per PP-2).
+        assertTrue(
+            "Found code must stay active after gameOver",
+            vm.uiState.value.shouldNavigateToVictory
+        )
+        io.mockk.coVerify(atLeast = 1) { firestoreRepository.addWinner(eq("test-id"), any()) }
+    }
+
+    /** Scenario 5 (hunter): once `isGameOver` is set, no further
+     *  `setHunterLocation` calls fire. The streams are cancelled the
+     *  moment `cancelStreams` runs alongside the `isGameOver` flip. */
+    @Test
+    fun `pp19 GPS writes stop after isGameOver flips on timeout`() {
+        val now = System.currentTimeMillis()
+        val game = dev.rahier.pouleparty.model.Game(
+            id = "test-id",
+            chickenCanSeeHunters = true,
+            gameMode = dev.rahier.pouleparty.model.GameMod.FOLLOW_THE_CHICKEN.firestoreValue,
+            status = dev.rahier.pouleparty.model.GameStatus.IN_PROGRESS.firestoreValue,
+            timing = dev.rahier.pouleparty.model.Timing(
+                start = com.google.firebase.Timestamp(java.util.Date(now - 3_600_000)),
+                end = com.google.firebase.Timestamp(java.util.Date(now - 1_000))
+            )
+        )
+        io.mockk.coEvery { firestoreRepository.getConfig(any()) } returns game
+        io.mockk.coEvery { locationRepository.getLastLocation() } returns null
+
+        // Hot location flow that emits AFTER gameOver fires.
+        val locationFlow = kotlinx.coroutines.flow.MutableSharedFlow<com.mapbox.geojson.Point>(replay = 0)
+        io.mockk.every { locationRepository.locationFlow() } returns locationFlow
+
+        val vm = createViewModel()
+        testDispatcher.scheduler.advanceTimeBy(1_500)
+        testDispatcher.scheduler.runCurrent()
+        assertTrue("Precondition: isGameOver true", vm.uiState.value.isGameOver)
+
+        kotlinx.coroutines.runBlocking {
+            locationFlow.emit(com.mapbox.geojson.Point.fromLngLat(4.3600, 50.8500))
+        }
+        testDispatcher.scheduler.advanceTimeBy(100)
+        testDispatcher.scheduler.runCurrent()
+
+        io.mockk.coVerify(exactly = 0) {
+            firestoreRepository.setHunterLocation(any(), any(), any())
+        }
+    }
+
     @Test
     fun `first locationFlow emit writes immediately when getLastLocation is null`() {
         val now = System.currentTimeMillis()

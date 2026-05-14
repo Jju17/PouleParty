@@ -754,4 +754,145 @@ struct HunterMapFeatureTests {
             $0.hasChallenges = true
         }
     }
+
+    // MARK: - PP-19 end-game stays on map
+    //
+    // Hunter mirror of `ChickenMapFeatureTests` PP-19 block. The map
+    // stays mounted at gameOver; `isGameOver` flips to true; no
+    // auto-transition to Victory (only `winnerRegistered` keeps that
+    // path per PP-16). The hunter's GPS effect cancels (no more
+    // `setHunterLocation` writes). Mirrors
+    // `HunterMapViewModelBehaviorTest` on Android.
+
+    /// Scenario 1 (hunter): timeout flips `isGameOver` and the map
+    /// stays mounted. `locationClient.stopTracking()` is invoked to
+    /// kill the GPS coroutine (no further `setHunterLocation` writes).
+    @Test func pp19_timeoutFlipsIsGameOverWithoutTransition() async {
+        var game = startedGameMock
+        game.endDate = .now.addingTimeInterval(-1)
+        var state = HunterMapFeature.State(game: game)
+        state.radius = 500
+
+        let stopCalls = LockIsolated(0)
+        let store = TestStore(initialState: state) {
+            HunterMapFeature()
+        } withDependencies: {
+            $0.locationClient.stopTracking = {
+                stopCalls.withValue { $0 += 1 }
+            }
+        }
+        store.exhaustivity = .off
+
+        await store.send(.internal(.timerTicked)) {
+            $0.isGameOver = true
+        }
+        #expect(stopCalls.value == 1, "Hunter must call stopTracking when game times out")
+    }
+
+    /// Scenario 2 (hunter): zone collapse flips `isGameOver` and
+    /// invokes `stopTracking()`. No GPS writes can survive past this
+    /// point because the streaming coroutine is cancelled.
+    @Test func pp19_zoneCollapseFlipsIsGameOverAndStopsGPS() async {
+        var game = startedGameMock
+        game.zone.shrinkMetersPerUpdate = 100
+        var state = HunterMapFeature.State(game: game)
+        state.radius = 50
+        state.nextRadiusUpdate = .now.addingTimeInterval(-1)
+
+        let stopCalls = LockIsolated(0)
+        let store = TestStore(initialState: state) {
+            HunterMapFeature()
+        } withDependencies: {
+            $0.locationClient.stopTracking = {
+                stopCalls.withValue { $0 += 1 }
+            }
+        }
+        store.exhaustivity = .off
+
+        await store.send(.internal(.timerTicked)) {
+            $0.isGameOver = true
+        }
+        #expect(stopCalls.value == 1, "Hunter must call stopTracking on zone collapse")
+    }
+
+    /// Scenario 3 (hunter side): when all hunters are in `winners`,
+    /// the hunter VM flips `isGameOver` too — the chicken is
+    /// authoritative for the Firestore status update, but the hunter
+    /// surface must also recognise gameOver locally and stop GPS.
+    @Test func pp19_allHuntersFoundFlipsIsGameOverHunterSide() async {
+        var game = Game.mock
+        game.hunterIds = ["my-hunter-id", "other-hunter"]
+        var state = HunterMapFeature.State(game: game)
+        state.hunterId = "my-hunter-id"
+        state.previousWinnersCount = 0
+
+        var updatedGame = game
+        updatedGame.winners = [
+            Winner(hunterId: "my-hunter-id", hunterName: "Me", timestamp: Timestamp(date: .now)),
+            Winner(hunterId: "other-hunter", hunterName: "Other", timestamp: Timestamp(date: .now))
+        ]
+
+        let stopCalls = LockIsolated(0)
+        let store = TestStore(initialState: state) {
+            HunterMapFeature()
+        } withDependencies: {
+            $0.continuousClock = ImmediateClock()
+            $0.locationClient.stopTracking = {
+                stopCalls.withValue { $0 += 1 }
+            }
+            $0.liveActivityClient.end = { _ in }
+        }
+        store.exhaustivity = .off
+
+        await store.send(.internal(.gameConfigUpdated(updatedGame)))
+        #expect(store.state.isGameOver == true)
+        #expect(stopCalls.value == 1, "Hunter must call stopTracking when all hunters found")
+    }
+
+    /// Scenario 4 (PP-16 exception): an individual hunter entering the
+    /// correct found code → `winnerRegistered` still triggers the
+    /// transition to Victory (the personal win path is preserved).
+    @Test func pp19_winnerRegisteredStillTransitionsToVictory() async {
+        var state = HunterMapFeature.State(game: .mock)
+        state.enteredCode = "1234"
+
+        let store = TestStore(initialState: state) {
+            HunterMapFeature()
+        } withDependencies: {
+            $0.apiClient.addWinner = { _, _ in }
+            $0.liveActivityClient.end = { _ in }
+        }
+        store.exhaustivity = .off
+
+        await store.send(.view(.submitCodeButtonTapped))
+        await store.receive(\.internal.winnerRegistered)
+        // `winnerRegistered` is the AppFeature pivot to Victory — the
+        // personal-win navigation is preserved per PP-16's exception.
+        // `isGameOver` is irrelevant for this branch: the hunter is
+        // leaving the map regardless.
+    }
+
+    /// Scenario 6 (PP-2 exception): even after `isGameOver` is set,
+    /// the FOUND code stays active for the hunter — `submitCodeButtonTapped`
+    /// still triggers a winner registration. The "won late" path lets
+    /// stragglers close the loop.
+    @Test func pp19_foundCodeStaysActiveAfterGameOver() async {
+        var state = HunterMapFeature.State(game: .mock)
+        state.isGameOver = true
+        state.enteredCode = "1234"
+
+        let store = TestStore(initialState: state) {
+            HunterMapFeature()
+        } withDependencies: {
+            $0.apiClient.addWinner = { _, _ in }
+            $0.liveActivityClient.end = { _ in }
+        }
+        store.exhaustivity = .off
+
+        await store.send(.view(.submitCodeButtonTapped))
+        // The submit flow runs unchanged: addWinner is called, then
+        // winnerRegistered fires. The reducer doesn't gate the found
+        // code on `isGameOver`.
+        await store.receive(\.internal.winnerRegistered)
+    }
 }
