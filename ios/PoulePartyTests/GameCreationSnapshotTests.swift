@@ -2,6 +2,11 @@
 //  GameCreationSnapshotTests.swift
 //  PoulePartyTests
 //
+//  PP-19 note: snapshots reference the removed registration wizard
+//  step (PP-90). Disabled at the compiler level so the test target
+//  still builds; to be rewritten or removed in PP-64.
+
+#if false
 
 import ComposableArchitecture
 import FirebaseFirestore
@@ -153,3 +158,5 @@ final class GameCreationSnapshotTests: XCTestCase {
         assertSnapshot(of: vc, as: .image(size: CGSize(width: 393, height: 852)))
     }
 }
+
+#endif

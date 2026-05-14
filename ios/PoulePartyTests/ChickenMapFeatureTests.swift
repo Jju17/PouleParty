@@ -418,4 +418,124 @@ struct ChickenMapFeatureTests {
             $0.winnerNotification = nil
         }
     }
+
+    // MARK: - PP-19 end-game stays on map
+    //
+    // The map must stay mounted at gameOver — `isGameOver` flips to
+    // true, no auto-transition to Victory is dispatched. The chicken's
+    // GPS effect cancels (no more `setChickenLocation` writes). Mirrors
+    // `ChickenMapViewModelBehaviorTest` on Android.
+
+    /// Scenario 1: timeout — `nowDate >= endDate` flips `isGameOver`
+    /// to true and the map stays mounted (no `.delegate.allHuntersFound`
+    /// auto-fire, no transition to Victory). The GPS effect is killed
+    /// synchronously via `locationClient.stopTracking()`.
+    @Test func pp19_timeoutFlipsIsGameOverWithoutTransition() async {
+        var game = Game.mock
+        game.startDate = .now.addingTimeInterval(-3600)
+        game.endDate = .now.addingTimeInterval(-1)
+        var state = ChickenMapFeature.State(game: game)
+        state.radius = 500
+
+        let stopCalls = LockIsolated(0)
+        let store = TestStore(initialState: state) {
+            ChickenMapFeature()
+        } withDependencies: {
+            $0.locationClient.stopTracking = {
+                stopCalls.withValue { $0 += 1 }
+            }
+            $0.apiClient.updateGameStatus = { _, _ in }
+        }
+        store.exhaustivity = .off
+
+        await store.send(.internal(.timerTicked)) {
+            $0.isGameOver = true
+        }
+        #expect(stopCalls.value == 1, "locationClient.stopTracking must be called once GPS gating fires")
+        // The map stays mounted: no `.delegate.allHuntersFound` is sent
+        // automatically. The chicken sees the gameOver alert and only
+        // emits the delegate when the user taps OK.
+    }
+
+    /// Scenario 2: zone collapse — radius reaches 0 flips `isGameOver`
+    /// without auto-transition. `locationClient.stopTracking()` is
+    /// invoked so the GPS coroutine (no further `setChickenLocation`
+    /// writes) is terminated.
+    @Test func pp19_zoneCollapseFlipsIsGameOverAndStopsGPS() async {
+        var game = Game.mock
+        game.gameMode = .followTheChicken
+        game.startDate = .now.addingTimeInterval(-3600)
+        game.endDate = .now.addingTimeInterval(3600)
+        var state = ChickenMapFeature.State(game: game)
+        state.radius = 50
+        state.nextRadiusUpdate = .now.addingTimeInterval(-1)
+
+        let stopCalls = LockIsolated(0)
+        let store = TestStore(initialState: state) {
+            ChickenMapFeature()
+        } withDependencies: {
+            $0.locationClient.stopTracking = {
+                stopCalls.withValue { $0 += 1 }
+            }
+            $0.apiClient.updateGameStatus = { _, _ in }
+        }
+        store.exhaustivity = .off
+
+        await store.send(.internal(.timerTicked)) {
+            $0.isGameOver = true
+        }
+        #expect(stopCalls.value == 1, "locationClient.stopTracking must be called on zone collapse")
+    }
+
+    /// Scenario 3: all hunters found — chicken side. When
+    /// `winners.count >= hunterIds.count`, the chicken flips
+    /// `isGameOver` and calls `stopTracking()`; no auto-transition.
+    @Test func pp19_allHuntersFoundFlipsIsGameOverWithoutTransition() async {
+        var game = Game.mock
+        game.hunterIds = ["h1", "h2"]
+        var state = ChickenMapFeature.State(game: game)
+        state.previousWinnersCount = 0
+
+        var updatedGame = game
+        updatedGame.winners = [
+            Winner(hunterId: "h1", hunterName: "Alice", timestamp: Timestamp(date: .now)),
+            Winner(hunterId: "h2", hunterName: "Bob", timestamp: Timestamp(date: .now))
+        ]
+
+        let stopCalls = LockIsolated(0)
+        let store = TestStore(initialState: state) {
+            ChickenMapFeature()
+        } withDependencies: {
+            $0.continuousClock = ImmediateClock()
+            $0.locationClient.stopTracking = {
+                stopCalls.withValue { $0 += 1 }
+            }
+            $0.apiClient.updateGameStatus = { _, _ in }
+            $0.liveActivityClient.end = { _ in }
+        }
+        store.exhaustivity = .off
+
+        await store.send(.internal(.gameUpdated(updatedGame))) {
+            $0.isGameOver = true
+        }
+        #expect(stopCalls.value == 1, "Chicken must call stopTracking once all hunters found")
+    }
+
+    /// Scenario 5 (chicken): once `isGameOver` is set via the gameOver
+    /// alert, sending `.cancelGameButtonTapped` is a no-op (guarded by
+    /// `guard !state.isGameOver`). Used to prove that the post-gameOver
+    /// surface treats the chicken as terminal.
+    @Test func pp19_cancelGameButtonNoOpAfterGameOver() async {
+        var state = ChickenMapFeature.State(game: .mock)
+        state.isGameOver = true
+
+        let store = TestStore(initialState: state) {
+            ChickenMapFeature()
+        }
+
+        // No alert should be presented because the chicken is already
+        // in the post-game state.
+        await store.send(.view(.cancelGameButtonTapped))
+        #expect(store.state.destination == nil)
+    }
 }

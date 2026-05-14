@@ -992,4 +992,59 @@ class GameTimerHelperTest {
         assertEquals(50.5, result.latitude(), 1e-10)
         assertEquals(4.5, result.longitude(), 1e-10)
     }
+
+    // ── PP-19 formatOvertime cross-platform parity ──
+    //
+    // The strings produced by `formatOvertime` are rendered byte-for-byte
+    // on the gameOver countdown bar. The iOS mirror in
+    // `GameTimerLogicTests.swift` asserts the same inputs map to the same
+    // outputs.
+
+    @Test
+    fun `formatOvertime clamps negative delta to plus zero`() {
+        val endDate = Date(1_000_000_000L)
+        val now = Date(endDate.time - 5_000L)
+        assertEquals("+00:00", formatOvertime(now, endDate))
+    }
+
+    @Test
+    fun `formatOvertime at zero seconds`() {
+        val endDate = Date(1_000_000_000L)
+        assertEquals("+00:00", formatOvertime(endDate, endDate))
+    }
+
+    @Test
+    fun `formatOvertime at 30 seconds`() {
+        val endDate = Date(1_000_000_000L)
+        val now = Date(endDate.time + 30_000L)
+        assertEquals("+00:30", formatOvertime(now, endDate))
+    }
+
+    @Test
+    fun `formatOvertime at 5 minutes 12 seconds`() {
+        val endDate = Date(1_000_000_000L)
+        val now = Date(endDate.time + (5 * 60 + 12) * 1000L)
+        assertEquals("+05:12", formatOvertime(now, endDate))
+    }
+
+    @Test
+    fun `formatOvertime at 59 minutes 59 seconds`() {
+        val endDate = Date(1_000_000_000L)
+        val now = Date(endDate.time + (59 * 60 + 59) * 1000L)
+        assertEquals("+59:59", formatOvertime(now, endDate))
+    }
+
+    @Test
+    fun `formatOvertime at 1 hour`() {
+        val endDate = Date(1_000_000_000L)
+        val now = Date(endDate.time + 3600_000L)
+        assertEquals("+01:00:00", formatOvertime(now, endDate))
+    }
+
+    @Test
+    fun `formatOvertime at 1 hour 20 minutes`() {
+        val endDate = Date(1_000_000_000L)
+        val now = Date(endDate.time + (3600L + 20 * 60) * 1000L)
+        assertEquals("+01:20:00", formatOvertime(now, endDate))
+    }
 }
