@@ -536,3 +536,20 @@ func seededRandom(seed: Int, index: Int) -> Double {
     z = z ^ (z >> 31)
     return Double(z >> 1) / Double(Int64.max)
 }
+
+// MARK: - PP-17 Overtime formatter
+
+/// Renders the `+MM:SS` (or `+HH:MM:SS` past one hour) overtime
+/// delta shown on the gameOver countdown bar. Negative deltas
+/// (i.e. `now < endDate`) clamp to `+00:00`. Mirrors the Kotlin
+/// `formatOvertime` so the two platforms produce identical strings.
+func formatOvertime(now: Date, endDate: Date) -> String {
+    let seconds = max(0, Int(now.timeIntervalSince(endDate)))
+    let hours = seconds / 3600
+    let minutes = (seconds % 3600) / 60
+    let secs = seconds % 60
+    if hours > 0 {
+        return String(format: "+%02d:%02d:%02d", hours, minutes, secs)
+    }
+    return String(format: "+%02d:%02d", minutes, secs)
+}
