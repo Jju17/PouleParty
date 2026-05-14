@@ -175,4 +175,99 @@ class PowerUpTest {
             defaults,
         )
     }
+
+    // MARK: PP-37 parity goldens (PP-35 follow-up)
+
+    /**
+     * Strict count parity: 6 types in FOLLOW_THE_CHICKEN vs 3 in
+     * STAY_IN_THE_ZONE. Mirrors the iOS
+     * `availablePowerUpTypesCountsMatchParityMatrix` test — a silent enum
+     * addition that bypassed the positional filter would fail this on
+     * one platform without the other and surface the divergence loudly.
+     */
+    @Test
+    fun `availablePowerUpTypes counts match parity matrix`() {
+        assertEquals(6, availablePowerUpTypes(GameMod.FOLLOW_THE_CHICKEN).size)
+        assertEquals(3, availablePowerUpTypes(GameMod.STAY_IN_THE_ZONE).size)
+    }
+
+    /**
+     * `STAY_IN_THE_ZONE` MUST NOT contain any positional power-up — the
+     * chicken does not broadcast its position in that mode so spawning
+     * invisibility / decoy / jammer is wasted. Mirrors the iOS
+     * `availablePowerUpTypesStayInTheZoneExcludesEveryPositionalType`
+     * test.
+     */
+    @Test
+    fun `STAY_IN_THE_ZONE excludes every positional power-up`() {
+        val stay = availablePowerUpTypes(GameMod.STAY_IN_THE_ZONE)
+        assertFalse(stay.contains(PowerUpType.INVISIBILITY))
+        assertFalse(stay.contains(PowerUpType.DECOY))
+        assertFalse(stay.contains(PowerUpType.JAMMER))
+    }
+
+    /**
+     * `STAY_IN_THE_ZONE` MUST contain every non-positional power-up.
+     * Mirrors the iOS
+     * `availablePowerUpTypesStayInTheZoneIncludesEveryNonPositionalType`
+     * test.
+     */
+    @Test
+    fun `STAY_IN_THE_ZONE keeps every non-positional power-up`() {
+        val stay = availablePowerUpTypes(GameMod.STAY_IN_THE_ZONE)
+        assertTrue(stay.contains(PowerUpType.ZONE_PREVIEW))
+        assertTrue(stay.contains(PowerUpType.RADAR_PING))
+        assertTrue(stay.contains(PowerUpType.ZONE_FREEZE))
+    }
+
+    /**
+     * `FOLLOW_THE_CHICKEN` is a passthrough — every enum case lands in
+     * the returned list. Mirrors the iOS
+     * `availablePowerUpTypesFollowTheChickenIsPassthrough` test.
+     */
+    @Test
+    fun `FOLLOW_THE_CHICKEN is a passthrough of every enum case`() {
+        val follow = availablePowerUpTypes(GameMod.FOLLOW_THE_CHICKEN)
+        PowerUpType.entries.forEach { type ->
+            assertTrue("Expected $type in FOLLOW_THE_CHICKEN", follow.contains(type))
+        }
+    }
+
+    /**
+     * The Firestore wire format for `enabledTypes` is a `List<String>` of
+     * `firestoreValue`s. The strings used by iOS, Android and the TS
+     * server MUST match exactly — a typo on one platform silently breaks
+     * the `stayInTheZone` filter on the server. Locks the wire contract.
+     */
+    @Test
+    fun `PowerUpType firestoreValues match Firestore wire contract`() {
+        val expected = mapOf(
+            PowerUpType.ZONE_PREVIEW to "zonePreview",
+            PowerUpType.RADAR_PING to "radarPing",
+            PowerUpType.INVISIBILITY to "invisibility",
+            PowerUpType.ZONE_FREEZE to "zoneFreeze",
+            PowerUpType.DECOY to "decoy",
+            PowerUpType.JAMMER to "jammer",
+        )
+        expected.forEach { (type, raw) ->
+            assertEquals("Wire raw value drift on $type", raw, type.firestoreValue)
+        }
+    }
+
+    /**
+     * The defaults shipped to players (`zoneFreeze` + `zonePreview`)
+     * must be available in BOTH modes — a player who keeps the defaults
+     * in `stayInTheZone` should still see both power-up types spawn.
+     * Guards against a future filter change that would accidentally
+     * strip a default type.
+     */
+    @Test
+    fun `default enabledTypes are available in both modes`() {
+        val follow = availablePowerUpTypes(GameMod.FOLLOW_THE_CHICKEN)
+        val stay = availablePowerUpTypes(GameMod.STAY_IN_THE_ZONE)
+        assertTrue(follow.contains(PowerUpType.ZONE_FREEZE))
+        assertTrue(follow.contains(PowerUpType.ZONE_PREVIEW))
+        assertTrue(stay.contains(PowerUpType.ZONE_FREEZE))
+        assertTrue(stay.contains(PowerUpType.ZONE_PREVIEW))
+    }
 }

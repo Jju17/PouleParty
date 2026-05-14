@@ -23,7 +23,11 @@ import Testing
 // GameCreationFeature. Leaving the file as compiled-but-empty keeps
 // it in the synchronized PoulePartyTests root group; full cleanup
 // belongs to its own ticket.
-#if false
+//
+// PP-37 fix: PP-19 already wrapped the file in `#if false` ... `#endif`
+// (see top of file). PP-66 added a second `#if false` here without
+// removing the first, so iOS test compilation has been broken on main
+// since that merge. Removed the duplicate so the test target builds.
 
 @MainActor
 struct GameCreationFeatureTests {
