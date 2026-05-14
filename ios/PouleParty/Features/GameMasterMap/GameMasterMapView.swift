@@ -55,7 +55,13 @@ struct GameMasterMapView: View {
                 NavigationStack {
                     GameMasterHuntersListView(
                         game: store.game,
-                        hunterAnnotations: store.hunterAnnotations
+                        hunterAnnotations: store.hunterAnnotations,
+                        registrations: store.registrations,
+                        currentChickenId: store.game.chickenId,
+                        canDesignate: store.game.status == .waiting,
+                        onDesignateTapped: { reg in
+                            store.send(.view(.designateHunterTapped(reg)))
+                        }
                     )
                     .toolbar {
                         ToolbarItem {
@@ -68,6 +74,37 @@ struct GameMasterMapView: View {
                     }
                 }
                 .presentationDetents([.medium, .large])
+            }
+            .alert(
+                "Désigner la poule",
+                isPresented: Binding(
+                    get: { store.pendingChickenDesignation != nil },
+                    set: { if !$0 { store.send(.view(.designateCancelTapped)) } }
+                ),
+                presenting: store.pendingChickenDesignation
+            ) { reg in
+                Button("Désigner \(reg.teamName)", role: .destructive) {
+                    store.send(.view(.designateConfirmTapped))
+                }
+                Button("Annuler", role: .cancel) {
+                    store.send(.view(.designateCancelTapped))
+                }
+            } message: { reg in
+                Text("\(reg.teamName) deviendra la poule. Le chicken actuel perdra ce rôle.")
+            }
+            .alert(
+                "Erreur",
+                isPresented: Binding(
+                    get: { store.designationError != nil },
+                    set: { if !$0 { store.send(.view(.designationErrorDismissed)) } }
+                ),
+                presenting: store.designationError
+            ) { _ in
+                Button("OK", role: .cancel) {
+                    store.send(.view(.designationErrorDismissed))
+                }
+            } message: { message in
+                Text(message)
             }
             .sheet(isPresented: Binding(
                 get: { store.showGameInfo },
@@ -92,6 +129,17 @@ struct GameMasterMapView: View {
 private struct GameMasterHuntersListView: View {
     let game: Game
     let hunterAnnotations: [HunterAnnotation]
+    let registrations: [Registration]
+    let currentChickenId: String
+    let canDesignate: Bool
+    let onDesignateTapped: (Registration) -> Void
+
+    /// PP-86 — only registered hunters (in `registrations`) who are NOT
+    /// the current chicken can be re-designated. We surface the
+    /// `teamName` rather than the technical UID.
+    private var designatableRegistrations: [Registration] {
+        registrations.filter { $0.userId != currentChickenId }
+    }
 
     var body: some View {
         List {
@@ -101,7 +149,7 @@ private struct GameMasterHuntersListView: View {
                         Image(systemName: "figure.run")
                             .foregroundStyle(Color.CROrange)
                         VStack(alignment: .leading) {
-                            Text(hunter.displayName)
+                            Text(displayName(for: hunter.id))
                                 .font(.headline)
                             Text("Live position")
                                 .font(.caption)
@@ -118,7 +166,7 @@ private struct GameMasterHuntersListView: View {
                         HStack {
                             Image(systemName: "person.fill.questionmark")
                                 .foregroundStyle(.secondary)
-                            Text("Hunter (no position yet)")
+                            Text(displayName(for: hid))
                                 .foregroundStyle(.secondary)
                         }
                     }
@@ -126,9 +174,42 @@ private struct GameMasterHuntersListView: View {
                     Text("Registered but not transmitting")
                 }
             }
+            if canDesignate && !designatableRegistrations.isEmpty {
+                Section {
+                    ForEach(designatableRegistrations) { reg in
+                        Button {
+                            onDesignateTapped(reg)
+                        } label: {
+                            HStack {
+                                Image(systemName: "crown.fill")
+                                    .foregroundStyle(Color.CRPink)
+                                VStack(alignment: .leading) {
+                                    Text(reg.teamName)
+                                        .font(.headline)
+                                        .foregroundStyle(Color.onBackground)
+                                    Text("Désigner comme poule")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                } header: {
+                    Text("Désigner la poule")
+                } footer: {
+                    Text("Le hunter désigné devient la poule ; il quitte la liste des chasseurs. Possible uniquement avant le début de la partie.")
+                }
+            }
         }
         .navigationTitle("Hunters")
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func displayName(for uid: String) -> String {
+        registrations.first(where: { $0.userId == uid })?.teamName ?? "Hunter"
     }
 }
 

@@ -26,6 +26,7 @@ struct GameMasterMapFeature {
         var chickenIsInvisible: Bool = false
         var hunterAnnotations: [HunterAnnotation] = []
         var powerUpAnnotations: [PowerUp] = []
+        var registrations: [Registration] = []
         var nextRadiusUpdate: Date?
         var nowDate: Date = .now
         var radius: Int = 1500
@@ -36,6 +37,11 @@ struct GameMasterMapFeature {
         var countdownNumber: Int? = nil
         var countdownText: String? = nil
         var previousWinnersCount: Int = -1
+        /// PP-86: hunter pending confirmation as the new chicken.
+        var pendingChickenDesignation: Registration?
+        /// PP-86: last error from `designateChicken` (e.g. game already
+        /// started, network).
+        var designationError: String?
 
         // MARK: - MapFeatureState surface (GM has no power-up tray)
         var availablePowerUps: [PowerUp] { [] }
@@ -62,6 +68,11 @@ struct GameMasterMapFeature {
             case huntersDrawerTapped
             case huntersDrawerDismissed
             case leaveGameTapped
+            // PP-86
+            case designateHunterTapped(Registration)
+            case designateConfirmTapped
+            case designateCancelTapped
+            case designationErrorDismissed
         }
 
         @CasePathable
@@ -72,6 +83,9 @@ struct GameMasterMapFeature {
             case powerUpsUpdated([PowerUp])
             case timerTicked
             case winnerNotificationDismissed
+            case registrationsLoaded([Registration])
+            case designationSucceeded
+            case designationFailed(String)
         }
 
         @CasePathable
@@ -120,6 +134,13 @@ struct GameMasterMapFeature {
                     .run { send in
                         for await hunters in apiClient.hunterLocationsStream(gameId) {
                             await send(.internal(.hunterLocationsUpdated(hunters)))
+                        }
+                    },
+                    .run { send in
+                        // PP-86: load registrations once so the drawer
+                        // can show teamNames alongside the live markers.
+                        if let regs = try? await apiClient.fetchAllRegistrations(gameId) {
+                            await send(.internal(.registrationsLoaded(regs)))
                         }
                     },
                     .run { send in
@@ -214,6 +235,39 @@ struct GameMasterMapFeature {
                 return .none
             case .view(.leaveGameTapped):
                 return .send(.delegate(.returnedToMenu))
+
+            // PP-86 — Désigner la poule
+            case let .view(.designateHunterTapped(reg)):
+                state.pendingChickenDesignation = reg
+                return .none
+            case .view(.designateCancelTapped):
+                state.pendingChickenDesignation = nil
+                return .none
+            case .view(.designationErrorDismissed):
+                state.designationError = nil
+                return .none
+            case .view(.designateConfirmTapped):
+                guard let reg = state.pendingChickenDesignation else { return .none }
+                let gameId = state.game.id
+                let newChickenUid = reg.userId
+                state.pendingChickenDesignation = nil
+                return .run { send in
+                    do {
+                        try await apiClient.designateChicken(gameId, newChickenUid)
+                        await send(.internal(.designationSucceeded))
+                    } catch {
+                        await send(.internal(.designationFailed(error.localizedDescription)))
+                    }
+                }
+            case let .internal(.registrationsLoaded(regs)):
+                state.registrations = regs
+                return .none
+            case .internal(.designationSucceeded):
+                state.showHuntersDrawer = false
+                return .none
+            case let .internal(.designationFailed(message)):
+                state.designationError = message
+                return .none
             }
         }
     }

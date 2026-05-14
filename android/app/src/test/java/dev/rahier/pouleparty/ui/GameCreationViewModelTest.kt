@@ -112,14 +112,16 @@ class GameCreationViewModelTest {
         assertEquals(GameCreationStep.PARTICIPATION, steps[0])
         assertEquals(GameCreationStep.MAX_PLAYERS, steps[1])
         assertEquals(GameCreationStep.GAME_MODE, steps[2])
-        assertEquals(GameCreationStep.ZONE_SETUP, steps[3])
-        assertEquals(GameCreationStep.REGISTRATION, steps[4])
-        assertEquals(GameCreationStep.START_TIME, steps[5])
-        assertEquals(GameCreationStep.DURATION, steps[6])
-        assertEquals(GameCreationStep.HEAD_START, steps[7])
-        assertEquals(GameCreationStep.POWER_UPS, steps[8])
-        assertEquals(GameCreationStep.CHICKEN_SEES_HUNTERS, steps[9])
-        assertEquals(GameCreationStep.RECAP, steps[10])
+        // PP-88: GAME_MASTER_PASSWORD lands right after GAME_MODE.
+        assertEquals(GameCreationStep.GAME_MASTER_PASSWORD, steps[3])
+        assertEquals(GameCreationStep.ZONE_SETUP, steps[4])
+        assertEquals(GameCreationStep.REGISTRATION, steps[5])
+        assertEquals(GameCreationStep.START_TIME, steps[6])
+        assertEquals(GameCreationStep.DURATION, steps[7])
+        assertEquals(GameCreationStep.HEAD_START, steps[8])
+        assertEquals(GameCreationStep.POWER_UPS, steps[9])
+        assertEquals(GameCreationStep.CHICKEN_SEES_HUNTERS, steps[10])
+        assertEquals(GameCreationStep.RECAP, steps[11])
     }
 
     @Test
@@ -131,7 +133,7 @@ class GameCreationViewModelTest {
         assertEquals(GameCreationStep.CHICKEN_SELECTION, steps[1])
         assertEquals(GameCreationStep.MAX_PLAYERS, steps[2])
         assertEquals(GameCreationStep.GAME_MODE, steps[3])
-        assertEquals(12, steps.size) // 11 + chickenSelection
+        assertEquals(13, steps.size) // 12 base + chickenSelection (PP-88 added GAME_MASTER_PASSWORD)
     }
 
     @Test
@@ -633,15 +635,16 @@ class GameCreationViewModelTest {
 
     @Test
     fun `toggling participation multiple times keeps step list in sync`() {
+        // PP-88 added GAME_MASTER_PASSWORD → base 12, +1 for chickenSelection.
         val vm = createViewModel()
-        assertEquals(11, vm.uiState.value.steps.size)
-        vm.onIntent(GameCreationIntent.ParticipatingChanged(false))
         assertEquals(12, vm.uiState.value.steps.size)
+        vm.onIntent(GameCreationIntent.ParticipatingChanged(false))
+        assertEquals(13, vm.uiState.value.steps.size)
         vm.onIntent(GameCreationIntent.ParticipatingChanged(true))
-        assertEquals(11, vm.uiState.value.steps.size)
+        assertEquals(12, vm.uiState.value.steps.size)
         vm.onIntent(GameCreationIntent.ParticipatingChanged(false))
         vm.onIntent(GameCreationIntent.ParticipatingChanged(false)) // no-op
-        assertEquals(12, vm.uiState.value.steps.size)
+        assertEquals(13, vm.uiState.value.steps.size)
     }
 
     @Test

@@ -41,6 +41,13 @@ data class GameMasterMapUiState(
     val chickenIsInvisible: Boolean = false,
     val hunterAnnotations: List<HunterAnnotation> = emptyList(),
     val powerUpAnnotations: List<PowerUp> = emptyList(),
+    /** PP-86: registrations preloaded once at game load so the drawer
+     *  can render teamNames + offer designation. */
+    val registrations: List<dev.rahier.pouleparty.model.Registration> = emptyList(),
+    /** PP-86: hunter awaiting confirmation. Non-null = alert showing. */
+    val pendingChickenDesignation: dev.rahier.pouleparty.model.Registration? = null,
+    /** PP-86: last error message from `designateChicken` to surface. */
+    val designationError: String? = null,
     override val nextRadiusUpdate: Date? = null,
     override val nowDate: Date = Date(),
     override val radius: Int = 1500,
@@ -91,6 +98,25 @@ class GameMasterMapViewModel @Inject constructor(
             GameMasterMapIntent.LeaveGameTapped -> viewModelScope.launch {
                 _effects.send(GameMasterMapEffect.ReturnedToMenu)
             }
+            is GameMasterMapIntent.DesignateHunterTapped ->
+                _uiState.update { it.copy(pendingChickenDesignation = intent.registration) }
+            GameMasterMapIntent.DesignateCancelTapped ->
+                _uiState.update { it.copy(pendingChickenDesignation = null) }
+            GameMasterMapIntent.DesignationErrorDismissed ->
+                _uiState.update { it.copy(designationError = null) }
+            GameMasterMapIntent.DesignateConfirmTapped -> {
+                val reg = _uiState.value.pendingChickenDesignation ?: return
+                val gameId = _uiState.value.game.id
+                _uiState.update { it.copy(pendingChickenDesignation = null) }
+                viewModelScope.launch {
+                    try {
+                        firestoreRepository.designateChicken(gameId, reg.userId)
+                        _uiState.update { it.copy(showHuntersDrawer = false) }
+                    } catch (e: Exception) {
+                        _uiState.update { it.copy(designationError = e.message ?: "Failed to designate chicken") }
+                    }
+                }
+            }
         }
     }
 
@@ -108,6 +134,13 @@ class GameMasterMapViewModel @Inject constructor(
                 initialRadius = game.zone.radius,
                 currentRadius = lastRadius.toDouble(),
             )
+            // PP-86: preload registrations once so the drawer can show
+            // teamNames + offer designation. Failure is non-fatal.
+            val registrations = try {
+                firestoreRepository.fetchAllRegistrations(gameId)
+            } catch (e: Exception) {
+                emptyList()
+            }
             _uiState.update {
                 it.copy(
                     game = game,
@@ -116,6 +149,7 @@ class GameMasterMapViewModel @Inject constructor(
                     circleCenter = center,
                     hasGameStarted = Date().after(game.startDate),
                     previousWinnersCount = game.winners.size,
+                    registrations = registrations,
                 )
             }
             startStreams(game)

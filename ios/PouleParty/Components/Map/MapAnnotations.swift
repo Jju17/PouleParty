@@ -12,8 +12,10 @@
 
 import SwiftUI
 
-/// Avatar rendered for a hunter on the chicken's map when
-/// `chickenCanSeeHunters` is enabled.
+/// Avatar rendered for a hunter on the chicken's map (when
+/// `chickenCanSeeHunters` is enabled) and on the GameMaster map.
+/// Same size as `GMChickenMarker` (34 px disc, 18 pt glyph) so every
+/// map renders chicken + hunters with equal visual weight.
 struct HunterMapMarker: View {
     let displayName: String
 
@@ -22,11 +24,15 @@ struct HunterMapMarker: View {
             Text(displayName)
                 .font(.caption2)
                 .fontWeight(.semibold)
-            Image(systemName: "figure.walk")
-                .foregroundStyle(.white)
-                .padding(6)
-                .background(Color.CROrange)
-                .clipShape(Circle())
+            ZStack {
+                Circle()
+                    .fill(Color.CROrange)
+                    .frame(width: 34, height: 34)
+                Image(systemName: "figure.walk")
+                    .foregroundStyle(.white)
+                    .font(.system(size: 18))
+            }
+            .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
         }
     }
 }

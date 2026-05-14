@@ -77,6 +77,13 @@ struct ApiClient {
     /// lock). Returns `attemptsRemaining` for wrong passwords and a
     /// `lockedUntilMs` when the lock kicked in.
     var joinAsGameMaster: (_ gameId: String, _ password: String) async throws -> JoinAsGameMasterResult
+    /// PP-86: GameMaster (or creator as fallback) designates a hunter
+    /// as the new chicken. Atomic Firestore transaction sets
+    /// `chickenId = newUid` and removes `newUid` from `hunterIds`.
+    /// firestore.rules enforces `status == waiting` and the
+    /// caller-is-creator-or-GM guard server-side; the client also
+    /// pre-checks for fast feedback.
+    var designateChicken: (_ gameId: String, _ newChickenUid: String) async throws -> Void
 }
 
 struct JoinAsGameMasterResult: Equatable {
@@ -163,7 +170,8 @@ extension ApiClient: TestDependencyKey {
         newGameId: { "test-game-id" },
         setGameMasterPassword: { _, _ in },
         clearGameMasterPassword: { _ in },
-        joinAsGameMaster: { _, _ in JoinAsGameMasterResult(success: true, attemptsRemaining: 5, lockedUntilMs: nil) }
+        joinAsGameMaster: { _, _ in JoinAsGameMasterResult(success: true, attemptsRemaining: 5, lockedUntilMs: nil) },
+        designateChicken: { _, _ in }
     )
 }
 
@@ -785,6 +793,43 @@ extension ApiClient: DependencyKey {
                 attemptsRemaining: (dict["attemptsRemaining"] as? Int) ?? 0,
                 lockedUntilMs: dict["lockedUntil"] as? Int
             )
+        },
+        designateChicken: { gameId, newChickenUid in
+            let db = Firestore.firestore()
+            let ref = db.collection(gamesCollection).document(gameId)
+            _ = try await db.runTransaction { transaction, errorPointer in
+                let snap: DocumentSnapshot
+                do {
+                    snap = try transaction.getDocument(ref)
+                } catch let fetchError as NSError {
+                    errorPointer?.pointee = fetchError
+                    return nil
+                }
+                guard let data = snap.data() else {
+                    errorPointer?.pointee = NSError(
+                        domain: "ApiClient",
+                        code: 404,
+                        userInfo: [NSLocalizedDescriptionKey: "Game not found"]
+                    )
+                    return nil
+                }
+                let status = data["status"] as? String ?? ""
+                guard status == Game.GameStatus.waiting.rawValue else {
+                    errorPointer?.pointee = NSError(
+                        domain: "ApiClient",
+                        code: 409,
+                        userInfo: [NSLocalizedDescriptionKey: "Chicken can only be re-designated while the game is waiting"]
+                    )
+                    return nil
+                }
+                var hunterIds = data["hunterIds"] as? [String] ?? []
+                hunterIds.removeAll { $0 == newChickenUid }
+                transaction.updateData([
+                    "chickenId": newChickenUid,
+                    "hunterIds": hunterIds,
+                ], forDocument: ref)
+                return nil
+            }
         }
     )
 }

@@ -808,6 +808,34 @@ class FirestoreRepository @Inject constructor(
      * [JoinAsGameMasterResult] with the wrong-password attempts left
      * and the lock expiry timestamp when the lock kicked in.
      */
+    /**
+     * PP-86: GameMaster (or creator as fallback) designates a hunter as
+     * the new chicken. Atomic Firestore transaction: sets
+     * `chickenId = newUid` and pulls `newUid` out of `hunterIds`.
+     * The PP-26 firestore.rule enforces `status == waiting` and the
+     * caller-is-creator-or-GM guard server-side; we pre-check
+     * `status == waiting` client-side for fast feedback.
+     */
+    suspend fun designateChicken(gameId: String, newChickenUid: String) {
+        firestore.runTransaction { tx ->
+            val ref = firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
+            val snap = tx.get(ref)
+            val data = snap.data ?: throw IllegalStateException("Game not found")
+            val status = data["status"] as? String
+            if (status != GameStatus.WAITING.firestoreValue) {
+                throw IllegalStateException("Chicken can only be re-designated while the game is waiting")
+            }
+            @Suppress("UNCHECKED_CAST")
+            val hunterIds = (data["hunterIds"] as? List<String>).orEmpty().toMutableList()
+            hunterIds.remove(newChickenUid)
+            tx.update(ref, mapOf(
+                "chickenId" to newChickenUid,
+                "hunterIds" to hunterIds,
+            ))
+            null
+        }.await()
+    }
+
     suspend fun joinAsGameMaster(gameId: String, password: String): JoinAsGameMasterResult {
         val callableResult = functions
             .getHttpsCallable("joinAsGameMaster")

@@ -76,6 +76,11 @@ struct GameMasterMapContent: View {
     }
 }
 
+/// GameMaster chicken marker. Matches the shared `HunterMapMarker`
+/// disc size (34 px / 18 pt glyph) so the chicken and hunters read
+/// as the same visual weight on the GM map. When the chicken is
+/// invisible the disc fades and a dashed white outline is drawn —
+/// the GM is the only role that ever sees this state (PP-87).
 private struct GMChickenMarker: View {
     let isInvisible: Bool
 
@@ -83,15 +88,15 @@ private struct GMChickenMarker: View {
         ZStack {
             Circle()
                 .fill(Color.chickenYellow)
-                .frame(width: 40, height: 40)
+                .frame(width: 34, height: 34)
                 .opacity(isInvisible ? 0.45 : 1)
             Text("🐔")
-                .font(.system(size: 22))
+                .font(.system(size: 18))
                 .opacity(isInvisible ? 0.65 : 1)
             if isInvisible {
                 Circle()
                     .strokeBorder(.white, style: StrokeStyle(lineWidth: 2, dash: [4, 3]))
-                    .frame(width: 44, height: 44)
+                    .frame(width: 38, height: 38)
             }
         }
         .shadow(color: .black.opacity(0.3), radius: 4, y: 2)

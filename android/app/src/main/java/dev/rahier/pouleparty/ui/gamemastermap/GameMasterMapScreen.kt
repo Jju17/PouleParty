@@ -168,8 +168,47 @@ fun GameMasterMapScreen(
                     HuntersList(
                         connectedAnnotations = state.hunterAnnotations,
                         allHunterIds = state.game.hunterIds,
+                        registrations = state.registrations,
+                        currentChickenId = state.game.chickenId,
+                        canDesignate = state.game.gameStatusEnum == dev.rahier.pouleparty.model.GameStatus.WAITING,
+                        onDesignateTapped = { viewModel.onIntent(GameMasterMapIntent.DesignateHunterTapped(it)) },
                     )
                 }
+            }
+
+            // PP-86 — confirmation alert
+            val pending = state.pendingChickenDesignation
+            if (pending != null) {
+                AlertDialog(
+                    onDismissRequest = { viewModel.onIntent(GameMasterMapIntent.DesignateCancelTapped) },
+                    title = { Text("Désigner la poule") },
+                    text = { Text("${pending.teamName} deviendra la poule. La poule actuelle perdra ce rôle.") },
+                    confirmButton = {
+                        TextButton(onClick = { viewModel.onIntent(GameMasterMapIntent.DesignateConfirmTapped) }) {
+                            Text("Désigner ${pending.teamName}")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { viewModel.onIntent(GameMasterMapIntent.DesignateCancelTapped) }) {
+                            Text("Annuler")
+                        }
+                    },
+                )
+            }
+
+            // PP-86 — error alert
+            val designationError = state.designationError
+            if (designationError != null) {
+                AlertDialog(
+                    onDismissRequest = { viewModel.onIntent(GameMasterMapIntent.DesignationErrorDismissed) },
+                    title = { Text("Erreur") },
+                    text = { Text(designationError) },
+                    confirmButton = {
+                        TextButton(onClick = { viewModel.onIntent(GameMasterMapIntent.DesignationErrorDismissed) }) {
+                            Text("OK")
+                        }
+                    },
+                )
             }
         }
     }
@@ -179,7 +218,14 @@ fun GameMasterMapScreen(
 private fun HuntersList(
     connectedAnnotations: List<dev.rahier.pouleparty.ui.chickenmap.HunterAnnotation>,
     allHunterIds: List<String>,
+    registrations: List<dev.rahier.pouleparty.model.Registration> = emptyList(),
+    currentChickenId: String = "",
+    canDesignate: Boolean = false,
+    onDesignateTapped: (dev.rahier.pouleparty.model.Registration) -> Unit = {},
 ) {
+    fun displayName(uid: String): String =
+        registrations.firstOrNull { it.userId == uid }?.teamName ?: "Hunter"
+
     Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
         Text("Hunters", style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.height(8.dp))
@@ -195,20 +241,55 @@ private fun HuntersList(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("🏃 ${hunter.displayName}", style = MaterialTheme.typography.bodyLarge)
+                    Text("🏃 ${displayName(hunter.id)}", style = MaterialTheme.typography.bodyLarge)
                 }
             }
             val missing = allHunterIds.filterNot { hid -> connectedAnnotations.any { it.id == hid } }
             if (missing.isNotEmpty()) {
-                items(missing) { _ ->
+                items(missing) { hid ->
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            "👤 Hunter (no position yet)",
+                            "👤 ${displayName(hid)}",
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                    }
+                }
+            }
+            val designatable = registrations.filter { it.userId != currentChickenId }
+            if (canDesignate && designatable.isNotEmpty()) {
+                item {
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        "Désigner la poule",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        "Le hunter désigné devient la poule ; il quitte la liste des chasseurs. Possible uniquement avant le début de la partie.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                }
+                items(designatable) { reg ->
+                    TextButton(
+                        onClick = { onDesignateTapped(reg) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text("👑 ", style = MaterialTheme.typography.bodyLarge)
+                            Text(
+                                reg.teamName,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
                     }
                 }
             }
