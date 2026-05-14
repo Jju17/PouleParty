@@ -140,6 +140,8 @@
     <string name="hunt_starts_in_chicken">🐔 Hunt starts in:</string>
     <string name="hunt_starts_in_hunter">Hunt starts in:</string>
     <string name="map_update_in">Map update in:</string>
+    <!-- PP-17: shown after game endDate is reached. -->
+    <string name="countdown_overtime">Overtime:</string>
 
     <!-- Onboarding -->
     <string name="welcome_title">Welcome to\nPouleParty!</string>

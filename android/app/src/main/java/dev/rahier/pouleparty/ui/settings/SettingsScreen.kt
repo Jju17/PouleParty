@@ -445,7 +445,7 @@ private fun MyGamesSection(state: SettingsUiState, viewModel: SettingsViewModel)
             onViewLeaderboard = { viewModel.onIntent(SettingsIntent.ShowLeaderboard) }
         )
         if (state.isShowingLeaderboard) {
-            LeaderboardDialog(
+            dev.rahier.pouleparty.ui.components.GameLeaderboardSheet(
                 game = selectedGame.game,
                 currentUserId = viewModel.currentUserId(),
                 onDismiss = { viewModel.onIntent(SettingsIntent.DismissLeaderboard) },
@@ -642,73 +642,6 @@ private fun DetailRow(label: String, value: String) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         Text(label, style = gameboyStyle(8), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
         Text(value, style = bangerStyle(16), color = MaterialTheme.colorScheme.onBackground)
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun LeaderboardDialog(
-    game: dev.rahier.pouleparty.model.Game,
-    currentUserId: String,
-    onDismiss: () -> Unit,
-    onReport: ((dev.rahier.pouleparty.ui.victory.LeaderboardEntry) -> Unit)? = null
-) {
-    // Build entries from winners only — no network fetch needed for a basic leaderboard.
-    // Uses the same shared helper as VictoryScreen for consistency.
-    val entries = remember(game.winners, currentUserId) {
-        dev.rahier.pouleparty.ui.victory.buildLeaderboardEntries(
-            game = game,
-            registrations = emptyList(),
-            currentUserId = currentUserId
-        )
-    }
-    val hasWinners = game.winners.isNotEmpty()
-
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = MaterialTheme.colorScheme.surface) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text("🏆", fontSize = 56.sp)
-            Text(
-                game.name.ifEmpty { "Game ${game.gameCode}" },
-                style = bangerStyle(22),
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            Text(
-                "Final results",
-                style = gameboyStyle(10),
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
-            )
-
-            if (!hasWinners) {
-                Spacer(Modifier.height(16.dp))
-                Text("🐔", fontSize = 48.sp)
-                Text(
-                    "The Chicken survived!",
-                    style = bangerStyle(22),
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
-                )
-                Text(
-                    "No hunter found the chicken in this game",
-                    style = gameboyStyle(9),
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                )
-            } else {
-                dev.rahier.pouleparty.ui.components.LeaderboardContent(
-                    entries = entries,
-                    hunterStartMs = game.hunterStartDate.time,
-                    modifier = Modifier.fillMaxWidth(),
-                    onReport = onReport
-                )
-            }
-            Spacer(Modifier.height(32.dp))
-        }
     }
 }
 

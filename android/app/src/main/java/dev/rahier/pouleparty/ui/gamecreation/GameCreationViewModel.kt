@@ -500,6 +500,21 @@ class GameCreationViewModel @Inject constructor(
         _uiState.update { it.copy(showAlert = false) }
     }
 
+    /** Mirrors iOS `clampStartDateToMinimum`: pushes the start date forward
+     *  if it falls before the wizard's minimum allowed (now + 1 min). */
+    private fun clampStartDateToMinimum() {
+        val minimum = Date(System.currentTimeMillis() + 60_000L)
+        val current = _uiState.value.game.startDate
+        if (current.before(minimum)) {
+            _uiState.update {
+                val newGame = it.game.copy(
+                    timing = it.game.timing.copy(start = com.google.firebase.Timestamp(minimum))
+                )
+                it.copy(game = newGame)
+            }
+        }
+    }
+
     private fun recalculateNormalMode() {
         val state = _uiState.value
         val effectiveDuration = maxOf(state.gameDurationMinutes - state.game.timing.headStartMinutes, 1.0)

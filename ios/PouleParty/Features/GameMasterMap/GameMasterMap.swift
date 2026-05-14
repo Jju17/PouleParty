@@ -56,6 +56,10 @@ struct GameMasterMapFeature {
         /// The GM has no per-player zone check — they are pure spectator.
         var isOutsideZone: Bool { false }
         var hasGameStarted: Bool { nowDate >= game.startDate }
+        /// PP-18: the GM is a spectator — they don't play, so the
+        /// leaderboard CTA never appears on this map. Hard-coded
+        /// `false` to satisfy the shared `MapFeatureState` contract.
+        var isGameOver: Bool { false }
     }
 
     enum Action: BindableAction {

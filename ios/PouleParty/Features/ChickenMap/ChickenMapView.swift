@@ -9,6 +9,9 @@ import SwiftUI
 struct ChickenMapView: View {
     @Bindable var store: StoreOf<ChickenMapFeature>
     @State private var selectedPowerUp: PowerUp?
+    /// PP-18: manual leaderboard CTA — sheet stays closed by default
+    /// even at gameOver so the chicken keeps watching the map.
+    @State private var showLeaderboard: Bool = false
 
     private var subtitle: String {
         if store.game.chickenCanSeeHunters {
@@ -33,10 +36,14 @@ struct ChickenMapView: View {
             .safeAreaInset(edge: .bottom) {
                 MapBottomBar(
                     state: store.state,
-                    isActionButtonVisible: true,
+                    // PP-18: chicken hides the FOUND button at gameOver so
+                    // the leaderboard CTA takes its slot. The chicken can
+                    // still hand off the foundCode manually before that.
+                    isActionButtonVisible: !store.state.isGameOver,
                     actionAccessibilityLabel: "I have been found",
                     onActionTapped: { store.send(.view(.beenFoundButtonTapped)) },
                     onInventoryTapped: { store.send(.powerUps(.inventoryTapped)) },
+                    onLeaderboardTapped: { showLeaderboard = true },
                     isChicken: true
                 )
             }
@@ -97,6 +104,10 @@ struct ChickenMapView: View {
                 onInventoryDismiss: { store.send(.powerUps(.inventoryDismissed)) },
                 onActivatePowerUp: { store.send(.powerUps(.activateTapped($0))) }
             )
+            // PP-18 — manual leaderboard CTA at gameOver.
+            .sheet(isPresented: $showLeaderboard) {
+                GameLeaderboardSheet(game: store.game)
+            }
     }
 }
 

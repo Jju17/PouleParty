@@ -138,6 +138,8 @@
     <string name="hunt_starts_in_chicken">🐔 Jacht begint over:</string>
     <string name="hunt_starts_in_hunter">Jacht begint over:</string>
     <string name="map_update_in">Kaartupdate over:</string>
+    <!-- PP-17: na het verlopen van de gametimer. -->
+    <string name="countdown_overtime">Verlenging:</string>
 
     <!-- Onboarding -->
     <string name="welcome_title">Welkom bij\nPouleParty!</string>

@@ -100,6 +100,9 @@ class ChickenMapViewModel @Inject constructor(
     override val gameId: String = savedStateHandle["gameId"] ?: ""
     private val isDebugPreview: Boolean = savedStateHandle.get<Boolean>("debug") ?: false
     override val playerId: String = auth.currentUser?.uid ?: ""
+
+    /** PP-18: exposed for the leaderboard sheet so it can highlight the current user's row. */
+    fun currentUserId(): String = playerId
     override val analyticsRole: String = "chicken"
     override val logTag: String = "ChickenMapVM"
 

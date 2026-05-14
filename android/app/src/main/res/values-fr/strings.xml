@@ -110,6 +110,8 @@
     <string name="hunt_starts_in_chicken">🐔 La chasse commence dans :</string>
     <string name="hunt_starts_in_hunter">La chasse commence dans :</string>
     <string name="map_update_in">Màj de la carte dans :</string>
+    <!-- PP-17: après l'expiration du timer principal. -->
+    <string name="countdown_overtime">Prolongation :</string>
 
     <!-- Onboarding -->
     <string name="welcome_title">Bienvenue sur\nPouleParty !</string>

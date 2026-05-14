@@ -45,6 +45,7 @@ import dev.rahier.pouleparty.ui.components.outerBoundsPoints
 import dev.rahier.pouleparty.ui.components.zoomForRadius
 import dev.rahier.pouleparty.ui.components.CountdownView
 import dev.rahier.pouleparty.ui.components.GameInfoDialog
+import dev.rahier.pouleparty.ui.components.GameLeaderboardSheet
 import dev.rahier.pouleparty.ui.components.HapticManager
 import dev.rahier.pouleparty.ui.components.MapHapticsEffect
 import dev.rahier.pouleparty.ui.components.KeepScreenOn
@@ -118,6 +119,9 @@ fun HunterMapScreen(
     }
 
     var selectedPowerUpType by remember { mutableStateOf<PowerUpType?>(null) }
+    // PP-18: manual leaderboard CTA — closed by default at gameOver so the
+    // hunter keeps the map until they tap the trophy.
+    var showLeaderboard by remember { mutableStateOf(false) }
     var isChallengesSheetVisible by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -334,6 +338,7 @@ fun HunterMapScreen(
                         nextUpdateDate = state.nextRadiusUpdate,
                         chickenStartDate = state.game.startDate,
                         hunterStartDate = state.game.hunterStartDate,
+                        endDate = state.game.endDate,
                         isChicken = false
                     )
                 }
@@ -351,6 +356,28 @@ fun HunterMapScreen(
                             contentPadding = PaddingValues(0.dp)
                         ) {
                             Text("\u26A1${state.collectedPowerUps.size}", fontSize = 11.sp, color = Color.White)
+                        }
+                    }
+
+                    // PP-18: leaderboard CTA visible at gameOver \u2014 sits next
+                    // to FOUND so a straggler can still try to close the
+                    // loop while their team checks the rankings.
+                    if (state.isGameOver) {
+                        Button(
+                            onClick = { showLeaderboard = true },
+                            colors = ButtonDefaults.buttonColors(containerColor = CROrange),
+                            shape = RoundedCornerShape(50.dp),
+                            modifier = Modifier
+                                .size(width = 50.dp, height = 40.dp)
+                                .neonGlow(CROrange, NeonGlowIntensity.SUBTLE, cornerRadius = 20.dp),
+                            contentPadding = PaddingValues(0.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.EmojiEvents,
+                                contentDescription = stringResource(R.string.view_leaderboard),
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
                         }
                     }
 
@@ -532,5 +559,14 @@ fun HunterMapScreen(
     // Challenges / Leaderboard sheet
     if (isChallengesSheetVisible) {
         ChallengesSheet(onDismiss = { isChallengesSheetVisible = false })
+    }
+
+    // PP-18: leaderboard sheet shown when the trophy CTA is tapped.
+    if (showLeaderboard) {
+        GameLeaderboardSheet(
+            game = state.game,
+            currentUserId = viewModel.currentUserId(),
+            onDismiss = { showLeaderboard = false }
+        )
     }
 }

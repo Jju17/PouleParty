@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -39,6 +40,7 @@ import dev.rahier.pouleparty.ui.components.outerBoundsPoints
 import dev.rahier.pouleparty.ui.components.zoomForRadius
 import dev.rahier.pouleparty.ui.components.CountdownView
 import dev.rahier.pouleparty.ui.components.GameInfoDialog
+import dev.rahier.pouleparty.ui.components.GameLeaderboardSheet
 import dev.rahier.pouleparty.ui.components.HapticManager
 import dev.rahier.pouleparty.ui.components.MapHapticsEffect
 import dev.rahier.pouleparty.ui.components.KeepScreenOn
@@ -98,6 +100,9 @@ fun ChickenMapScreen(
     }
 
     var selectedPowerUpType by remember { mutableStateOf<PowerUpType?>(null) }
+    // PP-18: manual leaderboard CTA — closed by default at gameOver so
+    // the chicken keeps watching the map until they tap the trophy.
+    var showLeaderboard by remember { mutableStateOf(false) }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -297,6 +302,7 @@ fun ChickenMapScreen(
                     nextUpdateDate = state.nextRadiusUpdate,
                     chickenStartDate = state.game.startDate,
                     hunterStartDate = state.game.hunterStartDate,
+                    endDate = state.game.endDate,
                     isChicken = true
                 )
             }
@@ -316,8 +322,30 @@ fun ChickenMapScreen(
                 }
             }
 
-            // FOUND button (only visible after game starts)
-            if (state.hasGameStarted) {
+            // PP-18: leaderboard CTA visible at gameOver — sits to the
+            // left of FOUND. FOUND is hidden at gameOver on chicken so
+            // the trophy becomes the primary action.
+            if (state.isGameOver) {
+                Button(
+                    onClick = { showLeaderboard = true },
+                    colors = ButtonDefaults.buttonColors(containerColor = CROrange),
+                    shape = RoundedCornerShape(50.dp),
+                    modifier = Modifier
+                        .size(width = 50.dp, height = 40.dp)
+                        .neonGlow(CROrange, NeonGlowIntensity.SUBTLE, cornerRadius = 20.dp),
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.EmojiEvents,
+                        contentDescription = stringResource(R.string.view_leaderboard),
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+
+            // FOUND button (only visible after game starts, hidden at gameOver per PP-18)
+            if (state.hasGameStarted && !state.isGameOver) {
                 Button(
                     onClick = { viewModel.onIntent(ChickenMapIntent.FoundButtonTapped) },
                     colors = ButtonDefaults.buttonColors(containerColor = HunterRed),
@@ -442,6 +470,15 @@ fun ChickenMapScreen(
             activateButtonColor = PowerupStealth,
             onActivate = { viewModel.onIntent(ChickenMapIntent.ActivatePowerUp(it)) },
             onDismiss = { viewModel.onIntent(ChickenMapIntent.DismissPowerUpInventory) }
+        )
+    }
+
+    // PP-18: leaderboard sheet shown when the trophy CTA is tapped.
+    if (showLeaderboard) {
+        GameLeaderboardSheet(
+            game = state.game,
+            currentUserId = viewModel.currentUserId(),
+            onDismiss = { showLeaderboard = false }
         )
     }
 }
