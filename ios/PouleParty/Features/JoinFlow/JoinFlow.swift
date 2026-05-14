@@ -12,12 +12,14 @@ struct JoinFlowFeature {
     enum Step: Equatable {
         case enteringCode
         case validating
-        case codeValidated(Game, alreadyRegistered: Bool)
-        case registering(Game)
-        case submittingRegistration(Game)
+        /// PP-90: after the code resolves, every hunter goes through
+        /// the teamName form before joining. No more "registration
+        /// required vs open" branching — teamName is collected always.
+        case codeValidated(Game)
+        case joiningWithTeamName(Game)
+        case submittingJoin(Game)
         case codeNotFound
         case networkError
-        case registrationClosed(Game)
         /// PP-88: chicken set a GM password on this game; the user
         /// picked "Rejoindre comme GameMaster". Collect the 4-digit
         /// code and call `joinAsGameMaster`.
@@ -58,14 +60,13 @@ struct JoinFlowFeature {
         case binding(BindingAction<State>)
         case codeChanged(String)
         case codeValidationFailed
-        case codeValidationSucceeded(Game, alreadyRegistered: Bool)
+        case codeValidationSucceeded(Game)
         case delegate(Delegate)
-        case joinTapped
+        case joinAsHunterTapped
+        case submitJoinTapped
+        case joinSucceeded(Game, teamName: String)
+        case joinFailed(String)
         case networkErrorOccurred
-        case registrationDeadlinePassed(Game)
-        case registerTapped
-        case registrationSubmitted(Game, teamName: String)
-        case submitRegistrationTapped
         // PP-88
         case joinAsGameMasterTapped
         case submitGameMasterPasswordTapped
@@ -75,7 +76,6 @@ struct JoinFlowFeature {
 
         enum Delegate: Equatable {
             case joinGame(Game, hunterName: String)
-            case registered(Game, teamName: String)
             case joinedAsGameMaster(Game)
         }
     }
@@ -101,7 +101,7 @@ struct JoinFlowFeature {
                    normalized.allSatisfy({ $0.isLetter || $0.isNumber }) {
                     // Skip if we're already validating or have already validated this code
                     if case .validating = state.step { return .none }
-                    if case let .codeValidated(game, _) = state.step, game.gameCode == normalized {
+                    if case let .codeValidated(game) = state.step, game.gameCode == normalized {
                         return .none
                     }
                     state.step = .validating
@@ -121,21 +121,7 @@ struct JoinFlowFeature {
                                 await send(.codeValidationFailed)
                                 return
                             }
-                            if game.registration.required {
-                                if game.isRegistrationClosed {
-                                    let registration = try await apiClient.findRegistration(game.id, userId)
-                                    if registration != nil {
-                                        await send(.codeValidationSucceeded(game, alreadyRegistered: true))
-                                    } else {
-                                        await send(.registrationDeadlinePassed(game))
-                                    }
-                                } else {
-                                    let registration = try await apiClient.findRegistration(game.id, userId)
-                                    await send(.codeValidationSucceeded(game, alreadyRegistered: registration != nil))
-                                }
-                            } else {
-                                await send(.codeValidationSucceeded(game, alreadyRegistered: true))
-                            }
+                            await send(.codeValidationSucceeded(game))
                         } catch {
                             await send(.networkErrorOccurred)
                         }
@@ -149,59 +135,63 @@ struct JoinFlowFeature {
                 state.step = .codeNotFound
                 return .none
 
-            case let .codeValidationSucceeded(game, alreadyRegistered):
-                state.step = .codeValidated(game, alreadyRegistered: alreadyRegistered)
+            case let .codeValidationSucceeded(game):
+                state.step = .codeValidated(game)
+                // Pre-fill teamName with the user's saved nickname so
+                // a returning player doesn't have to retype.
+                if state.teamName.isEmpty {
+                    state.teamName = state.savedNickname.trimmingCharacters(in: .whitespacesAndNewlines)
+                }
                 return .none
 
             case .delegate:
                 return .none
 
-            case .joinTapped:
-                guard case let .codeValidated(game, alreadyRegistered) = state.step,
-                      alreadyRegistered || !game.registration.required
-                else { return .none }
-                let nickname = state.savedNickname.trimmingCharacters(in: .whitespacesAndNewlines)
-                let finalName = nickname.isEmpty ? "Hunter" : nickname
-                return .send(.delegate(.joinGame(game, hunterName: finalName)))
-
-            case .networkErrorOccurred:
-                state.step = .networkError
+            case .joinAsHunterTapped:
+                guard case let .codeValidated(game) = state.step else { return .none }
+                state.step = .joiningWithTeamName(game)
                 return .none
 
-            case let .registrationDeadlinePassed(game):
-                state.step = .registrationClosed(game)
-                return .none
-
-            case .registerTapped:
-                guard case let .codeValidated(game, _) = state.step else { return .none }
-                state.step = .registering(game)
-                return .none
-
-            case let .registrationSubmitted(game, teamName):
-                return .send(.delegate(.registered(game, teamName: teamName)))
-
-            case .submitRegistrationTapped:
-                guard case let .registering(game) = state.step,
+            case .submitJoinTapped:
+                guard case let .joiningWithTeamName(game) = state.step,
                       state.isTeamNameValid
                 else { return .none }
                 let userId = userClient.currentUserId() ?? ""
                 let teamName = state.teamName.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !userId.isEmpty else { return .none }
 
-                state.step = .submittingRegistration(game)
+                state.step = .submittingJoin(game)
                 let registration = Registration(userId: userId, teamName: teamName)
-                return .run { [analyticsClient] send in
+                return .run { send in
                     do {
+                        // PP-90: create the registration doc *first* so
+                        // the teamName is visible to the chicken / GM
+                        // by the time the user lands in `hunterIds`.
                         try await apiClient.createRegistration(game.id, registration)
-                        analyticsClient.registrationCompleted()
-                        await send(.registrationSubmitted(game, teamName: teamName))
+                        await send(.joinSucceeded(game, teamName: teamName))
                     } catch {
-                        await send(.networkErrorOccurred)
+                        await send(.joinFailed(error.localizedDescription))
                     }
                 }
 
+            case let .joinSucceeded(game, teamName):
+                return .send(.delegate(.joinGame(game, hunterName: teamName)))
+
+            case let .joinFailed(_):
+                // For now we fall back to networkError UI; the user can
+                // retry by tapping the join button again from
+                // `codeValidated`.
+                if case let .submittingJoin(game) = state.step {
+                    state.step = .codeValidated(game)
+                }
+                return .none
+
+            case .networkErrorOccurred:
+                state.step = .networkError
+                return .none
+
             case .joinAsGameMasterTapped:
-                guard case let .codeValidated(game, _) = state.step else { return .none }
+                guard case let .codeValidated(game) = state.step else { return .none }
                 state.gameMasterPassword = ""
                 state.gameMasterError = nil
                 state.step = .gameMasterPasswordEntry(game)
@@ -292,10 +282,10 @@ struct JoinFlowView: View {
 
     private func stepId(_ step: JoinFlowFeature.Step) -> String {
         switch step {
-        case .enteringCode, .validating, .codeNotFound, .networkError, .codeValidated, .registrationClosed:
+        case .enteringCode, .validating, .codeNotFound, .networkError, .codeValidated:
             return "code"
-        case .registering, .submittingRegistration:
-            return "register"
+        case .joiningWithTeamName, .submittingJoin:
+            return "teamName"
         case .gameMasterPasswordEntry, .submittingGameMasterPassword:
             return "gmPassword"
         }
@@ -304,10 +294,12 @@ struct JoinFlowView: View {
     @ViewBuilder
     private func content(for step: JoinFlowFeature.Step) -> some View {
         switch step {
-        case .enteringCode, .validating, .codeNotFound, .networkError, .codeValidated, .registrationClosed:
+        case .enteringCode, .validating, .codeNotFound, .networkError, .codeValidated:
             codeEntry(step: step)
-        case let .registering(game), let .submittingRegistration(game):
-            registrationForm(game: game, isSubmitting: { if case .submittingRegistration = step { return true } else { return false } }())
+        case let .joiningWithTeamName(game):
+            teamNameForm(game: game, isSubmitting: false)
+        case let .submittingJoin(game):
+            teamNameForm(game: game, isSubmitting: true)
         case let .gameMasterPasswordEntry(game):
             gameMasterPasswordForm(game: game, isSubmitting: false)
         case let .submittingGameMasterPassword(game):
@@ -371,12 +363,6 @@ struct JoinFlowView: View {
                 .foregroundStyle(Color.CROrange)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 24)
-        case .registrationClosed:
-            Text(String(localized: "Registration is closed for this game."))
-                .font(.gameboy(size: 9))
-                .foregroundStyle(Color.CROrange)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 24)
         default:
             Color.clear.frame(height: 1)
         }
@@ -385,24 +371,19 @@ struct JoinFlowView: View {
     @ViewBuilder
     private func actionButton(for step: JoinFlowFeature.Step) -> some View {
         let validatedGame: Game? = {
-            if case let .codeValidated(game, _) = step { return game }
+            if case let .codeValidated(game) = step { return game }
             return nil
         }()
+        let isEnabled = validatedGame != nil
         if let game = validatedGame, game.hasGameMasterPassword {
             // PP-88: chicken enabled GM role on this game. Offer the
             // two roles side by side so a hunter and an arbitre can
             // both land on the same screen and pick.
-            let alreadyRegistered: Bool = {
-                if case let .codeValidated(_, ok) = step { return ok }
-                return false
-            }()
-            let needsRegister = game.registration.required && !alreadyRegistered
             VStack(spacing: 12) {
                 Button {
-                    if needsRegister { store.send(.registerTapped) }
-                    else { store.send(.joinTapped) }
+                    store.send(.joinAsHunterTapped)
                 } label: {
-                    BangerText(needsRegister ? String(localized: "Join as Hunter — Register") : String(localized: "Join as Hunter"), size: 20)
+                    BangerText(String(localized: "Join as Hunter"), size: 20)
                         .foregroundStyle(.black)
                         .padding(.horizontal, 28)
                         .padding(.vertical, 14)
@@ -423,25 +404,10 @@ struct JoinFlowView: View {
                 }
             }
         } else {
-            let needsRegister: Bool = {
-                if case let .codeValidated(game, alreadyRegistered) = step {
-                    return game.registration.required && !alreadyRegistered
-                }
-                return false
-            }()
-            let isEnabled: Bool = {
-                if case .codeValidated = step { return true }
-                return false
-            }()
-            let title = needsRegister ? String(localized: "Register") : String(localized: "Join")
             Button {
-                if needsRegister {
-                    store.send(.registerTapped)
-                } else {
-                    store.send(.joinTapped)
-                }
+                store.send(.joinAsHunterTapped)
             } label: {
-                BangerText(title, size: 22)
+                BangerText(String(localized: "Join"), size: 22)
                     .foregroundStyle(isEnabled ? .black : .black.opacity(0.4))
                     .padding(.horizontal, 28)
                     .padding(.vertical, 14)
@@ -521,12 +487,12 @@ struct JoinFlowView: View {
         }
     }
 
-    // MARK: - Registration Form
+    // MARK: - TeamName Form (PP-90)
 
-    private func registrationForm(game: Game, isSubmitting: Bool) -> some View {
+    private func teamNameForm(game: Game, isSubmitting: Bool) -> some View {
         return VStack(spacing: 20) {
             Spacer().frame(height: 8)
-            BangerText(String(localized: "Register"), size: 28)
+            BangerText(String(localized: "Join the hunt"), size: 28)
                 .foregroundStyle(Color.onBackground)
 
             Text("Game \(game.gameCode)")
@@ -553,14 +519,14 @@ struct JoinFlowView: View {
             .padding(.horizontal, 24)
 
             Button {
-                store.send(.submitRegistrationTapped)
+                store.send(.submitJoinTapped)
             } label: {
                 Group {
                     if isSubmitting {
                         ProgressView()
                             .tint(.black)
                     } else {
-                        BangerText(String(localized: "Sign up"), size: 22)
+                        BangerText(String(localized: "Join"), size: 22)
                             .foregroundStyle(.black)
                     }
                 }

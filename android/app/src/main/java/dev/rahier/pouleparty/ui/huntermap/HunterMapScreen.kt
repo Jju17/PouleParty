@@ -495,21 +495,6 @@ fun HunterMapScreen(
         )
     }
 
-    // Registration required alert — game requires registration but user isn't registered
-    if (state.showRegistrationRequiredAlert) {
-        AlertDialog(
-            onDismissRequest = { },
-            title = { Text(stringResource(R.string.registration_required)) },
-            text = { Text(stringResource(R.string.you_must_register_before_joining_this_game)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    viewModel.onIntent(HunterMapIntent.DismissRegistrationRequiredAlert)
-                    onGoToMenu()
-                }) { Text(stringResource(R.string.back_to_menu)) }
-            }
-        )
-    }
-
     // Game info dialog
     if (state.showGameInfo) {
         GameInfoDialog(

@@ -82,7 +82,6 @@ data class HunterMapUiState(
     // gates marker visibility on `game.isRadarPingActive` — without that
     // gate this would be a free locator.
     val chickenLocation: Point? = null,
-    val showRegistrationRequiredAlert: Boolean = false,
     val hasChallenges: Boolean = false,
     val winnerRegistrationFailed: Boolean = false,
     val pendingWinner: Winner? = null,
@@ -136,7 +135,6 @@ class HunterMapViewModel @Inject constructor(
     fun onIntent(intent: HunterMapIntent) {
         when (intent) {
             HunterMapIntent.AppResumed -> onAppResumed()
-            HunterMapIntent.DismissRegistrationRequiredAlert -> dismissRegistrationRequiredAlert()
             HunterMapIntent.PowerUpInventoryTapped -> onPowerUpInventoryTapped()
             HunterMapIntent.DismissPowerUpInventory -> dismissPowerUpInventory()
             HunterMapIntent.FoundButtonTapped -> onFoundButtonTapped()
@@ -179,18 +177,6 @@ class HunterMapViewModel @Inject constructor(
             }
             val game = firestoreRepository.getConfig(gameId) ?: return@launch
 
-            // Defensive gate: refuse entry if game requires registration and user isn't registered.
-            // This catches client-side bypasses and prevents the Firestore rule from rejecting
-            // the hunterIds update (which would otherwise crash the screen).
-            if (game.registration.required) {
-                val registration = firestoreRepository.findRegistration(gameId, hunterId)
-                if (registration == null) {
-                    Log.w(TAG, "Hunter $hunterId not registered for game $gameId — bouncing back")
-                    _uiState.update { it.copy(showRegistrationRequiredAlert = true) }
-                    return@launch
-                }
-            }
-
             val (lastUpdate, lastRadius) = game.findLastUpdate()
 
             _uiState.update {
@@ -206,7 +192,6 @@ class HunterMapViewModel @Inject constructor(
                 analyticsRepository.gameJoined(gameMode = game.gameMode, gameCode = game.gameCode)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to register hunter $hunterId for game $gameId", e)
-                _uiState.update { it.copy(showRegistrationRequiredAlert = true) }
                 return@launch
             }
             streamJobs += startTimer()
@@ -215,10 +200,6 @@ class HunterMapViewModel @Inject constructor(
             streamJobs += viewModelScope.launch { trackHunterSelfLocation(game) }
             streamJobs += viewModelScope.launch { streamPowerUps() }
         }
-    }
-
-    private fun dismissRegistrationRequiredAlert() {
-        _uiState.update { it.copy(showRegistrationRequiredAlert = false) }
     }
 
     private fun startTimer(): Job {

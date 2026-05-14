@@ -156,10 +156,3 @@ internal fun formatDuration(minutes: Double): String {
     val mins = minutes.toInt() % 60
     return if (mins == 0) "${hours}h" else "${hours}h${mins}"
 }
-
-internal fun registrationDeadlineLabel(minutes: Int): String = when {
-    minutes < 60 -> "$minutes min before"
-    minutes == 60 -> "1 hour before"
-    minutes == 1440 -> "1 day before"
-    else -> "${minutes / 60} hours before"
-}

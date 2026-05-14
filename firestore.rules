@@ -35,23 +35,20 @@ service cloud.firestore {
                     // once hunters have registered (PP-26).
                     && request.resource.data.chickenId == request.resource.data.creatorId;
 
-      // Any player can update hunterIds and winners (join game, submit winner)
-      // If the game requires registration, the joining user must already have a registration doc.
-      // The current chicken is never in `hunterIds`: at creation the chicken
-      // is the creator (PP-26 sets `chickenId == creatorId`); a GM-led
-      // re-designation runs through the dedicated update rule below and
-      // pulls the newly-designated hunter out of `hunterIds` atomically.
+      // Any player can update hunterIds and winners (join game, submit
+      // winner). PP-90 dropped the in-app "registration required +
+      // deadline" gate — any authenticated user can join, even
+      // mid-game. The chicken is still never in `hunterIds`: at
+      // creation `chickenId == creatorId` (PP-26); a GM-led
+      // re-designation runs through the dedicated update rule below
+      // and pulls the newly-designated hunter out of `hunterIds`
+      // atomically.
       allow update: if request.auth != null
                     && request.resource.data.diff(resource.data).affectedKeys()
                         .hasOnly(['hunterIds', 'winners'])
                     && request.resource.data.hunterIds.size() <= resource.data.maxPlayers
                     && request.resource.data.winners.size() <= resource.data.maxPlayers
-                    && !request.resource.data.hunterIds.hasAny([resource.data.chickenId])
-                    && (
-                      resource.data.get('registration', {}).get('required', false) == false
-                      || !request.resource.data.hunterIds.hasAny([request.auth.uid])
-                      || exists(/databases/$(database)/documents/games/$(gameId)/registrations/$(request.auth.uid))
-                    );
+                    && !request.resource.data.hunterIds.hasAny([resource.data.chickenId]);
 
       // Only game participants can update power-up active effect fields.
       // `gameMasterIds` is admin-SDK only — the chicken can't self-promote
@@ -138,8 +135,13 @@ service cloud.firestore {
         allow delete: if false;
       }
 
-      // Registrations subcollection — hunters register before joining a game
-      // that requires it. Simple client-side write keyed by user UID.
+      // Registrations subcollection. PP-90 dropped the in-app
+      // registration-required gate, but the subcollection is still
+      // written: each in-app hunter creates a doc keyed by their UID
+      // so the GameMaster can pick a chicken from the team-name list
+      // (PP-86). PP-52 will reuse this subcollection for external
+      // Typeform/Stripe registrations using a random `registrationId`
+      // instead of `userId`.
       match /registrations/{visitorId} {
         allow read: if request.auth != null
                     && (visitorId == request.auth.uid
@@ -149,13 +151,7 @@ service cloud.firestore {
                       && request.resource.data.userId == request.auth.uid
                       && request.resource.data.keys().hasAll(['userId', 'teamName', 'joinedAt'])
                       && request.resource.data.teamName is string
-                      && request.resource.data.teamName.size() > 0
-                      // Enforce registration deadline if set
-                      && (
-                        get(/databases/$(database)/documents/games/$(gameId)).data.get('registration', {}).get('closesMinutesBefore', null) == null
-                        || request.time < get(/databases/$(database)/documents/games/$(gameId)).data.timing.start
-                            - duration.value(get(/databases/$(database)/documents/games/$(gameId)).data.registration.closesMinutesBefore * 60, 's')
-                      );
+                      && request.resource.data.teamName.size() > 0;
         allow update: if request.auth != null
                       && visitorId == request.auth.uid
                       && request.resource.data.userId == request.auth.uid;

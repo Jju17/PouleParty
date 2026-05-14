@@ -24,7 +24,6 @@ import dev.rahier.pouleparty.ui.gamecreation.GameCreationUiState
 import dev.rahier.pouleparty.ui.gamecreation.RecapRow
 import dev.rahier.pouleparty.ui.gamecreation.StepContainer
 import dev.rahier.pouleparty.ui.gamecreation.formatDuration
-import dev.rahier.pouleparty.ui.gamecreation.registrationDeadlineLabel
 import dev.rahier.pouleparty.ui.theme.CROrange
 import dev.rahier.pouleparty.ui.theme.gameboyStyle
 import java.text.SimpleDateFormat
@@ -119,18 +118,6 @@ fun RecapStep(
                     RecapRow(
                         label = stringResource(R.string.chicken_can_see_hunters),
                         value = if (game.chickenCanSeeHunters) "Yes" else "No"
-                    )
-                }
-                HorizontalDivider()
-                RecapRow(
-                    label = stringResource(R.string.registration),
-                    value = if (game.registration.required) stringResource(R.string.registration_required) else stringResource(R.string.open_join)
-                )
-                if (game.registration.required && game.registration.closesMinutesBefore != null) {
-                    HorizontalDivider()
-                    RecapRow(
-                        label = stringResource(R.string.registration_closes),
-                        value = registrationDeadlineLabel(game.registration.closesMinutesBefore)
                     )
                 }
                 if (!state.isZoneConfigured) {

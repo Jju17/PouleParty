@@ -132,7 +132,6 @@ struct HunterMapFeature {
             case chickenLocationMasked
             case powerUpCollected(PowerUp)
             case powerUpsUpdated([PowerUp])
-            case registrationRequiredDetected
             case timerTicked
             case userLocationUpdated(CLLocationCoordinate2D)
             case winnerNotificationDismissed
@@ -161,7 +160,6 @@ struct HunterMapFeature {
                 case leaveGame
                 case gameOver
                 case wrongCode
-                case registrationRequired
                 case retryWinnerRegistration
             }
         }
@@ -255,11 +253,6 @@ struct HunterMapFeature {
                     // Show leaderboard instead of returning to menu directly
                     await send(.delegate(.allHuntersFound))
                 }
-            case .destination(.presented(.alert(.registrationRequired))):
-                return .run { send in
-                    await liveActivityClient.end(nil)
-                    await send(.delegate(.returnedToMenu))
-                }
             case .destination(.presented(.alert(.retryWinnerRegistration))):
                 // Must live above the catch-all `case .destination:` below,
                 // otherwise the pattern never matches.
@@ -272,19 +265,6 @@ struct HunterMapFeature {
                     winner: winner,
                     attempts: attempts
                 )
-            case .internal(.registrationRequiredDetected):
-                state.destination = .alert(
-                    AlertState {
-                        TextState("Registration required")
-                    } actions: {
-                        ButtonState(action: .registrationRequired) {
-                            TextState("OK")
-                        }
-                    } message: {
-                        TextState("You must register for this game before joining. Ask the chicken for the registration link.")
-                    }
-                )
-                return .none
             case .destination:
                 return .none
             case .internal(.countdownDismissed):
@@ -576,7 +556,6 @@ struct HunterMapFeature {
                 let initialLAState = state.liveActivityState
                 state.lastLiveActivityState = initialLAState
 
-                let requiresRegistration = state.game.registration.required
                 let gameMode = state.game.gameMode.rawValue
                 let gameCode = state.game.gameCode
                 var effects: [Effect<Action>] = [
@@ -584,17 +563,6 @@ struct HunterMapFeature {
                         await liveActivityClient.start(attributes, initialLAState)
                     },
                     .run { [analyticsClient] send in
-                        // Defensive gate: if game requires registration, ensure user has one before
-                        // calling registerHunter (which would fail the Firestore rule and silently
-                        // break the rest of the screen).
-                        if requiresRegistration {
-                            let registration = try? await apiClient.findRegistration(gameId, hunterId)
-                            if registration == nil {
-                                logger.warning("Hunter \(hunterId) not registered for game \(gameId) — bouncing back")
-                                await send(.internal(.registrationRequiredDetected))
-                                return
-                            }
-                        }
                         do {
                             try await apiClient.registerHunter(gameId, hunterId)
                             analyticsClient.gameJoined(gameMode: gameMode, gameCode: gameCode)

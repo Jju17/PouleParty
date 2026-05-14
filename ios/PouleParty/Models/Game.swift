@@ -35,23 +35,12 @@ struct Game: Codable, Equatable, Identifiable {
 
     var timing: Timing = Timing()
     var zone: Zone = Zone()
-    var registration: GameRegistration = GameRegistration()
     var powerUps: GamePowerUps = GamePowerUps()
     var lastHeartbeat: Timestamp?
     /// Lifts the `maxPlayers` cap from 5 to 500 for parties created via the
     /// admin code (`jujurahier`). Garde-fou client only — see PP-45 and the
     /// firestore.rules `allow create` clause.
     var isAdminCreation: Bool = false
-
-    var registrationDeadline: Date? {
-        guard let minutes = registration.closesMinutesBefore else { return nil }
-        return timing.start.dateValue().addingTimeInterval(TimeInterval(-minutes * 60))
-    }
-
-    var isRegistrationClosed: Bool {
-        guard registration.required, let deadline = registrationDeadline else { return false }
-        return Date.now >= deadline
-    }
 
     // MARK: - Nested Types
 
@@ -72,11 +61,6 @@ struct Game: Codable, Equatable, Identifiable {
         var shrinkIntervalMinutes: Double = 5
         var shrinkMetersPerUpdate: Double = 100
         var driftSeed: Int = 0
-    }
-
-    struct GameRegistration: Codable, Equatable {
-        var required: Bool = false
-        var closesMinutesBefore: Int? = 15
     }
 
     struct GamePowerUps: Codable, Equatable {

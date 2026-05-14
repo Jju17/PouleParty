@@ -14,23 +14,6 @@ import Sharing
 import SwiftUI
 import UIKit
 
-struct PendingRegistration: Codable, Equatable {
-    let gameId: String
-    let gameCode: String
-    let teamName: String
-    var startDate: Date
-    var isFinished: Bool = false
-}
-
-extension SharedKey where Self == FileStorageKey<PendingRegistration?>.Default {
-    static var pendingRegistration: Self {
-        Self[
-            .fileStorage(.documentsDirectory.appending(component: "pending-registration.json")),
-            default: nil
-        ]
-    }
-}
-
 extension SharedKey where Self == FileStorageKey<Set<String>>.Default {
     /// Game ids the user explicitly dismissed from the Home banner.
     /// Persisted cross-session so a dismiss sticks until the game phase
@@ -51,7 +34,6 @@ struct HomeFeature {
         @Presents var destination: Destination.State?
         @Shared(.appStorage(AppConstants.prefIsMusicMuted)) var isMusicMuted = false
         @Shared(.appStorage(AppConstants.prefUserNickname)) var savedNickname = ""
-        @Shared(.pendingRegistration) var pendingRegistration: PendingRegistration?
         /// Set of game ids the user has dismissed from the Home banner. The
         /// banner skips these so it doesn't reappear on every resume for a
         /// game the user actively hid. Cleared individually when the same
@@ -60,7 +42,6 @@ struct HomeFeature {
         @Shared(.dismissedActiveGameIds) var dismissedActiveGameIds: Set<String> = []
         var gameCode: String = ""
         var musicMuted: Bool { isMusicMuted }
-        var currentPendingRegistration: PendingRegistration? { pendingRegistration }
         var activeGame: Game? = nil
         var activeGameRole: GameRole? = nil
         /// Distinguishes "Reprendre la partie" (inProgress) from "Prochaine
@@ -112,9 +93,6 @@ struct HomeFeature {
         case networkRequestFailed
         case noActiveGameFound
         case onTask
-        case pendingRegistrationDismissed
-        case pendingRegistrationRefreshed(PendingRegistration?)
-        case pendingRegistrationRejoinTapped
         case rejoinGameTapped
         case rulesButtonTapped
         case settingsButtonTapped
@@ -333,17 +311,6 @@ struct HomeFeature {
                 case .done:
                     return .send(.completedGameFound(game))
                 }
-            case let .destination(.presented(.joinFlow(.delegate(.registered(game, teamName))))):
-                state.destination = nil
-                state.$pendingRegistration.withLock { value in
-                    value = PendingRegistration(
-                        gameId: game.id,
-                        gameCode: game.gameCode,
-                        teamName: teamName,
-                        startDate: game.startDate
-                    )
-                }
-                return .none
             case let .destination(.presented(.joinFlow(.delegate(.joinedAsGameMaster(game))))):
                 state.destination = nil
                 return .send(.gameMasterGameStarted(game))
@@ -395,7 +362,6 @@ struct HomeFeature {
             case .gameMasterGameStarted:
                 return .none
             case .hunterGameJoined:
-                state.$pendingRegistration.withLock { $0 = nil }
                 return .none
             case .accountDeletionCompleted:
                 return .none
@@ -476,54 +442,27 @@ struct HomeFeature {
                 guard let userId, !userId.isEmpty else {
                     return .none
                 }
-                let pending = state.pendingRegistration
-                return .merge(
-                    .run { [apiClient] send in
-                        guard let pending else { return }
-                        // TTL: a banner for a game whose start date was > 7 days
-                        // ago is a zombie (user never opened the app after the
-                        // game ended). Clear it instead of keeping it forever.
-                        let sevenDaysAgo = Date().addingTimeInterval(-7 * 24 * 60 * 60)
-                        if pending.startDate < sevenDaysAgo {
-                            await send(.pendingRegistrationRefreshed(nil))
+                return .run { [apiClient, dismissedIds = state.dismissedActiveGameIds] send in
+                    func emit(_ triple: (Game, GameRole, GamePhase)?) async {
+                        guard let (game, role, phase) = triple else {
+                            await send(.noActiveGameFound)
                             return
                         }
-                        guard let game = try? await apiClient.getConfig(pending.gameId) else {
-                            // Game no longer exists — clear the banner
-                            await send(.pendingRegistrationRefreshed(nil))
-                            return
+                        if dismissedIds.contains(game.id) {
+                            await send(.noActiveGameFound)
+                        } else {
+                            await send(.activeGameFound(game, role, phase))
                         }
-                        let updated = PendingRegistration(
-                            gameId: pending.gameId,
-                            gameCode: game.gameCode,
-                            teamName: pending.teamName,
-                            startDate: game.startDate,
-                            isFinished: game.status == .done
-                        )
-                        await send(.pendingRegistrationRefreshed(updated))
-                    },
-                    .run { [apiClient, dismissedIds = state.dismissedActiveGameIds] send in
-                        func emit(_ triple: (Game, GameRole, GamePhase)?) async {
-                            guard let (game, role, phase) = triple else {
-                                await send(.noActiveGameFound)
-                                return
-                            }
-                            if dismissedIds.contains(game.id) {
-                                await send(.noActiveGameFound)
-                            } else {
-                                await send(.activeGameFound(game, role, phase))
-                            }
-                        }
-                        // First attempt may fail on cold start while auth token refreshes
-                        if let triple = try? await apiClient.findActiveGame(userId) {
-                            await emit(triple)
-                            return
-                        }
-                        // Retry once after a short delay to allow auth token refresh
-                        try? await clock.sleep(for: .seconds(2))
-                        await emit(try? await apiClient.findActiveGame(userId))
                     }
-                )
+                    // First attempt may fail on cold start while auth token refreshes
+                    if let triple = try? await apiClient.findActiveGame(userId) {
+                        await emit(triple)
+                        return
+                    }
+                    // Retry once after a short delay to allow auth token refresh
+                    try? await clock.sleep(for: .seconds(2))
+                    await emit(try? await apiClient.findActiveGame(userId))
+                }
             case .rejoinGameTapped:
                 guard let game = state.activeGame, let role = state.activeGameRole else {
                     return .none
@@ -552,36 +491,6 @@ struct HomeFeature {
             case .settingsButtonTapped:
                 state.destination = .settings(SettingsFeature.State())
                 return .none
-            case .pendingRegistrationDismissed:
-                state.$pendingRegistration.withLock { $0 = nil }
-                return .none
-
-            case let .pendingRegistrationRefreshed(updated):
-                state.$pendingRegistration.withLock { $0 = updated }
-                return .none
-
-            case .pendingRegistrationRejoinTapped:
-                guard let pending = state.pendingRegistration else { return .none }
-                let savedNickname = state.savedNickname.trimmingCharacters(in: .whitespacesAndNewlines)
-                let finalName = savedNickname.isEmpty ? "Hunter" : savedNickname
-                let gameId = pending.gameId
-                return .run { send in
-                    do {
-                        guard let game = try await apiClient.getConfig(gameId) else {
-                            await send(.gameNotFound)
-                            return
-                        }
-                        switch game.status {
-                        case .waiting, .inProgress:
-                            await send(.hunterGameJoined(game, finalName))
-                        case .done:
-                            await send(.completedGameFound(game))
-                        }
-                    } catch {
-                        await send(.networkRequestFailed)
-                    }
-                }
-
             case .startButtonTapped:
                 let startLocStatus = locationClient.authorizationStatus()
                 guard startLocStatus == .authorizedAlways || startLocStatus == .authorizedWhenInUse else {
@@ -604,7 +513,6 @@ struct HomeView: View {
     @State private var isVisible = true
     @State private var audioPlayer: AVAudioPlayer?
     @State private var musicButtonScale: CGFloat = 1.0
-    @State private var isPendingBannerCollapsed = false
 
     var body: some View {
         NavigationStack {
@@ -702,26 +610,6 @@ struct HomeView: View {
                             withAnimation { _ = store.send(.activeGameBannerDismissed) }
                         }
                     )
-                } else if let pending = store.currentPendingRegistration {
-                    if isPendingBannerCollapsed {
-                        CollapsedPendingRegistrationTab(
-                            onExpand: {
-                                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                                    isPendingBannerCollapsed = false
-                                }
-                            }
-                        )
-                    } else {
-                        PendingRegistrationBanner(
-                            pending: pending,
-                            onJoin: { store.send(.pendingRegistrationRejoinTapped) },
-                            onCollapse: {
-                                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                                    isPendingBannerCollapsed = true
-                                }
-                            }
-                        )
-                    }
                 }
 
                 HStack {

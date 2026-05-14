@@ -21,12 +21,6 @@ object AppConstants {
     const val COLLECTION_USERS = "users"
     const val COLLECTION_CHALLENGES = "challenges"
 
-    // Pending registration banner
-    const val PREF_PENDING_REGISTRATION_GAME_ID = "pendingRegistrationGameId"
-    const val PREF_PENDING_REGISTRATION_GAME_CODE = "pendingRegistrationGameCode"
-    const val PREF_PENDING_REGISTRATION_TEAM_NAME = "pendingRegistrationTeamName"
-    const val PREF_PENDING_REGISTRATION_START_MS = "pendingRegistrationStartMs"
-    const val PREF_PENDING_REGISTRATION_IS_FINISHED = "pendingRegistrationIsFinished"
     /** Last game id the user explicitly dismissed from the "active game" Home
      *  banner. Skipped in findActiveGame so the banner doesn't reappear on the
      *  next onResume for a game the user actively hid. (Legacy single-value;

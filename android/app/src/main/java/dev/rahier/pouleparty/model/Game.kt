@@ -25,11 +25,6 @@ data class Zone(
     val driftSeed: Int = 0
 )
 
-data class GameRegistration(
-    val required: Boolean = false,
-    val closesMinutesBefore: Int? = 15
-)
-
 data class ActiveEffects(
     val invisibility: Timestamp? = null,
     val zoneFreeze: Timestamp? = null,
@@ -73,7 +68,6 @@ data class Game(
     val hasGameMasterPassword: Boolean = false,
     val timing: Timing = Timing(),
     val zone: Zone = Zone(),
-    val registration: GameRegistration = GameRegistration(),
     val powerUps: GamePowerUps = GamePowerUps(),
     val lastHeartbeat: Timestamp? = null,
     /**
@@ -168,21 +162,6 @@ data class Game(
     @get:Exclude
     val gameStatusEnum: GameStatus
         get() = GameStatus.fromFirestore(status)
-
-    @get:Exclude
-    val registrationDeadline: Date?
-        get() {
-            val minutes = registration.closesMinutesBefore ?: return null
-            return Date(startDate.time - minutes * 60 * 1000L)
-        }
-
-    @get:Exclude
-    val isRegistrationClosed: Boolean
-        get() {
-            if (!registration.required) return false
-            val deadline = registrationDeadline ?: return false
-            return Date().after(deadline) || Date() == deadline
-        }
 
     // ── Game Logic ─────────────────────────────────────
 

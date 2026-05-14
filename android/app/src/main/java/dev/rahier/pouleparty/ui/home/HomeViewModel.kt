@@ -3,24 +3,16 @@ package dev.rahier.pouleparty.ui.home
 import android.content.SharedPreferences
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.GeoPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.rahier.pouleparty.AppConstants
 import dev.rahier.pouleparty.data.FirestoreRepository
 import dev.rahier.pouleparty.data.LocationRepository
 import dev.rahier.pouleparty.model.Game
-import dev.rahier.pouleparty.model.GameMod
-import dev.rahier.pouleparty.model.GamePowerUps
 import dev.rahier.pouleparty.model.GameStatus
 import dev.rahier.pouleparty.model.Registration
-import dev.rahier.pouleparty.model.Timing
-import dev.rahier.pouleparty.model.Zone
-import dev.rahier.pouleparty.model.calculateNormalModeSettings
 import dev.rahier.pouleparty.ui.gamelogic.PlayerRole
 import dev.rahier.pouleparty.util.getTrimmedString
-import java.util.Date
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -45,7 +37,6 @@ data class HomeUiState(
     /** Distinguishes "Reprendre" (IN_PROGRESS) from "Prochaine partie"
      *  (UPCOMING) for the Home banner copy + CTA. Null when no active game. */
     val activeGamePhase: dev.rahier.pouleparty.ui.gamelogic.GamePhase? = null,
-    val pendingRegistration: PendingRegistration? = null,
     /** PP-45: admin-code dialog open / current input / wrong-code error. */
     val isShowingAdminCodeDialog: Boolean = false,
     val adminCodeInput: String = "",
@@ -95,10 +86,8 @@ class HomeViewModel @Inject constructor(
             HomeIntent.ToggleMusic -> toggleMusicMuted()
             HomeIntent.ActiveGameDismissed -> dismissActiveGame()
             HomeIntent.RejoinActiveGameTapped -> rejoinActiveGame()
-            HomeIntent.RegisterTapped -> onRegisterTapped()
-            HomeIntent.SubmitRegistrationTapped -> onSubmitRegistrationTapped()
-            HomeIntent.JoinValidatedGameTapped -> joinValidatedGame()
-            HomeIntent.PendingRegistrationJoinTapped -> joinPendingRegistration()
+            HomeIntent.JoinAsHunterTapped -> onJoinAsHunterTapped()
+            HomeIntent.SubmitJoinTapped -> onSubmitJoinTapped()
             HomeIntent.RefreshActiveGame -> checkForActiveGame()
             HomeIntent.AdminModeTapped -> onAdminModeTapped()
             HomeIntent.AdminCodeDismissed -> _uiState.update { it.copy(isShowingAdminCodeDialog = false, adminCodeInput = "") }
@@ -229,32 +218,9 @@ class HomeViewModel @Inject constructor(
 
     init {
         _uiState.update {
-            it.copy(
-                isMusicMuted = prefs.getBoolean(AppConstants.PREF_IS_MUSIC_MUTED, false),
-                pendingRegistration = loadPendingRegistration()
-            )
+            it.copy(isMusicMuted = prefs.getBoolean(AppConstants.PREF_IS_MUSIC_MUTED, false))
         }
         checkForActiveGame()
-        refreshPendingRegistration()
-    }
-
-    private fun refreshPendingRegistration() {
-        val pending = _uiState.value.pendingRegistration ?: return
-        viewModelScope.launch {
-            val game = firestoreRepository.getConfig(pending.gameId)
-            if (game == null) {
-                clearPendingRegistration()
-                _uiState.update { it.copy(pendingRegistration = null) }
-                return@launch
-            }
-            val updated = pending.copy(
-                gameCode = game.gameCode,
-                startMs = game.startDate.time,
-                isFinished = game.gameStatusEnum == GameStatus.DONE
-            )
-            savePendingRegistration(updated)
-            _uiState.update { it.copy(pendingRegistration = updated) }
-        }
     }
 
     /**
@@ -432,15 +398,14 @@ class HomeViewModel @Inject constructor(
                     _uiState.update { it.copy(joinStep = JoinFlowStep.CodeNotFound) }
                     return@launch
                 }
-                if (game.registration.required) {
-                    val registration = firestoreRepository.findRegistration(game.id, userId)
-                    if (game.isRegistrationClosed && registration == null) {
-                        _uiState.update { it.copy(joinStep = JoinFlowStep.RegistrationClosed(game)) }
-                        return@launch
-                    }
-                    _uiState.update { it.copy(joinStep = JoinFlowStep.CodeValidated(game, registration != null)) }
-                } else {
-                    _uiState.update { it.copy(joinStep = JoinFlowStep.CodeValidated(game, true)) }
+                // PP-90: pre-fill teamName from the saved nickname so the
+                // user can join in one tap if they're happy with the default.
+                val savedNickname = prefs.getTrimmedString(AppConstants.PREF_USER_NICKNAME)
+                _uiState.update {
+                    it.copy(
+                        joinStep = JoinFlowStep.CodeValidated(game),
+                        teamName = if (it.teamName.isBlank()) savedNickname else it.teamName,
+                    )
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 // Sheet was dismissed or a newer validation started — don't
@@ -460,91 +425,49 @@ class HomeViewModel @Inject constructor(
         _uiState.update { it.copy(teamName = name.trimStart()) }
     }
 
-    private fun onRegisterTapped() {
+    private fun onJoinAsHunterTapped() {
         val step = _uiState.value.joinStep
         if (step !is JoinFlowStep.CodeValidated) return
-        _uiState.update { it.copy(joinStep = JoinFlowStep.Registering(step.game)) }
+        _uiState.update { it.copy(joinStep = JoinFlowStep.JoiningWithTeamName(step.game)) }
     }
 
-    private fun onSubmitRegistrationTapped() {
+    /**
+     * PP-90: collects the teamName, writes the registration doc keyed by
+     * userId, then navigates to the hunter map. Anyone can join at any
+     * point — there's no deadline. The registration subcollection is
+     * still written so PP-86 GameMaster can pick a chicken from the
+     * teamName list.
+     */
+    private fun onSubmitJoinTapped() {
         val step = _uiState.value.joinStep
-        if (step !is JoinFlowStep.Registering) return
+        if (step !is JoinFlowStep.JoiningWithTeamName) return
         if (!_uiState.value.isTeamNameValid) return
         val userId = auth.currentUser?.uid ?: return
         if (userId.isEmpty()) return
         val game = step.game
         val teamName = _uiState.value.teamName.trim()
-        _uiState.update { it.copy(joinStep = JoinFlowStep.SubmittingRegistration(game)) }
+        _uiState.update { it.copy(joinStep = JoinFlowStep.SubmittingJoin(game)) }
         viewModelScope.launch {
             try {
                 val registration = Registration(userId = userId, teamName = teamName)
                 firestoreRepository.createRegistration(game.id, registration)
                 analyticsRepository.registrationCompleted()
-                val pending = PendingRegistration(
-                    gameId = game.id,
-                    gameCode = game.gameCode,
-                    teamName = teamName,
-                    startMs = game.startDate.time
-                )
-                savePendingRegistration(pending)
                 _uiState.update {
                     it.copy(
-                        pendingRegistration = pending,
                         isShowingJoinSheet = false,
                         gameCode = "",
                         teamName = "",
                         joinStep = JoinFlowStep.EnteringCode
                     )
                 }
+                val effect = when (game.gameStatusEnum) {
+                    GameStatus.WAITING, GameStatus.IN_PROGRESS -> HomeEffect.NavigateToHunterMap(game.id, teamName)
+                    GameStatus.DONE -> HomeEffect.NavigateToGameDone(game.id)
+                }
+                _effects.send(effect)
             } catch (e: Exception) {
                 _uiState.update { it.copy(joinStep = JoinFlowStep.NetworkError) }
             }
-        }
-    }
-
-    private fun joinValidatedGame() {
-        val step = _uiState.value.joinStep
-        if (step !is JoinFlowStep.CodeValidated) return
-        if (step.game.registration.required && !step.alreadyRegistered) return
-
-        val savedNickname = prefs.getTrimmedString(AppConstants.PREF_USER_NICKNAME)
-        val hunterName = savedNickname.ifEmpty { "Hunter" }
-        clearPendingRegistration()
-        _uiState.update {
-            it.copy(
-                isShowingJoinSheet = false,
-                gameCode = "",
-                teamName = "",
-                joinStep = JoinFlowStep.EnteringCode,
-                pendingRegistration = null
-            )
-        }
-        viewModelScope.launch {
-            val effect = when (step.game.gameStatusEnum) {
-                GameStatus.WAITING, GameStatus.IN_PROGRESS -> HomeEffect.NavigateToHunterMap(step.game.id, hunterName)
-                GameStatus.DONE -> HomeEffect.NavigateToGameDone(step.game.id)
-            }
-            _effects.send(effect)
-        }
-    }
-
-    private fun joinPendingRegistration() {
-        val pending = _uiState.value.pendingRegistration ?: return
-        val savedNickname = prefs.getTrimmedString(AppConstants.PREF_USER_NICKNAME)
-        val hunterName = savedNickname.ifEmpty { "Hunter" }
-        viewModelScope.launch {
-            val game = firestoreRepository.getConfig(pending.gameId)
-            if (game == null) {
-                _uiState.update { it.copy(isShowingGameNotFound = true) }
-                return@launch
-            }
-            clearPendingRegistration()
-            _uiState.update { it.copy(pendingRegistration = null) }
-            val effect = when (game.gameStatusEnum) {
-                GameStatus.WAITING, GameStatus.IN_PROGRESS -> HomeEffect.NavigateToHunterMap(game.id, hunterName)
-                GameStatus.DONE -> HomeEffect.NavigateToGameDone(game.id)
-            }
-            _effects.send(effect)
         }
     }
 
@@ -589,46 +512,5 @@ class HomeViewModel @Inject constructor(
             return
         }
         viewModelScope.launch { _effects.send(HomeEffect.NavigateToDebugMapConfig) }
-    }
-
-    // ── Pending registration persistence ──────────────────
-
-    private fun loadPendingRegistration(): PendingRegistration? {
-        val gameId = prefs.getString(AppConstants.PREF_PENDING_REGISTRATION_GAME_ID, null) ?: return null
-        val gameCode = prefs.getString(AppConstants.PREF_PENDING_REGISTRATION_GAME_CODE, null) ?: return null
-        val teamName = prefs.getString(AppConstants.PREF_PENDING_REGISTRATION_TEAM_NAME, null) ?: return null
-        val startMs = prefs.getLong(AppConstants.PREF_PENDING_REGISTRATION_START_MS, 0L)
-        val isFinished = prefs.getBoolean(AppConstants.PREF_PENDING_REGISTRATION_IS_FINISHED, false)
-        if (gameId.isEmpty() || gameCode.isEmpty()) return null
-
-        // TTL: if the stored game's start is more than 7 days in the past, the
-        // banner is almost certainly a zombie (user never opened the app
-        // after the game ended). Drop it rather than display forever.
-        val PENDING_TTL_MS = 7L * 24 * 60 * 60 * 1000
-        if (startMs > 0 && System.currentTimeMillis() - startMs > PENDING_TTL_MS) {
-            clearPendingRegistration()
-            return null
-        }
-        return PendingRegistration(gameId, gameCode, teamName, startMs, isFinished)
-    }
-
-    private fun savePendingRegistration(pending: PendingRegistration) {
-        prefs.edit()
-            .putString(AppConstants.PREF_PENDING_REGISTRATION_GAME_ID, pending.gameId)
-            .putString(AppConstants.PREF_PENDING_REGISTRATION_GAME_CODE, pending.gameCode)
-            .putString(AppConstants.PREF_PENDING_REGISTRATION_TEAM_NAME, pending.teamName)
-            .putLong(AppConstants.PREF_PENDING_REGISTRATION_START_MS, pending.startMs)
-            .putBoolean(AppConstants.PREF_PENDING_REGISTRATION_IS_FINISHED, pending.isFinished)
-            .apply()
-    }
-
-    private fun clearPendingRegistration() {
-        prefs.edit()
-            .remove(AppConstants.PREF_PENDING_REGISTRATION_GAME_ID)
-            .remove(AppConstants.PREF_PENDING_REGISTRATION_GAME_CODE)
-            .remove(AppConstants.PREF_PENDING_REGISTRATION_TEAM_NAME)
-            .remove(AppConstants.PREF_PENDING_REGISTRATION_START_MS)
-            .remove(AppConstants.PREF_PENDING_REGISTRATION_IS_FINISHED)
-            .apply()
     }
 }

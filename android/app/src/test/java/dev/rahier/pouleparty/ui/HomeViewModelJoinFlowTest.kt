@@ -9,7 +9,6 @@ import dev.rahier.pouleparty.data.FirestoreRepository
 import dev.rahier.pouleparty.data.LocationRepository
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameStatus
-import dev.rahier.pouleparty.model.Registration
 import dev.rahier.pouleparty.ui.home.HomeIntent
 import dev.rahier.pouleparty.ui.home.HomeViewModel
 import dev.rahier.pouleparty.ui.home.JoinFlowStep
@@ -115,7 +114,6 @@ class HomeViewModelJoinFlowTest {
         mockAuthUser("user-xyz")
         val game = Game.mock.copy(creatorId = "other")
         coEvery { firestoreRepository.findGameByCode("ABC123") } returns game
-        coEvery { firestoreRepository.findRegistration(any(), any()) } returns null
 
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()

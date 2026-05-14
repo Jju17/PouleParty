@@ -267,7 +267,6 @@ The game has two distinct roles. The UI subtly shifts to immerse the player:
 ├── foundCode, hunterIds, gameMasterIds, status, winners, creatorId, chickenId
 ├── timing: { start, end, headStartMinutes }
 ├── zone: { center, finalCenter, radius, shrinkIntervalMinutes, shrinkMetersPerUpdate, driftSeed }
-├── registration: { required, closesMinutesBefore }
 ├── powerUps: { enabled, enabledTypes, activeEffects: { invisibility, zoneFreeze, radarPing, decoy, jammer } }
 ├── /chickenLocations/latest
 ├── /hunterLocations/{hunterId}

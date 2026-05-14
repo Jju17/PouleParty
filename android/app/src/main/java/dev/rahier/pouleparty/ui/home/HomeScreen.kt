@@ -41,7 +41,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.ui.home.components.GameRulesOverlay
 import dev.rahier.pouleparty.ui.home.components.JoinFlowBottomSheet
-import dev.rahier.pouleparty.ui.home.components.PendingRegistrationBannerSlot
 import dev.rahier.pouleparty.ui.theme.*
 
 private enum class PendingPermissionAction { None, Start, CreateParty }
@@ -112,7 +111,6 @@ fun HomeScreen(
         if (!state.isMusicMuted && !mediaPlayer.isPlaying) mediaPlayer.start()
     }
 
-    var isPendingBannerCollapsed by remember { mutableStateOf(false) }
     var pendingPermissionAction by remember { mutableStateOf<PendingPermissionAction>(PendingPermissionAction.None) }
 
     // PP-42: Forms a fresh Firestore-style auto-ID, then navigates straight
@@ -346,17 +344,6 @@ fun HomeScreen(
                         )
                     }
                 }
-            } else {
-                val pending = state.pendingRegistration
-                if (pending != null) {
-                PendingRegistrationBannerSlot(
-                    pending = pending,
-                    isCollapsed = isPendingBannerCollapsed,
-                    onCollapse = { isPendingBannerCollapsed = true },
-                    onExpand = { isPendingBannerCollapsed = false },
-                    onJoin = { viewModel.onIntent(HomeIntent.PendingRegistrationJoinTapped) }
-                )
-                }
             }
 
             // Bottom row: Rules (left) + I am la poule (right)
@@ -450,9 +437,8 @@ fun HomeScreen(
             onDismiss = { viewModel.onIntent(HomeIntent.JoinSheetDismissed) },
             onCodeChanged = { viewModel.onIntent(HomeIntent.GameCodeChanged(it)) },
             onTeamNameChanged = { viewModel.onIntent(HomeIntent.TeamNameChanged(it)) },
-            onJoinTapped = { viewModel.onIntent(HomeIntent.JoinValidatedGameTapped) },
-            onRegisterTapped = { viewModel.onIntent(HomeIntent.RegisterTapped) },
-            onSubmitRegistrationTapped = { viewModel.onIntent(HomeIntent.SubmitRegistrationTapped) },
+            onJoinAsHunterTapped = { viewModel.onIntent(HomeIntent.JoinAsHunterTapped) },
+            onSubmitJoinTapped = { viewModel.onIntent(HomeIntent.SubmitJoinTapped) },
             onJoinAsGameMasterTapped = { viewModel.onIntent(HomeIntent.JoinAsGameMasterTapped) },
             onGameMasterPasswordChanged = { viewModel.onIntent(HomeIntent.GameMasterPasswordChanged(it)) },
             onSubmitGameMasterPasswordTapped = { viewModel.onIntent(HomeIntent.SubmitGameMasterPasswordTapped) },

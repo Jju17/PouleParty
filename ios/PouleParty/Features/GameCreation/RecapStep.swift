@@ -89,12 +89,6 @@ struct RecapStep: GameCreationStepView {
                 Divider()
                 RecapRow(label: "Chicken sees hunters", value: store.currentGame.chickenCanSeeHunters ? "Yes" : "No")
             }
-            Divider()
-            RecapRow(label: "Registration", value: store.currentGame.registration.required ? "Required" : "Open")
-            if store.currentGame.registration.required, let minutes = store.currentGame.registration.closesMinutesBefore {
-                Divider()
-                RecapRow(label: "Registration closes", value: GameCreationFormatters.registrationDeadlineLabel(minutes))
-            }
         }
         .background(
             RoundedRectangle(cornerRadius: 16)

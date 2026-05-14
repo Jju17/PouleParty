@@ -26,10 +26,10 @@ sealed interface HomeIntent {
     object ToggleMusic : HomeIntent
     object ActiveGameDismissed : HomeIntent
     object RejoinActiveGameTapped : HomeIntent
-    object RegisterTapped : HomeIntent
-    object SubmitRegistrationTapped : HomeIntent
-    object JoinValidatedGameTapped : HomeIntent
-    object PendingRegistrationJoinTapped : HomeIntent
+    /** PP-90: on the CodeValidated step, user taps "Rejoindre la partie". */
+    object JoinAsHunterTapped : HomeIntent
+    /** PP-90: user taps Submit on the teamName entry step. */
+    object SubmitJoinTapped : HomeIntent
     object RefreshActiveGame : HomeIntent
     /** PP-45: opens the admin-code dialog on Home. */
     object AdminModeTapped : HomeIntent

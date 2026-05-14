@@ -31,8 +31,6 @@ sealed interface GameCreationIntent {
     data class PowerUpsToggled(val enabled: Boolean) : GameCreationIntent
     data class PowerUpTypeToggled(val type: PowerUpType) : GameCreationIntent
     data class ChickenCanSeeHuntersToggled(val value: Boolean) : GameCreationIntent
-    data class RequiresRegistrationToggled(val required: Boolean) : GameCreationIntent
-    data class RegistrationClosesBeforeStartChanged(val minutes: Int?) : GameCreationIntent
     data class LocationSelected(val point: Point) : GameCreationIntent
     data class FinalLocationSelected(val point: Point?) : GameCreationIntent
     /** PP-88: chicken toggled the GameMaster role on/off on the wizard step. */

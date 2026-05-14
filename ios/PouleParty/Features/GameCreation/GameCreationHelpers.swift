@@ -115,12 +115,4 @@ enum GameCreationFormatters {
         return "\(hours)h\(String(format: "%02d", mins))"
     }
 
-    static func registrationDeadlineLabel(_ minutes: Int) -> String {
-        switch minutes {
-        case ..<60: return "\(minutes) min before"
-        case 60: return "1 hour before"
-        case 1440: return "1 day before"
-        default: return "\(minutes / 60) hours before"
-        }
-    }
 }

@@ -25,7 +25,6 @@ enum GameCreationStep: Equatable {
     case headStart
     case powerUps
     case chickenSeesHunters
-    case registration
     case recap
 }
 
@@ -68,7 +67,6 @@ struct GameCreationFeature {
                 .gameMode,
                 .gameMasterPassword,
                 .zoneSetup,
-                .registration,
                 .startTime,
                 .duration,
                 .headStart,
@@ -112,18 +110,11 @@ struct GameCreationFeature {
             return true
         }
 
-        /// Minimum start time based on registration settings.
-        /// Open join: now + 1 minute.
-        /// Registration required: now + deadline + 5 minutes buffer.
+        /// Minimum start time : 1 min in the future. PP-90 dropped the
+        /// in-app registration deadline gating so we no longer need to
+        /// reserve buffer time for a sign-up window.
         var minimumStartDate: Date {
-            let bufferMinutes: Double = 5
-            if game.registration.required {
-                if let deadline = game.registration.closesMinutesBefore {
-                    return Date.now.addingTimeInterval((Double(deadline) + bufferMinutes) * 60)
-                }
-                return Date.now.addingTimeInterval(bufferMinutes * 60)
-            }
-            return Date.now.addingTimeInterval(60)
+            Date.now.addingTimeInterval(60)
         }
 
         var currentGame: Game { game }
@@ -146,8 +137,6 @@ struct GameCreationFeature {
         case participationChanged(Bool)
         case powerUpsToggled(Bool)
         case powerUpTypeToggled(PowerUp.PowerUpType)
-        case registrationClosesBeforeStartChanged(Int?)
-        case requiresRegistrationChanged(Bool)
         case startDateChanged(Date)
         case startGameButtonTapped
     }
@@ -285,23 +274,6 @@ struct GameCreationFeature {
 
             case let .powerUpsToggled(enabled):
                 state.$game.withLock { $0.powerUps.enabled = enabled }
-                return .none
-
-            case let .registrationClosesBeforeStartChanged(minutes):
-                state.$game.withLock { $0.registration.closesMinutesBefore = minutes }
-                clampStartDateToMinimum(state: &state)
-                return .none
-
-            case let .requiresRegistrationChanged(value):
-                state.$game.withLock { game in
-                    game.registration.required = value
-                    if value {
-                        game.registration.closesMinutesBefore = game.registration.closesMinutesBefore ?? 15
-                    } else {
-                        game.registration.closesMinutesBefore = nil
-                    }
-                }
-                clampStartDateToMinimum(state: &state)
                 return .none
 
             case let .powerUpTypeToggled(type):
@@ -529,7 +501,6 @@ struct GameCreationView: View {
         case .headStart:           HeadStartStep(store: store)
         case .powerUps:            PowerUpsStep(store: store)
         case .chickenSeesHunters:  ChickenSeesHuntersStep(store: store)
-        case .registration:        RegistrationStep(store: store)
         case .recap:               RecapStep(store: store)
         }
     }

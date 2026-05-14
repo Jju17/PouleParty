@@ -11,7 +11,6 @@ import dev.rahier.pouleparty.data.LocationRepository
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameMod
 import dev.rahier.pouleparty.model.GamePowerUps
-import dev.rahier.pouleparty.model.GameRegistration
 import dev.rahier.pouleparty.powerups.model.PowerUpType
 import dev.rahier.pouleparty.model.Timing
 import dev.rahier.pouleparty.model.Zone
@@ -62,7 +61,6 @@ data class GameCreationUiState(
                 GameCreationStep.GAME_MODE,
                 GameCreationStep.GAME_MASTER_PASSWORD,
                 GameCreationStep.ZONE_SETUP,
-                GameCreationStep.REGISTRATION,
                 GameCreationStep.START_TIME,
                 GameCreationStep.DURATION,
                 GameCreationStep.HEAD_START,
@@ -99,22 +97,10 @@ data class GameCreationUiState(
             return true
         }
 
-    /** Minimum start time based on registration settings.
-     *  Open join: now + 1 minute.
-     *  Registration required: now + deadline + 5 minutes buffer. */
+    /** PP-90: anyone can join anytime, even mid-game. Minimum start time
+     *  is now + 1 minute (avoids clock skew on submission). */
     val minimumStartDate: Date
-        get() {
-            val bufferMs = 5 * 60 * 1000L
-            if (game.registration.required) {
-                val deadline = game.registration.closesMinutesBefore
-                return if (deadline != null) {
-                    Date(System.currentTimeMillis() + deadline * 60 * 1000L + bufferMs)
-                } else {
-                    Date(System.currentTimeMillis() + bufferMs)
-                }
-            }
-            return Date(System.currentTimeMillis() + 60_000L)
-        }
+        get() = Date(System.currentTimeMillis() + 60_000L)
 }
 
 @HiltViewModel
@@ -182,8 +168,6 @@ class GameCreationViewModel @Inject constructor(
             is GameCreationIntent.PowerUpsToggled -> togglePowerUps(intent.enabled)
             is GameCreationIntent.PowerUpTypeToggled -> togglePowerUpType(intent.type)
             is GameCreationIntent.ChickenCanSeeHuntersToggled -> toggleChickenCanSeeHunters(intent.value)
-            is GameCreationIntent.RequiresRegistrationToggled -> toggleRequiresRegistration(intent.required)
-            is GameCreationIntent.RegistrationClosesBeforeStartChanged -> setRegistrationClosesBeforeStart(intent.minutes)
             is GameCreationIntent.LocationSelected -> onLocationSelected(intent.point)
             is GameCreationIntent.FinalLocationSelected -> onFinalLocationSelected(intent.point)
             is GameCreationIntent.GameMasterEnabledChanged -> _uiState.update { it.copy(isGameMasterEnabled = intent.enabled) }
@@ -335,38 +319,6 @@ class GameCreationViewModel @Inject constructor(
 
     private fun toggleChickenCanSeeHunters(value: Boolean) {
         _uiState.update { it.copy(game = it.game.withChickenCanSeeHunters(value)) }
-    }
-
-    private fun toggleRequiresRegistration(value: Boolean) {
-        _uiState.update { state ->
-            val updatedGame = state.game.copy(
-                registration = state.game.registration.copy(
-                    required = value,
-                    closesMinutesBefore = if (!value) null else (state.game.registration.closesMinutesBefore ?: 15)
-                )
-            )
-            state.copy(game = updatedGame)
-        }
-        clampStartDateToMinimum()
-    }
-
-    private fun setRegistrationClosesBeforeStart(minutes: Int?) {
-        _uiState.update { state ->
-            state.copy(game = state.game.copy(registration = state.game.registration.copy(closesMinutesBefore = minutes)))
-        }
-        clampStartDateToMinimum()
-    }
-
-    /** Pushes the start date forward if it falls before the minimum allowed. */
-    private fun clampStartDateToMinimum() {
-        _uiState.update { state ->
-            val minimum = state.minimumStartDate
-            if (state.game.startDate.before(minimum)) {
-                state.copy(game = state.game.withStartDate(minimum))
-            } else {
-                state
-            }
-        }
     }
 
     private fun onLocationSelected(point: Point) {

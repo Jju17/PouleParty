@@ -315,13 +315,6 @@ class HunterMapViewModelBehaviorTest {
     }
 
     @Test
-    fun `DismissRegistrationRequiredAlert clears the flag`() {
-        val vm = createViewModel()
-        vm.onIntent(HunterMapIntent.DismissRegistrationRequiredAlert)
-        assertFalse(vm.uiState.value.showRegistrationRequiredAlert)
-    }
-
-    @Test
     fun `CodeCopied flips codeCopied to true then back to false after delay`() {
         val vm = createViewModel()
         vm.onIntent(HunterMapIntent.CodeCopied)

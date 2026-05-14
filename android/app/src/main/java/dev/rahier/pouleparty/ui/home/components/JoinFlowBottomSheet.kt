@@ -34,7 +34,7 @@ import dev.rahier.pouleparty.ui.home.JoinFlowStep
 import dev.rahier.pouleparty.ui.theme.GameBoyFont
 import dev.rahier.pouleparty.ui.theme.GradientFire
 
-/** Modal sheet driving the multi-step join/register flow. */
+/** Modal sheet driving the multi-step join flow (PP-90: no more registration gate). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun JoinFlowBottomSheet(
@@ -42,9 +42,8 @@ fun JoinFlowBottomSheet(
     onDismiss: () -> Unit,
     onCodeChanged: (String) -> Unit,
     onTeamNameChanged: (String) -> Unit,
-    onJoinTapped: () -> Unit,
-    onRegisterTapped: () -> Unit,
-    onSubmitRegistrationTapped: () -> Unit,
+    onJoinAsHunterTapped: () -> Unit,
+    onSubmitJoinTapped: () -> Unit,
     onJoinAsGameMasterTapped: () -> Unit = {},
     onGameMasterPasswordChanged: (String) -> Unit = {},
     onSubmitGameMasterPasswordTapped: () -> Unit = {},
@@ -56,17 +55,17 @@ fun JoinFlowBottomSheet(
         containerColor = MaterialTheme.colorScheme.background
     ) {
         when (val step = state.joinStep) {
-            is JoinFlowStep.Registering, is JoinFlowStep.SubmittingRegistration -> {
-                val game = (step as? JoinFlowStep.Registering)?.game
-                    ?: (step as JoinFlowStep.SubmittingRegistration).game
-                val isSubmitting = step is JoinFlowStep.SubmittingRegistration
-                RegisterFormContent(
+            is JoinFlowStep.JoiningWithTeamName, is JoinFlowStep.SubmittingJoin -> {
+                val game = (step as? JoinFlowStep.JoiningWithTeamName)?.game
+                    ?: (step as JoinFlowStep.SubmittingJoin).game
+                val isSubmitting = step is JoinFlowStep.SubmittingJoin
+                TeamNameFormContent(
                     game = game,
                     teamName = state.teamName,
                     isTeamNameValid = state.isTeamNameValid,
                     isSubmitting = isSubmitting,
                     onTeamNameChanged = onTeamNameChanged,
-                    onSubmit = onSubmitRegistrationTapped
+                    onSubmit = onSubmitJoinTapped
                 )
             }
             is JoinFlowStep.GameMasterPasswordEntry, is JoinFlowStep.SubmittingGameMasterPassword -> {
@@ -83,8 +82,7 @@ fun JoinFlowBottomSheet(
                 CodeEntryContent(
                     state = state,
                     onCodeChanged = onCodeChanged,
-                    onJoinTapped = onJoinTapped,
-                    onRegisterTapped = onRegisterTapped,
+                    onJoinAsHunterTapped = onJoinAsHunterTapped,
                     onJoinAsGameMasterTapped = onJoinAsGameMasterTapped,
                 )
             }
@@ -96,15 +94,11 @@ fun JoinFlowBottomSheet(
 private fun CodeEntryContent(
     state: HomeUiState,
     onCodeChanged: (String) -> Unit,
-    onJoinTapped: () -> Unit,
-    onRegisterTapped: () -> Unit,
+    onJoinAsHunterTapped: () -> Unit,
     onJoinAsGameMasterTapped: () -> Unit,
 ) {
     val step = state.joinStep
-    val needsRegister: Boolean = (step as? JoinFlowStep.CodeValidated)
-        ?.let { it.game.registration.required && !it.alreadyRegistered } ?: false
     val isEnabled = step is JoinFlowStep.CodeValidated
-    val buttonLabel = if (needsRegister) stringResource(R.string.register) else stringResource(R.string.join)
     val gmAvailable: Boolean = (step as? JoinFlowStep.CodeValidated)
         ?.let { it.game.hasGameMasterPassword } ?: false
 
@@ -149,16 +143,10 @@ private fun CodeEntryContent(
                 fontSize = 9.sp,
                 color = MaterialTheme.colorScheme.error
             )
-            is JoinFlowStep.RegistrationClosed -> Text(
-                stringResource(R.string.registration_closed_for_this_game),
-                fontFamily = GameBoyFont,
-                fontSize = 9.sp,
-                color = MaterialTheme.colorScheme.error
-            )
             else -> Spacer(Modifier.height(1.dp))
         }
         TextButton(
-            onClick = { if (needsRegister) onRegisterTapped() else onJoinTapped() },
+            onClick = onJoinAsHunterTapped,
             enabled = isEnabled,
             modifier = Modifier
                 .background(
@@ -168,7 +156,7 @@ private fun CodeEntryContent(
                 .padding(horizontal = 24.dp, vertical = 4.dp)
         ) {
             Text(
-                if (gmAvailable) stringResource(R.string.join_as_hunter) else buttonLabel,
+                if (gmAvailable) stringResource(R.string.join_as_hunter) else stringResource(R.string.join),
                 fontFamily = GameBoyFont,
                 fontSize = 18.sp,
                 color = Color.Black.copy(alpha = if (isEnabled) 1f else 0.4f)
@@ -268,7 +256,7 @@ private fun GameMasterPasswordContent(
 }
 
 @Composable
-private fun RegisterFormContent(
+private fun TeamNameFormContent(
     game: Game,
     teamName: String,
     isTeamNameValid: Boolean,
@@ -284,7 +272,7 @@ private fun RegisterFormContent(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text(
-            stringResource(R.string.register),
+            stringResource(R.string.team_name),
             fontFamily = GameBoyFont,
             fontSize = 22.sp,
             color = MaterialTheme.colorScheme.onBackground
@@ -321,7 +309,7 @@ private fun RegisterFormContent(
                 )
             } else {
                 Text(
-                    stringResource(R.string.sign_up),
+                    stringResource(R.string.join),
                     fontFamily = GameBoyFont,
                     fontSize = 18.sp,
                     color = Color.Black

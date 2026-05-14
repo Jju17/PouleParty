@@ -11,7 +11,6 @@ sealed interface HunterMapIntent {
      * rather than waiting for the periodic 5 s writer's next tick.
      */
     object AppResumed : HunterMapIntent
-    object DismissRegistrationRequiredAlert : HunterMapIntent
     object PowerUpInventoryTapped : HunterMapIntent
     object DismissPowerUpInventory : HunterMapIntent
     object FoundButtonTapped : HunterMapIntent

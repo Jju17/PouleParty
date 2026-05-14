@@ -47,7 +47,6 @@ import dev.rahier.pouleparty.ui.gamecreation.steps.MaxPlayersStep
 import dev.rahier.pouleparty.ui.gamecreation.steps.ParticipationStep
 import dev.rahier.pouleparty.ui.gamecreation.steps.PowerUpsStep
 import dev.rahier.pouleparty.ui.gamecreation.steps.RecapStep
-import dev.rahier.pouleparty.ui.gamecreation.steps.RegistrationStep
 import dev.rahier.pouleparty.ui.gamecreation.steps.StartTimeStep
 import dev.rahier.pouleparty.ui.gamecreation.steps.ZoneSetupStep
 import dev.rahier.pouleparty.ui.theme.*
@@ -186,12 +185,6 @@ fun GameCreationScreen(
                     GameCreationStep.CHICKEN_SEES_HUNTERS -> ChickenSeesHuntersStep(
                         chickenCanSeeHunters = state.game.chickenCanSeeHunters,
                         onToggle = { viewModel.onIntent(GameCreationIntent.ChickenCanSeeHuntersToggled(it)) }
-                    )
-                    GameCreationStep.REGISTRATION -> RegistrationStep(
-                        requiresRegistration = state.game.registration.required,
-                        registrationClosesBeforeStartMinutes = state.game.registration.closesMinutesBefore,
-                        onToggle = { viewModel.onIntent(GameCreationIntent.RequiresRegistrationToggled(it)) },
-                        onDeadlineChanged = { viewModel.onIntent(GameCreationIntent.RegistrationClosesBeforeStartChanged(it)) }
                     )
                     GameCreationStep.RECAP -> RecapStep(
                         state = state,

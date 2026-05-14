@@ -98,12 +98,11 @@ cd web && npm run dev
   ├── foundCode, hunterIds, gameMasterIds, status, winners, creatorId, chickenId, lastHeartbeat
   ├── timing: { start, end, headStartMinutes }
   ├── zone: { center, finalCenter, radius, shrinkIntervalMinutes, shrinkMetersPerUpdate, driftSeed }
-  ├── registration: { required, closesMinutesBefore }
   ├── powerUps: { enabled, enabledTypes, activeEffects: { invisibility, zoneFreeze, radarPing, decoy, jammer } }
   ├── /chickenLocations/latest     → Single doc, overwritten each position update
   ├── /hunterLocations/{hunterId}  → One doc per hunter, overwritten
   ├── /powerUps/{powerUpId}        → One doc per spawned power-up (collected/activated state)
-  ├── /registrations/{userId}      → One doc per registered hunter (teamName, joinedAt)
+  ├── /registrations/{userId}      → One doc per in-app hunter (teamName, joinedAt). PP-90 dropped the registration-required gate — anyone can join at any time, but the subcollection is still written so the GameMaster can pick a chicken from the team-name list (PP-86). PP-52 will reuse this subcollection for external Typeform/Stripe registrations keyed by random `registrationId` instead of `userId`.
   ├── /challengeCompletions/{hunterId} → One doc per hunter who has completed at least one challenge (completedChallengeIds, totalPoints, teamName)
   └── /private/{docId}             → Admin-SDK-only subcollection. Holds the `gameMasterPassword` (PP-23) and any future field that must never be client-readable. Rules: `read, write: if false`.
 
@@ -140,7 +139,7 @@ Anonymous Firebase Auth. Users don't create accounts — a UID is generated on f
 
 ## Security rules
 
-See `firestore.rules`. Key principle: the creator has full control over their game, hunters can only update `hunterIds`, `winners`, and `powerUps` (active effects) fields. Subcollection writes are restricted by role. **Power-up creation is denied to all clients** (`allow create: if false`) — only the Cloud Function (which bypasses rules via admin SDK) can spawn them. Power-up collection uses transactions to prevent double-collection. Registration creation enforces the `registration.closesMinutesBefore` deadline if set.
+See `firestore.rules`. Key principle: the creator has full control over their game, hunters can only update `hunterIds`, `winners`, and `powerUps` (active effects) fields. Subcollection writes are restricted by role. **Power-up creation is denied to all clients** (`allow create: if false`) — only the Cloud Function (which bypasses rules via admin SDK) can spawn them. Power-up collection uses transactions to prevent double-collection.
 
 ## Conventions
 
@@ -149,7 +148,7 @@ See `firestore.rules`. Key principle: the creator has full control over their ga
 - Color palette: CRBeige, CROrange (#FE6A00), CRPink (#EF0778) — consistent hex values across platforms
 - Dark mode: fully supported everywhere
 - Profanity filter on nicknames (FR + EN, with leetspeak detection)
-- **Player identifiers**: `teamName` is the label displayed everywhere in gameplay (map markers, leaderboard, submissions, GameMaster drawer, validation queue). `nickname` (= username) is an internal identifier for settings, profile, and auth — never displayed in gameplay. Every hunter must have a teamName (registration required, or teamName defaults to nickname if not provided).
+- **Player identifiers**: `teamName` is the label displayed everywhere in gameplay (map markers, leaderboard, submissions, GameMaster drawer, validation queue). `nickname` (= username) is an internal identifier for settings, profile, and auth — never displayed in gameplay. Every hunter must have a teamName: PP-90 collects it on the join sheet (pre-filled with the saved nickname), so it's always set before the user lands on the hunter map.
 - Game codes: 6 chars, found codes: 4 digits
 - All Firestore write operations use retry logic (3 attempts, exponential backoff)
 - When adding a new feature, keep parity between iOS and Android implementations

@@ -97,12 +97,6 @@ class GameCreationViewModelTest {
         assertEquals(5, game.maxPlayers)
     }
 
-    @Test
-    fun `default state does not require registration`() {
-        val vm = createViewModel()
-        assertFalse(vm.uiState.value.game.registration.required)
-    }
-
     // ── Steps flow ──
 
     @Test
@@ -115,13 +109,12 @@ class GameCreationViewModelTest {
         // PP-88: GAME_MASTER_PASSWORD lands right after GAME_MODE.
         assertEquals(GameCreationStep.GAME_MASTER_PASSWORD, steps[3])
         assertEquals(GameCreationStep.ZONE_SETUP, steps[4])
-        assertEquals(GameCreationStep.REGISTRATION, steps[5])
-        assertEquals(GameCreationStep.START_TIME, steps[6])
-        assertEquals(GameCreationStep.DURATION, steps[7])
-        assertEquals(GameCreationStep.HEAD_START, steps[8])
-        assertEquals(GameCreationStep.POWER_UPS, steps[9])
-        assertEquals(GameCreationStep.CHICKEN_SEES_HUNTERS, steps[10])
-        assertEquals(GameCreationStep.RECAP, steps[11])
+        assertEquals(GameCreationStep.START_TIME, steps[5])
+        assertEquals(GameCreationStep.DURATION, steps[6])
+        assertEquals(GameCreationStep.HEAD_START, steps[7])
+        assertEquals(GameCreationStep.POWER_UPS, steps[8])
+        assertEquals(GameCreationStep.CHICKEN_SEES_HUNTERS, steps[9])
+        assertEquals(GameCreationStep.RECAP, steps[10])
     }
 
     @Test
@@ -133,7 +126,8 @@ class GameCreationViewModelTest {
         assertEquals(GameCreationStep.CHICKEN_SELECTION, steps[1])
         assertEquals(GameCreationStep.MAX_PLAYERS, steps[2])
         assertEquals(GameCreationStep.GAME_MODE, steps[3])
-        assertEquals(13, steps.size) // 12 base + chickenSelection (PP-88 added GAME_MASTER_PASSWORD)
+        // PP-90 removed REGISTRATION step (11 base + chickenSelection).
+        assertEquals(12, steps.size)
     }
 
     @Test
@@ -226,15 +220,6 @@ class GameCreationViewModelTest {
         val vm = createViewModel()
         vm.onIntent(GameCreationIntent.MaxPlayersChanged(6))
         assertEquals(5, vm.uiState.value.game.maxPlayers)
-    }
-
-    @Test
-    fun `registration comes before start time in steps`() {
-        val vm = createViewModel()
-        val steps = vm.uiState.value.steps
-        val regIndex = steps.indexOf(GameCreationStep.REGISTRATION)
-        val startIndex = steps.indexOf(GameCreationStep.START_TIME)
-        assertTrue("REGISTRATION must come before START_TIME", regIndex < startIndex)
     }
 
     // ── Navigation ──
@@ -354,84 +339,14 @@ class GameCreationViewModelTest {
         assertTrue(vm.uiState.value.isZoneConfigured)
     }
 
-    // ── Registration ──
-
-    @Test
-    fun `toggleRequiresRegistration enables and sets default deadline`() {
-        val vm = createViewModel()
-        vm.onIntent(GameCreationIntent.RequiresRegistrationToggled(true))
-        assertTrue(vm.uiState.value.game.registration.required)
-        assertEquals(15, vm.uiState.value.game.registration.closesMinutesBefore)
-    }
-
-    @Test
-    fun `toggleRequiresRegistration disables and clears deadline`() {
-        val vm = createViewModel()
-        vm.onIntent(GameCreationIntent.RequiresRegistrationToggled(true))
-        vm.onIntent(GameCreationIntent.RequiresRegistrationToggled(false))
-        assertFalse(vm.uiState.value.game.registration.required)
-        assertNull(vm.uiState.value.game.registration.closesMinutesBefore)
-    }
-
-    @Test
-    fun `setRegistrationClosesBeforeStart updates deadline`() {
-        val vm = createViewModel()
-        vm.onIntent(GameCreationIntent.RequiresRegistrationToggled(true))
-        vm.onIntent(GameCreationIntent.RegistrationClosesBeforeStartChanged(60))
-        assertEquals(60, vm.uiState.value.game.registration.closesMinutesBefore)
-    }
-
     // ── Minimum start date ──
 
     @Test
-    fun `minimumStartDate open join is 1 minute from now`() {
+    fun `minimumStartDate is 1 minute from now`() {
         val vm = createViewModel()
         val min = vm.uiState.value.minimumStartDate
         val expected = System.currentTimeMillis() + 60_000L
-        assertTrue("Open join minimum should be ~1 min", Math.abs(min.time - expected) < 1000)
-    }
-
-    @Test
-    fun `minimumStartDate with 15 min deadline is 20 minutes`() {
-        val vm = createViewModel()
-        vm.onIntent(GameCreationIntent.RequiresRegistrationToggled(true))
-        vm.onIntent(GameCreationIntent.RegistrationClosesBeforeStartChanged(15))
-        val min = vm.uiState.value.minimumStartDate
-        val expected = System.currentTimeMillis() + (15 + 5) * 60 * 1000L
-        assertTrue("15 min deadline should produce ~20 min minimum", Math.abs(min.time - expected) < 1000)
-    }
-
-    @Test
-    fun `minimumStartDate with 1 day deadline is 1445 minutes`() {
-        val vm = createViewModel()
-        vm.onIntent(GameCreationIntent.RequiresRegistrationToggled(true))
-        vm.onIntent(GameCreationIntent.RegistrationClosesBeforeStartChanged(1440))
-        val min = vm.uiState.value.minimumStartDate
-        val expected = System.currentTimeMillis() + (1440 + 5) * 60 * 1000L
-        assertTrue("1 day deadline should produce ~1445 min minimum", Math.abs(min.time - expected) < 1000)
-    }
-
-    @Test
-    fun `toggling registration clamps start date forward`() {
-        val vm = createViewModel()
-        // Start date initial → roughly in 90 min
-        // Activate registration with 120 min deadline → minimum becomes now + 125 min
-        vm.onIntent(GameCreationIntent.RequiresRegistrationToggled(true))
-        vm.onIntent(GameCreationIntent.RegistrationClosesBeforeStartChanged(120))
-        val startDate = vm.uiState.value.game.startDate
-        val minExpected = System.currentTimeMillis() + 125 * 60 * 1000L
-        assertTrue("Start date should be clamped to at least ~125 min", startDate.time >= minExpected - 2000)
-    }
-
-    @Test
-    fun `disabling registration does not push start date backward`() {
-        val vm = createViewModel()
-        vm.onIntent(GameCreationIntent.RequiresRegistrationToggled(true))
-        vm.onIntent(GameCreationIntent.RegistrationClosesBeforeStartChanged(120))
-        val beforeDisable = vm.uiState.value.game.startDate.time
-        vm.onIntent(GameCreationIntent.RequiresRegistrationToggled(false))
-        val afterDisable = vm.uiState.value.game.startDate.time
-        assertEquals("Start date should not move when registration is disabled", beforeDisable, afterDisable)
+        assertTrue("Minimum should be ~1 min", Math.abs(min.time - expected) < 1000)
     }
 
     // ── Duration ──
@@ -548,19 +463,6 @@ class GameCreationViewModelTest {
         advanceUntilIdle()
         assertFalse("onSuccess should not be called on failure", successCalled)
         assertTrue("Alert should be shown", vm.uiState.value.showAlert)
-    }
-
-    @Test
-    fun `startGame clamps start date to minimum before saving`() = runTest(testDispatcher) {
-        val vm = createViewModel()
-        vm.onIntent(GameCreationIntent.RequiresRegistrationToggled(true))
-        vm.onIntent(GameCreationIntent.RegistrationClosesBeforeStartChanged(60)) // 65 min minimum
-        coEvery { firestoreRepository.setConfig(any()) } returns Unit
-        vm.onIntent(GameCreationIntent.StartGameTapped)
-        advanceUntilIdle()
-        val startDate = vm.uiState.value.game.startDate
-        val minExpected = System.currentTimeMillis() + 65 * 60 * 1000L
-        assertTrue("Start date should be clamped to at least ~65 min", startDate.time >= minExpected - 2000)
     }
 
     @Test
@@ -773,77 +675,6 @@ class GameCreationViewModelTest {
         vm.onIntent(GameCreationIntent.PowerUpTypeToggled(PowerUpType.ZONE_FREEZE))
         val after = vm.uiState.value.game.powerUps.enabledTypes.size
         assertEquals("Cannot remove last available type", before, after)
-    }
-
-    // ── Registration deadline edge cases ──
-
-    @Test
-    fun `setRegistrationClosesBeforeStart while registration not required still updates field`() {
-        val vm = createViewModel()
-        assertFalse(vm.uiState.value.game.registration.required)
-        vm.onIntent(GameCreationIntent.RegistrationClosesBeforeStartChanged(30))
-        // Field is updated even if not required
-        assertEquals(30, vm.uiState.value.game.registration.closesMinutesBefore)
-    }
-
-    @Test
-    fun `toggle registration off then on restores default 15 min`() {
-        val vm = createViewModel()
-        vm.onIntent(GameCreationIntent.RequiresRegistrationToggled(true))
-        vm.onIntent(GameCreationIntent.RegistrationClosesBeforeStartChanged(60))
-        vm.onIntent(GameCreationIntent.RequiresRegistrationToggled(false)) // clears to null
-        vm.onIntent(GameCreationIntent.RequiresRegistrationToggled(true)) // should restore default 15
-        assertEquals(15, vm.uiState.value.game.registration.closesMinutesBefore)
-    }
-
-    @Test
-    fun `setRegistrationClosesBeforeStart with null clears deadline`() {
-        val vm = createViewModel()
-        vm.onIntent(GameCreationIntent.RequiresRegistrationToggled(true))
-        vm.onIntent(GameCreationIntent.RegistrationClosesBeforeStartChanged(null))
-        assertNull(vm.uiState.value.game.registration.closesMinutesBefore)
-    }
-
-    @Test
-    fun `changing deadline multiple times clamps progressively`() {
-        val vm = createViewModel()
-        vm.onIntent(GameCreationIntent.RequiresRegistrationToggled(true))
-        vm.onIntent(GameCreationIntent.RegistrationClosesBeforeStartChanged(15)) // min = now + 20 min
-        val t1 = vm.uiState.value.game.startDate.time
-        vm.onIntent(GameCreationIntent.RegistrationClosesBeforeStartChanged(60)) // min = now + 65 min
-        val t2 = vm.uiState.value.game.startDate.time
-        vm.onIntent(GameCreationIntent.RegistrationClosesBeforeStartChanged(120)) // min = now + 125 min
-        val t3 = vm.uiState.value.game.startDate.time
-        assertTrue("Start date should increase with deadline", t1 <= t2)
-        assertTrue("Start date should increase with deadline", t2 <= t3)
-    }
-
-    // ── startDate clamping on navigation ──
-
-    @Test
-    fun `next clamps start date to minimum`() = runTest(testDispatcher) {
-        val vm = createViewModel()
-        // Manually set an outdated start date via updateStartTime bypass not directly possible;
-        // instead, enable registration with aggressive deadline which pushes minimum
-        vm.onIntent(GameCreationIntent.RequiresRegistrationToggled(true))
-        vm.onIntent(GameCreationIntent.RegistrationClosesBeforeStartChanged(60)) // pushes min to now + 65 min
-        val dateBeforeNav = vm.uiState.value.game.startDate.time
-        vm.onIntent(GameCreationIntent.Next) // clamp runs again
-        val dateAfterNav = vm.uiState.value.game.startDate.time
-        assertTrue("Start date should not regress after next", dateAfterNav >= dateBeforeNav - 2000)
-    }
-
-    @Test
-    fun `back clamps start date to minimum`() = runTest(testDispatcher) {
-        val vm = createViewModel()
-        vm.onIntent(GameCreationIntent.Next)
-        vm.onIntent(GameCreationIntent.Next)
-        vm.onIntent(GameCreationIntent.RequiresRegistrationToggled(true))
-        vm.onIntent(GameCreationIntent.RegistrationClosesBeforeStartChanged(30)) // min = now + 35 min
-        vm.onIntent(GameCreationIntent.Back)
-        val startDate = vm.uiState.value.game.startDate
-        val minExpected = System.currentTimeMillis() + 35 * 60 * 1000L
-        assertTrue("Start date should be >= minimum after back", startDate.time >= minExpected - 2000)
     }
 
     // ── Duration edge cases ──
