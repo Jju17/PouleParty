@@ -50,6 +50,9 @@ data class HomeUiState(
     val isShowingAdminCodeDialog: Boolean = false,
     val adminCodeInput: String = "",
     val isShowingAdminCodeError: Boolean = false,
+    /** PP-88: 4-digit buffer + last error from joinAsGameMaster. */
+    val gameMasterPasswordInput: String = "",
+    val gameMasterPasswordError: String? = null,
 ) {
     val isCodeValid: Boolean
         get() {
@@ -104,6 +107,76 @@ class HomeViewModel @Inject constructor(
             is HomeIntent.GameCodeChanged -> onGameCodeChanged(intent.code)
             is HomeIntent.TeamNameChanged -> onTeamNameChanged(intent.name)
             is HomeIntent.AdminCodeChanged -> _uiState.update { it.copy(adminCodeInput = intent.code) }
+            HomeIntent.JoinAsGameMasterTapped -> onJoinAsGameMasterTapped()
+            is HomeIntent.GameMasterPasswordChanged -> onGameMasterPasswordChanged(intent.code)
+            HomeIntent.SubmitGameMasterPasswordTapped -> onSubmitGameMasterPasswordTapped()
+        }
+    }
+
+    private fun onJoinAsGameMasterTapped() {
+        val game = (_uiState.value.joinStep as? JoinFlowStep.CodeValidated)?.game ?: return
+        _uiState.update {
+            it.copy(
+                joinStep = JoinFlowStep.GameMasterPasswordEntry(game),
+                gameMasterPasswordInput = "",
+                gameMasterPasswordError = null,
+            )
+        }
+    }
+
+    private fun onGameMasterPasswordChanged(raw: String) {
+        // Strip non-digits, clamp to 4. UI binds the input back to state.
+        val clean = raw.filter { it.isDigit() }.take(4)
+        _uiState.update { it.copy(gameMasterPasswordInput = clean) }
+    }
+
+    private fun onSubmitGameMasterPasswordTapped() {
+        val game = (_uiState.value.joinStep as? JoinFlowStep.GameMasterPasswordEntry)?.game ?: return
+        val password = _uiState.value.gameMasterPasswordInput
+        if (password.length != 4) return
+        _uiState.update {
+            it.copy(
+                joinStep = JoinFlowStep.SubmittingGameMasterPassword(game),
+                gameMasterPasswordError = null,
+            )
+        }
+        viewModelScope.launch {
+            try {
+                val result = firestoreRepository.joinAsGameMaster(game.id, password)
+                if (result.success) {
+                    _uiState.update {
+                        it.copy(
+                            isShowingJoinSheet = false,
+                            joinStep = JoinFlowStep.EnteringCode,
+                            gameCode = "",
+                            gameMasterPasswordInput = "",
+                            gameMasterPasswordError = null,
+                        )
+                    }
+                    _effects.send(HomeEffect.NavigateToGameMasterMap(game.id))
+                } else {
+                    val msg = if (result.lockedUntilMs != null) {
+                        val mins = ((result.lockedUntilMs - System.currentTimeMillis()) / 60_000L).coerceAtLeast(1L)
+                        "Trop de tentatives. Réessaie dans $mins min."
+                    } else {
+                        "Mauvais code. ${result.attemptsRemaining} tentative(s) restante(s)."
+                    }
+                    _uiState.update {
+                        it.copy(
+                            joinStep = JoinFlowStep.GameMasterPasswordEntry(game),
+                            gameMasterPasswordInput = "",
+                            gameMasterPasswordError = msg,
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        joinStep = JoinFlowStep.GameMasterPasswordEntry(game),
+                        gameMasterPasswordError = e.message ?: "Network error",
+                    )
+                }
+            }
         }
     }
 

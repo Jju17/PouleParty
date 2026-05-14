@@ -40,6 +40,7 @@ import dev.rahier.pouleparty.powerups.selection.PowerUpSelectionScreen
 import dev.rahier.pouleparty.ui.gamecreation.steps.ChickenSeesHuntersStep
 import dev.rahier.pouleparty.ui.gamecreation.steps.ChickenSelectionStep
 import dev.rahier.pouleparty.ui.gamecreation.steps.DurationStep
+import dev.rahier.pouleparty.ui.gamecreation.steps.GameMasterPasswordStep
 import dev.rahier.pouleparty.ui.gamecreation.steps.GameModeStep
 import dev.rahier.pouleparty.ui.gamecreation.steps.HeadStartStep
 import dev.rahier.pouleparty.ui.gamecreation.steps.MaxPlayersStep
@@ -141,6 +142,12 @@ fun GameCreationScreen(
                     GameCreationStep.GAME_MODE -> GameModeStep(
                         selectedMode = state.game.gameModEnum,
                         onSelect = { viewModel.onIntent(GameCreationIntent.GameModeChanged(it)) }
+                    )
+                    GameCreationStep.GAME_MASTER_PASSWORD -> GameMasterPasswordStep(
+                        isEnabled = state.isGameMasterEnabled,
+                        password = state.gameMasterPassword,
+                        onEnabledChanged = { viewModel.onIntent(GameCreationIntent.GameMasterEnabledChanged(it)) },
+                        onPasswordChanged = { viewModel.onIntent(GameCreationIntent.GameMasterPasswordChanged(it)) },
                     )
                     GameCreationStep.ZONE_SETUP -> ZoneSetupStep(
                         game = state.game,

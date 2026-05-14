@@ -452,7 +452,10 @@ fun HomeScreen(
             onTeamNameChanged = { viewModel.onIntent(HomeIntent.TeamNameChanged(it)) },
             onJoinTapped = { viewModel.onIntent(HomeIntent.JoinValidatedGameTapped) },
             onRegisterTapped = { viewModel.onIntent(HomeIntent.RegisterTapped) },
-            onSubmitRegistrationTapped = { viewModel.onIntent(HomeIntent.SubmitRegistrationTapped) }
+            onSubmitRegistrationTapped = { viewModel.onIntent(HomeIntent.SubmitRegistrationTapped) },
+            onJoinAsGameMasterTapped = { viewModel.onIntent(HomeIntent.JoinAsGameMasterTapped) },
+            onGameMasterPasswordChanged = { viewModel.onIntent(HomeIntent.GameMasterPasswordChanged(it)) },
+            onSubmitGameMasterPasswordTapped = { viewModel.onIntent(HomeIntent.SubmitGameMasterPasswordTapped) },
         )
     }
 

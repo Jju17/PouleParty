@@ -295,4 +295,9 @@
     <string name="other_hunters">Other hunters</string>
     <string name="view_leaderboard">View Leaderboard</string>
     <string name="open_settings">Open Settings</string>
+    <!-- PP-88 GameMaster join flow -->
+    <string name="join_as_hunter">Join as Hunter</string>
+    <string name="join_as_game_master">Join as GameMaster 🦅</string>
+    <string name="gamemaster_join_title">GameMaster 🦅</string>
+    <string name="gamemaster_password_hint">4-digit code</string>
 </resources>

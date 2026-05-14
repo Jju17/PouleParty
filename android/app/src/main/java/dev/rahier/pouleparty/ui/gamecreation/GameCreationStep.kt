@@ -5,6 +5,8 @@ enum class GameCreationStep {
     CHICKEN_SELECTION,
     MAX_PLAYERS,
     GAME_MODE,
+    /** PP-70 / PP-88: chicken sets the optional 4-digit GameMaster password. */
+    GAME_MASTER_PASSWORD,
     ZONE_SETUP,
     START_TIME,
     DURATION,

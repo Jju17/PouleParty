@@ -44,7 +44,10 @@ fun JoinFlowBottomSheet(
     onTeamNameChanged: (String) -> Unit,
     onJoinTapped: () -> Unit,
     onRegisterTapped: () -> Unit,
-    onSubmitRegistrationTapped: () -> Unit
+    onSubmitRegistrationTapped: () -> Unit,
+    onJoinAsGameMasterTapped: () -> Unit = {},
+    onGameMasterPasswordChanged: (String) -> Unit = {},
+    onSubmitGameMasterPasswordTapped: () -> Unit = {},
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(
@@ -66,12 +69,23 @@ fun JoinFlowBottomSheet(
                     onSubmit = onSubmitRegistrationTapped
                 )
             }
+            is JoinFlowStep.GameMasterPasswordEntry, is JoinFlowStep.SubmittingGameMasterPassword -> {
+                val isSubmitting = step is JoinFlowStep.SubmittingGameMasterPassword
+                GameMasterPasswordContent(
+                    password = state.gameMasterPasswordInput,
+                    error = state.gameMasterPasswordError,
+                    isSubmitting = isSubmitting,
+                    onPasswordChanged = onGameMasterPasswordChanged,
+                    onSubmit = onSubmitGameMasterPasswordTapped,
+                )
+            }
             else -> {
                 CodeEntryContent(
                     state = state,
                     onCodeChanged = onCodeChanged,
                     onJoinTapped = onJoinTapped,
-                    onRegisterTapped = onRegisterTapped
+                    onRegisterTapped = onRegisterTapped,
+                    onJoinAsGameMasterTapped = onJoinAsGameMasterTapped,
                 )
             }
         }
@@ -83,13 +97,16 @@ private fun CodeEntryContent(
     state: HomeUiState,
     onCodeChanged: (String) -> Unit,
     onJoinTapped: () -> Unit,
-    onRegisterTapped: () -> Unit
+    onRegisterTapped: () -> Unit,
+    onJoinAsGameMasterTapped: () -> Unit,
 ) {
     val step = state.joinStep
     val needsRegister: Boolean = (step as? JoinFlowStep.CodeValidated)
         ?.let { it.game.registration.required && !it.alreadyRegistered } ?: false
     val isEnabled = step is JoinFlowStep.CodeValidated
     val buttonLabel = if (needsRegister) stringResource(R.string.register) else stringResource(R.string.join)
+    val gmAvailable: Boolean = (step as? JoinFlowStep.CodeValidated)
+        ?.let { it.game.hasGameMasterPassword } ?: false
 
     Column(
         modifier = Modifier
@@ -151,11 +168,100 @@ private fun CodeEntryContent(
                 .padding(horizontal = 24.dp, vertical = 4.dp)
         ) {
             Text(
-                buttonLabel,
+                if (gmAvailable) stringResource(R.string.join_as_hunter) else buttonLabel,
                 fontFamily = GameBoyFont,
                 fontSize = 18.sp,
                 color = Color.Black.copy(alpha = if (isEnabled) 1f else 0.4f)
             )
+        }
+        if (gmAvailable) {
+            TextButton(
+                onClick = onJoinAsGameMasterTapped,
+                modifier = Modifier
+                    .background(
+                        SolidColor(MaterialTheme.colorScheme.primary),
+                        RoundedCornerShape(50)
+                    )
+                    .padding(horizontal = 24.dp, vertical = 4.dp)
+            ) {
+                Text(
+                    stringResource(R.string.join_as_game_master),
+                    fontFamily = GameBoyFont,
+                    fontSize = 18.sp,
+                    color = Color.White,
+                )
+            }
+        }
+        Spacer(Modifier.height(20.dp))
+    }
+}
+
+@Composable
+private fun GameMasterPasswordContent(
+    password: String,
+    error: String?,
+    isSubmitting: Boolean,
+    onPasswordChanged: (String) -> Unit,
+    onSubmit: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text(
+            stringResource(R.string.gamemaster_join_title),
+            fontFamily = GameBoyFont,
+            fontSize = 22.sp,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        Text(
+            stringResource(R.string.gamemaster_password_hint),
+            fontFamily = GameBoyFont,
+            fontSize = 10.sp,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+        )
+        OutlinedTextField(
+            value = password,
+            onValueChange = onPasswordChanged,
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword),
+            visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+            modifier = Modifier.fillMaxWidth(0.4f),
+            placeholder = { Text("••••") },
+            enabled = !isSubmitting,
+        )
+        if (error != null) {
+            Text(
+                error,
+                fontFamily = GameBoyFont,
+                fontSize = 9.sp,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(horizontal = 8.dp),
+            )
+        }
+        TextButton(
+            onClick = onSubmit,
+            enabled = password.length == 4 && !isSubmitting,
+            modifier = Modifier
+                .background(
+                    if (password.length == 4 && !isSubmitting) GradientFire else SolidColor(Color.Gray.copy(alpha = 0.3f)),
+                    RoundedCornerShape(50)
+                )
+                .padding(horizontal = 24.dp, vertical = 4.dp)
+        ) {
+            if (isSubmitting) {
+                CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(20.dp))
+            } else {
+                Text(
+                    stringResource(R.string.submit),
+                    fontFamily = GameBoyFont,
+                    fontSize = 18.sp,
+                    color = Color.Black,
+                )
+            }
         }
         Spacer(Modifier.height(20.dp))
     }

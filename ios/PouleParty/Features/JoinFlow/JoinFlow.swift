@@ -18,6 +18,12 @@ struct JoinFlowFeature {
         case codeNotFound
         case networkError
         case registrationClosed(Game)
+        /// PP-88: chicken set a GM password on this game; the user
+        /// picked "Rejoindre comme GameMaster". Collect the 4-digit
+        /// code and call `joinAsGameMaster`.
+        case gameMasterPasswordEntry(Game)
+        /// PP-88: `joinAsGameMaster` in flight.
+        case submittingGameMasterPassword(Game)
     }
 
     @ObservableState
@@ -26,6 +32,12 @@ struct JoinFlowFeature {
         var code: String = ""
         var teamName: String = ""
         var step: Step = .enteringCode
+        /// PP-88: 4-digit GM password buffer. Cleared on every new
+        /// step transition so a stale entry can't leak across games.
+        var gameMasterPassword: String = ""
+        /// PP-88: last error message from `joinAsGameMaster` (wrong
+        /// code → attempts remaining ; lock → timer).
+        var gameMasterError: String?
 
         var isCodeValid: Bool {
             let trimmed = code.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
@@ -35,6 +47,10 @@ struct JoinFlowFeature {
 
         var isTeamNameValid: Bool {
             !teamName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+
+        var isGameMasterPasswordValid: Bool {
+            gameMasterPassword.count == 4 && gameMasterPassword.allSatisfy { $0.isNumber }
         }
     }
 
@@ -50,10 +66,17 @@ struct JoinFlowFeature {
         case registerTapped
         case registrationSubmitted(Game, teamName: String)
         case submitRegistrationTapped
+        // PP-88
+        case joinAsGameMasterTapped
+        case submitGameMasterPasswordTapped
+        case gameMasterJoinSucceeded(Game)
+        case gameMasterJoinFailed(attemptsRemaining: Int, lockedUntilMs: Int?)
+        case gameMasterJoinErrored(String)
 
         enum Delegate: Equatable {
             case joinGame(Game, hunterName: String)
             case registered(Game, teamName: String)
+            case joinedAsGameMaster(Game)
         }
     }
 
@@ -176,6 +199,61 @@ struct JoinFlowFeature {
                         await send(.networkErrorOccurred)
                     }
                 }
+
+            case .joinAsGameMasterTapped:
+                guard case let .codeValidated(game, _) = state.step else { return .none }
+                state.gameMasterPassword = ""
+                state.gameMasterError = nil
+                state.step = .gameMasterPasswordEntry(game)
+                return .none
+
+            case .submitGameMasterPasswordTapped:
+                guard case let .gameMasterPasswordEntry(game) = state.step,
+                      state.isGameMasterPasswordValid
+                else { return .none }
+                let password = state.gameMasterPassword
+                state.step = .submittingGameMasterPassword(game)
+                state.gameMasterError = nil
+                let gameId = game.id
+                return .run { send in
+                    do {
+                        let result = try await apiClient.joinAsGameMaster(gameId, password)
+                        if result.success {
+                            await send(.gameMasterJoinSucceeded(game))
+                        } else {
+                            await send(.gameMasterJoinFailed(
+                                attemptsRemaining: result.attemptsRemaining,
+                                lockedUntilMs: result.lockedUntilMs
+                            ))
+                        }
+                    } catch {
+                        await send(.gameMasterJoinErrored(error.localizedDescription))
+                    }
+                }
+
+            case let .gameMasterJoinSucceeded(game):
+                return .send(.delegate(.joinedAsGameMaster(game)))
+
+            case let .gameMasterJoinFailed(attemptsRemaining, lockedUntilMs):
+                if let lockedUntilMs {
+                    let secs = max(0, (lockedUntilMs - Int(Date.now.timeIntervalSince1970 * 1000)) / 1000)
+                    let mins = max(1, secs / 60)
+                    state.gameMasterError = "Trop de tentatives. Réessaie dans \(mins) min."
+                } else {
+                    state.gameMasterError = "Mauvais code. \(attemptsRemaining) tentative(s) restante(s)."
+                }
+                state.gameMasterPassword = ""
+                if case let .submittingGameMasterPassword(game) = state.step {
+                    state.step = .gameMasterPasswordEntry(game)
+                }
+                return .none
+
+            case let .gameMasterJoinErrored(message):
+                state.gameMasterError = message
+                if case let .submittingGameMasterPassword(game) = state.step {
+                    state.step = .gameMasterPasswordEntry(game)
+                }
+                return .none
             }
         }
     }
@@ -218,6 +296,8 @@ struct JoinFlowView: View {
             return "code"
         case .registering, .submittingRegistration:
             return "register"
+        case .gameMasterPasswordEntry, .submittingGameMasterPassword:
+            return "gmPassword"
         }
     }
 
@@ -228,6 +308,10 @@ struct JoinFlowView: View {
             codeEntry(step: step)
         case let .registering(game), let .submittingRegistration(game):
             registrationForm(game: game, isSubmitting: { if case .submittingRegistration = step { return true } else { return false } }())
+        case let .gameMasterPasswordEntry(game):
+            gameMasterPasswordForm(game: game, isSubmitting: false)
+        case let .submittingGameMasterPassword(game):
+            gameMasterPasswordForm(game: game, isSubmitting: true)
         }
     }
 
@@ -298,38 +382,143 @@ struct JoinFlowView: View {
         }
     }
 
+    @ViewBuilder
     private func actionButton(for step: JoinFlowFeature.Step) -> some View {
-        let needsRegister: Bool = {
-            if case let .codeValidated(game, alreadyRegistered) = step {
-                return game.registration.required && !alreadyRegistered
-            }
-            return false
+        let validatedGame: Game? = {
+            if case let .codeValidated(game, _) = step { return game }
+            return nil
         }()
-        let isEnabled: Bool = {
-            if case .codeValidated = step { return true }
-            return false
-        }()
-        let title = needsRegister ? String(localized: "Register") : String(localized: "Join")
-        return Button {
-            if needsRegister {
-                store.send(.registerTapped)
-            } else {
-                store.send(.joinTapped)
+        if let game = validatedGame, game.hasGameMasterPassword {
+            // PP-88: chicken enabled GM role on this game. Offer the
+            // two roles side by side so a hunter and an arbitre can
+            // both land on the same screen and pick.
+            let alreadyRegistered: Bool = {
+                if case let .codeValidated(_, ok) = step { return ok }
+                return false
+            }()
+            let needsRegister = game.registration.required && !alreadyRegistered
+            VStack(spacing: 12) {
+                Button {
+                    if needsRegister { store.send(.registerTapped) }
+                    else { store.send(.joinTapped) }
+                } label: {
+                    BangerText(needsRegister ? String(localized: "Join as Hunter — Register") : String(localized: "Join as Hunter"), size: 20)
+                        .foregroundStyle(.black)
+                        .padding(.horizontal, 28)
+                        .padding(.vertical, 14)
+                        .background(AnyShapeStyle(Color.gradientFire))
+                        .clipShape(Capsule())
+                        .shadow(color: .black.opacity(0.2), radius: 6, y: 3)
+                }
+                Button {
+                    store.send(.joinAsGameMasterTapped)
+                } label: {
+                    BangerText(String(localized: "Join as GameMaster 🦅"), size: 20)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 28)
+                        .padding(.vertical, 14)
+                        .background(Color.CRPink)
+                        .clipShape(Capsule())
+                        .shadow(color: .black.opacity(0.2), radius: 6, y: 3)
+                }
             }
-        } label: {
-            BangerText(title, size: 22)
-                .foregroundStyle(isEnabled ? .black : .black.opacity(0.4))
+        } else {
+            let needsRegister: Bool = {
+                if case let .codeValidated(game, alreadyRegistered) = step {
+                    return game.registration.required && !alreadyRegistered
+                }
+                return false
+            }()
+            let isEnabled: Bool = {
+                if case .codeValidated = step { return true }
+                return false
+            }()
+            let title = needsRegister ? String(localized: "Register") : String(localized: "Join")
+            Button {
+                if needsRegister {
+                    store.send(.registerTapped)
+                } else {
+                    store.send(.joinTapped)
+                }
+            } label: {
+                BangerText(title, size: 22)
+                    .foregroundStyle(isEnabled ? .black : .black.opacity(0.4))
+                    .padding(.horizontal, 28)
+                    .padding(.vertical, 14)
+                    .background(
+                        isEnabled
+                            ? AnyShapeStyle(Color.gradientFire)
+                            : AnyShapeStyle(Color.gray.opacity(0.3))
+                    )
+                    .clipShape(Capsule())
+                    .shadow(color: .black.opacity(isEnabled ? 0.2 : 0), radius: 6, y: 3)
+            }
+            .disabled(!isEnabled)
+        }
+    }
+
+    // MARK: - GameMaster password form (PP-88)
+
+    private func gameMasterPasswordForm(game: Game, isSubmitting: Bool) -> some View {
+        VStack(spacing: 20) {
+            Spacer().frame(height: 8)
+            BangerText(String(localized: "GameMaster 🦅"), size: 28)
+                .foregroundStyle(Color.onBackground)
+
+            Text("Code à 4 chiffres")
+                .font(.gameboy(size: 10))
+                .foregroundStyle(Color.onBackground.opacity(0.6))
+
+            SecureField("", text: $store.gameMasterPassword)
+                .keyboardType(.numberPad)
+                .textContentType(.oneTimeCode)
+                .multilineTextAlignment(.center)
+                .font(.system(size: 32, weight: .bold, design: .monospaced))
+                .frame(maxWidth: 200)
+                .padding(.vertical, 12)
+                .background(Color.onBackground.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .onChange(of: store.gameMasterPassword) { _, newValue in
+                    let digits = newValue.filter { $0.isNumber }.prefix(4)
+                    if digits != Substring(newValue) {
+                        store.gameMasterPassword = String(digits)
+                    }
+                }
+                .disabled(isSubmitting)
+
+            if let err = store.gameMasterError {
+                Text(err)
+                    .font(.gameboy(size: 9))
+                    .foregroundStyle(Color.CROrange)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
+            }
+
+            Button {
+                store.send(.submitGameMasterPasswordTapped)
+            } label: {
+                Group {
+                    if isSubmitting {
+                        ProgressView()
+                            .tint(.white)
+                    } else {
+                        BangerText(String(localized: "Submit"), size: 22)
+                            .foregroundStyle(.white)
+                    }
+                }
                 .padding(.horizontal, 28)
                 .padding(.vertical, 14)
                 .background(
-                    isEnabled
-                        ? AnyShapeStyle(Color.gradientFire)
+                    (store.isGameMasterPasswordValid && !isSubmitting)
+                        ? AnyShapeStyle(Color.CRPink)
                         : AnyShapeStyle(Color.gray.opacity(0.3))
                 )
                 .clipShape(Capsule())
-                .shadow(color: .black.opacity(isEnabled ? 0.2 : 0), radius: 6, y: 3)
+            }
+            .disabled(!store.isGameMasterPasswordValid || isSubmitting)
+
+            Spacer()
         }
-        .disabled(!isEnabled)
     }
 
     // MARK: - Registration Form

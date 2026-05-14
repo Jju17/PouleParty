@@ -291,4 +291,9 @@
     <string name="report_player_submit">Rapporteer</string>
     <string name="report_player_success">Bedankt — rapport verzonden</string>
     <string name="report_player_error">Rapport kon niet verzonden worden. Probeer straks opnieuw.</string>
+    <!-- PP-88 GameMaster join flow -->
+    <string name="join_as_hunter">Word een Jager</string>
+    <string name="join_as_game_master">Word GameMaster 🦅</string>
+    <string name="gamemaster_join_title">GameMaster 🦅</string>
+    <string name="gamemaster_password_hint">Code van 4 cijfers</string>
 </resources>

@@ -32,7 +32,8 @@ import javax.inject.Singleton
 
 @Singleton
 class FirestoreRepository @Inject constructor(
-    private val firestore: FirebaseFirestore
+    private val firestore: FirebaseFirestore,
+    private val functions: com.google.firebase.functions.FirebaseFunctions
 ) {
 
     companion object {
@@ -766,5 +767,58 @@ class FirestoreRepository @Inject constructor(
                 )
             )
             .await()
+    }
+
+    // ── GameMaster (PP-70 / PP-88) ────────────────────────
+
+    /** Result of a `joinAsGameMaster` call. */
+    data class JoinAsGameMasterResult(
+        val success: Boolean,
+        val attemptsRemaining: Int,
+        val lockedUntilMs: Long?
+    )
+
+    /**
+     * Calls the `setGameMasterPassword` Cloud Function. Only the
+     * game's creator may call this; the CF writes the password to the
+     * private subcollection and flips `Game.hasGameMasterPassword`.
+     */
+    suspend fun setGameMasterPassword(gameId: String, password: String) {
+        functions
+            .getHttpsCallable("setGameMasterPassword")
+            .call(mapOf("gameId" to gameId, "password" to password))
+            .await()
+    }
+
+    /**
+     * Calls the `clearGameMasterPassword` Cloud Function. Only the
+     * creator may call this. Existing GMs in `gameMasterIds` are
+     * kept.
+     */
+    suspend fun clearGameMasterPassword(gameId: String) {
+        functions
+            .getHttpsCallable("clearGameMasterPassword")
+            .call(mapOf("gameId" to gameId))
+            .await()
+    }
+
+    /**
+     * Calls the `joinAsGameMaster` Cloud Function. Rate-limited
+     * server-side (5 attempts → 5 min lock). Returns
+     * [JoinAsGameMasterResult] with the wrong-password attempts left
+     * and the lock expiry timestamp when the lock kicked in.
+     */
+    suspend fun joinAsGameMaster(gameId: String, password: String): JoinAsGameMasterResult {
+        val callableResult = functions
+            .getHttpsCallable("joinAsGameMaster")
+            .call(mapOf("gameId" to gameId, "password" to password))
+            .await()
+        @Suppress("UNCHECKED_CAST")
+        val raw = callableResult.getData() as? Map<String, Any?> ?: emptyMap()
+        return JoinAsGameMasterResult(
+            success = (raw["success"] as? Boolean) ?: false,
+            attemptsRemaining = (raw["attemptsRemaining"] as? Number)?.toInt() ?: 0,
+            lockedUntilMs = (raw["lockedUntil"] as? Number)?.toLong()
+        )
     }
 }

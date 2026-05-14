@@ -494,13 +494,16 @@
 			shellScript = (
 				"# ⚠️ Have to be the last build phase, otherwise Crashlytics won't properly process dSYMs",
 				"",
+				"# Skip in Debug — Crashlytics symbol upload only matters for Release/TestFlight/App Store",
+				"# builds. Saves 1-3 s per Debug build (PP-89).",
+				"if [ \"$CONFIGURATION\" = \"Debug\" ]; then exit 0; fi",
+				"",
 				"\"${BUILD_DIR%/Build/*}/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run\"",
 				"",
 			);
 		};
 		F986A3802F48AB000086DF16 /* Copy Firebase Config */ = {
 			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
 			inputPaths = (
 				"${SRCROOT}/Firebase/Staging/GoogleService-Info.plist",
 				"${SRCROOT}/Firebase/Production/GoogleService-Info.plist",
@@ -655,7 +658,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = YXXNH92P5F;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;

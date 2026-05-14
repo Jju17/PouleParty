@@ -44,6 +44,10 @@ data class GameCreationUiState(
      *  `2..500`. Always `false` in PP-42; PP-45 will flip it via the
      *  `jujurahier` admin code modal. */
     val isAdminCreation: Boolean = false,
+    /** PP-88: toggle on the gameMasterPassword step. Default ON. */
+    val isGameMasterEnabled: Boolean = true,
+    /** PP-88: 4-digit GameMaster password collected on the step. */
+    val gameMasterPassword: String = "",
 ) {
     val steps: List<GameCreationStep>
         get() {
@@ -56,6 +60,7 @@ data class GameCreationUiState(
             base.addAll(listOf(
                 GameCreationStep.MAX_PLAYERS,
                 GameCreationStep.GAME_MODE,
+                GameCreationStep.GAME_MASTER_PASSWORD,
                 GameCreationStep.ZONE_SETUP,
                 GameCreationStep.REGISTRATION,
                 GameCreationStep.START_TIME,
@@ -181,6 +186,10 @@ class GameCreationViewModel @Inject constructor(
             is GameCreationIntent.RegistrationClosesBeforeStartChanged -> setRegistrationClosesBeforeStart(intent.minutes)
             is GameCreationIntent.LocationSelected -> onLocationSelected(intent.point)
             is GameCreationIntent.FinalLocationSelected -> onFinalLocationSelected(intent.point)
+            is GameCreationIntent.GameMasterEnabledChanged -> _uiState.update { it.copy(isGameMasterEnabled = intent.enabled) }
+            is GameCreationIntent.GameMasterPasswordChanged -> _uiState.update {
+                it.copy(gameMasterPassword = intent.password.filter { ch -> ch.isDigit() }.take(4))
+            }
         }
     }
 
@@ -410,10 +419,20 @@ class GameCreationViewModel @Inject constructor(
         val state = _uiState.value
         val endDate = Date(game.startDate.time + (state.gameDurationMinutes * 60 * 1000).toLong())
         val finalGame = game.withEndDate(endDate)
+        val enableGameMaster = state.isGameMasterEnabled && state.gameMasterPassword.length == 4
+        val gmPassword = state.gameMasterPassword
 
         viewModelScope.launch {
             try {
                 firestoreRepository.setConfig(finalGame)
+                if (enableGameMaster) {
+                    try {
+                        firestoreRepository.setGameMasterPassword(finalGame.id, gmPassword)
+                    } catch (_: Exception) {
+                        // Game is created — chicken can retry from
+                        // Settings (PP-88 follow-up).
+                    }
+                }
                 analyticsRepository.gameCreated(
                     gameMode = finalGame.gameMode,
                     maxPlayers = finalGame.maxPlayers,

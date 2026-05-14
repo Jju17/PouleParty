@@ -42,4 +42,10 @@ sealed interface HomeIntent {
     data class GameCodeChanged(val code: String) : HomeIntent
     data class TeamNameChanged(val name: String) : HomeIntent
     data class AdminCodeChanged(val code: String) : HomeIntent
+    /** PP-88: user picked "Join as GameMaster" on the CodeValidated step. */
+    object JoinAsGameMasterTapped : HomeIntent
+    /** PP-88: user typed into the 4-digit GM password field. */
+    data class GameMasterPasswordChanged(val code: String) : HomeIntent
+    /** PP-88: user tapped Submit on the GM password entry step. */
+    object SubmitGameMasterPasswordTapped : HomeIntent
 }

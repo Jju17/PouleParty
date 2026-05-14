@@ -16,6 +16,9 @@ enum GameCreationStep: Equatable {
     case chickenSelection
     case maxPlayers
     case gameMode
+    /// PP-70 / PP-88: chicken opts in to the GameMaster role and sets
+    /// a 4-digit password. Falls after `gameMode` per PP-70 spec.
+    case gameMasterPassword
     case zoneSetup
     case startTime
     case duration
@@ -45,6 +48,15 @@ struct GameCreationFeature {
         /// to `2...500`. Always `false` in PP-42; PP-45 will flip it via the
         /// `jujurahier` admin code modal.
         var isAdminCreation: Bool = false
+        /// PP-88: toggle on the gameMasterPassword step. Default ON for
+        /// D-Day so every Free game ships with a GameMaster slot
+        /// available; the chicken can flip it off.
+        var isGameMasterEnabled: Bool = true
+        /// PP-88: 4-digit password collected on the gameMasterPassword
+        /// step. Empty until the user types. The CF
+        /// `setGameMasterPassword` is called after `setConfig` succeeds
+        /// when this is non-empty and `isGameMasterEnabled` is true.
+        var gameMasterPassword: String = ""
 
         var steps: [GameCreationStep] {
             var result: [GameCreationStep] = [.participation]
@@ -54,6 +66,7 @@ struct GameCreationFeature {
             result.append(contentsOf: [
                 .maxPlayers,
                 .gameMode,
+                .gameMasterPassword,
                 .zoneSetup,
                 .registration,
                 .startTime,
@@ -318,9 +331,25 @@ struct GameCreationFeature {
                     game.endDate = game.startDate.addingTimeInterval(state.gameDurationMinutes * 60)
                 }
                 recalculateNormalMode(state: &state)
+                let enableGameMaster = state.isGameMasterEnabled
+                    && state.gameMasterPassword.count == 4
+                let gameMasterPassword = state.gameMasterPassword
                 return .run { [state = state, analyticsClient] send in
                     do {
                         try await apiClient.setConfig(state.game)
+                        // PP-88: enable the GM role *after* the Game doc
+                        // exists — `setGameMasterPassword` validates the
+                        // caller is `creatorId`, which only resolves once
+                        // the doc is committed. Wizard skips silently
+                        // when the toggle is OFF or the password is empty.
+                        if enableGameMaster {
+                            do {
+                                try await apiClient.setGameMasterPassword(state.game.id, gameMasterPassword)
+                            } catch {
+                                // Game is still created — chicken can
+                                // retry from Settings.
+                            }
+                        }
                         analyticsClient.gameCreated(
                             gameMode: state.game.gameMode.rawValue,
                             maxPlayers: state.game.maxPlayers,
@@ -493,6 +522,7 @@ struct GameCreationView: View {
         case .chickenSelection:    ChickenSelectionStep(store: store)
         case .maxPlayers:          MaxPlayersStep(store: store)
         case .gameMode:            GameModeStep(store: store)
+        case .gameMasterPassword:  GameMasterPasswordStep(store: store)
         case .zoneSetup:           ZoneSetupStep(store: store)
         case .startTime:           StartTimeStep(store: store)
         case .duration:            DurationStep(store: store)

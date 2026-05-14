@@ -295,4 +295,9 @@
     <string name="report_player_submit">Signaler</string>
     <string name="report_player_success">Merci — signalement envoyé</string>
     <string name="report_player_error">Impossible d\'envoyer le signalement. Réessaie dans un instant.</string>
+    <!-- PP-88 GameMaster join flow -->
+    <string name="join_as_hunter">Rejoindre comme Chasseur</string>
+    <string name="join_as_game_master">Rejoindre comme GameMaster 🦅</string>
+    <string name="gamemaster_join_title">GameMaster 🦅</string>
+    <string name="gamemaster_password_hint">Code à 4 chiffres</string>
 </resources>

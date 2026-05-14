@@ -344,6 +344,9 @@ struct HomeFeature {
                     )
                 }
                 return .none
+            case let .destination(.presented(.joinFlow(.delegate(.joinedAsGameMaster(game))))):
+                state.destination = nil
+                return .send(.gameMasterGameStarted(game))
             case .destination:
                 return .none
             case .activeGameBannerDismissed:

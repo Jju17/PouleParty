@@ -11,6 +11,10 @@ sealed class JoinFlowStep {
     data class RegistrationClosed(val game: Game) : JoinFlowStep()
     data class Registering(val game: Game) : JoinFlowStep()
     data class SubmittingRegistration(val game: Game) : JoinFlowStep()
+    /** PP-88: chicken enabled GM role; user picked "Join as GM". */
+    data class GameMasterPasswordEntry(val game: Game) : JoinFlowStep()
+    /** PP-88: joinAsGameMaster CF in flight. */
+    data class SubmittingGameMasterPassword(val game: Game) : JoinFlowStep()
 }
 
 data class PendingRegistration(
