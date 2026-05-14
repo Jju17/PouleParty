@@ -59,6 +59,11 @@ data class HunterMapUiState(
     val previousWinnersCount: Int = -1,
     override val winnerNotification: String? = null,
     val shouldNavigateToVictory: Boolean = false,
+    /** PP-16: flipped when the game ends (time-out, zone collapse,
+     *  all hunters found). The map stays visible, gameplay
+     *  controls grey, GPS stops. Found-code submission stays
+     *  active (per PP-2 spec). Mirrors iOS `isGameOver`. */
+    val isGameOver: Boolean = false,
     override val hasGameStarted: Boolean = false,
     override val countdownNumber: Int? = null,
     override val countdownText: String? = null,
@@ -268,6 +273,7 @@ class HunterMapViewModel @Inject constructor(
                     cancelStreams()
                     _uiState.update {
                         it.copy(
+                            isGameOver = true,
                             showGameOverAlert = true,
                             gameOverMessage = "Time's up! The Chicken survived!"
                         )
@@ -296,6 +302,7 @@ class HunterMapViewModel @Inject constructor(
                         cancelStreams()
                         _uiState.update {
                             it.copy(
+                                isGameOver = true,
                                 showGameOverAlert = true,
                                 gameOverMessage = radiusResult.gameOverMessage ?: "Game over"
                             )
@@ -410,13 +417,16 @@ class HunterMapViewModel @Inject constructor(
                     }
                 }
 
-                // Navigate to victory when all hunters have found the chicken
-                // (Chicken is authoritative for setting game status to DONE)
-                if (!_uiState.value.shouldNavigateToVictory &&
+                // PP-16: end the game when all hunters have found
+                // the chicken. Stay on the map — no auto-Victory.
+                // Chicken is authoritative for the Firestore
+                // `status = DONE` write; hunter just flips its
+                // local phase + cancels GPS.
+                if (!_uiState.value.isGameOver &&
                     updatedGame.hunterIds.isNotEmpty() &&
                     updatedGame.winners.size >= updatedGame.hunterIds.size) {
                     cancelStreams()
-                    _uiState.update { it.copy(shouldNavigateToVictory = true) }
+                    _uiState.update { it.copy(isGameOver = true) }
                     return@collect
                 }
             }
@@ -786,9 +796,11 @@ class HunterMapViewModel @Inject constructor(
     }
 
     private fun confirmGameOver() {
+        // PP-16: stay on the map. The alert closes; `isGameOver`
+        // greys the controls and `cancelStreams()` already cut the
+        // GPS stream when the timer / zone tick flipped the flag.
         cancelStreams()
         _uiState.update { it.copy(showGameOverAlert = false, previewCircle = null) }
-        viewModelScope.launch { _effects.send(HunterMapEffect.NavigateToVictory) }
     }
 
     val hunterSubtitle: String

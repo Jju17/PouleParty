@@ -69,14 +69,11 @@ struct AppFeature {
                 state = AppFeature.State.home(HomeFeature.State())
                 return .none
             case .chickenMap(.delegate(.allHuntersFound)):
-                if case let .chickenMap(chickenState) = state {
-                    state = .victory(VictoryFeature.State(
-                        game: chickenState.game,
-                        hunterId: "",
-                        hunterName: "",
-                        isChicken: true
-                    ))
-                }
+                // PP-16: do NOT auto-transition to Victory. The
+                // chicken stays on the map with a red timer (PP-17)
+                // and a manual "View leaderboard" CTA (PP-18). The
+                // gamePhase already flips to `.gameOver` inside
+                // ChickenMap, which greys the gameplay controls.
                 return .none
             case let .home(.completedGameFound(game)):
                 state = .victory(VictoryFeature.State(
@@ -107,13 +104,10 @@ struct AppFeature {
                 state = AppFeature.State.home(HomeFeature.State())
                 return .none
             case .hunterMap(.delegate(.allHuntersFound)):
-                if case let .hunterMap(hunterState) = state {
-                    state = .victory(VictoryFeature.State(
-                        game: hunterState.game,
-                        hunterId: hunterState.hunterId,
-                        hunterName: hunterState.hunterName
-                    ))
-                }
+                // PP-16: stay on the hunter map at gameOver (see
+                // ChickenMap sibling). Only `winnerRegistered`
+                // (individual hunter found the chicken, just below)
+                // still jumps to Victory.
                 return .none
             case .hunterMap(.internal(.winnerRegistered)):
                 if case let .hunterMap(hunterState) = state {

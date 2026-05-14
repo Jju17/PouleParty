@@ -63,6 +63,13 @@ struct HunterMapFeature {
         // `hunterIds.size` and can end the game early.
         var isSubmittingWinner: Bool = false
 
+        /// PP-16: flipped to `true` when the game ends (time-out,
+        /// zone collapse, all hunters found). `gamePhase` then
+        /// reports `.gameOver`, the map stays visible, gameplay
+        /// controls grey out, and the GPS effect cancels (no more
+        /// `hunterLocations` writes).
+        var isGameOver: Bool = false
+
         // MARK: - MapFeatureState passthroughs (child → parent surface)
         var availablePowerUps: [PowerUp] { powerUps.available }
         var collectedPowerUps: [PowerUp] { powerUps.collected }
@@ -74,7 +81,10 @@ struct HunterMapFeature {
         var hasGameStarted: Bool { nowDate >= game.hunterStartDate }
         var isCodeOnCooldown: Bool { codeCooldownUntil.map { nowDate < $0 } ?? false }
 
-        var currentGamePhase: PoulePartyAttributes.ContentState.GamePhase {
+        /// Resolves the live game phase, factoring in PP-16's
+        /// post-game `isGameOver` flag.
+        var gamePhase: PoulePartyAttributes.ContentState.GamePhase {
+            if isGameOver { return .gameOver }
             if !hasChickenStarted { return .waitingToStart }
             if !hasGameStarted { return .chickenHeadStart }
             return .hunting
@@ -87,7 +97,7 @@ struct HunterMapFeature {
                 activeHunters: max(0, game.hunterIds.count - game.winners.count),
                 winnersCount: game.winners.count,
                 isOutsideZone: isOutsideZone,
-                gamePhase: currentGamePhase
+                gamePhase: gamePhase
             )
         }
     }
@@ -240,18 +250,19 @@ struct HunterMapFeature {
                     await send(.delegate(.returnedToMenu))
                 }
             case .destination(.presented(.alert(.gameOver))):
+                // PP-16: the alert closes and the hunter stays on
+                // the map (gamePhase is already .gameOver). No auto
+                // transition to Victory — PP-18 wires the manual
+                // leaderboard CTA.
                 state.previewCircle = nil
                 let gameId = state.game.id
-                return .run { send in
+                return .run { _ in
                     await liveActivityClient.end(nil)
-                    // Fallback: also update status from hunter side in case chicken didn't
                     do {
                         try await apiClient.updateGameStatus(gameId, .done)
                     } catch {
                         logger.error("Failed to update game status to done: \(error)")
                     }
-                    // Show leaderboard instead of returning to menu directly
-                    await send(.delegate(.allHuntersFound))
                 }
             case .destination(.presented(.alert(.retryWinnerRegistration))):
                 // Must live above the catch-all `case .destination:` below,
@@ -845,15 +856,19 @@ struct HunterMapFeature {
                     state.previousWinnersCount = game.winners.count
                 }
 
-                // Navigate to victory when all hunters have found the chicken
-                // (Chicken is authoritative for setting game status to DONE)
-                if state.destination == nil &&
+                // PP-16: end the game when all hunters have found the
+                // chicken. Stay on the map, grey controls via
+                // `isGameOver`. The chicken is authoritative for the
+                // `status = .done` Firestore write — the hunter just
+                // flips its local phase + cancels GPS.
+                if !state.isGameOver &&
+                   state.destination == nil &&
                    !game.hunterIds.isEmpty &&
                    game.winners.count >= game.hunterIds.count {
+                    state.isGameOver = true
                     locationClient.stopTracking()
-                    effects.append(.run { send in
+                    effects.append(.run { _ in
                         await liveActivityClient.end(nil)
-                        await send(.delegate(.allHuntersFound))
                     })
                 }
 
@@ -901,6 +916,7 @@ struct HunterMapFeature {
                 // Game over by time
                 if checkGameOverByTime(endDate: state.game.endDate) {
                     HapticManager.notification(.warning)
+                    state.isGameOver = true
                     locationClient.stopTracking()
                     let endState = PoulePartyAttributes.ContentState(
                         radiusMeters: state.radius,
@@ -942,6 +958,7 @@ struct HunterMapFeature {
                 ) {
                     if result.isGameOver {
                         HapticManager.notification(.warning)
+                        state.isGameOver = true
                         locationClient.stopTracking()
                         let endState = PoulePartyAttributes.ContentState(
                             radiusMeters: 0,

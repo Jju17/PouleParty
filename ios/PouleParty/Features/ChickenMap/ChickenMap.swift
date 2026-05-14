@@ -41,6 +41,13 @@ struct ChickenMapFeature {
         var isDebugPreview: Bool = false
         var zonePreviewCircles: [DebugShrinkCircle] = []
 
+        /// PP-16: flipped to `true` when the game ends (time-out,
+        /// zone collapse, all hunters found, or the chicken cancels).
+        /// `gamePhase` then reports `.gameOver`, the map stays
+        /// visible, gameplay controls are greyed, and the GPS
+        /// effect cancels (no more `chickenLocations` writes).
+        var isGameOver: Bool = false
+
         // MARK: - MapFeatureState passthroughs (child → parent surface)
         var availablePowerUps: [PowerUp] { powerUps.available }
         var collectedPowerUps: [PowerUp] { powerUps.collected }
@@ -51,7 +58,12 @@ struct ChickenMapFeature {
         var hasGameStarted: Bool { nowDate >= game.startDate }
         var hasHuntStarted: Bool { nowDate >= game.hunterStartDate }
 
-        var currentGamePhase: PoulePartyAttributes.ContentState.GamePhase {
+        /// Resolves the live game phase, factoring in PP-16's
+        /// post-game `isGameOver` flag. The LiveActivity reads this
+        /// to update the lock-screen widget; the view layer reads it
+        /// to grey out gameplay controls.
+        var gamePhase: PoulePartyAttributes.ContentState.GamePhase {
+            if isGameOver { return .gameOver }
             if !hasGameStarted { return .waitingToStart }
             if !hasHuntStarted { return .chickenHeadStart }
             return .hunting
@@ -64,7 +76,7 @@ struct ChickenMapFeature {
                 activeHunters: max(0, game.hunterIds.count - game.winners.count),
                 winnersCount: game.winners.count,
                 isOutsideZone: isOutsideZone,
-                gamePhase: currentGamePhase
+                gamePhase: gamePhase
             )
         }
     }
@@ -164,19 +176,21 @@ struct ChickenMapFeature {
                     await send(.delegate(.returnedToMenu))
                 }
             case .destination(.presented(.alert(.gameOver))):
+                // PP-16: the alert closes and the chicken stays on
+                // the map (gamePhase already flipped to .gameOver
+                // when the timer / zone collapsed, so the gameplay
+                // controls are greyed). Don't auto-transition to
+                // Victory — the map shows the final state plus
+                // PP-17's red timer and PP-18's leaderboard CTA.
                 let gameId = state.game.id
-                return .run { send in
+                return .run { _ in
                     await liveActivityClient.end(nil)
-                    // Ensure status is set to done (the timer effect may have
-                    // been cancelled if the user tapped OK before it completed)
                     do {
                         try await apiClient.updateGameStatus(gameId, .done)
                     } catch {
                         Logger(category: "ChickenMapFeature")
                             .error("Failed to update game status to done: \(error.localizedDescription)")
                     }
-                    // Show leaderboard instead of returning to menu directly
-                    await send(.delegate(.allHuntersFound))
                 }
             case .destination:
                 return .none
@@ -330,15 +344,21 @@ struct ChickenMapFeature {
                     state.previousWinnersCount = game.winners.count
                 }
 
-                // End the game when all hunters have found the chicken
+                // End the game when all hunters have found the chicken.
                 // Chicken is authoritative: it sets game status to DONE
-                if state.destination == nil &&
+                // and flips `gamePhase` to .gameOver so the map switches
+                // into its read-only end-state (controls greyed, GPS
+                // off — PP-16). No auto-nav to Victory; PP-18 wires the
+                // manual leaderboard CTA.
+                if !state.isGameOver &&
+                   state.destination == nil &&
                    !game.hunterIds.isEmpty &&
                    game.winners.count >= game.hunterIds.count {
+                    state.isGameOver = true
                     locationClient.stopTracking()
                     let gameId = game.id
                     let winnersCount = game.winners.count
-                    effects.append(.run { [analyticsClient] send in
+                    effects.append(.run { [analyticsClient] _ in
                         do {
                             try await apiClient.updateGameStatus(gameId, .done)
                             analyticsClient.gameEnded(reason: "all_hunters_found", winnersCount: winnersCount)
@@ -347,12 +367,15 @@ struct ChickenMapFeature {
                                 .error("Failed to set game DONE when all hunters found: \(error.localizedDescription)")
                         }
                         await liveActivityClient.end(nil)
-                        await send(.delegate(.allHuntersFound))
                     })
                 }
 
                 return effects.isEmpty ? .none : .merge(effects)
             case .view(.cancelGameButtonTapped):
+                // PP-16: cancelling a game that already ended is a
+                // no-op — the gameOver alert already updated the
+                // Firestore status to .done.
+                guard !state.isGameOver else { return .none }
                 state.destination = .alert(
                     AlertState {
                         TextState("Cancel game")
@@ -684,6 +707,7 @@ struct ChickenMapFeature {
                 // Game over by time
                 if checkGameOverByTime(endDate: state.game.endDate) {
                     HapticManager.notification(.warning)
+                    state.isGameOver = true
                     locationClient.stopTracking()
                     let endState = PoulePartyAttributes.ContentState(
                         radiusMeters: state.radius,
@@ -733,6 +757,7 @@ struct ChickenMapFeature {
                 ) {
                     if result.isGameOver {
                         HapticManager.notification(.warning)
+                        state.isGameOver = true
                         locationClient.stopTracking()
                         let endState = PoulePartyAttributes.ContentState(
                             radiusMeters: 0,

@@ -75,6 +75,10 @@ data class ChickenMapUiState(
     override val lastActivatedPowerUpType: PowerUpType? = null,
     val activatingPowerUpId: String? = null,
     val shouldNavigateToVictory: Boolean = false,
+    /** PP-16: flipped to true when the game ends (time-out, zone
+     *  collapse, all hunters found). The map stays visible,
+     *  controls grey, GPS stops. Mirrors iOS `isGameOver`. */
+    val isGameOver: Boolean = false,
     /**
      * Long-press-on-Create-Party easter egg. When true,
      * [ChickenMapScreen] draws every future shrunk circle on top of the
@@ -245,6 +249,7 @@ class ChickenMapViewModel @Inject constructor(
                     cancelStreams()
                     _uiState.update {
                         it.copy(
+                            isGameOver = true,
                             showGameOverAlert = true,
                             gameOverMessage = "Time's up! The Chicken survived!"
                         )
@@ -276,6 +281,7 @@ class ChickenMapViewModel @Inject constructor(
                         cancelStreams()
                         _uiState.update {
                             it.copy(
+                                isGameOver = true,
                                 showGameOverAlert = true,
                                 gameOverMessage = radiusResult.gameOverMessage ?: "Game over"
                             )
@@ -502,9 +508,12 @@ class ChickenMapViewModel @Inject constructor(
                     }
                 }
 
-                // End the game when all hunters have found the chicken
-                // Chicken is authoritative: it sets game status to DONE
-                if (!_uiState.value.shouldNavigateToVictory &&
+                // PP-16: end the game when all hunters have found
+                // the chicken. Stay on the map (no auto-Victory),
+                // grey controls via `isGameOver`, stop GPS. Chicken
+                // is authoritative for the Firestore `status = DONE`
+                // write.
+                if (!_uiState.value.isGameOver &&
                     updatedGame.hunterIds.isNotEmpty() &&
                     updatedGame.winners.size >= updatedGame.hunterIds.size) {
                     try {
@@ -514,8 +523,7 @@ class ChickenMapViewModel @Inject constructor(
                         android.util.Log.e("ChickenMapVM", "Failed to set game DONE when all hunters found", e)
                     }
                     cancelStreams()
-                    _uiState.update { it.copy(shouldNavigateToVictory = true) }
-                    _effects.send(ChickenMapEffect.NavigateToVictory)
+                    _uiState.update { it.copy(isGameOver = true) }
                     return@collect
                 }
             }
@@ -523,6 +531,8 @@ class ChickenMapViewModel @Inject constructor(
     }
 
     private fun onCancelGameTapped() {
+        // PP-16: can't cancel an already-over game.
+        if (_uiState.value.isGameOver) return
         _uiState.update { it.copy(showCancelAlert = true) }
     }
 
@@ -539,8 +549,10 @@ class ChickenMapViewModel @Inject constructor(
     }
 
     private fun confirmGameOver() {
+        // PP-16: stay on the map. The alert closes; `isGameOver`
+        // greys the controls and the GPS stream has already been
+        // cancelled when the timer / zone tick flipped the flag.
         _uiState.update { it.copy(showGameOverAlert = false) }
-        viewModelScope.launch { _effects.send(ChickenMapEffect.NavigateToVictory) }
     }
 
     private fun onInfoTapped() {
