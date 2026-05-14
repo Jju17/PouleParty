@@ -167,6 +167,13 @@ service cloud.firestore {
       // completed at least one challenge. Readable by any participant (for
       // the live leaderboard). Writable only by the owning hunter, and only
       // while they are still in hunterIds.
+      //
+      // PP-36 (out-of-zone penalty): the same write path is reused by the
+      // hunter to decrement their own `totalPoints` by 1 every 5 s while
+      // outside the zone. The `hunterId == request.auth.uid` clause is the
+      // load-bearing guarantee — no hunter can decrement (or increment)
+      // another hunter's points. PP-25 will later flip the increment side
+      // to validator (chicken / GM) writes; the decrement stays self-write.
       match /challengeCompletions/{hunterId} {
         allow read: if request.auth != null
                     && request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.hunterIds;

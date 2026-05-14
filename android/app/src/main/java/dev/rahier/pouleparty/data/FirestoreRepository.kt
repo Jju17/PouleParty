@@ -670,6 +670,50 @@ class FirestoreRepository @Inject constructor(
     }
 
     /**
+     * PP-36: decrement the hunter's `totalPoints` by 1 atomically. Used by
+     * the out-of-zone penalty timer (-1 point every 5 s while the hunter is
+     * outside the zone). Wrapped in a Firestore transaction so a concurrent
+     * `markChallengeCompleted` from a parallel challenge submission can't
+     * clobber the decrement (or vice versa). If no doc exists yet (the
+     * hunter has never completed a challenge), we still seed one at -1 so
+     * the leaderboard reflects the penalty. firestore.rules permits the
+     * hunter to write their own doc as long as `totalPoints` is
+     * monotonically non-increasing — see the PP-36 rule update.
+     */
+    suspend fun decrementTotalPoints(gameId: String, hunterId: String) {
+        if (gameId.isEmpty() || hunterId.isEmpty()) {
+            Log.w(
+                TAG,
+                "decrementTotalPoints skipped — gameId: '$gameId', hunterId: '$hunterId'"
+            )
+            return
+        }
+        withRetry("decrementTotalPoints($gameId, $hunterId)") {
+            val docRef = firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
+                .collection(AppConstants.SUBCOLLECTION_CHALLENGE_COMPLETIONS).document(hunterId)
+            firestore.runTransaction { transaction ->
+                val snapshot = transaction.get(docRef)
+                val existing = if (snapshot.exists()) {
+                    safeToObject<ChallengeCompletion>(
+                        snapshot,
+                        "decrementTotalPoints($gameId, $hunterId)"
+                    )
+                } else {
+                    null
+                }
+                val data = mapOf(
+                    "hunterId" to hunterId,
+                    "completedChallengeIds" to (existing?.completedChallengeIds ?: emptyList()),
+                    "totalPoints" to ((existing?.totalPoints ?: 0) - 1),
+                    "teamName" to (existing?.teamName ?: "")
+                )
+                transaction.set(docRef, data)
+                null
+            }.await()
+        }
+    }
+
+    /**
      * Marks a challenge as completed for the given hunter. Uses a Firestore transaction
      * so concurrent writes don't lose updates. If the hunter already completed this
      * challenge, it's a no-op (idempotent).

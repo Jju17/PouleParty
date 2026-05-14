@@ -97,6 +97,19 @@ data class HunterMapUiState(
     // for the same hunter, which inflates `winners.size` past
     // `hunterIds.size` and can end the game early.
     val isSubmittingWinner: Boolean = false,
+    /** PP-36: mirrors the chicken-side `isDebugPreview` flag. When the
+     *  hunter map is driven by a previewer (snapshot tests, Compose
+     *  preview), the out-of-zone penalty must not fire. Live runs leave
+     *  this `false`. */
+    val isDebugPreview: Boolean = false,
+    /** PP-36: epoch-millis of the last out-of-zone penalty tick. The 1 s
+     *  timer fires the decrement only when the previous tick was ≥
+     *  [AppConstants.OUT_OF_ZONE_PENALTY_INTERVAL_MS] ago, so the penalty
+     *  is exactly -1 point per 5 s while the hunter stays outside. Reset
+     *  to `null` whenever the hunter is inside the zone so re-exit
+     *  starts a fresh 5 s window rather than firing immediately on
+     *  re-cross. */
+    val lastPenaltyAt: Long? = null,
 ) : dev.rahier.pouleparty.ui.map.MapUiState
 
 @HiltViewModel
@@ -334,6 +347,44 @@ class HunterMapViewModel @Inject constructor(
                         val zoneResult = checkZoneStatus(userLoc, center, currentState.radius.toDouble())
                         _uiState.update { it.copy(isOutsideZone = zoneResult.isOutsideZone) }
                     }
+                }
+
+                // PP-36: out-of-zone penalty (-1 point / 5 s).
+                // Phase gates: only while the hunt is actually running.
+                // `gameStarted` (hunter start passed) is already checked
+                // above; we additionally exclude `isGameOver` and the
+                // debug preview flag. The `lastPenaltyAt` guard is
+                // computed against `now` so the very first out-of-zone
+                // tick fires after a full 5 s, not immediately on
+                // re-cross — matches the 4 s → 0 / 12 s → -2 acceptance
+                // criteria.
+                val zoneState = _uiState.value
+                if (zoneState.isOutsideZone &&
+                    !zoneState.isGameOver &&
+                    !zoneState.isDebugPreview &&
+                    hunterId.isNotEmpty()
+                ) {
+                    val nowMs = now.time
+                    val last = zoneState.lastPenaltyAt
+                    if (last == null) {
+                        // First out-of-zone tick: start the 5 s window.
+                        _uiState.update { it.copy(lastPenaltyAt = nowMs) }
+                    } else if (nowMs - last >= AppConstants.OUT_OF_ZONE_PENALTY_INTERVAL_MS) {
+                        _uiState.update { it.copy(lastPenaltyAt = nowMs) }
+                        val gid = zoneState.game.id
+                        val hid = hunterId
+                        viewModelScope.launch {
+                            try {
+                                firestoreRepository.decrementTotalPoints(gid, hid)
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Out-of-zone penalty write failed", e)
+                            }
+                        }
+                    }
+                } else if (!zoneState.isOutsideZone && zoneState.lastPenaltyAt != null) {
+                    // Back inside the zone → reset the window so the next
+                    // exit starts a fresh 5 s countdown.
+                    _uiState.update { it.copy(lastPenaltyAt = null) }
                 }
             }
         }

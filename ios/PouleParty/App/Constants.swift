@@ -55,6 +55,10 @@ enum AppConstants {
     // MARK: - Zone
     // Grace period disabled — kept for future game mode
     // static let outsideZoneGracePeriodSeconds = 30
+    /// PP-36: how often the hunter loses a point while outside the
+    /// zone. Mirrors `AppConstants.OUT_OF_ZONE_PENALTY_INTERVAL_MS`
+    /// on Android — both platforms must tick at the same cadence.
+    static let outOfZonePenaltyIntervalSeconds: TimeInterval = 5
 
     // MARK: - Confetti
     static let confettiParticleCount = 80

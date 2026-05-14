@@ -236,6 +236,8 @@
 
     <!-- Zone Warning -->
     <string name="return_to_zone">Return to the zone!</string>
+    <!-- PP-36 out-of-zone penalty pill shown on the hunter map -->
+    <string name="out_of_zone_losing_points">⚠️ Out of zone: losing points</string>
 
     <!-- Map Config -->
     <string name="search_address">Search address</string>

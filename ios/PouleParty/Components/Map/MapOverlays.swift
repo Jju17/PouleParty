@@ -28,6 +28,24 @@ struct ZoneWarningOverlay: View {
     }
 }
 
+/// PP-36: small pill shown below the red zone-warning banner that
+/// surfaces the active -1 point / 5 s penalty so the hunter
+/// understands the cost of staying outside, not just that they
+/// should come back. Hunter-only — the chicken's out-of-zone state
+/// (stayInTheZone mode) has no penalty.
+struct OutOfZonePenaltyOverlay: View {
+    var body: some View {
+        Text("⚠️ Out of zone: losing points")
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(Color.zoneDanger.opacity(0.75))
+            .clipShape(Capsule())
+            .padding(.top, 192)
+    }
+}
+
 // MARK: - Circle Overlay
 
 struct CircleOverlay: Equatable {

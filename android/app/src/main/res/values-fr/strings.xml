@@ -206,6 +206,8 @@
 
     <!-- Zone Warning -->
     <string name="return_to_zone">Retourne dans la zone !</string>
+    <!-- PP-36 out-of-zone penalty pill shown on the hunter map -->
+    <string name="out_of_zone_losing_points">⚠️ Hors zone : tu perds des points</string>
 
     <!-- Power-Ups -->
     <string name="power_ups">Power-Ups</string>
