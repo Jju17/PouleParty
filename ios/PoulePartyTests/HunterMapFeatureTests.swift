@@ -474,7 +474,12 @@ struct HunterMapFeatureTests {
         await store.receive(\.delegate.returnedToMenu)
     }
 
-    @Test func gameOverAlertSendsGoToMenu() async {
+    @Test func gameOverAlertKeepsHunterOnMap() async {
+        // PP-16: dismissing the gameOver alert no longer auto-transitions
+        // to Victory. The hunter stays on the map with `gamePhase ==
+        // .gameOver` so the gameplay controls are greyed and PP-18's
+        // manual leaderboard CTA is reachable. No `.allHuntersFound`
+        // delegate fires.
         var state = HunterMapFeature.State(game: .mock)
         state.destination = .alert(
             AlertState {
@@ -490,12 +495,17 @@ struct HunterMapFeatureTests {
 
         let store = TestStore(initialState: state) {
             HunterMapFeature()
+        } withDependencies: {
+            $0.apiClient.updateGameStatus = { _, _ in }
+            $0.liveActivityClient.end = { _ in }
         }
+        store.exhaustivity = .off
 
         await store.send(.destination(.presented(.alert(.gameOver)))) {
             $0.destination = nil
+            $0.previewCircle = nil
         }
-        await store.receive(\.delegate.allHuntersFound)
+        // No follow-up delegate action — hunter stays on the map.
     }
 
     // MARK: - Game info

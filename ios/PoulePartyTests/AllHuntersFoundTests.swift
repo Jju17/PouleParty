@@ -135,25 +135,30 @@ struct AllHuntersFoundTests {
 
     // MARK: - Chicken gameUpdated detects all hunters found
 
-    @Test func chickenGameUpdatedWithAllHuntersFoundTriggersNavigation() async {
+    @Test func chickenGameUpdatedWithAllHuntersFoundFlipsToGameOver() async {
+        // PP-16: when all hunters find the chicken, the chicken stays
+        // on the map. The reducer flips `isGameOver = true`, pushes the
+        // status to .done server-side, and ends the Live Activity — but
+        // NO `.delegate.allHuntersFound` fires. PP-18's manual
+        // leaderboard CTA is the only path off the map.
         var game = Game.mock
         game.hunterIds = ["h1"]
         game.startDate = .now.addingTimeInterval(-600)
         game.endDate = .now.addingTimeInterval(3000)
 
         var state = ChickenMapFeature.State(game: game)
-        state.previousWinnersCount = 0 // Already initialized
-        state.nowDate = .now // Ensure game/hunt appear started (startDate is in the past)
+        state.previousWinnersCount = 0
+        state.nowDate = .now
 
         let store = TestStore(initialState: state) {
             ChickenMapFeature()
         } withDependencies: {
             $0.apiClient.updateGameStatus = { _, _ in }
             $0.liveActivityClient.end = { _ in }
+            $0.locationClient.stopTracking = { }
             $0.continuousClock = ImmediateClock()
         }
 
-        // Game update: the single hunter found the chicken
         var updatedGame = game
         updatedGame.winners = [
             Winner(hunterId: "h1", hunterName: "Alice", timestamp: Timestamp(date: .now))
@@ -161,7 +166,8 @@ struct AllHuntersFoundTests {
 
         store.exhaustivity = .off
         await store.send(.internal(.gameUpdated(updatedGame)))
-        await store.receive(\.delegate.allHuntersFound)
+        // No follow-up delegate action.
+        #expect(store.state.isGameOver)
     }
 
     // MARK: - findActiveGame ordering logic

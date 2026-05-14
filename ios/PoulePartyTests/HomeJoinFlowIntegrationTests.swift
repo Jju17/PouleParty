@@ -4,12 +4,11 @@
 //
 //  End-to-end TCA tests for the Home ↔ JoinFlow flow.
 //
-//  PP-19 note: these tests target a `PendingRegistration` state that no
-//  longer exists post-PP-90. The suite is disabled at the compiler
-//  level so the test target still builds; the file will be rewritten
-//  or deleted in a follow-up cleanup ticket.
-
-#if false
+//  PP-64: re-enabled after PP-90 retired the registration-required gate.
+//  The old `pendingRegistrationRejoinTapped` action + `PendingRegistration`
+//  type are gone, so the test now only covers the post-PP-90 surface:
+//  the JoinFlow delegate fires `joinGame(_, hunterName:)` and Home
+//  immediately bridges to `hunterGameJoined`.
 
 import ComposableArchitecture
 import FirebaseFirestore
@@ -36,12 +35,4 @@ struct HomeJoinFlowIntegrationTests {
         await store.receive(\.hunterGameJoined)
         #expect(store.state.destination == nil)
     }
-
-    // PP-90 retired the PendingRegistration flow — anyone can join at
-    // any point, no pre-registration window. The
-    // `pendingRegistrationRejoinTapped` action and the
-    // `PendingRegistration` type were removed with it. The legacy
-    // integration test that targeted them is intentionally dropped.
 }
-
-#endif

@@ -2,28 +2,19 @@
 //  GameCreationFeatureTests.swift
 //  PoulePartyTests
 //
-//  PP-19 note: tests reference removed APIs (`Game.registration`,
-//  `requiresRegistrationChanged`, etc.) after PP-90 / PP-11..14.
-//  Disabled at the compiler level so the test target still builds;
-//  to be rewritten or removed in PP-64.
-
-#if false
+//  Post-PP-11/12/13/14/90 wizard coverage. The pre-PP-90 file was
+//  gated under `#if false` because it referenced retired APIs
+//  (`Game.registration`, `requiresRegistrationChanged`, the legacy
+//  3-step zone block, etc.). PP-64 rewrites it against the current
+//  `GameCreationFeature` surface.
+//
 
 import ComposableArchitecture
 import CoreLocation
 import FirebaseFirestore
+import Foundation
 import Testing
 @testable import PouleParty
-
-// PP-66 / PP-64: the bulk of this file references the pre-PP-90
-// `Game.registration` / `GameCreationStep.registration` /
-// `requiresRegistrationChanged` surfaces, which were retired with
-// PP-90. The test file has drifted from production code and is gated
-// off until PP-64 (test cleanup) re-aligns it with the current
-// GameCreationFeature. Leaving the file as compiled-but-empty keeps
-// it in the synchronized PoulePartyTests root group; full cleanup
-// belongs to its own ticket.
-#if false
 
 @MainActor
 struct GameCreationFeatureTests {
@@ -33,32 +24,32 @@ struct GameCreationFeatureTests {
     private func makeState(
         gameId: String = "test-game-id",
         maxPlayers: Int = 5,
-        registrationRequired: Bool = false
+        gameMode: Game.GameMode = .stayInTheZone
     ) -> GameCreationFeature.State {
         var game = Game(id: gameId)
         game.maxPlayers = maxPlayers
-        if registrationRequired {
-            game.registration.required = true
-            game.registration.closesMinutesBefore = 15
-        }
+        game.gameMode = gameMode
+        game.foundCode = "1234"
         let shared = Shared(value: game)
         let mapConfig = ChickenMapConfigFeature.State(game: shared)
-        return GameCreationFeature.State(game: shared, mapConfigState: mapConfig)
+        return GameCreationFeature.State(
+            game: shared,
+            mapConfigState: mapConfig
+        )
     }
 
-    private func makeStore(
-        state: GameCreationFeature.State? = nil
-    ) -> TestStore<GameCreationFeature.State, GameCreationFeature.Action> {
+    private func makeStore(state: GameCreationFeature.State? = nil) -> TestStore<GameCreationFeature.State, GameCreationFeature.Action> {
         let initial = state ?? makeState()
         return TestStore(initialState: initial) {
             GameCreationFeature()
         } withDependencies: {
             $0.analyticsClient = .testValue
             $0.apiClient.setConfig = { _ in }
+            $0.apiClient.setGameMasterPassword = { _, _ in }
         }
     }
 
-    // MARK: - Initial state
+    // MARK: - Initial state (PP-11/12/13/90)
 
     @Test func initialStateHasDefaultValues() {
         let state = makeState()
@@ -68,52 +59,232 @@ struct GameCreationFeatureTests {
         #expect(state.goingForward == true)
     }
 
-    @Test func defaultStateDoesNotRequireRegistration() {
-        let state = makeState()
-        #expect(state.game.registration.required == false)
-    }
+    // MARK: - Step order (PP-11/12/13 + PP-88)
 
-    // MARK: - Steps flow
-
-    @Test func stepsAreInCorrectOrderWhenParticipating() {
-        let state = makeState()
+    @Test func stepsOrderInStayInTheZoneParticipating() {
+        let state = makeState(gameMode: .stayInTheZone)
         let steps = state.steps
         #expect(steps[0] == .participation)
         #expect(steps[1] == .maxPlayers)
-        #expect(steps[2] == .gameMode)
-        #expect(steps[3] == .zoneSetup)
-        #expect(steps[4] == .registration)
-        #expect(steps[5] == .startTime)
-        #expect(steps[6] == .duration)
-        #expect(steps[7] == .headStart)
-        #expect(steps[8] == .powerUps)
-        #expect(steps[9] == .chickenSeesHunters)
-        #expect(steps[10] == .recap)
+        // Wizard order: When → How long → Mode → Where → Rules.
+        #expect(steps[2] == .startTime)
+        #expect(steps[3] == .duration)
+        #expect(steps[4] == .headStart)
+        #expect(steps[5] == .gameMode)
+        // PP-11 / PP-12 / PP-13: zone setup as three consecutive
+        // sub-steps in stayInTheZone (default mode).
+        #expect(steps[6] == .startZoneSetup)
+        #expect(steps[7] == .finalZoneSetup)
+        #expect(steps[8] == .zonesRecap)
+        // PP-70 / PP-88: GameMaster password sits with the modifier
+        // toggles at the tail of the wizard.
+        #expect(steps[9] == .gameMasterPassword)
+        #expect(steps[10] == .powerUps)
+        #expect(steps[11] == .chickenSeesHunters)
+        #expect(steps[12] == .recap)
+        #expect(steps.count == 13)
     }
 
-    @Test func stepsIncludeChickenSelectionWhenNotParticipating() {
-        var state = makeState()
-        state.isParticipating = false
-        let steps = state.steps
-        #expect(steps[0] == .participation)
-        #expect(steps[1] == .chickenSelection)
-        #expect(steps[2] == .maxPlayers)
-        #expect(steps[3] == .gameMode)
+    @Test func stepsOrderInFollowTheChickenSkipsFinalZone() async {
+        let store = makeStore()
+        store.exhaustivity = .off
+        await store.send(.gameModChanged(.followTheChicken))
+        let steps = store.state.steps
+        // PP-12: no `finalCenter` in followTheChicken — the zone
+        // tracks the chicken's live position, so finalZoneSetup is
+        // dropped from the sequence (forward + back). zonesRecap stays.
+        #expect(steps.contains(.startZoneSetup))
+        #expect(!steps.contains(.finalZoneSetup))
+        #expect(steps.contains(.zonesRecap))
         #expect(steps.count == 12)
     }
 
-    @Test func maxPlayersStepFollowsParticipation() {
-        let state = makeState()
-        let participationIndex = state.steps.firstIndex(of: .participation)!
-        let maxPlayersIndex = state.steps.firstIndex(of: .maxPlayers)!
-        #expect(maxPlayersIndex == participationIndex + 1)
+    @Test func stepsIncludeChickenSelectionWhenNotParticipating() async {
+        let store = makeStore()
+        store.exhaustivity = .off
+        await store.send(.participationChanged(false))
+        let steps = store.state.steps
+        #expect(steps[0] == .participation)
+        #expect(steps[1] == .chickenSelection)
+        #expect(steps[2] == .maxPlayers)
+        // Same step count = base (13) + chickenSelection.
+        #expect(steps.count == 14)
     }
 
-    // MARK: - Max players (PP-42)
+    @Test func togglingParticipationKeepsStepListInSync() async {
+        let store = makeStore()
+        store.exhaustivity = .off
+        #expect(store.state.steps.count == 13)
+        await store.send(.participationChanged(false))
+        #expect(store.state.steps.count == 14)
+        await store.send(.participationChanged(true))
+        #expect(store.state.steps.count == 13)
+        await store.send(.participationChanged(false))
+        await store.send(.participationChanged(false))
+        #expect(store.state.steps.count == 14)
+    }
+
+    // MARK: - PP-11 isStartZoneConfigured
+
+    @Test func isStartZoneConfiguredFalseAtDefaultBrussels() {
+        let state = makeState()
+        // Brand-new wizard seeds zone.center on the Brussels default.
+        #expect(state.isStartZoneConfigured == false)
+    }
+
+    @Test func isStartZoneConfiguredTrueAfterMovingPin() {
+        var state = makeState()
+        state.$game.withLock {
+            $0.zone.center = GeoPoint(latitude: 50.9, longitude: 4.4)
+        }
+        #expect(state.isStartZoneConfigured == true)
+    }
+
+    // MARK: - PP-12 isFinalZoneConfigured (≥ 100 m haversine)
+
+    @Test func isFinalZoneConfiguredFalseWithoutFinal() {
+        var state = makeState()
+        state.$game.withLock {
+            $0.zone.center = GeoPoint(latitude: 50.9, longitude: 4.4)
+        }
+        #expect(state.isFinalZoneConfigured == false)
+    }
+
+    @Test func isFinalZoneConfiguredFalseWhenWithin100m() {
+        // ~10 m offset: 0.00009° latitude near 51°N → ~10 m. Well below
+        // PP-12's 100 m threshold so Next stays gated.
+        var state = makeState()
+        state.$game.withLock {
+            $0.zone.center = GeoPoint(latitude: 50.9, longitude: 4.4)
+            $0.zone.finalCenter = GeoPoint(latitude: 50.90009, longitude: 4.4)
+        }
+        #expect(state.isFinalZoneConfigured == false)
+        #expect(state.isZoneConfigured == false)
+    }
+
+    @Test func isFinalZoneConfiguredTrueWhenAtLeast100mAway() {
+        // ~166 m offset: 0.0015° latitude near 51°N.
+        var state = makeState()
+        state.$game.withLock {
+            $0.zone.center = GeoPoint(latitude: 50.9, longitude: 4.4)
+            $0.zone.finalCenter = GeoPoint(latitude: 50.9015, longitude: 4.4)
+        }
+        #expect(state.isFinalZoneConfigured == true)
+        #expect(state.isZoneConfigured == true)
+    }
+
+    @Test func isZoneConfiguredTrueForFollowTheChickenWithoutFinal() {
+        var state = makeState(gameMode: .followTheChicken)
+        state.$game.withLock {
+            $0.zone.center = GeoPoint(latitude: 50.9, longitude: 4.4)
+        }
+        // followTheChicken: no final pin needed — the zone tracks the
+        // chicken's live position.
+        #expect(state.isZoneConfigured == true)
+    }
+
+    // MARK: - Game mode change clears finalCenter on follow
+
+    @Test func gameModChangedToFollowTheChickenClearsFinalCenter() async {
+        var state = makeState()
+        state.$game.withLock {
+            $0.zone.finalCenter = GeoPoint(latitude: 51.0, longitude: 5.0)
+        }
+        let store = makeStore(state: state)
+        store.exhaustivity = .off
+        await store.send(.gameModChanged(.followTheChicken))
+        #expect(store.state.game.gameMode == .followTheChicken)
+        #expect(store.state.game.finalLocation == nil)
+    }
+
+    @Test func gameModChangedToStayInTheZonePreservesFinalCenter() async {
+        var state = makeState(gameMode: .followTheChicken)
+        state.$game.withLock {
+            $0.zone.finalCenter = GeoPoint(latitude: 51.0, longitude: 5.0)
+        }
+        let store = makeStore(state: state)
+        store.exhaustivity = .off
+        await store.send(.gameModChanged(.stayInTheZone))
+        #expect(store.state.game.finalLocation != nil)
+    }
+
+    // MARK: - PP-13 zonesRecapEntered computes radius + drift seed
+
+    @Test func zonesRecapEnteredInStayInTheZoneComputesRadiusFromPins() async {
+        var state = makeState()
+        state.$game.withLock {
+            $0.zone.startPin = GeoPoint(latitude: 50.85, longitude: 4.35)
+            $0.zone.center = GeoPoint(latitude: 50.85, longitude: 4.35)
+            // ~1.1 km offset → 1.5x = ~1668 m, dominates other branches.
+            $0.zone.finalCenter = GeoPoint(latitude: 50.86, longitude: 4.35)
+            $0.zone.driftSeed = 0
+        }
+        let store = makeStore(state: state)
+        store.exhaustivity = .off
+        await store.send(.zonesRecapEntered)
+        // Recomputed by `computeZoneRadius` to 1.5 × ~1112 m ≈ 1668 m.
+        #expect(abs(store.state.game.zone.radius - 1668) < 5)
+        // Drift seed allocated on first visit.
+        #expect(store.state.game.zone.driftSeed != 0)
+    }
+
+    @Test func zonesRecapEnteredKeepsExistingDriftSeed() async {
+        var state = makeState()
+        state.$game.withLock {
+            $0.zone.startPin = GeoPoint(latitude: 50.85, longitude: 4.35)
+            $0.zone.center = GeoPoint(latitude: 50.85, longitude: 4.35)
+            $0.zone.finalCenter = GeoPoint(latitude: 50.86, longitude: 4.35)
+            $0.zone.driftSeed = 42
+        }
+        let store = makeStore(state: state)
+        store.exhaustivity = .off
+        await store.send(.zonesRecapEntered)
+        // PP-14: keep the seed across back-navigations; only the
+        // Shuffle button generates a new one.
+        #expect(store.state.game.zone.driftSeed == 42)
+    }
+
+    @Test func zonesRecapEnteredInFollowTheChickenUsesRadiusHint() async {
+        var state = makeState(gameMode: .followTheChicken)
+        state.$game.withLock {
+            $0.zone.startPin = GeoPoint(latitude: 50.85, longitude: 4.35)
+            $0.zone.center = GeoPoint(latitude: 50.85, longitude: 4.35)
+            $0.zone.radius = 2000 // Large picker.
+        }
+        let store = makeStore(state: state)
+        store.exhaustivity = .off
+        await store.send(.zonesRecapEntered)
+        #expect(store.state.game.zone.radius == 2000)
+    }
+
+    // MARK: - PP-14 Shuffle button
+
+    @Test func shuffleDriftSeedReplacesSeedAndKeepsPins() async {
+        var state = makeState()
+        state.$game.withLock {
+            $0.zone.startPin = GeoPoint(latitude: 50.85, longitude: 4.35)
+            $0.zone.center = GeoPoint(latitude: 50.85, longitude: 4.35)
+            $0.zone.finalCenter = GeoPoint(latitude: 50.86, longitude: 4.35)
+            $0.zone.driftSeed = 42
+            $0.zone.radius = 1668
+        }
+        let store = makeStore(state: state)
+        store.exhaustivity = .off
+        await store.send(.shuffleDriftSeed)
+        // Seed changed.
+        #expect(store.state.game.zone.driftSeed != 42)
+        #expect(store.state.game.zone.driftSeed != 0)
+        // Pins preserved.
+        #expect(store.state.game.startPinLocation.latitude == 50.85)
+        #expect(store.state.game.zone.finalCenter?.latitude == 50.86)
+        // Radius preserved — a function of the pins, not the seed.
+        #expect(store.state.game.zone.radius == 1668)
+    }
+
+    // MARK: - Max players (PP-42 / PP-45)
 
     @Test func defaultMaxPlayersRangeIs2To5() {
         let state = makeState()
-        #expect(state.isAdminCreation == false)
         #expect(state.maxPlayersRange == 2...5)
     }
 
@@ -123,58 +294,10 @@ struct GameCreationFeatureTests {
         #expect(state.maxPlayersRange == 2...500)
     }
 
-    @Test func maxPlayersChangedWithinRangeUpdatesGame() async {
-        let store = makeStore()
-        await store.send(.maxPlayersChanged(3)) {
-            $0.$game.withLock { $0.maxPlayers = 3 }
-        }
-    }
-
-    @Test func maxPlayersChangedClampsToUpperBoundForStandardCreation() async {
+    @Test func maxPlayersChangedClampsToUpperBoundForStandard() async {
         let store = makeStore()
         await store.send(.maxPlayersChanged(50)) {
             $0.$game.withLock { $0.maxPlayers = 5 }
-        }
-    }
-
-    @Test func maxPlayersChangedClampsToLowerBound() async {
-        let store = makeStore()
-        await store.send(.maxPlayersChanged(0)) {
-            $0.$game.withLock { $0.maxPlayers = 2 }
-        }
-    }
-
-    @Test func maxPlayersChangedAcceptsLargeValueWhenAdminCreation() async {
-        var state = makeState()
-        state.isAdminCreation = true
-        let store = makeStore(state: state)
-        await store.send(.maxPlayersChanged(250)) {
-            $0.$game.withLock { $0.maxPlayers = 250 }
-        }
-    }
-
-    @Test func maxPlayersChangedBoundaryValuesPassThroughForStandard() async {
-        // Both `2` and `5` (the inclusive bounds of the standard range)
-        // must round-trip without clamping when typed via the editable
-        // field — the user can pick exactly the cap.
-        let store = makeStore()
-        await store.send(.maxPlayersChanged(2)) {
-            $0.$game.withLock { $0.maxPlayers = 2 }
-        }
-        await store.send(.maxPlayersChanged(5)) {
-            $0.$game.withLock { $0.maxPlayers = 5 }
-        }
-    }
-
-    @Test func maxPlayersChangedBoundaryValuesPassThroughForAdmin() async {
-        var state = makeState()
-        state.isAdminCreation = true
-        let store = makeStore(state: state)
-        await store.send(.maxPlayersChanged(2)) {
-            $0.$game.withLock { $0.maxPlayers = 2 }
-        }
-        await store.send(.maxPlayersChanged(500)) {
-            $0.$game.withLock { $0.maxPlayers = 500 }
         }
     }
 
@@ -182,34 +305,9 @@ struct GameCreationFeatureTests {
         var state = makeState()
         state.isAdminCreation = true
         let store = makeStore(state: state)
-        // The view caps text input at 3 digits but a paste / future API
-        // change could still hand us 9999 — the reducer must clamp anyway.
         await store.send(.maxPlayersChanged(9999)) {
             $0.$game.withLock { $0.maxPlayers = 500 }
         }
-    }
-
-    @Test func maxPlayersChangedClampsNegativeToLowerBound() async {
-        // Possible if the view ever lets a `-` through (e.g. external API).
-        // The reducer must clamp.
-        let store = makeStore()
-        await store.send(.maxPlayersChanged(-10)) {
-            $0.$game.withLock { $0.maxPlayers = 2 }
-        }
-    }
-
-    @Test func maxPlayersChangedJustAboveStandardCapClampsToFive() async {
-        let store = makeStore()
-        await store.send(.maxPlayersChanged(6)) {
-            $0.$game.withLock { $0.maxPlayers = 5 }
-        }
-    }
-
-    @Test func registrationComesBeforeStartTimeInSteps() {
-        let state = makeState()
-        let regIndex = state.steps.firstIndex(of: .registration)!
-        let startIndex = state.steps.firstIndex(of: .startTime)!
-        #expect(regIndex < startIndex)
     }
 
     // MARK: - Navigation
@@ -226,7 +324,9 @@ struct GameCreationFeatureTests {
         var state = makeState()
         state.currentStepIndex = state.steps.count - 1
         let store = makeStore(state: state)
+        store.exhaustivity = .off
         await store.send(.nextTapped)
+        #expect(store.state.currentStepIndex == state.steps.count - 1)
     }
 
     @Test func backDecrementsStepIndex() async {
@@ -241,637 +341,50 @@ struct GameCreationFeatureTests {
 
     @Test func backDoesNotGoBelowZero() async {
         let store = makeStore()
-        await store.send(.backTapped)
-    }
-
-    @Test func canGoBackFalseOnFirstStep() {
-        let state = makeState()
-        #expect(state.canGoBack == false)
-    }
-
-    @Test func canGoBackTrueOnSecondStep() {
-        var state = makeState()
-        state.currentStepIndex = 1
-        #expect(state.canGoBack == true)
-    }
-
-    // MARK: - Progress
-
-    @Test func progressOneOverTotalOnFirstStep() {
-        let state = makeState()
-        let expected = 1.0 / Double(state.steps.count)
-        #expect(abs(state.progress - expected) < 0.001)
-    }
-
-    @Test func progressIsOneOnLastStep() {
-        var state = makeState()
-        state.currentStepIndex = state.steps.count - 1
-        #expect(state.progress == 1.0)
-    }
-
-    // MARK: - Game mode
-
-    @Test func updateGameModToFollowTheChickenClearsFinalCenter() async {
-        var state = makeState()
-        state.$game.withLock { $0.zone.finalCenter = GeoPoint(latitude: 51.0, longitude: 5.0) }
-        let store = makeStore(state: state)
-        await store.send(.gameModChanged(.followTheChicken)) {
-            $0.$game.withLock {
-                $0.gameMode = .followTheChicken
-                $0.zone.finalCenter = nil
-            }
-            $0.mapConfigState.pinMode = .start
-        }
-    }
-
-    @Test func updateGameModToStayInTheZoneDoesNotClearFinalCenter() async {
-        var state = makeState()
-        state.$game.withLock {
-            $0.gameMode = .followTheChicken
-            $0.zone.finalCenter = GeoPoint(latitude: 51.0, longitude: 5.0)
-        }
-        let store = makeStore(state: state)
-        await store.send(.gameModChanged(.stayInTheZone)) {
-            $0.$game.withLock { $0.gameMode = .stayInTheZone }
-        }
-    }
-
-    // MARK: - Zone configuration
-
-    @Test func isZoneConfiguredFalseWithDefaultLocation() {
-        let state = makeState()
-        #expect(state.isZoneConfigured == false)
-    }
-
-    @Test func isZoneConfiguredFalseForStayInTheZoneWithoutFinalCenter() {
-        var state = makeState()
-        state.$game.withLock {
-            $0.gameMode = .stayInTheZone
-            $0.zone.center = GeoPoint(latitude: 50.9, longitude: 4.4)
-        }
-        #expect(state.isZoneConfigured == false)
-    }
-
-    @Test func isZoneConfiguredTrueForStayInTheZoneWithBothLocations() {
-        var state = makeState()
-        state.$game.withLock {
-            $0.gameMode = .stayInTheZone
-            $0.zone.center = GeoPoint(latitude: 50.9, longitude: 4.4)
-            $0.zone.finalCenter = GeoPoint(latitude: 51.0, longitude: 4.5)
-        }
-        #expect(state.isZoneConfigured == true)
-    }
-
-    @Test func isZoneConfiguredTrueForFollowTheChickenWithOnlyInitialLocation() {
-        var state = makeState()
-        state.$game.withLock {
-            $0.gameMode = .followTheChicken
-            $0.zone.center = GeoPoint(latitude: 50.9, longitude: 4.4)
-        }
-        #expect(state.isZoneConfigured == true)
-    }
-
-    // MARK: - Registration
-
-    @Test func requiresRegistrationChangedEnablesAndSetsDefaultDeadline() async {
-        let store = makeStore()
-        await store.send(.requiresRegistrationChanged(true)) {
-            $0.$game.withLock {
-                $0.registration.required = true
-                $0.registration.closesMinutesBefore = 15
-            }
-            // Clamping may push start date forward
-            let minimum = $0.minimumStartDate
-            if $0.game.startDate < minimum {
-                $0.$game.withLock { $0.startDate = minimum }
-            }
-        }
-    }
-
-    @Test func requiresRegistrationChangedDisablesAndClearsDeadline() async {
-        var state = makeState()
-        state.$game.withLock {
-            $0.registration.required = true
-            $0.registration.closesMinutesBefore = 60
-        }
-        let store = makeStore(state: state)
-        await store.send(.requiresRegistrationChanged(false)) {
-            $0.$game.withLock {
-                $0.registration.required = false
-                $0.registration.closesMinutesBefore = nil
-            }
-        }
-    }
-
-    @Test func registrationClosesBeforeStartChangedUpdatesDeadline() async {
-        var state = makeState()
-        state.$game.withLock { $0.registration.required = true }
-        let store = makeStore(state: state)
-        await store.send(.registrationClosesBeforeStartChanged(60)) {
-            $0.$game.withLock { $0.registration.closesMinutesBefore = 60 }
-            let minimum = $0.minimumStartDate
-            if $0.game.startDate < minimum {
-                $0.$game.withLock { $0.startDate = minimum }
-            }
-        }
-    }
-
-    // MARK: - Minimum start date
-
-    @Test func minimumStartDateOpenJoinIs1Minute() {
-        let state = makeState()
-        let min = state.minimumStartDate
-        let expected = Date.now.addingTimeInterval(60)
-        #expect(abs(min.timeIntervalSince(expected)) < 1)
-    }
-
-    @Test func minimumStartDateWith15MinDeadlineIs20Minutes() {
-        var state = makeState()
-        state.$game.withLock {
-            $0.registration.required = true
-            $0.registration.closesMinutesBefore = 15
-        }
-        let min = state.minimumStartDate
-        let expected = Date.now.addingTimeInterval((15 + 5) * 60)
-        #expect(abs(min.timeIntervalSince(expected)) < 1)
-    }
-
-    @Test func minimumStartDateWith1DayDeadlineIs1445Minutes() {
-        var state = makeState()
-        state.$game.withLock {
-            $0.registration.required = true
-            $0.registration.closesMinutesBefore = 1440
-        }
-        let min = state.minimumStartDate
-        let expected = Date.now.addingTimeInterval((1440 + 5) * 60)
-        #expect(abs(min.timeIntervalSince(expected)) < 1)
-    }
-
-    @Test func minimumStartDateRequiredButNoDeadlineIs5Minutes() {
-        var state = makeState()
-        state.$game.withLock {
-            $0.registration.required = true
-            $0.registration.closesMinutesBefore = nil
-        }
-        let min = state.minimumStartDate
-        let expected = Date.now.addingTimeInterval(5 * 60)
-        #expect(abs(min.timeIntervalSince(expected)) < 1)
-    }
-
-    // MARK: - Chicken visibility
-
-    @Test func chickenCanSeeHuntersChangedTrue() async {
-        let store = makeStore()
-        await store.send(.chickenCanSeeHuntersChanged(true)) {
-            $0.$game.withLock { $0.chickenCanSeeHunters = true }
-        }
-    }
-
-    @Test func chickenCanSeeHuntersChangedFalse() async {
-        var state = makeState()
-        state.$game.withLock { $0.chickenCanSeeHunters = true }
-        let store = makeStore(state: state)
-        await store.send(.chickenCanSeeHuntersChanged(false)) {
-            $0.$game.withLock { $0.chickenCanSeeHunters = false }
-        }
-    }
-
-    // MARK: - Power-ups
-
-    @Test func powerUpsToggledEnables() async {
-        let store = makeStore()
-        await store.send(.powerUpsToggled(true)) {
-            $0.$game.withLock { $0.powerUps.enabled = true }
-        }
-    }
-
-    @Test func powerUpsToggledDisables() async {
-        var state = makeState()
-        state.$game.withLock { $0.powerUps.enabled = true }
-        let store = makeStore(state: state)
-        await store.send(.powerUpsToggled(false)) {
-            $0.$game.withLock { $0.powerUps.enabled = false }
-        }
-    }
-
-    @Test func powerUpTypeToggledRemovesExistingType() async {
-        let store = makeStore()
-        await store.send(.powerUpTypeToggled(.zonePreview)) {
-            $0.$game.withLock {
-                $0.powerUps.enabledTypes.removeAll { $0 == PowerUp.PowerUpType.zonePreview.rawValue }
-            }
-        }
-    }
-
-    @Test func powerUpTypeToggledReAddsRemovedType() async {
-        var state = makeState()
-        state.$game.withLock { $0.powerUps.enabledTypes.removeAll { $0 == PowerUp.PowerUpType.zonePreview.rawValue } }
-        let store = makeStore(state: state)
-        await store.send(.powerUpTypeToggled(.zonePreview)) {
-            $0.$game.withLock { $0.powerUps.enabledTypes.append(PowerUp.PowerUpType.zonePreview.rawValue) }
-        }
-    }
-
-    // MARK: - Duration
-
-    @Test func gameDurationChangedUpdatesState() async {
-        let store = makeStore()
-        await store.send(.gameDurationChanged(120)) {
-            $0.gameDurationMinutes = 120
-            // Normal mode recalc for 120 min
-            let effectiveDuration = max(120 - $0.game.timing.headStartMinutes, 1)
-            let (interval, decline) = calculateNormalModeSettings(
-                initialRadius: $0.game.zone.radius,
-                gameDurationMinutes: effectiveDuration
-            )
-            $0.$game.withLock {
-                $0.zone.shrinkIntervalMinutes = interval
-                $0.zone.shrinkMetersPerUpdate = decline
-            }
-        }
-    }
-
-    // MARK: - Head start
-
-    @Test func chickenHeadStartChangedUpdatesState() async {
-        let store = makeStore()
-        await store.send(.chickenHeadStartChanged(10)) {
-            $0.$game.withLock { $0.timing.headStartMinutes = 10 }
-            let effectiveDuration = max($0.gameDurationMinutes - 10, 1)
-            let (interval, decline) = calculateNormalModeSettings(
-                initialRadius: $0.game.zone.radius,
-                gameDurationMinutes: effectiveDuration
-            )
-            $0.$game.withLock {
-                $0.zone.shrinkIntervalMinutes = interval
-                $0.zone.shrinkMetersPerUpdate = decline
-            }
-        }
-    }
-
-    // MARK: - Initial radius
-
-    @Test func initialRadiusChangedUpdatesGameAndRecalcs() async {
-        let store = makeStore()
-        await store.send(.initialRadiusChanged(500)) {
-            $0.$game.withLock { $0.zone.radius = 500 }
-            let effectiveDuration = max($0.gameDurationMinutes - $0.game.timing.headStartMinutes, 1)
-            let (interval, decline) = calculateNormalModeSettings(
-                initialRadius: 500,
-                gameDurationMinutes: effectiveDuration
-            )
-            $0.$game.withLock {
-                $0.zone.shrinkIntervalMinutes = interval
-                $0.zone.shrinkMetersPerUpdate = decline
-            }
-        }
-    }
-
-    // MARK: - Participation
-
-    @Test func participationChangedUpdatesState() async {
-        let store = makeStore()
-        await store.send(.participationChanged(false)) {
-            $0.isParticipating = false
-        }
-    }
-
-    // MARK: - Start date
-
-    @Test func startDateChangedUpdatesGame() async {
-        let newDate = Date.now.addingTimeInterval(3600)
-        let store = makeStore()
-        await store.send(.startDateChanged(newDate)) {
-            $0.$game.withLock { $0.startDate = newDate }
-        }
-    }
-
-    // MARK: - Start game
-
-    @Test func startGameButtonTappedCallsApiAndSendsGameCreated() async {
-        var state = makeState()
-        state.$game.withLock {
-            $0.zone.center = GeoPoint(latitude: 50.9, longitude: 4.4)
-            $0.gameMode = .followTheChicken
-        }
-        let store = TestStore(initialState: state) {
-            GameCreationFeature()
-        } withDependencies: {
-            $0.analyticsClient = .testValue
-            $0.apiClient.setConfig = { _ in }
-        }
-        store.exhaustivity = .off
-
-        await store.send(.startGameButtonTapped)
-        await store.receive(\.gameCreated)
-    }
-
-    @Test func startGameButtonTappedSendsConfigSaveFailedOnError() async {
-        var state = makeState()
-        state.$game.withLock {
-            $0.zone.center = GeoPoint(latitude: 50.9, longitude: 4.4)
-            $0.gameMode = .followTheChicken
-        }
-        let store = TestStore(initialState: state) {
-            GameCreationFeature()
-        } withDependencies: {
-            $0.analyticsClient = .testValue
-            $0.apiClient.setConfig = { _ in throw NSError(domain: "test", code: 0) }
-        }
-        store.exhaustivity = .off
-
-        await store.send(.startGameButtonTapped)
-        await store.receive(\.configSaveFailed)
-    }
-
-    // ═══════════════════════════════════════════════════
-    // EDGE CASES
-    // ═══════════════════════════════════════════════════
-
-    // MARK: - Zone boundaries
-
-    @Test func isZoneConfiguredFalseWhenLocationExactlyAtDefaultBrussels() {
-        var state = makeState()
-        state.$game.withLock {
-            $0.gameMode = .followTheChicken
-            $0.zone.center = GeoPoint(
-                latitude: AppConstants.defaultLatitude,
-                longitude: AppConstants.defaultLongitude
-            )
-        }
-        #expect(state.isZoneConfigured == false)
-    }
-
-    @Test func isZoneConfiguredFalseWhenLocationWithinDefaultTolerance() {
-        var state = makeState()
-        state.$game.withLock {
-            $0.gameMode = .followTheChicken
-            $0.zone.center = GeoPoint(
-                latitude: AppConstants.defaultLatitude + 0.0005,
-                longitude: AppConstants.defaultLongitude + 0.0005
-            )
-        }
-        #expect(state.isZoneConfigured == false)
-    }
-
-    @Test func isZoneConfiguredTrueJustBeyondDefaultTolerance() {
-        var state = makeState()
-        state.$game.withLock {
-            $0.gameMode = .followTheChicken
-            $0.zone.center = GeoPoint(
-                latitude: AppConstants.defaultLatitude + 0.002,
-                longitude: AppConstants.defaultLongitude + 0.002
-            )
-        }
-        #expect(state.isZoneConfigured == true)
-    }
-
-    @Test func clearingFinalLocationSetsBackToNotConfiguredInStayInTheZone() {
-        var state = makeState()
-        state.$game.withLock {
-            $0.gameMode = .stayInTheZone
-            $0.zone.center = GeoPoint(latitude: 50.9, longitude: 4.4)
-            $0.zone.finalCenter = GeoPoint(latitude: 51.0, longitude: 4.5)
-        }
-        #expect(state.isZoneConfigured == true)
-        state.$game.withLock { $0.zone.finalCenter = nil }
-        #expect(state.isZoneConfigured == false)
-    }
-
-    // MARK: - Power-up toggle constraints
-
-    @Test func powerUpTypeToggledCannotRemoveLastAvailableInFollowTheChicken() async {
-        var state = makeState()
-        state.$game.withLock {
-            $0.gameMode = .followTheChicken
-            $0.powerUps.enabledTypes = [PowerUp.PowerUpType.radarPing.rawValue]
-        }
-        let store = makeStore(state: state)
-        // Attempt to remove the last one — should not remove
-        await store.send(.powerUpTypeToggled(.radarPing))
-        #expect(store.state.game.powerUps.enabledTypes.count == 1)
-    }
-
-    @Test func powerUpTypeToggledCanRemoveUnavailableInStayInTheZone() async {
-        var state = makeState()
-        state.$game.withLock {
-            $0.gameMode = .stayInTheZone
-            $0.powerUps.enabledTypes = PowerUp.PowerUpType.allCases.map(\.rawValue)
-        }
-        let store = makeStore(state: state)
-        await store.send(.powerUpTypeToggled(.invisibility)) {
-            $0.$game.withLock {
-                $0.powerUps.enabledTypes.removeAll { $0 == PowerUp.PowerUpType.invisibility.rawValue }
-            }
-        }
-    }
-
-    @Test func powerUpTypeToggledLastAvailableInStayInTheZoneCountsOnlyAvailable() async {
-        var state = makeState()
-        state.$game.withLock {
-            $0.gameMode = .stayInTheZone
-            // Only ZONE_FREEZE available (other 2 available types removed)
-            $0.powerUps.enabledTypes = [
-                PowerUp.PowerUpType.zoneFreeze.rawValue,
-                PowerUp.PowerUpType.invisibility.rawValue,
-                PowerUp.PowerUpType.decoy.rawValue,
-                PowerUp.PowerUpType.jammer.rawValue
-            ]
-        }
-        let store = makeStore(state: state)
-        // Cannot remove last available
-        await store.send(.powerUpTypeToggled(.zoneFreeze))
-        #expect(store.state.game.powerUps.enabledTypes.contains(PowerUp.PowerUpType.zoneFreeze.rawValue))
-    }
-
-    // MARK: - Registration deadline edge cases
-
-    @Test func toggleRegistrationOffThenOnRestoresDefault15Min() async {
-        var state = makeState()
-        state.$game.withLock {
-            $0.registration.required = true
-            $0.registration.closesMinutesBefore = 60
-        }
-        let store = makeStore(state: state)
-        store.exhaustivity = .off
-        await store.send(.requiresRegistrationChanged(false))
-        #expect(store.state.game.registration.closesMinutesBefore == nil)
-        await store.send(.requiresRegistrationChanged(true))
-        #expect(store.state.game.registration.closesMinutesBefore == 15)
-    }
-
-    // MARK: - Start date clamping on navigation
-
-    @Test func nextClampsStartDateToMinimum() async {
-        var state = makeState()
-        // Set registration requiring 60 min deadline → min = now + 65 min
-        state.$game.withLock {
-            $0.registration.required = true
-            $0.registration.closesMinutesBefore = 60
-            // Force startDate to well before minimum
-            $0.startDate = Date.now.addingTimeInterval(60) // only 1 min
-        }
-        let store = makeStore(state: state)
-        store.exhaustivity = .off
-        await store.send(.nextTapped)
-        // Note: startDate setter strips seconds, so allow up to 1 min tolerance
-        let minExpected = Date.now.addingTimeInterval(65 * 60).addingTimeInterval(-60)
-        #expect(store.state.game.startDate >= minExpected)
-    }
-
-    @Test func backClampsStartDateToMinimum() async {
-        var state = makeState()
-        state.currentStepIndex = 2
-        state.$game.withLock {
-            $0.registration.required = true
-            $0.registration.closesMinutesBefore = 30
-            $0.startDate = Date.now.addingTimeInterval(60)
-        }
-        let store = makeStore(state: state)
         store.exhaustivity = .off
         await store.send(.backTapped)
-        // Note: startDate setter strips seconds, so allow up to 1 min tolerance
-        let minExpected = Date.now.addingTimeInterval(35 * 60).addingTimeInterval(-60)
-        #expect(store.state.game.startDate >= minExpected)
-    }
-
-    // MARK: - Duration edge cases
-
-    @Test func durationZeroWithHeadStart0ProducesLargeDecline() async {
-        let store = makeStore()
-        store.exhaustivity = .off
-        await store.send(.gameDurationChanged(0))
-        // effective = max(0 - 0, 1) = 1 → numberOfShrinks = 0.2 → decline = 7000
-        #expect(abs(store.state.game.zone.shrinkMetersPerUpdate - 7000) < 0.1)
-    }
-
-    @Test func durationEqualToHeadStartProducesEffectiveOne() async {
-        var state = makeState()
-        state.$game.withLock { $0.timing.headStartMinutes = 15 }
-        let store = makeStore(state: state)
-        store.exhaustivity = .off
-        await store.send(.gameDurationChanged(15))
-        // effective = max(15 - 15, 1) = 1 → large decline
-        #expect(store.state.game.zone.shrinkMetersPerUpdate > 1000)
-    }
-
-    @Test func headStartGreaterThanDurationClampsEffectiveToOne() async {
-        var state = makeState()
-        state.gameDurationMinutes = 10
-        let store = makeStore(state: state)
-        store.exhaustivity = .off
-        await store.send(.chickenHeadStartChanged(20))
-        // effective = max(10 - 20, 1) = 1 → positive decline
-        #expect(store.state.game.zone.shrinkMetersPerUpdate > 0)
-    }
-
-    @Test func veryLongDurationProducesSmallDecline() async {
-        let store = makeStore()
-        store.exhaustivity = .off
-        await store.send(.gameDurationChanged(600))
-        // 600/5 = 120 shrinks → (1500-100)/120 ≈ 11.67
-        #expect(abs(store.state.game.zone.shrinkMetersPerUpdate - 11.67) < 0.1)
-    }
-
-    // MARK: - Initial radius edge cases
-
-    @Test func updateInitialRadiusWithRadiusAtMinimumProducesZeroDecline() async {
-        let store = makeStore()
-        store.exhaustivity = .off
-        await store.send(.initialRadiusChanged(100))
-        #expect(abs(store.state.game.zone.shrinkMetersPerUpdate) < 0.01)
-    }
-
-    @Test func updateInitialRadiusWithRadiusBelowMinimumProducesZeroDecline() async {
-        let store = makeStore()
-        store.exhaustivity = .off
-        await store.send(.initialRadiusChanged(50))
-        #expect(abs(store.state.game.zone.shrinkMetersPerUpdate) < 0.01)
-    }
-
-    @Test func updateInitialRadiusWithVeryLargeValueProducesLargeDecline() async {
-        let store = makeStore()
-        store.exhaustivity = .off
-        await store.send(.initialRadiusChanged(50000))
-        // 90/5 = 18 shrinks → (50000-100)/18 ≈ 2772.22
-        #expect(abs(store.state.game.zone.shrinkMetersPerUpdate - 2772.22) < 0.1)
-    }
-
-    // MARK: - Registration invariants
-
-    @Test func registrationRequiredGameStaysRequiredAfterStart() async {
-        var state = makeState(registrationRequired: true)
-        state.$game.withLock {
-            $0.zone.center = GeoPoint(latitude: 50.9, longitude: 4.4)
-            $0.gameMode = .followTheChicken
-        }
-        let store = TestStore(initialState: state) {
-            GameCreationFeature()
-        } withDependencies: {
-            $0.analyticsClient = .testValue
-            $0.apiClient.setConfig = { _ in }
-        }
-        store.exhaustivity = .off
-        await store.send(.startGameButtonTapped)
-        await store.receive(\.gameCreated)
-        #expect(store.state.game.registration.required == true)
-    }
-
-    // MARK: - Normal mode invariant
-
-    @Test func normalModeRecalcAlwaysProducesNonNegativeDecline() async {
-        let radii: [Double] = [100, 500, 1500, 50000]
-        let durations: [Double] = [5, 60, 90, 180]
-        let headStarts: [Double] = [0, 5, 15]
-        for radius in radii {
-            for duration in durations {
-                for headStart in headStarts {
-                    let store = makeStore()
-                    store.exhaustivity = .off
-                    await store.send(.initialRadiusChanged(radius))
-                    await store.send(.gameDurationChanged(duration))
-                    await store.send(.chickenHeadStartChanged(headStart))
-                    let decline = store.state.game.zone.shrinkMetersPerUpdate
-                    #expect(decline >= 0, "Decline must be >= 0 (r=\(radius) d=\(duration) hs=\(headStart)): \(decline)")
-                }
-            }
-        }
-    }
-
-    // MARK: - Concurrency
-
-    @Test func rapidNextCallsDoNotSkipOrGoPastMax() async {
-        let store = makeStore()
-        store.exhaustivity = .off
-        let maxSteps = store.state.steps.count
-        for _ in 0..<(maxSteps * 2) {
-            await store.send(.nextTapped)
-        }
-        #expect(store.state.currentStepIndex == maxSteps - 1)
-    }
-
-    @Test func rapidBackCallsDoNotGoBelowZero() async {
-        var state = makeState()
-        state.currentStepIndex = 2
-        let store = makeStore(state: state)
-        store.exhaustivity = .off
-        for _ in 0..<20 {
-            await store.send(.backTapped)
-        }
         #expect(store.state.currentStepIndex == 0)
     }
 
-    @Test func rapidPowerUpTypeTogglesAlternateCorrectly() async {
-        var state = makeState()
-        state.$game.withLock { $0.gameMode = .followTheChicken }
+    // MARK: - Power-ups (PP-35 default + filter)
+
+    @Test func powerUpTypeToggledCannotRemoveLastAvailableTypeInFollowTheChicken() async {
+        var state = makeState(gameMode: .followTheChicken)
+        // PP-35 default ships only `zoneFreeze` + `zonePreview`. Seed
+        // every other type ON so the guard below trips on the LAST one.
+        state.$game.withLock { game in
+            for type in PowerUp.PowerUpType.allCases {
+                if !game.powerUps.enabledTypes.contains(type.rawValue) {
+                    game.powerUps.enabledTypes.append(type.rawValue)
+                }
+            }
+        }
         let store = makeStore(state: state)
         store.exhaustivity = .off
-        let initial = store.state.game.powerUps.enabledTypes.contains(PowerUp.PowerUpType.zonePreview.rawValue)
-        for _ in 0..<4 {
-            await store.send(.powerUpTypeToggled(.zonePreview))
+        #expect(store.state.game.powerUps.enabledTypes.count == PowerUp.PowerUpType.allCases.count)
+        let allTypes = PowerUp.PowerUpType.allCases
+        for type in allTypes.dropLast() {
+            await store.send(.powerUpTypeToggled(type))
         }
-        let after = store.state.game.powerUps.enabledTypes.contains(PowerUp.PowerUpType.zonePreview.rawValue)
-        #expect(initial == after, "Even number of toggles → same state")
+        #expect(store.state.game.powerUps.enabledTypes.count == 1)
+        // Now try to remove the last one — guard blocks.
+        if let last = allTypes.last {
+            await store.send(.powerUpTypeToggled(last))
+        }
+        #expect(store.state.game.powerUps.enabledTypes.count == 1)
+    }
+
+    @Test func powerUpTypeToggledCanRemoveUnavailableTypeInStayInTheZone() async {
+        var state = makeState(gameMode: .stayInTheZone)
+        // INVISIBILITY is unavailable in stayInTheZone — toggle it ON
+        // first since PP-35 default doesn't include it.
+        state.$game.withLock {
+            $0.powerUps.enabledTypes.append(PowerUp.PowerUpType.invisibility.rawValue)
+        }
+        let store = makeStore(state: state)
+        store.exhaustivity = .off
+        await store.send(.powerUpTypeToggled(.invisibility))
+        #expect(!store.state.game.powerUps.enabledTypes.contains(PowerUp.PowerUpType.invisibility.rawValue))
     }
 
     // MARK: - Game code
@@ -880,13 +393,4 @@ struct GameCreationFeatureTests {
         let state = makeState(gameId: "abcdef-1234-5678")
         #expect(state.game.gameCode == "ABCDEF")
     }
-
-    @Test func foundCodeIsValidFourDigitFormat() {
-        var state = makeState()
-        state.$game.withLock { $0.foundCode = Game.generateFoundCode() }
-        #expect(state.game.foundCode.count == 4)
-        #expect(Int(state.game.foundCode) != nil)
-    }
 }
-
-#endif

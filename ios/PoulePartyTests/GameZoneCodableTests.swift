@@ -83,6 +83,7 @@ struct GameZoneCodableTests {
             "winners": [],
             "creatorId": "user-1",
             "chickenId": "user-1",
+            "hasGameMasterPassword": false,
             "timing": [
                 "start": Timestamp(seconds: 1_700_000_000, nanoseconds: 0),
                 "end": Timestamp(seconds: 1_700_003_600, nanoseconds: 0),
@@ -96,9 +97,8 @@ struct GameZoneCodableTests {
                 "shrinkMetersPerUpdate": 100.0,
                 "driftSeed": 42,
             ] as [String: Any],
-            "registration": [
-                "required": false,
-            ] as [String: Any],
+            // PP-90: the `registration` field was retired with PP-90.
+            // No corresponding key in the Game struct anymore.
             "powerUps": [
                 "enabled": true,
                 "enabledTypes": ["radarPing"],

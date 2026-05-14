@@ -68,74 +68,87 @@ class ChickenMapConfigViewModelTest {
         return ChickenMapConfigViewModel(locationRepository, context)
     }
 
-    // ── Final zone validation: must be within start zone radius ──
+    // ── PP-11 / PP-12: final-pin placement is unconstrained by the
+    //    slider-controlled start radius. The recap step (PP-13) picks
+    //    the radius from the pin distance, so PP-12 only enforces the
+    //    ≥ 100 m minimum (via `GameCreationUiState.isFinalZoneConfigured`,
+    //    not at tap time). Tap inside or outside the legacy circle:
+    //    both stick. ──
 
     @Test
     fun `final zone tap inside start zone is accepted`() {
         val vm = createViewModel()
         vm.initialize(1500.0, null)
-
-        // Place start zone at Brussels
         vm.onMapTapped(brussels)
-        // Switch to final mode
         vm.setPinMode(MapConfigPinMode.FINAL)
-        // Tap nearby (within 1500m)
         vm.onMapTapped(nearby)
-
         assertNotNull(vm.uiState.value.finalMarkerPosition)
     }
 
     @Test
-    fun `final zone tap outside start zone is rejected`() {
+    fun `final zone tap outside start zone is still accepted (PP-12 no radius constraint)`() {
         val vm = createViewModel()
         vm.initialize(1500.0, null)
-
-        // Place start zone at Brussels
         vm.onMapTapped(brussels)
-        // Switch to final mode
         vm.setPinMode(MapConfigPinMode.FINAL)
-        // Tap far away (>1500m)
+        // Pre-PP-11 this would be rejected (> 1500 m from start); PP-12
+        // removed the radius constraint, so the pin sticks.
         vm.onMapTapped(farAway)
+        assertNotNull(vm.uiState.value.finalMarkerPosition)
+    }
 
+    // ── PP-12: the only auto-clear path is when the user moves the
+    //    START pin to within 100 m of the existing FINAL pin — at that
+    //    distance the final wouldn't satisfy `isFinalZoneConfigured`
+    //    anyway, so the VM clears it to force a re-placement. Any other
+    //    start move leaves the final untouched. ──
+
+    @Test
+    fun `moving start zone within 100 m of final clears final`() {
+        val vm = createViewModel()
+        vm.initialize(1500.0, null)
+        vm.onMapTapped(brussels)
+        vm.setPinMode(MapConfigPinMode.FINAL)
+        vm.onMapTapped(nearby)
+        assertNotNull(vm.uiState.value.finalMarkerPosition)
+        // Move start to within 100 m of the existing final → cleared.
+        vm.setPinMode(MapConfigPinMode.START)
+        val withinHundredMeters = Point.fromLngLat(nearby.longitude() + 0.0005, nearby.latitude())
+        vm.onMapTapped(withinHundredMeters)
         assertNull(vm.uiState.value.finalMarkerPosition)
     }
 
-    // ── Final zone cleared when start zone moves away ──
-
     @Test
-    fun `moving start zone clears final zone if now outside radius`() {
+    fun `moving start zone far away keeps final (PP-12 no radius gate)`() {
         val vm = createViewModel()
         vm.initialize(1500.0, null)
-
-        // Place start + final close together
         vm.onMapTapped(brussels)
         vm.setPinMode(MapConfigPinMode.FINAL)
         vm.onMapTapped(nearby)
         assertNotNull(vm.uiState.value.finalMarkerPosition)
-
-        // Now move start zone far away — final should be cleared
+        // Move start very far. Pre-PP-12 the final would be cleared
+        // (outside the slider radius); now the recap recomputes the
+        // radius from the new pin pair, so the final persists.
         vm.setPinMode(MapConfigPinMode.START)
         vm.onMapTapped(farAway)
-        // After moving start, final should stay only if it's within radius of new start
-        // farAway is ~2km from nearby, and radius is 1500m, so final should be cleared
-        assertNull(vm.uiState.value.finalMarkerPosition)
+        assertNotNull(vm.uiState.value.finalMarkerPosition)
     }
 
-    // ── Final zone cleared when radius shrinks ──
+    // ── PP-13 radius slider only fires in followTheChicken now; in
+    //    stayInTheZone the radius is recomputed at the recap step from
+    //    the two pins. The VM helper `updateRadius` still validates the
+    //    final against the new radius for the followTheChicken case
+    //    (legacy code path) so we keep these tests as regression
+    //    coverage for that branch. ──
 
     @Test
     fun `shrinking radius clears final zone if now outside`() {
         val vm = createViewModel()
         vm.initialize(1500.0, null)
-
-        // Place start at Brussels
         vm.onMapTapped(brussels)
-        // Place final ~500m away
         vm.setPinMode(MapConfigPinMode.FINAL)
         vm.onMapTapped(nearby)
         assertNotNull(vm.uiState.value.finalMarkerPosition)
-
-        // Shrink radius to 200m — final at 500m should be cleared
         vm.updateRadius(200.0)
         assertNull(vm.uiState.value.finalMarkerPosition)
     }
@@ -144,51 +157,41 @@ class ChickenMapConfigViewModelTest {
     fun `shrinking radius keeps final zone if still inside`() {
         val vm = createViewModel()
         vm.initialize(1500.0, null)
-
-        // Place start at Brussels
         vm.onMapTapped(brussels)
-        // Place final ~500m away
         vm.setPinMode(MapConfigPinMode.FINAL)
         vm.onMapTapped(nearby)
         assertNotNull(vm.uiState.value.finalMarkerPosition)
-
-        // Shrink radius to 1000m — final at 500m should still be inside
         vm.updateRadius(1000.0)
         assertNotNull(vm.uiState.value.finalMarkerPosition)
     }
 
-    // ── Start zone tap auto-validates existing final zone ──
+    // ── Edge case: placing start exactly on the final pin (distance = 0)
+    //    triggers the < 100 m guard and clears the final. ──
 
     @Test
-    fun `onMapTapped in start mode validates existing final zone`() {
+    fun `onMapTapped in start mode on top of final clears final`() {
         val vm = createViewModel()
         vm.initialize(1500.0, null)
-
-        // Place start at Brussels, final nearby
         vm.onMapTapped(brussels)
         vm.setPinMode(MapConfigPinMode.FINAL)
         vm.onMapTapped(nearby)
         assertNotNull(vm.uiState.value.finalMarkerPosition)
-
-        // Move start far from final — should clear final
         vm.setPinMode(MapConfigPinMode.START)
-        // Place start far from the existing final
-        val veryFar = Point.fromLngLat(5.0, 51.0) // ~50km away
-        vm.onMapTapped(veryFar)
+        // Start on top of final → distance 0 → < 100 m guard → clears.
+        vm.onMapTapped(nearby)
         assertNull(vm.uiState.value.finalMarkerPosition)
     }
 
-    // ── Edge case: radius at exact boundary ──
-
     @Test
-    fun `final zone at exact radius boundary is accepted`() {
+    fun `final zone at exact start pin is accepted`() {
         val vm = createViewModel()
         vm.initialize(1500.0, null)
-
-        // Use the same point for start — final at distance 0 should always be accepted
         vm.onMapTapped(brussels)
         vm.setPinMode(MapConfigPinMode.FINAL)
-        vm.onMapTapped(brussels) // distance = 0, always within radius
+        // PP-12 no longer enforces a minimum at tap time — only at the
+        // Next button via `isFinalZoneConfigured`. So a coincident tap
+        // still leaves the marker on the map.
+        vm.onMapTapped(brussels)
         assertNotNull(vm.uiState.value.finalMarkerPosition)
     }
 
