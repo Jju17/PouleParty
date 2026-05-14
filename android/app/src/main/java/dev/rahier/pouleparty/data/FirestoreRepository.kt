@@ -298,6 +298,34 @@ class FirestoreRepository @Inject constructor(
         }
     }
 
+    /**
+     * Live stream of `/games/{gameId}/registrations/*`. Used by the
+     * GameMaster map (PP-86) so the hunter counter + drawer team-name
+     * list refresh the moment a new hunter joins, instead of staying
+     * frozen on the snapshot loaded once at screen entry.
+     */
+    fun registrationsFlow(gameId: String): Flow<List<Registration>> = callbackFlow {
+        val listener = firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
+            .collection(AppConstants.SUBCOLLECTION_REGISTRATIONS)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    logListenerError("Registrations (game $gameId)", error)
+                    trySend(emptyList())
+                    return@addSnapshotListener
+                }
+                if (snapshot == null) {
+                    trySend(emptyList())
+                    return@addSnapshotListener
+                }
+                val regs = snapshot.documents.mapNotNull { doc ->
+                    safeToObject<Registration>(doc, "Registrations (game $gameId)")
+                }
+                trySend(regs)
+            }
+
+        awaitClose { listener.remove() }
+    }
+
     suspend fun createRegistration(gameId: String, registration: Registration) {
         if (gameId.isEmpty() || registration.userId.isEmpty()) {
             Log.w(TAG, "createRegistration skipped — gameId: '$gameId', userId: '${registration.userId}'")

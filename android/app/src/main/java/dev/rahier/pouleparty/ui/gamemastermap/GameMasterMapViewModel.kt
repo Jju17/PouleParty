@@ -40,6 +40,10 @@ data class GameMasterMapUiState(
     val chickenLocation: Point? = null,
     val chickenIsInvisible: Boolean = false,
     val hunterAnnotations: List<HunterAnnotation> = emptyList(),
+    /** Raw hunter locations cached so marker labels can be rebuilt when
+     *  the registrations stream emits — a hunter's team name may land
+     *  after their first location ping. */
+    val hunterLocations: List<dev.rahier.pouleparty.model.HunterLocation> = emptyList(),
     val powerUpAnnotations: List<PowerUp> = emptyList(),
     /** PP-86: registrations preloaded once at game load so the drawer
      *  can render teamNames + offer designation. */
@@ -134,13 +138,6 @@ class GameMasterMapViewModel @Inject constructor(
                 initialRadius = game.zone.radius,
                 currentRadius = lastRadius.toDouble(),
             )
-            // PP-86: preload registrations once so the drawer can show
-            // teamNames + offer designation. Failure is non-fatal.
-            val registrations = try {
-                firestoreRepository.fetchAllRegistrations(gameId)
-            } catch (e: Exception) {
-                emptyList()
-            }
             _uiState.update {
                 it.copy(
                     game = game,
@@ -149,7 +146,6 @@ class GameMasterMapViewModel @Inject constructor(
                     circleCenter = center,
                     hasGameStarted = Date().after(game.startDate),
                     previousWinnersCount = game.winners.size,
-                    registrations = registrations,
                 )
             }
             startStreams(game)
@@ -160,6 +156,22 @@ class GameMasterMapViewModel @Inject constructor(
         streamJobs += viewModelScope.launch {
             firestoreRepository.gameConfigFlow(gameId).collect { game ->
                 if (game != null) onGameUpdated(game)
+            }
+        }
+        // PP-86 + GM-live-fix: stream registrations so the hunter
+        // counter + drawer team-name list update the instant a hunter
+        // joins, instead of staying frozen on a one-shot load. Also
+        // rebuild marker labels so a hunter's `teamName` replaces the
+        // index-based `Hunter N` fallback as soon as their registration
+        // doc lands.
+        streamJobs += viewModelScope.launch {
+            firestoreRepository.registrationsFlow(gameId).collect { regs ->
+                _uiState.update { state ->
+                    state.copy(
+                        registrations = regs,
+                        hunterAnnotations = buildHunterAnnotations(state.hunterLocations, regs),
+                    )
+                }
             }
         }
         streamJobs += viewModelScope.launch {
@@ -180,15 +192,12 @@ class GameMasterMapViewModel @Inject constructor(
         }
         streamJobs += viewModelScope.launch {
             firestoreRepository.hunterLocationsFlow(gameId).collect { locations ->
-                val sorted = locations.sortedBy { it.hunterId }
-                val annotations = sorted.mapIndexed { index, hunter ->
-                    HunterAnnotation(
-                        id = hunter.hunterId,
-                        coordinate = Point.fromLngLat(hunter.location.longitude, hunter.location.latitude),
-                        displayName = "Hunter ${index + 1}",
+                _uiState.update { state ->
+                    state.copy(
+                        hunterLocations = locations,
+                        hunterAnnotations = buildHunterAnnotations(locations, state.registrations),
                     )
                 }
-                _uiState.update { it.copy(hunterAnnotations = annotations) }
             }
         }
         if (initialGame.powerUps.enabled) {
@@ -251,5 +260,26 @@ class GameMasterMapViewModel @Inject constructor(
         streamJobs.clear()
         winnerNotificationJob?.cancel()
         super.onCleared()
+    }
+}
+
+/**
+ * Build hunter markers for the GameMaster map. The label prefers the
+ * hunter's registered `teamName`; it falls back to an index-based
+ * `Hunter N` (sorted by hunterId) so a hunter who hasn't yet been
+ * matched with a registration doc still gets a stable label.
+ */
+private fun buildHunterAnnotations(
+    locations: List<dev.rahier.pouleparty.model.HunterLocation>,
+    registrations: List<dev.rahier.pouleparty.model.Registration>,
+): List<HunterAnnotation> {
+    val sorted = locations.sortedBy { it.hunterId }
+    val teamNameByUserId = registrations.associate { it.userId to it.teamName }
+    return sorted.mapIndexed { index, hunter ->
+        HunterAnnotation(
+            id = hunter.hunterId,
+            coordinate = Point.fromLngLat(hunter.location.longitude, hunter.location.latitude),
+            displayName = teamNameByUserId[hunter.hunterId] ?: "Hunter ${index + 1}",
+        )
     }
 }

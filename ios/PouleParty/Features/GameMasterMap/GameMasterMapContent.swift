@@ -88,17 +88,17 @@ private struct GMChickenMarker: View {
         ZStack {
             Circle()
                 .fill(Color.chickenYellow)
-                .frame(width: 34, height: 34)
+                .frame(width: 24, height: 24)
                 .opacity(isInvisible ? 0.45 : 1)
             Text("🐔")
-                .font(.system(size: 18))
+                .font(.system(size: 13))
                 .opacity(isInvisible ? 0.65 : 1)
             if isInvisible {
                 Circle()
-                    .strokeBorder(.white, style: StrokeStyle(lineWidth: 2, dash: [4, 3]))
-                    .frame(width: 38, height: 38)
+                    .strokeBorder(.white, style: StrokeStyle(lineWidth: 1.5, dash: [3, 2]))
+                    .frame(width: 28, height: 28)
             }
         }
-        .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
+        .shadow(color: .black.opacity(0.3), radius: 3, y: 1)
     }
 }

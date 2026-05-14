@@ -190,6 +190,21 @@ class HunterMapViewModel @Inject constructor(
             try {
                 firestoreRepository.registerHunter(gameId, hunterId)
                 analyticsRepository.gameJoined(gameMode = game.gameMode, gameCode = game.gameCode)
+                // Backfill the `registrations` doc so the GameMaster map
+                // can label the marker with the team name even when the
+                // hunter came in via "Reprendre la partie" or rejoined an
+                // old game that pre-dates PP-90. The JoinFlow already
+                // creates this doc on first join — this is the
+                // idempotent safety net.
+                val teamName = hunterName.trim()
+                if (teamName.isNotEmpty()) {
+                    runCatching {
+                        firestoreRepository.createRegistration(
+                            gameId,
+                            dev.rahier.pouleparty.model.Registration(userId = hunterId, teamName = teamName),
+                        )
+                    }
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to register hunter $hunterId for game $gameId", e)
                 return@launch

@@ -562,10 +562,21 @@ struct HunterMapFeature {
                     .run { _ in
                         await liveActivityClient.start(attributes, initialLAState)
                     },
-                    .run { [analyticsClient] send in
+                    .run { [analyticsClient, hunterName = state.hunterName] send in
                         do {
                             try await apiClient.registerHunter(gameId, hunterId)
                             analyticsClient.gameJoined(gameMode: gameMode, gameCode: gameCode)
+                            // Backfill the `registrations` doc so the GameMaster
+                            // map can label the marker with the team name even
+                            // when the hunter came in via "Reprendre la partie"
+                            // or rejoined an old game that pre-dates PP-90.
+                            // The JoinFlow already creates this doc on first
+                            // join — this is the idempotent safety net.
+                            let teamName = hunterName.trimmingCharacters(in: .whitespacesAndNewlines)
+                            if !teamName.isEmpty {
+                                let registration = Registration(userId: hunterId, teamName: teamName)
+                                try? await apiClient.createRegistration(gameId, registration)
+                            }
                         } catch {
                             logger.error("Failed to register hunter: \(error.localizedDescription)")
                         }

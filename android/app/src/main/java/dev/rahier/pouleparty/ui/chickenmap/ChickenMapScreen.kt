@@ -26,11 +26,9 @@ import com.mapbox.maps.MapboxExperimental
 import com.mapbox.maps.extension.compose.MapboxMap
 import com.mapbox.maps.extension.compose.MapEffect
 import com.mapbox.maps.extension.compose.animation.viewport.rememberMapViewportState
-import com.mapbox.maps.extension.compose.annotation.IconImage
 import com.mapbox.maps.extension.compose.annotation.ViewAnnotation
 import com.mapbox.maps.viewannotation.viewAnnotationOptions
 import com.mapbox.maps.viewannotation.geometry
-import com.mapbox.maps.extension.compose.annotation.generated.PointAnnotation
 import com.mapbox.maps.extension.compose.annotation.generated.PolygonAnnotation
 import com.mapbox.maps.extension.compose.annotation.generated.PolylineAnnotation
 import com.mapbox.maps.plugin.locationcomponent.location
@@ -223,11 +221,14 @@ fun ChickenMapScreen(
 
             // Hunter annotations (chickenCanSeeHunters) -- only after hunt starts
             if (state.hasHuntStarted) state.hunterAnnotations.forEach { hunter ->
-                PointAnnotation(
-                    point = hunter.coordinate
+                ViewAnnotation(
+                    options = viewAnnotationOptions {
+                        geometry(hunter.coordinate)
+                        allowOverlap(true)
+                        allowOverlapWithPuck(true)
+                    }
                 ) {
-                    iconImage = IconImage("marker-15")
-                    textField = hunter.displayName
+                    dev.rahier.pouleparty.ui.components.HunterMapMarker(displayName = hunter.displayName)
                 }
             }
         }

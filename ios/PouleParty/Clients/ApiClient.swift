@@ -54,6 +54,11 @@ struct ApiClient {
     var findRegistration: (String, String) async throws -> Registration?
     var createRegistration: (String, Registration) async throws -> Void
     var fetchAllRegistrations: (String) async throws -> [Registration]
+    /// Live stream of every `/games/{gameId}/registrations/*` doc. Used by the
+    /// GameMaster map so the hunter count + drawer team names refresh the
+    /// instant a new hunter joins, instead of staying frozen on the load-time
+    /// snapshot.
+    var registrationsStream: (String) -> AsyncStream<[Registration]>
     var challengesStream: () -> AsyncStream<[Challenge]>
     var challengeCompletionsStream: (String) -> AsyncStream<[ChallengeCompletion]>
     var markChallengeCompleted: (String, String, String, String, Int) async throws -> Void
@@ -162,6 +167,7 @@ extension ApiClient: TestDependencyKey {
         findRegistration: { _, _ in nil },
         createRegistration: { _, _ in },
         fetchAllRegistrations: { _ in [] },
+        registrationsStream: { _ in AsyncStream { _ in } },
         challengesStream: { AsyncStream { _ in } },
         challengeCompletionsStream: { _ in AsyncStream { _ in } },
         markChallengeCompleted: { _, _, _, _, _ in },
@@ -632,6 +638,34 @@ extension ApiClient: DependencyKey {
                 .getDocuments()
             return snapshot.documents.compactMap { doc in
                 try? doc.data(as: Registration.self)
+            }
+        },
+        registrationsStream: { gameId in
+            AsyncStream { continuation in
+                let listener = Firestore.firestore()
+                    .collection(gamesCollection).document(gameId)
+                    .collection(registrationsSubcollection)
+                    .addSnapshotListener { snapshot, error in
+                        if let error {
+                            logListenerError("Registrations (game \(gameId))", error)
+                        }
+                        guard let documents = snapshot?.documents else {
+                            continuation.yield([])
+                            return
+                        }
+                        let regs = documents.compactMap { doc -> Registration? in
+                            do { return try doc.data(as: Registration.self) }
+                            catch {
+                                logger.error("Failed to decode Registration \(doc.documentID): \(String(describing: error))")
+                                return nil
+                            }
+                        }
+                        continuation.yield(regs)
+                    }
+
+                continuation.onTermination = { _ in
+                    listener.remove()
+                }
             }
         },
         challengesStream: {

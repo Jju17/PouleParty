@@ -14,25 +14,33 @@ import SwiftUI
 
 /// Avatar rendered for a hunter on the chicken's map (when
 /// `chickenCanSeeHunters` is enabled) and on the GameMaster map.
-/// Same size as `GMChickenMarker` (34 px disc, 18 pt glyph) so every
+/// Same size as `GMChickenMarker` (24 px disc, 13 pt glyph) so every
 /// map renders chicken + hunters with equal visual weight.
 struct HunterMapMarker: View {
     let displayName: String
 
     var body: some View {
-        VStack(spacing: 2) {
+        VStack(spacing: 1) {
+            // White text with a 1-px black outline (4 directional
+            // shadows) so the label stays readable on both light and
+            // dark map tiles — Mapbox switches palette with the system
+            // theme so any single colour would fail on one of the two.
             Text(displayName)
-                .font(.caption2)
-                .fontWeight(.semibold)
+                .font(.system(size: 9, weight: .bold))
+                .foregroundStyle(.white)
+                .shadow(color: .black, radius: 0.5, x: 1, y: 0)
+                .shadow(color: .black, radius: 0.5, x: -1, y: 0)
+                .shadow(color: .black, radius: 0.5, x: 0, y: 1)
+                .shadow(color: .black, radius: 0.5, x: 0, y: -1)
             ZStack {
                 Circle()
                     .fill(Color.CROrange)
-                    .frame(width: 34, height: 34)
+                    .frame(width: 24, height: 24)
                 Image(systemName: "figure.walk")
                     .foregroundStyle(.white)
-                    .font(.system(size: 18))
+                    .font(.system(size: 13))
             }
-            .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
+            .shadow(color: .black.opacity(0.3), radius: 3, y: 1)
         }
     }
 }

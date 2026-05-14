@@ -25,6 +25,10 @@ struct GameMasterMapFeature {
         var chickenLocation: CLLocationCoordinate2D?
         var chickenIsInvisible: Bool = false
         var hunterAnnotations: [HunterAnnotation] = []
+        /// Raw hunter locations cached so the marker labels can be
+        /// re-rendered when the registrations stream emits (a hunter's
+        /// team name may arrive after their first location ping).
+        var hunterLocations: [HunterLocation] = []
         var powerUpAnnotations: [PowerUp] = []
         var registrations: [Registration] = []
         var nextRadiusUpdate: Date?
@@ -137,9 +141,11 @@ struct GameMasterMapFeature {
                         }
                     },
                     .run { send in
-                        // PP-86: load registrations once so the drawer
-                        // can show teamNames alongside the live markers.
-                        if let regs = try? await apiClient.fetchAllRegistrations(gameId) {
+                        // PP-86 + GM-live-fix: stream registrations so the
+                        // hunter counter + drawer team-name list update the
+                        // moment a hunter joins, instead of staying frozen
+                        // on a one-shot fetch at load.
+                        for await regs in apiClient.registrationsStream(gameId) {
                             await send(.internal(.registrationsLoaded(regs)))
                         }
                     },
@@ -184,17 +190,11 @@ struct GameMasterMapFeature {
                 state.chickenIsInvisible = isInvisible
                 return .none
             case let .internal(.hunterLocationsUpdated(hunters)):
-                let sorted = hunters.sorted { $0.hunterId < $1.hunterId }
-                state.hunterAnnotations = sorted.enumerated().map { index, hunter in
-                    HunterAnnotation(
-                        id: hunter.hunterId,
-                        coordinate: CLLocationCoordinate2D(
-                            latitude: hunter.location.latitude,
-                            longitude: hunter.location.longitude
-                        ),
-                        displayName: "Hunter \(index + 1)"
-                    )
-                }
+                state.hunterLocations = hunters
+                state.hunterAnnotations = makeHunterAnnotations(
+                    hunters: hunters,
+                    registrations: state.registrations
+                )
                 return .none
             case let .internal(.powerUpsUpdated(powerUps)):
                 state.powerUpAnnotations = powerUps.filter { !$0.isCollected }
@@ -261,6 +261,13 @@ struct GameMasterMapFeature {
                 }
             case let .internal(.registrationsLoaded(regs)):
                 state.registrations = regs
+                // Re-label markers: a hunter's teamName may land after
+                // their first location ping, so we need to rebuild the
+                // annotations whenever registrations refresh.
+                state.hunterAnnotations = makeHunterAnnotations(
+                    hunters: state.hunterLocations,
+                    registrations: regs
+                )
                 return .none
             case .internal(.designationSucceeded):
                 state.showHuntersDrawer = false
@@ -270,5 +277,29 @@ struct GameMasterMapFeature {
                 return .none
             }
         }
+    }
+}
+
+/// Build hunter markers for the GameMaster map. The label prefers the
+/// hunter's registered `teamName`; it falls back to an index-based
+/// `Hunter N` (sorted by hunterId) so a hunter who hasn't yet been
+/// joined with a registration doc still gets a stable label.
+private func makeHunterAnnotations(
+    hunters: [HunterLocation],
+    registrations: [Registration]
+) -> [HunterAnnotation] {
+    let sorted = hunters.sorted { $0.hunterId < $1.hunterId }
+    let teamNameByUserId = Dictionary(
+        uniqueKeysWithValues: registrations.map { ($0.userId, $0.teamName) }
+    )
+    return sorted.enumerated().map { index, hunter in
+        HunterAnnotation(
+            id: hunter.hunterId,
+            coordinate: CLLocationCoordinate2D(
+                latitude: hunter.location.latitude,
+                longitude: hunter.location.longitude
+            ),
+            displayName: teamNameByUserId[hunter.hunterId] ?? "Hunter \(index + 1)"
+        )
     }
 }

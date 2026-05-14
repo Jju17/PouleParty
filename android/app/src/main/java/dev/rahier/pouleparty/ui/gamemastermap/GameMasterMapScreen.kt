@@ -21,11 +21,14 @@ import com.mapbox.maps.CameraOptions
 import com.mapbox.maps.MapboxExperimental
 import com.mapbox.maps.extension.compose.MapboxMap
 import com.mapbox.maps.extension.compose.animation.viewport.rememberMapViewportState
-import com.mapbox.maps.extension.compose.annotation.IconImage
-import com.mapbox.maps.extension.compose.annotation.generated.PointAnnotation
+import com.mapbox.maps.extension.compose.annotation.ViewAnnotation
 import com.mapbox.maps.extension.compose.annotation.generated.PolygonAnnotation
 import com.mapbox.maps.extension.compose.annotation.generated.PolylineAnnotation
+import com.mapbox.maps.viewannotation.geometry
+import com.mapbox.maps.viewannotation.viewAnnotationOptions
 import dev.rahier.pouleparty.R
+import dev.rahier.pouleparty.ui.components.GMChickenMarker
+import dev.rahier.pouleparty.ui.components.HunterMapMarker
 import dev.rahier.pouleparty.ui.components.circlePolygonPoints
 import dev.rahier.pouleparty.ui.components.outerBoundsPoints
 import dev.rahier.pouleparty.ui.components.zoomForRadius
@@ -97,16 +100,26 @@ fun GameMasterMapScreen(
                 }
 
                 state.chickenLocation?.let { chicken ->
-                    PointAnnotation(point = chicken) {
-                        iconImage = IconImage("marker-15")
-                        textField = if (state.chickenIsInvisible) "🐔 (hidden)" else "🐔"
+                    ViewAnnotation(
+                        options = viewAnnotationOptions {
+                            geometry(chicken)
+                            allowOverlap(true)
+                            allowOverlapWithPuck(true)
+                        }
+                    ) {
+                        GMChickenMarker(isInvisible = state.chickenIsInvisible)
                     }
                 }
 
                 state.hunterAnnotations.forEach { hunter ->
-                    PointAnnotation(point = hunter.coordinate) {
-                        iconImage = IconImage("marker-15")
-                        textField = hunter.displayName
+                    ViewAnnotation(
+                        options = viewAnnotationOptions {
+                            geometry(hunter.coordinate)
+                            allowOverlap(true)
+                            allowOverlapWithPuck(true)
+                        }
+                    ) {
+                        HunterMapMarker(displayName = hunter.displayName)
                     }
                 }
 

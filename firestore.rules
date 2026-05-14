@@ -143,9 +143,14 @@ service cloud.firestore {
       // Typeform/Stripe registrations using a random `registrationId`
       // instead of `userId`.
       match /registrations/{visitorId} {
+        // Readable by the registration owner, the chicken creator,
+        // and any GameMaster on the game. The GM needs every doc so
+        // the validator carte can label markers + the "Désigner la
+        // poule" drawer (PP-86) can list candidates.
         allow read: if request.auth != null
                     && (visitorId == request.auth.uid
-                        || get(/databases/$(database)/documents/games/$(gameId)).data.creatorId == request.auth.uid);
+                        || get(/databases/$(database)/documents/games/$(gameId)).data.creatorId == request.auth.uid
+                        || request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.get('gameMasterIds', []));
         allow create: if request.auth != null
                       && visitorId == request.auth.uid
                       && request.resource.data.userId == request.auth.uid
