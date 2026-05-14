@@ -89,12 +89,81 @@ struct ApiClient {
     /// caller-is-creator-or-GM guard server-side; the client also
     /// pre-checks for fast feedback.
     var designateChicken: (_ gameId: String, _ newChickenUid: String) async throws -> Void
+    // MARK: - Zone configuration (PP-69)
+    /// Fetches the server-computed zone configuration for the wizard
+    /// recap step (PP-13 / PP-14 Phase 2). The Cloud Function is the
+    /// single source of truth for the initial radius, drift seed and
+    /// shrink schedule — once this wrapper is wired into the wizard,
+    /// the client-side `computeZoneRadius` / `interpolateZoneCenter` /
+    /// `deterministicDriftCenter` helpers can be deleted (handled by
+    /// the PP-13 Phase 2 / PP-14 Phase 2 tickets, NOT this one).
+    var computeZoneConfiguration: (_ input: ComputeZoneConfigurationInput) async throws -> ComputeZoneConfigurationOutput
 }
 
 struct JoinAsGameMasterResult: Equatable {
     let success: Bool
     let attemptsRemaining: Int
     let lockedUntilMs: Int?
+}
+
+// MARK: - PP-69 Zone configuration callable types
+
+struct ComputeZoneConfigurationInput: Equatable {
+    struct LatLng: Equatable {
+        let lat: Double
+        let lng: Double
+    }
+    let startPoint: LatLng
+    let finalPoint: LatLng?
+    let gameMode: Game.GameMode
+    /// 500 / 1000 / 2000 m. Required in `followTheChicken`, ignored in
+    /// `stayInTheZone` (the radius is computed from the two pins).
+    let radiusHint: Double?
+    let gameDurationMinutes: Double
+    /// `true` from the Shuffle button (PP-14 Phase 2) — forces a new
+    /// random seed on the server. `false` (default) yields a
+    /// deterministic seed derived from the inputs.
+    let forceNewSeed: Bool
+    /// When set, pins the resulting `driftSeed` to this value (useful
+    /// for re-fetching a previously created game's configuration).
+    let existingSeed: Int?
+
+    init(
+        startPoint: LatLng,
+        finalPoint: LatLng?,
+        gameMode: Game.GameMode,
+        radiusHint: Double?,
+        gameDurationMinutes: Double,
+        forceNewSeed: Bool = false,
+        existingSeed: Int? = nil
+    ) {
+        self.startPoint = startPoint
+        self.finalPoint = finalPoint
+        self.gameMode = gameMode
+        self.radiusHint = radiusHint
+        self.gameDurationMinutes = gameDurationMinutes
+        self.forceNewSeed = forceNewSeed
+        self.existingSeed = existingSeed
+    }
+}
+
+struct ComputeZoneConfigurationOutput: Equatable {
+    struct LatLng: Equatable {
+        let lat: Double
+        let lng: Double
+    }
+    struct Circle: Equatable {
+        let radiusMeters: Double
+        let center: LatLng
+    }
+    let initialRadius: Double
+    let validatedFinal: LatLng?
+    let driftSeed: Int
+    let finalZoneRadius: Double
+    let interiorMargin: Double
+    let shrinkIntervalMinutes: Double
+    let shrinkMetersPerUpdate: Double
+    let circles: [Circle]
 }
 
 private let logger = Logger(category: "ApiClient")
@@ -177,7 +246,19 @@ extension ApiClient: TestDependencyKey {
         setGameMasterPassword: { _, _ in },
         clearGameMasterPassword: { _ in },
         joinAsGameMaster: { _, _ in JoinAsGameMasterResult(success: true, attemptsRemaining: 5, lockedUntilMs: nil) },
-        designateChicken: { _, _ in }
+        designateChicken: { _, _ in },
+        computeZoneConfiguration: { _ in
+            ComputeZoneConfigurationOutput(
+                initialRadius: 1000,
+                validatedFinal: nil,
+                driftSeed: 1,
+                finalZoneRadius: 50,
+                interiorMargin: 200,
+                shrinkIntervalMinutes: 5,
+                shrinkMetersPerUpdate: 75,
+                circles: []
+            )
+        }
     )
 }
 
@@ -864,6 +945,90 @@ extension ApiClient: DependencyKey {
                 ], forDocument: ref)
                 return nil
             }
+        },
+        computeZoneConfiguration: { input in
+            // PP-69: defer to the central Cloud Function so the radius,
+            // drift seed and shrink schedule match what every other
+            // platform sees for the same pins. Client-side mirrors live
+            // in `Models/GameSettings.swift` as a parity reference until
+            // PP-13 Phase 2 deletes them.
+            let functions = Functions.functions(region: "europe-west1")
+            var payload: [String: Any] = [
+                "startPoint": ["lat": input.startPoint.lat, "lng": input.startPoint.lng],
+                "gameMode": input.gameMode.rawValue,
+                "gameDurationMinutes": input.gameDurationMinutes,
+                "forceNewSeed": input.forceNewSeed,
+            ]
+            if let finalPoint = input.finalPoint {
+                payload["finalPoint"] = ["lat": finalPoint.lat, "lng": finalPoint.lng]
+            } else {
+                payload["finalPoint"] = NSNull()
+            }
+            if let radiusHint = input.radiusHint {
+                payload["radiusHint"] = radiusHint
+            } else {
+                payload["radiusHint"] = NSNull()
+            }
+            if let existingSeed = input.existingSeed {
+                payload["existingSeed"] = existingSeed
+            }
+
+            let result = try await functions
+                .httpsCallable("computeZoneConfiguration")
+                .call(payload)
+            guard let dict = result.data as? [String: Any] else {
+                throw NSError(
+                    domain: "ApiClient",
+                    code: -1,
+                    userInfo: [NSLocalizedDescriptionKey: "computeZoneConfiguration: malformed response"]
+                )
+            }
+
+            func asDouble(_ value: Any?) -> Double? {
+                if let d = value as? Double { return d }
+                if let i = value as? Int { return Double(i) }
+                if let n = value as? NSNumber { return n.doubleValue }
+                return nil
+            }
+            func asInt(_ value: Any?) -> Int? {
+                if let i = value as? Int { return i }
+                if let n = value as? NSNumber { return n.intValue }
+                if let d = value as? Double { return Int(d) }
+                return nil
+            }
+            func asLatLng(_ value: Any?) -> ComputeZoneConfigurationOutput.LatLng? {
+                guard let map = value as? [String: Any],
+                      let lat = asDouble(map["lat"]),
+                      let lng = asDouble(map["lng"]) else { return nil }
+                return ComputeZoneConfigurationOutput.LatLng(lat: lat, lng: lng)
+            }
+
+            let initialRadius = asDouble(dict["initialRadius"]) ?? 0
+            let validatedFinal = asLatLng(dict["validatedFinal"])
+            let driftSeed = asInt(dict["driftSeed"]) ?? 1
+            let finalZoneRadius = asDouble(dict["finalZoneRadius"]) ?? 50
+            let interiorMargin = asDouble(dict["interiorMargin"]) ?? 200
+            let shrinkIntervalMinutes = asDouble(dict["shrinkIntervalMinutes"]) ?? 5
+            let shrinkMetersPerUpdate = asDouble(dict["shrinkMetersPerUpdate"]) ?? 0
+            let rawCircles = (dict["circles"] as? [[String: Any]]) ?? []
+            let circles: [ComputeZoneConfigurationOutput.Circle] = rawCircles.compactMap { raw in
+                guard let radius = asDouble(raw["radiusMeters"]),
+                      let center = asLatLng(raw["center"]) else { return nil }
+                return ComputeZoneConfigurationOutput.Circle(
+                    radiusMeters: radius,
+                    center: center
+                )
+            }
+            return ComputeZoneConfigurationOutput(
+                initialRadius: initialRadius,
+                validatedFinal: validatedFinal,
+                driftSeed: driftSeed,
+                finalZoneRadius: finalZoneRadius,
+                interiorMargin: interiorMargin,
+                shrinkIntervalMinutes: shrinkIntervalMinutes,
+                shrinkMetersPerUpdate: shrinkMetersPerUpdate,
+                circles: circles
+            )
         }
     )
 }
