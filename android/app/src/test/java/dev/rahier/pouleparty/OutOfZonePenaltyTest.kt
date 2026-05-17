@@ -1,6 +1,7 @@
 package dev.rahier.pouleparty
 
 import dev.rahier.pouleparty.data.FirestoreRepository
+import dev.rahier.pouleparty.ui.gamelogic.evaluateOutOfZonePenalty
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -15,97 +16,16 @@ import org.junit.Test
  * scenarios in the same order, same expected numeric outputs, so a
  * one-platform drift fails on this side without the other.
  *
- * Implementation notes:
- * The production penalty path lives inside `HunterMapViewModel.startTimer()`,
- * which is a private 1 Hz `delay(1000)` loop reading `_uiState` and writing
- * through `firestoreRepository.decrementTotalPoints`. Testing the loop end
- * to end requires driving the location flow, the gameConfig flow and the
- * test dispatcher in lockstep, which is brittle.
+ * The tests target the same `evaluateOutOfZonePenalty` helper the
+ * production code in `HunterMapViewModel.startTimer()` calls, so any
+ * drift surfaces immediately: the runtime no longer has a separate
+ * inline decision tree.
  *
- * Instead we mirror the production decision rule as a small pure helper
- * inside this test file ([evaluateOutOfZonePenalty]) and run the 9 strict
- * parity scenarios against it. The iOS sibling tests the reducer directly
- * via TCA's TestStore — same scenarios, same numeric outputs. A drift
- * between the helper here and the production logic in
- * `HunterMapViewModel.startTimer()` would surface immediately because the
- * shared parity contract test ([scenario9_twoTicksWithinFiveSecondsFireOnlyOnePenalty])
- * pins the anti-double-count guard the production code is built around.
- *
- * Additionally, the suite contains one integration-style smoke check that
- * exercises the real `decrementTotalPoints` call via mockk to lock the
- * Firestore-repository contract (function name + signature). The behavior
- * is verified at the unit level via the pure helper.
+ * The suite also contains one integration-style smoke check that
+ * exercises the real `decrementTotalPoints` call via mockk to lock
+ * the Firestore-repository contract (function name + signature).
  */
 class OutOfZonePenaltyTest {
-
-    /**
-     * Result of one penalty decision: optional updated `lastPenaltyAt`
-     * (null means "leave it as-is") and a boolean signalling whether the
-     * `decrementTotalPoints` write should fire this tick.
-     *
-     * The production code expresses the decision inline; this helper
-     * extracts the same branch tree so each scenario can assert against
-     * a deterministic output.
-     */
-    private data class PenaltyDecision(
-        val newLastPenaltyAt: Long?,
-        val resetLastPenaltyAt: Boolean,
-        val shouldFirePenalty: Boolean,
-    )
-
-    /**
-     * Pure mirror of the PP-36 penalty branch inside
-     * `HunterMapViewModel.startTimer()`. MUST stay byte-for-byte
-     * equivalent to the production logic — the iOS sibling test runs
-     * the real TCA reducer against the same scenarios.
-     */
-    private fun evaluateOutOfZonePenalty(
-        isOutsideZone: Boolean,
-        isGameOver: Boolean,
-        isDebugPreview: Boolean,
-        hunterId: String,
-        lastPenaltyAt: Long?,
-        nowMs: Long,
-        intervalMs: Long = AppConstants.OUT_OF_ZONE_PENALTY_INTERVAL_MS,
-    ): PenaltyDecision {
-        if (isOutsideZone && !isGameOver && !isDebugPreview && hunterId.isNotEmpty()) {
-            return if (lastPenaltyAt == null) {
-                // First out-of-zone tick: start the 5 s window. No penalty fires.
-                PenaltyDecision(
-                    newLastPenaltyAt = nowMs,
-                    resetLastPenaltyAt = false,
-                    shouldFirePenalty = false,
-                )
-            } else if (nowMs - lastPenaltyAt >= intervalMs) {
-                // Window elapsed: fire one penalty and start a fresh window.
-                PenaltyDecision(
-                    newLastPenaltyAt = nowMs,
-                    resetLastPenaltyAt = false,
-                    shouldFirePenalty = true,
-                )
-            } else {
-                // Still inside the window: no-op.
-                PenaltyDecision(
-                    newLastPenaltyAt = null,
-                    resetLastPenaltyAt = false,
-                    shouldFirePenalty = false,
-                )
-            }
-        } else if (!isOutsideZone && lastPenaltyAt != null) {
-            // Back inside the zone → reset the window so the next exit
-            // starts a fresh 5 s countdown.
-            return PenaltyDecision(
-                newLastPenaltyAt = null,
-                resetLastPenaltyAt = true,
-                shouldFirePenalty = false,
-            )
-        }
-        return PenaltyDecision(
-            newLastPenaltyAt = null,
-            resetLastPenaltyAt = false,
-            shouldFirePenalty = false,
-        )
-    }
 
     /** Anchor "now" for deterministic windows. Real wall clock is irrelevant. */
     private val now: Long = 1_000_000_000L
