@@ -5,6 +5,7 @@
 
 import ComposableArchitecture
 import SwiftUI
+import os
 
 @Reducer
 struct JoinFlowFeature {
@@ -16,6 +17,12 @@ struct JoinFlowFeature {
         /// the teamName form before joining. No more "registration
         /// required vs open" branching — teamName is collected always.
         case codeValidated(Game)
+        /// PP-52: the resolved game has `registrationBatchId`, so we
+        /// gate the join on the validation code the hunter received
+        /// by email before letting them onto the teamName form.
+        case validationCodeEntry(Game)
+        /// PP-52: `validateRegistrationCode` call in flight.
+        case submittingValidationCode(Game)
         case joiningWithTeamName(Game)
         case submittingJoin(Game)
         case codeNotFound
@@ -26,6 +33,17 @@ struct JoinFlowFeature {
         case gameMasterPasswordEntry(Game)
         /// PP-88: `joinAsGameMaster` in flight.
         case submittingGameMasterPassword(Game)
+        /// PP-52 deeplink — `lookupGameByValidationCode` call in
+        /// flight (spinner). The pre-filled `validationCode` is what
+        /// triggered the lookup.
+        case resolvingDeeplink(code: String)
+        /// PP-52 deeplink — inscription is valid but the in-app Game
+        /// hasn't been created yet (D-Day day-of, chicken hasn't
+        /// configured the party). Friendly "come back later" screen.
+        case deeplinkGameNotYetReady(code: String)
+        /// PP-52 deeplink — no `eventRegistration` matches the code.
+        /// Likely a typo or a stale link.
+        case deeplinkInvalidCode
     }
 
     @ObservableState
@@ -40,6 +58,17 @@ struct JoinFlowFeature {
         /// PP-88: last error message from `joinAsGameMaster` (wrong
         /// code → attempts remaining ; lock → timer).
         var gameMasterError: String?
+        /// PP-52: 6-char alphanum validation code typed by the hunter
+        /// (or pre-filled from the email deeplink `?code=…`).
+        var validationCode: String = ""
+        /// PP-52: localized error string when the entered code isn't
+        /// a paid match for the game's `registrationBatchId`.
+        var validationCodeError: String?
+        /// PP-52: when the app is opened via a deeplink that carries
+        /// a validation code, we stash it here so the JoinFlow can
+        /// drop it into `validationCode` the moment a game with a
+        /// matching `registrationBatchId` is resolved.
+        var pendingValidationCode: String?
 
         var isCodeValid: Bool {
             let trimmed = code.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
@@ -53,6 +82,11 @@ struct JoinFlowFeature {
 
         var isGameMasterPasswordValid: Bool {
             gameMasterPassword.count == 4 && gameMasterPassword.allSatisfy { $0.isNumber }
+        }
+
+        var isValidationCodeValid: Bool {
+            let trimmed = validationCode.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed.count >= 4 && trimmed.allSatisfy { $0.isLetter || $0.isNumber }
         }
     }
 
@@ -73,6 +107,23 @@ struct JoinFlowFeature {
         case gameMasterJoinSucceeded(Game)
         case gameMasterJoinFailed(attemptsRemaining: Int, lockedUntilMs: Int?)
         case gameMasterJoinErrored(String)
+        // PP-52
+        case submitValidationCodeTapped
+        case validationCodeAccepted(Game)
+        case validationCodeRejected
+        case validationCodeErrored(String)
+        case deeplinkValidationCodeReceived(String)
+        /// PP-52 — `lookupGameByValidationCode` returned a result.
+        case deeplinkLookupCompleted(ValidationCodeLookupResult)
+        /// PP-52 — `lookupGameByValidationCode` threw (network /
+        /// permission). Falls back to the generic `.networkError`
+        /// step so the user can retry.
+        case deeplinkLookupErrored(String)
+        /// PP-52 — user tapped "OK" on either the
+        /// `deeplinkGameNotYetReady` or `deeplinkInvalidCode` screen.
+        /// Resets the JoinFlow so they can keep using it (manual
+        /// gameCode entry still works with the pre-filled code).
+        case deeplinkDismissed
 
         enum Delegate: Equatable {
             case joinGame(Game, hunterName: String)
@@ -142,6 +193,17 @@ struct JoinFlowFeature {
                 if state.teamName.isEmpty {
                     state.teamName = state.savedNickname.trimmingCharacters(in: .whitespacesAndNewlines)
                 }
+                // PP-52: if the user arrived via a deeplink that
+                // carried a validation code, drop it into the
+                // validation field now (only when the game actually
+                // requires one). Mismatched batchId is caught by the
+                // submit action just like a manually-typed wrong code.
+                if let pending = state.pendingValidationCode,
+                   game.registrationBatchId != nil,
+                   state.validationCode.isEmpty {
+                    state.validationCode = pending
+                }
+                state.pendingValidationCode = nil
                 return .none
 
             case .delegate:
@@ -149,7 +211,15 @@ struct JoinFlowFeature {
 
             case .joinAsHunterTapped:
                 guard case let .codeValidated(game) = state.step else { return .none }
-                state.step = .joiningWithTeamName(game)
+                // PP-52: paid-batch games route through the validation
+                // code step first; everyone else lands directly on the
+                // teamName form (PP-90).
+                if game.registrationBatchId?.isEmpty == false {
+                    state.validationCodeError = nil
+                    state.step = .validationCodeEntry(game)
+                } else {
+                    state.step = .joiningWithTeamName(game)
+                }
                 return .none
 
             case .submitJoinTapped:
@@ -177,7 +247,7 @@ struct JoinFlowFeature {
             case let .joinSucceeded(game, teamName):
                 return .send(.delegate(.joinGame(game, hunterName: teamName)))
 
-            case let .joinFailed(_):
+            case .joinFailed:
                 // For now we fall back to networkError UI; the user can
                 // retry by tapping the join button again from
                 // `codeValidated`.
@@ -244,6 +314,99 @@ struct JoinFlowFeature {
                     state.step = .gameMasterPasswordEntry(game)
                 }
                 return .none
+
+            // MARK: - PP-52 validation code
+
+            case .submitValidationCodeTapped:
+                guard case let .validationCodeEntry(game) = state.step,
+                      state.isValidationCodeValid,
+                      let batchId = game.registrationBatchId,
+                      !batchId.isEmpty
+                else { return .none }
+                let code = state.validationCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+                state.validationCodeError = nil
+                state.step = .submittingValidationCode(game)
+                return .run { send in
+                    do {
+                        let ok = try await apiClient.validateRegistrationCode(batchId, code)
+                        if ok {
+                            await send(.validationCodeAccepted(game))
+                        } else {
+                            await send(.validationCodeRejected)
+                        }
+                    } catch {
+                        await send(.validationCodeErrored(error.localizedDescription))
+                    }
+                }
+
+            case let .validationCodeAccepted(game):
+                state.step = .joiningWithTeamName(game)
+                return .none
+
+            case .validationCodeRejected:
+                state.validationCodeError = String(localized: "Invalid validation code. Check the email we sent you.")
+                if case let .submittingValidationCode(game) = state.step {
+                    state.step = .validationCodeEntry(game)
+                }
+                return .none
+
+            case let .validationCodeErrored(message):
+                state.validationCodeError = message
+                if case let .submittingValidationCode(game) = state.step {
+                    state.step = .validationCodeEntry(game)
+                }
+                return .none
+
+            case let .deeplinkValidationCodeReceived(code):
+                let normalized = code.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+                guard !normalized.isEmpty else { return .none }
+                Logger(category: "PP-52-Deeplink").notice("[JoinFlowFeature] lookup starting for code=\(normalized, privacy: .public)")
+                state.validationCode = normalized
+                state.pendingValidationCode = nil
+                state.validationCodeError = nil
+                state.step = .resolvingDeeplink(code: normalized)
+                return .run { send in
+                    do {
+                        let result = try await apiClient.lookupGameByValidationCode(normalized)
+                        await send(.deeplinkLookupCompleted(result))
+                    } catch {
+                        await send(.deeplinkLookupErrored(error.localizedDescription))
+                    }
+                }
+
+            case let .deeplinkLookupCompleted(result):
+                let log = Logger(category: "PP-52-Deeplink")
+                switch result {
+                case let .gameReady(game):
+                    log.notice("[JoinFlowFeature] lookup result: gameReady id=\(game.id, privacy: .public)")
+                    // Server-side validation already done by the
+                    // lookup query — skip `validationCodeEntry` and
+                    // drop the user straight on the teamName form.
+                    if state.teamName.isEmpty {
+                        state.teamName = state.savedNickname.trimmingCharacters(in: .whitespacesAndNewlines)
+                    }
+                    state.step = .joiningWithTeamName(game)
+                case let .gameNotYetCreated(batchId):
+                    log.notice("[JoinFlowFeature] lookup result: gameNotYetCreated batchId=\(batchId, privacy: .public)")
+                    state.step = .deeplinkGameNotYetReady(code: state.validationCode)
+                case .invalidCode:
+                    log.notice("[JoinFlowFeature] lookup result: invalidCode")
+                    state.step = .deeplinkInvalidCode
+                }
+                return .none
+
+            case let .deeplinkLookupErrored(message):
+                Logger(category: "PP-52-Deeplink").error("[JoinFlowFeature] lookup error: \(message, privacy: .public)")
+                state.step = .networkError
+                return .none
+
+            case .deeplinkDismissed:
+                // Reset to the manual code-entry screen but keep the
+                // validation code stashed in case the user types a
+                // gameCode immediately and the game DOES require a
+                // matching code (manual flow takes over from there).
+                state.step = .enteringCode
+                return .none
             }
         }
     }
@@ -284,10 +447,18 @@ struct JoinFlowView: View {
         switch step {
         case .enteringCode, .validating, .codeNotFound, .networkError, .codeValidated:
             return "code"
+        case .validationCodeEntry, .submittingValidationCode:
+            return "validation"
         case .joiningWithTeamName, .submittingJoin:
             return "teamName"
         case .gameMasterPasswordEntry, .submittingGameMasterPassword:
             return "gmPassword"
+        case .resolvingDeeplink:
+            return "deeplinkResolving"
+        case .deeplinkGameNotYetReady:
+            return "deeplinkAwaiting"
+        case .deeplinkInvalidCode:
+            return "deeplinkInvalid"
         }
     }
 
@@ -296,6 +467,10 @@ struct JoinFlowView: View {
         switch step {
         case .enteringCode, .validating, .codeNotFound, .networkError, .codeValidated:
             codeEntry(step: step)
+        case let .validationCodeEntry(game):
+            validationCodeForm(game: game, isSubmitting: false)
+        case let .submittingValidationCode(game):
+            validationCodeForm(game: game, isSubmitting: true)
         case let .joiningWithTeamName(game):
             teamNameForm(game: game, isSubmitting: false)
         case let .submittingJoin(game):
@@ -304,6 +479,180 @@ struct JoinFlowView: View {
             gameMasterPasswordForm(game: game, isSubmitting: false)
         case let .submittingGameMasterPassword(game):
             gameMasterPasswordForm(game: game, isSubmitting: true)
+        case .resolvingDeeplink:
+            deeplinkResolvingView
+        case let .deeplinkGameNotYetReady(code):
+            deeplinkGameNotYetReadyView(code: code)
+        case .deeplinkInvalidCode:
+            deeplinkInvalidCodeView
+        }
+    }
+
+    // MARK: - PP-52 deeplink screens
+
+    private var deeplinkResolvingView: some View {
+        VStack(spacing: 16) {
+            Spacer()
+            ProgressView()
+                .tint(Color.CROrange)
+                .scaleEffect(1.5)
+            Text(String(localized: "Checking your code…"))
+                .font(.gameboy(size: 10))
+                .foregroundStyle(Color.onBackground.opacity(0.6))
+            Spacer()
+        }
+    }
+
+    private func deeplinkGameNotYetReadyView(code: String) -> some View {
+        VStack(spacing: 20) {
+            Spacer()
+            Text("🐔")
+                .font(.system(size: 56))
+
+            BangerText(String(localized: "Party not open yet"), size: 26)
+                .foregroundStyle(Color.onBackground)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
+
+            Text(String(localized: "Your validation code is saved. The party hasn't been set up yet — come back on June 6 with the game code we'll announce on site!"))
+                .font(.system(size: 14))
+                .foregroundStyle(Color.onBackground.opacity(0.75))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+
+            VStack(spacing: 6) {
+                Text(String(localized: "YOUR VALIDATION CODE"))
+                    .font(.gameboy(size: 8))
+                    .foregroundStyle(Color.onBackground.opacity(0.5))
+                Text(code)
+                    .font(.gameboy(size: 26))
+                    .foregroundStyle(Color.CRPink)
+                    .tracking(6)
+            }
+            .padding(.vertical, 16)
+            .padding(.horizontal, 28)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color.CROrange.opacity(0.12))
+            )
+
+            Button {
+                store.send(.deeplinkDismissed)
+            } label: {
+                BangerText(String(localized: "OK"), size: 22)
+                    .foregroundStyle(.black)
+                    .padding(.horizontal, 40)
+                    .padding(.vertical, 14)
+                    .background(AnyShapeStyle(Color.gradientFire))
+                    .clipShape(Capsule())
+            }
+
+            Spacer()
+        }
+    }
+
+    private var deeplinkInvalidCodeView: some View {
+        VStack(spacing: 20) {
+            Spacer()
+            Text("⚠️")
+                .font(.system(size: 56))
+
+            BangerText(String(localized: "Invalid code"), size: 26)
+                .foregroundStyle(Color.onBackground)
+
+            Text(String(localized: "We couldn't find any registration matching this code. Double-check the email we sent you, or contact julien@rahier.dev."))
+                .font(.system(size: 14))
+                .foregroundStyle(Color.onBackground.opacity(0.75))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+
+            Button {
+                store.send(.deeplinkDismissed)
+            } label: {
+                BangerText(String(localized: "Close"), size: 22)
+                    .foregroundStyle(.black)
+                    .padding(.horizontal, 40)
+                    .padding(.vertical, 14)
+                    .background(AnyShapeStyle(Color.gradientFire))
+                    .clipShape(Capsule())
+            }
+
+            Spacer()
+        }
+    }
+
+    // MARK: - PP-52 validation code form
+
+    private func validationCodeForm(game: Game, isSubmitting: Bool) -> some View {
+        VStack(spacing: 20) {
+            Spacer().frame(height: 8)
+            BangerText(String(localized: "Validation code"), size: 28)
+                .foregroundStyle(Color.onBackground)
+
+            Text(String(localized: "Code from your email"))
+                .font(.gameboy(size: 9))
+                .foregroundStyle(Color.onBackground.opacity(0.6))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
+
+            TextField("ABC123", text: $store.validationCode)
+                .font(.gameboy(size: 22))
+                .multilineTextAlignment(.center)
+                .textInputAutocapitalization(.characters)
+                .autocorrectionDisabled()
+                .padding(.vertical, 14)
+                .padding(.horizontal, 24)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color.surface)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.onBackground.opacity(0.2), lineWidth: 1)
+                )
+                .padding(.horizontal, 40)
+                .disabled(isSubmitting)
+
+            if let err = store.validationCodeError {
+                Text(err)
+                    .font(.gameboy(size: 9))
+                    .foregroundStyle(Color.CROrange)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
+            }
+
+            Button {
+                store.send(.submitValidationCodeTapped)
+            } label: {
+                Group {
+                    if isSubmitting {
+                        ProgressView()
+                            .tint(.black)
+                    } else {
+                        BangerText(String(localized: "Submit"), size: 22)
+                            .foregroundStyle(.black)
+                    }
+                }
+                .padding(.horizontal, 28)
+                .padding(.vertical, 14)
+                .background(
+                    (store.isValidationCodeValid && !isSubmitting)
+                        ? AnyShapeStyle(Color.gradientFire)
+                        : AnyShapeStyle(Color.gray.opacity(0.3))
+                )
+                .clipShape(Capsule())
+            }
+            .disabled(!store.isValidationCodeValid || isSubmitting)
+
+            // Show the game code as a quiet reminder so the user
+            // knows which game they're confirming, without competing
+            // with the validation-code input visually.
+            Text("Game \(game.gameCode)")
+                .font(.gameboy(size: 9))
+                .foregroundStyle(Color.onBackground.opacity(0.5))
+                .padding(.top, 8)
+
+            Spacer()
         }
     }
 

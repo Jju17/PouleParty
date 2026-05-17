@@ -311,4 +311,17 @@
     <string name="join_as_game_master">Rejoindre comme GameMaster 🦅</string>
     <string name="gamemaster_join_title">GameMaster 🦅</string>
     <string name="gamemaster_password_hint">Code à 4 chiffres</string>
+
+    <string name="validation_code_title">Code de validation</string>
+    <string name="validation_code_hint">Code reçu par email</string>
+    <string name="game_code_label">Partie %1$s</string>
+
+    <string name="deeplink_resolving_label">Vérification du code…</string>
+    <string name="deeplink_party_not_open_title">Partie pas encore ouverte</string>
+    <string name="deeplink_party_not_open_body">Ton code de validation est sauvegardé. La partie n\'est pas encore configurée — reviens le 6 juin avec le code de partie qu\'on t\'annoncera sur place !</string>
+    <string name="deeplink_invalid_code_title">Code invalide</string>
+    <string name="deeplink_invalid_code_body">On ne trouve aucune inscription correspondant à ce code. Vérifie l\'email qu\'on t\'a envoyé, ou contacte julien@rahier.dev.</string>
+    <string name="deeplink_code_label">TON CODE DE VALIDATION</string>
+    <string name="deeplink_ok">OK</string>
+    <string name="deeplink_close">Fermer</string>
 </resources>

@@ -9,6 +9,14 @@ import os
 import UIKit
 import UserNotifications
 
+extension Notification.Name {
+    /// PP-52 — fallback channel for cold-start Universal Links when the
+    /// SwiftUI `.onContinueUserActivity` modifier doesn't fire. The
+    /// AppDelegate posts; `PoulePartyApp` listens via `.onReceive`.
+    /// `userInfo["url"]` is the `URL` that was tapped.
+    static let pouleDeeplink = Notification.Name("dev.rahier.pouleparty.deeplink")
+}
+
 class AppDelegate: NSObject, UIApplicationDelegate, MessagingDelegate, UNUserNotificationCenterDelegate {
 
     func application(
@@ -29,6 +37,31 @@ class AppDelegate: NSObject, UIApplicationDelegate, MessagingDelegate, UNUserNot
                 }
             }
         }
+        return true
+    }
+
+    /// PP-52 fallback path for Universal Links. iOS SwiftUI App
+    /// lifecycle has `.onOpenURL` as the primary hook (which works
+    /// on iPhone — see `PoulePartyApp`); this UIKit method covers
+    /// macOS Catalyst + iPad multi-window scenarios where the
+    /// SwiftUI modifier may not fire. Forwards to the same
+    /// `.pouleDeeplink` notification the App scene observes.
+    func application(
+        _ application: UIApplication,
+        continue userActivity: NSUserActivity,
+        restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void
+    ) -> Bool {
+        guard userActivity.activityType == NSUserActivityTypeBrowsingWeb,
+              let url = userActivity.webpageURL
+        else {
+            return false
+        }
+        Logger(category: "PP-52-Deeplink").notice("[AppDelegate.continue] forwarding url=\(url.absoluteString, privacy: .public)")
+        NotificationCenter.default.post(
+            name: .pouleDeeplink,
+            object: nil,
+            userInfo: ["url": url]
+        )
         return true
     }
 

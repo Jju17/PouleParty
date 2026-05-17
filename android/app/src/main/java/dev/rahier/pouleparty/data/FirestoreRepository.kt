@@ -326,6 +326,85 @@ class FirestoreRepository @Inject constructor(
         awaitClose { listener.remove() }
     }
 
+    /**
+     * PP-52 deeplink resolution result. Mirrors iOS
+     * `ValidationCodeLookupResult` so the JoinFlow can branch the
+     * deeplink UX into "ready / not yet open / invalid code".
+     */
+    sealed class ValidationCodeLookupResult {
+        object InvalidCode : ValidationCodeLookupResult()
+        data class GameNotYetCreated(val batchId: String) : ValidationCodeLookupResult()
+        data class GameReady(val game: Game) : ValidationCodeLookupResult()
+    }
+
+    /**
+     * PP-52 — looks up the paid `eventRegistration` for the given
+     * validation code, then finds the matching Game (if any) via
+     * `Game.registrationBatchId`. Distinguishes "code matches nothing"
+     * from "code valid but Game not created yet" so the deeplink UI
+     * can show an appropriate message. Throws on network failure so
+     * the caller can surface a retryable error instead of conflating
+     * it with an invalid code.
+     */
+    suspend fun lookupGameByValidationCode(code: String): ValidationCodeLookupResult {
+        val trimmed = code.trim().uppercase()
+        if (trimmed.isEmpty()) return ValidationCodeLookupResult.InvalidCode
+        // 1) Find the paid registration matching the code.
+        val regSnapshot = firestore.collection(AppConstants.COLLECTION_EVENT_REGISTRATIONS)
+            .whereEqualTo("code", trimmed)
+            .whereEqualTo("paid", true)
+            .limit(1)
+            .get()
+            .await()
+        val batchId = regSnapshot.documents.firstOrNull()
+            ?.getString("batchId")?.trim()
+            ?.takeIf { it.isNotEmpty() }
+            ?: return ValidationCodeLookupResult.InvalidCode
+        // 2) Find any Game pointing at that batch. Filter `done`
+        // games client-side so a stale finished party doesn't mask
+        // a fresh one.
+        val gameSnapshot = firestore.collection(AppConstants.COLLECTION_GAMES)
+            .whereEqualTo("registrationBatchId", batchId)
+            .limit(5)
+            .get()
+            .await()
+        val games = gameSnapshot.documents.mapNotNull { doc ->
+            safeToObject<Game>(doc, "lookupGameByValidationCode")?.copy(id = doc.id)
+        }
+        val active = games.firstOrNull { it.gameStatusEnum != GameStatus.DONE }
+        return if (active != null) {
+            ValidationCodeLookupResult.GameReady(active)
+        } else {
+            ValidationCodeLookupResult.GameNotYetCreated(batchId)
+        }
+    }
+
+    /**
+     * PP-52 — true when a paid `eventRegistrations` doc matches the given
+     * `batchId + code` pair. Used by JoinFlow when the resolved game has
+     * `registrationBatchId != null` to gate the join on the validation
+     * code the hunter received by email. Returns false on any error so
+     * the UI shows "invalid code" rather than a confusing crash.
+     */
+    suspend fun validateRegistrationCode(batchId: String, code: String): Boolean {
+        val trimmedBatch = batchId.trim()
+        val trimmedCode = code.trim().uppercase()
+        if (trimmedBatch.isEmpty() || trimmedCode.isEmpty()) return false
+        return try {
+            val snapshot = firestore.collection(AppConstants.COLLECTION_EVENT_REGISTRATIONS)
+                .whereEqualTo("batchId", trimmedBatch)
+                .whereEqualTo("code", trimmedCode)
+                .whereEqualTo("paid", true)
+                .limit(1)
+                .get()
+                .await()
+            !snapshot.isEmpty
+        } catch (e: Exception) {
+            Log.e(TAG, "validateRegistrationCode($trimmedBatch/$trimmedCode) failed", e)
+            false
+        }
+    }
+
     suspend fun createRegistration(gameId: String, registration: Registration) {
         if (gameId.isEmpty() || registration.userId.isEmpty()) {
             Log.w(TAG, "createRegistration skipped — gameId: '$gameId', userId: '${registration.userId}'")

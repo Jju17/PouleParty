@@ -311,4 +311,21 @@
     <string name="join_as_game_master">Join as GameMaster 🦅</string>
     <string name="gamemaster_join_title">GameMaster 🦅</string>
     <string name="gamemaster_password_hint">4-digit code</string>
+
+    <!-- PP-52: validation code step shown in JoinFlow when the resolved
+         game has a non-null `registrationBatchId`. -->
+    <string name="validation_code_title">Validation code</string>
+    <string name="validation_code_hint">Code from your email</string>
+    <string name="game_code_label">Game %1$s</string>
+
+    <!-- PP-52 deeplink resolution screens (Universal Link / App Link from
+         the confirmation email). -->
+    <string name="deeplink_resolving_label">Checking your code…</string>
+    <string name="deeplink_party_not_open_title">Party not open yet</string>
+    <string name="deeplink_party_not_open_body">Your validation code is saved. The party hasn\'t been set up yet — come back on June 6 with the game code we\'ll announce on site!</string>
+    <string name="deeplink_invalid_code_title">Invalid code</string>
+    <string name="deeplink_invalid_code_body">We couldn\'t find any registration matching this code. Double-check the email we sent you, or contact julien@rahier.dev.</string>
+    <string name="deeplink_code_label">YOUR VALIDATION CODE</string>
+    <string name="deeplink_ok">OK</string>
+    <string name="deeplink_close">Close</string>
 </resources>

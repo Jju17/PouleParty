@@ -99,6 +99,11 @@ struct HomeFeature {
         case startButtonTapped
         /// Placeholder for the "Envie de créer une partie ?" web CTA. Wired in PP-46.
         case webCreatePartyTapped
+        /// PP-52 — relayed from `AppFeature.deeplinkValidationCodeReceived`.
+        /// Opens the join sheet (if not already open) and forwards the
+        /// validation code to the nested `JoinFlowFeature` so the user
+        /// only has to enter the gameCode they get on-site.
+        case deeplinkValidationCodeReceived(String)
     }
 
     @Reducer
@@ -499,6 +504,14 @@ struct HomeFeature {
                 MapWarmUp.warmUpIfNeeded()
                 state.destination = .joinFlow(JoinFlowFeature.State())
                 return .none
+
+            case let .deeplinkValidationCodeReceived(code):
+                if case .joinFlow = state.destination {
+                    // Already presented — just forward.
+                } else {
+                    state.destination = .joinFlow(JoinFlowFeature.State())
+                }
+                return .send(.destination(.presented(.joinFlow(.deeplinkValidationCodeReceived(code)))))
             }
         }
         .ifLet(\.$destination, action: \.destination) {

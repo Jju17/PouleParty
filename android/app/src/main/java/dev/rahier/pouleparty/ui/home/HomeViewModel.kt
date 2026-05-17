@@ -1,6 +1,7 @@
 package dev.rahier.pouleparty.ui.home
 
 import android.content.SharedPreferences
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
@@ -44,6 +45,15 @@ data class HomeUiState(
     /** PP-88: 4-digit buffer + last error from joinAsGameMaster. */
     val gameMasterPasswordInput: String = "",
     val gameMasterPasswordError: String? = null,
+    /** PP-52: validation-code text typed by the hunter (or pre-filled
+     *  from a deeplink) on the ValidationCodeEntry step. */
+    val validationCodeInput: String = "",
+    /** PP-52: localized error string when validateRegistrationCode
+     *  returns false (wrong code) or fails. */
+    val validationCodeError: String? = null,
+    /** PP-52: deeplink-supplied validation code awaiting a resolved
+     *  game that actually requires one. Cleared once applied. */
+    val pendingValidationCode: String? = null,
 ) {
     val isCodeValid: Boolean
         get() {
@@ -54,6 +64,12 @@ data class HomeUiState(
 
     val isTeamNameValid: Boolean
         get() = teamName.trim().isNotEmpty()
+
+    val isValidationCodeValid: Boolean
+        get() {
+            val trimmed = validationCodeInput.trim()
+            return trimmed.length >= 4 && trimmed.all { it.isLetterOrDigit() }
+        }
 }
 
 @HiltViewModel
@@ -62,8 +78,28 @@ class HomeViewModel @Inject constructor(
     private val locationRepository: LocationRepository,
     private val analyticsRepository: dev.rahier.pouleparty.data.AnalyticsRepository,
     private val prefs: SharedPreferences,
-    private val auth: FirebaseAuth
+    private val auth: FirebaseAuth,
 ) : ViewModel() {
+
+    init {
+        // PP-52 — observe Universal Link / App Link payloads pushed by
+        // MainActivity into the singleton `DeeplinkBus`. Any pending
+        // validation code is forwarded into the JoinFlow via the
+        // regular intent path, then consumed so the same code can't
+        // fire twice.
+        viewModelScope.launch {
+            dev.rahier.pouleparty.data.DeeplinkBus.validationCode.collect { code ->
+                if (!code.isNullOrEmpty()) {
+                    onIntent(HomeIntent.DeeplinkValidationCodeReceived(code))
+                    // Auto-open the join sheet so the prefilled code
+                    // is immediately useful even if the visitor wasn't
+                    // already on the join flow.
+                    _uiState.update { it.copy(isShowingJoinSheet = true) }
+                    dev.rahier.pouleparty.data.DeeplinkBus.consume()
+                }
+            }
+        }
+    }
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
@@ -99,6 +135,10 @@ class HomeViewModel @Inject constructor(
             HomeIntent.JoinAsGameMasterTapped -> onJoinAsGameMasterTapped()
             is HomeIntent.GameMasterPasswordChanged -> onGameMasterPasswordChanged(intent.code)
             HomeIntent.SubmitGameMasterPasswordTapped -> onSubmitGameMasterPasswordTapped()
+            is HomeIntent.ValidationCodeChanged -> onValidationCodeChanged(intent.code)
+            HomeIntent.SubmitValidationCodeTapped -> onSubmitValidationCodeTapped()
+            is HomeIntent.DeeplinkValidationCodeReceived -> onDeeplinkValidationCodeReceived(intent.code)
+            HomeIntent.DeeplinkDismissed -> onDeeplinkDismissed()
         }
     }
 
@@ -402,9 +442,18 @@ class HomeViewModel @Inject constructor(
                 // user can join in one tap if they're happy with the default.
                 val savedNickname = prefs.getTrimmedString(AppConstants.PREF_USER_NICKNAME)
                 _uiState.update {
+                    // PP-52: if the user arrived via a deeplink that
+                    // carried a validation code, drop it into the
+                    // validation field now (only when the game
+                    // actually requires one).
+                    val applyDeeplink = !game.registrationBatchId.isNullOrEmpty()
+                        && !it.pendingValidationCode.isNullOrEmpty()
+                        && it.validationCodeInput.isEmpty()
                     it.copy(
                         joinStep = JoinFlowStep.CodeValidated(game),
                         teamName = if (it.teamName.isBlank()) savedNickname else it.teamName,
+                        validationCodeInput = if (applyDeeplink) it.pendingValidationCode!! else it.validationCodeInput,
+                        pendingValidationCode = if (applyDeeplink) null else it.pendingValidationCode,
                     )
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
@@ -428,7 +477,124 @@ class HomeViewModel @Inject constructor(
     private fun onJoinAsHunterTapped() {
         val step = _uiState.value.joinStep
         if (step !is JoinFlowStep.CodeValidated) return
-        _uiState.update { it.copy(joinStep = JoinFlowStep.JoiningWithTeamName(step.game)) }
+        // PP-52: paid-batch games route through the validation code
+        // step first; everyone else lands directly on the teamName
+        // form (PP-90).
+        val game = step.game
+        val batchId = game.registrationBatchId
+        if (!batchId.isNullOrEmpty()) {
+            _uiState.update {
+                it.copy(
+                    joinStep = JoinFlowStep.ValidationCodeEntry(game),
+                    validationCodeError = null,
+                )
+            }
+        } else {
+            _uiState.update { it.copy(joinStep = JoinFlowStep.JoiningWithTeamName(game)) }
+        }
+    }
+
+    // MARK: - PP-52 validation code
+
+    private fun onValidationCodeChanged(code: String) {
+        _uiState.update { it.copy(validationCodeInput = code.trimStart()) }
+    }
+
+    private fun onSubmitValidationCodeTapped() {
+        val step = _uiState.value.joinStep
+        if (step !is JoinFlowStep.ValidationCodeEntry) return
+        if (!_uiState.value.isValidationCodeValid) return
+        val game = step.game
+        val batchId = game.registrationBatchId
+        if (batchId.isNullOrEmpty()) return
+        val code = _uiState.value.validationCodeInput.trim().uppercase()
+        _uiState.update {
+            it.copy(
+                joinStep = JoinFlowStep.SubmittingValidationCode(game),
+                validationCodeError = null,
+            )
+        }
+        viewModelScope.launch {
+            try {
+                val ok = firestoreRepository.validateRegistrationCode(batchId, code)
+                if (ok) {
+                    _uiState.update { it.copy(joinStep = JoinFlowStep.JoiningWithTeamName(game)) }
+                } else {
+                    _uiState.update {
+                        it.copy(
+                            joinStep = JoinFlowStep.ValidationCodeEntry(game),
+                            validationCodeError = "Code invalide. Vérifie l'email qu'on t'a envoyé.",
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        joinStep = JoinFlowStep.ValidationCodeEntry(game),
+                        validationCodeError = e.localizedMessage ?: "Erreur réseau",
+                    )
+                }
+            }
+        }
+    }
+
+    private fun onDeeplinkValidationCodeReceived(code: String) {
+        val tag = "PP-52-Deeplink"
+        val normalized = code.trim().uppercase()
+        if (normalized.isEmpty()) return
+        Log.d(tag, "[HomeViewModel] lookup starting for code=$normalized")
+        _uiState.update {
+            it.copy(
+                validationCodeInput = normalized,
+                pendingValidationCode = null,
+                validationCodeError = null,
+                joinStep = JoinFlowStep.ResolvingDeeplink(normalized),
+            )
+        }
+        viewModelScope.launch {
+            try {
+                val result = firestoreRepository.lookupGameByValidationCode(normalized)
+                when (result) {
+                    is FirestoreRepository.ValidationCodeLookupResult.GameReady -> {
+                        Log.d(tag, "[HomeViewModel] lookup result: gameReady id=${result.game.id}")
+                        // Validation done server-side by the lookup —
+                        // skip the manual validationCodeEntry step and
+                        // drop the user straight on the teamName form.
+                        val savedNickname = prefs.getTrimmedString(AppConstants.PREF_USER_NICKNAME)
+                        _uiState.update {
+                            it.copy(
+                                joinStep = JoinFlowStep.JoiningWithTeamName(result.game),
+                                teamName = if (it.teamName.isBlank()) savedNickname else it.teamName,
+                            )
+                        }
+                    }
+                    is FirestoreRepository.ValidationCodeLookupResult.GameNotYetCreated -> {
+                        Log.d(tag, "[HomeViewModel] lookup result: gameNotYetCreated batchId=${result.batchId}")
+                        _uiState.update {
+                            it.copy(joinStep = JoinFlowStep.DeeplinkGameNotYetReady(normalized))
+                        }
+                    }
+                    FirestoreRepository.ValidationCodeLookupResult.InvalidCode -> {
+                        Log.d(tag, "[HomeViewModel] lookup result: invalidCode")
+                        _uiState.update {
+                            it.copy(joinStep = JoinFlowStep.DeeplinkInvalidCode)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(tag, "[HomeViewModel] lookup error", e)
+                _uiState.update { it.copy(joinStep = JoinFlowStep.NetworkError) }
+            }
+        }
+    }
+
+    private fun onDeeplinkDismissed() {
+        // Reset to manual code entry but preserve `validationCodeInput`
+        // so a hunter who then types the gameCode still gets the
+        // validation auto-applied on the ValidationCodeEntry step.
+        _uiState.update {
+            it.copy(joinStep = JoinFlowStep.EnteringCode)
+        }
     }
 
     /**

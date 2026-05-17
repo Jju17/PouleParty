@@ -48,4 +48,18 @@ sealed interface HomeIntent {
     data class GameMasterPasswordChanged(val code: String) : HomeIntent
     /** PP-88: user tapped Submit on the GM password entry step. */
     object SubmitGameMasterPasswordTapped : HomeIntent
+    /** PP-52: user typed into the validation-code field on the new
+     *  ValidationCodeEntry step (only shown when the resolved game
+     *  has a non-null `registrationBatchId`). */
+    data class ValidationCodeChanged(val code: String) : HomeIntent
+    /** PP-52: user tapped Submit on the validation-code step. */
+    object SubmitValidationCodeTapped : HomeIntent
+    /** PP-52: deeplink (Universal Link / App Link) opened the app with
+     *  a `/join?code=...` URL. Triggers an async lookup via
+     *  `lookupGameByValidationCode`; the result drops the user on the
+     *  teamName form (game ready), a friendly "party not open yet"
+     *  view, or an "invalid code" view. */
+    data class DeeplinkValidationCodeReceived(val code: String) : HomeIntent
+    /** PP-52: user tapped OK on either deeplink fallback screen. */
+    object DeeplinkDismissed : HomeIntent
 }

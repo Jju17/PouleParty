@@ -18,8 +18,14 @@ Firebase Cloud Functions v2 (TypeScript) handling game lifecycle scheduling and 
 | `spawnPowerUpBatch` | Cloud Task | Server-authoritative power-up spawning — generates, road-snaps, and writes each batch |
 | `onGameCreated` | Firestore onCreate | Schedules all Cloud Tasks when a game is created |
 | `onGameUpdated` | Firestore onUpdate | Detects new winners and notifies all players |
-| `registerForEvent` | Callable HTTPS | Event registration with validation, dedup, capacity check, Google Sheets sync |
-| `getRegistrationCount` | Callable HTTPS | Returns current registration count and max capacity |
+| `computeZoneConfiguration` (PP-69) | Callable HTTPS | Wizard recap/shuffle math — initial radius, drift seed, shrink schedule |
+| `setGameMasterPassword` (PP-70) | Callable HTTPS | Creator sets the 4-digit GM password on a game (written to `/games/{id}/private/security`) |
+| `clearGameMasterPassword` (PP-70) | Callable HTTPS | Creator removes the GM password (kept GMs stay) |
+| `joinAsGameMaster` (PP-70) | Callable HTTPS | UID enrollment via 4-digit code, rate-limited (5 attempts, 5 min lock) |
+| `createPendingRegistration` (PP-52) | HTTPS POST | Web inscription form entry: writes `/eventRegistrations` doc, opens Stripe Checkout Session |
+| `confirmRegistrationPayment` (PP-52) | HTTPS POST (Stripe webhook) | Verifies signature, idempotent `paid: true` flip, sends Resend email + appends Google Sheet |
+
+The PP-9 legacy `registerForEvent` / `getRegistrationCount` were deleted with the rest of the Stripe in-app code. PP-52 replaced them with a different model (top-level `/eventRegistrations` collection, Stripe Checkout from the web form, no in-app payment).
 
 ## Game lifecycle scheduling
 
@@ -69,21 +75,23 @@ Stale FCM tokens are auto-cleaned after send failures.
 | Secret | Purpose |
 |---|---|
 | `MAPBOX_ACCESS_TOKEN` | Used by `spawnPowerUpBatch` + `onGameCreated` to road-snap power-up positions via the Mapbox Directions API |
+| `STRIPE_SECRET_KEY` (PP-52) | Stripe secret key. `sk_test_…` on staging, `sk_live_…` on prod (live mode since 2026-05-17) |
+| `STRIPE_WEBHOOK_SECRET` (PP-52) | `whsec_…` returned when the webhook endpoint is registered in Stripe. Distinct per (project, mode) |
+| `RESEND_API_KEY` (PP-52) | `re_…` from `resend.com`. Same key on staging + prod since `pouleparty.be` is verified once |
+| `GOOGLE_SHEET_ID` (PP-52) | D-Day spreadsheet ID (the long string in the Sheet URL). Same value on staging + prod for the first event |
 
-Defined via `defineSecret(...)` in `src/index.ts`. Rotate with:
+Defined via `defineSecret(...)` in `src/index.ts` / `src/registrations.ts`. Rotate with:
 
 ```bash
-firebase functions:secrets:set MAPBOX_ACCESS_TOKEN --project pouleparty-ba586
-firebase functions:secrets:set MAPBOX_ACCESS_TOKEN --project pouleparty-prod
+firebase functions:secrets:set <NAME> --project pouleparty-ba586
+firebase functions:secrets:set <NAME> --project pouleparty-prod
 ```
 
-No redeploy needed — `defineSecret(...).value()` reads the latest version at each invocation.
+**Caveat** (PP-52 lesson): `defineSecret(...).value()` reads the latest version at invocation, but Firebase Functions binds a specific version at deploy time. After `secrets:set`, the CLI prints "Please deploy your functions for the change to take effect" — re-run `firebase deploy --only functions:<name>` so the binding picks up the new version. Don't skip the redeploy.
 
-## Environment config
+## Firebase Admin SDK initialization
 
-| Variable | Purpose |
-|---|---|
-| `REGISTRATION_SHEET_ID` | Google Sheets document ID for event registrations |
+`src/index.ts` calls `initializeApp()` with no args — **Application Default Credentials**. ADC resolves to the deployed project's compute service account (staging `847523524308-compute@…`, prod `1047338092854-compute@…`), so the same build correctly targets the right project's Firestore / FCM / Cloud Tasks. **Do not** reintroduce the previous `require("../service-account.json")` + `cert(serviceAccount)` path — that file was permanently pinned to prod and made every staging-deployed function read/write prod Firestore. The `src/seedChallenges.ts` admin script is the only place that still loads the SA file (it can target any project from a dev machine, not deployed).
 
 ## Testing
 

@@ -26,12 +26,39 @@ contact pages, and an interactive Easter egg.
 | `/creer-une-partie` | `CreateParty.tsx` | "Want to create a party?" CTA target — FR locale, beta contact info |
 | `/create-a-party` | `CreateParty.tsx` | Same, EN locale |
 | `/een-feestje-organiseren` | `CreateParty.tsx` | Same, NL locale |
+| `/inscription` | `Inscription.tsx` | PP-52 paid event registration wizard (intro → form → recap → Stripe Checkout), FR locale |
+| `/registration` | `Inscription.tsx` | Same, EN locale |
+| `/inschrijving` | `Inscription.tsx` | Same, NL locale |
+| `/inscription/success` | `InscriptionSuccess.tsx` | Stripe success_url landing, FR — confetti + chicken bounce |
+| `/registration/success` | `InscriptionSuccess.tsx` | Same, EN locale |
+| `/inschrijving/success` | `InscriptionSuccess.tsx` | Same, NL locale |
+| `/inscription/cancel` | `InscriptionCancel.tsx` | Stripe cancel_url landing, FR — keeps `?batchId=…` so the retry link works |
+| `/registration/cancel` | `InscriptionCancel.tsx` | Same, EN locale |
+| `/inschrijving/cancel` | `InscriptionCancel.tsx` | Same, NL locale |
 
-The three `CreateParty` routes all render the same component; the URL slug
-pins the i18n locale (FR / EN / NL) regardless of the visitor's stored
-preference. The mobile apps build the URL from the device language and open
-it in the system browser via the Home "Envie de créer une partie ?" button
-(see PP-46).
+The three `CreateParty` routes (PP-46) and the nine `Inscription*` routes
+(PP-52) all share the same components per family; the URL slug pins the
+i18n locale (FR / EN / NL) regardless of the visitor's stored preference,
+and the header toggle navigates to the matching localized slug via
+`Layout.tsx`'s `localizedPathFor` helper. The mobile apps build the
+`CreateParty` URL from the device language and open it in the system
+browser via the Home "Envie de créer une partie ?" button (see PP-46).
+Inscription URLs are shared externally per-event with `?batchId=…`
+(e.g. `?batchId=game-06-06-2026`) and POST to the
+`createPendingRegistration` Cloud Function via the Firebase Hosting
+rewrite `/api/createPendingRegistration` (configured in
+root `firebase.json`).
+
+## PP-52 — Universal Link / App Link well-known files
+
+`public/.well-known/apple-app-site-association` (no extension, served as
+`application/json` via `firebase.json` `headers`) registers
+`pouleparty.be/join` paths for the iOS app (`TEAMID.dev.rahier.pouleparty`).
+`public/.well-known/assetlinks.json` registers the Android app
+(`dev.rahier.pouleparty2`) against the Play App Signing SHA-256. Both files
+are deployed alongside the React bundle whenever you `firebase deploy
+--only hosting` — see also the `firebase.json` `ignore` list which had to
+drop the legacy `**/.*` glob so the `.well-known/` directory ships.
 
 ## Project structure
 

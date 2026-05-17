@@ -50,7 +50,7 @@ android/app/src/main/java/dev/rahier/pouleparty/
     │   └── PowerUpSpawnHelper.kt    # Reference-only spawn algorithm (parity with functions/src/powerUpSpawn.ts)
     ├── components/                  # 12 reusable UI components
     ├── theme/                       # Color.kt (66 colors), Theme.kt, Type.kt
-    ├── home/                        # HomeScreen, HomeViewModel, JoinFlowState
+    ├── home/                        # HomeScreen, HomeViewModel, JoinFlowState (PP-52 adds a ValidationCodeEntry step for paid-batch games)
     ├── onboarding/                  # OnboardingScreen, OnboardingViewModel
     ├── gamecreation/                # GameCreationScreen, GameCreationViewModel, steps
     ├── chickenconfig/               # ChickenConfig + ChickenMapConfig + PowerUpSelection

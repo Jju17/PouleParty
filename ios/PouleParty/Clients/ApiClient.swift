@@ -53,6 +53,18 @@ struct ApiClient {
     var fetchMyGames: (String) async throws -> [MyGame]
     var findRegistration: (String, String) async throws -> Registration?
     var createRegistration: (String, Registration) async throws -> Void
+    /// PP-52 — true when a paid `eventRegistrations` doc matches the
+    /// given `batchId + code` pair. Used by JoinFlow when the resolved
+    /// game has `registrationBatchId != nil` to gate the join on the
+    /// validation code the hunter received by email.
+    var validateRegistrationCode: (_ batchId: String, _ code: String) async throws -> Bool
+    /// PP-52 deeplink resolution — looks up the paid `eventRegistration`
+    /// for the given validation code, then finds the matching Game (if
+    /// any) via `Game.registrationBatchId`. Distinguishes "code doesn't
+    /// match any inscription" from "inscription valid but Game not
+    /// created yet" so the deeplink UX can show an appropriate message.
+    /// Throws on network failure (UI maps to `.networkError`).
+    var lookupGameByValidationCode: (_ code: String) async throws -> ValidationCodeLookupResult
     var fetchAllRegistrations: (String) async throws -> [Registration]
     /// Live stream of every `/games/{gameId}/registrations/*` doc. Used by the
     /// GameMaster map so the hunter count + drawer team names refresh the
@@ -104,6 +116,24 @@ struct ApiClient {
     /// `deterministicDriftCenter` helpers can be deleted (handled by
     /// the PP-13 Phase 2 / PP-14 Phase 2 tickets, NOT this one).
     var computeZoneConfiguration: (_ input: ComputeZoneConfigurationInput) async throws -> ComputeZoneConfigurationOutput
+}
+
+/// PP-52 deeplink resolution result. The three cases drive distinct
+/// JoinFlow screens (resolving spinner → either ready-to-join, "party
+/// not yet open", or "invalid code"). Equatable so TCA can use
+/// it inside Actions.
+enum ValidationCodeLookupResult: Equatable {
+    /// No paid `eventRegistration` matches the code → user mistyped
+    /// or hit a stale email.
+    case invalidCode
+    /// Inscription is valid but the in-app Game with that
+    /// `registrationBatchId` hasn't been created yet (D-Day day-of
+    /// scenario before the chicken sets up the game).
+    case gameNotYetCreated(batchId: String)
+    /// Both inscription and Game are live → skip the manual
+    /// `validationCodeEntry` step (code already verified server-side
+    /// by the lookup query) and jump straight to the teamName form.
+    case gameReady(Game)
 }
 
 struct JoinAsGameMasterResult: Equatable {
@@ -192,6 +222,7 @@ private let chickenLocationsSubcollection = "chickenLocations"
 private let hunterLocationsSubcollection = "hunterLocations"
 private let powerUpsSubcollection = "powerUps"
 private let registrationsSubcollection = "registrations"
+private let eventRegistrationsCollection = "eventRegistrations"
 private let challengesCollection = "challenges"
 private let challengeCompletionsSubcollection = "challengeCompletions"
 private let maxRetries = 3
@@ -241,6 +272,8 @@ extension ApiClient: TestDependencyKey {
         fetchMyGames: { _ in [] },
         findRegistration: { _, _ in nil },
         createRegistration: { _, _ in },
+        validateRegistrationCode: { _, _ in false },
+        lookupGameByValidationCode: { _ in .invalidCode },
         fetchAllRegistrations: { _ in [] },
         registrationsStream: { _ in AsyncStream { _ in } },
         challengesStream: { AsyncStream { _ in } },
@@ -717,6 +750,51 @@ extension ApiClient: DependencyKey {
                     .collection(registrationsSubcollection).document(registration.userId)
                 try ref.setData(from: registration)
             }
+        },
+        validateRegistrationCode: { batchId, code in
+            let trimmedBatch = batchId.trimmingCharacters(in: .whitespacesAndNewlines)
+            let trimmedCode = code.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+            guard !trimmedBatch.isEmpty, !trimmedCode.isEmpty else { return false }
+            let snapshot = try await Firestore.firestore()
+                .collection(eventRegistrationsCollection)
+                .whereField("batchId", isEqualTo: trimmedBatch)
+                .whereField("code", isEqualTo: trimmedCode)
+                .whereField("paid", isEqualTo: true)
+                .limit(to: 1)
+                .getDocuments()
+            return !snapshot.documents.isEmpty
+        },
+        lookupGameByValidationCode: { code in
+            let trimmedCode = code.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+            guard !trimmedCode.isEmpty else { return .invalidCode }
+            // 1) Find the paid registration matching the code.
+            let regSnapshot = try await Firestore.firestore()
+                .collection(eventRegistrationsCollection)
+                .whereField("code", isEqualTo: trimmedCode)
+                .whereField("paid", isEqualTo: true)
+                .limit(to: 1)
+                .getDocuments()
+            guard let regDoc = regSnapshot.documents.first,
+                  let batchId = (regDoc.data()["batchId"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !batchId.isEmpty
+            else { return .invalidCode }
+            // 2) Find any Game pointing at that batch. Filter `done`
+            // games client-side so a stale finished party doesn't
+            // mask a fresh one.
+            let gameSnapshot = try await Firestore.firestore()
+                .collection(gamesCollection)
+                .whereField("registrationBatchId", isEqualTo: batchId)
+                .limit(to: 5)
+                .getDocuments()
+            let games: [Game] = gameSnapshot.documents.compactMap { doc in
+                guard var game = try? doc.data(as: Game.self) else { return nil }
+                game.id = doc.documentID
+                return game
+            }
+            if let active = games.first(where: { $0.status != .done }) {
+                return .gameReady(active)
+            }
+            return .gameNotYetCreated(batchId: batchId)
         },
         fetchAllRegistrations: { gameId in
             guard !gameId.isEmpty else { return [] }

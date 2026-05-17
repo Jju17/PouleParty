@@ -307,4 +307,17 @@
     <string name="join_as_game_master">Word GameMaster 🦅</string>
     <string name="gamemaster_join_title">GameMaster 🦅</string>
     <string name="gamemaster_password_hint">Code van 4 cijfers</string>
+
+    <string name="validation_code_title">Validatiecode</string>
+    <string name="validation_code_hint">Code uit je e-mail</string>
+    <string name="game_code_label">Spel %1$s</string>
+
+    <string name="deeplink_resolving_label">Code controleren…</string>
+    <string name="deeplink_party_not_open_title">Feest nog niet open</string>
+    <string name="deeplink_party_not_open_body">Je validatiecode is opgeslagen. Het feest is nog niet ingericht — kom op 6 juni terug met de spelcode die we ter plaatse aankondigen!</string>
+    <string name="deeplink_invalid_code_title">Ongeldige code</string>
+    <string name="deeplink_invalid_code_body">We vinden geen inschrijving die bij deze code hoort. Check de e-mail die we je hebben gestuurd, of mail julien@rahier.dev.</string>
+    <string name="deeplink_code_label">JE VALIDATIECODE</string>
+    <string name="deeplink_ok">OK</string>
+    <string name="deeplink_close">Sluiten</string>
 </resources>

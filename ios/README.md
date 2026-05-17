@@ -58,7 +58,7 @@ Every feature is a `@Reducer` struct containing `State`, `Action`, reducer `body
 | ChickenMap | `ChickenMap.swift` | Chicken gameplay (map, timer, power-ups) |
 | HunterMap | `HunterMap.swift` | Hunter gameplay (map, code entry, power-ups) |
 | ChickenConfig | `ChickenConfig.swift` | Chicken setup |
-| JoinFlow | `JoinFlow.swift` | Hunter join + registration flow |
+| JoinFlow | `JoinFlow.swift` | Hunter join (code → teamName → join). PP-52 adds a `validationCodeEntry` step when the resolved `Game.registrationBatchId != nil`, gating the join on a paid-registration code lookup. |
 | PlanSelection | `PlanSelection.swift` | Pricing plan picker |
 | Victory | `Victory.swift` | End game leaderboard |
 | Settings | `Settings.swift` | App settings |

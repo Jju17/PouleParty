@@ -47,6 +47,9 @@ fun JoinFlowBottomSheet(
     onJoinAsGameMasterTapped: () -> Unit = {},
     onGameMasterPasswordChanged: (String) -> Unit = {},
     onSubmitGameMasterPasswordTapped: () -> Unit = {},
+    onValidationCodeChanged: (String) -> Unit = {},
+    onSubmitValidationCodeTapped: () -> Unit = {},
+    onDeeplinkDismissed: () -> Unit = {},
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(
@@ -77,6 +80,32 @@ fun JoinFlowBottomSheet(
                     onPasswordChanged = onGameMasterPasswordChanged,
                     onSubmit = onSubmitGameMasterPasswordTapped,
                 )
+            }
+            is JoinFlowStep.ValidationCodeEntry, is JoinFlowStep.SubmittingValidationCode -> {
+                val game = (step as? JoinFlowStep.ValidationCodeEntry)?.game
+                    ?: (step as JoinFlowStep.SubmittingValidationCode).game
+                val isSubmitting = step is JoinFlowStep.SubmittingValidationCode
+                ValidationCodeContent(
+                    game = game,
+                    code = state.validationCodeInput,
+                    isValid = state.isValidationCodeValid,
+                    error = state.validationCodeError,
+                    isSubmitting = isSubmitting,
+                    onCodeChanged = onValidationCodeChanged,
+                    onSubmit = onSubmitValidationCodeTapped,
+                )
+            }
+            is JoinFlowStep.ResolvingDeeplink -> {
+                DeeplinkResolvingContent()
+            }
+            is JoinFlowStep.DeeplinkGameNotYetReady -> {
+                DeeplinkGameNotYetReadyContent(
+                    code = step.code,
+                    onDismiss = onDeeplinkDismissed,
+                )
+            }
+            JoinFlowStep.DeeplinkInvalidCode -> {
+                DeeplinkInvalidCodeContent(onDismiss = onDeeplinkDismissed)
             }
             else -> {
                 CodeEntryContent(
@@ -252,6 +281,218 @@ private fun GameMasterPasswordContent(
             }
         }
         Spacer(Modifier.height(20.dp))
+    }
+}
+
+// PP-52 — Deeplink resolution screens. Mirror iOS
+// `Features/JoinFlow/JoinFlow.swift` (`deeplinkResolvingView`,
+// `deeplinkGameNotYetReadyView`, `deeplinkInvalidCodeView`).
+
+@Composable
+private fun DeeplinkResolvingContent() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+        Text(
+            stringResource(R.string.deeplink_resolving_label),
+            fontFamily = GameBoyFont,
+            fontSize = 10.sp,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+        )
+    }
+}
+
+@Composable
+private fun DeeplinkGameNotYetReadyContent(
+    code: String,
+    onDismiss: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text("🐔", fontSize = 48.sp)
+        Text(
+            stringResource(R.string.deeplink_party_not_open_title),
+            fontFamily = GameBoyFont,
+            fontSize = 20.sp,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        Text(
+            stringResource(R.string.deeplink_party_not_open_body),
+            fontSize = 14.sp,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.75f),
+            modifier = Modifier.padding(horizontal = 16.dp)
+        )
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .padding(vertical = 8.dp)
+                .background(
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                    RoundedCornerShape(12.dp)
+                )
+                .padding(horizontal = 28.dp, vertical = 16.dp),
+        ) {
+            Text(
+                stringResource(R.string.deeplink_code_label),
+                fontFamily = GameBoyFont,
+                fontSize = 8.sp,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                code,
+                fontFamily = GameBoyFont,
+                fontSize = 22.sp,
+                color = MaterialTheme.colorScheme.error,
+                letterSpacing = 6.sp,
+            )
+        }
+        TextButton(
+            onClick = onDismiss,
+            modifier = Modifier
+                .background(GradientFire, RoundedCornerShape(50))
+                .padding(horizontal = 32.dp, vertical = 4.dp)
+        ) {
+            Text(
+                stringResource(R.string.deeplink_ok),
+                fontFamily = GameBoyFont,
+                fontSize = 18.sp,
+                color = Color.Black,
+            )
+        }
+        Spacer(Modifier.height(12.dp))
+    }
+}
+
+@Composable
+private fun DeeplinkInvalidCodeContent(onDismiss: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text("⚠️", fontSize = 48.sp)
+        Text(
+            stringResource(R.string.deeplink_invalid_code_title),
+            fontFamily = GameBoyFont,
+            fontSize = 20.sp,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        Text(
+            stringResource(R.string.deeplink_invalid_code_body),
+            fontSize = 14.sp,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.75f),
+            modifier = Modifier.padding(horizontal = 16.dp)
+        )
+        TextButton(
+            onClick = onDismiss,
+            modifier = Modifier
+                .background(GradientFire, RoundedCornerShape(50))
+                .padding(horizontal = 32.dp, vertical = 4.dp)
+        ) {
+            Text(
+                stringResource(R.string.deeplink_close),
+                fontFamily = GameBoyFont,
+                fontSize = 18.sp,
+                color = Color.Black,
+            )
+        }
+        Spacer(Modifier.height(12.dp))
+    }
+}
+
+// PP-52 — Validation code step shown between code resolution and the
+// teamName form when the resolved game has a non-null
+// `registrationBatchId`. Mirrors the iOS `validationCodeForm` in
+// `Features/JoinFlow/JoinFlow.swift`.
+@Composable
+private fun ValidationCodeContent(
+    game: Game,
+    code: String,
+    isValid: Boolean,
+    error: String?,
+    isSubmitting: Boolean,
+    onCodeChanged: (String) -> Unit,
+    onSubmit: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text(
+            stringResource(R.string.validation_code_title),
+            fontFamily = GameBoyFont,
+            fontSize = 22.sp,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        Text(
+            stringResource(R.string.validation_code_hint),
+            fontFamily = GameBoyFont,
+            fontSize = 10.sp,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+        )
+        OutlinedTextField(
+            value = code,
+            onValueChange = onCodeChanged,
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
+            modifier = Modifier.fillMaxWidth(0.7f),
+            placeholder = { Text("ABC123") },
+            enabled = !isSubmitting,
+        )
+        if (error != null) {
+            Text(
+                error,
+                fontFamily = GameBoyFont,
+                fontSize = 9.sp,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(horizontal = 8.dp),
+            )
+        }
+        TextButton(
+            onClick = onSubmit,
+            enabled = isValid && !isSubmitting,
+            modifier = Modifier
+                .background(
+                    if (isValid && !isSubmitting) GradientFire else SolidColor(Color.Gray.copy(alpha = 0.3f)),
+                    RoundedCornerShape(50)
+                )
+                .padding(horizontal = 24.dp, vertical = 4.dp)
+        ) {
+            if (isSubmitting) {
+                CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(20.dp))
+            } else {
+                Text(
+                    stringResource(R.string.submit),
+                    fontFamily = GameBoyFont,
+                    fontSize = 18.sp,
+                    color = Color.Black,
+                )
+            }
+        }
+        // Quiet reminder of which game the user is confirming.
+        Text(
+            stringResource(R.string.game_code_label, game.gameCode),
+            fontFamily = GameBoyFont,
+            fontSize = 9.sp,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+        )
+        Spacer(Modifier.height(12.dp))
     }
 }
 
