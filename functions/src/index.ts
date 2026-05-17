@@ -1,4 +1,4 @@
-import { cert, initializeApp } from "firebase-admin/app";
+import { initializeApp } from "firebase-admin/app";
 import { getFirestore, FieldValue, GeoPoint, Timestamp } from "firebase-admin/firestore";
 import { getFunctions } from "firebase-admin/functions";
 import { getMessaging } from "firebase-admin/messaging";
@@ -26,9 +26,25 @@ export {
 // it client-side.
 export { computeZoneConfiguration } from "./zoneCalculation";
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const serviceAccount = require("../service-account.json");
-initializeApp({ credential: cert(serviceAccount) });
+// Re-export the PP-52 event registration handlers (Stripe-backed web
+// inscription flow). The form posts to `createPendingRegistration`;
+// Stripe pings `confirmRegistrationPayment` once the checkout
+// session completes.
+export {
+  createPendingRegistration,
+  confirmRegistrationPayment,
+} from "./registrations";
+
+// Use Application Default Credentials so each deployed function
+// writes to the project it was deployed to. The previous hardcoded
+// `service-account.json` was always pointing at prod, which made
+// every staging-deployed function read/write prod Firestore. ADC
+// resolves to the compute service account of the host project
+// automatically — both staging (847523524308-compute@…) and prod
+// (1047338092854-compute@…) already have the Editor role they need.
+// The seedChallenges.ts script still uses the explicit SA file
+// (cross-project admin tooling, not deployed).
+initializeApp();
 
 const REGION = "europe-west1";
 const db = getFirestore();

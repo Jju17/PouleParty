@@ -1,12 +1,40 @@
 import type { ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useI18n } from "../i18n";
 import { useTheme } from "../theme";
+
+// Pages whose URL itself carries the locale (PP-46 CreateParty +
+// PP-52 Inscription/Success/Cancel). The header toggle navigates to
+// the matching slug instead of just flipping the i18n state — without
+// this, the page's own pathname-based `setLocale` useEffect would
+// snap the locale right back on the next render.
+type LocaleSlug = "fr" | "en" | "nl";
+
+const LOCALIZED_ROUTE_FAMILIES: Record<LocaleSlug, string>[] = [
+  // PP-46 — "create a party"
+  { fr: "/creer-une-partie", en: "/create-a-party", nl: "/een-feestje-organiseren" },
+  // PP-52 — inscription wizard (matches any sub-route like /success or /cancel)
+  { fr: "/inscription", en: "/registration", nl: "/inschrijving" },
+];
+
+function localizedPathFor(pathname: string, target: LocaleSlug): string | null {
+  for (const family of LOCALIZED_ROUTE_FAMILIES) {
+    for (const slug of Object.values(family)) {
+      if (pathname === slug || pathname.startsWith(`${slug}/`)) {
+        const tail = pathname.slice(slug.length); // "" or "/success" / "/cancel"
+        return family[target] + tail;
+      }
+    }
+  }
+  return null;
+}
 
 export default function Layout({ children }: { children: ReactNode }) {
   const { locale, t, setLocale } = useI18n();
   const { theme, toggleTheme } = useTheme();
   const isDark = theme === "dark";
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const footerLink = (to: string, label: string) => (
     <Link
@@ -41,8 +69,15 @@ export default function Layout({ children }: { children: ReactNode }) {
         <nav className="flex items-center gap-2">
           <button
             onClick={() => {
-              const next = locale === "en" ? "fr" : locale === "fr" ? "nl" : "en";
-              setLocale(next);
+              const next: LocaleSlug = locale === "en" ? "fr" : locale === "fr" ? "nl" : "en";
+              const swap = localizedPathFor(location.pathname, next);
+              if (swap) {
+                // Destination page's own `setLocale` useEffect will
+                // pin the locale once React Router lands there.
+                navigate({ pathname: swap, search: location.search }, { replace: true });
+              } else {
+                setLocale(next);
+              }
             }}
             className={`px-2.5 py-1.5 rounded-full border-2 text-xs font-bold transition-all duration-300 ${
               isDark

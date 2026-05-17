@@ -27,6 +27,24 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!-- PP-52 — App Link for /join?code=... deeplinks coming
+                 from the registration confirmation email. autoVerify
+                 makes Android query
+                 https://pouleparty.be/.well-known/assetlinks.json at
+                 install time to verify the package_name +
+                 sha256_cert_fingerprints listed there match the
+                 installed app, in which case the OS opens the link in
+                 the app instead of the browser. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="pouleparty.be"
+                    android:pathPrefix="/join" />
+            </intent-filter>
         </activity>
 
         <service

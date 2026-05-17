@@ -230,6 +230,27 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Event registrations (PP-52) — pre-paid registrations created from the
+    // public web form before any in-app Game exists. Top-level collection
+    // (deliberately separate from the per-game `/games/{gameId}/registrations`
+    // subcollection used by PP-90/PP-86 for in-app teamName + chicken
+    // designation). Each doc carries a `batchId` field; the admin-mode wizard
+    // sets `Game.registrationBatchId` to the same value to link a game to
+    // its batch.
+    //
+    // Writes are admin-SDK only: `createPendingRegistration` writes the doc
+    // with `paid: false`, the Stripe webhook `confirmRegistrationPayment`
+    // flips `paid: true` (both bypass these rules via admin SDK).
+    //
+    // Reads are open to any authenticated user. The validation code is the
+    // load-bearing gate — JoinFlow queries `where batchId == X && code == Y
+    // && paid == true`, and the 36^6 entropy of the 6-char alphanum code
+    // makes brute-force impractical for the ~50 valid codes per batch.
+    match /eventRegistrations/{registrationId} {
+      allow read: if request.auth != null;
+      allow create, update, delete: if false;
+    }
+
     // Player reports — created by authenticated users from the in-app "Report player"
     // button on leaderboards. Reads and mutations are admin-SDK-only so reporters can't
     // see each other's reports and reportees can't delete reports about them.

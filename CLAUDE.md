@@ -104,6 +104,7 @@ cd web && npm run dev
 ```
 /games/{gameId}
   ├── id, name, maxPlayers, gameMode, chickenCanSeeHunters, isAdminCreation
+  ├── registrationBatchId (PP-52, optional — links the game to a batch of pre-paid web registrations in `/eventRegistrations`; when set, JoinFlow gates the join on a validation code)
   ├── foundCode, hunterIds, gameMasterIds, status, winners, creatorId, chickenId, lastHeartbeat
   ├── timing: { start, end, headStartMinutes }
   ├── zone: { center, finalCenter, radius, shrinkIntervalMinutes, shrinkMetersPerUpdate, driftSeed }
@@ -111,13 +112,14 @@ cd web && npm run dev
   ├── /chickenLocations/latest     → Single doc, overwritten each position update
   ├── /hunterLocations/{hunterId}  → One doc per hunter, overwritten
   ├── /powerUps/{powerUpId}        → One doc per spawned power-up (collected/activated state)
-  ├── /registrations/{userId}      → One doc per in-app hunter (teamName, joinedAt). PP-90 dropped the registration-required gate — anyone can join at any time, but the subcollection is still written so the GameMaster can pick a chicken from the team-name list (PP-86). PP-52 will reuse this subcollection for external Typeform/Stripe registrations keyed by random `registrationId` instead of `userId`.
+  ├── /registrations/{userId}      → One doc per in-app hunter (teamName, joinedAt). PP-90 dropped the registration-required gate — anyone can join at any time, but the subcollection is still written so the GameMaster can pick a chicken from the team-name list (PP-86). Deliberately distinct from the top-level `/eventRegistrations` collection (PP-52, paying web registrations) — names overlap but namespaces and ownership are different.
   ├── /challengeCompletions/{hunterId} → One doc per hunter who has completed at least one challenge (completedChallengeIds, totalPoints, teamName)
   └── /private/{docId}             → Admin-SDK-only subcollection. Holds the `gameMasterPassword` (PP-23) and any future field that must never be client-readable. Rules: `read, write: if false`.
 
 /challenges/{challengeId}          → Global, dev-managed challenge catalog (title, body, points, lastUpdated)
 /users/{userId}                    → User profile (nickname, FCM token, platform, updatedAt)
 /reports/{reportId}                → Player reports (admin-only, in-app moderation)
+/eventRegistrations/{registrationId} → PP-52 pre-paid event registrations from the public web form. Top-level + decoupled from `/games` (web form runs before any in-app Game exists). One doc per inscription: `{batchId, playerName, teamName, email, phone, teamSize, code (6-char alphanum, unique within batch), paid, createdAt, paidAt, stripeSessionId, locale}`. Writes are admin-SDK only via `createPendingRegistration` + `confirmRegistrationPayment` Cloud Functions. Reads are open to any auth user — gating relies on the 36⁶ code entropy. Linked to a Game via `Game.registrationBatchId == batchId`.
 ```
 
 The `gameCode` is derived from the document ID (first 6 chars, uppercased).

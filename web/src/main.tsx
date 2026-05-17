@@ -11,6 +11,9 @@ import Support from "./pages/Support";
 import Terms from "./pages/Terms";
 import DeleteAccount from "./pages/DeleteAccount";
 import CreateParty from "./pages/CreateParty";
+import Inscription from "./pages/Inscription";
+import InscriptionSuccess from "./pages/InscriptionSuccess";
+import InscriptionCancel from "./pages/InscriptionCancel";
 
 const rootElement = document.getElementById("root");
 if (!rootElement) {
@@ -40,6 +43,24 @@ ReactDOM.createRoot(rootElement).render(
               <Route path="/creer-une-partie" element={<CreateParty />} />
               <Route path="/create-a-party" element={<CreateParty />} />
               <Route path="/een-feestje-organiseren" element={<CreateParty />} />
+              {/* PP-52: pre-paid event registration flow. Three
+                  parallel slugs per locale (same convention as
+                  PP-46's "create a party" page). The Inscription
+                  components read the pathname to pin the locale on
+                  mount; the visitor can still flip languages via the
+                  header toggle if they want. Stripe `success_url` /
+                  `cancel_url` are constructed by the CF using
+                  `payload.locale` so the redirect lands on the right
+                  slug. */}
+              <Route path="/inscription" element={<Inscription />} />
+              <Route path="/inscription/success" element={<InscriptionSuccess />} />
+              <Route path="/inscription/cancel" element={<InscriptionCancel />} />
+              <Route path="/registration" element={<Inscription />} />
+              <Route path="/registration/success" element={<InscriptionSuccess />} />
+              <Route path="/registration/cancel" element={<InscriptionCancel />} />
+              <Route path="/inschrijving" element={<Inscription />} />
+              <Route path="/inschrijving/success" element={<InscriptionSuccess />} />
+              <Route path="/inschrijving/cancel" element={<InscriptionCancel />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </BrowserRouter>

@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "dev.rahier.pouleparty2",
+      "sha256_cert_fingerprints": [
+        "32:95:09:C4:20:90:6A:B2:6B:CB:F4:E3:D8:25:4B:17:36:50:0A:2B:4B:C6:B8:23:A0:3C:4A:98:99:BC:29:DF"
+      ]
+    }
+  }
+]

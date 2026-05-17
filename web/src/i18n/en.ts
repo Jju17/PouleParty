@@ -159,6 +159,68 @@ export default {
   footer: {
     rights: "All rights reserved.",
   },
+  inscription: {
+    intro: {
+      eyebrow: "Real-life GPS hide-and-seek",
+      title: "Join\nthe hunt!",
+      body: [
+        "A Chicken in costume hides somewhere in Ixelles.",
+        "Your team has to track them down.",
+        "The zone shrinks. The pressure rises. Dirty tricks allowed. 😈",
+      ],
+      priceLine: "€12 / player · Teams of 3 to 5 · Sat. June 6 · 8:30 PM",
+      cta: "SIGN UP →",
+    },
+    form: {
+      title: "Your team",
+      subtitle: "Captain's contact info.",
+      playerNameLabel: "First & Last name",
+      playerNamePlaceholder: "Jane Smith",
+      teamNameLabel: "Team name",
+      teamNamePlaceholder: "The Hunters",
+      emailLabel: "Email",
+      emailPlaceholder: "jane@mail.com",
+      phoneLabel: "Phone",
+      phonePlaceholder: "+32 470 ...",
+      teamSizeLabel: "Team size",
+      teamSizeUnit: "PLAYERS",
+      back: "← BACK",
+      next: "RECAP →",
+    },
+    recap: {
+      title: "All good?",
+      subtitle: "Check before paying.",
+      captain: "Captain",
+      team: "Team",
+      email: "Email",
+      phone: "Phone",
+      players: "Players",
+      total: "TOTAL",
+      note: "€12 / player · 1 free drink at the starting bar · wristband at the final spot",
+      paymentSecure: "Secure payment via Stripe (Card · Apple Pay · Google Pay)",
+      back: "← EDIT",
+      // Template: replace {total} with the number — e.g. "PAY 36 € 🔒".
+      payButtonTemplate: "PAY {total} € 🔒",
+      redirecting: "REDIRECTING…",
+      defaultError: "Couldn't start the payment. Try again or write to julien@rahier.dev.",
+    },
+    fatalError: {
+      title: "Invalid registration link",
+      body: "This link doesn't carry an event reference. Go back to the original message or contact us at julien@rahier.dev.",
+    },
+    success: {
+      title: "Registration\nconfirmed!",
+      line1: "Can't wait to see you at Poule Party #1!",
+      line2: "You'll receive an email with your validation code and all the day-of details.",
+      spamHint: "No email after a few minutes? Check your spam or write to",
+      cluck: "CLUCK CLUCK 🐔",
+    },
+    cancel: {
+      title: "Payment\ncancelled",
+      body: "You weren't charged. Feel free to retry whenever.",
+      retryButton: "RESUME REGISTRATION",
+    },
+  },
   deleteAccount: {
     title: "Delete your Poule Party account",
     intro:
