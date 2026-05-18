@@ -106,24 +106,39 @@ Plus tientallen stabiliteitsfixes : betrouwbaarder achtergrond-volgen wanneer de
 **Mandatory paste for 1.13.0** — this release touches background location (`NSLocationAlwaysAndWhenInUseUsageDescription`), adds App Attest, and ships a new privacy manifest. App Review runs a 3-minute sandbox session — they need a path to reach the Always-location prompt to validate it.
 
 ```
-Test account: no sign-in required. PouleParty uses anonymous Firebase Auth — a UID is generated on first launch and persists across launches.
+Test account: no sign-in required. PouleParty uses anonymous Firebase Auth, a UID is generated on first launch and persists across launches.
 
-Reaching the background-location prompt:
+REACHING THE BACKGROUND-LOCATION PROMPT
 1. Launch the app, complete the onboarding (any nickname).
 2. On Home, tap "Create a game".
 3. In the wizard: pick "Follow the Chicken" mode, set Duration = 5 min, Head start = 1 min.
 4. Place the start zone pin anywhere on the map (Brussels by default).
-5. Tap "Start". The system "Always Allow" location prompt appears here — this is the prompt our NSLocationAlwaysAndWhenInUseUsageDescription justifies. The Chicken's GPS is then shared with Hunters in the same session for the duration of the game. Background tracking stops automatically when the game ends (status flips to "done", LocationClient.stopTracking() is called).
+5. Tap "Start". The system "Always Allow" location prompt appears here. This is the prompt our NSLocationAlwaysAndWhenInUseUsageDescription justifies. The Chicken's GPS is then shared with Hunters in the same session for the duration of the game. Background tracking stops automatically when the game ends (status flips to "done", LocationClient.stopTracking() is called).
 
-Push notifications: uses Firebase Cloud Messaging for zone-shrink + start-game pings. No content is collected from the user via push.
+PUSH NOTIFICATIONS
+Uses Firebase Cloud Messaging for zone-shrink + start-game pings. No content is collected from the user via push.
 
-App Check: ships Firebase App Check with App Attest (release builds) and Debug provider (debug builds). App Attest is a privacy-preserving anti-fraud signal — no PII.
+APP CHECK
+Ships Firebase App Check with App Attest (release builds) and Debug provider (debug builds). App Attest is a privacy-preserving anti-fraud signal, no PII collected.
 
-Account deletion: Settings → "Delete Account". Deletes the anonymous Firebase Auth account + the user's profile document. Past games keep the team name used for them, explained in Settings and the Privacy Policy.
+ACCOUNT DELETION
+Settings tab, "Delete Account" button. Deletes the anonymous Firebase Auth account + the user's profile document. Past games keep the team name used for them, explained in Settings and the Privacy Policy.
 
-Stripe: the in-app experience is free. We sell tickets for an occasional in-person event on the public web at pouleparty.be/registration (charged via Stripe Checkout, processed entirely outside the app). Falls under Guideline 3.1.3(b) (physical event tickets sold outside the app) — no IAP applies.
+ADMIN MODE (preempting a question)
+On the Home screen there is a small "Admin mode" entry point. Tapping it asks for a 4-character code. This is NOT an in-app purchase or a paywall. The code is hardcoded in the binary (constant `AdminCode.value` in `Models/AdminCode.swift`), publicly known to the reviewer below (`jujurahier`), and only unlocks a wizard variant that lifts the player-count slider from 5 to 500. The use case is corporate events / festivals where organizers run larger games. No payment, no PII, no server check, no real authentication. The default 5-player cap is what the App Store screenshots show and what 99% of users will ever see. Including this shortcut in the binary keeps the marketing flow uncluttered while still letting power-organizers run big games. The flag (`isAdminCreation`) is written to the Game doc and enforced server-side by a Firestore rules clause: `maxPlayers <= 5 || (isAdminCreation == true && maxPlayers <= 500)`.
 
-Encryption: only Apple-standard HTTPS / Firebase TLS; ITSAppUsesNonExemptEncryption = false in Info.plist.
+PAID EVENT TICKETS (preempting a Guideline 3.1.1 question)
+The in-app experience is 100% free, end-to-end. There is no IAP, no SKAdNetwork, no advertising, no subscription, no paywall, no upsell. PouleParty also organizes occasional real-world events (in-person hide-and-seek games in Brussels). Tickets for those events are sold on our public website at https://pouleparty.be/inscription (12 EUR per player, charged via Stripe Checkout, processed entirely outside the app). This falls under Guideline 3.1.3(e) "Goods and Services Outside of the App" (real-world experiences such as concerts and sporting events). The app NEVER:
+- displays a "Buy tickets" button or any in-app link to the inscription page,
+- mentions the price of the event,
+- promotes the event purchase flow.
+After someone has paid on the web, they receive a confirmation email with a Universal Link (`https://pouleparty.be/join?code=ABCDEF`). Tapping the link opens the app, which uses the code only to validate they paid for that specific physical event. The app itself does not collect any payment or facilitate any purchase. The reviewer can verify by:
+1. Inspecting the app binary: no Stripe SDK, no PaymentSheet, no Apple Pay, no merchant ID entitlement (all removed in 1.12.0).
+2. Browsing every screen: nothing offers a purchase. The only outbound web links are Privacy Policy and Terms (Settings) and a "Want to create a party?" landing page (Home, free product info, no checkout).
+3. Reading the Privacy Policy + Terms on pouleparty.be: the Stripe / Resend / Sheets disclosures only describe what happens for buyers of the web-sold event ticket, never anyone using the iOS app on its own.
+
+ENCRYPTION
+Only Apple-standard HTTPS / Firebase TLS; `ITSAppUsesNonExemptEncryption = false` in Info.plist.
 ```
 
 ---
