@@ -57,7 +57,6 @@ class MainActivity : ComponentActivity() {
         val path = data.path ?: return
         if (path != "/join" && !path.startsWith("/join/")) return
         val code = data.getQueryParameter("code") ?: return
-        android.util.Log.d("PP-52-Deeplink", "[MainActivity] parsed code=$code")
         DeeplinkBus.postValidationCode(code)
     }
 }

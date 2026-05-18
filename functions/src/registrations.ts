@@ -670,6 +670,90 @@ export const confirmRegistrationPayment = onRequest(
 // discriminated `{type, gameId, batchId}` payload), never PII.
 // ---------------------------------------------------------------------------
 
+// XPLAT-M6 (store-audit 2026-05-18) — per-UID rate limit on the two
+// validation callables. Threat model: brute-forcing a 6-char alphanum
+// code (32^6 ≈ 1 B combinations, ~50 valid codes per batch → 1 hit
+// every ~20 M attempts). The legitimate JoinFlow makes 1 call per
+// submit click, so 10 attempts inside a 10 min sliding window covers
+// any plausible typo retry while keeping a 60-min lockout in reserve.
+// Anonymous Auth UIDs are device-bound (one UID per fresh install) so
+// this is effectively per-device. Doc lives in `/validationRateLimits/{uid}`,
+// admin-SDK-only by firestore.rules.
+const VALIDATION_RATE_LIMIT_MAX = 10;
+const VALIDATION_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+const VALIDATION_RATE_LIMIT_LOCK_MS = 60 * 60 * 1000;
+
+interface ValidationRateLimit {
+  attempts: number;
+  firstAttemptAt: Timestamp;
+  lockedUntil: Timestamp | null;
+}
+
+function validationRateLimitRef(uid: string) {
+  return db().collection("validationRateLimits").doc(uid);
+}
+
+/**
+ * Single-transaction bump-and-check : reads the rate-limit doc, applies
+ * sliding-window / lockout-expiry resets, increments the counter, then
+ * either writes the new state or throws `resource-exhausted` if this
+ * call pushes the user over the limit. Throws BEFORE the actual lookup
+ * runs so brute-force attempts can't even reach the Firestore query.
+ *
+ * Failures and successes both count — a legit user retrying after a
+ * typo is fine within the 10/10min budget, while an attacker hammering
+ * the endpoint hits the wall on the same counter.
+ */
+async function bumpValidationRateLimit(uid: string): Promise<void> {
+  await db().runTransaction(async (tx) => {
+    const ref = validationRateLimitRef(uid);
+    const snap = await tx.get(ref);
+    const now = Timestamp.now();
+    let rl: ValidationRateLimit = (snap.data() as ValidationRateLimit) ?? {
+      attempts: 0,
+      firstAttemptAt: now,
+      lockedUntil: null,
+    };
+
+    // Auto-clear an expired lockout so the user can resume after waiting.
+    if (rl.lockedUntil && rl.lockedUntil.toMillis() <= now.toMillis()) {
+      rl = { attempts: 0, firstAttemptAt: now, lockedUntil: null };
+    }
+    if (rl.lockedUntil) {
+      throw new HttpsError("resource-exhausted", "Too many validation attempts", {
+        lockedUntil: rl.lockedUntil.toMillis(),
+      });
+    }
+
+    // Sliding-window reset : if the first attempt fell outside the
+    // window, start fresh from this call.
+    if (
+      now.toMillis() - rl.firstAttemptAt.toMillis() >
+      VALIDATION_RATE_LIMIT_WINDOW_MS
+    ) {
+      rl = { attempts: 0, firstAttemptAt: now, lockedUntil: null };
+    }
+
+    const attempts = rl.attempts + 1;
+    const reachedLock = attempts >= VALIDATION_RATE_LIMIT_MAX;
+    const lockedUntil = reachedLock
+      ? Timestamp.fromMillis(now.toMillis() + VALIDATION_RATE_LIMIT_LOCK_MS)
+      : null;
+    tx.set(ref, {
+      attempts,
+      firstAttemptAt: rl.firstAttemptAt,
+      lockedUntil,
+    } satisfies ValidationRateLimit);
+
+    if (reachedLock) {
+      throw new HttpsError("resource-exhausted", "Too many validation attempts", {
+        lockedUntil: lockedUntil!.toMillis(),
+      });
+    }
+  });
+}
+// ---------------------------------------------------------------------------
+
 interface ValidateRegistrationCodeInput {
   batchId?: string;
   code?: string;
@@ -710,6 +794,12 @@ export const validateRegistrationCode = onCall<
   const code = normalizeCode(request.data?.code);
   if (!batchId || !code) return { valid: false };
 
+  // XPLAT-M6 (store-audit 2026-05-18): throws `resource-exhausted` if
+  // this UID has exceeded the per-window budget. Runs BEFORE the
+  // Firestore lookup so a brute-force loop hits the wall without ever
+  // touching `/eventRegistrations`.
+  await bumpValidationRateLimit(request.auth.uid);
+
   const snap = await db()
     .collection(COLLECTION)
     .where("batchId", "==", batchId)
@@ -741,6 +831,10 @@ export const lookupGameByValidationCode = onCall<
   }
   const code = normalizeCode(request.data?.code);
   if (!code) return { type: "invalidCode" };
+
+  // XPLAT-M6 (store-audit 2026-05-18): shared rate-limit across both
+  // validation callables — see `bumpValidationRateLimit` above.
+  await bumpValidationRateLimit(request.auth.uid);
 
   const regSnap = await db()
     .collection(COLLECTION)

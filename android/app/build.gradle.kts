@@ -17,6 +17,15 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
+    // AND-M3 (store-audit 2026-05-18): namespace (Kotlin package root)
+    // intentionally diverges from `applicationId` (Play Store package
+    // identifier). The original Play Store listing was first created
+    // under `dev.rahier.pouleparty`, then archived; Play Store package
+    // names are permanent so we bumped to `…pouleparty2` for the new
+    // listing. The Kotlin/Java code keeps the original namespace to
+    // avoid a sweeping rename — they are decoupled by design. Do NOT
+    // try to "align" these unless we're prepared to ship a brand-new
+    // listing (which would lose the Play Store reviews).
     namespace = "dev.rahier.pouleparty"
     compileSdk = 35
 
@@ -80,6 +89,24 @@ android {
 
     testOptions {
         unitTests.isReturnDefaultValues = true
+    }
+
+    // AND-M7 (store-audit 2026-05-18): 16 KB page-size alignment for
+    // native libraries. Required by Google Play for uploads targeting
+    // API 35+ starting 2026-05-31 (Android 15 devices ship with a 16 KB
+    // kernel page size). AGP 9.x defaults `useLegacyPackaging = false`
+    // for targetSdk >= 35 but pinning it explicitly survives any future
+    // AGP default flip. Mapbox already ships via the `ndk27` artifacts
+    // which are pre-aligned (see dependencies block).
+    //
+    // Verify the produced AAB with :
+    //   unzip -p app-production-release.aab base/lib/arm64-v8a/<lib>.so \
+    //     | objdump -p - | grep LOAD
+    // → every LOAD segment must have align = 0x4000 (16 KB).
+    packaging {
+        jniLibs {
+            useLegacyPackaging = false
+        }
     }
 }
 

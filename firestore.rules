@@ -253,6 +253,14 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Validation-code rate-limit counters (XPLAT-M6, store-audit 2026-05-18).
+    // One doc per UID, written exclusively by `validateRegistrationCode` /
+    // `lookupGameByValidationCode` (admin SDK). Same lock-down as
+    // `gmRateLimits` — clients can't probe the lock or reset their counter.
+    match /validationRateLimits/{uid} {
+      allow read, write: if false;
+    }
+
     // Event registrations (PP-52) — pre-paid registrations created from the
     // public web form before any in-app Game exists. Top-level collection
     // (deliberately separate from the per-game `/games/{gameId}/registrations`

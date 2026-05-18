@@ -7,6 +7,12 @@
 	<key>com.apple.developer.associated-domains</key>
 	<array>
 		<string>applinks:pouleparty.be</string>
+		<!-- XPLAT-M3 (store-audit 2026-05-18): staging hostname so the
+		     Universal Link flow can be QA'd against the staging Firebase
+		     project before flipping production. The AASA file at
+		     `pouleparty-ba586.web.app/.well-known/apple-app-site-association`
+		     is shipped by the same `firebase deploy --only hosting` runs. -->
+		<string>applinks:pouleparty-ba586.web.app</string>
 	</array>
 	<!-- iOS-H4 (store-audit 2026-05-18): App Attest. The Firebase
 	     App Check `AppAttestProvider` requires this entitlement to be

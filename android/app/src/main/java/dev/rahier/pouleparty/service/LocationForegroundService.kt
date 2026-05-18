@@ -69,7 +69,13 @@ class LocationForegroundService : Service() {
 
     companion object {
         const val CHANNEL_ID = "location_tracking"
-        private const val NOTIFICATION_ID = 42
+        // AND-M8 (store-audit 2026-05-18): bumped from 42 to a high
+        // value to avoid colliding with FCM notification IDs minted by
+        // `PouleFCMService` (which auto-increments from a low counter).
+        // A collision would let an FCM notification overwrite (or be
+        // overwritten by) the foreground-service notification, breaking
+        // the location service's "ongoing" badge.
+        private const val NOTIFICATION_ID = 1_000_001
 
         fun start(context: Context) {
             val intent = Intent(context, LocationForegroundService::class.java)

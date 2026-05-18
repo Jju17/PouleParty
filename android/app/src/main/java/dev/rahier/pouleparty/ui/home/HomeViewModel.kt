@@ -553,7 +553,6 @@ class HomeViewModel @Inject constructor(
         val tag = "PP-52-Deeplink"
         val normalized = code.trim().uppercase()
         if (normalized.isEmpty()) return
-        Log.d(tag, "[HomeViewModel] lookup starting for code=$normalized")
         _uiState.update {
             it.copy(
                 validationCodeInput = normalized,
@@ -567,7 +566,6 @@ class HomeViewModel @Inject constructor(
                 val result = firestoreRepository.lookupGameByValidationCode(normalized)
                 when (result) {
                     is FirestoreRepository.ValidationCodeLookupResult.GameReady -> {
-                        Log.d(tag, "[HomeViewModel] lookup result: gameReady id=${result.game.id}")
                         // Validation done server-side by the lookup —
                         // skip the manual validationCodeEntry step and
                         // drop the user straight on the teamName form.
@@ -580,13 +578,11 @@ class HomeViewModel @Inject constructor(
                         }
                     }
                     is FirestoreRepository.ValidationCodeLookupResult.GameNotYetCreated -> {
-                        Log.d(tag, "[HomeViewModel] lookup result: gameNotYetCreated batchId=${result.batchId}")
                         _uiState.update {
                             it.copy(joinStep = JoinFlowStep.DeeplinkGameNotYetReady(normalized))
                         }
                     }
                     FirestoreRepository.ValidationCodeLookupResult.InvalidCode -> {
-                        Log.d(tag, "[HomeViewModel] lookup result: invalidCode")
                         _uiState.update {
                             it.copy(joinStep = JoinFlowStep.DeeplinkInvalidCode)
                         }

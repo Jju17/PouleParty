@@ -80,9 +80,12 @@
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="game_events" />
+        <!-- AND-L2 (store-audit 2026-05-18): monochrome silhouette so the
+             status bar shows a recognizable glyph instead of a white square.
+             See `res/drawable/ic_notification.xml`. -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"
-            android:resource="@mipmap/ic_launcher" />
+            android:resource="@drawable/ic_notification" />
     </application>
 
 </manifest>

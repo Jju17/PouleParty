@@ -13,7 +13,26 @@
 -keep class dev.rahier.pouleparty.powerups.model.** { *; }
 
 # ── Firebase ──
--keep class com.google.firebase.** { *; }
+# AND-L4 (store-audit 2026-05-18): narrowed from the catch-all
+# `com.google.firebase.**` to the specific submodules we actually import
+# (grepped from `com.google.firebase.*` imports under /java). The Firebase
+# SDK ships its own consumer ProGuard rules per module — keeping a narrow
+# list here is a defense-in-depth for the data classes we hand to
+# `DocumentSnapshot.toObject` and the callable response payloads that
+# Firestore/Functions deserialize via reflection. If a new Firebase
+# module is added, append its package here.
+-keep class com.google.firebase.firestore.** { *; }
+-keep class com.google.firebase.auth.** { *; }
+-keep class com.google.firebase.analytics.** { *; }
+-keep class com.google.firebase.messaging.** { *; }
+-keep class com.google.firebase.functions.** { *; }
+-keep class com.google.firebase.appcheck.** { *; }
+-keep class com.google.firebase.crashlytics.** { *; }
+-keep class com.google.firebase.FirebaseApp { *; }
+-keep class com.google.firebase.Timestamp { *; }
+# Keep the broad `dontwarn` — Firebase internals chain to optional deps
+# (gms-tasks, datastore protos, etc.) and a narrow list leaves R8 chasing
+# missing classes on unrelated build paths.
 -dontwarn com.google.firebase.**
 -keepattributes Signature
 -keepattributes *Annotation*
