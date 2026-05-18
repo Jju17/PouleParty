@@ -1,3 +1,162 @@
+# Store Listing — evergreen copy
+
+> ⚠️ **Section globale, partagée par toutes les releases.** Mettre à jour ici uniquement quand la proposition produit change (nouveau rôle clé, nouveau modèle de prix, nouveau positionnement). Editable sur ASC + Play Console **sans nouvelle soumission**, donc rotation libre. Chaque section "Release X.Y.Z" plus bas pointe ici par défaut.
+
+## 📱 App Store Connect — field "Promotional Text"
+
+Limite **170 caractères par locale**. Verifier avec `python3 -c "print(len('...'))"` avant collage.
+
+**English (U.S.)** · 154 chars
+
+```
+Real-world GPS hide-and-seek. One Chicken hides, the rest chase inside a shrinking zone. Power-ups, a 6-char code to share, play with your squad outdoors.
+```
+
+**French** · 157 chars
+
+```
+Cache-cache GPS dans la vraie vie. Une Poule se cache, les autres la chassent dans une zone qui rétrécit. Power-ups, code à 6 caractères, entre potes dehors.
+```
+
+**Dutch** · 158 chars
+
+```
+GPS-verstoppertje in het echte leven. Eén Kip verstopt zich, Jagers zoeken in een krimpende zone op de kaart. Power-ups, 6-cijferige code, buiten met je crew.
+```
+
+## 🤖 Google Play Console — field "Short description"
+
+Limite **80 caractères par locale**. Tags multi-locale dans le même champ comme pour les release notes.
+
+```
+<en-US>Real-world GPS hide-and-seek. The Chicken hides, the Hunters chase. Outdoors.</en-US>
+<fr-FR>Cache-cache GPS dans la vraie vie. La Poule se cache, les chasseurs chassent.</fr-FR>
+<nl-NL>GPS-verstoppertje in het echte leven. De Kip verstopt zich, de Jagers zoeken.</nl-NL>
+```
+
+## 📱 App Store Connect — field "Description" + 🤖 Google Play Console — field "Full description"
+
+Limite **4000 caractères par locale** sur ASC, **4000 sur Play**. Plain text, même contenu pour les deux stores (Play accepte un peu de markdown light mais on garde plain pour la parité).
+
+**English (U.S.)**
+
+```
+PouleParty turns the city into your playground.
+
+Real-world hide-and-seek with GPS. One player is the Chicken. The rest are Hunters. The Chicken hides somewhere inside a circle on a real map. The circle shrinks. The Hunters chase. The first Hunter to physically find the Chicken and enter their 4-digit code wins.
+
+WHAT MAKES POULEPARTY DIFFERENT
+- Play outdoors with real movement, not virtual joysticks
+- Live GPS, real maps, real streets
+- 3 to 5 players by default, up to 500 for organized events
+- One free 6-character game code, share it with anyone
+- No account, no signup, no email. Open the app and play.
+
+TWO GAME MODES
+Follow the Chicken: the zone follows the Chicken in real time. Hunters see roughly where they are. The Chicken has to keep moving.
+Stay in the Zone: a fixed circle that shrinks unpredictably. No live position sharing. Pure stealth.
+
+A REFEREE IF YOU WANT ONE
+Add a GameMaster: a non-player who watches the whole game from a dedicated observer map. Perfect for tournaments, corporate retreats, or just when you want a neutral observer who can swap the Chicken before kickoff.
+
+POWER-UPS
+Hunters get Zone Preview (see where the zone will shrink next) and Radar Ping (reveal the Chicken once). The Chicken can drop a Decoy, freeze the zone, jam the Hunters' GPS, or go invisible. Six power-ups, four roles, plenty of tactics.
+
+WHO IT'S FOR
+- Friends planning an active afternoon
+- Coworkers organizing a team event
+- Festival organizers running custom games
+- Anyone tired of indoor games and wanting to move
+
+WHERE IT WORKS
+Anywhere your phone has GPS. Cities are most fun (cover, alleys, parks), but it works in suburbs, forests, on beaches.
+
+100% FREE
+The app is free. Always. No ads. No paywalls. No subscriptions. No in-app purchases. We sometimes organize real-world events with paid tickets sold on our public website, but those are completely optional and have nothing to do with the in-app experience.
+
+Made in Brussels with way too much chicken-themed energy.
+```
+
+**French**
+
+```
+PouleParty transforme la ville en terrain de jeu.
+
+Cache-cache GPS dans la vraie vie. Un joueur est la Poule. Les autres sont les chasseurs. La Poule se cache quelque part dans un cercle sur une vraie carte. Le cercle rétrécit. Les chasseurs traquent. Le premier chasseur qui trouve physiquement la Poule et tape son code à 4 chiffres gagne.
+
+CE QUI FAIT LA DIFFÉRENCE
+- Joue dehors avec ton corps, pas avec un joystick virtuel
+- GPS en direct, vraies cartes, vraies rues
+- 3 à 5 joueurs par défaut, jusqu'à 500 pour les événements organisés
+- Un code de partie à 6 caractères gratuit, partage-le avec n'importe qui
+- Pas de compte, pas d'inscription, pas d'email. Ouvre l'app et joue.
+
+DEUX MODES DE JEU
+Suivre la Poule : la zone suit la Poule en temps réel. Les chasseurs voient à peu près où elle est. La Poule doit continuer à bouger.
+Rester dans la zone : un cercle fixe qui rétrécit de manière imprévisible. Pas de partage de position. Pure infiltration.
+
+UN ARBITRE SI TU VEUX
+Ajoute un GameMaster : un non-joueur qui observe toute la partie depuis une carte dédiée. Parfait pour les tournois, les événements d'entreprise, ou quand tu veux un observateur neutre qui peut désigner la Poule avant le départ.
+
+POWER-UPS
+Les chasseurs ont Aperçu de zone (voir où la zone va rétrécir) et Radar Ping (révéler la Poule une fois). La Poule peut poser un leurre, geler la zone, brouiller le GPS des chasseurs, ou devenir invisible. Six power-ups, quatre rôles, plein de tactiques.
+
+POUR QUI
+- Des potes qui veulent un après-midi actif
+- Des collègues qui organisent un team event
+- Des organisateurs de festival qui veulent un jeu sur mesure
+- Tout le monde qui en a marre des jeux d'intérieur et veut bouger
+
+OÙ ÇA MARCHE
+Partout où ton téléphone a du GPS. Les villes sont les plus fun (couverts, ruelles, parcs), mais ça marche en banlieue, en forêt, à la plage.
+
+100% GRATUIT
+L'app est gratuite. Toujours. Pas de pub. Pas de paywall. Pas d'abonnement. Pas d'achat intégré. On organise parfois des événements physiques avec des billets payants vendus sur notre site public, mais c'est complètement optionnel et ça n'a rien à voir avec l'expérience in-app.
+
+Fait à Bruxelles avec beaucoup trop d'énergie thématique poulet.
+```
+
+**Dutch**
+
+```
+PouleParty maakt van de stad jouw speelterrein.
+
+GPS-verstoppertje in het echte leven. Eén speler is de Kip. De rest zijn Jagers. De Kip verstopt zich ergens in een cirkel op een echte kaart. De cirkel krimpt. De Jagers zoeken. De eerste Jager die de Kip fysiek vindt en haar 4-cijferige code intikt, wint.
+
+WAT POULEPARTY UNIEK MAAKT
+- Speel buiten met je lichaam, niet met een virtuele joystick
+- Live GPS, echte kaarten, echte straten
+- 3 tot 5 spelers standaard, tot 500 voor georganiseerde events
+- Eén gratis 6-cijferige spelcode, deel hem met iedereen
+- Geen account, geen registratie, geen e-mail. Open de app en speel.
+
+TWEE SPELMODI
+Follow the Chicken : de zone volgt de Kip in real time. Jagers zien ongeveer waar ze is. De Kip moet blijven bewegen.
+Stay in the Zone : een vaste cirkel die onvoorspelbaar krimpt. Geen positie-deling. Pure stealth.
+
+EEN SCHEIDSRECHTER ALS JE WILT
+Voeg een GameMaster toe : een niet-speler die het hele spel volgt vanaf een speciale observatiekaart. Perfect voor toernooien, bedrijfsevents, of als je gewoon een neutrale waarnemer wilt die de Kip kan wisselen voor de start.
+
+POWER-UPS
+Jagers krijgen Zone Preview (zien waar de zone gaat krimpen) en Radar Ping (de Kip één keer onthullen). De Kip kan een Decoy droppen, de zone bevriezen, de GPS van Jagers verstoren, of onzichtbaar worden. Zes power-ups, vier rollen, volop tactieken.
+
+VOOR WIE
+- Vrienden die een actieve middag willen
+- Collega's die een team event organiseren
+- Festivalorganisatoren die een spel op maat willen
+- Iedereen die genoeg heeft van indoor spelletjes en wil bewegen
+
+WAAR HET WERKT
+Overal waar je telefoon GPS heeft. Steden zijn het leukst (dekking, steegjes, parken), maar het werkt in voorsteden, bossen, op stranden.
+
+100% GRATIS
+De app is gratis. Altijd. Geen reclame. Geen paywalls. Geen abonnementen. Geen in-app aankopen. We organiseren soms fysieke events met betaalde tickets verkocht op onze publieke website, maar dat is volledig optioneel en heeft niets te maken met de in-app ervaring.
+
+Gemaakt in Brussel met veel te veel kip-thema energie.
+```
+
+---
+
 # Release 1.13.0
 
 > ⚠️ **Do not paste this "Summary" paragraph into any store field.** Only the blocks explicitly labelled **App Store Connect**, **Google Play Console**, or **App Review Notes** below are store-safe.
@@ -98,6 +257,8 @@ Plus tientallen stabiliteitsfixes : betrouwbaarder achtergrond-volgen wanneer de
 <fr-FR>Nouveau rôle GameMaster : un arbitre peut rejoindre la partie pour observer sans jouer, et échanger la Poule avant le début. Config de zone simplifiée avec Petit/Moyen/Grand et bouton Shuffle. La Poule perd 1 point toutes les 5s hors de la zone. Power-ups simplifiés : 2 actifs par défaut. Leaderboard à un tap. N'importe qui peut rejoindre avec le code, plus d'inscription préalable. D-Day 6 juin : billets sur pouleparty.be.</fr-FR>
 <nl-NL>Nieuwe GameMaster-rol : een scheidsrechter kan meekijken zonder mee te spelen en de Kip wisselen vóór de start. Eenvoudigere zone-setup met Klein/Gemiddeld/Groot en een Shuffle-knop. De Kip verliest 1 punt per 5s buiten de zone. Power-ups vereenvoudigd : 2 standaard actief. Leaderboard één tik weg. Iedereen met de spelcode kan meedoen, geen registratie meer. D-Day 6 juni : tickets op pouleparty.be.</nl-NL>
 ```
+
+> **Promotional Text + Description**: voir la **section globale** en haut du fichier ("Store Listing — evergreen copy"). Pas d'update pour 1.13.0 sauf changement de proposition produit.
 
 ---
 
