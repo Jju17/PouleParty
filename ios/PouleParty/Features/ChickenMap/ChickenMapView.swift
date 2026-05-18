@@ -12,6 +12,11 @@ struct ChickenMapView: View {
     /// PP-18: manual leaderboard CTA — sheet stays closed by default
     /// even at gameOver so the chicken keeps watching the map.
     @State private var showLeaderboard: Bool = false
+    /// HIGH-11 (audit 2026-05-17): mirror of HunterMapView. iOS may
+    /// suspend the background writer loop; on resume we push one fresh
+    /// `chickenLocations/latest` write so hunters don't see a stale
+    /// chicken marker.
+    @Environment(\.scenePhase) private var scenePhase
 
     private var subtitle: String {
         if store.game.chickenCanSeeHunters {
@@ -50,6 +55,11 @@ struct ChickenMapView: View {
             .task {
                 store.send(.view(.gameInitialized))
                 store.send(.view(.onTask))
+            }
+            .onChange(of: scenePhase) { _, newPhase in
+                if newPhase == .active {
+                    store.send(.view(.appBecameActive))
+                }
             }
             .idleTimerDisabled()
             .mapHaptics(store.state)

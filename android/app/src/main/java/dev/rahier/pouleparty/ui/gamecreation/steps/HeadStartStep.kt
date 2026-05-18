@@ -7,7 +7,9 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.ui.gamecreation.StepContainer
 import dev.rahier.pouleparty.ui.theme.CROrange
 import dev.rahier.pouleparty.ui.theme.bangerStyle
@@ -19,8 +21,8 @@ fun HeadStartStep(
     onHeadStartChanged: (Double) -> Unit
 ) {
     StepContainer(
-        title = "Avance de la poule ?",
-        subtitle = "Temps avant que les chasseurs ne commencent"
+        title = stringResource(R.string.wizard_head_start_title),
+        subtitle = stringResource(R.string.wizard_head_start_subtitle)
     ) {
         Text(
             text = "${headStartMinutes.toInt()} min",
@@ -38,7 +40,10 @@ fun HeadStartStep(
         )
 
         Text(
-            text = if (headStartMinutes.toInt() == 0) "Pas d'avance" else "${headStartMinutes.toInt()} minutes d'avance pour la poule",
+            text = if (headStartMinutes.toInt() == 0)
+                stringResource(R.string.wizard_head_start_none)
+            else
+                stringResource(R.string.wizard_head_start_minutes, headStartMinutes.toInt()),
             style = gameboyStyle(9),
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
             textAlign = TextAlign.Center

@@ -7,6 +7,7 @@
 
 import ComposableArchitecture
 import CoreLocation
+import Foundation
 
 struct LocationClient {
     var authorizationStatus: () -> CLAuthorizationStatus
@@ -61,10 +62,54 @@ extension DependencyValues {
     }
 }
 
-private final class LiveLocationManager: NSObject, CLLocationManagerDelegate {
+/// CRIT-7 (audit 2026-05-17): rewritten for multi-consumer safety +
+/// continuation-race safety.
+///
+/// Two bugs the previous version had:
+///   1) `startTracking()` called `stopTracking()` which finished the
+///      single shared continuation. If a second feature called
+///      `startTracking()` while the chicken was iterating, the chicken's
+///      for-await loop exited silently and the chicken stopped emitting
+///      its position for the rest of the game.
+///   2) `authorizationContinuation` was a single optional that callers
+///      stomped on — two concurrent `requestAlways()` (or the same
+///      caller's two-step .whenInUse → .always sequence racing with a
+///      delegate fire) tripped the Swift "continuation called twice"
+///      trap.
+///
+/// Fix:
+///   1) Multiple continuations keyed by UUID. Each `startTracking()`
+///      call returns a fresh AsyncStream; cancellation removes only
+///      that one. CoreLocation's `startUpdatingLocation` is
+///      ref-counted on the 0→1 transition; `stopUpdatingLocation`
+///      fires on 1→0 (or on explicit `stopTracking()`, which still
+///      tears down ALL consumers).
+///   2) Authorization continuations are a FIFO queue. Every requester
+///      appends a continuation; the delegate callback drains the
+///      whole queue on the first resolved status. Concurrent callers
+///      all wake on the same delegate fire instead of clobbering
+///      each other's continuation slot.
+///
+/// Thread safety: the class is `@unchecked Sendable` because
+/// CLLocationManager + its delegate run on the main thread by default
+/// (we never reassign the delegate from anywhere else), but the API
+/// surface can be called from any actor / Task. An NSLock guards
+/// mutations to the continuations / queue so concurrent callers
+/// can't corrupt the dictionaries.
+private final class LiveLocationManager: NSObject, CLLocationManagerDelegate, @unchecked Sendable {
     private let locationManager = CLLocationManager()
-    private var continuation: AsyncStream<CLLocationCoordinate2D>.Continuation?
-    private var authorizationContinuation: CheckedContinuation<Void, Never>?
+    private let lock = NSLock()
+
+    /// Active location stream consumers. Each `startTracking()` call
+    /// inserts an entry; the stream's `onTermination` removes it. The
+    /// manager's `startUpdatingLocation` is called on 0→1, stopped on
+    /// 1→0 (or on `stopTracking()`).
+    private var continuations: [UUID: AsyncStream<CLLocationCoordinate2D>.Continuation] = [:]
+
+    /// FIFO of authorization-change waiters. Drained by
+    /// `didChangeAuthorization` whenever the status is no longer
+    /// `.notDetermined`.
+    private var authorizationContinuations: [CheckedContinuation<Void, Never>] = []
 
     var currentAuthorizationStatus: CLAuthorizationStatus {
         locationManager.authorizationStatus
@@ -105,61 +150,99 @@ private final class LiveLocationManager: NSObject, CLLocationManagerDelegate {
         }
     }
 
-    func requestWhenInUse() async {
-        let status = locationManager.authorizationStatus
-        if status != .notDetermined { return }
+    /// Queue a continuation that will be resumed by the next
+    /// `didChangeAuthorization` callback (any non-`.notDetermined`
+    /// status). Multiple concurrent waiters all wake on the same fire.
+    private func waitForAuthorizationChange() async {
         await withCheckedContinuation { continuation in
-            self.authorizationContinuation?.resume()
-            self.authorizationContinuation = continuation
-            locationManager.requestWhenInUseAuthorization()
+            lock.lock()
+            authorizationContinuations.append(continuation)
+            lock.unlock()
         }
+    }
+
+    func requestWhenInUse() async {
+        if locationManager.authorizationStatus != .notDetermined { return }
+        // Trigger the system prompt (idempotent for queued callers — iOS
+        // collapses duplicate prompts), then wait for the delegate.
+        locationManager.requestWhenInUseAuthorization()
+        await waitForAuthorizationChange()
     }
 
     func requestAlways() async {
         let status = locationManager.authorizationStatus
         if status == .authorizedAlways { return }
         if status == .notDetermined {
-            // Must request "when in use" first before "always"
-            await withCheckedContinuation { continuation in
-                self.authorizationContinuation?.resume()
-                self.authorizationContinuation = continuation
-                locationManager.requestWhenInUseAuthorization()
-            }
+            // Must request "when in use" first before "always".
+            locationManager.requestWhenInUseAuthorization()
+            await waitForAuthorizationChange()
         }
-        // Now request always if we have at least "when in use"
         if locationManager.authorizationStatus == .authorizedWhenInUse {
-            await withCheckedContinuation { continuation in
-                self.authorizationContinuation?.resume()
-                self.authorizationContinuation = continuation
-                locationManager.requestAlwaysAuthorization()
-            }
+            locationManager.requestAlwaysAuthorization()
+            await waitForAuthorizationChange()
         }
     }
 
     func startTracking() -> AsyncStream<CLLocationCoordinate2D> {
-        stopTracking()
         // Re-check background capability on every start: the user may have
         // upgraded the authorization in Settings between launches.
         refreshBackgroundCapability()
 
+        let id = UUID()
         return AsyncStream { continuation in
-            self.continuation = continuation
+            let shouldStartManager: Bool = {
+                lock.lock(); defer { lock.unlock() }
+                let firstConsumer = continuations.isEmpty
+                continuations[id] = continuation
+                return firstConsumer
+            }()
             continuation.onTermination = { [weak self] _ in
-                self?.locationManager.stopUpdatingLocation()
+                guard let self else { return }
+                let shouldStopManager: Bool = {
+                    self.lock.lock(); defer { self.lock.unlock() }
+                    self.continuations.removeValue(forKey: id)
+                    return self.continuations.isEmpty
+                }()
+                if shouldStopManager {
+                    DispatchQueue.main.async {
+                        self.locationManager.stopUpdatingLocation()
+                    }
+                }
             }
-            self.locationManager.startUpdatingLocation()
+            if shouldStartManager {
+                DispatchQueue.main.async { [weak self] in
+                    self?.locationManager.startUpdatingLocation()
+                }
+            }
         }
     }
 
+    /// Hard stop: end every active stream AND stop the manager. Callers
+    /// expecting "stop just my stream" should rely on Task cancellation
+    /// (which fires the AsyncStream's `onTermination` and removes only
+    /// their consumer).
     func stopTracking() {
-        continuation?.finish()
-        continuation = nil
-        locationManager.stopUpdatingLocation()
+        let toFinish: [AsyncStream<CLLocationCoordinate2D>.Continuation] = {
+            lock.lock(); defer { lock.unlock() }
+            let all = Array(continuations.values)
+            continuations.removeAll()
+            return all
+        }()
+        for continuation in toFinish { continuation.finish() }
+        DispatchQueue.main.async { [weak self] in
+            self?.locationManager.stopUpdatingLocation()
+        }
     }
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let location = locations.last else { return }
-        continuation?.yield(location.coordinate)
+        let snapshot: [AsyncStream<CLLocationCoordinate2D>.Continuation] = {
+            lock.lock(); defer { lock.unlock() }
+            return Array(continuations.values)
+        }()
+        for continuation in snapshot {
+            continuation.yield(location.coordinate)
+        }
     }
 
     func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
@@ -168,9 +251,13 @@ private final class LiveLocationManager: NSObject, CLLocationManagerDelegate {
         // .authorizedWhenInUse to .authorizedAlways mid-session must still
         // enable background tracking for the rest of the game.
         refreshBackgroundCapability()
-        if status != .notDetermined {
-            authorizationContinuation?.resume()
-            authorizationContinuation = nil
-        }
+        guard status != .notDetermined else { return }
+        let waiters: [CheckedContinuation<Void, Never>] = {
+            lock.lock(); defer { lock.unlock() }
+            let snap = authorizationContinuations
+            authorizationContinuations.removeAll()
+            return snap
+        }()
+        for continuation in waiters { continuation.resume() }
     }
 }

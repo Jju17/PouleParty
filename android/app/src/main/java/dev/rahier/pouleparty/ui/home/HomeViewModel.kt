@@ -79,6 +79,11 @@ class HomeViewModel @Inject constructor(
     private val analyticsRepository: dev.rahier.pouleparty.data.AnalyticsRepository,
     private val prefs: SharedPreferences,
     private val auth: FirebaseAuth,
+    // CRIT-8 (audit 2026-05-17): @ApplicationContext for `getString` calls
+    // when surfacing user-facing errors from the VM. Stays on the app
+    // singleton so it's process-scoped — no Activity leak risk.
+    @dagger.hilt.android.qualifiers.ApplicationContext
+    private val appContext: android.content.Context,
 ) : ViewModel() {
 
     init {
@@ -184,11 +189,14 @@ class HomeViewModel @Inject constructor(
                     }
                     _effects.send(HomeEffect.NavigateToGameMasterMap(game.id))
                 } else {
+                    // CRIT-8 (audit 2026-05-17): resolve via @ApplicationContext
+                    // so NL / EN users see localized copy instead of French
+                    // literals.
                     val msg = if (result.lockedUntilMs != null) {
-                        val mins = ((result.lockedUntilMs - System.currentTimeMillis()) / 60_000L).coerceAtLeast(1L)
-                        "Trop de tentatives. Réessaie dans $mins min."
+                        val mins = ((result.lockedUntilMs - System.currentTimeMillis()) / 60_000L).coerceAtLeast(1L).toInt()
+                        appContext.getString(dev.rahier.pouleparty.R.string.join_flow_gm_too_many_attempts, mins)
                     } else {
-                        "Mauvais code. ${result.attemptsRemaining} tentative(s) restante(s)."
+                        appContext.getString(dev.rahier.pouleparty.R.string.join_flow_gm_wrong_code, result.attemptsRemaining)
                     }
                     _uiState.update {
                         it.copy(
@@ -523,7 +531,9 @@ class HomeViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             joinStep = JoinFlowStep.ValidationCodeEntry(game),
-                            validationCodeError = "Code invalide. Vérifie l'email qu'on t'a envoyé.",
+                            validationCodeError = appContext.getString(
+                                dev.rahier.pouleparty.R.string.join_flow_validation_code_invalid
+                            ),
                         )
                     }
                 }
@@ -531,7 +541,8 @@ class HomeViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         joinStep = JoinFlowStep.ValidationCodeEntry(game),
-                        validationCodeError = e.localizedMessage ?: "Erreur réseau",
+                        validationCodeError = e.localizedMessage
+                            ?: appContext.getString(dev.rahier.pouleparty.R.string.join_flow_network_error),
                     )
                 }
             }

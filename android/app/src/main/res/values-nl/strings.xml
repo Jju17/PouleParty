@@ -320,4 +320,53 @@
     <string name="deeplink_code_label">JE VALIDATIECODE</string>
     <string name="deeplink_ok">OK</string>
     <string name="deeplink_close">Sluiten</string>
+
+    <!-- CRIT-8 (audit 2026-05-17) -->
+    <string name="join_flow_gm_too_many_attempts">Te veel pogingen. Probeer opnieuw over %1$d min.</string>
+    <string name="join_flow_gm_wrong_code">Verkeerde code. %1$d poging(en) over.</string>
+    <string name="join_flow_gm_generic_error">Kon de GameMaster-code niet verifiëren. Probeer opnieuw.</string>
+    <string name="join_flow_validation_code_invalid">Ongeldige code. Controleer de e-mail die we hebben verstuurd.</string>
+    <string name="join_flow_network_error">Netwerkfout</string>
+
+    <!-- CRIT-8 (audit 2026-05-17): wizard voor het aanmaken van een spel -->
+    <string name="wizard_duration_title">Hoe lang?</string>
+    <string name="wizard_duration_subtitle">Duur van het spel</string>
+    <string name="wizard_head_start_title">Voorsprong voor de kip?</string>
+    <string name="wizard_head_start_subtitle">Tijd voordat de jagers beginnen</string>
+    <string name="wizard_head_start_none">Geen voorsprong</string>
+    <string name="wizard_head_start_minutes">%1$d minuten voorsprong voor de kip</string>
+    <string name="wizard_power_ups_title">Power-Ups?</string>
+    <string name="wizard_power_ups_subtitle">Activeer in-game bonussen</string>
+    <string name="wizard_chicken_sees_hunters_title">Ziet de kip de jagers?</string>
+    <string name="wizard_chicken_sees_hunters_subtitle">Kan de kip zien waar de jagers zijn?</string>
+    <string name="wizard_chicken_sees_hunters_yes">Ja, ze ziet ze</string>
+    <string name="wizard_chicken_sees_hunters_no">Nee, blind</string>
+    <string name="wizard_gamemaster_title">GameMaster</string>
+    <string name="wizard_gamemaster_subtitle">Een scheidsrechter kan meedoen met een 4-cijferige code</string>
+    <string name="wizard_gamemaster_enable">GameMaster-rol inschakelen</string>
+    <string name="wizard_gamemaster_secret_hint">Houd hem geheim: deel hem alleen met de scheidsrechter.</string>
+    <string name="wizard_start_time_title">Wanneer?</string>
+    <string name="wizard_start_time_subtitle">Kies de startdatum en -tijd</string>
+    <string name="wizard_start_time_tap_to_change">Tik om te wijzigen</string>
+    <string name="wizard_participation_title">Doe je mee?</string>
+    <string name="wizard_participation_subtitle">Speel je zelf ook mee?</string>
+    <string name="wizard_participation_chicken">Ik ben de Kip</string>
+    <string name="wizard_participation_organizer">Ik organiseer</string>
+    <string name="wizard_game_mode_title">Welke spelmodus?</string>
+    <string name="wizard_game_mode_subtitle">Kies hoe je wilt spelen</string>
+    <string name="wizard_game_mode_follow_title">Follow the Chicken</string>
+    <string name="wizard_game_mode_follow_subtitle">De zone krimpt richting de kip</string>
+    <string name="wizard_game_mode_stay_title">Stay in the Zone</string>
+    <string name="wizard_game_mode_stay_subtitle">Vaste zone die krimpt</string>
+    <string name="wizard_chicken_selection_title">Wie wordt de Kip?</string>
+    <string name="wizard_chicken_selection_subtitle">Hoe kies je de kip?</string>
+    <string name="wizard_chicken_selection_random">Willekeurig</string>
+    <string name="wizard_chicken_selection_first">Eerste binnen</string>
+    <string name="wizard_chicken_selection_pick">Ik kies</string>
+    <string name="wizard_recap_title">Overzicht</string>
+    <string name="wizard_recap_subtitle">Controleer voor je begint</string>
+    <string name="wizard_recap_role_chicken">Kip 🐔</string>
+    <string name="wizard_recap_role_organizer">Organisator 📋</string>
+    <string name="wizard_recap_yes">Ja</string>
+    <string name="wizard_recap_no">Nee</string>
 </resources>

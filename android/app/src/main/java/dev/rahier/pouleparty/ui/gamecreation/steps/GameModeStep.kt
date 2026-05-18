@@ -1,6 +1,8 @@
 package dev.rahier.pouleparty.ui.gamecreation.steps
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.model.GameMod
 import dev.rahier.pouleparty.ui.gamecreation.OptionCard
 import dev.rahier.pouleparty.ui.gamecreation.StepContainer
@@ -13,24 +15,24 @@ fun GameModeStep(
     onSelect: (GameMod) -> Unit
 ) {
     StepContainer(
-        title = "Quel mode de jeu ?",
-        subtitle = "Choisis comment tu veux jouer"
+        title = stringResource(R.string.wizard_game_mode_title),
+        subtitle = stringResource(R.string.wizard_game_mode_subtitle)
     ) {
         OptionCard(
-            text = "Follow the Chicken",
+            text = stringResource(R.string.wizard_game_mode_follow_title),
             emoji = "\uD83D\uDC14",
             isSelected = selectedMode == GameMod.FOLLOW_THE_CHICKEN,
             onClick = { onSelect(GameMod.FOLLOW_THE_CHICKEN) },
             gradient = GradientChicken,
-            subtitle = "The zone shrinks toward the chicken"
+            subtitle = stringResource(R.string.wizard_game_mode_follow_subtitle)
         )
         OptionCard(
-            text = "Stay in the Zone",
+            text = stringResource(R.string.wizard_game_mode_stay_title),
             emoji = "\uD83D\uDCCD",
             isSelected = selectedMode == GameMod.STAY_IN_THE_ZONE,
             onClick = { onSelect(GameMod.STAY_IN_THE_ZONE) },
             gradient = GradientHunter,
-            subtitle = "Fixed zone that shrinks"
+            subtitle = stringResource(R.string.wizard_game_mode_stay_subtitle)
         )
     }
 }

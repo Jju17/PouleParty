@@ -17,9 +17,6 @@ object AppConstants {
     const val SUBCOLLECTION_HUNTER_LOCATIONS = "hunterLocations"
     const val SUBCOLLECTION_POWER_UPS = "powerUps"
     const val SUBCOLLECTION_REGISTRATIONS = "registrations"
-    /** PP-52 — top-level paying registrations (web form / Stripe). Distinct
-     *  from the in-app per-game `registrations` subcollection above. */
-    const val COLLECTION_EVENT_REGISTRATIONS = "eventRegistrations"
     const val SUBCOLLECTION_CHALLENGE_COMPLETIONS = "challengeCompletions"
     const val COLLECTION_USERS = "users"
     const val COLLECTION_CHALLENGES = "challenges"

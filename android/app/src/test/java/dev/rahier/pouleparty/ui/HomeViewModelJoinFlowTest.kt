@@ -88,6 +88,7 @@ class HomeViewModelJoinFlowTest {
         analyticsRepository = analyticsRepository,
         prefs = prefs,
         auth = auth,
+        appContext = mockk(relaxed = true),
     )
 
     // ── Self-join protection ──────────────────────────────

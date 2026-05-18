@@ -210,16 +210,16 @@ export const joinAsGameMaster = onCall(
         };
       }
 
-      // Success: append the UID to gameMasterIds AND reset the
-      // rate-limit counter in the same transaction.
+      // Success: append the UID to gameMasterIds AND delete the
+      // rate-limit doc in the same transaction.
+      // HIGH-6 (audit 2026-05-17): switched from `tx.set(..., {attempts:0})`
+      // to `tx.delete(...)` so successful joins don't leave growing
+      // dead docs in `/gmRateLimits` — the collection was unbounded
+      // before this fix.
       tx.update(gameRef(gameId), {
         gameMasterIds: [...(game.gameMasterIds ?? []), uid],
       });
-      tx.set(rateLimitRef(uid, gameId), {
-        attempts: 0,
-        firstAttemptAt: now,
-        lockedUntil: null,
-      } satisfies GmRateLimit);
+      tx.delete(rateLimitRef(uid, gameId));
 
       return { success: true, attemptsRemaining: RATE_LIMIT_MAX_ATTEMPTS };
     });

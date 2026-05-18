@@ -295,12 +295,21 @@ struct JoinFlowFeature {
                 return .send(.delegate(.joinedAsGameMaster(game)))
 
             case let .gameMasterJoinFailed(attemptsRemaining, lockedUntilMs):
+                // CRIT-8 / HIGH-19 (audit 2026-05-17): routed through
+                // `String(localized:)` so FR / NL users see localized copy
+                // instead of hardcoded French interpolation.
                 if let lockedUntilMs {
                     let secs = max(0, (lockedUntilMs - Int(Date.now.timeIntervalSince1970 * 1000)) / 1000)
                     let mins = max(1, secs / 60)
-                    state.gameMasterError = "Trop de tentatives. Réessaie dans \(mins) min."
+                    state.gameMasterError = String(
+                        format: String(localized: "Too many attempts. Try again in %d min."),
+                        mins
+                    )
                 } else {
-                    state.gameMasterError = "Mauvais code. \(attemptsRemaining) tentative(s) restante(s)."
+                    state.gameMasterError = String(
+                        format: String(localized: "Wrong code. %d attempt(s) remaining."),
+                        attemptsRemaining
+                    )
                 }
                 state.gameMasterPassword = ""
                 if case let .submittingGameMasterPassword(game) = state.step {

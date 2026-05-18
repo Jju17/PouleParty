@@ -12,9 +12,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.ui.gamecreation.StepContainer
 import dev.rahier.pouleparty.ui.theme.CROrange
 import dev.rahier.pouleparty.ui.theme.gameboyStyle
@@ -33,8 +35,8 @@ fun GameMasterPasswordStep(
     onPasswordChanged: (String) -> Unit,
 ) {
     StepContainer(
-        title = "GameMaster",
-        subtitle = "Un arbitre peut rejoindre avec un code 4 chiffres",
+        title = stringResource(R.string.wizard_gamemaster_title),
+        subtitle = stringResource(R.string.wizard_gamemaster_subtitle),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -42,7 +44,7 @@ fun GameMasterPasswordStep(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Activer le rôle GameMaster",
+                text = stringResource(R.string.wizard_gamemaster_enable),
                 style = gameboyStyle(10),
                 color = MaterialTheme.colorScheme.onBackground,
             )
@@ -64,7 +66,7 @@ fun GameMasterPasswordStep(
                 modifier = Modifier.fillMaxWidth(0.5f),
             )
             Text(
-                text = "Garde-le secret : partage-le uniquement à l'arbitre.",
+                text = stringResource(R.string.wizard_gamemaster_secret_hint),
                 style = gameboyStyle(9),
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
                 textAlign = TextAlign.Center,

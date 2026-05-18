@@ -33,7 +33,14 @@ abstract class BaseMapViewModel(
     protected val auth: FirebaseAuth
 ) : ViewModel() {
 
-    protected val streamJobs = mutableListOf<Job>()
+    /** HIGH-13 (audit 2026-05-17): synchronized list. The previous
+     *  `mutableListOf<Job>()` was mutated from multiple coroutines (the
+     *  periodic hunter writer, the timer ticks, `onCleared`) without
+     *  any guard — concurrent add + clear could trip a
+     *  `ConcurrentModificationException`. Same pattern as the existing
+     *  `collectingPowerUpIds = Collections.synchronizedSet(...)` below. */
+    protected val streamJobs: MutableList<Job> =
+        java.util.Collections.synchronizedList(mutableListOf())
     protected var notificationJob: Job? = null
     private val collectingPowerUpIds = java.util.Collections.synchronizedSet(mutableSetOf<String>())
 

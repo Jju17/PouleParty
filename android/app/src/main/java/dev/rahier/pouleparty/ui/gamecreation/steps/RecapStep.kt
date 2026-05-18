@@ -39,8 +39,8 @@ fun RecapStep(
     val endTime = Date(game.startDate.time + (state.gameDurationMinutes * 60 * 1000).toLong())
 
     StepContainer(
-        title = "Recapitulatif",
-        subtitle = "Verifie avant de lancer"
+        title = stringResource(R.string.wizard_recap_title),
+        subtitle = stringResource(R.string.wizard_recap_subtitle)
     ) {
         GameCodeCard(
             gameCode = game.gameCode,
@@ -61,7 +61,10 @@ fun RecapStep(
             ) {
                 RecapRow(
                     label = stringResource(R.string.role),
-                    value = if (state.isParticipating) "Chicken \uD83D\uDC14" else "Organizer \uD83D\uDCCB"
+                    value = if (state.isParticipating)
+                        stringResource(R.string.wizard_recap_role_chicken)
+                    else
+                        stringResource(R.string.wizard_recap_role_organizer)
                 )
                 HorizontalDivider()
                 RecapRow(
@@ -117,7 +120,10 @@ fun RecapStep(
                     HorizontalDivider()
                     RecapRow(
                         label = stringResource(R.string.chicken_can_see_hunters),
-                        value = if (game.chickenCanSeeHunters) "Yes" else "No"
+                        value = if (game.chickenCanSeeHunters)
+                            stringResource(R.string.wizard_recap_yes)
+                        else
+                            stringResource(R.string.wizard_recap_no)
                     )
                 }
                 if (!state.isZoneConfigured) {

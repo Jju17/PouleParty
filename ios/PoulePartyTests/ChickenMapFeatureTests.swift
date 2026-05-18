@@ -31,7 +31,13 @@ struct ChickenMapFeatureTests {
     }
 
     @Test func beenFoundButtonShowsEndGameCode() async {
-        let store = TestStore(initialState: ChickenMapFeature.State(game: .mock)) {
+        // CRIT-2 (audit 2026-05-17): destination uses
+        // `state.chickenFoundCode` (populated by getFoundCode CF on map
+        // load) instead of `state.game.foundCode`. Seed it directly so
+        // the assertion stays deterministic.
+        var initial = ChickenMapFeature.State(game: .mock)
+        initial.chickenFoundCode = "1234"
+        let store = TestStore(initialState: initial) {
             ChickenMapFeature()
         }
 

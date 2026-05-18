@@ -64,7 +64,8 @@ class HomeViewModelBehaviorTest {
             locationRepository = locationRepository,
             analyticsRepository = mockk<dev.rahier.pouleparty.data.AnalyticsRepository>(relaxed = true),
             prefs = prefs,
-            auth = auth
+            auth = auth,
+            appContext = mockk(relaxed = true),
         )
     }
 

@@ -4,6 +4,7 @@
 //
 
 import Firebase
+import FirebaseAppCheck
 import FirebaseMessaging
 import os
 import UIKit
@@ -23,6 +24,10 @@ class AppDelegate: NSObject, UIApplicationDelegate, MessagingDelegate, UNUserNot
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
+        // CRIT-4 (audit 2026-05-17): App Check provider factory MUST be set
+        // before `FirebaseApp.configure()` — Firebase reads it once at
+        // configure-time and caches the choice for the process lifetime.
+        AppCheck.setAppCheckProviderFactory(PoulePartyAppCheckProviderFactory())
         FirebaseApp.configure()
         MigrationManager.runIfNeeded()
         Messaging.messaging().delegate = self

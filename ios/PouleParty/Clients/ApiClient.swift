@@ -28,7 +28,20 @@ enum GamePhase: Equatable {
 
 struct ApiClient {
     var findActiveGame: (String) async throws -> (Game, GameRole, GamePhase)?
-    var addWinner: (String, Winner) async throws -> Void
+    /// CRIT-3 (audit 2026-05-17): replaced the previous client-side
+    /// `addWinner(gameId, Winner)` arrayUnion. The Cloud Function
+    /// verifies caller-is-hunter + foundCode-matches inside a Firestore
+    /// transaction before appending. Throws a `SubmitFoundCodeError`
+    /// when the CF refuses (wrong code, not a hunter, already won,
+    /// game not in progress).
+    var submitFoundCode: (_ gameId: String, _ foundCode: String, _ hunterName: String) async throws -> Void
+    /// CRIT-2 (audit 2026-05-17): fetches the game's 4-digit
+    /// foundCode. The CF returns it only if the caller is `chickenId`
+    /// — foundCode lives in `/games/{id}/private/security` (admin-SDK
+    /// only) since V2.3 so hunters can't read it off the public doc
+    /// and self-declare victory. Returns "" if no foundCode is set
+    /// (e.g. pre-V2.3 game whose public field was never relocated).
+    var getFoundCode: (_ gameId: String) async throws -> String
     var deleteConfig: (String) async throws -> Void
     var getConfig: (String) async throws -> Game?
     var findGameByCode: (String) async throws -> Game?
@@ -122,6 +135,16 @@ struct ApiClient {
 /// JoinFlow screens (resolving spinner → either ready-to-join, "party
 /// not yet open", or "invalid code"). Equatable so TCA can use
 /// it inside Actions.
+/// CRIT-3 (audit 2026-05-17): rejection reason from the `submitFoundCode`
+/// Cloud Function. Used by HunterMap to render the right alert copy.
+enum SubmitFoundCodeError: Error, Equatable {
+    case invalidCode
+    case notAHunter
+    case alreadyWinner
+    case gameNotInProgress
+    case malformedResponse
+}
+
 enum ValidationCodeLookupResult: Equatable {
     /// No paid `eventRegistration` matches the code → user mistyped
     /// or hit a stale email.
@@ -222,7 +245,6 @@ private let chickenLocationsSubcollection = "chickenLocations"
 private let hunterLocationsSubcollection = "hunterLocations"
 private let powerUpsSubcollection = "powerUps"
 private let registrationsSubcollection = "registrations"
-private let eventRegistrationsCollection = "eventRegistrations"
 private let challengesCollection = "challenges"
 private let challengeCompletionsSubcollection = "challengeCompletions"
 private let maxRetries = 3
@@ -252,7 +274,8 @@ private func withRetry(_ operation: String, block: () async throws -> Void) asyn
 extension ApiClient: TestDependencyKey {
     static let testValue = ApiClient(
         findActiveGame: { _ in nil as (Game, GameRole, GamePhase)? },
-        addWinner: { _, _ in },
+        submitFoundCode: { _, _, _ in },
+        getFoundCode: { _ in "" },
         deleteConfig: { _ in },
         getConfig: { _ in nil },
         findGameByCode: { _ in nil },
@@ -390,19 +413,53 @@ extension ApiClient: DependencyKey {
             }
             return nil
         },
-        addWinner: { gameId, winner in
-            try await withRetry("addWinner(\(gameId))") {
-                let ref = Firestore.firestore().collection(gamesCollection).document(gameId)
-                try await ref.updateData([
-                    "winners": FieldValue.arrayUnion([
-                        [
-                            "hunterId": winner.hunterId,
-                            "hunterName": winner.hunterName,
-                            "timestamp": winner.timestamp
-                        ] as [String: Any]
-                    ])
+        submitFoundCode: { gameId, foundCode, hunterName in
+            // CRIT-3 (audit 2026-05-17): routed via callable CF. The
+            // CF re-verifies caller-is-hunter + foundCode-matches
+            // inside a Firestore transaction before appending the
+            // winner. firestore.rules denies all client writes to
+            // `winners`, so this is now the only path.
+            let functions = Functions.functions(region: "europe-west1")
+            let result = try await functions
+                .httpsCallable("submitFoundCode")
+                .call([
+                    "gameId": gameId,
+                    "foundCode": foundCode,
+                    "hunterName": hunterName,
                 ])
+            guard let dict = result.data as? [String: Any],
+                  let success = dict["success"] as? Bool
+            else {
+                throw SubmitFoundCodeError.malformedResponse
             }
+            if success { return }
+            let reason = (dict["reason"] as? String) ?? ""
+            switch reason {
+            case "invalidCode": throw SubmitFoundCodeError.invalidCode
+            case "notAHunter": throw SubmitFoundCodeError.notAHunter
+            case "alreadyWinner": throw SubmitFoundCodeError.alreadyWinner
+            case "gameNotInProgress": throw SubmitFoundCodeError.gameNotInProgress
+            default: throw SubmitFoundCodeError.malformedResponse
+            }
+        },
+        getFoundCode: { gameId in
+            // CRIT-2 (audit 2026-05-17): foundCode lives in
+            // /private/security since V2.3. The chicken fetches it via
+            // this CF; the CF refuses for non-chicken callers.
+            let functions = Functions.functions(region: "europe-west1")
+            let result = try await functions
+                .httpsCallable("getFoundCode")
+                .call(["gameId": gameId])
+            guard let dict = result.data as? [String: Any],
+                  let code = dict["foundCode"] as? String
+            else {
+                throw NSError(
+                    domain: "ApiClient",
+                    code: -1,
+                    userInfo: [NSLocalizedDescriptionKey: "getFoundCode: malformed response"]
+                )
+            }
+            return code
         },
         deleteConfig: { gameId in
             try await Firestore.firestore().collection(gamesCollection).document(gameId).delete()
@@ -752,49 +809,78 @@ extension ApiClient: DependencyKey {
             }
         },
         validateRegistrationCode: { batchId, code in
+            // CRIT-1 (audit 2026-05-17): routed via callable CF so
+            // firestore.rules can lock /eventRegistrations reads. The
+            // CF returns only { valid: Bool } — no PII ever crosses the
+            // wire to the client.
             let trimmedBatch = batchId.trimmingCharacters(in: .whitespacesAndNewlines)
             let trimmedCode = code.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
             guard !trimmedBatch.isEmpty, !trimmedCode.isEmpty else { return false }
-            let snapshot = try await Firestore.firestore()
-                .collection(eventRegistrationsCollection)
-                .whereField("batchId", isEqualTo: trimmedBatch)
-                .whereField("code", isEqualTo: trimmedCode)
-                .whereField("paid", isEqualTo: true)
-                .limit(to: 1)
-                .getDocuments()
-            return !snapshot.documents.isEmpty
+            let functions = Functions.functions(region: "europe-west1")
+            let result = try await functions
+                .httpsCallable("validateRegistrationCode")
+                .call(["batchId": trimmedBatch, "code": trimmedCode])
+            guard let dict = result.data as? [String: Any],
+                  let valid = dict["valid"] as? Bool
+            else {
+                throw NSError(
+                    domain: "ApiClient",
+                    code: -1,
+                    userInfo: [NSLocalizedDescriptionKey: "validateRegistrationCode: malformed response"]
+                )
+            }
+            return valid
         },
         lookupGameByValidationCode: { code in
+            // CRIT-1 (audit 2026-05-17): routed via callable CF so
+            // firestore.rules can lock /eventRegistrations reads. The
+            // CF returns only the discriminated `{ type, gameId, batchId }`
+            // — no email/phone/name PII. For the `gameReady` case we
+            // then fetch the public Game doc by ID (still allowed by
+            // rules) to keep the existing `.gameReady(Game)` contract.
             let trimmedCode = code.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
             guard !trimmedCode.isEmpty else { return .invalidCode }
-            // 1) Find the paid registration matching the code.
-            let regSnapshot = try await Firestore.firestore()
-                .collection(eventRegistrationsCollection)
-                .whereField("code", isEqualTo: trimmedCode)
-                .whereField("paid", isEqualTo: true)
-                .limit(to: 1)
-                .getDocuments()
-            guard let regDoc = regSnapshot.documents.first,
-                  let batchId = (regDoc.data()["batchId"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
-                  !batchId.isEmpty
-            else { return .invalidCode }
-            // 2) Find any Game pointing at that batch. Filter `done`
-            // games client-side so a stale finished party doesn't
-            // mask a fresh one.
-            let gameSnapshot = try await Firestore.firestore()
-                .collection(gamesCollection)
-                .whereField("registrationBatchId", isEqualTo: batchId)
-                .limit(to: 5)
-                .getDocuments()
-            let games: [Game] = gameSnapshot.documents.compactMap { doc in
-                guard var game = try? doc.data(as: Game.self) else { return nil }
-                game.id = doc.documentID
-                return game
+            let functions = Functions.functions(region: "europe-west1")
+            let result = try await functions
+                .httpsCallable("lookupGameByValidationCode")
+                .call(["code": trimmedCode])
+            guard let dict = result.data as? [String: Any],
+                  let type = dict["type"] as? String
+            else {
+                throw NSError(
+                    domain: "ApiClient",
+                    code: -1,
+                    userInfo: [NSLocalizedDescriptionKey: "lookupGameByValidationCode: malformed response"]
+                )
             }
-            if let active = games.first(where: { $0.status != .done }) {
-                return .gameReady(active)
+            switch type {
+            case "invalidCode":
+                return .invalidCode
+            case "gameNotYetCreated":
+                let batchId = (dict["batchId"] as? String) ?? ""
+                return .gameNotYetCreated(batchId: batchId)
+            case "gameReady":
+                guard let gameId = dict["gameId"] as? String, !gameId.isEmpty else {
+                    return .invalidCode
+                }
+                // Fetch the Game doc directly — /games/{id} reads stay
+                // open to authenticated clients (CRIT-2/V2.3 will move
+                // foundCode off this doc, not gate the read itself).
+                do {
+                    var game = try await Firestore.firestore()
+                        .collection(gamesCollection)
+                        .document(gameId)
+                        .getDocument(as: Game.self)
+                    game.id = gameId
+                    return .gameReady(game)
+                } catch {
+                    logger.error("lookupGameByValidationCode: failed to load Game \(gameId): \(String(describing: error))")
+                    return .invalidCode
+                }
+            default:
+                logger.error("lookupGameByValidationCode: unknown type=\(type)")
+                return .invalidCode
             }
-            return .gameNotYetCreated(batchId: batchId)
         },
         fetchAllRegistrations: { gameId in
             guard !gameId.isEmpty else { return [] }

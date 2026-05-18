@@ -40,8 +40,8 @@ fun PowerUpsStep(
     onPowerUpSelectionTapped: () -> Unit
 ) {
     StepContainer(
-        title = "Power-Ups ?",
-        subtitle = "Active les bonus en jeu"
+        title = stringResource(R.string.wizard_power_ups_title),
+        subtitle = stringResource(R.string.wizard_power_ups_subtitle)
     ) {
         val shape = RoundedCornerShape(16.dp)
         Card(

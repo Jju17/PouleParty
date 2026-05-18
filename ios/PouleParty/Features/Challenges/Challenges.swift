@@ -65,10 +65,16 @@ struct ChallengesFeature {
         /// completion doc appear with 0 pts. Sorted by points desc, then by
         /// team name for stable ordering on ties.
         var leaderboard: [ChallengeLeaderboardEntry] {
-            let byHunter = Dictionary(uniqueKeysWithValues: completions.compactMap { completion -> (String, ChallengeCompletion)? in
-                guard let hid = completion.hunterId else { return nil }
-                return (hid, completion)
-            })
+            // CRIT-6 (audit 2026-05-17): uniquingKeysWith — defensive against a
+            // future bug that lets two completion docs share the same hunterId.
+            // Keeping the entry with the higher totalPoints loses the least info.
+            let byHunter = Dictionary(
+                completions.compactMap { completion -> (String, ChallengeCompletion)? in
+                    guard let hid = completion.hunterId else { return nil }
+                    return (hid, completion)
+                },
+                uniquingKeysWith: { first, second in first.totalPoints >= second.totalPoints ? first : second }
+            )
             let entries = hunterIds.map { hid -> ChallengeLeaderboardEntry in
                 let completion = byHunter[hid]
                 let fallback = nicknames[hid] ?? "Hunter"

@@ -114,6 +114,12 @@ dependencies {
     implementation("com.google.firebase:firebase-messaging-ktx")
     implementation("com.google.firebase:firebase-crashlytics-ktx")
     implementation("com.google.firebase:firebase-functions-ktx")
+    // CRIT-4 (audit 2026-05-17): App Check. Play Integrity for release
+    // builds (verifies the binary is the Play-Store-distributed APK on a
+    // genuine device); Debug Provider for debug builds (devs register a
+    // per-device token in Firebase Console).
+    implementation("com.google.firebase:firebase-appcheck-playintegrity")
+    implementation("com.google.firebase:firebase-appcheck-debug")
 
     // Mapbox Maps (ndk27 artifacts for 16 KB page size support on Android 15+)
     implementation("com.mapbox.maps:android-ndk27:11.20.2")

@@ -50,17 +50,19 @@ struct HunterMapFeature {
         // this would be a free locator.
         var chickenLocation: CLLocationCoordinate2D? = nil
         var hasChallenges: Bool = false
-        // Held between a failed `addWinner` write and a user-triggered retry,
-        // so the retry keeps the original found-the-chicken timestamp + attempt
-        // count instead of recomputing them.
-        var pendingWinner: Winner? = nil
+        // CRIT-3 (audit 2026-05-17): we now hold the typed-in code +
+        // attempt count between a failed `submitFoundCode` CF call and a
+        // user-triggered retry. The server stamps the winner's timestamp
+        // at success, so we no longer pre-build a Winner client-side
+        // (which previously caused arrayUnion to skip dedup when a retry
+        // landed with a different timestamp).
+        var pendingFoundCode: String? = nil
         var pendingWinnerAttempts: Int = 0
-        // Raised while an `addWinner` write is in flight so a fast double-tap
-        // on the submit button can't enqueue the write twice. Because the
-        // winner record uses a fresh `Timestamp` on each submit, Firestore's
-        // `arrayUnion` does *not* dedupe — two writes = two winner entries
-        // for the same hunter, which inflates `winners.size` past
-        // `hunterIds.size` and can end the game early.
+        // Raised while a `submitFoundCode` CF call is in flight so a fast
+        // double-tap on the submit button can't enqueue the call twice.
+        // The CF itself is also idempotent (returns `alreadyWinner` on
+        // re-submission of the same hunterId), but this UX gate prevents
+        // the second call entirely.
         var isSubmittingWinner: Bool = false
 
         /// PP-16: flipped to `true` when the game ends (time-out,
@@ -162,6 +164,11 @@ struct HunterMapFeature {
             case winnerNotificationDismissed
             case winnerRegistered
             case winnerRegistrationFailed
+            /// CRIT-2 (audit 2026-05-17): the `submitFoundCode` CF
+            /// rejected the code as wrong. Routes back to the
+            /// "Wrong code" alert + cooldown logic that used to
+            /// fire on the client-side comparison.
+            case wrongCodeRejected
         }
 
         @CasePathable
@@ -282,13 +289,15 @@ struct HunterMapFeature {
             case .destination(.presented(.alert(.retryWinnerRegistration))):
                 // Must live above the catch-all `case .destination:` below,
                 // otherwise the pattern never matches.
-                guard let winner = state.pendingWinner else { return .none }
+                guard let foundCode = state.pendingFoundCode else { return .none }
                 guard !state.isSubmittingWinner else { return .none }
                 let attempts = state.pendingWinnerAttempts
+                let hunterName = state.hunterName
                 state.isSubmittingWinner = true
-                return submitPendingWinnerEffect(
+                return submitFoundCodeEffect(
                     gameId: state.game.id,
-                    winner: winner,
+                    foundCode: foundCode,
+                    hunterName: hunterName,
                     attempts: attempts
                 )
             case .destination:
@@ -430,44 +439,46 @@ struct HunterMapFeature {
                 state.enteredCode = ""
                 state.isEnteringFoundCode = false
 
-                guard code == state.game.foundCode else {
-                    HapticManager.notification(.error)
-                    state.wrongCodeAttempts += 1
-                    analyticsClient.hunterWrongCode(attemptNumber: state.wrongCodeAttempts)
-                    if state.wrongCodeAttempts >= AppConstants.codeMaxWrongAttempts {
-                        state.codeCooldownUntil = .now.addingTimeInterval(AppConstants.codeCooldownSeconds)
-                        state.wrongCodeAttempts = 0
-                    }
-                    state.destination = .alert(
-                        AlertState {
-                            TextState("Wrong code")
-                        } actions: {
-                            ButtonState(action: .wrongCode) {
-                                TextState("OK")
-                            }
-                        } message: {
-                            TextState("That code is incorrect. Try again!")
-                        }
-                    )
-                    return .none
-                }
-
-                HapticManager.notification(.success)
-
-                let winner = Winner(
-                    hunterId: state.hunterId,
-                    hunterName: state.hunterName,
-                    timestamp: Timestamp(date: .now)
-                )
+                // CRIT-2 (audit 2026-05-17): the client used to compare
+                // `code == state.game.foundCode` here, but foundCode is
+                // no longer on the public Game doc (V2.3 moves it to
+                // /private/security). The CF re-verifies the code
+                // server-side and returns `invalidCode` for misses —
+                // routed back to `.wrongCodeRejected` so the existing
+                // wrong-code alert + cooldown logic still fires.
                 let totalAttempts = state.wrongCodeAttempts + 1
-                state.pendingWinner = winner
+                let hunterName = state.hunterName
+                state.pendingFoundCode = code
                 state.pendingWinnerAttempts = totalAttempts
                 state.isSubmittingWinner = true
-                return submitPendingWinnerEffect(
+                return submitFoundCodeEffect(
                     gameId: state.game.id,
-                    winner: winner,
+                    foundCode: code,
+                    hunterName: hunterName,
                     attempts: totalAttempts
                 )
+            case .internal(.wrongCodeRejected):
+                state.isSubmittingWinner = false
+                state.pendingFoundCode = nil
+                HapticManager.notification(.error)
+                state.wrongCodeAttempts += 1
+                analyticsClient.hunterWrongCode(attemptNumber: state.wrongCodeAttempts)
+                if state.wrongCodeAttempts >= AppConstants.codeMaxWrongAttempts {
+                    state.codeCooldownUntil = .now.addingTimeInterval(AppConstants.codeCooldownSeconds)
+                    state.wrongCodeAttempts = 0
+                }
+                state.destination = .alert(
+                    AlertState {
+                        TextState("Wrong code")
+                    } actions: {
+                        ButtonState(action: .wrongCode) {
+                            TextState("OK")
+                        }
+                    } message: {
+                        TextState("That code is incorrect. Try again!")
+                    }
+                )
+                return .none
             case .internal(.winnerRegistrationFailed):
                 state.isSubmittingWinner = false
                 state.destination = .alert(
@@ -1087,22 +1098,44 @@ struct HunterMapFeature {
         }
     }
 
-    /// Runs the Firestore `addWinner` write and branches to either the
-    /// "registered" or "failed" internal action. Keeps the effect body in one
-    /// place so the initial submit and the retry path can share it.
-    private func submitPendingWinnerEffect(
+    /// CRIT-3 (audit 2026-05-17): runs the `submitFoundCode` callable
+    /// CF and branches to either the "registered" or "failed" internal
+    /// action. `alreadyWinner` is treated as success — the server has
+    /// the winner recorded from an earlier attempt and the UX should
+    /// proceed to Victory.
+    private func submitFoundCodeEffect(
         gameId: String,
-        winner: Winner,
+        foundCode: String,
+        hunterName: String,
         attempts: Int
     ) -> Effect<Action> {
         .run { [analyticsClient, apiClient, locationClient] send in
             do {
-                try await apiClient.addWinner(gameId, winner)
+                try await apiClient.submitFoundCode(gameId, foundCode, hunterName)
                 analyticsClient.hunterFoundChicken(attempts: attempts)
                 locationClient.stopTracking()
                 await send(.internal(.winnerRegistered))
+            } catch let err as SubmitFoundCodeError {
+                switch err {
+                case .alreadyWinner:
+                    // Idempotent: the server already has us as a
+                    // winner. Treat as success so the UI proceeds to
+                    // Victory.
+                    analyticsClient.hunterFoundChicken(attempts: attempts)
+                    locationClient.stopTracking()
+                    await send(.internal(.winnerRegistered))
+                case .invalidCode:
+                    // CRIT-2 (audit 2026-05-17): the server rejected
+                    // the code. Route back to the wrong-code UX (alert
+                    // + cooldown) instead of the network-failure
+                    // retry alert.
+                    await send(.internal(.wrongCodeRejected))
+                default:
+                    logger.error("submitFoundCode rejected: \(String(describing: err))")
+                    await send(.internal(.winnerRegistrationFailed))
+                }
             } catch {
-                logger.error("Failed to add winner: \(error.localizedDescription)")
+                logger.error("submitFoundCode failed: \(error.localizedDescription)")
                 await send(.internal(.winnerRegistrationFailed))
             }
         }

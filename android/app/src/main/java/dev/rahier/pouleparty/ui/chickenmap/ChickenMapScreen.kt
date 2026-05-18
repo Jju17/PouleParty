@@ -431,7 +431,11 @@ fun ChickenMapScreen(
         AlertDialog(
             onDismissRequest = { viewModel.onIntent(ChickenMapIntent.DismissFoundCode) },
             title = null,
-            text = { EndGameCodeContent(foundCode = state.game.foundCode) },
+            // CRIT-2 (audit 2026-05-17): read from chickenFoundCode
+            // (populated by getFoundCode CF on map load). The public
+            // game.foundCode is now "" since V2.3 moves it to
+            // /games/{id}/private/security (admin-SDK only).
+            text = { EndGameCodeContent(foundCode = state.chickenFoundCode) },
             confirmButton = {
                 TextButton(onClick = { viewModel.onIntent(ChickenMapIntent.DismissFoundCode) }) {
                     Text(stringResource(R.string.close))

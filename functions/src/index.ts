@@ -2,7 +2,7 @@ import { initializeApp } from "firebase-admin/app";
 import { getFirestore, FieldValue, GeoPoint, Timestamp } from "firebase-admin/firestore";
 import { getFunctions } from "firebase-admin/functions";
 import { getMessaging } from "firebase-admin/messaging";
-import { onDocumentCreated, onDocumentUpdated } from "firebase-functions/v2/firestore";
+import { onDocumentCreated, onDocumentDeleted, onDocumentUpdated } from "firebase-functions/v2/firestore";
 import { onTaskDispatched } from "firebase-functions/v2/tasks";
 import { defineSecret } from "firebase-functions/params";
 import {
@@ -30,10 +30,25 @@ export { computeZoneConfiguration } from "./zoneCalculation";
 // inscription flow). The form posts to `createPendingRegistration`;
 // Stripe pings `confirmRegistrationPayment` once the checkout
 // session completes.
+// `validateRegistrationCode` + `lookupGameByValidationCode` were
+// added by CRIT-1 (audit 2026-05-17) to move the registration-code
+// lookups server-side so firestore.rules can lock `/eventRegistrations`
+// reads (the collection was leaking email/phone/name PII).
 export {
   createPendingRegistration,
   confirmRegistrationPayment,
+  validateRegistrationCode,
+  lookupGameByValidationCode,
 } from "./registrations";
+
+// CRIT-3 (audit 2026-05-17): server-authoritative winner submission.
+// Replaces the client-side `addWinner` arrayUnion which previously let
+// any authenticated user self-declare victory by writing to the
+// `winners` field directly.
+// CRIT-2 (audit 2026-05-17): `getFoundCode` lets the chicken fetch its
+// 4-digit code now that it's stored server-side only in
+// /private/security (no longer leaked on the public Game doc).
+export { submitFoundCode, getFoundCode } from "./gameplay";
 
 // Use Application Default Credentials so each deployed function
 // writes to the project it was deployed to. The previous hardcoded
@@ -295,14 +310,17 @@ export const transitionGameStatus = onTaskDispatched(
     };
 
     const ref = db.collection("games").doc(gameId);
-    const doc = await ref.get();
-
-    if (!doc.exists) return;
-
-    const currentStatus = doc.data()?.status;
-    if (currentStatus === expectedCurrentStatus) {
-      await ref.update({ status: targetStatus });
-    }
+    // CRIT-11 (audit 2026-05-17): atomic compare-and-set. Without the
+    // transaction, a client write (e.g. chicken cancels → status: "done")
+    // between read and update would be silently clobbered back to
+    // targetStatus, resurrecting a finished game.
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      if (!snap.exists) return;
+      if (snap.data()?.status === expectedCurrentStatus) {
+        tx.update(ref, { status: targetStatus });
+      }
+    });
   }
 );
 
@@ -485,20 +503,28 @@ async function spawnBatchForGame(
     enabledTypes
   );
 
-  // Snap each location in parallel; falls back per-point on failure.
-  const snapped: SpawnedPowerUp[] = await Promise.all(
-    generated.map(async (pu) => {
-      const s = await snapToRoad(
-        pu.location.latitude,
-        pu.location.longitude,
-        mapboxToken
-      );
-      return {
-        ...pu,
-        location: new GeoPoint(s.latitude, s.longitude),
-      };
-    })
+  // HIGH-1 (audit 2026-05-17): per-point fallback instead of fail-the-batch.
+  // The previous Promise.all rejected the whole batch on the first
+  // Mapbox failure; during a 5 min Mapbox outage that meant 45 retries
+  // per game and zero power-ups spawned. Promise.allSettled + raw
+  // coordinate fallback degrades gracefully — players get power-ups,
+  // they just aren't snapped to the road for that batch.
+  const snapResults = await Promise.allSettled(
+    generated.map((pu) =>
+      snapToRoad(pu.location.latitude, pu.location.longitude, mapboxToken)
+    )
   );
+  const snapped: SpawnedPowerUp[] = generated.map((pu, i) => {
+    const result = snapResults[i];
+    if (result.status === "fulfilled") {
+      return { ...pu, location: new GeoPoint(result.value.latitude, result.value.longitude) };
+    }
+    console.warn(
+      `[spawn] snap failed for ${pu.id}, using raw coord:`,
+      result.reason instanceof Error ? result.reason.message : String(result.reason)
+    );
+    return pu;
+  });
 
   await writePowerUpBatch(gameId, snapped);
   console.log(`[spawn] wrote ${snapped.length} power-ups for game ${gameId} (batch ${batchIndex})`);
@@ -598,46 +624,66 @@ async function scheduleGameLifecycleTasks(
     `locations/${REGION}/functions/spawnPowerUpBatch`
   );
 
+  // CRIT-10 (audit 2026-05-17): track every enqueued task ID per queue
+  // so `onGameDeleted` can call the Cloud Tasks REST API to delete them.
+  // Without this, deleting a game in `waiting` left up to 150 dangling
+  // tasks that kept firing (each handler early-returned on `!doc.exists`
+  // but still paid the invocation + Firestore read + Cloud Tasks retry
+  // cost, and bloated queue depth).
+  const enqueuedTasksByQueue: Record<string, string[]> = {
+    transitionGameStatus: [],
+    sendGameNotification: [],
+    spawnPowerUpBatch: [],
+  };
+
   // Schedule waiting → inProgress at startTimestamp
   if (startTimestamp) {
+    const id = `status-start-${gameId}`;
     await statusQueue.enqueue(
       {
         gameId,
         targetStatus: "inProgress",
         expectedCurrentStatus: "waiting",
       },
-      { scheduleTime: startTimestamp }
+      { scheduleTime: startTimestamp, id }
     );
+    enqueuedTasksByQueue.transitionGameStatus.push(id);
 
     // Schedule chicken_start notification
+    const chickenStartId = `notif-chickenstart-${gameId}`;
     await notifQueue.enqueue(
       { gameId, notificationType: "chicken_start" },
-      { scheduleTime: startTimestamp }
+      { scheduleTime: startTimestamp, id: chickenStartId }
     );
+    enqueuedTasksByQueue.sendGameNotification.push(chickenStartId);
 
     // Schedule the initial power-up batch at game start — not earlier,
     // so power-ups don't sit in Firestore while the game is still in
     // `waiting` state (which could be hours or days for a scheduled game).
+    const initialSpawnId = `spawn-${gameId}-0`;
     await spawnQueue.enqueue(
       {
         gameId,
         batchIndex: 0,
         count: POWER_UP_INITIAL_BATCH_SIZE,
       },
-      { scheduleTime: startTimestamp }
+      { scheduleTime: startTimestamp, id: initialSpawnId }
     );
+    enqueuedTasksByQueue.spawnPowerUpBatch.push(initialSpawnId);
   }
 
   // Schedule inProgress → done at endTimestamp
   if (endTimestamp) {
+    const id = `status-end-${gameId}`;
     await statusQueue.enqueue(
       {
         gameId,
         targetStatus: "done",
         expectedCurrentStatus: "inProgress",
       },
-      { scheduleTime: endTimestamp }
+      { scheduleTime: endTimestamp, id }
     );
+    enqueuedTasksByQueue.transitionGameStatus.push(id);
   }
 
   // Compute hunterStartDate = startTimestamp + chickenHeadStartMinutes
@@ -647,10 +693,12 @@ async function scheduleGameLifecycleTasks(
     );
 
     // Schedule hunter_start notification
+    const hunterStartId = `notif-hunterstart-${gameId}`;
     await notifQueue.enqueue(
       { gameId, notificationType: "hunter_start" },
-      { scheduleTime: hunterStartDate }
+      { scheduleTime: hunterStartDate, id: hunterStartId }
     );
+    enqueuedTasksByQueue.sendGameNotification.push(hunterStartId);
 
     // Schedule zone_shrink notifications at each interval after hunterStartDate
     // Cap at 100 to prevent scheduling an unreasonable number of tasks
@@ -660,10 +708,12 @@ async function scheduleGameLifecycleTasks(
     let shrinkCount = 0;
 
     while (shrinkTime < endTimestamp && shrinkCount < MAX_SHRINK_NOTIFICATIONS) {
+      const id = `notif-shrink-${gameId}-${shrinkCount}`;
       await notifQueue.enqueue(
         { gameId, notificationType: "zone_shrink" },
-        { scheduleTime: shrinkTime }
+        { scheduleTime: shrinkTime, id }
       );
+      enqueuedTasksByQueue.sendGameNotification.push(id);
       shrinkTime = new Date(shrinkTime.getTime() + intervalMs);
       shrinkCount++;
     }
@@ -673,20 +723,108 @@ async function scheduleGameLifecycleTasks(
     const spawnCount = Math.min(shrinkCount, MAX_POWER_UP_SHRINK_BATCHES);
     let spawnTime = new Date(hunterStartDate.getTime() + intervalMs);
     for (let batchIndex = 1; batchIndex <= spawnCount; batchIndex++) {
+      const id = `spawn-${gameId}-${batchIndex}`;
       await spawnQueue.enqueue(
         {
           gameId,
           batchIndex,
           count: POWER_UP_PERIODIC_BATCH_SIZE,
         },
-        { scheduleTime: spawnTime }
+        { scheduleTime: spawnTime, id }
       );
+      enqueuedTasksByQueue.spawnPowerUpBatch.push(id);
       spawnTime = new Date(spawnTime.getTime() + intervalMs);
     }
   }
 
+  // CRIT-10: persist the manifest so `onGameDeleted` can clean up.
+  // Stored as a single doc to keep the write count low; `set` (not
+  // `update`) replaces any previous manifest from a re-trigger.
+  try {
+    await db
+      .collection("games")
+      .doc(gameId)
+      .collection("lifecycle")
+      .doc("taskManifest")
+      .set({ enqueuedTasksByQueue });
+  } catch (err) {
+    // Non-fatal — the tasks are still enqueued; the worst that
+    // happens is a delete won't fully clean up.
+    console.warn(`Failed to persist task manifest for game ${gameId}:`, err);
+  }
+
   return true;
 }
+
+// CRIT-10 (audit 2026-05-17): clean up scheduled Cloud Tasks when a
+// game doc is deleted. Reads the manifest written by
+// `scheduleGameLifecycleTasks` and calls Cloud Tasks v2 REST DELETE
+// for every task ID. Failures are logged but don't reject the
+// trigger — partial cleanup is still better than nothing, and the
+// handlers themselves early-return on `!doc.exists` so any tasks
+// that survive are harmless beyond their invocation cost.
+export const onGameDeleted = onDocumentDeleted(
+  {
+    document: "games/{gameId}",
+    region: REGION,
+  },
+  async (event) => {
+    const gameId = event.params.gameId;
+    const project = process.env.GCLOUD_PROJECT || process.env.GCP_PROJECT;
+    if (!project) {
+      console.warn(`onGameDeleted: GCLOUD_PROJECT not set for game ${gameId}`);
+      return;
+    }
+
+    // Try to read the manifest. If it's missing (game created before
+    // CRIT-10 fix, or a write race) we silently skip the cleanup —
+    // there's no way to know which task IDs were enqueued.
+    const manifestRef = db
+      .collection("games")
+      .doc(gameId)
+      .collection("lifecycle")
+      .doc("taskManifest");
+    const manifestSnap = await manifestRef.get();
+    if (!manifestSnap.exists) {
+      console.info(`onGameDeleted: no task manifest for game ${gameId} — nothing to cancel`);
+      return;
+    }
+    const manifest = manifestSnap.data() as {
+      enqueuedTasksByQueue?: Record<string, string[]>;
+    };
+    const byQueue = manifest.enqueuedTasksByQueue ?? {};
+
+    // Lazy-load googleapis (already a dep via Sheets) to avoid a
+    // cold-start hit when this trigger isn't fired.
+    const { google } = await import("googleapis");
+    const auth = new google.auth.GoogleAuth({
+      scopes: ["https://www.googleapis.com/auth/cloud-platform"],
+    });
+    const tasksClient = google.cloudtasks({ version: "v2", auth });
+
+    let deletedCount = 0;
+    let failedCount = 0;
+    for (const [queueId, taskIds] of Object.entries(byQueue)) {
+      for (const taskId of taskIds) {
+        const name = `projects/${project}/locations/${REGION}/queues/${queueId}/tasks/${taskId}`;
+        try {
+          await tasksClient.projects.locations.queues.tasks.delete({ name });
+          deletedCount++;
+        } catch (err) {
+          // 404 is expected for tasks that already fired or were
+          // GC'd by Cloud Tasks. Anything else is worth a warning.
+          const status = (err as { code?: number }).code;
+          if (status === 404) continue;
+          failedCount++;
+          console.warn(`onGameDeleted: failed to delete task ${name}:`, err);
+        }
+      }
+    }
+    console.info(
+      `onGameDeleted ${gameId}: deleted ${deletedCount} tasks, failed ${failedCount}`
+    );
+  }
+);
 
 export const onGameCreated = onDocumentCreated(
   {
@@ -700,6 +838,28 @@ export const onGameCreated = onDocumentCreated(
 
     const data = snap.data();
     const gameId = event.params.gameId;
+
+    // CRIT-2 (audit 2026-05-17): move foundCode off the public Game
+    // doc so hunters can't read it and self-declare victory. The
+    // chicken fetches it via the `getFoundCode` callable. We merge
+    // into /private/security (which also holds gameMasterPassword
+    // from PP-70) and null out the public field.
+    const foundCodeRaw = data.foundCode;
+    const foundCode = typeof foundCodeRaw === "string" ? foundCodeRaw : "";
+    if (foundCode.length > 0) {
+      try {
+        await snap.ref
+          .collection("private")
+          .doc("security")
+          .set({ foundCode }, { merge: true });
+        await snap.ref.update({ foundCode: "" });
+      } catch (err) {
+        // Failure here is bad — the public foundCode would stay
+        // readable. Re-throw so Firebase retries the trigger.
+        console.error(`Failed to relocate foundCode for game ${gameId}:`, err);
+        throw err;
+      }
+    }
 
     try {
       await scheduleGameLifecycleTasks(gameId, data);

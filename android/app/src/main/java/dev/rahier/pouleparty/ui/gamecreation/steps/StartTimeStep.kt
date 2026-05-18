@@ -50,8 +50,8 @@ fun StartTimeStep(
 ) {
     val displayFormat = remember { SimpleDateFormat("EEE d MMM, HH:mm", Locale.getDefault()) }
     StepContainer(
-        title = "Quand ?",
-        subtitle = "Choisis la date et l'heure de depart"
+        title = stringResource(R.string.wizard_start_time_title),
+        subtitle = stringResource(R.string.wizard_start_time_subtitle)
     ) {
         val shape = RoundedCornerShape(16.dp)
         Box(
@@ -72,7 +72,7 @@ fun StartTimeStep(
         }
 
         Text(
-            text = "Appuie pour changer",
+            text = stringResource(R.string.wizard_start_time_tap_to_change),
             style = gameboyStyle(9),
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
         )

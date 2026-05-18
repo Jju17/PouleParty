@@ -48,6 +48,14 @@ struct ChickenMapFeature {
         /// effect cancels (no more `chickenLocations` writes).
         var isGameOver: Bool = false
 
+        /// CRIT-2 (audit 2026-05-17): the 4-digit code the chicken
+        /// reads out to hunters who physically find them. Fetched
+        /// once on map load via `apiClient.getFoundCode` — the value
+        /// lives in `/games/{id}/private/security` (admin-SDK only),
+        /// so it's no longer leaked to hunters via the public Game
+        /// doc. Empty until the CF responds.
+        var chickenFoundCode: String = ""
+
         // MARK: - MapFeatureState passthroughs (child → parent surface)
         var availablePowerUps: [PowerUp] { powerUps.available }
         var collectedPowerUps: [PowerUp] { powerUps.collected }
@@ -91,6 +99,15 @@ struct ChickenMapFeature {
 
         @CasePathable
         enum View {
+            /// HIGH-11 (audit 2026-05-17): mirror of HunterMap's
+            /// `.appBecameActive`. iOS can suspend the chicken's
+            /// `for await coordinate in locationClient.startTracking()`
+            /// writer loop while the app is in the background. In
+            /// `followTheChicken` mode there is no rebroadcast timer,
+            /// so a stationary chicken who backgrounds the app sees
+            /// their position go stale until they walk 10 m. Push one
+            /// fix on resume to close the gap.
+            case appBecameActive
             case beenFoundButtonTapped
             case cancelGameButtonTapped
             case endGameCodeDismissed
@@ -103,6 +120,7 @@ struct ChickenMapFeature {
         @CasePathable
         enum Internal {
             case countdownDismissed
+            case foundCodeFetched(String)
             case gameUpdated(Game)
             case hunterLocationsUpdated([HunterLocation])
             case newLocationFetched(CLLocationCoordinate2D)
@@ -391,8 +409,34 @@ struct ChickenMapFeature {
                     }
                 )
                 return .none
+            case .view(.appBecameActive):
+                // HIGH-11 (audit 2026-05-17): force a single
+                // `chickenLocations/latest` write on resume so hunters
+                // see a fresh marker the moment they reopen the app.
+                // Guarded on `hasGameStarted` so we don't write before
+                // the game opens.
+                guard state.hasGameStarted, !state.isGameOver else { return .none }
+                let gameId = state.game.id
+                // Snapshot invisibility from the live game state at the
+                // call site so we honor any active power-up.
+                let isInvisible = state.game.isChickenInvisible
+                return .run { _ in
+                    guard let coord = locationClient.lastLocation() else { return }
+                    do {
+                        try apiClient.setChickenLocation(gameId, coord, isInvisible)
+                    } catch {
+                        logger.error("appBecameActive setChickenLocation failed: \(error.localizedDescription)")
+                    }
+                }
             case .view(.beenFoundButtonTapped):
-                state.destination = .endGameCode(state.game.foundCode)
+                // CRIT-2 (audit 2026-05-17): read from `chickenFoundCode`,
+                // populated by the `getFoundCode` CF on map load. The
+                // public `game.foundCode` is now "" since V2.3 moves it
+                // to /private/security.
+                state.destination = .endGameCode(state.chickenFoundCode)
+                return .none
+            case let .internal(.foundCodeFetched(code)):
+                state.chickenFoundCode = code
                 return .none
             case .view(.infoButtonTapped):
                 state.showGameInfo = true
@@ -436,6 +480,20 @@ struct ChickenMapFeature {
                 let radarPingUntil = LockIsolated<Date?>(nil)
 
                 var effects: [Effect<Action>] = [
+                    // CRIT-2 (audit 2026-05-17): fetch the foundCode once
+                    // on map load. The chicken needs it to read out to
+                    // hunters who physically find them. The CF refuses
+                    // for non-chicken callers, so the result is empty
+                    // for any other UID — harmless if the view ever
+                    // mis-renders.
+                    .run { send in
+                        do {
+                            let code = try await apiClient.getFoundCode(gameId)
+                            await send(.internal(.foundCodeFetched(code)))
+                        } catch {
+                            logger.error("getFoundCode failed: \(error.localizedDescription)")
+                        }
+                    },
                     .run { send in
                         for await _ in self.clock.timer(interval: .seconds(1)) {
                             await send(.internal(.timerTicked))

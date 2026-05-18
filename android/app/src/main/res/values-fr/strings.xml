@@ -324,4 +324,53 @@
     <string name="deeplink_code_label">TON CODE DE VALIDATION</string>
     <string name="deeplink_ok">OK</string>
     <string name="deeplink_close">Fermer</string>
+
+    <!-- CRIT-8 (audit 2026-05-17) -->
+    <string name="join_flow_gm_too_many_attempts">Trop de tentatives. Réessaie dans %1$d min.</string>
+    <string name="join_flow_gm_wrong_code">Mauvais code. %1$d tentative(s) restante(s).</string>
+    <string name="join_flow_gm_generic_error">Impossible de vérifier le code GameMaster. Réessaie.</string>
+    <string name="join_flow_validation_code_invalid">Code invalide. Vérifie l\'email qu\'on t\'a envoyé.</string>
+    <string name="join_flow_network_error">Erreur réseau</string>
+
+    <!-- CRIT-8 (audit 2026-05-17): wizard de création de partie -->
+    <string name="wizard_duration_title">Combien de temps ?</string>
+    <string name="wizard_duration_subtitle">Durée de la partie</string>
+    <string name="wizard_head_start_title">Avance de la poule ?</string>
+    <string name="wizard_head_start_subtitle">Temps avant que les chasseurs ne commencent</string>
+    <string name="wizard_head_start_none">Pas d\'avance</string>
+    <string name="wizard_head_start_minutes">%1$d minutes d\'avance pour la poule</string>
+    <string name="wizard_power_ups_title">Power-Ups ?</string>
+    <string name="wizard_power_ups_subtitle">Active les bonus en jeu</string>
+    <string name="wizard_chicken_sees_hunters_title">La poule voit les chasseurs ?</string>
+    <string name="wizard_chicken_sees_hunters_subtitle">La poule peut-elle voir où sont les chasseurs ?</string>
+    <string name="wizard_chicken_sees_hunters_yes">Oui, elle les voit</string>
+    <string name="wizard_chicken_sees_hunters_no">Non, à l\'aveugle</string>
+    <string name="wizard_gamemaster_title">GameMaster</string>
+    <string name="wizard_gamemaster_subtitle">Un arbitre peut rejoindre avec un code 4 chiffres</string>
+    <string name="wizard_gamemaster_enable">Activer le rôle GameMaster</string>
+    <string name="wizard_gamemaster_secret_hint">Garde-le secret : partage-le uniquement à l\'arbitre.</string>
+    <string name="wizard_start_time_title">Quand ?</string>
+    <string name="wizard_start_time_subtitle">Choisis la date et l\'heure de départ</string>
+    <string name="wizard_start_time_tap_to_change">Appuie pour changer</string>
+    <string name="wizard_participation_title">Tu participes ?</string>
+    <string name="wizard_participation_subtitle">Est-ce que tu joues aussi ?</string>
+    <string name="wizard_participation_chicken">Je suis la Poule</string>
+    <string name="wizard_participation_organizer">J\'organise</string>
+    <string name="wizard_game_mode_title">Quel mode de jeu ?</string>
+    <string name="wizard_game_mode_subtitle">Choisis comment tu veux jouer</string>
+    <string name="wizard_game_mode_follow_title">Follow the Chicken</string>
+    <string name="wizard_game_mode_follow_subtitle">La zone rétrécit vers la poule</string>
+    <string name="wizard_game_mode_stay_title">Stay in the Zone</string>
+    <string name="wizard_game_mode_stay_subtitle">Zone fixe qui rétrécit</string>
+    <string name="wizard_chicken_selection_title">Qui sera la Poule ?</string>
+    <string name="wizard_chicken_selection_subtitle">Comment choisir la poule ?</string>
+    <string name="wizard_chicken_selection_random">Au hasard</string>
+    <string name="wizard_chicken_selection_first">Premier arrivé</string>
+    <string name="wizard_chicken_selection_pick">Je désigne</string>
+    <string name="wizard_recap_title">Récapitulatif</string>
+    <string name="wizard_recap_subtitle">Vérifie avant de lancer</string>
+    <string name="wizard_recap_role_chicken">Poule 🐔</string>
+    <string name="wizard_recap_role_organizer">Organisateur 📋</string>
+    <string name="wizard_recap_yes">Oui</string>
+    <string name="wizard_recap_no">Non</string>
 </resources>

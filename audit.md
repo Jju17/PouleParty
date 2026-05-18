@@ -7,6 +7,85 @@
 
 ---
 
+## État d'avancement — 2026-05-18
+
+### ✅ CRITICAL (11/11)
+
+| ID | Sujet | Statut | Deploy |
+|----|-------|--------|--------|
+| CRIT-1 | `/eventRegistrations` PII lock + CFs callable | ✅ Code + tests + iOS/Android callers | ✅ Staging + Prod |
+| CRIT-2 | `foundCode` → `/private/security` + getFoundCode CF | ✅ Code + tests + iOS/Android UI | ✅ Staging + Prod |
+| CRIT-3 | `hunterIds`/`winners` restreints + `submitFoundCode` CF | ✅ Code + tests + iOS/Android callers | ✅ Staging + Prod |
+| CRIT-4 | Stripe hardening (CORS, maxInstances, honeypot, batchId allowlist, max-length, email regex, phone formula-injection) | ✅ Code + tests | ✅ Staging + Prod |
+| CRIT-5 | `crypto.randomInt` + transactional uniqueness sur codes payants | ✅ Code + tests | ✅ Staging + Prod |
+| CRIT-6 | iOS `Dictionary uniquingKeysWith` (Victory + Challenges) | ✅ Code + tests | n/a (mobile) |
+| CRIT-7 | iOS `LiveLocationManager` refactor (multi-consumer + serialized auth queue) | ✅ Code + tests | n/a (mobile) |
+| CRIT-8 | Android i18n extraction (40 strings wizard + 4 JoinFlow errors) | ✅ Code + tests | n/a (mobile) |
+| CRIT-9 | Android deeplink mid-game route check | ✅ Code + tests | n/a (mobile) |
+| CRIT-10 | Cloud Tasks cleanup au game delete (deterministic IDs + manifest + onGameDeleted) | ✅ Code + tests | ✅ Staging + Prod |
+| CRIT-11 | Functions `transitionGameStatus` transactionnel | ✅ Code + tests | ✅ Staging + Prod (V1) |
+
+### ✅ HIGH addressés (14/21)
+
+| ID | Sujet | Statut |
+|----|-------|--------|
+| HIGH-1 | Functions Mapbox `Promise.allSettled` + fallback raw coord | ✅ Code |
+| HIGH-2 | Functions Mapbox token log sanitization | ✅ Code |
+| HIGH-4 | Functions Stripe idempotencyKey | ✅ Code |
+| HIGH-5 | Functions Stripe webhook amount/currency/mode cross-check + not-found graceful | ✅ Code |
+| HIGH-6 | Functions `gmRateLimits` tx.delete on success | ✅ Code |
+| HIGH-8 | iOS JoinFlow GM error strings → `String(localized:)` | ✅ Code |
+| HIGH-10 | iOS `findLastUpdate` bounded + early break | ✅ Code |
+| HIGH-11 | iOS ChickenMap scenePhase resume | ✅ Code |
+| HIGH-12 | Android NotificationChannel centralisé dans PoulePartyApp | ✅ Code |
+| HIGH-13 | Android `BaseMapViewModel.streamJobs` thread-safe | ✅ Code |
+| HIGH-14 | Android `MediaPlayer.create` NPE guard | ✅ Code |
+| HIGH-16 | Android deeplink `pathPrefix` → `path` exact | ✅ Code |
+| HIGH-17 | Parity Android shrink boundary off-by-one | ✅ Code (V1) |
+| HIGH-18 | Android heartbeat retry via `withRetry` | ✅ Code (V1) |
+| HIGH-19 | JoinFlow/GM error i18n iOS+Android (jumelé HIGH-8) | ✅ Code |
+| HIGH-20 | Web security headers (HSTS, CSP, X-Frame-Options, etc.) | ✅ Code |
+| HIGH-21 | Web `firebase.ts` dead code supprimé + dep retirée | ✅ Code |
+
+### ⏳ HIGH différés (7/21) — backlog post-D-Day
+
+| ID | Sujet | Raison de différer |
+|----|-------|--------------------|
+| HIGH-3 | Functions webhook side-effects recovery (scheduled re-run) | Nice-to-have ; le mécanisme actuel log les échecs et permet récupération manuelle |
+| HIGH-7 | Functions GM password brute-force per-IP rate limit | Cluster séparé (M-1 audit), nécessite Cloud Functions IP extraction |
+| HIGH-9 | iOS effects sans `.cancellable(id:)` sur 3 features map | Refactor ChickenMap/HunterMap/GameMasterMap, ~30 effects à wrapper |
+| HIGH-6 (iOS) | iOS audio doublage on Home re-task | Mineur ; nécessite guard sur `playSound()` |
+| HIGH-15 | Android `collectAsState` → `collectAsStateWithLifecycle` (12 screens) | Mécanique mais répétitif ; gain batterie |
+| iOS GameMaster strings | `Features/GameMasterMap/GameMasterMapView.swift:79-203` (15+ strings) | Symétrique de la GameMasterMapScreen Android (toujours en FR) ; à faire en parallèle |
+| Android GameMaster strings | `ui/gamemastermap/GameMasterMapScreen.kt:143-284` (15+ strings) | Idem iOS |
+
+### Non-couvert (manuel par Julien)
+
+- **App Check** (CRIT-4 reste partiel) : reCAPTCHA Enterprise site key à configurer dans Firebase Console (staging + prod), puis activation `enforceAppCheck: true` sur `createPendingRegistration` + init du Web SDK.
+- **Firestore TTL policy** sur `gmRateLimits.firstAttemptAt` (HIGH-6 complémentaire) : à configurer Firebase Console → Firestore → TTL.
+- **Cloud Tasks IAM** : vérifier que le compute SA staging/prod a bien `roles/cloudtasks.taskRunner` pour le `onGameDeleted` delete.
+
+### ✅ Tous les déploiements réalisés
+
+- Cloud Functions staging + prod : `onGameDeleted`, `onGameCreated`, `createPendingRegistration`, `confirmRegistrationPayment`, `spawnPowerUpBatch`, `joinAsGameMaster` (+ V1/V2/V3 déjà déployées)
+- Firestore Rules staging + prod (lock `/eventRegistrations`, restrict `hunterIds`/`winners`)
+- Hosting staging + prod (security headers + Inscription.tsx honeypot)
+
+### Métriques finales
+
+- **CRITICAL** : 11/11 fixés (10 déployés + 1 pending re-auth)
+- **HIGH** : 14/21 fixés (60 % couverts dans la session ; 7 différés au backlog)
+- **Builds** : iOS ✅ / Android ✅ / Functions ✅ / Web ✅
+- **Tests** : iOS (642 tests) ✅ / Android (testStagingDebugUnitTest) ✅ / Functions (122 tests) ✅
+- **Strings i18n ajoutées** : 49 (40 wizard + 5 JoinFlow Android, 2+2 iOS GM errors)
+- **Cloud Functions nouvelles** : `validateRegistrationCode`, `lookupGameByValidationCode`, `submitFoundCode`, `getFoundCode`, `onGameDeleted`
+- **Cloud Functions modifiées** : `transitionGameStatus`, `createPendingRegistration`, `confirmRegistrationPayment`, `onGameCreated`, `spawnPowerUpBatch`, `joinAsGameMaster`
+- **Rules** : 4 changements (deny `/eventRegistrations` reads, restrict `hunterIds` to own UID, deny `winners` direct writes, exclude `winners` from creator/participant update rules)
+
+---
+
+---
+
 ## 0. TL;DR — Les 10 choses à fixer avant le 06/06
 
 Ordonnées par ratio « risque × probabilité × proximité D-Day ».

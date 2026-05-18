@@ -22,12 +22,44 @@ object DeeplinkBus {
     private val _validationCode = MutableStateFlow<String?>(null)
     val validationCode: StateFlow<String?> = _validationCode.asStateFlow()
 
+    /** CRIT-9 (audit 2026-05-17) — mid-game route guard. AppNavigation pushes
+     *  the current top-of-stack route here; `postValidationCode` drops App Link
+     *  payloads while the user is on a gameplay screen so a tap on the email
+     *  CTA doesn't yank them out of an active game. iOS does the same drop
+     *  inside `AppFeature` for `.chickenMap / .hunterMap / .gameMasterMap /
+     *  .victory`. Without this guard, the StateFlow value stays set until the
+     *  user returns to Home, where `HomeViewModel.init` collects it and opens
+     *  the JoinFlow sheet on top of the post-game screen.
+     */
+    private val _currentRoute = MutableStateFlow<String?>(null)
+
+    /** Route templates that should reject incoming App Link payloads. Match
+     *  the patterns in `navigation.Routes` (the runtime value of
+     *  `NavDestination.route` is the template string, not the resolved URL). */
+    private val MID_GAME_ROUTE_PREFIXES = listOf(
+        "chicken_map/",
+        "hunter_map/",
+        "game_master_map/",
+        "victory/",
+    )
+
+    /** Called by AppNavigation on every back-stack change so the bus knows
+     *  whether the user is in a gameplay screen. */
+    fun updateCurrentRoute(route: String?) {
+        _currentRoute.value = route
+    }
+
     /** Push a new code from MainActivity. Empty or whitespace input
      *  is dropped silently so a malformed Intent can't fire an empty
-     *  prefill into the JoinFlow. */
+     *  prefill into the JoinFlow. Mid-game routes also drop. */
     fun postValidationCode(code: String) {
         val normalized = code.trim().uppercase()
         if (normalized.isEmpty()) return
+        val route = _currentRoute.value
+        if (route != null && MID_GAME_ROUTE_PREFIXES.any { route.startsWith(it) }) {
+            android.util.Log.d("PP-52-Deeplink", "[DeeplinkBus] dropping during mid-game route=$route")
+            return
+        }
         _validationCode.value = normalized
     }
 

@@ -83,6 +83,7 @@ class HomeActivePhaseTest {
         analyticsRepository = analyticsRepository,
         prefs = prefs,
         auth = auth,
+        appContext = mockk(relaxed = true),
     )
 
     // ── Phase wiring ──────────────────────────────────────

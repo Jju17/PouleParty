@@ -306,7 +306,10 @@ fun processRadiusUpdate(
 ): RadiusUpdateResult? {
     val nextUpdate = nextRadiusUpdate ?: return null
     val now = Date()
-    if (!now.after(nextUpdate)) return null
+    // HIGH-17 (audit 2026-05-17): match iOS `now >= nextUpdate`. Previously
+    // `!now.after(nextUpdate)` was strict `<=`, so Android fired one tick later
+    // than iOS at the exact-second boundary — 1 s desync at every shrink.
+    if (now.time < nextUpdate.time) return null
     // Zone Freeze: skip the radius reduction for THIS scheduled shrink but
     // still advance `nextRadiusUpdate` to the following one. Previously we
     // returned null here, which left the countdown target frozen on a past

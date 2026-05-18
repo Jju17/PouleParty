@@ -14,7 +14,6 @@ import dev.rahier.pouleparty.model.GameStatus
 import dev.rahier.pouleparty.AppConstants
 import dev.rahier.pouleparty.powerups.model.PowerUp
 import dev.rahier.pouleparty.powerups.model.PowerUpType
-import dev.rahier.pouleparty.model.Winner
 import dev.rahier.pouleparty.ui.gamelogic.CountdownPhase
 import dev.rahier.pouleparty.ui.gamelogic.CountdownResult
 import dev.rahier.pouleparty.ui.gamelogic.PlayerRole
@@ -91,13 +90,15 @@ data class HunterMapUiState(
     val chickenLocation: Point? = null,
     val hasChallenges: Boolean = false,
     val winnerRegistrationFailed: Boolean = false,
-    val pendingWinner: Winner? = null,
-    // Raised while an `addWinner` write is in flight so a fast double-tap
-    // on the submit button can't enqueue the write twice. Because the
-    // winner record uses a fresh `Timestamp` on each submit, Firestore's
-    // `arrayUnion` does *not* dedupe — two writes = two winner entries
-    // for the same hunter, which inflates `winners.size` past
-    // `hunterIds.size` and can end the game early.
+    // CRIT-3 (audit 2026-05-17): hold the typed-in code (not a pre-built
+    // Winner) between a failed `submitFoundCode` CF call and a retry. The
+    // server stamps the winner's timestamp at success, so we no longer
+    // build a Winner client-side.
+    val pendingFoundCode: String? = null,
+    // Raised while a `submitFoundCode` CF call is in flight so a fast
+    // double-tap on the submit button can't enqueue two CF calls. The CF
+    // itself is also idempotent (returns AlreadyWinner on re-submission),
+    // but this UX gate avoids the round-trip.
     val isSubmittingWinner: Boolean = false,
     /** PP-36: mirrors the chicken-side `isDebugPreview` flag. When the
      *  hunter map is driven by a previewer (snapshot tests, Compose
@@ -758,54 +759,85 @@ class HunterMapViewModel @Inject constructor(
         val code = _uiState.value.enteredCode.trim()
         _uiState.update { it.copy(isEnteringFoundCode = false, enteredCode = "") }
 
-        if (code != _uiState.value.game.foundCode) {
-            val attempts = _uiState.value.wrongCodeAttempts + 1
-            analyticsRepository.hunterWrongCode(attemptNumber = attempts)
-            val cooldown = if (attempts >= AppConstants.CODE_MAX_WRONG_ATTEMPTS) System.currentTimeMillis() + AppConstants.CODE_COOLDOWN_MS else 0L
-            _uiState.update {
-                it.copy(
-                    showWrongCodeAlert = true,
-                    wrongCodeAttempts = if (attempts >= AppConstants.CODE_MAX_WRONG_ATTEMPTS) 0 else attempts,
-                    codeCooldownUntil = cooldown
-                )
-            }
-            return
-        }
-
+        // CRIT-2 (audit 2026-05-17): the client used to compare
+        // `code != game.foundCode` here, but foundCode is no longer
+        // on the public Game doc. The CF re-verifies server-side and
+        // returns `InvalidCode` for misses — routed to the same
+        // wrong-code alert + cooldown logic via [handleWrongCode].
         val totalAttempts = _uiState.value.wrongCodeAttempts + 1
-        val winner = Winner(
-            hunterId = hunterId,
-            hunterName = hunterName,
-            timestamp = Timestamp.now()
-        )
-        recordWinner(winner, totalAttempts)
+        recordFoundCodeSubmission(code, totalAttempts)
     }
 
-    // Extracted so the "retry" path can reuse it after a network failure -
-    // we keep the freshly-built Winner in state so the second attempt records
-    // the original found-the-chicken timestamp, not a retry-time one.
-    private fun recordWinner(winner: Winner, totalAttempts: Int) {
+    private fun handleWrongCodeRejected() {
+        val attempts = _uiState.value.wrongCodeAttempts + 1
+        analyticsRepository.hunterWrongCode(attemptNumber = attempts)
+        val cooldown = if (attempts >= AppConstants.CODE_MAX_WRONG_ATTEMPTS)
+            System.currentTimeMillis() + AppConstants.CODE_COOLDOWN_MS
+        else 0L
         _uiState.update {
             it.copy(
-                pendingWinner = winner,
+                showWrongCodeAlert = true,
+                wrongCodeAttempts = if (attempts >= AppConstants.CODE_MAX_WRONG_ATTEMPTS) 0 else attempts,
+                codeCooldownUntil = cooldown,
+                pendingFoundCode = null,
+                winnerRegistrationFailed = false,
+                isSubmittingWinner = false,
+            )
+        }
+    }
+
+    /** CRIT-3 (audit 2026-05-17): submit the typed code through the
+     *  server-authoritative CF. `AlreadyWinner` is treated as success
+     *  — the server already has the hunter recorded from an earlier
+     *  attempt, so the UX proceeds to Victory. Any other rejection
+     *  surfaces the retry prompt. Extracted so the retry path can
+     *  re-send the same (code, name) pair.
+     */
+    private fun recordFoundCodeSubmission(code: String, totalAttempts: Int) {
+        _uiState.update {
+            it.copy(
+                pendingFoundCode = code,
                 winnerRegistrationFailed = false,
                 isSubmittingWinner = true,
             )
         }
         viewModelScope.launch {
             try {
-                firestoreRepository.addWinner(gameId, winner)
-                analyticsRepository.hunterFoundChicken(attempts = totalAttempts)
-                _uiState.update {
-                    it.copy(
-                        pendingWinner = null,
-                        shouldNavigateToVictory = true,
-                        isSubmittingWinner = false,
-                    )
+                val result = firestoreRepository.submitFoundCode(gameId, code, hunterName)
+                val accepted = when (result) {
+                    FirestoreRepository.SubmitFoundCodeResult.Success -> true
+                    is FirestoreRepository.SubmitFoundCodeResult.Failure ->
+                        result.reason == FirestoreRepository.SubmitFoundCodeReason.AlreadyWinner
                 }
-                _effects.send(HunterMapEffect.NavigateToVictory)
+                if (accepted) {
+                    analyticsRepository.hunterFoundChicken(attempts = totalAttempts)
+                    _uiState.update {
+                        it.copy(
+                            pendingFoundCode = null,
+                            shouldNavigateToVictory = true,
+                            isSubmittingWinner = false,
+                        )
+                    }
+                    _effects.send(HunterMapEffect.NavigateToVictory)
+                } else {
+                    val reason = (result as FirestoreRepository.SubmitFoundCodeResult.Failure).reason
+                    Log.w(TAG, "submitFoundCode rejected: $reason")
+                    // CRIT-2: route InvalidCode to the wrong-code UX
+                    // (alert + cooldown), other reasons to the generic
+                    // retry prompt.
+                    if (reason == FirestoreRepository.SubmitFoundCodeReason.InvalidCode) {
+                        handleWrongCodeRejected()
+                    } else {
+                        _uiState.update {
+                            it.copy(
+                                winnerRegistrationFailed = true,
+                                isSubmittingWinner = false,
+                            )
+                        }
+                    }
+                }
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to register winner, will surface retry prompt", e)
+                Log.e(TAG, "submitFoundCode failed, will surface retry prompt", e)
                 _uiState.update {
                     it.copy(
                         winnerRegistrationFailed = true,
@@ -818,14 +850,15 @@ class HunterMapViewModel @Inject constructor(
 
     private fun retryWinnerRegistration() {
         if (_uiState.value.isSubmittingWinner) return
-        val winner = _uiState.value.pendingWinner ?: return
+        val code = _uiState.value.pendingFoundCode ?: return
         val totalAttempts = _uiState.value.wrongCodeAttempts + 1
-        recordWinner(winner, totalAttempts)
+        recordFoundCodeSubmission(code, totalAttempts)
     }
 
     private fun dismissWinnerRegistrationError() {
-        // Dismiss clears the error overlay but keeps `pendingWinner` so the
-        // hunter can re-trigger the retry from the found-code flow if needed.
+        // Dismiss clears the error overlay but keeps `pendingFoundCode` so
+        // the hunter can re-trigger the retry from the found-code flow if
+        // needed.
         _uiState.update { it.copy(winnerRegistrationFailed = false) }
     }
 

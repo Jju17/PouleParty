@@ -60,6 +60,13 @@ data class ChickenMapUiState(
     override val showGameInfo: Boolean = false,
     val codeCopied: Boolean = false,
     val showFoundCode: Boolean = false,
+    /** CRIT-2 (audit 2026-05-17): the 4-digit code the chicken reads out
+     *  to hunters who physically find them. Fetched once on init via
+     *  `firestoreRepository.getFoundCode` — the value lives in
+     *  `/games/{id}/private/security` (admin-SDK only), so it's no
+     *  longer leaked on the public Game doc. Empty until the CF
+     *  responds. */
+    val chickenFoundCode: String = "",
     val previousWinnersCount: Int = -1,
     override val winnerNotification: String? = null,
     override val hasGameStarted: Boolean = false,
@@ -142,6 +149,17 @@ class ChickenMapViewModel @Inject constructor(
 
     init {
         loadGame()
+        // CRIT-2 (audit 2026-05-17): fetch foundCode once on map load.
+        // The CF refuses for non-chicken callers, so a non-chicken VM
+        // hitting this path just gets "" (harmless).
+        viewModelScope.launch {
+            try {
+                val code = firestoreRepository.getFoundCode(gameId)
+                _uiState.update { it.copy(chickenFoundCode = code) }
+            } catch (e: Exception) {
+                Log.e("ChickenMapVM", "Failed to fetch foundCode for $gameId", e)
+            }
+        }
     }
 
     private fun loadGame() {

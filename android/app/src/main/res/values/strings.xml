@@ -328,4 +328,55 @@
     <string name="deeplink_code_label">YOUR VALIDATION CODE</string>
     <string name="deeplink_ok">OK</string>
     <string name="deeplink_close">Close</string>
+
+    <!-- CRIT-8 (audit 2026-05-17): JoinFlow error strings, previously
+         hardcoded in HomeViewModel — broke EN/NL users. -->
+    <string name="join_flow_gm_too_many_attempts">Too many attempts. Try again in %1$d min.</string>
+    <string name="join_flow_gm_wrong_code">Wrong code. %1$d attempt(s) remaining.</string>
+    <string name="join_flow_gm_generic_error">Could not verify the GameMaster code. Try again.</string>
+    <string name="join_flow_validation_code_invalid">Invalid code. Check the email we sent you.</string>
+    <string name="join_flow_network_error">Network error</string>
+
+    <!-- CRIT-8 (audit 2026-05-17): Game creation wizard steps, previously
+         hardcoded in French in the step composables. -->
+    <string name="wizard_duration_title">How long?</string>
+    <string name="wizard_duration_subtitle">Game duration</string>
+    <string name="wizard_head_start_title">Chicken head start?</string>
+    <string name="wizard_head_start_subtitle">Time before the hunters can start</string>
+    <string name="wizard_head_start_none">No head start</string>
+    <string name="wizard_head_start_minutes">%1$d minutes head start for the chicken</string>
+    <string name="wizard_power_ups_title">Power-Ups?</string>
+    <string name="wizard_power_ups_subtitle">Enable in-game bonuses</string>
+    <string name="wizard_chicken_sees_hunters_title">Can the chicken see the hunters?</string>
+    <string name="wizard_chicken_sees_hunters_subtitle">Can the chicken see where the hunters are?</string>
+    <string name="wizard_chicken_sees_hunters_yes">Yes, she sees them</string>
+    <string name="wizard_chicken_sees_hunters_no">No, blind mode</string>
+    <string name="wizard_gamemaster_title">GameMaster</string>
+    <string name="wizard_gamemaster_subtitle">A referee can join with a 4-digit code</string>
+    <string name="wizard_gamemaster_enable">Enable the GameMaster role</string>
+    <string name="wizard_gamemaster_secret_hint">Keep it secret: share it only with the referee.</string>
+    <string name="wizard_start_time_title">When?</string>
+    <string name="wizard_start_time_subtitle">Choose the start date and time</string>
+    <string name="wizard_start_time_tap_to_change">Tap to change</string>
+    <string name="wizard_participation_title">Are you playing?</string>
+    <string name="wizard_participation_subtitle">Are you playing too?</string>
+    <string name="wizard_participation_chicken">I am the Chicken</string>
+    <string name="wizard_participation_organizer">I\'m organizing</string>
+    <string name="wizard_game_mode_title">Which game mode?</string>
+    <string name="wizard_game_mode_subtitle">Choose how you want to play</string>
+    <string name="wizard_game_mode_follow_title">Follow the Chicken</string>
+    <string name="wizard_game_mode_follow_subtitle">The zone shrinks toward the chicken</string>
+    <string name="wizard_game_mode_stay_title">Stay in the Zone</string>
+    <string name="wizard_game_mode_stay_subtitle">Fixed zone that shrinks</string>
+    <string name="wizard_chicken_selection_title">Who will be the Chicken?</string>
+    <string name="wizard_chicken_selection_subtitle">How to choose the chicken?</string>
+    <string name="wizard_chicken_selection_random">Random</string>
+    <string name="wizard_chicken_selection_first">First in</string>
+    <string name="wizard_chicken_selection_pick">I pick</string>
+    <string name="wizard_recap_title">Recap</string>
+    <string name="wizard_recap_subtitle">Check before launching</string>
+    <string name="wizard_recap_role_chicken">Chicken 🐔</string>
+    <string name="wizard_recap_role_organizer">Organizer 📋</string>
+    <string name="wizard_recap_yes">Yes</string>
+    <string name="wizard_recap_no">No</string>
 </resources>

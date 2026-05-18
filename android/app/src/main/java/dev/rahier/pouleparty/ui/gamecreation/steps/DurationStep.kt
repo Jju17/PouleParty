@@ -33,8 +33,8 @@ fun DurationStep(
     onDurationChanged: (Double) -> Unit
 ) {
     StepContainer(
-        title = "Combien de temps ?",
-        subtitle = "Duree de la partie"
+        title = stringResource(R.string.wizard_duration_title),
+        subtitle = stringResource(R.string.wizard_duration_subtitle)
     ) {
         val durationOptions = listOf(
             60.0 to "1h",

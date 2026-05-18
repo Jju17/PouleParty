@@ -35,30 +35,51 @@ service cloud.firestore {
                     // once hunters have registered (PP-26).
                     && request.resource.data.chickenId == request.resource.data.creatorId;
 
-      // Any player can update hunterIds and winners (join game, submit
-      // winner). PP-90 dropped the in-app "registration required +
-      // deadline" gate — any authenticated user can join, even
-      // mid-game. The chicken is still never in `hunterIds`: at
-      // creation `chickenId == creatorId` (PP-26); a GM-led
-      // re-designation runs through the dedicated update rule below
-      // and pulls the newly-designated hunter out of `hunterIds`
-      // atomically.
+      // hunterIds-only update (join / leave a game). PP-90 dropped the
+      // in-app "registration required + deadline" gate — any
+      // authenticated user can join, even mid-game. The chicken is
+      // still never in `hunterIds`: at creation `chickenId == creatorId`
+      // (PP-26); a GM-led re-designation runs through the dedicated
+      // update rule below and pulls the newly-designated hunter out
+      // of `hunterIds` atomically.
+      //
+      // CRIT-3 (audit 2026-05-17): tightened so a caller can only
+      // add/remove their OWN UID. Previously any auth user could
+      // impersonate someone else into hunterIds, or saturate the
+      // array up to maxPlayers and lock real players out.
+      // `removeAll(other).hasOnly([uid])` enforces caller-only on
+      // both directions: additions = hunterIds_new \ hunterIds_old,
+      // removals = hunterIds_old \ hunterIds_new.
       allow update: if request.auth != null
                     && request.resource.data.diff(resource.data).affectedKeys()
-                        .hasOnly(['hunterIds', 'winners'])
+                        .hasOnly(['hunterIds'])
                     && request.resource.data.hunterIds.size() <= resource.data.maxPlayers
-                    && request.resource.data.winners.size() <= resource.data.maxPlayers
-                    && !request.resource.data.hunterIds.hasAny([resource.data.chickenId]);
+                    && !request.resource.data.hunterIds.hasAny([resource.data.chickenId])
+                    && request.resource.data.hunterIds
+                        .removeAll(resource.data.hunterIds)
+                        .hasOnly([request.auth.uid])
+                    && resource.data.hunterIds
+                        .removeAll(request.resource.data.hunterIds)
+                        .hasOnly([request.auth.uid]);
+
+      // `winners` writes are CF-only since CRIT-3 (audit 2026-05-17).
+      // The `submitFoundCode` callable verifies caller-is-hunter +
+      // foundCode-matches inside a transaction before appending. No
+      // client-side update rule for `winners` exists anymore — any
+      // attempt to write the field directly is denied by default.
 
       // Only game participants can update power-up active effect fields.
       // `gameMasterIds` is admin-SDK only — the chicken can't self-promote
       // a GM via this path (PP-23). `chickenId` is gated by a dedicated
-      // rule below (PP-26).
+      // rule below (PP-26). CRIT-3 (audit 2026-05-17) added `winners`
+      // and `hunterIds` to the deny list so a hunter can't bypass the
+      // dedicated hunterIds rule above or write winners through this
+      // permissive path (winners is callable-CF only now).
       allow update: if request.auth != null
                     && (request.auth.uid == resource.data.creatorId
                         || request.auth.uid in resource.data.hunterIds)
                     && !request.resource.data.diff(resource.data).affectedKeys()
-                        .hasAny(['gameMasterIds', 'chickenId']);
+                        .hasAny(['gameMasterIds', 'chickenId', 'winners', 'hunterIds']);
 
       // GameMaster (or the creator as a fallback when no GM has joined
       // yet) re-designates the chicken before the game starts. Single
@@ -79,11 +100,13 @@ service cloud.firestore {
       // Only the creator can update other game settings. `gameMasterIds`
       // is admin-SDK only — `joinAsGameMaster` (PP-70) is the only path
       // that mutates it. `chickenId` is gated by the dedicated PP-26
-      // rule above.
+      // rule above. CRIT-3 (audit 2026-05-17) added `winners` so the
+      // creator can't bypass the callable-only contract for winner
+      // submissions either.
       allow update: if request.auth != null
                     && resource.data.creatorId == request.auth.uid
                     && !request.resource.data.diff(resource.data).affectedKeys()
-                        .hasAny(['gameMasterIds', 'chickenId']);
+                        .hasAny(['gameMasterIds', 'chickenId', 'winners']);
 
       // Only the creator can delete, and only while still in `waiting`.
       allow delete: if request.auth != null
@@ -242,13 +265,16 @@ service cloud.firestore {
     // with `paid: false`, the Stripe webhook `confirmRegistrationPayment`
     // flips `paid: true` (both bypass these rules via admin SDK).
     //
-    // Reads are open to any authenticated user. The validation code is the
-    // load-bearing gate — JoinFlow queries `where batchId == X && code == Y
-    // && paid == true`, and the 36^6 entropy of the 6-char alphanum code
-    // makes brute-force impractical for the ~50 valid codes per batch.
+    // CRIT-1 (audit 2026-05-17): reads are now FULLY locked. Previously
+    // `allow read: if request.auth != null` relied on the 36^6 entropy of
+    // the 6-char code as the only gate, but the rule allowed enumerating
+    // the entire collection — leaking email / phone / playerName / teamName
+    // for every paying user (GDPR breach). Client lookups now go through
+    // the `validateRegistrationCode` + `lookupGameByValidationCode`
+    // callable Cloud Functions, which return only the minimum the JoinFlow
+    // needs (a boolean or `{type, gameId, batchId}`) — never PII.
     match /eventRegistrations/{registrationId} {
-      allow read: if request.auth != null;
-      allow create, update, delete: if false;
+      allow read, create, update, delete: if false;
     }
 
     // Player reports — created by authenticated users from the in-app "Report player"

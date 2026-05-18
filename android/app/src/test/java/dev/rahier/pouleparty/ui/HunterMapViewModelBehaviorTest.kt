@@ -44,6 +44,26 @@ class HunterMapViewModelBehaviorTest {
         io.mockk.every { firestoreRepository.powerUpsFlow(any()) } returns kotlinx.coroutines.flow.emptyFlow()
         io.mockk.every { firestoreRepository.chickenLocationFlow(any()) } returns kotlinx.coroutines.flow.emptyFlow()
         io.mockk.every { firestoreRepository.challengesStream() } returns kotlinx.coroutines.flow.emptyFlow()
+        // CRIT-2/CRIT-3 (audit 2026-05-17): the foundCode check is now
+        // server-side via `submitFoundCode`. Default the mock to accept
+        // only the Game.mock canonical code "1234" — every other code
+        // gets a `InvalidCode` rejection, mirroring the real CF. Tests
+        // that need throw-based failure modes override per-test.
+        io.mockk.coEvery {
+            firestoreRepository.submitFoundCode(any(), any(), any())
+        } coAnswers {
+            if (secondArg<String>() == "1234") {
+                FirestoreRepository.SubmitFoundCodeResult.Success
+            } else {
+                FirestoreRepository.SubmitFoundCodeResult.Failure(
+                    FirestoreRepository.SubmitFoundCodeReason.InvalidCode
+                )
+            }
+        }
+        // CRIT-2: chicken-side foundCode fetch (harmless for hunter VM
+        // tests since it's only invoked from ChickenMapViewModel; the
+        // relaxed mock returns "" by default which is fine).
+        io.mockk.coEvery { firestoreRepository.getFoundCode(any()) } returns "1234"
     }
 
     @After
@@ -110,6 +130,9 @@ class HunterMapViewModelBehaviorTest {
         val vm = createViewModel()
         vm.onIntent(HunterMapIntent.EnteredCodeChanged("9999"))
         vm.onIntent(HunterMapIntent.SubmitFoundCode)
+        // CRIT-2 (audit 2026-05-17): wrong-code check is now server-side;
+        // advance the dispatcher so the CF mock resolves before asserting.
+        testDispatcher.scheduler.advanceUntilIdle()
         assertTrue(vm.uiState.value.showWrongCodeAlert)
         assertEquals("", vm.uiState.value.enteredCode)
         assertFalse(vm.uiState.value.isEnteringFoundCode)
@@ -120,6 +143,7 @@ class HunterMapViewModelBehaviorTest {
         val vm = createViewModel()
         vm.onIntent(HunterMapIntent.EnteredCodeChanged("9999"))
         vm.onIntent(HunterMapIntent.SubmitFoundCode)
+        testDispatcher.scheduler.advanceUntilIdle()
         assertEquals(1, vm.uiState.value.wrongCodeAttempts)
     }
 
@@ -130,6 +154,7 @@ class HunterMapViewModelBehaviorTest {
             vm.onIntent(HunterMapIntent.DismissWrongCodeAlert)
             vm.onIntent(HunterMapIntent.EnteredCodeChanged("9999"))
             vm.onIntent(HunterMapIntent.SubmitFoundCode)
+            testDispatcher.scheduler.advanceUntilIdle()
         }
         // After max attempts, wrongCodeAttempts resets to 0 and cooldown is set
         assertEquals(0, vm.uiState.value.wrongCodeAttempts)
@@ -144,6 +169,7 @@ class HunterMapViewModelBehaviorTest {
             vm.onIntent(HunterMapIntent.DismissWrongCodeAlert)
             vm.onIntent(HunterMapIntent.EnteredCodeChanged("9999"))
             vm.onIntent(HunterMapIntent.SubmitFoundCode)
+            testDispatcher.scheduler.advanceUntilIdle()
         }
         // Now on cooldown, try submitting again
         vm.onIntent(HunterMapIntent.EnteredCodeChanged("1234"))
@@ -155,7 +181,7 @@ class HunterMapViewModelBehaviorTest {
     @Test
     fun `submitFoundCode correct code navigates to victory`() {
         val vm = createViewModel()
-        // Game.mock has foundCode = "1234"
+        // Game.mock has foundCode = "1234"; the default mock accepts it.
         vm.onIntent(HunterMapIntent.EnteredCodeChanged("1234"))
         vm.onIntent(HunterMapIntent.SubmitFoundCode)
         testDispatcher.scheduler.advanceUntilIdle()
@@ -169,6 +195,7 @@ class HunterMapViewModelBehaviorTest {
         val vm = createViewModel()
         vm.onIntent(HunterMapIntent.EnteredCodeChanged("9999"))
         vm.onIntent(HunterMapIntent.SubmitFoundCode)
+        testDispatcher.scheduler.advanceUntilIdle()
         assertTrue(vm.uiState.value.showWrongCodeAlert)
         vm.onIntent(HunterMapIntent.DismissWrongCodeAlert)
         assertFalse(vm.uiState.value.showWrongCodeAlert)
@@ -413,24 +440,27 @@ class HunterMapViewModelBehaviorTest {
         assertFalse(vm.uiState.value.hasChallenges)
     }
 
-    // MARK:, addWinner retry flow
+    // MARK:, submitFoundCode retry flow (CRIT-3 audit 2026-05-17)
 
     @Test
-    fun `submitFoundCode with correct code clears pendingWinner on success`() {
+    fun `submitFoundCode with correct code clears pendingFoundCode on success`() {
         val vm = createViewModel()
         vm.onIntent(HunterMapIntent.EnteredCodeChanged("1234"))
         vm.onIntent(HunterMapIntent.SubmitFoundCode)
         testDispatcher.scheduler.advanceUntilIdle()
         assertTrue(vm.uiState.value.shouldNavigateToVictory)
-        // On success the VM must NOT keep the winner around, leaking it
-        // would let a later retry double-write the same victory.
-        assertNull(vm.uiState.value.pendingWinner)
+        // On success the VM must NOT keep the pending code around, leaking
+        // it would let a later retry double-call the CF (idempotent server-
+        // side but wastes a round-trip).
+        assertNull(vm.uiState.value.pendingFoundCode)
         assertFalse(vm.uiState.value.winnerRegistrationFailed)
     }
 
     @Test
-    fun `submitFoundCode with correct code surfaces retry alert when write throws`() {
-        io.mockk.coEvery { firestoreRepository.addWinner(any(), any()) } coAnswers { throw RuntimeException("offline") }
+    fun `submitFoundCode with correct code surfaces retry alert when CF throws`() {
+        io.mockk.coEvery {
+            firestoreRepository.submitFoundCode(any(), any(), any())
+        } coAnswers { throw RuntimeException("offline") }
         val vm = createViewModel()
 
         vm.onIntent(HunterMapIntent.EnteredCodeChanged("1234"))
@@ -440,20 +470,19 @@ class HunterMapViewModelBehaviorTest {
         // Hunter is NOT navigated to victory because the server has no record.
         assertFalse(vm.uiState.value.shouldNavigateToVictory)
         assertTrue(vm.uiState.value.winnerRegistrationFailed)
-        // pendingWinner must be kept so Retry can reuse the original Winner
-        // (same timestamp, same attempt count).
-        val pending = vm.uiState.value.pendingWinner
-        assertNotNull(pending)
-        assertEquals("hunter-123", pending!!.hunterId)
+        // pendingFoundCode must be kept so Retry can reuse the same code.
+        assertEquals("1234", vm.uiState.value.pendingFoundCode)
     }
 
     @Test
     fun `retryWinnerRegistration after transient failure eventually navigates on success`() {
-        // First write throws, second succeeds, simulates a flaky Firestore.
         var callCount = 0
-        io.mockk.coEvery { firestoreRepository.addWinner(any(), any()) } coAnswers {
+        io.mockk.coEvery {
+            firestoreRepository.submitFoundCode(any(), any(), any())
+        } coAnswers {
             callCount++
-            if (callCount == 1) throw RuntimeException("transient") else Unit
+            if (callCount == 1) throw RuntimeException("transient")
+            else FirestoreRepository.SubmitFoundCodeResult.Success
         }
         val vm = createViewModel()
 
@@ -462,24 +491,31 @@ class HunterMapViewModelBehaviorTest {
         testDispatcher.scheduler.advanceUntilIdle()
         assertTrue(vm.uiState.value.winnerRegistrationFailed)
         assertFalse(vm.uiState.value.shouldNavigateToVictory)
-        val originalWinner = vm.uiState.value.pendingWinner
-        assertNotNull(originalWinner)
+        assertEquals("1234", vm.uiState.value.pendingFoundCode)
 
         vm.onIntent(HunterMapIntent.RetryWinnerRegistration)
         testDispatcher.scheduler.advanceUntilIdle()
 
         assertTrue(vm.uiState.value.shouldNavigateToVictory)
         assertFalse(vm.uiState.value.winnerRegistrationFailed)
-        assertNull(vm.uiState.value.pendingWinner)
+        assertNull(vm.uiState.value.pendingFoundCode)
         assertEquals(2, callCount)
     }
 
     @Test
-    fun `retryWinnerRegistration preserves original Winner across retries`() {
-        val winnersCaptured = mutableListOf<dev.rahier.pouleparty.model.Winner>()
-        io.mockk.coEvery { firestoreRepository.addWinner(any(), any()) } answers {
-            @Suppress("UNCHECKED_CAST")
-            winnersCaptured.add(secondArg<dev.rahier.pouleparty.model.Winner>())
+    fun `retryWinnerRegistration re-sends same code and name across retries`() {
+        // CRIT-3: the user-typed code must be the SAME on each retry. The
+        // server stamps the winner's timestamp at success, so we don't
+        // preserve a Winner across retries anymore; but if the retry sent
+        // a different code, the hunter could in theory submit a wrong code
+        // after the typed one was forgotten.
+        val codesCaptured = mutableListOf<String>()
+        val namesCaptured = mutableListOf<String>()
+        io.mockk.coEvery {
+            firestoreRepository.submitFoundCode(any(), any(), any())
+        } answers {
+            codesCaptured.add(secondArg<String>())
+            namesCaptured.add(thirdArg<String>())
             throw RuntimeException("offline")
         }
 
@@ -492,45 +528,42 @@ class HunterMapViewModelBehaviorTest {
         vm.onIntent(HunterMapIntent.RetryWinnerRegistration)
         testDispatcher.scheduler.advanceUntilIdle()
 
-        // Same Winner (same timestamp, same hunter) must be submitted on
-        // every retry, otherwise we'd log "found at time X" the first time
-        // and "found at time X+30s" on retry, corrupting analytics.
-        assertEquals(3, winnersCaptured.size)
-        val first = winnersCaptured[0]
-        assertEquals(first.hunterId, winnersCaptured[1].hunterId)
-        assertEquals(first.timestamp, winnersCaptured[1].timestamp)
-        assertEquals(first.hunterId, winnersCaptured[2].hunterId)
-        assertEquals(first.timestamp, winnersCaptured[2].timestamp)
+        assertEquals(3, codesCaptured.size)
+        assertEquals(codesCaptured[0], codesCaptured[1])
+        assertEquals(codesCaptured[0], codesCaptured[2])
+        assertEquals(namesCaptured[0], namesCaptured[1])
+        assertEquals(namesCaptured[0], namesCaptured[2])
     }
 
     @Test
-    fun `dismissWinnerRegistrationError hides alert but keeps pendingWinner`() {
-        io.mockk.coEvery { firestoreRepository.addWinner(any(), any()) } coAnswers { throw RuntimeException("offline") }
+    fun `dismissWinnerRegistrationError hides alert but keeps pendingFoundCode`() {
+        io.mockk.coEvery {
+            firestoreRepository.submitFoundCode(any(), any(), any())
+        } coAnswers { throw RuntimeException("offline") }
         val vm = createViewModel()
 
         vm.onIntent(HunterMapIntent.EnteredCodeChanged("1234"))
         vm.onIntent(HunterMapIntent.SubmitFoundCode)
         testDispatcher.scheduler.advanceUntilIdle()
         assertTrue(vm.uiState.value.winnerRegistrationFailed)
-        assertNotNull(vm.uiState.value.pendingWinner)
+        assertEquals("1234", vm.uiState.value.pendingFoundCode)
 
         vm.onIntent(HunterMapIntent.DismissWinnerRegistrationError)
         assertFalse(vm.uiState.value.winnerRegistrationFailed)
-        // Pending winner is preserved → the hunter can still retry later.
-        assertNotNull(vm.uiState.value.pendingWinner)
+        // Pending code is preserved → the hunter can still retry later.
+        assertEquals("1234", vm.uiState.value.pendingFoundCode)
     }
 
     @Test
-    fun `retryWinnerRegistration without pendingWinner is a no-op`() {
-        // Defensive: no winner in state (e.g. retry tapped after alert already
-        // dismissed and something else cleared it). Must not crash or fire
-        // addWinner.
+    fun `retryWinnerRegistration without pendingFoundCode is a no-op`() {
         val vm = createViewModel()
 
         vm.onIntent(HunterMapIntent.RetryWinnerRegistration)
         testDispatcher.scheduler.advanceUntilIdle()
 
-        io.mockk.coVerify(exactly = 0) { firestoreRepository.addWinner(any(), any()) }
+        io.mockk.coVerify(exactly = 0) {
+            firestoreRepository.submitFoundCode(any(), any(), any())
+        }
         assertFalse(vm.uiState.value.shouldNavigateToVictory)
     }
 
@@ -791,14 +824,16 @@ class HunterMapViewModelBehaviorTest {
         vm.onIntent(HunterMapIntent.SubmitFoundCode)
         testDispatcher.scheduler.advanceUntilIdle()
 
-        // The submit path is NOT gated on isGameOver — addWinner is
+        // The submit path is NOT gated on isGameOver — submitFoundCode is
         // dispatched and the hunter heads to Victory (their personal win
         // path stays open per PP-2).
         assertTrue(
             "Found code must stay active after gameOver",
             vm.uiState.value.shouldNavigateToVictory
         )
-        io.mockk.coVerify(atLeast = 1) { firestoreRepository.addWinner(eq("test-id"), any()) }
+        io.mockk.coVerify(atLeast = 1) {
+            firestoreRepository.submitFoundCode(eq("test-id"), any(), any())
+        }
     }
 
     /** Scenario 5 (hunter): once `isGameOver` is set, no further

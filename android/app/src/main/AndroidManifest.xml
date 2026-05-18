@@ -36,6 +36,13 @@
                  sha256_cert_fingerprints listed there match the
                  installed app, in which case the OS opens the link in
                  the app instead of the browser. -->
+            <!-- HIGH-16 (audit 2026-05-17): switched from pathPrefix="/join"
+                 (which is a string-prefix match — also captures /joinparty,
+                 /joiner etc.) to android:path="/join" exact match. iOS
+                 Associated Domains use exact-segment matching and were
+                 stricter; this aligns Android with iOS so a future
+                 /joinparty route on web can't be silently hijacked by
+                 the app. -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -43,7 +50,7 @@
                 <data
                     android:scheme="https"
                     android:host="pouleparty.be"
-                    android:pathPrefix="/join" />
+                    android:path="/join" />
             </intent-filter>
         </activity>
 

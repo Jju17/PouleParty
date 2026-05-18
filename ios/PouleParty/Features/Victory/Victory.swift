@@ -115,8 +115,15 @@ func buildLeaderboardEntries(
     registrations: [Registration],
     currentUserId: String
 ) -> [LeaderboardEntry] {
-    let registrationByUserId = Dictionary(uniqueKeysWithValues: registrations.map { ($0.userId, $0) })
-    let winnerById = Dictionary(uniqueKeysWithValues: game.winners.map { ($0.hunterId, $0) })
+    // CRIT-6 (audit 2026-05-17): use uniquingKeysWith to survive duplicate keys.
+    // `Game.winners` is an `arrayUnion` field; a retry of `addWinner` after a server
+    // commit that returned a network error can land two entries with the same
+    // hunterId (different write timestamps). Same defence on registrations in case
+    // a future migration leaves two docs per userId during the rollover window.
+    let registrationByUserId = Dictionary(registrations.map { ($0.userId, $0) }, uniquingKeysWith: { first, _ in first })
+    let winnerById = Dictionary(game.winners.map { ($0.hunterId, $0) }, uniquingKeysWith: { first, second in
+        first.timestamp.dateValue() <= second.timestamp.dateValue() ? first : second
+    })
     let allHunterIds = Set(game.hunterIds)
         .union(game.winners.map(\.hunterId))
         .union(registrations.map(\.userId))

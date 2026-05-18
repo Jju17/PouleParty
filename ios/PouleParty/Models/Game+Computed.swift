@@ -161,9 +161,17 @@ extension Game {
         let freezeDuration = PowerUp.PowerUpType.zoneFreeze.durationSeconds ?? 0
         let freezeStart = freezeEnd?.addingTimeInterval(-freezeDuration)
 
+        // HIGH-10 (audit 2026-05-17): bound the loop and exit early once
+        // the radius has collapsed. Without the cap, a stale game with
+        // an `hunterStartDate` far in the past (timeskew, test left
+        // running) iterates thousands of times per timer tick — the
+        // loop runs on every 1 s timer event on three feature stacks.
+        let maxIterations = 10_000
+        let interval = TimeInterval(self.zone.shrinkIntervalMinutes * 60)
         let now = Date.now
-        while lastUpdate.addingTimeInterval(TimeInterval(self.zone.shrinkIntervalMinutes * 60)) < now {
-            lastUpdate.addTimeInterval(TimeInterval(self.zone.shrinkIntervalMinutes * 60))
+        var iterations = 0
+        while lastUpdate.addingTimeInterval(interval) < now && iterations < maxIterations {
+            lastUpdate.addTimeInterval(interval)
             let isFrozen: Bool
             if let fs = freezeStart, let fe = freezeEnd {
                 isFrozen = lastUpdate >= fs && lastUpdate < fe
@@ -173,10 +181,14 @@ extension Game {
             if !isFrozen {
                 lastRadius -= Int(self.zone.shrinkMetersPerUpdate)
             }
+            // Once the radius is at floor, every later iteration is a
+            // no-op — skip them.
+            if lastRadius <= 0 { break }
+            iterations += 1
         }
 
         lastRadius = max(0, lastRadius)
-        let nextUpdate = lastUpdate.addingTimeInterval(TimeInterval(self.zone.shrinkIntervalMinutes * 60))
+        let nextUpdate = lastUpdate.addingTimeInterval(interval)
         return (nextUpdate, lastRadius)
     }
 }

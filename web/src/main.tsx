@@ -4,7 +4,13 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { I18nProvider } from "./i18n";
 import { ThemeProvider } from "./theme";
 import ErrorBoundary from "./components/ErrorBoundary";
+import { initAppCheck } from "./appCheck";
 import "./index.css";
+
+// CRIT-4 (audit 2026-05-17): boot App Check before render so the SDK has
+// time to fetch a token in the background while the user navigates. Token
+// fetch is async; the Inscription form awaits the token when it submits.
+initAppCheck();
 import Home from "./pages/Home";
 import Privacy from "./pages/Privacy";
 import Support from "./pages/Support";

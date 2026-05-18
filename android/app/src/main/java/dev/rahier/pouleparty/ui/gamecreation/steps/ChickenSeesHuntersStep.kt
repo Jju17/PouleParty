@@ -1,6 +1,8 @@
 package dev.rahier.pouleparty.ui.gamecreation.steps
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.ui.gamecreation.OptionCard
 import dev.rahier.pouleparty.ui.gamecreation.StepContainer
 
@@ -10,17 +12,17 @@ fun ChickenSeesHuntersStep(
     onToggle: (Boolean) -> Unit
 ) {
     StepContainer(
-        title = "La poule voit les chasseurs ?",
-        subtitle = "Can the chicken see where the hunters are?"
+        title = stringResource(R.string.wizard_chicken_sees_hunters_title),
+        subtitle = stringResource(R.string.wizard_chicken_sees_hunters_subtitle)
     ) {
         OptionCard(
-            text = "Oui, elle les voit",
+            text = stringResource(R.string.wizard_chicken_sees_hunters_yes),
             emoji = "\uD83D\uDC40",
             isSelected = chickenCanSeeHunters,
             onClick = { onToggle(true) }
         )
         OptionCard(
-            text = "Non, a l'aveugle",
+            text = stringResource(R.string.wizard_chicken_sees_hunters_no),
             emoji = "\uD83D\uDE48",
             isSelected = !chickenCanSeeHunters,
             onClick = { onToggle(false) }

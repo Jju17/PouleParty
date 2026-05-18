@@ -42,7 +42,9 @@ class LocationForegroundService : Service() {
     }
 
     private fun buildNotification(): Notification {
-        ensureChannel(this)
+        // HIGH-12 (audit 2026-05-17): channel registration moved to
+        // PoulePartyApp.createNotificationChannels so it always exists
+        // by the time this service starts.
 
         val openIntent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -77,21 +79,6 @@ class LocationForegroundService : Service() {
         fun stop(context: Context) {
             val intent = Intent(context, LocationForegroundService::class.java)
             context.stopService(intent)
-        }
-
-        private fun ensureChannel(context: Context) {
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
-            val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            if (manager.getNotificationChannel(CHANNEL_ID) != null) return
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                context.getString(R.string.location_service_channel_name),
-                NotificationManager.IMPORTANCE_LOW
-            ).apply {
-                description = context.getString(R.string.location_service_channel_description)
-                setShowBadge(false)
-            }
-            manager.createNotificationChannel(channel)
         }
     }
 }

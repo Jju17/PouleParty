@@ -17,11 +17,14 @@ struct GameFlowIntegrationTests {
     // MARK: - Full hunter found-chicken flow
 
     @Test func hunterFindsChickenEndToEnd() async {
-        // Setup: game already started, hunter has ID
+        // CRIT-2 (audit 2026-05-17): foundCode check is now server-side
+        // via `submitFoundCode`. The integration mock returns invalidCode
+        // for "0000" and success for "4321".
         var game = Game.mock
         game.startDate = .now.addingTimeInterval(-600)
         game.endDate = .now.addingTimeInterval(3000)
-        game.foundCode = "4321"
+        // game.foundCode no longer used client-side — CF reads from
+        // /private/security. Kept here for legacy game fixtures.
 
         var state = HunterMapFeature.State(game: game)
         state.hunterId = "test-hunter-uid"
@@ -30,55 +33,29 @@ struct GameFlowIntegrationTests {
         let store = TestStore(initialState: state) {
             HunterMapFeature()
         } withDependencies: {
-            $0.apiClient.addWinner = { _, _ in }
+            $0.apiClient.submitFoundCode = { _, code, _ in
+                if code == "4321" { return }
+                throw SubmitFoundCodeError.invalidCode
+            }
         }
+        store.exhaustivity = .off
 
         // 1. Hunter taps FOUND
-        await store.send(.view(.foundButtonTapped)) {
-            $0.isEnteringFoundCode = true
-        }
+        await store.send(.view(.foundButtonTapped))
 
         // 2. Hunter enters wrong code first
-        store.exhaustivity = .off
         await store.send(.binding(.set(\.enteredCode, "0000")))
-        store.exhaustivity = .on
-
-        var wrongState = store.state
-        wrongState.enteredCode = "0000"
-
-        await store.send(.view(.submitCodeButtonTapped)) {
-            $0.enteredCode = ""
-            $0.isEnteringFoundCode = false
-            $0.wrongCodeAttempts = 1
-            $0.destination = .alert(
-                AlertState {
-                    TextState("Wrong code")
-                } actions: {
-                    ButtonState(action: .wrongCode) {
-                        TextState("OK")
-                    }
-                } message: {
-                    TextState("That code is incorrect. Try again!")
-                }
-            )
-        }
+        await store.send(.view(.submitCodeButtonTapped))
+        await store.receive(\.internal.wrongCodeRejected)
+        #expect(store.state.wrongCodeAttempts == 1)
+        #expect(store.state.destination != nil)
 
         // 3. Dismiss wrong code alert
-        await store.send(.destination(.presented(.alert(.wrongCode)))) {
-            $0.destination = nil
-        }
+        await store.send(.destination(.presented(.alert(.wrongCode))))
 
         // 4. Try again with correct code
-        await store.send(.view(.foundButtonTapped)) {
-            $0.isEnteringFoundCode = true
-        }
-
-        store.exhaustivity = .off
+        await store.send(.view(.foundButtonTapped))
         await store.send(.binding(.set(\.enteredCode, "4321")))
-
-        // Exhaustivity stays off through submit: the Winner built by the
-        // reducer uses `Date.now` for its timestamp and is stored in state
-        // for the retry path, so exhaustive matching is flaky.
         await store.send(.view(.submitCodeButtonTapped))
         await store.receive(\.internal.winnerRegistered)
     }

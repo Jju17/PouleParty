@@ -81,34 +81,42 @@ fun HomeScreen(
         }
     }
 
-    // Music playback
+    // Music playback. HIGH-14 (audit 2026-05-17): `MediaPlayer.create`
+    // returns null on prep failure (corrupt asset, OOM, codec quirk).
+    // The previous `.apply { … }` chained directly off the result threw
+    // NPE in that path → Home (launcher screen) crashes.
     val mediaPlayer = remember {
-        MediaPlayer.create(context, R.raw.background_music).apply {
-            isLooping = true
-            setVolume(0.1f, 0.1f)
-        }
+        runCatching {
+            MediaPlayer.create(context, R.raw.background_music)?.apply {
+                isLooping = true
+                setVolume(0.1f, 0.1f)
+            }
+        }.getOrNull()
     }
 
     DisposableEffect(Unit) {
-        if (!state.isMusicMuted) mediaPlayer.start()
-        onDispose { mediaPlayer.release() }
+        if (!state.isMusicMuted) mediaPlayer?.start()
+        onDispose { mediaPlayer?.release() }
     }
 
     LaunchedEffect(state.isMusicMuted) {
+        val player = mediaPlayer ?: return@LaunchedEffect
         if (state.isMusicMuted) {
-            if (mediaPlayer.isPlaying) mediaPlayer.pause()
+            if (player.isPlaying) player.pause()
         } else {
-            if (!mediaPlayer.isPlaying) mediaPlayer.start()
+            if (!player.isPlaying) player.start()
         }
     }
 
     // PP-39: pause on backgrounding, resume on foregrounding (respecting mute).
     // ON_STOP fires when the app goes to background; ON_START when it returns.
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
-        if (mediaPlayer.isPlaying) mediaPlayer.pause()
+        val player = mediaPlayer ?: return@LifecycleEventEffect
+        if (player.isPlaying) player.pause()
     }
     LifecycleEventEffect(Lifecycle.Event.ON_START) {
-        if (!state.isMusicMuted && !mediaPlayer.isPlaying) mediaPlayer.start()
+        val player = mediaPlayer ?: return@LifecycleEventEffect
+        if (!state.isMusicMuted && !player.isPlaying) player.start()
     }
 
     var pendingPermissionAction by remember { mutableStateOf<PendingPermissionAction>(PendingPermissionAction.None) }

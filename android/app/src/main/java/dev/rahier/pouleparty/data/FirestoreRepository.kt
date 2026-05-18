@@ -247,17 +247,70 @@ class FirestoreRepository @Inject constructor(
         }
     }
 
-    suspend fun addWinner(gameId: String, winner: Winner) {
-        withRetry("addWinner($gameId)") {
-            val winnerMap = mapOf(
-                "hunterId" to winner.hunterId,
-                "hunterName" to winner.hunterName,
-                "timestamp" to winner.timestamp
-            )
-            firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
-                .update("winners", FieldValue.arrayUnion(winnerMap))
-                .await()
+    /** CRIT-3 (audit 2026-05-17): submit the typed-in 4-digit code to the
+     *  `submitFoundCode` Cloud Function. The CF verifies caller-is-hunter +
+     *  foundCode-matches inside a Firestore transaction before appending to
+     *  `winners`. firestore.rules denies all client writes to `winners`, so
+     *  this is now the only path. Returns a [SubmitFoundCodeResult] for the
+     *  caller to render the right UX.
+     */
+    suspend fun submitFoundCode(
+        gameId: String,
+        foundCode: String,
+        hunterName: String,
+    ): SubmitFoundCodeResult {
+        val callable = functions
+            .getHttpsCallable("submitFoundCode")
+            .call(mapOf(
+                "gameId" to gameId,
+                "foundCode" to foundCode,
+                "hunterName" to hunterName,
+            ))
+            .await()
+        @Suppress("UNCHECKED_CAST")
+        val raw = callable.getData() as? Map<String, Any?>
+            ?: return SubmitFoundCodeResult.Failure(SubmitFoundCodeReason.MalformedResponse)
+        val success = raw["success"] as? Boolean ?: false
+        if (success) return SubmitFoundCodeResult.Success
+        val reason = when (raw["reason"] as? String) {
+            "invalidCode" -> SubmitFoundCodeReason.InvalidCode
+            "notAHunter" -> SubmitFoundCodeReason.NotAHunter
+            "alreadyWinner" -> SubmitFoundCodeReason.AlreadyWinner
+            "gameNotInProgress" -> SubmitFoundCodeReason.GameNotInProgress
+            else -> SubmitFoundCodeReason.MalformedResponse
         }
+        return SubmitFoundCodeResult.Failure(reason)
+    }
+
+    /** CRIT-2 (audit 2026-05-17): fetch the game's 4-digit foundCode. The
+     *  CF returns the code only if the caller is `chickenId` — the value
+     *  lives in `/games/{id}/private/security` (admin-SDK only) since
+     *  V2.3 so hunters can't read it off the public Game doc and
+     *  self-declare victory. Returns "" if no code is set.
+     */
+    suspend fun getFoundCode(gameId: String): String {
+        val callable = functions
+            .getHttpsCallable("getFoundCode")
+            .call(mapOf("gameId" to gameId))
+            .await()
+        @Suppress("UNCHECKED_CAST")
+        val raw = callable.getData() as? Map<String, Any?> ?: return ""
+        return (raw["foundCode"] as? String).orEmpty()
+    }
+
+    /** Outcome of [submitFoundCode]. */
+    sealed class SubmitFoundCodeResult {
+        object Success : SubmitFoundCodeResult()
+        data class Failure(val reason: SubmitFoundCodeReason) : SubmitFoundCodeResult()
+    }
+
+    /** Distinct rejection reasons from the `submitFoundCode` CF. */
+    enum class SubmitFoundCodeReason {
+        InvalidCode,
+        NotAHunter,
+        AlreadyWinner,
+        GameNotInProgress,
+        MalformedResponse,
     }
 
     // ── Registrations ─────────────────────────────────────
@@ -347,58 +400,72 @@ class FirestoreRepository @Inject constructor(
      * it with an invalid code.
      */
     suspend fun lookupGameByValidationCode(code: String): ValidationCodeLookupResult {
+        // CRIT-1 (audit 2026-05-17): routed via callable CF so firestore.rules
+        // can lock /eventRegistrations reads. The CF returns only a discriminated
+        // `{ type, gameId, batchId }` payload — no email/phone/name PII. For the
+        // `gameReady` case we fetch the public Game doc by id (still allowed by
+        // rules) to keep the existing `GameReady(Game)` contract.
         val trimmed = code.trim().uppercase()
         if (trimmed.isEmpty()) return ValidationCodeLookupResult.InvalidCode
-        // 1) Find the paid registration matching the code.
-        val regSnapshot = firestore.collection(AppConstants.COLLECTION_EVENT_REGISTRATIONS)
-            .whereEqualTo("code", trimmed)
-            .whereEqualTo("paid", true)
-            .limit(1)
-            .get()
+
+        val callable = functions
+            .getHttpsCallable("lookupGameByValidationCode")
+            .call(mapOf("code" to trimmed))
             .await()
-        val batchId = regSnapshot.documents.firstOrNull()
-            ?.getString("batchId")?.trim()
-            ?.takeIf { it.isNotEmpty() }
-            ?: return ValidationCodeLookupResult.InvalidCode
-        // 2) Find any Game pointing at that batch. Filter `done`
-        // games client-side so a stale finished party doesn't mask
-        // a fresh one.
-        val gameSnapshot = firestore.collection(AppConstants.COLLECTION_GAMES)
-            .whereEqualTo("registrationBatchId", batchId)
-            .limit(5)
-            .get()
-            .await()
-        val games = gameSnapshot.documents.mapNotNull { doc ->
-            safeToObject<Game>(doc, "lookupGameByValidationCode")?.copy(id = doc.id)
-        }
-        val active = games.firstOrNull { it.gameStatusEnum != GameStatus.DONE }
-        return if (active != null) {
-            ValidationCodeLookupResult.GameReady(active)
-        } else {
-            ValidationCodeLookupResult.GameNotYetCreated(batchId)
+        @Suppress("UNCHECKED_CAST")
+        val raw = callable.getData() as? Map<String, Any?>
+            ?: throw IllegalStateException("lookupGameByValidationCode: malformed response")
+
+        return when (val type = raw["type"] as? String) {
+            "invalidCode" -> ValidationCodeLookupResult.InvalidCode
+            "gameNotYetCreated" -> {
+                val batchId = (raw["batchId"] as? String).orEmpty()
+                ValidationCodeLookupResult.GameNotYetCreated(batchId)
+            }
+            "gameReady" -> {
+                val gameId = (raw["gameId"] as? String).orEmpty()
+                if (gameId.isEmpty()) {
+                    ValidationCodeLookupResult.InvalidCode
+                } else {
+                    val doc = firestore.collection(AppConstants.COLLECTION_GAMES)
+                        .document(gameId)
+                        .get()
+                        .await()
+                    val game = safeToObject<Game>(doc, "lookupGameByValidationCode($gameId)")?.copy(id = doc.id)
+                    if (game != null) {
+                        ValidationCodeLookupResult.GameReady(game)
+                    } else {
+                        Log.e(TAG, "lookupGameByValidationCode: failed to load Game $gameId")
+                        ValidationCodeLookupResult.InvalidCode
+                    }
+                }
+            }
+            else -> {
+                Log.e(TAG, "lookupGameByValidationCode: unknown type=$type")
+                ValidationCodeLookupResult.InvalidCode
+            }
         }
     }
 
     /**
      * PP-52 — true when a paid `eventRegistrations` doc matches the given
-     * `batchId + code` pair. Used by JoinFlow when the resolved game has
-     * `registrationBatchId != null` to gate the join on the validation
-     * code the hunter received by email. Returns false on any error so
-     * the UI shows "invalid code" rather than a confusing crash.
+     * `batchId + code` pair. CRIT-1 (audit 2026-05-17): routed via callable
+     * CF so firestore.rules can lock /eventRegistrations reads. Returns false
+     * on any error so the UI shows "invalid code" rather than a confusing
+     * crash.
      */
     suspend fun validateRegistrationCode(batchId: String, code: String): Boolean {
         val trimmedBatch = batchId.trim()
         val trimmedCode = code.trim().uppercase()
         if (trimmedBatch.isEmpty() || trimmedCode.isEmpty()) return false
         return try {
-            val snapshot = firestore.collection(AppConstants.COLLECTION_EVENT_REGISTRATIONS)
-                .whereEqualTo("batchId", trimmedBatch)
-                .whereEqualTo("code", trimmedCode)
-                .whereEqualTo("paid", true)
-                .limit(1)
-                .get()
+            val callable = functions
+                .getHttpsCallable("validateRegistrationCode")
+                .call(mapOf("batchId" to trimmedBatch, "code" to trimmedCode))
                 .await()
-            !snapshot.isEmpty
+            @Suppress("UNCHECKED_CAST")
+            val raw = callable.getData() as? Map<String, Any?> ?: return false
+            (raw["valid"] as? Boolean) == true
         } catch (e: Exception) {
             Log.e(TAG, "validateRegistrationCode($trimmedBatch/$trimmedCode) failed", e)
             false
@@ -438,11 +505,17 @@ class FirestoreRepository @Inject constructor(
         }
     }
 
-    /** Fire-and-forget heartbeat update so hunters can detect chicken disconnect. */
-    fun updateHeartbeat(gameId: String) {
-        firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
-            .update("lastHeartbeat", Timestamp.now())
-            .addOnFailureListener { e -> Log.w(TAG, "Failed to update heartbeat: $e") }
+    /** Heartbeat update so hunters can detect chicken disconnect.
+     *  HIGH-18 (audit 2026-05-17): wrapped in withRetry to match iOS. A single
+     *  transient write failure must not make the chicken look offline — hunters
+     *  flip to "disconnected" after 60s of stale heartbeat and the loop only
+     *  fires every 30s, so one lost write is enough to trip the UI. */
+    suspend fun updateHeartbeat(gameId: String) {
+        withRetry("updateHeartbeat($gameId)") {
+            firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
+                .update("lastHeartbeat", Timestamp.now())
+                .await()
+        }
     }
 
     // ── Chicken location ──────────────────────────────────

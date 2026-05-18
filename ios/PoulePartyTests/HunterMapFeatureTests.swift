@@ -207,11 +207,8 @@ struct HunterMapFeatureTests {
         let store = TestStore(initialState: state) {
             HunterMapFeature()
         } withDependencies: {
-            $0.apiClient.addWinner = { _, _ in }
+            $0.apiClient.submitFoundCode = { _, _, _ in }
         }
-        // The Winner built inside the reducer uses `Date.now` for its
-        // timestamp, which makes exhaustive state matching flaky, assert
-        // the observable transitions instead of the whole state diff.
         store.exhaustivity = .off
 
         await store.send(.view(.submitCodeButtonTapped))
@@ -226,7 +223,7 @@ struct HunterMapFeatureTests {
         let store = TestStore(initialState: state) {
             HunterMapFeature()
         } withDependencies: {
-            $0.apiClient.addWinner = { _, _ in throw TestError() }
+            $0.apiClient.submitFoundCode = { _, _, _ in throw TestError() }
         }
         store.exhaustivity = .off
 
@@ -234,12 +231,12 @@ struct HunterMapFeatureTests {
         await store.receive(\.internal.winnerRegistrationFailed)
         // The retry alert must surface so the hunter can try again.
         #expect(store.state.destination != nil)
-        // pendingWinner must be held in state for the retry path.
-        #expect(store.state.pendingWinner != nil)
+        // pendingFoundCode must be held in state for the retry path
+        // (CRIT-3 audit 2026-05-17).
+        #expect(store.state.pendingFoundCode != nil)
     }
 
     @Test func retryAfterTransientFailureEventuallyNavigates() async {
-        // Flakes once, succeeds on retry, the most common real-world pattern.
         struct TestError: Error {}
         var state = HunterMapFeature.State(game: .mock)
         state.enteredCode = "1234"
@@ -248,7 +245,7 @@ struct HunterMapFeatureTests {
         let store = TestStore(initialState: state) {
             HunterMapFeature()
         } withDependencies: {
-            $0.apiClient.addWinner = { _, _ in
+            $0.apiClient.submitFoundCode = { _, _, _ in
                 let n = callCount.withValue { count in
                     count += 1
                     return count
@@ -262,27 +259,30 @@ struct HunterMapFeatureTests {
         await store.receive(\.internal.winnerRegistrationFailed)
         #expect(store.state.destination != nil)
 
-        // Hunter taps Retry → alert dismissed, addWinner fires again, this
-        // time succeeding → winnerRegistered.
+        // Hunter taps Retry → alert dismissed, submitFoundCode fires
+        // again, this time succeeding → winnerRegistered.
         await store.send(.destination(.presented(.alert(.retryWinnerRegistration))))
         await store.receive(\.internal.winnerRegistered)
         #expect(callCount.value == 2)
     }
 
-    @Test func retryKeepsSameWinnerAcrossAttempts() async {
-        // The Winner object (timestamp, hunterId) built on the first submit
-        // must be the SAME one sent on every retry, otherwise analytics would
-        // log the "wrong" found-time on the write that finally sticks.
+    @Test func retrySendsSameCodeAndNameAcrossAttempts() async {
+        // CRIT-3 (audit 2026-05-17): with the server-authoritative
+        // winner flow, the client retries the same (code, hunterName)
+        // pair on each attempt. The server stamps `timestamp` at
+        // success, so we don't preserve a Winner across retries
+        // anymore — but the user-typed code MUST be the same one each
+        // time (otherwise a retry could leak a different value).
         struct TestError: Error {}
         var state = HunterMapFeature.State(game: .mock)
         state.enteredCode = "1234"
 
-        let submittedWinners = LockIsolated<[Winner]>([])
+        let submittedCalls = LockIsolated<[(String, String)]>([])
         let store = TestStore(initialState: state) {
             HunterMapFeature()
         } withDependencies: {
-            $0.apiClient.addWinner = { _, winner in
-                submittedWinners.withValue { $0.append(winner) }
+            $0.apiClient.submitFoundCode = { _, foundCode, hunterName in
+                submittedCalls.withValue { $0.append((foundCode, hunterName)) }
                 throw TestError()
             }
         }
@@ -297,39 +297,33 @@ struct HunterMapFeatureTests {
         await store.send(.destination(.presented(.alert(.retryWinnerRegistration))))
         await store.receive(\.internal.winnerRegistrationFailed)
 
-        let all = submittedWinners.value
+        let all = submittedCalls.value
         #expect(all.count == 3)
-        // Every submit attempt used the exact same Winner, not a freshly
-        // constructed one with a drifted timestamp.
-        #expect(all[0] == all[1])
-        #expect(all[0] == all[2])
+        #expect(all[0].0 == all[1].0)
+        #expect(all[0].0 == all[2].0)
+        #expect(all[0].1 == all[1].1)
+        #expect(all[0].1 == all[2].1)
     }
 
 
     @Test func submitCodeButtonTappedWithWrongCodeShowsAlert() async {
+        // CRIT-2 (audit 2026-05-17): wrong-code check is now server-side
+        // via `submitFoundCode`. Mock returns `.invalidCode`, which the
+        // reducer routes to `.internal(.wrongCodeRejected)` → same alert.
         var state = HunterMapFeature.State(game: .mock)
-        state.enteredCode = "9999" // wrong code
+        state.enteredCode = "9999"
 
         let store = TestStore(initialState: state) {
             HunterMapFeature()
+        } withDependencies: {
+            $0.apiClient.submitFoundCode = { _, _, _ in throw SubmitFoundCodeError.invalidCode }
         }
+        store.exhaustivity = .off
 
-        await store.send(.view(.submitCodeButtonTapped)) {
-            $0.enteredCode = ""
-            $0.isEnteringFoundCode = false
-            $0.wrongCodeAttempts = 1
-            $0.destination = .alert(
-                AlertState {
-                    TextState("Wrong code")
-                } actions: {
-                    ButtonState(action: .wrongCode) {
-                        TextState("OK")
-                    }
-                } message: {
-                    TextState("That code is incorrect. Try again!")
-                }
-            )
-        }
+        await store.send(.view(.submitCodeButtonTapped))
+        await store.receive(\.internal.wrongCodeRejected)
+        #expect(store.state.wrongCodeAttempts == 1)
+        #expect(store.state.destination != nil)
     }
 
     // MARK: - Winner notifications
@@ -593,21 +587,22 @@ struct HunterMapFeatureTests {
     }
 
     @Test func submitCodeButtonTappedTriggersCooldownAfterMaxAttempts() async {
+        // CRIT-2 (audit 2026-05-17): wrong-code check + cooldown is now
+        // server-side; receive `.wrongCodeRejected` before asserting.
         var state = HunterMapFeature.State(game: .mock)
         state.enteredCode = "9999"
         state.wrongCodeAttempts = AppConstants.codeMaxWrongAttempts - 1
 
         let store = TestStore(initialState: state) {
             HunterMapFeature()
+        } withDependencies: {
+            $0.apiClient.submitFoundCode = { _, _, _ in throw SubmitFoundCodeError.invalidCode }
         }
         store.exhaustivity = .off
 
-        await store.send(.view(.submitCodeButtonTapped)) {
-            $0.enteredCode = ""
-            $0.isEnteringFoundCode = false
-            $0.wrongCodeAttempts = 0
-        }
-        // codeCooldownUntil is set to .now + codeCooldownSeconds (time-dependent)
+        await store.send(.view(.submitCodeButtonTapped))
+        await store.receive(\.internal.wrongCodeRejected)
+        #expect(store.state.wrongCodeAttempts == 0)
         #expect(store.state.codeCooldownUntil != nil)
     }
 
@@ -869,7 +864,7 @@ struct HunterMapFeatureTests {
         let store = TestStore(initialState: state) {
             HunterMapFeature()
         } withDependencies: {
-            $0.apiClient.addWinner = { _, _ in }
+            $0.apiClient.submitFoundCode = { _, _, _ in }
             $0.liveActivityClient.end = { _ in }
         }
         store.exhaustivity = .off
@@ -894,7 +889,7 @@ struct HunterMapFeatureTests {
         let store = TestStore(initialState: state) {
             HunterMapFeature()
         } withDependencies: {
-            $0.apiClient.addWinner = { _, _ in }
+            $0.apiClient.submitFoundCode = { _, _, _ in }
             $0.liveActivityClient.end = { _ in }
         }
         store.exhaustivity = .off

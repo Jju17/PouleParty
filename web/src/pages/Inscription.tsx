@@ -3,6 +3,7 @@ import { useLocation, useSearchParams } from "react-router-dom";
 import Layout from "../components/Layout";
 import { useI18n } from "../i18n";
 import { localeFromPathname } from "./inscriptionPaths";
+import { getAppCheckToken } from "../appCheck";
 
 // PP-52 — 3-step inscription wizard (intro → form → récap → Stripe).
 // All copy comes from `t.inscription.*` (en/fr/nl). The page pins
@@ -22,6 +23,11 @@ interface FormState {
   email: string;
   phone: string;
   teamSize: TeamSize | null;
+  /** CRIT-4 (audit 2026-05-17): honeypot. Real users never see / fill
+   *  this field (it's `display:none` + aria-hidden + tabIndex=-1).
+   *  Naive bots that auto-fill every input populate it — the server
+   *  rejects any non-empty value. */
+  company: string;
 }
 
 const EMPTY_FORM: FormState = {
@@ -30,6 +36,7 @@ const EMPTY_FORM: FormState = {
   email: "",
   phone: "",
   teamSize: null,
+  company: "",
 };
 
 function isFormValid(form: FormState): form is FormState & { teamSize: TeamSize } {
@@ -87,9 +94,18 @@ export default function Inscription() {
     setSubmitting(true);
     setError(null);
     try {
+      // CRIT-4 (audit 2026-05-17): attach the App Check token. When
+      // `enforceAppCheck` is later flipped to true on the CF, requests
+      // without a valid token will be rejected. Today the token is
+      // tracked-but-not-enforced — the value goes through to populate
+      // the App Check monitoring dashboard.
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      const appCheckToken = await getAppCheckToken();
+      if (appCheckToken) headers["X-Firebase-AppCheck"] = appCheckToken;
+
       const response = await fetch(API_ENDPOINT, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           batchId,
           playerName: form.playerName.trim(),
@@ -98,6 +114,10 @@ export default function Inscription() {
           phone: form.phone.trim(),
           teamSize: form.teamSize,
           locale,
+          // CRIT-4 (audit 2026-05-17): honeypot — real users never
+          // touch this field, but naive form-fillers populate it.
+          // Server rejects any non-empty value.
+          company: form.company,
         }),
       });
       const json = (await response.json()) as { checkoutUrl?: string; error?: string };
@@ -208,6 +228,19 @@ function FormStep({
       <p className="text-sm opacity-75 mb-6">{f.subtitle}</p>
 
       <div className="space-y-4">
+        {/* CRIT-4 (audit 2026-05-17): honeypot. `display:none` keeps
+            it invisible to real users; bots that fill every input
+            trigger the server's reject path. */}
+        <input
+          type="text"
+          name="company"
+          value={form.company}
+          onChange={(e) => onChange({ ...form, company: e.target.value })}
+          autoComplete="off"
+          tabIndex={-1}
+          aria-hidden="true"
+          style={{ position: "absolute", left: "-9999px", width: 1, height: 1, opacity: 0 }}
+        />
         <Field label={f.playerNameLabel}>
           <input
             type="text"
