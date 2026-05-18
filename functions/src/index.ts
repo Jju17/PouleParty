@@ -41,6 +41,11 @@ export {
   lookupGameByValidationCode,
 } from "./registrations";
 
+// AND-H6 (store-audit 2026-05-18): self-service account-deletion request
+// backing `pouleparty.be/delete-account`. Replaces the previous
+// mailto-only fallback that Google Play 2024+ rejects at upload.
+export { processAccountDeletion } from "./accountDeletion";
+
 // CRIT-3 (audit 2026-05-17): server-authoritative winner submission.
 // Replaces the client-side `addWinner` arrayUnion which previously let
 // any authenticated user self-declare victory by writing to the

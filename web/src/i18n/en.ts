@@ -235,12 +235,15 @@ export default {
       total: "TOTAL",
       note: "€12 / player · 1 free drink at the starting bar · wristband at the final spot",
       paymentSecure: "Secure payment via Stripe (Card · Apple Pay · Google Pay)",
-      // XPLAT-H5 (store-audit 2026-05-18): explicit consent before payment.
-      consentPrefix: "I accept the ",
+      // XPLAT-H5 (store-audit 2026-05-18, updated 2026-05-18 PM):
+      // implicit consent at submit. Disclosure rendered right above
+      // the "PAY {n} €" button so the user sees the Terms + Privacy
+      // links + the Art. 16(l) waiver at the moment of click.
+      consentPrefix: "By clicking Pay, you accept the",
       consentTermsLink: "Terms of Use",
       consentJoin: " and the ",
       consentPrivacyLink: "Privacy Policy",
-      consentSuffix: ". I understand this is a dated leisure event so the 14-day right of withdrawal does not apply (CRD Art. 16(l)).",
+      consentSuffix: ". Dated leisure event — the 14-day right of withdrawal does not apply (CRD Art. 16(l)).",
       back: "← EDIT",
       // Template: replace {total} with the number — e.g. "PAY 36 € 🔒".
       payButtonTemplate: "PAY {total} € 🔒",
@@ -291,5 +294,21 @@ export default {
       "We process manual scrub requests within 30 days (usually within a week). You'll receive an email confirmation once it's done.",
     emailButton: "Email a manual scrub request",
     backHome: "Back to home",
+    formTitle: "Request a scrub",
+    formSubtitle: "Fill this in and we'll process it within 30 days.",
+    formEmailLabel: "Your email",
+    formEmailPlaceholder: "jane@mail.com",
+    formNicknameLabel: "Nickname or team name (optional)",
+    formNicknamePlaceholder: "As it appeared in the app",
+    formReasonLabel: "Anything else? (optional)",
+    formReasonPlaceholder: "Approximate date of last game, etc.",
+    formSubmit: "SUBMIT REQUEST",
+    formSubmitting: "SUBMITTING…",
+    formSuccess:
+      "Got it — we received your request and will process it within 30 days. A copy was emailed to {email}.",
+    formErrorGeneric:
+      "Something went wrong. Try again or email us at julien@rahier.dev.",
+    formErrorInvalidEmail: "Please enter a valid email address.",
+    fallbackHint: "Form not working? You can also email us directly:",
   },
 };

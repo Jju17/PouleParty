@@ -76,24 +76,24 @@ struct GameMasterMapView: View {
                 .presentationDetents([.medium, .large])
             }
             .alert(
-                "Désigner la poule",
+                "Designate the chicken",
                 isPresented: Binding(
                     get: { store.pendingChickenDesignation != nil },
                     set: { if !$0 { store.send(.view(.designateCancelTapped)) } }
                 ),
                 presenting: store.pendingChickenDesignation
             ) { reg in
-                Button("Désigner \(reg.teamName)", role: .destructive) {
+                Button("Designate \(reg.teamName)", role: .destructive) {
                     store.send(.view(.designateConfirmTapped))
                 }
-                Button("Annuler", role: .cancel) {
+                Button("Cancel", role: .cancel) {
                     store.send(.view(.designateCancelTapped))
                 }
             } message: { reg in
-                Text("\(reg.teamName) deviendra la poule. Le chicken actuel perdra ce rôle.")
+                Text("\(reg.teamName) will become the chicken. The current chicken will lose this role.")
             }
             .alert(
-                "Erreur",
+                "Error",
                 isPresented: Binding(
                     get: { store.designationError != nil },
                     set: { if !$0 { store.send(.view(.designationErrorDismissed)) } }
@@ -187,7 +187,7 @@ private struct GameMasterHuntersListView: View {
                                     Text(reg.teamName)
                                         .font(.headline)
                                         .foregroundStyle(Color.onBackground)
-                                    Text("Désigner comme poule")
+                                    Text("Designate as chicken")
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                 }
@@ -198,9 +198,9 @@ private struct GameMasterHuntersListView: View {
                         }
                     }
                 } header: {
-                    Text("Désigner la poule")
+                    Text("Designate the chicken")
                 } footer: {
-                    Text("Le hunter désigné devient la poule ; il quitte la liste des chasseurs. Possible uniquement avant le début de la partie.")
+                    Text("The designated hunter becomes the chicken; they leave the hunters list. Only possible before the game starts.")
                 }
             }
         }

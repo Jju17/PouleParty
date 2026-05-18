@@ -36,6 +36,13 @@
         }
       },
       {
+        "source": "/api/processAccountDeletion",
+        "function": {
+          "functionId": "processAccountDeletion",
+          "region": "europe-west1"
+        }
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

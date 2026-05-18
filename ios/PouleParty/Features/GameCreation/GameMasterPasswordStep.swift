@@ -26,7 +26,7 @@ struct GameMasterPasswordStep: GameCreationStepView {
             )
 
             Toggle(isOn: $store.isGameMasterEnabled) {
-                Text("Activer le rôle GameMaster")
+                Text("Enable GameMaster role")
                     .font(.gameboy(size: 10))
                     .foregroundStyle(Color.onBackground)
             }
@@ -35,7 +35,7 @@ struct GameMasterPasswordStep: GameCreationStepView {
 
             if store.isGameMasterEnabled {
                 VStack(spacing: 12) {
-                    Text("Code à 4 chiffres")
+                    Text("4-digit code")
                         .font(.gameboy(size: 8))
                         .foregroundStyle(Color.onBackground.opacity(0.6))
 
@@ -57,7 +57,7 @@ struct GameMasterPasswordStep: GameCreationStepView {
                             }
                         }
 
-                    Text("Garde-le secret : tu le partages seulement à l'arbitre.")
+                    Text("Keep it secret: share it only with the referee.")
                         .font(.gameboy(size: 8))
                         .foregroundStyle(Color.onBackground.opacity(0.6))
                         .multilineTextAlignment(.center)

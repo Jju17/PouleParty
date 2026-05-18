@@ -261,6 +261,16 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Account deletion requests (AND-H6, store-audit 2026-05-18). Captured
+    // from the public `pouleparty.be/delete-account` form by the
+    // `processAccountDeletion` Cloud Function (admin SDK). Carries the
+    // user-provided email + nickname + reason. Reads / writes are denied
+    // to all clients so the queue stays private — Julien processes from
+    // the Firebase console / admin tooling.
+    match /accountDeletionRequests/{rid} {
+      allow read, write: if false;
+    }
+
     // Event registrations (PP-52) — pre-paid registrations created from the
     // public web form before any in-app Game exists. Top-level collection
     // (deliberately separate from the per-game `/games/{gameId}/registrations`

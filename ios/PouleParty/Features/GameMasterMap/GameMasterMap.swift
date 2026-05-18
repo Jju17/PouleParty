@@ -240,7 +240,7 @@ struct GameMasterMapFeature {
             case .view(.leaveGameTapped):
                 return .send(.delegate(.returnedToMenu))
 
-            // PP-86 — Désigner la poule
+            // PP-86 — Designate the chicken
             case let .view(.designateHunterTapped(reg)):
                 state.pendingChickenDesignation = reg
                 return .none

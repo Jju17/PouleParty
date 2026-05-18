@@ -33,11 +33,6 @@ interface FormState {
    *  populating the field with the user's Google profile organization,
    *  triggering false-positive 400 "invalid request" on submit. */
   nicknameAlt: string;
-  /** XPLAT-H5 (store-audit 2026-05-18): explicit T&C / Privacy consent
-   *  acknowledged by the buyer before payment, per CRD Art. 8(2). The
-   *  pay button is disabled until this is `true`, and we send a
-   *  `consentAcknowledgedAt` timestamp to the server. */
-  consentAccepted: boolean;
 }
 
 const EMPTY_FORM: FormState = {
@@ -47,7 +42,6 @@ const EMPTY_FORM: FormState = {
   phone: "",
   teamSize: null,
   nicknameAlt: "",
-  consentAccepted: false,
 };
 
 function isFormValid(form: FormState): form is FormState & { teamSize: TeamSize } {
@@ -133,11 +127,16 @@ export default function Inscription() {
           // touch this field but naive form-fillers populate it.
           // Server rejects any non-empty value.
           nicknameAlt: form.nicknameAlt,
-          // XPLAT-H5 (store-audit 2026-05-18): T&C / Privacy explicit
-          // consent. The server stamps the registration doc with
-          // `consentAcknowledgedAt` so we can prove consent later if
-          // a buyer challenges the purchase.
-          consentAcknowledgedAt: form.consentAccepted ? new Date().toISOString() : null,
+          // XPLAT-H5 (store-audit 2026-05-18, updated 2026-05-18 PM):
+          // implicit consent at submit click. The "Pay" button is
+          // labeled "PAY {n} €" (CRD Art. 8(2) obligation-to-pay
+          // requirement) and the disclosure text right above it
+          // surfaces Terms + Privacy + CRD Art. 16(l) waiver. Belgian
+          // clickwrap doctrine accepts implicit consent when the
+          // disclosure is prominent + the button is unambiguous, so
+          // the previous explicit checkbox was removed to reduce
+          // friction. We still timestamp the click for audit trail.
+          consentAcknowledgedAt: new Date().toISOString(),
         }),
       });
       const json = (await response.json()) as { checkoutUrl?: string; error?: string };
@@ -174,7 +173,6 @@ export default function Inscription() {
             <RecapStep
               t={t}
               form={form}
-              onChange={setForm}
               total={total}
               submitting={submitting}
               error={error}
@@ -338,7 +336,6 @@ function FormStep({
 function RecapStep({
   t,
   form,
-  onChange,
   total,
   submitting,
   error,
@@ -347,7 +344,6 @@ function RecapStep({
 }: {
   t: T;
   form: FormState;
-  onChange: (form: FormState) => void;
   total: number;
   submitting: boolean;
   error: string | null;
@@ -358,10 +354,7 @@ function RecapStep({
   const payLabel = submitting
     ? recap.redirecting
     : recap.payButtonTemplate.replace("{total}", String(total));
-  // XPLAT-H5 (store-audit 2026-05-18): block pay until consent is
-  // explicitly acknowledged. CRD Art. 8(2) requires explicit consent
-  // to the T&C / Privacy before charging.
-  const payDisabled = submitting || !form.consentAccepted;
+  const payDisabled = submitting;
   return (
     <div>
       <h2
@@ -397,27 +390,25 @@ function RecapStep({
         {recap.paymentSecure}
       </p>
 
-      {/* XPLAT-H5 (store-audit 2026-05-18): explicit T&C / Privacy
-          consent + CRD Art. 16(l) acknowledgment. */}
-      <label className="mt-5 flex gap-3 items-start cursor-pointer text-sm leading-snug">
-        <input
-          type="checkbox"
-          checked={form.consentAccepted}
-          onChange={(e) => onChange({ ...form, consentAccepted: e.target.checked })}
-          className="mt-0.5 size-5 accent-[#FE6A00] shrink-0"
-        />
-        <span>
-          {recap.consentPrefix}{" "}
-          <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-[#FE6A00] underline">
-            {recap.consentTermsLink}
-          </a>
-          {recap.consentJoin}
-          <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-[#FE6A00] underline">
-            {recap.consentPrivacyLink}
-          </a>
-          {recap.consentSuffix}
-        </span>
-      </label>
+      {/* XPLAT-H5 (store-audit 2026-05-18, updated 2026-05-18 PM):
+          implicit consent at submit. The disclosure sits right above
+          the Pay button — Belgian clickwrap doctrine accepts this when
+          (1) the button label is unambiguous ("PAY {n} €" → CRD Art. 8(2)
+          obligation-to-pay requirement, ✅), (2) the Terms + Privacy
+          links are prominent at the moment of click, (3) the CRD Art.
+          16(l) waiver is surfaced pre-charge. We still capture a
+          `consentAcknowledgedAt` timestamp server-side. */}
+      <p className="mt-5 text-xs opacity-75 leading-relaxed text-center">
+        {recap.consentPrefix}{" "}
+        <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-[#FE6A00] underline">
+          {recap.consentTermsLink}
+        </a>
+        {recap.consentJoin}
+        <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-[#FE6A00] underline">
+          {recap.consentPrivacyLink}
+        </a>
+        {recap.consentSuffix}
+      </p>
 
       {error && (
         <div className="mt-4 p-3 rounded-xl bg-red-100 text-red-800 text-sm">

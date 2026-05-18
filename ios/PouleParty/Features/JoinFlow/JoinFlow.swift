@@ -789,7 +789,7 @@ struct JoinFlowView: View {
             BangerText(String(localized: "GameMaster 🦅"), size: 28)
                 .foregroundStyle(Color.onBackground)
 
-            Text("Code à 4 chiffres")
+            Text("4-digit code")
                 .font(.gameboy(size: 10))
                 .foregroundStyle(Color.onBackground.opacity(0.6))
 
