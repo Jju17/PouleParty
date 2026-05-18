@@ -167,7 +167,7 @@ struct SettingsView: View {
                 store.send(.nicknameSubmitted(nicknameText))
             }
         }
-        .alert("Delete My Data", isPresented: $store.showingDeleteConfirmation) {
+        .alert("Delete Account", isPresented: $store.showingDeleteConfirmation) {
             Button("Delete", role: .destructive) {
                 store.send(.deleteConfirmationTapped)
             }

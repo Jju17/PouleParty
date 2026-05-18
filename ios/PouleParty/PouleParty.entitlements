@@ -8,6 +8,15 @@
 	<array>
 		<string>applinks:pouleparty.be</string>
 	</array>
+	<!-- iOS-H4 (store-audit 2026-05-18): App Attest. The Firebase
+	     App Check `AppAttestProvider` requires this entitlement to be
+	     present and resolved to either "development" (DEBUG builds) or
+	     "production" (release builds). Without it, App Attest fails
+	     silently on every release device once server-side
+	     `enforceAppCheck` is flipped on. The value is driven by the
+	     `APPATTEST_ENVIRONMENT` build setting injected per config. -->
+	<key>com.apple.developer.devicecheck.appattest-environment</key>
+	<string>$(APPATTEST_ENVIRONMENT)</string>
 </dict>
 </plist>
 

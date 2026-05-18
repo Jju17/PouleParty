@@ -136,7 +136,7 @@ struct SettingsDangerSection: View {
                 HStack {
                     Image(systemName: "trash")
                         .font(.banger(size: 18))
-                    BangerText("Delete My Data", size: 18)
+                    BangerText("Delete Account", size: 18)
                 }
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)

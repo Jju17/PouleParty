@@ -12,10 +12,14 @@ export default {
     appStore: "App Store",
     googlePlay: "Google Play",
     androidDisclaimer: "⚠️ Android: the app is in closed testing. Your email must be registered with the developer before you can download it. If it doesn't work, let us know on the WhatsApp group!",
+    dDayEyebrow: "PouleParty D-Day",
+    dDayTitle: "🐔 Saturday, June 6",
+    dDayBody: "A Chicken hides in Ixelles. Your team has to hunt them down. €12 / player · Teams of 3 to 5.",
+    dDayCta: "REGISTER YOUR TEAM →",
   },
   privacy: {
     title: "Privacy Policy",
-    lastUpdated: "Last updated: May 12, 2026",
+    lastUpdated: "Last updated: May 18, 2026",
     overview: "Data Controller",
     overviewText:
       'Poule Party ("we", "our", "the app") is a location-based mobile game. The data controller responsible for your personal data is:',
@@ -33,6 +37,9 @@ export default {
     analytics: "Analytics:",
     analyticsText:
       "We use Firebase Analytics to collect anonymous usage data (app opens, screen views) and Firebase Crashlytics for crash reports, to improve the app. No personally identifiable information is collected through these services.",
+    paidEventData: "Paid event registration:",
+    paidEventDataText:
+      "When you register for a paid PouleParty event on the web form (pouleparty.be/registration), we collect: the captain's full name, team name, email address, phone number, team size, your IP address and locale, the Stripe Checkout session ID, and a 6-character validation code we generate for the event. This data is stored in our `/eventRegistrations` Firestore collection and transmitted to the third-party services listed below for payment, confirmation email delivery, and on-site logistics. Payment card details are never collected by us — they are entered directly on Stripe's hosted Checkout page.",
     legalBasis: "Legal Basis for Processing",
     legalBasisIntro: "Under the GDPR (Art. 6), we process your data based on the following legal grounds:",
     legalBasisConsent: "Consent (Art. 6(1)(a)):",
@@ -54,18 +61,27 @@ export default {
     thirdPartyCrashlyticsUrl: "https://firebase.google.com/support/privacy/",
     thirdPartyMapbox: "Mapbox",
     thirdPartyMapboxUrl: "https://www.mapbox.com/legal/privacy",
+    thirdPartyStripe: "Stripe (payment processing for paid events — Stripe Technology Europe Ltd in Ireland, with onward transfer to Stripe Inc. in the US under Standard Contractual Clauses)",
+    thirdPartyStripeUrl: "https://stripe.com/privacy",
+    thirdPartyResend: "Resend (transactional confirmation emails for paid events — Resend Inc. in the US under Standard Contractual Clauses)",
+    thirdPartyResendUrl: "https://resend.com/legal/privacy-policy",
+    thirdPartyGoogleSheets: "Google Sheets (operational roster for on-site D-Day check-in — Google LLC under the EU-US Data Privacy Framework)",
+    thirdPartyGoogleSheetsUrl: "https://policies.google.com/privacy",
     dataSharing: "Data Sharing",
     dataSharingText:
       "We do not sell, trade, or share your personal data with third parties for marketing purposes. Location data is only shared with other players in the same game session during active gameplay.",
     internationalTransfers: "International Data Transfers",
     internationalTransfersText:
-      "Your data is processed by Google Firebase services, whose servers may be located outside the European Economic Area (EEA), including in the United States. Google operates under the EU-US Data Privacy Framework and Standard Contractual Clauses (SCCs) to ensure an adequate level of data protection as required by the GDPR. Mapbox also processes map data under similar safeguards.",
+      "Your data is processed by Google Firebase services, whose servers may be located outside the European Economic Area (EEA), including in the United States. Google operates under the EU-US Data Privacy Framework and Standard Contractual Clauses (SCCs) to ensure an adequate level of data protection as required by the GDPR. Mapbox processes map data under similar safeguards. For paid event registrations: Stripe routes payments via Stripe Technology Europe Ltd (Ireland) and transmits anonymized risk/fraud signals to Stripe Inc. (USA) under SCCs. Resend (USA) transmits the confirmation email under SCCs. Google Sheets data (event roster) is stored in Google LLC (USA) infrastructure under the EU-US Data Privacy Framework.",
     dataRetention: "Data Retention",
     dataRetentionText:
-      "Game data (including location history) may be retained in Firebase Firestore after a game ends. No long-term location tracking occurs outside of active gameplay. You can request deletion of your game data by contacting us at julien@rahier.dev. Anonymous authentication tokens may persist on your device but can be cleared by deleting your account in the app settings or by uninstalling the app.",
-    children: "Children's Privacy",
+      "Game data (including location history) may be retained in Firebase Firestore after a game ends. No long-term location tracking occurs outside of active gameplay. Paid event registrations in `/eventRegistrations` are kept for 12 months after the event date for accounting, dispute resolution and tax obligations, then purged. The Google Sheet used for on-site check-in is purged within 30 days after the event. You can request deletion of your game data by contacting us at julien@rahier.dev. Anonymous authentication tokens may persist on your device but can be cleared by deleting your account in the app settings or by uninstalling the app.",
+    cookies: "Cookies and Similar Technologies",
+    cookiesText:
+      "The public website uses strictly-necessary cookies only: Firebase App Check for bot protection on the registration form, and Stripe-hosted cookies on the Stripe Checkout page itself (handled by Stripe, see their privacy policy). We do not use any advertising, analytics or tracking cookies on the public web pages. No cookie banner is shown because consent under the ePrivacy Directive is not required for strictly-necessary cookies.",
+    children: "Age Requirements",
     childrenText:
-      "The app is not directed at children under 16. We do not knowingly collect personal information from children under 16. If you believe a child under 16 has provided us with personal data, please contact us so we can delete it.",
+      "The free PouleParty mobile game is recommended for ages 13 and above; users under 13 must have a parent or guardian set up the device and grant location permissions on their behalf. The paid PouleParty D-Day event held in public venues (bars, the city of Brussels) is reserved for participants aged 18 and above due to the venue's licensing requirements. We do not knowingly collect personal information from children under 13 through the app, or from anyone under 18 through the paid event registration form. If you believe a minor has provided us with data outside these limits, please contact us at julien@rahier.dev so we can delete it.",
     rights: "Your Rights Under the GDPR",
     rightsIntro: "As a user in the European Economic Area, you have the following rights:",
     rightAccess: "Right of access (Art. 15):",
@@ -73,11 +89,11 @@ export default {
     rightRectification: "Right to rectification (Art. 16):",
     rightRectificationText: "You can request correction of inaccurate data.",
     rightErasure: "Right to erasure (Art. 17):",
-    rightErasureText: "You can request deletion of your data. You can delete your anonymous authentication account directly in the app via Settings > Delete My Data. For complete deletion of game data stored in Firestore, please contact us at julien@rahier.dev.",
+    rightErasureText: "You can request deletion of your data. The in-app Settings > Delete Account button deletes your anonymous Firebase Auth account and the `/users/{uid}` profile document immediately. Games you participated in (and the team name you used for them) are kept indefinitely for game-history integrity — they are visible only to participants of the same session and the game creator. For full scrubbing of past game data (including your team name in winners arrays), contact us at julien@rahier.dev and we will process the manual scrub within 30 days. Paid event registrations are deleted on request (subject to the 12-month accounting retention period mentioned above).",
     rightRestriction: "Right to restriction (Art. 18):",
     rightRestrictionText: "You can request that we limit the processing of your data.",
     rightPortability: "Right to data portability (Art. 20):",
-    rightPortabilityText: "You can request your data in a structured, machine-readable format.",
+    rightPortabilityText: "You can request your data in a structured, machine-readable format. Send a request to julien@rahier.dev and we will respond within 30 days with a JSON export containing your `/users/{uid}` profile document, the team names and winner records linked to your anonymous user ID across past games, and any paid event registration tied to your email if applicable.",
     rightObject: "Right to object (Art. 21):",
     rightObjectText: "You can object to the processing of your data based on legitimate interest.",
     rightWithdraw: "Right to withdraw consent:",
@@ -114,13 +130,27 @@ export default {
   },
   terms: {
     title: "Terms of Use",
-    lastUpdated: "Last updated: May 12, 2026",
+    lastUpdated: "Last updated: May 18, 2026",
     acceptance: "Acceptance of Terms",
     acceptanceText:
-      "By downloading, installing or using Poule Party, you agree to these Terms of Use. If you do not agree, please do not use the app.",
+      "By downloading, installing or using Poule Party, or by registering for a paid PouleParty event, you agree to these Terms of Use. If you do not agree, please do not use the app or register for an event.",
     description: "Description of the Service",
     descriptionText:
-      "Poule Party is a free location-based mobile game where one player (the Chicken) hides while other players (Hunters) try to find them using a real-time map with a shrinking zone.",
+      "Poule Party is a free location-based mobile game where one player (the Chicken) hides while other players (Hunters) try to find them using a real-time map with a shrinking zone. Separately, we organize occasional paid in-person PouleParty events in Brussels (the \"D-Day\" event series), for which tickets can be purchased on the web at pouleparty.be/registration; the in-app experience itself is and remains free of charge.",
+    parties: "Contracting Party",
+    partiesText:
+      "PouleParty is operated by Julien Rahier, sole trader registered in Belgium, contact julien@rahier.dev. For paid events, you contract directly with Julien Rahier as the event organizer. No company sits between you and us.",
+    paidEvents: "Paid Event Tickets",
+    paidEventsPrice:
+      "Tickets for paid PouleParty events are sold per player at €12 per player, charged as €12 × the team size you select (3, 4, or 5 players) at checkout. Prices are in EUR and include any applicable Belgian VAT. Payment is processed by Stripe (see Privacy Policy for details); we never receive your card data.",
+    paidEventsWhatsIncluded:
+      "Each ticket includes: one entry to the dated event (e.g. PouleParty D-Day on Saturday, June 6, 2026 from 8:30 PM in Brussels/Ixelles), one welcome drink at the starting bar, and a wristband collected at the final location. Food, additional drinks, transportation and any incidental expenses are not included.",
+    paidEventsWithdrawal:
+      "Because PouleParty events are leisure activities scheduled for a specific date, the 14-day right of withdrawal granted by Article 9 of the EU Consumer Rights Directive (2011/83/EU) does NOT apply — this exemption is provided by Article 16(l) of that Directive. By completing your purchase, you explicitly acknowledge this and waive the cooling-off period. Tickets are non-refundable except in the cases listed below.",
+    paidEventsRefund:
+      "Refund rules: (a) if WE cancel or postpone the event for any reason (including weather, force majeure, insufficient registrations, or operator decision), you receive a full refund of the ticket price or, at your option, a transfer to the rescheduled date; (b) if YOU cannot attend, the ticket is non-refundable — but team rosters are freely interchangeable, so you may transfer your spot to another participant up until the day of the event by emailing julien@rahier.dev with the substitution details; (c) if a participant is denied entry to the venue for reasons attributable to them (intoxication, refusal to follow safety instructions, age below 18), no refund is issued.",
+    paidEventsForceMajeure:
+      "In case of force majeure (e.g. pandemic public-health order, severe weather warning, terror threat, venue closure beyond our control), we will either reschedule the event to a future date — with all tickets transferring automatically — or, if rescheduling is not feasible within 6 months, refund all ticket holders in full.",
     userConduct: "User Conduct",
     conduct1: "Use the app only for its intended purpose (playing the game).",
     conduct2: "Do not attempt to cheat, hack, or reverse-engineer the app.",
@@ -147,6 +177,13 @@ export default {
     changes: "Changes to These Terms",
     changesText:
       "We may update these terms from time to time. Continued use of the app after changes constitutes acceptance of the new terms.",
+    governingLaw: "Governing Law and Jurisdiction",
+    governingLawText:
+      "These terms are governed by Belgian law. Any dispute arising from these terms or from your participation in a paid PouleParty event will be brought exclusively before the courts of the judicial district of Brussels, Belgium, without prejudice to any non-waivable consumer-protection rights you hold under the law of your habitual residence.",
+    odr: "Online Dispute Resolution",
+    odrText:
+      "As a consumer in the European Union, you may also use the European Commission's Online Dispute Resolution platform to attempt to resolve disputes out of court. The ODR platform is accessible at:",
+    odrUrl: "https://ec.europa.eu/consumers/odr",
     contact: "Contact",
     contactText: "If you have questions about these terms, please contact us at",
   },
@@ -198,6 +235,12 @@ export default {
       total: "TOTAL",
       note: "€12 / player · 1 free drink at the starting bar · wristband at the final spot",
       paymentSecure: "Secure payment via Stripe (Card · Apple Pay · Google Pay)",
+      // XPLAT-H5 (store-audit 2026-05-18): explicit consent before payment.
+      consentPrefix: "I accept the ",
+      consentTermsLink: "Terms of Use",
+      consentJoin: " and the ",
+      consentPrivacyLink: "Privacy Policy",
+      consentSuffix: ". I understand this is a dated leisure event so the 14-day right of withdrawal does not apply (CRD Art. 16(l)).",
       back: "← EDIT",
       // Template: replace {total} with the number — e.g. "PAY 36 € 🔒".
       payButtonTemplate: "PAY {total} € 🔒",
@@ -224,29 +267,29 @@ export default {
   deleteAccount: {
     title: "Delete your Poule Party account",
     intro:
-      "You can delete your Poule Party account and all the data tied to it. This page is the web-accessible deletion endpoint required by Google Play — the same action is also available inside the app under Settings → Delete My Data.",
-    dataDeletedTitle: "What is deleted",
+      "You can delete your Poule Party account and all the data tied to it. This page is the web-accessible deletion endpoint required by Google Play — the same action is also available inside the app under Settings → Delete Account.",
+    dataDeletedTitle: "What is deleted immediately",
     dataDeleted: [
-      "Your anonymous Firebase user ID",
-      "Your nickname and push notification token",
-      "Any user profile data stored under /users/{your-id}",
+      "Your anonymous Firebase Auth user account",
+      "Your /users/{uid} profile document (nickname + push notification token)",
     ],
     dataKeptTitle: "What is kept",
     dataKept: [
-      "Games you created or joined are kept so other participants can still see final results. Your nickname is replaced with a generic label.",
+      "Past games you participated in keep the team name you used for them (visible only to participants of the same session and the game creator). This is required for game-history integrity.",
       "Anonymous analytics and crash reports (aggregated, not tied to your identity).",
+      "Paid event registrations are retained for 12 months after the event for accounting, dispute resolution and tax obligations (see Privacy Policy).",
     ],
-    howTitle: "How to request deletion",
+    howTitle: "Want a full manual scrub?",
     howText:
-      "Send an email to the address below from the email you'd like a confirmation at, and include:",
+      "If you want the team names attached to your past games replaced with a generic label, email us. Include:",
     howList: [
-      "Your nickname (as it appears in the app)",
+      "Your nickname or team name (as it appeared in the app)",
       "Approximate date of your last game, if you remember it",
       "Subject line: \"Delete my Poule Party account\"",
     ],
     timeframe:
-      "We process deletion requests within 30 days (usually within a week). You'll receive an email confirmation once it's done.",
-    emailButton: "Email deletion request",
+      "We process manual scrub requests within 30 days (usually within a week). You'll receive an email confirmation once it's done.",
+    emailButton: "Email a manual scrub request",
     backHome: "Back to home",
   },
 };

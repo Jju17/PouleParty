@@ -1,3 +1,64 @@
+# Release 1.13.0
+
+> ⚠️ **Do not paste this "Summary" paragraph into any store field.** Only the blocks explicitly labelled **App Store Connect**, **Google Play Console**, or **App Review Notes** below are store-safe.
+
+**Summary (internal, do not paste):** D-Day prep release. Closes the two-week store-compliance audit. Backend (already deployed staging + prod): App Check enforce on `createPendingRegistration`; Stripe webhook adds amount/currency/mode cross-checks; `gmRateLimits` now `tx.delete` on success; new callables `validateRegistrationCode` / `lookupGameByValidationCode` / `submitFoundCode` / `getFoundCode` / `onGameDeleted`. Mobile: App Check init (Play Integrity on Android release, App Attest on iOS release, Debug provider otherwise); foundCode moved off the public Game doc; winners write requires the CF; deeplink mid-game drop on Android; iOS LiveLocationManager rewritten for multi-consumer safety; iOS `Dictionary uniquingKeysWith` on Victory/Challenges to defuse the duplicate-winner crash. Privacy + Terms web pages rewritten with Stripe/Resend/Sheets disclosures and CRD Art. 16(l) opt-out for the paid event. Settings "Delete My Data" → "Delete Account" per Apple Guideline 5.1.1(v). iOS Info.plist deduplicated; App Attest entitlement added; widget extension `IPHONEOS_DEPLOYMENT_TARGET = 17.0` so Live Activities work on iOS 17/18/19; macOS-only sandbox build settings removed. Android: `dataExtractionRules` to lock cloud backup + D2D for Android 12+; deeplink intent-filter adds `www.pouleparty.be`; network security config gets a debug-overrides block; location disclosure strings (en/fr/nl) name Firebase Firestore + the real-time sharing flow + the stop condition. See `audit.md` + `store-audit.md` for the full audit trail.
+
+---
+
+## 📱 App Store Connect — field "What's New in This Version"
+
+**English (U.S.)**
+
+Reliability and safety pass before our first big real-world event. Background tracking is more resilient when the app sleeps in your pocket, the lock-screen Live Activity now works on every iOS version we support, and account deletion is one tap clearer. Faster zone updates when several players move at once, fewer false "Chicken disconnected" warnings, and a cleaner power-up spawn on flaky networks.
+
+**French**
+
+Passe de fiabilité et de sécurité avant notre premier gros événement physique. Le suivi en arrière-plan tient mieux quand l'appli dort dans ta poche, la Live Activity de l'écran verrouillé fonctionne enfin sur toutes les versions d'iOS qu'on supporte, et la suppression de compte est plus claire en un tap. Mises à jour de zone plus rapides quand plusieurs joueurs bougent en même temps, moins de fausses alertes "Poule déconnectée", et power-ups qui apparaissent même sur un réseau capricieux.
+
+**Dutch**
+
+Stabiliteits- en veiligheidspas voor ons eerste grote fysieke event. Het achtergrond-volgen is robuuster wanneer de app in je broekzak slaapt, de Live Activity op het vergrendelscherm werkt nu op elke iOS-versie die we ondersteunen, en account verwijderen is één tap duidelijker. Snellere zone-updates wanneer meerdere spelers tegelijk bewegen, minder valse "Kip offline"-meldingen, en power-ups die ook bij een wankel netwerk verschijnen.
+
+---
+
+## 🤖 Google Play Console — field "Release notes"
+
+```
+<en-US>Reliability + safety pass before our first big in-person event. Background tracking is more robust when the app sleeps in your pocket, account deletion is one tap clearer, and zone updates are faster when several players move at once. Fewer false "Chicken disconnected" alerts and a cleaner power-up spawn on flaky networks.</en-US>
+<fr-FR>Passe fiabilité + sécurité avant notre premier gros événement physique. Le suivi en arrière-plan tient mieux quand l'appli dort dans ta poche, la suppression de compte est plus claire en un tap, et les mises à jour de zone sont plus rapides quand plusieurs joueurs bougent en même temps. Moins de fausses alertes « Poule déconnectée » et power-ups qui apparaissent même sur un réseau capricieux.</fr-FR>
+<nl-NL>Stabiliteit + veiligheidspas voor ons eerste grote fysieke event. Het achtergrond-volgen is robuuster wanneer de app in je broekzak slaapt, account verwijderen is één tap duidelijker, en zone-updates zijn sneller wanneer meerdere spelers tegelijk bewegen. Minder valse "Kip offline"-meldingen en power-ups die ook bij een wankel netwerk verschijnen.</nl-NL>
+```
+
+---
+
+## 📝 App Store Connect — field "App Review Information → Notes"
+
+**Mandatory paste for 1.13.0** — this release touches background location (`NSLocationAlwaysAndWhenInUseUsageDescription`), adds App Attest, and ships a new privacy manifest. App Review runs a 3-minute sandbox session — they need a path to reach the Always-location prompt to validate it.
+
+```
+Test account: no sign-in required. PouleParty uses anonymous Firebase Auth — a UID is generated on first launch and persists across launches.
+
+Reaching the background-location prompt:
+1. Launch the app, complete the onboarding (any nickname).
+2. On Home, tap "Create a game".
+3. In the wizard: pick "Follow the Chicken" mode, set Duration = 5 min, Head start = 1 min.
+4. Place the start zone pin anywhere on the map (Brussels by default).
+5. Tap "Start". The system "Always Allow" location prompt appears here — this is the prompt our NSLocationAlwaysAndWhenInUseUsageDescription justifies. The Chicken's GPS is then shared with Hunters in the same session for the duration of the game. Background tracking stops automatically when the game ends (status flips to "done", LocationClient.stopTracking() is called).
+
+Push notifications: uses Firebase Cloud Messaging for zone-shrink + start-game pings. No content is collected from the user via push.
+
+App Check: ships Firebase App Check with App Attest (release builds) and Debug provider (debug builds). App Attest is a privacy-preserving anti-fraud signal — no PII.
+
+Account deletion: Settings → "Delete Account". Deletes the anonymous Firebase Auth account + the user's profile document. Past games keep the team name used for them, explained in Settings and the Privacy Policy.
+
+Stripe: the in-app experience is free. We sell tickets for an occasional in-person event on the public web at pouleparty.be/registration (charged via Stripe Checkout, processed entirely outside the app). Falls under Guideline 3.1.3(b) (physical event tickets sold outside the app) — no IAP applies.
+
+Encryption: only Apple-standard HTTPS / Firebase TLS; ITSAppUsesNonExemptEncryption = false in Info.plist.
+```
+
+---
+
 # Release 1.12.0
 
 > ⚠️ **Do not paste this "Summary" paragraph into any store field.** Only the blocks explicitly labelled **App Store Connect**, **Google Play Console**, or **App Review Notes** below are store-safe.

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<!--
+  iOS-B1 (store-audit 2026-05-18): widget extensions ship as separate
+  signed binaries inside the host app's IPA, and Apple's Privacy
+  Manifest enforcement validates each binary independently. The
+  PoulePartyWidgets target hosts a Live Activity (lock screen +
+  Dynamic Island) that renders `ActivityAttributes` content passed
+  in by the host app — it doesn't collect its own data, doesn't
+  hit the network, doesn't read UserDefaults, doesn't touch the
+  filesystem. Declared accordingly. Verified absence of Required
+  Reason API calls with `grep -rE "UserDefaults|@AppStorage|FileManager"
+  PoulePartyWidgets/` returning no matches.
+-->
+<dict>
+    <key>NSPrivacyTracking</key>
+    <false/>
+    <key>NSPrivacyTrackingDomains</key>
+    <array/>
+    <key>NSPrivacyCollectedDataTypes</key>
+    <array/>
+    <key>NSPrivacyAccessedAPITypes</key>
+    <array/>
+</dict>
+</plist>

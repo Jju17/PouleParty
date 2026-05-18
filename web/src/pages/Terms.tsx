@@ -21,6 +21,20 @@ export default function Terms() {
         </section>
 
         <section>
+          <h2 className="text-xl font-semibold mb-2">{t.terms.parties}</h2>
+          <p>{t.terms.partiesText}</p>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-semibold mb-2">{t.terms.paidEvents}</h2>
+          <p className="mb-3">{t.terms.paidEventsPrice}</p>
+          <p className="mb-3">{t.terms.paidEventsWhatsIncluded}</p>
+          <p className="mb-3">{t.terms.paidEventsWithdrawal}</p>
+          <p className="mb-3">{t.terms.paidEventsRefund}</p>
+          <p>{t.terms.paidEventsForceMajeure}</p>
+        </section>
+
+        <section>
           <h2 className="text-xl font-semibold mb-2">{t.terms.userConduct}</h2>
           <ul className="list-disc pl-6 space-y-2">
             <li>{t.terms.conduct1}</li>
@@ -63,6 +77,21 @@ export default function Terms() {
         <section>
           <h2 className="text-xl font-semibold mb-2">{t.terms.changes}</h2>
           <p>{t.terms.changesText}</p>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-semibold mb-2">{t.terms.governingLaw}</h2>
+          <p>{t.terms.governingLawText}</p>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-semibold mb-2">{t.terms.odr}</h2>
+          <p>
+            {t.terms.odrText}{" "}
+            <a href={t.terms.odrUrl} target="_blank" rel="noopener noreferrer" className="text-[#FE6A00] underline">
+              {t.terms.odrUrl}
+            </a>
+          </p>
         </section>
 
         <section>

@@ -19,7 +19,12 @@
     <string name="upcoming_game_cta_chicken">Open</string>
     <string name="upcoming_game_cta_hunter">Join</string>
     <string name="location_required">Location Required</string>
-    <string name="location_required_message">Location is the core of PouleParty! Your position is anonymous and only used during the game. Please enable location access to continue.</string>
+    <!-- AND-H2 (store-audit 2026-05-18): explicit prominent disclosure
+         per Google Play sensitive-permissions policy. Names the
+         third-party processor (Firebase), the data flow (real-time
+         sharing with other players in your session) and the stop
+         condition (game end). -->
+    <string name="location_required_message">PouleParty collects your precise GPS location while a game is active and shares it in real time with other players in your session via Firebase Firestore. Location tracking stops automatically when the game ends. We never sell or share this data with advertisers or any third party outside the game.</string>
 
     <!-- Join / Register flow -->
     <string name="enter_the_game_code">Enter the game code</string>
@@ -152,8 +157,8 @@
     <string name="hunt_subtitle">Split into squads. Use the map to track them.\n\nThe Chicken could be hiding anywhere!</string>
     <string name="need_location">We Need Your Location</string>
     <string name="location_granted">You\'re all set! The game will track location even in the background.\n\nMaximum fun guaranteed!</string>
-    <string name="location_partial">Almost there! The game needs to track the Chicken even when the app is in the background.\n\nPlease allow background location.</string>
-    <string name="location_denied">Without it, the game can\'t work.\nNo location = no map = no fun.\n\nWe only share your position with other players while a game is in progress.</string>
+    <string name="location_partial">Almost there! PouleParty needs to track your GPS in the background so the Chicken stays on the map when your phone is in your pocket. Your position is uploaded to Firebase Firestore and shared in real time with other players in your active game session only — tracking stops the moment the game ends.\n\nPlease allow background location.</string>
+    <string name="location_denied">Without location access, the game can\'t work.\nNo location = no map = no fun.\n\nYour GPS is uploaded to Firebase Firestore and shared with other players in your active game session only. Tracking stops automatically when the game ends. We never sell or share this data with advertisers.</string>
     <string name="location_service_channel_name">Game location tracking</string>
     <string name="location_service_channel_description">Keeps the app tracking your position during active games.</string>
     <string name="location_service_title">Game in progress</string>
@@ -260,9 +265,12 @@
     <string name="privacy_policy">Privacy Policy</string>
     <string name="terms_of_use">Terms of Use</string>
     <string name="contact_support">Contact Support</string>
-    <string name="delete_my_data">Delete My Data</string>
-    <string name="delete_data_footer">This will delete your anonymous account and all associated data. You can continue using the app — a new anonymous account will be created automatically.</string>
-    <string name="delete_data_title">Delete My Data</string>
+    <!-- iOS-H6 / store-audit 2026-05-18: "Delete Account" (not "Delete My Data")
+         is the Apple-mandated wording for Guideline 5.1.1(v). Play Console's
+         account-deletion policy uses the same term. -->
+    <string name="delete_my_data">Delete Account</string>
+    <string name="delete_data_footer">This deletes your anonymous Firebase Auth account and the profile data associated with it (nickname, push token). Past games keep the team name you used for them — they\'re visible only to participants of those sessions. You can continue using the app — a new anonymous account will be created automatically.</string>
+    <string name="delete_data_title">Delete Account</string>
     <string name="delete_data_message">This will permanently delete your anonymous account. Any active games will be abandoned. Are you sure?</string>
     <string name="delete">Delete</string>
     <string name="data_deleted">Data Deleted</string>
@@ -301,7 +309,7 @@
     <string name="challenges_empty">No challenges yet. Check back later!</string>
     <string name="leaderboard_empty">No hunters yet.</string>
 
-    <string name="mapbox_access_token" translatable="false">pk.eyJ1Ijoiamp1MTciLCJhIjoiY20yaGpwaG53MGI2YzJsc2NxOTNzMWJ2bCJ9.D6NMFnmGF7pA2LN64vmqcA</string>
+    <string name="mapbox_access_token" translatable="false">pk.eyJ1Ijoiamp1MTciLCJhIjoiY21wYmZpZzhyMDRvejJxc2J4cWM4YXY2YyJ9.kzhYo5q-xC_2gC8S73SDrA</string>
     <string name="podium">Podium</string>
     <string name="other_hunters">Other hunters</string>
     <string name="view_leaderboard">View Leaderboard</string>

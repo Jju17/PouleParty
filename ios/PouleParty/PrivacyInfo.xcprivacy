@@ -8,10 +8,14 @@
     <array/>
     <key>NSPrivacyCollectedDataTypes</key>
     <array>
-        <!-- Player nickname chosen during onboarding; not linked to real identity -->
+        <!-- Player nickname + teamName chosen by the user. Classified as
+             "Other User Content" rather than "Name" because Apple defines
+             "Name" as a real name (e.g. "John Smith"); a self-chosen
+             pseudonym used in gameplay is the canonical example Apple gives
+             for "Other User Content" in the App Privacy questionnaire. -->
         <dict>
             <key>NSPrivacyCollectedDataType</key>
-            <string>NSPrivacyCollectedDataTypeName</string>
+            <string>NSPrivacyCollectedDataTypeOtherUserContent</string>
             <key>NSPrivacyCollectedDataTypeLinked</key>
             <true/>
             <key>NSPrivacyCollectedDataTypeTracking</key>

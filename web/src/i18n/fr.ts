@@ -12,10 +12,14 @@ export default {
     appStore: "App Store",
     googlePlay: "Google Play",
     androidDisclaimer: "⚠️ Android : l'app est en test fermé. Ton adresse email doit être enregistrée côté développeur pour pouvoir la télécharger. Si ça ne marche pas, préviens-nous sur le groupe WhatsApp !",
+    dDayEyebrow: "PouleParty D-Day",
+    dDayTitle: "🐔 Samedi 6 juin",
+    dDayBody: "Une Poule se cache dans Ixelles. Ton équipe doit la traquer. 12 € / joueur · Équipes de 3 à 5.",
+    dDayCta: "INSCRIS TON ÉQUIPE →",
   },
   privacy: {
     title: "Politique de confidentialité",
-    lastUpdated: "Dernière mise à jour : 12 mai 2026",
+    lastUpdated: "Dernière mise à jour : 18 mai 2026",
     overview: "Responsable du traitement",
     overviewText:
       "Poule Party (\"nous\", \"notre\", \"l'application\") est un jeu mobile de géolocalisation. Le responsable du traitement de vos données personnelles est :",
@@ -33,6 +37,9 @@ export default {
     analytics: "Analytiques :",
     analyticsText:
       "Nous utilisons Firebase Analytics pour collecter des données d'utilisation anonymes (ouvertures de l'app, vues d'écran) et Firebase Crashlytics pour les rapports de crash, afin d'améliorer l'application. Aucune information personnelle identifiable n'est collectée via ces services.",
+    paidEventData: "Inscription à un événement payant :",
+    paidEventDataText:
+      "Lorsque tu t'inscris à un événement PouleParty payant via le formulaire web (pouleparty.be/inscription), nous collectons : le nom complet du capitaine, le nom d'équipe, l'adresse email, le numéro de téléphone, la taille de l'équipe, ton adresse IP et ta langue, l'identifiant de session Stripe Checkout, ainsi qu'un code de validation à 6 caractères que nous générons pour l'événement. Ces données sont stockées dans notre collection Firestore `/eventRegistrations` et transmises aux services tiers listés ci-dessous pour le paiement, l'envoi de l'email de confirmation et la logistique sur place. Les données de carte bancaire ne sont jamais collectées par nous — elles sont saisies directement sur la page Checkout hébergée par Stripe.",
     legalBasis: "Base légale du traitement",
     legalBasisIntro: "Conformément au RGPD (Art. 6), nous traitons vos données sur les bases légales suivantes :",
     legalBasisConsent: "Consentement (Art. 6(1)(a)) :",
@@ -54,18 +61,27 @@ export default {
     thirdPartyCrashlyticsUrl: "https://firebase.google.com/support/privacy/",
     thirdPartyMapbox: "Mapbox",
     thirdPartyMapboxUrl: "https://www.mapbox.com/legal/privacy",
+    thirdPartyStripe: "Stripe (traitement des paiements pour les événements payants — Stripe Technology Europe Ltd en Irlande, avec transfert ultérieur vers Stripe Inc. aux États-Unis sous Clauses contractuelles types)",
+    thirdPartyStripeUrl: "https://stripe.com/privacy",
+    thirdPartyResend: "Resend (emails de confirmation transactionnels pour les événements payants — Resend Inc. aux États-Unis sous Clauses contractuelles types)",
+    thirdPartyResendUrl: "https://resend.com/legal/privacy-policy",
+    thirdPartyGoogleSheets: "Google Sheets (liste opérationnelle pour le check-in sur place le jour J — Google LLC dans le cadre du EU-US Data Privacy Framework)",
+    thirdPartyGoogleSheetsUrl: "https://policies.google.com/privacy",
     dataSharing: "Partage des données",
     dataSharingText:
       "Nous ne vendons, n'échangeons ni ne partageons vos données personnelles avec des tiers à des fins commerciales. Les données de localisation sont uniquement partagées avec les autres joueurs de la même session pendant le jeu.",
     internationalTransfers: "Transferts internationaux de données",
     internationalTransfersText:
-      "Vos données sont traitées par les services Google Firebase, dont les serveurs peuvent être situés en dehors de l'Espace économique européen (EEE), notamment aux États-Unis. Google opère dans le cadre du EU-US Data Privacy Framework et des Clauses contractuelles types (CCT) pour garantir un niveau de protection adéquat tel qu'exigé par le RGPD. Mapbox traite également les données cartographiques sous des garanties similaires.",
+      "Tes données sont traitées par les services Google Firebase, dont les serveurs peuvent être situés en dehors de l'Espace économique européen (EEE), notamment aux États-Unis. Google opère dans le cadre du EU-US Data Privacy Framework et des Clauses contractuelles types (CCT) pour garantir un niveau de protection adéquat tel qu'exigé par le RGPD. Mapbox traite les données cartographiques sous des garanties similaires. Pour les inscriptions aux événements payants : Stripe achemine les paiements via Stripe Technology Europe Ltd (Irlande) et transmet des signaux anonymisés de risque/fraude à Stripe Inc. (États-Unis) sous CCT. Resend (États-Unis) transmet l'email de confirmation sous CCT. Les données Google Sheets (liste de l'événement) sont stockées sur l'infrastructure Google LLC (États-Unis) dans le cadre du EU-US Data Privacy Framework.",
     dataRetention: "Conservation des données",
     dataRetentionText:
-      "Les données de jeu (y compris l'historique de localisation) peuvent être conservées dans Firebase Firestore après la fin d'une partie. Aucun suivi de localisation à long terme n'a lieu en dehors des parties actives. Vous pouvez demander la suppression de vos données de jeu en nous contactant à julien@rahier.dev. Les jetons d'authentification anonyme peuvent persister sur votre appareil mais peuvent être supprimés en supprimant votre compte dans les paramètres de l'application ou en désinstallant l'application.",
-    children: "Protection des mineurs",
+      "Les données de jeu (y compris l'historique de localisation) peuvent être conservées dans Firebase Firestore après la fin d'une partie. Aucun suivi de localisation à long terme n'a lieu en dehors des parties actives. Les inscriptions aux événements payants stockées dans `/eventRegistrations` sont conservées pendant 12 mois après la date de l'événement pour la comptabilité, la résolution des litiges et les obligations fiscales, puis purgées. La feuille Google Sheets utilisée pour le check-in sur place est purgée dans les 30 jours suivant l'événement. Tu peux demander la suppression de tes données de jeu en nous contactant à julien@rahier.dev. Les jetons d'authentification anonyme peuvent persister sur ton appareil mais peuvent être supprimés en supprimant ton compte dans les paramètres de l'application ou en désinstallant l'application.",
+    cookies: "Cookies et technologies similaires",
+    cookiesText:
+      "Le site web public utilise uniquement des cookies strictement nécessaires : Firebase App Check pour la protection anti-bot du formulaire d'inscription, et les cookies hébergés par Stripe sur la page Checkout Stripe elle-même (gérés par Stripe, voir leur politique de confidentialité). Nous n'utilisons aucun cookie publicitaire, analytique ou de tracking sur les pages web publiques. Aucune bannière cookies n'est affichée car le consentement au titre de la directive ePrivacy n'est pas requis pour les cookies strictement nécessaires.",
+    children: "Conditions d'âge",
     childrenText:
-      "L'application ne s'adresse pas aux enfants de moins de 16 ans. Nous ne collectons pas sciemment d'informations personnelles auprès d'enfants de moins de 16 ans. Si vous pensez qu'un enfant de moins de 16 ans nous a fourni des données personnelles, contactez-nous afin que nous puissions les supprimer.",
+      "Le jeu mobile gratuit PouleParty est recommandé à partir de 13 ans ; les utilisateurs de moins de 13 ans doivent faire configurer l'appareil et accorder les permissions de localisation par un parent ou tuteur. L'événement payant PouleParty D-Day organisé dans des lieux publics (bars, ville de Bruxelles) est réservé aux participants âgés de 18 ans et plus en raison des conditions de licence des lieux. Nous ne collectons pas sciemment de données personnelles auprès d'enfants de moins de 13 ans via l'app, ni auprès de toute personne de moins de 18 ans via le formulaire d'inscription à l'événement payant. Si tu penses qu'un mineur nous a fourni des données en dehors de ces limites, contacte-nous à julien@rahier.dev pour que nous puissions les supprimer.",
     rights: "Vos droits au titre du RGPD",
     rightsIntro: "En tant qu'utilisateur dans l'Espace économique européen, vous disposez des droits suivants :",
     rightAccess: "Droit d'accès (Art. 15) :",
@@ -73,11 +89,11 @@ export default {
     rightRectification: "Droit de rectification (Art. 16) :",
     rightRectificationText: "Vous pouvez demander la correction de données inexactes.",
     rightErasure: "Droit à l'effacement (Art. 17) :",
-    rightErasureText: "Vous pouvez demander la suppression de vos données. Vous pouvez supprimer votre compte d'authentification anonyme directement dans l'application via Paramètres > Supprimer mes données. Pour la suppression complète des données de jeu stockées dans Firestore, veuillez nous contacter à julien@rahier.dev.",
+    rightErasureText: "Tu peux demander la suppression de tes données. Le bouton Paramètres > Supprimer mon compte dans l'app supprime immédiatement ton compte Firebase Auth anonyme et le document de profil `/users/{uid}`. Les parties auxquelles tu as participé (et le nom d'équipe que tu y as utilisé) sont conservées indéfiniment pour l'intégrité de l'historique des parties — elles ne sont visibles que par les participants de la même session et par le créateur de la partie. Pour un effacement complet des données de parties passées (y compris ton nom d'équipe dans les listes de gagnants), contacte-nous à julien@rahier.dev et nous traiterons l'effacement manuel sous 30 jours. Les inscriptions aux événements payants sont supprimées sur demande (sous réserve de la période de conservation comptable de 12 mois mentionnée ci-dessus).",
     rightRestriction: "Droit à la limitation (Art. 18) :",
     rightRestrictionText: "Vous pouvez demander que nous limitions le traitement de vos données.",
     rightPortability: "Droit à la portabilité (Art. 20) :",
-    rightPortabilityText: "Vous pouvez demander vos données dans un format structuré et lisible par machine.",
+    rightPortabilityText: "Tu peux demander tes données dans un format structuré et lisible par machine. Envoie une demande à julien@rahier.dev et nous te répondrons sous 30 jours avec un export JSON contenant ton document de profil `/users/{uid}`, les noms d'équipe et records de victoires liés à ton identifiant utilisateur anonyme à travers les parties passées, ainsi que toute inscription à un événement payant liée à ton adresse email le cas échéant.",
     rightObject: "Droit d'opposition (Art. 21) :",
     rightObjectText: "Vous pouvez vous opposer au traitement de vos données fondé sur l'intérêt légitime.",
     rightWithdraw: "Droit de retrait du consentement :",
@@ -114,13 +130,27 @@ export default {
   },
   terms: {
     title: "Conditions d'utilisation",
-    lastUpdated: "Dernière mise à jour : 12 mai 2026",
+    lastUpdated: "Dernière mise à jour : 18 mai 2026",
     acceptance: "Acceptation des conditions",
     acceptanceText:
-      "En téléchargeant, installant ou utilisant Poule Party, vous acceptez ces conditions d'utilisation. Si vous n'êtes pas d'accord, veuillez ne pas utiliser l'application.",
+      "En téléchargeant, installant ou utilisant Poule Party, ou en t'inscrivant à un événement PouleParty payant, tu acceptes ces conditions d'utilisation. Si tu n'es pas d'accord, n'utilise pas l'application et ne t'inscris pas à un événement.",
     description: "Description du service",
     descriptionText:
-      "Poule Party est un jeu mobile gratuit basé sur la géolocalisation dans lequel un joueur (la Poule) se cache tandis que les autres joueurs (les Chasseurs) tentent de la trouver à l'aide d'une carte en temps réel avec une zone qui rétrécit.",
+      "Poule Party est un jeu mobile gratuit basé sur la géolocalisation dans lequel un joueur (la Poule) se cache tandis que les autres joueurs (les Chasseurs) tentent de la trouver à l'aide d'une carte en temps réel avec une zone qui rétrécit. Séparément, nous organisons occasionnellement des événements PouleParty payants en personne à Bruxelles (la série d'événements « D-Day »), dont les billets peuvent être achetés sur le web à l'adresse pouleparty.be/inscription ; l'expérience in-app, elle, reste entièrement gratuite.",
+    parties: "Partie contractante",
+    partiesText:
+      "PouleParty est exploité par Julien Rahier, indépendant en personne physique enregistré en Belgique, contact julien@rahier.dev. Pour les événements payants, tu contractes directement avec Julien Rahier en qualité d'organisateur de l'événement. Aucune société ne s'interpose entre toi et nous.",
+    paidEvents: "Billets pour événements payants",
+    paidEventsPrice:
+      "Les billets pour les événements PouleParty payants sont vendus par joueur au prix de 12 € par joueur, facturés 12 € × la taille d'équipe sélectionnée (3, 4 ou 5 joueurs) au moment du paiement. Les prix sont en EUR et incluent la TVA belge applicable le cas échéant. Le paiement est traité par Stripe (voir la politique de confidentialité pour les détails) ; nous ne recevons jamais tes données de carte bancaire.",
+    paidEventsWhatsIncluded:
+      "Chaque billet comprend : une entrée pour l'événement à la date indiquée (par exemple PouleParty D-Day le samedi 6 juin 2026 à partir de 20h30 à Bruxelles/Ixelles), un verre de bienvenue au bar de départ, et un bracelet remis au lieu final. La nourriture, les boissons supplémentaires, les transports et toute dépense annexe ne sont pas inclus.",
+    paidEventsWithdrawal:
+      "Les événements PouleParty étant des activités de loisir programmées à une date précise, le droit de rétractation de 14 jours prévu par l'article 9 de la directive européenne 2011/83/UE relative aux droits des consommateurs NE s'applique PAS — cette exception est prévue par l'article 16(l) de cette même directive. En finalisant ton achat, tu reconnais explicitement cette exception et renonces au délai de rétractation. Les billets ne sont pas remboursables sauf dans les cas listés ci-dessous.",
+    paidEventsRefund:
+      "Règles de remboursement : (a) si NOUS annulons ou reportons l'événement pour quelque raison que ce soit (météo, force majeure, inscriptions insuffisantes, décision de l'organisateur), tu reçois un remboursement intégral du prix du billet ou, à ton choix, un transfert vers la date reportée ; (b) si TU ne peux pas venir, le billet n'est pas remboursable — mais les compositions d'équipe sont librement interchangeables, donc tu peux céder ta place à un autre participant jusqu'au jour de l'événement en envoyant un email à julien@rahier.dev avec les détails de la substitution ; (c) si un participant se voit refuser l'accès au lieu pour des raisons qui lui sont imputables (ivresse, refus de suivre les consignes de sécurité, âge inférieur à 18 ans), aucun remboursement n'est accordé.",
+    paidEventsForceMajeure:
+      "En cas de force majeure (par exemple décret sanitaire de pandémie, alerte météo grave, menace terroriste, fermeture du lieu indépendante de notre volonté), nous reportons l'événement à une date ultérieure — tous les billets étant automatiquement transférés — ou, si le report n'est pas possible dans un délai de 6 mois, nous remboursons intégralement tous les détenteurs de billets.",
     userConduct: "Comportement des utilisateurs",
     conduct1: "Utilisez l'application uniquement dans le cadre prévu (jouer au jeu).",
     conduct2: "Ne tentez pas de tricher, pirater ou rétro-ingéniérer l'application.",
@@ -147,6 +177,13 @@ export default {
     changes: "Modifications des conditions",
     changesText:
       "Nous pouvons mettre à jour ces conditions de temps à autre. L'utilisation continue de l'application après les modifications constitue une acceptation des nouvelles conditions.",
+    governingLaw: "Droit applicable et juridiction",
+    governingLawText:
+      "Les présentes conditions sont régies par le droit belge. Tout litige né des présentes conditions ou de ta participation à un événement PouleParty payant sera porté exclusivement devant les juridictions de l'arrondissement judiciaire de Bruxelles, Belgique, sans préjudice des droits de protection du consommateur auxquels il ne peut être renoncé dont tu bénéficies au titre du droit de ta résidence habituelle.",
+    odr: "Règlement en ligne des litiges",
+    odrText:
+      "En tant que consommateur dans l'Union européenne, tu peux également recourir à la plateforme de Règlement en ligne des litiges (RLL) de la Commission européenne pour tenter de résoudre les différends à l'amiable. La plateforme RLL est accessible à :",
+    odrUrl: "https://ec.europa.eu/consumers/odr",
     contact: "Contact",
     contactText: "Si vous avez des questions concernant ces conditions, contactez-nous à",
   },
@@ -198,6 +235,11 @@ export default {
       total: "TOTAL",
       note: "12 € / pers · 1 verre offert au bar de départ · bracelet lieu final",
       paymentSecure: "Paiement sécurisé via Stripe (CB · Apple Pay · Google Pay)",
+      consentPrefix: "J'accepte les ",
+      consentTermsLink: "Conditions d'utilisation",
+      consentJoin: " et la ",
+      consentPrivacyLink: "Politique de confidentialité",
+      consentSuffix: ". Je comprends qu'il s'agit d'un événement de loisir programmé à une date précise et que le droit de rétractation de 14 jours ne s'applique donc pas (art. 16(l) de la directive 2011/83/UE).",
       back: "← MODIFIER",
       payButtonTemplate: "PAYER {total} € 🔒",
       redirecting: "REDIRECTION…",
@@ -223,29 +265,29 @@ export default {
   deleteAccount: {
     title: "Supprimer ton compte Poule Party",
     intro:
-      "Tu peux supprimer ton compte Poule Party et toutes les données associées. Cette page est le point de suppression web exigé par Google Play — la même action est aussi disponible dans l'app via Paramètres → Supprimer mes données.",
-    dataDeletedTitle: "Ce qui est supprimé",
+      "Tu peux supprimer ton compte Poule Party et toutes les données qui y sont rattachées. Cette page est le point de suppression accessible sur le web exigé par Google Play — la même action est aussi disponible dans l'app via Paramètres → Supprimer mon compte.",
+    dataDeletedTitle: "Ce qui est supprimé immédiatement",
     dataDeleted: [
-      "Ton identifiant Firebase anonyme",
-      "Ton pseudo et ton token de notifications push",
-      "Toutes les données de profil stockées sous /users/{ton-id}",
+      "Ton compte utilisateur anonyme Firebase Auth",
+      "Ton document de profil /users/{uid} (pseudo + token de notifications push)",
     ],
     dataKeptTitle: "Ce qui est conservé",
     dataKept: [
-      "Les parties créées ou rejointes sont conservées pour que les autres participants voient encore les résultats. Ton pseudo est remplacé par un libellé générique.",
+      "Les parties passées auxquelles tu as participé conservent le nom d'équipe que tu y as utilisé (visible uniquement par les participants de la même session et par le créateur de la partie). C'est nécessaire à l'intégrité de l'historique des parties.",
       "Les analytics et rapports de crash anonymes (agrégés, non liés à ton identité).",
+      "Les inscriptions à des événements payants sont conservées 12 mois après l'événement pour la comptabilité, la résolution des litiges et les obligations fiscales (voir la politique de confidentialité).",
     ],
-    howTitle: "Comment demander la suppression",
+    howTitle: "Tu veux un effacement manuel complet ?",
     howText:
-      "Envoie un email à l'adresse ci-dessous depuis l'adresse où tu veux recevoir la confirmation, en incluant :",
+      "Si tu veux que les noms d'équipe attachés à tes parties passées soient remplacés par un libellé générique, écris-nous. Inclus :",
     howList: [
-      "Ton pseudo (tel qu'il apparaît dans l'app)",
+      "Ton pseudo ou ton nom d'équipe (tel qu'il apparaissait dans l'app)",
       "La date approximative de ta dernière partie, si tu t'en souviens",
       "Objet : « Suppression de mon compte Poule Party »",
     ],
     timeframe:
-      "Nous traitons les demandes de suppression sous 30 jours (en général sous une semaine). Tu recevras un email de confirmation dès que c'est fait.",
-    emailButton: "Envoyer la demande par email",
+      "Nous traitons les demandes d'effacement manuel sous 30 jours (en général sous une semaine). Tu recevras un email de confirmation dès que c'est fait.",
+    emailButton: "Envoyer une demande d'effacement manuel",
     backHome: "Retour à l'accueil",
   },
 };

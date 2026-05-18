@@ -4,6 +4,7 @@ import Layout from "../components/Layout";
 import { useI18n } from "../i18n";
 import { localeFromPathname } from "./inscriptionPaths";
 import { getAppCheckToken } from "../appCheck";
+import { isAllowedBatchId } from "../registrationBatches";
 
 // PP-52 — 3-step inscription wizard (intro → form → récap → Stripe).
 // All copy comes from `t.inscription.*` (en/fr/nl). The page pins
@@ -25,9 +26,18 @@ interface FormState {
   teamSize: TeamSize | null;
   /** CRIT-4 (audit 2026-05-17): honeypot. Real users never see / fill
    *  this field (it's `display:none` + aria-hidden + tabIndex=-1).
-   *  Naive bots that auto-fill every input populate it — the server
-   *  rejects any non-empty value. */
-  company: string;
+   *  Naive bots that auto-fill every input populate it; the server
+   *  rejects any non-empty value.
+   *  XPLAT-staging-fix 2026-05-18: renamed from `company` because Chrome
+   *  autofill ignores `autoComplete="off"` for that name and was
+   *  populating the field with the user's Google profile organization,
+   *  triggering false-positive 400 "invalid request" on submit. */
+  nicknameAlt: string;
+  /** XPLAT-H5 (store-audit 2026-05-18): explicit T&C / Privacy consent
+   *  acknowledged by the buyer before payment, per CRD Art. 8(2). The
+   *  pay button is disabled until this is `true`, and we send a
+   *  `consentAcknowledgedAt` timestamp to the server. */
+  consentAccepted: boolean;
 }
 
 const EMPTY_FORM: FormState = {
@@ -36,7 +46,8 @@ const EMPTY_FORM: FormState = {
   email: "",
   phone: "",
   teamSize: null,
-  company: "",
+  nicknameAlt: "",
+  consentAccepted: false,
 };
 
 function isFormValid(form: FormState): form is FormState & { teamSize: TeamSize } {
@@ -73,7 +84,11 @@ export default function Inscription() {
     [form.teamSize]
   );
 
-  if (!batchId) {
+  // Reject both empty AND unknown batchIds up-front so the visitor
+  // doesn't fill the whole form before getting a server-side rejection.
+  // The allowlist is mirrored from `functions/src/registrations.ts` via
+  // `registrationBatches.ts`.
+  if (!batchId || !isAllowedBatchId(batchId)) {
     return (
       <Layout>
         <FatalError
@@ -114,10 +129,15 @@ export default function Inscription() {
           phone: form.phone.trim(),
           teamSize: form.teamSize,
           locale,
-          // CRIT-4 (audit 2026-05-17): honeypot — real users never
-          // touch this field, but naive form-fillers populate it.
+          // CRIT-4 (audit 2026-05-17): honeypot, real users never
+          // touch this field but naive form-fillers populate it.
           // Server rejects any non-empty value.
-          company: form.company,
+          nicknameAlt: form.nicknameAlt,
+          // XPLAT-H5 (store-audit 2026-05-18): T&C / Privacy explicit
+          // consent. The server stamps the registration doc with
+          // `consentAcknowledgedAt` so we can prove consent later if
+          // a buyer challenges the purchase.
+          consentAcknowledgedAt: form.consentAccepted ? new Date().toISOString() : null,
         }),
       });
       const json = (await response.json()) as { checkoutUrl?: string; error?: string };
@@ -154,6 +174,7 @@ export default function Inscription() {
             <RecapStep
               t={t}
               form={form}
+              onChange={setForm}
               total={total}
               submitting={submitting}
               error={error}
@@ -233,9 +254,9 @@ function FormStep({
             trigger the server's reject path. */}
         <input
           type="text"
-          name="company"
-          value={form.company}
-          onChange={(e) => onChange({ ...form, company: e.target.value })}
+          name="nicknameAlt"
+          value={form.nicknameAlt}
+          onChange={(e) => onChange({ ...form, nicknameAlt: e.target.value })}
           autoComplete="off"
           tabIndex={-1}
           aria-hidden="true"
@@ -317,6 +338,7 @@ function FormStep({
 function RecapStep({
   t,
   form,
+  onChange,
   total,
   submitting,
   error,
@@ -325,6 +347,7 @@ function RecapStep({
 }: {
   t: T;
   form: FormState;
+  onChange: (form: FormState) => void;
   total: number;
   submitting: boolean;
   error: string | null;
@@ -335,6 +358,10 @@ function RecapStep({
   const payLabel = submitting
     ? recap.redirecting
     : recap.payButtonTemplate.replace("{total}", String(total));
+  // XPLAT-H5 (store-audit 2026-05-18): block pay until consent is
+  // explicitly acknowledged. CRD Art. 8(2) requires explicit consent
+  // to the T&C / Privacy before charging.
+  const payDisabled = submitting || !form.consentAccepted;
   return (
     <div>
       <h2
@@ -370,6 +397,28 @@ function RecapStep({
         {recap.paymentSecure}
       </p>
 
+      {/* XPLAT-H5 (store-audit 2026-05-18): explicit T&C / Privacy
+          consent + CRD Art. 16(l) acknowledgment. */}
+      <label className="mt-5 flex gap-3 items-start cursor-pointer text-sm leading-snug">
+        <input
+          type="checkbox"
+          checked={form.consentAccepted}
+          onChange={(e) => onChange({ ...form, consentAccepted: e.target.checked })}
+          className="mt-0.5 size-5 accent-[#FE6A00] shrink-0"
+        />
+        <span>
+          {recap.consentPrefix}{" "}
+          <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-[#FE6A00] underline">
+            {recap.consentTermsLink}
+          </a>
+          {recap.consentJoin}
+          <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-[#FE6A00] underline">
+            {recap.consentPrivacyLink}
+          </a>
+          {recap.consentSuffix}
+        </span>
+      </label>
+
       {error && (
         <div className="mt-4 p-3 rounded-xl bg-red-100 text-red-800 text-sm">
           {error}
@@ -378,7 +427,7 @@ function RecapStep({
 
       <div className="flex justify-between items-center mt-6">
         <BackButton label={recap.back} onClick={onBack} disabled={submitting} />
-        <NextButton label={payLabel} onClick={onPay} disabled={submitting} />
+        <NextButton label={payLabel} onClick={onPay} disabled={payDisabled} />
       </div>
     </div>
   );

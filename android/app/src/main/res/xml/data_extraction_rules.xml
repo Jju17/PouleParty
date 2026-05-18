@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  AND-B2 (store-audit 2026-05-18) — Android 12+ data-extraction rules.
+  Pre-Android 12, `allowBackup="true"` controlled both cloud backup AND
+  device-to-device transfers via the same SharedPreferences/files include.
+  Since Android 12, you must declare `dataExtractionRules` separately or
+  the OS applies the default rules (include everything), which leaks
+  SharedPreferences (FCM tokens, anonymous auth UID, nickname) to Google
+  Drive backups and D2D transfers without explicit consent.
+
+  Policy: exclude ALL data from both cloud backup and D2D. Anonymous
+  Auth UID is generated on first launch; an empty restore on a new
+  device gets a fresh UID, which matches what we already document in
+  the Privacy Policy ("Anonymous authentication tokens may persist on
+  your device but can be cleared by deleting your account or
+  uninstalling the app").
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="database" path="." />
+        <exclude domain="file" path="." />
+        <exclude domain="external" path="." />
+        <exclude domain="root" path="." />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="database" path="." />
+        <exclude domain="file" path="." />
+        <exclude domain="external" path="." />
+        <exclude domain="root" path="." />
+    </device-transfer>
+</data-extraction-rules>

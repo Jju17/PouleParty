@@ -1,4 +1,5 @@
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
+import { getAppCheck } from "firebase-admin/app-check";
 import { onCall, onRequest, HttpsError } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/v2";
 import { defineSecret } from "firebase-functions/params";
@@ -13,7 +14,7 @@ import { randomInt } from "crypto";
 import Stripe = require("stripe");
 
 import { sendRegistrationConfirmationEmail } from "./email/registrationConfirmation";
-import { appendRegistrationRow } from "./sheets";
+import { appendRegistrationRow, markRegistrationRefunded } from "./sheets";
 
 // PP-52 — Pre-paid event registrations from the public web form.
 // Top-level collection `/eventRegistrations/{rid}` deliberately
@@ -75,6 +76,10 @@ interface RegistrationFormPayload {
   phone: string;
   teamSize: TeamSize;
   locale?: string;
+  /** XPLAT-H5 (store-audit 2026-05-18): ISO-8601 timestamp captured
+   *  client-side when the buyer ticked the T&C / Privacy checkbox.
+   *  Required (CRD Art. 8(2) explicit consent + audit trail). */
+  consentAcknowledgedAt?: string | null;
 }
 
 interface RegistrationDoc {
@@ -90,7 +95,22 @@ interface RegistrationDoc {
   createdAt: Timestamp;
   paidAt?: Timestamp;
   stripeSessionId?: string;
+  /** Persisted on the first paid flip so the refund webhook can find
+   *  the registration by `payment_intent` without an extra Stripe API
+   *  round-trip. Falls back to a `checkout.sessions.list` lookup for
+   *  docs created before this field was introduced. */
+  stripePaymentIntentId?: string;
+  /** Set by `charge.refunded` webhook on a FULL refund. Pairs with
+   *  `paid: false` so the existing `where paid == true` queries in
+   *  `validateRegistrationCode` / `lookupGameByValidationCode`
+   *  filter out refunded inscriptions automatically. */
+  refunded?: boolean;
+  refundedAt?: Timestamp;
   locale: string;
+  /** XPLAT-H5 (store-audit 2026-05-18): timestamp persisted from the
+   *  client-side consent checkbox (CRD Art. 8(2) audit trail). The
+   *  validator rejects the submit if missing. */
+  consentAcknowledgedAt: Timestamp;
 }
 
 function db() {
@@ -121,9 +141,13 @@ function validatePayload(body: unknown): RegistrationFormPayload {
   const b = body as Record<string, unknown>;
 
   // CRIT-4: honeypot field. The web form ships a hidden, aria-hidden
-  // `company` input that real users never see / touch. Bots that
-  // auto-fill every visible field will populate it — reject if non-empty.
-  const honeypot = typeof b.company === "string" ? b.company.trim() : "";
+  // input that real users never see or touch. Bots that auto-fill every
+  // visible field will populate it — reject if non-empty.
+  // XPLAT-staging-fix 2026-05-18: renamed from `company` because Chrome
+  // autofill was populating it with the user's Google profile
+  // organization despite `autoComplete="off"`, triggering false-positive
+  // 400 "invalid request" on every form submit.
+  const honeypot = typeof b.nicknameAlt === "string" ? b.nicknameAlt.trim() : "";
   if (honeypot.length > 0) {
     throw new Error("invalid request");
   }
@@ -171,7 +195,17 @@ function validatePayload(body: unknown): RegistrationFormPayload {
 
   const locale = typeof b.locale === "string" && b.locale.length === 2 ? b.locale : "fr";
 
-  return { batchId, playerName, teamName, email, phone, teamSize, locale };
+  // XPLAT-H5 (store-audit 2026-05-18): explicit consent (CRD Art. 8(2))
+  // must be present. The web form's checkbox cannot be ticked
+  // server-side, so a missing/empty value is a sign of a bot, an old
+  // cached page, or a tampered request.
+  const consentRaw = typeof b.consentAcknowledgedAt === "string" ? b.consentAcknowledgedAt.trim() : "";
+  if (!consentRaw || Number.isNaN(Date.parse(consentRaw))) {
+    throw new Error("consentAcknowledgedAt is required");
+  }
+  const consentAcknowledgedAt = consentRaw;
+
+  return { batchId, playerName, teamName, email, phone, teamSize, locale, consentAcknowledgedAt };
 }
 
 // 6-char uppercase alphanum. Skips ambiguous chars (0/O, 1/I) so the
@@ -256,16 +290,31 @@ export const createPendingRegistration = onRequest(
     ],
     maxInstances: 10,
     concurrency: 50,
-    // CRIT-4 (audit 2026-05-17, activated 2026-05-18): require a valid
-    // Firebase App Check token on every request. The web form attaches
-    // a reCAPTCHA Enterprise token via `X-Firebase-AppCheck` header;
-    // bots without a valid attestation are rejected with 401 before
-    // the handler runs. Mobile apps don't hit this endpoint.
-    enforceAppCheck: true,
   },
   async (req, res) => {
     if (req.method !== "POST") {
       res.status(405).json({ error: "Method not allowed" });
+      return;
+    }
+
+    // CRIT-4 (audit 2026-05-17, enforced 2026-05-18): verify the
+    // Firebase App Check token before running any handler logic.
+    // `onRequest` doesn't support the `enforceAppCheck` option (it's
+    // callable-only); manual verification via admin SDK is the documented
+    // pattern for HTTP functions. The web form attaches a reCAPTCHA
+    // Enterprise token via `X-Firebase-AppCheck`. Mobile apps don't hit
+    // this endpoint.
+    const appCheckHeader = req.header("X-Firebase-AppCheck");
+    if (!appCheckHeader) {
+      logger.warn("createPendingRegistration: missing App Check token");
+      res.status(401).json({ error: "Missing App Check token" });
+      return;
+    }
+    try {
+      await getAppCheck().verifyToken(appCheckHeader);
+    } catch (err) {
+      logger.warn("createPendingRegistration: App Check verify failed", err);
+      res.status(401).json({ error: "Invalid App Check token" });
       return;
     }
 
@@ -293,6 +342,7 @@ export const createPendingRegistration = onRequest(
         paid: false,
         createdAt: Timestamp.now(),
         locale: payload.locale ?? "fr",
+        consentAcknowledgedAt: Timestamp.fromDate(new Date(payload.consentAcknowledgedAt!)),
       });
       const registrationId = reservation.registrationId;
       const docRef = db().collection(COLLECTION).doc(registrationId);
@@ -378,6 +428,107 @@ export const confirmRegistrationPayment = onRequest(
       return;
     }
 
+    // Refund branch — fires when an inscription is refunded from the
+    // Stripe Dashboard (or via API). FULL refunds invalidate the
+    // registration so the email's validation code stops working in
+    // JoinFlow (`validateRegistrationCode` filters `where paid == true`).
+    // Partial refunds are ignored (e.g. refunding one player from a
+    // team of 4 to drop down to 3 — the inscription is still valid
+    // for the remaining players).
+    if (event.type === "charge.refunded") {
+      const charge = event.data.object;
+      if (charge.amount_refunded < charge.amount) {
+        logger.info(
+          `charge.refunded ${charge.id}: partial refund (${charge.amount_refunded}/${charge.amount}), keeping registration valid`
+        );
+        res.status(200).json({ received: true, ignored: "partial-refund" });
+        return;
+      }
+      const paymentIntentId =
+        typeof charge.payment_intent === "string"
+          ? charge.payment_intent
+          : charge.payment_intent?.id ?? null;
+      if (!paymentIntentId) {
+        logger.warn(`charge.refunded ${charge.id}: missing payment_intent`);
+        res.status(200).json({ received: true, ignored: "no-payment-intent" });
+        return;
+      }
+
+      let registrationId: string | null = null;
+      const indexed = await db()
+        .collection(COLLECTION)
+        .where("stripePaymentIntentId", "==", paymentIntentId)
+        .limit(1)
+        .get();
+      if (!indexed.empty) {
+        registrationId = indexed.docs[0].id;
+      } else {
+        // Fallback for docs paid before `stripePaymentIntentId` was
+        // persisted — one extra Stripe API call to map PI → session →
+        // client_reference_id.
+        const sessions = await stripe.checkout.sessions.list({
+          payment_intent: paymentIntentId,
+          limit: 1,
+        });
+        registrationId = sessions.data[0]?.client_reference_id ?? null;
+      }
+
+      if (!registrationId) {
+        logger.warn(
+          `charge.refunded ${charge.id}: could not resolve to a registration (pi=${paymentIntentId})`
+        );
+        res.status(200).json({ received: true, ignored: "no-registration" });
+        return;
+      }
+
+      const refundDocRef = db().collection(COLLECTION).doc(registrationId);
+      const refundResult = await db().runTransaction<
+        { kind: "notFound" } | { kind: "alreadyRefunded" } | { kind: "flipped" }
+      >(async (tx) => {
+        const snap = await tx.get(refundDocRef);
+        if (!snap.exists) return { kind: "notFound" };
+        const data = snap.data() as RegistrationDoc;
+        if (data.refunded === true) return { kind: "alreadyRefunded" };
+        tx.update(refundDocRef, {
+          paid: false,
+          refunded: true,
+          refundedAt: FieldValue.serverTimestamp(),
+        });
+        return { kind: "flipped" };
+      });
+
+      if (refundResult.kind === "notFound") {
+        logger.error(
+          `charge.refunded ${charge.id}: registration ${registrationId} doesn't exist`
+        );
+        res.status(200).json({ received: true, error: "registration-not-found" });
+        return;
+      }
+      if (refundResult.kind === "alreadyRefunded") {
+        logger.info(
+          `charge.refunded re-delivery for ${registrationId} — already refunded, noop`
+        );
+        res.status(200).json({ received: true, idempotent: true });
+        return;
+      }
+      // Side effect (post-transaction, same pattern as the paid flip):
+      // mirror the refunded state into the Google Sheet so the roster
+      // Martin reads stays in sync. Independent try/catch so a Sheets
+      // outage doesn't 5xx Stripe (which would retry the webhook and
+      // hit the idempotency guard above, losing this call entirely).
+      try {
+        await markRegistrationRefunded(registrationId, GOOGLE_SHEET_ID.value());
+      } catch (err) {
+        logger.error(`Sheet refund mark failed for ${registrationId}`, err);
+      }
+
+      logger.info(
+        `Registration ${registrationId} marked refunded (charge ${charge.id})`
+      );
+      res.status(200).json({ received: true });
+      return;
+    }
+
     // We only care about completed Checkout Sessions. Acknowledge
     // every other event with 200 so Stripe doesn't keep retrying.
     // The discriminated-union narrowing on `event.type` types
@@ -443,14 +594,24 @@ export const confirmRegistrationPayment = onRequest(
         return { kind: "amountMismatch", expected, got: session.amount_total };
       }
       if (data.paid) return { kind: "alreadyPaid", snapshot: data };
+      const paymentIntentId =
+        typeof session.payment_intent === "string"
+          ? session.payment_intent
+          : session.payment_intent?.id;
       tx.update(docRef, {
         paid: true,
         paidAt: FieldValue.serverTimestamp(),
         stripeSessionId: session.id,
+        ...(paymentIntentId ? { stripePaymentIntentId: paymentIntentId } : {}),
       });
       return {
         kind: "flipped",
-        snapshot: { ...data, paid: true, stripeSessionId: session.id },
+        snapshot: {
+          ...data,
+          paid: true,
+          stripeSessionId: session.id,
+          ...(paymentIntentId ? { stripePaymentIntentId: paymentIntentId } : {}),
+        },
       };
     });
 

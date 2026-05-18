@@ -12,6 +12,7 @@
     <application
         android:name=".PoulePartyApp"
         android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="PouleParty"
         android:networkSecurityConfig="@xml/network_security_config"
@@ -42,15 +43,19 @@
                  Associated Domains use exact-segment matching and were
                  stricter; this aligns Android with iOS so a future
                  /joinparty route on web can't be silently hijacked by
-                 the app. -->
+                 the app.
+                 AND-H3 (store-audit 2026-05-18): added www.pouleparty.be
+                 host so deeplinks coming from mail clients that auto-
+                 prepend www.* also open the app. assetlinks.json must
+                 be served at both apex and www subdomain. -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data
-                    android:scheme="https"
-                    android:host="pouleparty.be"
-                    android:path="/join" />
+                <data android:scheme="https" />
+                <data android:host="pouleparty.be" />
+                <data android:host="www.pouleparty.be" />
+                <data android:path="/join" />
             </intent-filter>
         </activity>
 

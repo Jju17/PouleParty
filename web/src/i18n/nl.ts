@@ -13,10 +13,14 @@ export default {
     googlePlay: "Google Play",
     androidDisclaimer:
       "⚠️ Android: de app zit in gesloten tests. Je e-mailadres moet bij de ontwikkelaar geregistreerd zijn voor je hem kan downloaden. Werkt het niet? Laat het ons weten in de WhatsApp-groep!",
+    dDayEyebrow: "PouleParty D-Day",
+    dDayTitle: "🐔 Zaterdag 6 juni",
+    dDayBody: "Een Kip verstopt zich in Elsene. Jouw team moet haar opsporen. €12 / speler · Teams van 3 tot 5.",
+    dDayCta: "SCHRIJF JE TEAM IN →",
   },
   privacy: {
     title: "Privacybeleid",
-    lastUpdated: "Laatst bijgewerkt: 12 mei 2026",
+    lastUpdated: "Laatst bijgewerkt: 18 mei 2026",
     overview: "Verwerkingsverantwoordelijke",
     overviewText:
       "Poule Party (\"wij\", \"ons\", \"de app\") is een mobiele game op basis van locatie. De verwerkingsverantwoordelijke voor uw persoonsgegevens is:",
@@ -34,6 +38,9 @@ export default {
     analytics: "Analytics:",
     analyticsText:
       "We gebruiken Firebase Analytics om anonieme gebruiksgegevens te verzamelen (app-openingen, schermweergaves) en Firebase Crashlytics voor crashrapporten, om de app te verbeteren. Er worden via deze diensten geen persoonlijk identificeerbare gegevens verzameld.",
+    paidEventData: "Inschrijving voor een betaald evenement:",
+    paidEventDataText:
+      "Wanneer je je inschrijft voor een betaald PouleParty-evenement via het webformulier (pouleparty.be/inschrijving), verzamelen we: de volledige naam van de kapitein, de teamnaam, het e-mailadres, het telefoonnummer, de teamgrootte, je IP-adres en taal, het Stripe Checkout-sessie-ID, en een validatiecode van 6 tekens die we voor het evenement genereren. Deze gegevens worden opgeslagen in onze Firestore-collectie `/eventRegistrations` en doorgegeven aan de hieronder vermelde derde partijen voor de betaling, het versturen van de bevestigingsmail en de logistiek ter plaatse. Betaalkaartgegevens worden nooit door ons verzameld — ze worden rechtstreeks ingevoerd op de door Stripe gehoste Checkout-pagina.",
     legalBasis: "Rechtsgrondslag voor de verwerking",
     legalBasisIntro:
       "Op grond van de AVG (art. 6) verwerken we uw gegevens op basis van de volgende rechtsgrondslagen:",
@@ -59,18 +66,27 @@ export default {
     thirdPartyCrashlyticsUrl: "https://firebase.google.com/support/privacy/",
     thirdPartyMapbox: "Mapbox",
     thirdPartyMapboxUrl: "https://www.mapbox.com/legal/privacy",
+    thirdPartyStripe: "Stripe (betalingsverwerking voor betaalde evenementen — Stripe Technology Europe Ltd in Ierland, met verdere doorgifte aan Stripe Inc. in de VS onder Standard Contractual Clauses)",
+    thirdPartyStripeUrl: "https://stripe.com/privacy",
+    thirdPartyResend: "Resend (transactionele bevestigingsmails voor betaalde evenementen — Resend Inc. in de VS onder Standard Contractual Clauses)",
+    thirdPartyResendUrl: "https://resend.com/legal/privacy-policy",
+    thirdPartyGoogleSheets: "Google Sheets (operationele deelnemerslijst voor on-site check-in op D-Day — Google LLC onder het EU-US Data Privacy Framework)",
+    thirdPartyGoogleSheetsUrl: "https://policies.google.com/privacy",
     dataSharing: "Delen van gegevens",
     dataSharingText:
       "We verkopen, ruilen of delen uw persoonsgegevens niet met derden voor marketingdoeleinden. Locatiegegevens worden uitsluitend gedeeld met andere spelers in dezelfde spelsessie tijdens het actieve spel.",
     internationalTransfers: "Internationale gegevensoverdracht",
     internationalTransfersText:
-      "Uw gegevens worden verwerkt door Google Firebase-diensten, waarvan de servers zich buiten de Europese Economische Ruimte (EER) kunnen bevinden, onder meer in de Verenigde Staten. Google werkt in het kader van het EU-US Data Privacy Framework en de Standard Contractual Clauses (SCCs) om een adequaat niveau van gegevensbescherming te waarborgen zoals vereist door de AVG. Mapbox verwerkt kaartgegevens onder vergelijkbare waarborgen.",
+      "Je gegevens worden verwerkt door Google Firebase-diensten, waarvan de servers zich buiten de Europese Economische Ruimte (EER) kunnen bevinden, onder meer in de Verenigde Staten. Google werkt in het kader van het EU-US Data Privacy Framework en de Standard Contractual Clauses (SCCs) om een adequaat niveau van gegevensbescherming te waarborgen zoals vereist door de AVG. Mapbox verwerkt kaartgegevens onder vergelijkbare waarborgen. Voor inschrijvingen voor betaalde evenementen: Stripe routeert de betalingen via Stripe Technology Europe Ltd (Ierland) en geeft geanonimiseerde risico-/fraudesignalen door aan Stripe Inc. (VS) onder SCC's. Resend (VS) verzendt de bevestigingsmail onder SCC's. De gegevens in Google Sheets (deelnemerslijst van het evenement) worden bewaard op de infrastructuur van Google LLC (VS) onder het EU-US Data Privacy Framework.",
     dataRetention: "Bewaren van gegevens",
     dataRetentionText:
-      "Spelgegevens (inclusief locatiegeschiedenis) kunnen na afloop van een partij in Firebase Firestore bewaard blijven. Er vindt geen langdurig locatievolgen plaats buiten actieve partijen om. U kunt verzoeken om verwijdering van uw spelgegevens door ons te contacteren op julien@rahier.dev. Anonieme authenticatietokens kunnen op uw toestel blijven bestaan, maar kunnen worden gewist door uw account te verwijderen via de app-instellingen of door de app te verwijderen.",
-    children: "Privacy van kinderen",
+      "Spelgegevens (inclusief locatiegeschiedenis) kunnen na afloop van een partij in Firebase Firestore bewaard blijven. Er vindt geen langdurig locatievolgen plaats buiten actieve partijen om. Inschrijvingen voor betaalde evenementen in `/eventRegistrations` worden tot 12 maanden na de datum van het evenement bewaard voor boekhouding, geschillenbeslechting en fiscale verplichtingen, en worden daarna gewist. Het Google Sheet dat wordt gebruikt voor de check-in ter plaatse wordt binnen 30 dagen na het evenement gewist. Je kan verzoeken om verwijdering van je spelgegevens door ons te contacteren op julien@rahier.dev. Anonieme authenticatietokens kunnen op je toestel blijven bestaan, maar kunnen worden gewist door je account te verwijderen via de app-instellingen of door de app te verwijderen.",
+    cookies: "Cookies en vergelijkbare technologieën",
+    cookiesText:
+      "De publieke website gebruikt uitsluitend strikt noodzakelijke cookies: Firebase App Check voor bot-bescherming op het inschrijfformulier en de door Stripe gehoste cookies op de Stripe Checkout-pagina zelf (beheerd door Stripe, zie hun privacybeleid). We gebruiken geen advertentie-, analytische of tracking-cookies op de publieke webpagina's. Er wordt geen cookiebanner getoond omdat toestemming onder de ePrivacy-richtlijn niet vereist is voor strikt noodzakelijke cookies.",
+    children: "Leeftijdsvereisten",
     childrenText:
-      "De app is niet gericht op kinderen jonger dan 16 jaar. We verzamelen niet bewust persoonsgegevens van kinderen jonger dan 16. Als u denkt dat een kind jonger dan 16 ons persoonsgegevens heeft verstrekt, neem dan contact met ons op zodat we deze kunnen verwijderen.",
+      "De gratis mobiele game PouleParty wordt aanbevolen vanaf 13 jaar; gebruikers jonger dan 13 moeten het toestel laten configureren en de locatietoestemmingen laten verlenen door een ouder of voogd. Het betaalde PouleParty D-Day-evenement dat in openbare gelegenheden plaatsvindt (bars, de stad Brussel) is voorbehouden aan deelnemers van 18 jaar en ouder vanwege de vergunningsvereisten van de locatie. We verzamelen niet bewust persoonsgegevens van kinderen jonger dan 13 via de app, noch van personen jonger dan 18 via het inschrijfformulier voor het betaalde evenement. Als je vermoedt dat een minderjarige ons gegevens heeft verstrekt buiten deze grenzen, neem dan contact op via julien@rahier.dev zodat we deze kunnen verwijderen.",
     rights: "Uw rechten onder de AVG",
     rightsIntro:
       "Als gebruiker in de Europese Economische Ruimte heeft u de volgende rechten:",
@@ -81,13 +97,13 @@ export default {
     rightRectificationText: "U kunt verzoeken om correctie van onjuiste gegevens.",
     rightErasure: "Recht op gegevenswissing (art. 17):",
     rightErasureText:
-      "U kunt verzoeken om verwijdering van uw gegevens. U kunt uw anonieme authenticatieaccount rechtstreeks in de app verwijderen via Instellingen > Mijn gegevens verwijderen. Voor de volledige verwijdering van spelgegevens in Firestore kunt u contact opnemen via julien@rahier.dev.",
+      "Je kan verzoeken om verwijdering van je gegevens. De knop Instellingen > Verwijder mijn account in de app verwijdert onmiddellijk je anonieme Firebase Auth-account en je profieldocument `/users/{uid}`. Spellen waaraan je hebt deelgenomen (en de teamnaam die je daarvoor hebt gebruikt) worden onbeperkt bewaard omwille van de integriteit van de spelgeschiedenis — ze zijn enkel zichtbaar voor de deelnemers van dezelfde sessie en voor de spelmaker. Voor het volledig wissen van gegevens uit eerdere spellen (inclusief je teamnaam in winnaarslijsten) neem je contact op via julien@rahier.dev en handelen we de manuele wissing af binnen 30 dagen. Inschrijvingen voor betaalde evenementen worden op verzoek verwijderd (onder voorbehoud van de hierboven vermelde boekhoudkundige bewaartermijn van 12 maanden).",
     rightRestriction: "Recht op beperking (art. 18):",
     rightRestrictionText:
       "U kunt verzoeken dat we de verwerking van uw gegevens beperken.",
     rightPortability: "Recht op dataportabiliteit (art. 20):",
     rightPortabilityText:
-      "U kunt uw gegevens opvragen in een gestructureerd, machine-leesbaar formaat.",
+      "Je kan je gegevens opvragen in een gestructureerd, machineleesbaar formaat. Stuur een verzoek naar julien@rahier.dev en we antwoorden binnen 30 dagen met een JSON-export die je profieldocument `/users/{uid}` bevat, de teamnamen en winnaarsrecords gekoppeld aan je anonieme gebruikers-ID over eerdere spellen, en — indien van toepassing — elke inschrijving voor een betaald evenement gekoppeld aan je e-mailadres.",
     rightObject: "Recht van bezwaar (art. 21):",
     rightObjectText:
       "U kunt bezwaar maken tegen de verwerking van uw gegevens op basis van gerechtvaardigd belang.",
@@ -128,13 +144,27 @@ export default {
   },
   terms: {
     title: "Gebruiksvoorwaarden",
-    lastUpdated: "Laatst bijgewerkt: 12 mei 2026",
+    lastUpdated: "Laatst bijgewerkt: 18 mei 2026",
     acceptance: "Aanvaarding van de voorwaarden",
     acceptanceText:
-      "Door Poule Party te downloaden, installeren of gebruiken gaat u akkoord met deze gebruiksvoorwaarden. Als u niet akkoord gaat, gebruik de app dan niet.",
+      "Door Poule Party te downloaden, installeren of gebruiken, of door je in te schrijven voor een betaald PouleParty-evenement, ga je akkoord met deze gebruiksvoorwaarden. Als je niet akkoord gaat, gebruik de app dan niet en schrijf je niet in voor een evenement.",
     description: "Beschrijving van de dienst",
     descriptionText:
-      "Poule Party is een gratis mobiele game op basis van locatie, waarbij één speler (de Kip) zich verstopt terwijl andere spelers (Jagers) haar proberen te vinden via een realtime kaart met een krimpende zone.",
+      "Poule Party is een gratis mobiele game op basis van locatie, waarbij één speler (de Kip) zich verstopt terwijl andere spelers (Jagers) haar proberen te vinden via een realtime kaart met een krimpende zone. Daarnaast organiseren we af en toe betaalde PouleParty-evenementen in persoon in Brussel (de \"D-Day\"-evenementenreeks), waarvoor tickets kunnen worden gekocht op het web via pouleparty.be/inschrijving; de in-app-ervaring zelf is en blijft gratis.",
+    parties: "Contracterende partij",
+    partiesText:
+      "PouleParty wordt uitgebaat door Julien Rahier, in België geregistreerd als zelfstandige in eigen naam, contact julien@rahier.dev. Voor betaalde evenementen sluit je je contract rechtstreeks met Julien Rahier als organisator van het evenement. Er zit geen enkele vennootschap tussen jou en ons.",
+    paidEvents: "Tickets voor betaalde evenementen",
+    paidEventsPrice:
+      "Tickets voor betaalde PouleParty-evenementen worden per speler verkocht aan €12 per speler, gefactureerd als €12 × de teamgrootte die je bij checkout kiest (3, 4 of 5 spelers). De prijzen zijn in EUR en omvatten de toepasselijke Belgische btw. De betaling wordt verwerkt door Stripe (zie het privacybeleid voor details); we ontvangen nooit je kaartgegevens.",
+    paidEventsWhatsIncluded:
+      "Elk ticket omvat: één toegang tot het gedateerde evenement (bv. PouleParty D-Day op zaterdag 6 juni 2026 vanaf 20u30 in Brussel/Elsene), één welkomstdrankje aan de startbar, en een polsbandje dat je op de eindlocatie ontvangt. Eten, extra drankjes, vervoer en eventuele bijkomende kosten zijn niet inbegrepen.",
+    paidEventsWithdrawal:
+      "Omdat PouleParty-evenementen vrijetijdsactiviteiten zijn die op een specifieke datum gepland zijn, is het 14-daagse herroepingsrecht uit artikel 9 van de Europese richtlijn consumentenrechten (2011/83/EU) NIET van toepassing — deze uitzondering is voorzien in artikel 16(l) van diezelfde richtlijn. Door je aankoop af te ronden erken je deze uitzondering uitdrukkelijk en doe je afstand van de bedenktermijn. Tickets zijn niet terugbetaalbaar, behalve in de hieronder vermelde gevallen.",
+    paidEventsRefund:
+      "Terugbetalingsregels: (a) als WIJ het evenement annuleren of verplaatsen om welke reden dan ook (weersomstandigheden, overmacht, onvoldoende inschrijvingen, beslissing van de organisator), ontvang je een volledige terugbetaling van de ticketprijs of, naar keuze, een overdracht naar de nieuwe datum; (b) als JIJ niet kan komen, is het ticket niet terugbetaalbaar — maar teams zijn vrij uitwisselbaar, dus je kan je plaats overdragen aan een andere deelnemer tot op de dag van het evenement door een e-mail te sturen naar julien@rahier.dev met de details van de vervanging; (c) als een deelnemer de toegang tot de locatie wordt geweigerd om redenen die hem toerekenbaar zijn (dronkenschap, weigering om veiligheidsinstructies te volgen, jonger dan 18), wordt geen terugbetaling gedaan.",
+    paidEventsForceMajeure:
+      "In geval van overmacht (bijvoorbeeld een pandemische volksgezondheidsmaatregel, ernstige weerswaarschuwing, terreurdreiging, sluiting van de locatie buiten onze wil) verplaatsen we het evenement naar een latere datum — waarbij alle tickets automatisch overgaan — of, als verplaatsing niet haalbaar is binnen 6 maanden, betalen we alle ticketbezitters volledig terug.",
     userConduct: "Gedrag van gebruikers",
     conduct1: "Gebruik de app uitsluitend voor het beoogde doel (het spelen van de game).",
     conduct2: "Probeer niet te valsspelen, te hacken of de app te reverse-engineeren.",
@@ -161,6 +191,13 @@ export default {
     changes: "Wijzigingen aan deze voorwaarden",
     changesText:
       "We kunnen deze voorwaarden van tijd tot tijd bijwerken. Het voortgezet gebruik van de app na wijzigingen geldt als aanvaarding van de nieuwe voorwaarden.",
+    governingLaw: "Toepasselijk recht en bevoegde rechtbank",
+    governingLawText:
+      "Op deze voorwaarden is het Belgisch recht van toepassing. Elk geschil dat voortvloeit uit deze voorwaarden of uit je deelname aan een betaald PouleParty-evenement wordt uitsluitend voorgelegd aan de rechtbanken van het gerechtelijk arrondissement Brussel, België, onverminderd de niet voor afstand vatbare rechten inzake consumentenbescherming waarvan je geniet op grond van het recht van je gewone verblijfplaats.",
+    odr: "Online geschillenbeslechting",
+    odrText:
+      "Als consument in de Europese Unie kan je ook gebruikmaken van het platform voor onlinegeschillenbeslechting (ODR) van de Europese Commissie om geschillen buitengerechtelijk op te lossen. Het ODR-platform is bereikbaar via:",
+    odrUrl: "https://ec.europa.eu/consumers/odr",
     contact: "Contact",
     contactText:
       "Als u vragen heeft over deze voorwaarden, neem dan contact met ons op via",
@@ -213,6 +250,11 @@ export default {
       total: "TOTAAL",
       note: "€12 / persoon · 1 gratis drankje aan de startbar · armband op de eindlocatie",
       paymentSecure: "Veilige betaling via Stripe (Kaart · Apple Pay · Google Pay)",
+      consentPrefix: "Ik aanvaard de ",
+      consentTermsLink: "Gebruiksvoorwaarden",
+      consentJoin: " en het ",
+      consentPrivacyLink: "Privacybeleid",
+      consentSuffix: ". Ik begrijp dat dit een vrijetijdsevenement op een vaste datum is en dat het 14-daagse herroepingsrecht dus niet van toepassing is (art. 16(l) Richtlijn 2011/83/EU).",
       back: "← AANPASSEN",
       payButtonTemplate: "BETAAL {total} € 🔒",
       redirecting: "DOORVERWIJZEN…",
@@ -238,29 +280,29 @@ export default {
   deleteAccount: {
     title: "Je Poule Party-account verwijderen",
     intro:
-      "Je kan je Poule Party-account en alle bijhorende gegevens verwijderen. Deze pagina is het web-eindpunt voor verwijdering dat Google Play vereist — dezelfde actie kan ook in de app via Instellingen → Verwijder mijn gegevens.",
-    dataDeletedTitle: "Wat wordt verwijderd",
+      "Je kan je Poule Party-account en alle gegevens die eraan gekoppeld zijn verwijderen. Deze pagina is het webtoegankelijke verwijderingsendpoint dat Google Play vereist — dezelfde actie is ook beschikbaar in de app via Instellingen → Verwijder mijn account.",
+    dataDeletedTitle: "Wat onmiddellijk wordt verwijderd",
     dataDeleted: [
-      "Je anonieme Firebase-gebruikers-ID",
-      "Je nickname en push-token",
-      "Alle profielgegevens onder /users/{jouw-id}",
+      "Je anonieme Firebase Auth-gebruikersaccount",
+      "Je profieldocument /users/{uid} (nickname + push-notificatietoken)",
     ],
     dataKeptTitle: "Wat blijft bewaard",
     dataKept: [
-      "Spellen die je hebt aangemaakt of waaraan je meedeed blijven bewaard zodat andere deelnemers de resultaten nog kunnen zien. Je nickname wordt vervangen door een algemeen label.",
+      "Spellen waaraan je hebt deelgenomen behouden de teamnaam die je daarvoor hebt gebruikt (enkel zichtbaar voor de deelnemers van dezelfde sessie en voor de spelmaker). Dit is nodig voor de integriteit van de spelgeschiedenis.",
       "Anonieme analytics en crash-rapporten (geaggregeerd, niet gekoppeld aan jouw identiteit).",
+      "Inschrijvingen voor betaalde evenementen worden 12 maanden na het evenement bewaard voor boekhouding, geschillenbeslechting en fiscale verplichtingen (zie het privacybeleid).",
     ],
-    howTitle: "Hoe een verwijdering aanvragen",
+    howTitle: "Wil je een volledige manuele wissing?",
     howText:
-      "Stuur een e-mail naar onderstaand adres vanaf het e-mailadres waarop je de bevestiging wil ontvangen, met:",
+      "Als je wil dat de teamnamen die aan je vorige spellen hangen worden vervangen door een algemeen label, mail ons. Voeg toe:",
     howList: [
-      "Je nickname (zoals hij in de app verschijnt)",
+      "Je nickname of teamnaam (zoals die in de app verscheen)",
       "De geschatte datum van je laatste spel, indien je je die herinnert",
       "Onderwerp: \"Verwijder mijn Poule Party-account\"",
     ],
     timeframe:
-      "We behandelen verwijderingsverzoeken binnen 30 dagen (meestal binnen een week). Je ontvangt een bevestigingsmail zodra het klaar is.",
-    emailButton: "Stuur verwijderingsverzoek",
+      "We behandelen verzoeken tot manuele wissing binnen 30 dagen (meestal binnen een week). Je ontvangt een bevestigingsmail zodra het klaar is.",
+    emailButton: "Stuur een verzoek tot manuele wissing",
     backHome: "Terug naar home",
   },
 };

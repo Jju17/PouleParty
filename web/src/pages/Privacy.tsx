@@ -23,6 +23,7 @@ export default function Privacy() {
             <li><strong>{t.privacy.auth}</strong> {t.privacy.authText}</li>
             <li><strong>{t.privacy.playerName}</strong> {t.privacy.playerNameText}</li>
             <li><strong>{t.privacy.analytics}</strong> {t.privacy.analyticsText}</li>
+            <li><strong>{t.privacy.paidEventData}</strong> {t.privacy.paidEventDataText}</li>
           </ul>
         </section>
 
@@ -63,6 +64,21 @@ export default function Privacy() {
                 {t.privacy.thirdPartyMapbox}
               </a>
             </li>
+            <li>
+              <a href={t.privacy.thirdPartyStripeUrl} target="_blank" rel="noopener noreferrer" className="text-[#FE6A00] underline">
+                {t.privacy.thirdPartyStripe}
+              </a>
+            </li>
+            <li>
+              <a href={t.privacy.thirdPartyResendUrl} target="_blank" rel="noopener noreferrer" className="text-[#FE6A00] underline">
+                {t.privacy.thirdPartyResend}
+              </a>
+            </li>
+            <li>
+              <a href={t.privacy.thirdPartyGoogleSheetsUrl} target="_blank" rel="noopener noreferrer" className="text-[#FE6A00] underline">
+                {t.privacy.thirdPartyGoogleSheets}
+              </a>
+            </li>
           </ul>
         </section>
 
@@ -79,6 +95,11 @@ export default function Privacy() {
         <section>
           <h2 className="text-xl font-semibold mb-2">{t.privacy.dataRetention}</h2>
           <p>{t.privacy.dataRetentionText}</p>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-semibold mb-2">{t.privacy.cookies}</h2>
+          <p>{t.privacy.cookiesText}</p>
         </section>
 
         <section>

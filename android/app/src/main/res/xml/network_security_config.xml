@@ -1,8 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Network security baseline:
+  - Production: no cleartext, system CAs only. Mapbox + Firebase +
+    pouleparty.be all serve via valid TLS.
+  - Debug builds: allow cleartext to localhost + 10.0.2.2 (Android
+    Studio emulator host loopback) + user-installed CAs (Charles /
+    mitmproxy for local debugging). Never shipped to release builds.
+
+  AND-H8 (store-audit 2026-05-18): `<debug-overrides>` block added so
+  devs don't flip cleartext globally to inspect traffic from the
+  emulator. Pre-launch report flagged the absence as MEDIUM "no
+  certificate pinning configured" — adding pinning is out of scope
+  for this audit, but isolating the debug-only relaxations is cheap
+  and prevents the cleartext flag from regressing into release.
+-->
 <network-security-config>
     <base-config cleartextTrafficPermitted="false">
         <trust-anchors>
             <certificates src="system" />
         </trust-anchors>
     </base-config>
+    <debug-overrides>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </debug-overrides>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">10.0.2.2</domain>
+        <domain includeSubdomains="false">localhost</domain>
+    </domain-config>
 </network-security-config>

@@ -5,7 +5,8 @@
       "namespace": "android_app",
       "package_name": "dev.rahier.pouleparty2",
       "sha256_cert_fingerprints": [
-        "32:95:09:C4:20:90:6A:B2:6B:CB:F4:E3:D8:25:4B:17:36:50:0A:2B:4B:C6:B8:23:A0:3C:4A:98:99:BC:29:DF"
+        "32:95:09:C4:20:90:6A:B2:6B:CB:F4:E3:D8:25:4B:17:36:50:0A:2B:4B:C6:B8:23:A0:3C:4A:98:99:BC:29:DF",
+        "01:AA:82:6B:B5:A4:1A:1B:8E:80:13:A4:25:28:F4:C2:7F:85:AA:EF:F2:D1:F9:A1:C3:7C:5B:C4:48:72:50:2A"
       ]
     }
   }
