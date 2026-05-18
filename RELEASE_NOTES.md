@@ -10,24 +10,93 @@
 
 **English (U.S.)**
 
-Reliability and safety pass before our first big real-world event. Background tracking is more resilient when the app sleeps in your pocket, the lock-screen Live Activity now works on every iOS version we support, and account deletion is one tap clearer. Faster zone updates when several players move at once, fewer false "Chicken disconnected" warnings, and a cleaner power-up spawn on flaky networks.
+The biggest PouleParty update yet, just in time for our first real-world event.
+
+NEW GAMEMASTER ROLE
+A referee can now join your game without playing. They see the Chicken's live position and every Hunter on a dedicated observer map. The GameMaster can swap the Chicken before the game starts, perfect for big events where you don't want your tech-savvy friend to always be the Chicken.
+
+SMARTER ZONE SETUP
+Pick a size (Small, Medium, Large) instead of fiddling with a slider. Tap Shuffle to reroll the zone's shrinking pattern. Same start point, completely different game.
+
+NEW PENALTY MECHANIC
+The Chicken loses 1 point every 5 seconds outside the zone. Hiding in cover now has a real cost. Sprinting to the edge becomes a tactic.
+
+STREAMLINED POWER-UPS
+Only Zone Preview and Zone Freeze are enabled by default for a cleaner game. The other four can be toggled per party.
+
+JUST JOIN
+Anyone with the game code can join. No more registration gate before the party starts.
+
+END-GAME POLISH
+The map sticks around at the end of the game. Tap the leaderboard CTA when you're ready to see who won. The "Overtime!" label shows up in red when the game runs past its scheduled end.
+
+D-DAY 6 JUNE
+Tickets for our first big in-person event at pouleparty.be. Form your team of 3 to 5 players and come hunt the Chicken through Brussels.
+
+Plus dozens of stability and safety fixes: more reliable background tracking when the phone sleeps in your pocket, faster zone updates when many players move at once, the Live Activity now works on every iOS version we support, and a clearer Account Deletion flow in Settings.
 
 **French**
 
-Passe de fiabilité et de sécurité avant notre premier gros événement physique. Le suivi en arrière-plan tient mieux quand l'appli dort dans ta poche, la Live Activity de l'écran verrouillé fonctionne enfin sur toutes les versions d'iOS qu'on supporte, et la suppression de compte est plus claire en un tap. Mises à jour de zone plus rapides quand plusieurs joueurs bougent en même temps, moins de fausses alertes "Poule déconnectée", et power-ups qui apparaissent même sur un réseau capricieux.
+La plus grosse mise à jour de PouleParty, juste à temps pour notre premier événement physique.
+
+NOUVEAU RÔLE GAMEMASTER
+Un arbitre peut maintenant rejoindre ta partie sans jouer. Il voit la position de la Poule en direct et chaque chasseur sur une carte d'observation dédiée. Le GameMaster peut échanger la Poule avant le début, parfait pour les gros événements où tu ne veux pas que ton pote geek soit toujours la Poule.
+
+CONFIGURATION DE ZONE SIMPLIFIÉE
+Choisis une taille (Petit, Moyen, Grand) au lieu de jongler avec un slider. Tape Shuffle pour relancer le pattern de rétrécissement. Même point de départ, partie complètement différente.
+
+NOUVELLE PÉNALITÉ
+La Poule perd 1 point toutes les 5 secondes hors de la zone. Se cacher coûte maintenant. Sprinter vers la frontière devient une tactique.
+
+POWER-UPS SIMPLIFIÉS
+Seuls Aperçu de zone et Gel de zone sont activés par défaut pour une partie plus propre. Les quatre autres restent activables par partie.
+
+REJOINS DIRECT
+N'importe qui peut rejoindre avec le code. Plus de gate d'inscription avant le début.
+
+POLISH DE FIN DE PARTIE
+La carte reste à la fin du jeu. Tape le bouton Leaderboard quand tu veux voir qui a gagné. Le label "Overtime !" apparaît en rouge quand la partie dépasse son heure de fin.
+
+D-DAY 6 JUIN
+Billets pour notre premier gros événement physique sur pouleparty.be. Forme ton équipe de 3 à 5 joueurs et viens chasser la Poule à Bruxelles.
+
+Plus des dizaines de fixes de stabilité : suivi en arrière-plan plus fiable quand le téléphone dort dans ta poche, mises à jour de zone plus rapides quand plusieurs joueurs bougent en même temps, la Live Activity marche enfin sur toutes les versions d'iOS supportées, et un flow Supprimer le compte plus clair dans les Réglages.
 
 **Dutch**
 
-Stabiliteits- en veiligheidspas voor ons eerste grote fysieke event. Het achtergrond-volgen is robuuster wanneer de app in je broekzak slaapt, de Live Activity op het vergrendelscherm werkt nu op elke iOS-versie die we ondersteunen, en account verwijderen is één tap duidelijker. Snellere zone-updates wanneer meerdere spelers tegelijk bewegen, minder valse "Kip offline"-meldingen, en power-ups die ook bij een wankel netwerk verschijnen.
+De grootste PouleParty-update tot nu toe, net op tijd voor ons eerste grote fysieke event.
+
+NIEUWE GAMEMASTER-ROL
+Een scheidsrechter kan nu meedoen zonder te spelen. Hij ziet de positie van de Kip live en elke Jager op een speciale observatiekaart. De GameMaster kan de Kip wisselen vóór het spel begint, perfect voor grote events waar je niet wilt dat je tech-fanaat altijd de Kip is.
+
+EENVOUDIGERE ZONECONFIGURATIE
+Kies een grootte (Klein, Gemiddeld, Groot) in plaats van met een schuifregelaar te knoeien. Tik op Shuffle om het krimppatroon opnieuw te genereren. Hetzelfde startpunt, een compleet ander spel.
+
+NIEUWE STRAFREGEL
+De Kip verliest 1 punt elke 5 seconden buiten de zone. Schuilen heeft nu kosten. Naar de rand sprinten wordt een tactiek.
+
+VEREENVOUDIGDE POWER-UPS
+Alleen Zone Preview en Zone Freeze zijn standaard ingeschakeld voor een schoner spel. De andere vier blijven per partij in te schakelen.
+
+GEWOON MEEDOEN
+Iedereen met de spelcode kan meedoen. Geen registratie-gate meer voor het feest begint.
+
+EINDSPEL-POLISH
+De kaart blijft staan na het spel. Tik op de Leaderboard-knop wanneer je wil zien wie won. Het label "Overtime!" verschijnt in het rood wanneer het spel langer duurt dan gepland.
+
+D-DAY 6 JUNI
+Tickets voor ons eerste grote fysieke event op pouleparty.be. Stel je team van 3 tot 5 spelers samen en kom de Kip jagen door Brussel.
+
+Plus tientallen stabiliteitsfixes : betrouwbaarder achtergrond-volgen wanneer de telefoon in je broekzak slaapt, snellere zone-updates wanneer veel spelers tegelijk bewegen, de Live Activity werkt nu op elke iOS-versie die we ondersteunen, en een duidelijker Account verwijderen-flow in Instellingen.
 
 ---
 
 ## 🤖 Google Play Console — field "Release notes"
 
 ```
-<en-US>Reliability + safety pass before our first big in-person event. Background tracking is more robust when the app sleeps in your pocket, account deletion is one tap clearer, and zone updates are faster when several players move at once. Fewer false "Chicken disconnected" alerts and a cleaner power-up spawn on flaky networks.</en-US>
-<fr-FR>Passe fiabilité + sécurité avant notre premier gros événement physique. Le suivi en arrière-plan tient mieux quand l'appli dort dans ta poche, la suppression de compte est plus claire en un tap, et les mises à jour de zone sont plus rapides quand plusieurs joueurs bougent en même temps. Moins de fausses alertes « Poule déconnectée » et power-ups qui apparaissent même sur un réseau capricieux.</fr-FR>
-<nl-NL>Stabiliteit + veiligheidspas voor ons eerste grote fysieke event. Het achtergrond-volgen is robuuster wanneer de app in je broekzak slaapt, account verwijderen is één tap duidelijker, en zone-updates zijn sneller wanneer meerdere spelers tegelijk bewegen. Minder valse "Kip offline"-meldingen en power-ups die ook bij een wankel netwerk verschijnen.</nl-NL>
+<en-US>New GameMaster role: a referee can join your game to watch without playing, and swap the Chicken before kickoff. Smarter zone setup with Small/Medium/Large picker plus a Shuffle button. The Chicken now loses 1 point every 5 seconds outside the zone. Power-ups streamlined: only 2 enabled by default. End-game leaderboard one tap away. Anyone with the code can join, no more registration gate. D-Day 6 June: tickets on pouleparty.be.</en-US>
+<fr-FR>Nouveau rôle GameMaster : un arbitre peut rejoindre la partie pour observer sans jouer, et échanger la Poule avant le début. Config de zone simplifiée avec Petit/Moyen/Grand et bouton Shuffle. La Poule perd 1 point toutes les 5s hors de la zone. Power-ups simplifiés : 2 actifs par défaut. Leaderboard à un tap. N'importe qui peut rejoindre avec le code, plus d'inscription préalable. D-Day 6 juin : billets sur pouleparty.be.</fr-FR>
+<nl-NL>Nieuwe GameMaster-rol : een scheidsrechter kan meekijken zonder mee te spelen en de Kip wisselen vóór de start. Eenvoudigere zone-setup met Klein/Gemiddeld/Groot en een Shuffle-knop. De Kip verliest 1 punt per 5s buiten de zone. Power-ups vereenvoudigd : 2 standaard actief. Leaderboard één tik weg. Iedereen met de spelcode kan meedoen, geen registratie meer. D-Day 6 juni : tickets op pouleparty.be.</nl-NL>
 ```
 
 ---
