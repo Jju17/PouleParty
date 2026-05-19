@@ -55,12 +55,26 @@ struct HunterMapView: View {
             }
             .overlay(alignment: .bottomTrailing) {
                 if store.hasChallenges {
-                    ChallengesFabButton {
-                        store.send(.view(.challengesButtonTapped))
-                    }
+                    ChallengesFabButton(
+                        badgeCount: store.pendingChallengeCount,
+                        onTap: { store.send(.view(.challengesButtonTapped)) }
+                    )
                     .padding(.trailing, 16)
                     // Offset above the bottom bar (MapBottomBar is ~72pt tall including padding)
                     .padding(.bottom, 96)
+                }
+            }
+            .overlay(alignment: .top) {
+                if store.hasChallenges,
+                   store.hasPendingChallenges,
+                   store.hasGameStarted,
+                   !store.isDebugPreview {
+                    PendingChallengesBanner(
+                        count: store.pendingChallengeCount,
+                        onTap: { store.send(.view(.challengesButtonTapped)) }
+                    )
+                    .padding(.top, 56)
+                    .padding(.horizontal, 16)
                 }
             }
             .sheet(
@@ -139,6 +153,7 @@ struct HunterMapView: View {
 /// Floating action button that opens the Challenges & Leaderboard sheet.
 /// Matches the visual tone (dark translucent material) of the bottom bar.
 struct ChallengesFabButton: View {
+    let badgeCount: Int
     let onTap: () -> Void
 
     var body: some View {
@@ -149,6 +164,15 @@ struct ChallengesFabButton: View {
                 Image(systemName: "trophy.fill")
                     .font(.system(size: 20, weight: .bold))
                     .foregroundStyle(Color.CROrange)
+                if badgeCount > 0 {
+                    Text("\(badgeCount)")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(Color.CRPink))
+                        .offset(x: 16, y: -16)
+                }
             }
         }
         .frame(width: 52, height: 52)
@@ -157,8 +181,50 @@ struct ChallengesFabButton: View {
     }
 }
 
+/// PP-21 Phase 2 banner: surfaced when the hunter has un-submitted
+/// challenges, taps to open the sheet.
+struct PendingChallengesBanner: View {
+    let count: Int
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 10) {
+                Image(systemName: "exclamationmark.bubble.fill")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.white)
+                Group {
+                    if count == 1 {
+                        Text("1 challenge to submit")
+                    } else {
+                        Text("\(count) challenges to submit")
+                    }
+                }
+                .font(.subheadline.bold())
+                .foregroundStyle(.white)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.8))
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(Color.CRPink, in: RoundedRectangle(cornerRadius: 12))
+            .neonGlow(.CRPink, intensity: .subtle)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(count) challenges to submit. Tap to open.")
+    }
+}
+
 #Preview {
     HunterMapView(store: Store(initialState: HunterMapFeature.State(game: .mock)) {
         HunterMapFeature()
     })
+}
+
+#Preview("ChallengesFabButton with badge") {
+    ChallengesFabButton(badgeCount: 3, onTap: {})
+        .padding(40)
+        .background(Color.gray.opacity(0.2))
 }

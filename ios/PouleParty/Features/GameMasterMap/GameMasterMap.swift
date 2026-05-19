@@ -37,6 +37,8 @@ struct GameMasterMapFeature {
         var mapCircle: CircleOverlay?
         var showGameInfo: Bool = false
         var showHuntersDrawer: Bool = false
+        var showValidationQueue: Bool = false
+        var pendingSubmissionsCount: Int = 0
         var winnerNotification: String? = nil
         var countdownNumber: Int? = nil
         var countdownText: String? = nil
@@ -75,6 +77,8 @@ struct GameMasterMapFeature {
             case gameInfoDismissed
             case huntersDrawerTapped
             case huntersDrawerDismissed
+            case validationQueueTapped
+            case validationQueueDismissed
             case leaveGameTapped
             // PP-86
             case designateHunterTapped(Registration)
@@ -92,6 +96,7 @@ struct GameMasterMapFeature {
             case timerTicked
             case winnerNotificationDismissed
             case registrationsLoaded([Registration])
+            case pendingSubmissionsUpdated(Int)
             case designationSucceeded
             case designationFailed(String)
         }
@@ -157,6 +162,11 @@ struct GameMasterMapFeature {
                         guard powerUpsEnabled else { return }
                         for await powerUps in apiClient.powerUpsStream(gameId) {
                             await send(.internal(.powerUpsUpdated(powerUps)))
+                        }
+                    },
+                    .run { send in
+                        for await subs in apiClient.pendingSubmissionsStream(gameId) {
+                            await send(.internal(.pendingSubmissionsUpdated(subs.count)))
                         }
                     }
                 )
@@ -236,6 +246,15 @@ struct GameMasterMapFeature {
                 return .none
             case .view(.huntersDrawerDismissed):
                 state.showHuntersDrawer = false
+                return .none
+            case .view(.validationQueueTapped):
+                state.showValidationQueue = true
+                return .none
+            case .view(.validationQueueDismissed):
+                state.showValidationQueue = false
+                return .none
+            case let .internal(.pendingSubmissionsUpdated(count)):
+                state.pendingSubmissionsCount = count
                 return .none
             case .view(.leaveGameTapped):
                 return .send(.delegate(.returnedToMenu))

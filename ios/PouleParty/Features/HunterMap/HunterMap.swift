@@ -50,6 +50,13 @@ struct HunterMapFeature {
         // this would be a free locator.
         var chickenLocation: CLLocationCoordinate2D? = nil
         var hasChallenges: Bool = false
+
+        // Recomputed on every observable change; SwiftUI re-evaluates
+        // when state changes (notably on challenges-sheet dismiss).
+        var pendingChallengeCount: Int {
+            PendingChallengeStore.ids(forGame: game.id).count
+        }
+        var hasPendingChallenges: Bool { pendingChallengeCount > 0 }
         // CRIT-3 (audit 2026-05-17): we now hold the typed-in code +
         // attempt count between a failed `submitFoundCode` CF call and a
         // user-triggered retry. The server stamps the winner's timestamp
@@ -525,7 +532,8 @@ struct HunterMapFeature {
                     gameId: gameId,
                     hunterId: hunterId,
                     hunterIds: hunterIds,
-                    myTeamName: fallbackName
+                    myTeamName: fallbackName,
+                    isClosedForSubmissions: state.isGameOver
                 )
                 return .run { [apiClient] send in
                     if let registration = try? await apiClient.findRegistration(gameId, hunterId),

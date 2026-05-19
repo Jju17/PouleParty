@@ -182,29 +182,32 @@ service cloud.firestore {
         allow delete: if false;
       }
 
-      // Challenge completions subcollection — one doc per hunter who has
-      // completed at least one challenge. Readable by any participant (for
-      // the live leaderboard). Writable only by the owning hunter, and only
-      // while they are still in hunterIds.
-      //
-      // PP-36 (out-of-zone penalty): the same write path is reused by the
-      // hunter to decrement their own `totalPoints` by 1 every 5 s while
-      // outside the zone. The `hunterId == request.auth.uid` clause is the
-      // load-bearing guarantee — no hunter can decrement (or increment)
-      // another hunter's points. PP-25 will later flip the increment side
-      // to validator (chicken / GM) writes; the decrement stays self-write.
       match /challengeCompletions/{hunterId} {
         allow read: if request.auth != null
-                    && request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.hunterIds;
-        // Hunter self-writes blocked post-endDate so a cheater can't
-        // rack up points after the leaderboard freezes. PP-25 will add
-        // a validator clause that is NOT time-gated.
-        allow create, update: if request.auth != null
-                      && request.auth.uid == hunterId
+                    && (request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.hunterIds
+                        || request.auth.uid == get(/databases/$(database)/documents/games/$(gameId)).data.creatorId
+                        || request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.get('gameMasterIds', []));
+        allow create, update, delete: if false;
+      }
+
+      match /challengeSubmissions/{submissionId} {
+        allow read: if request.auth != null
+                    && (request.auth.uid == get(/databases/$(database)/documents/games/$(gameId)).data.creatorId
+                        || request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.hunterIds
+                        || request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.get('gameMasterIds', []));
+        allow create: if request.auth != null
+                      && request.auth.uid == request.resource.data.hunterId
                       && request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.hunterIds
                       && request.time.toMillis()
-                           < get(/databases/$(database)/documents/games/$(gameId)).data.timing.end.toMillis();
-        allow delete: if false;
+                           < get(/databases/$(database)/documents/games/$(gameId)).data.timing.end.toMillis()
+                      && request.resource.data.keys().hasAll(['challengeId', 'hunterId', 'type', 'submittedAt', 'photoUrl', 'status'])
+                      && request.resource.data.status == 'pending'
+                      && request.resource.data.type in ['oneShot', 'repeatable']
+                      && request.resource.data.photoUrl is string
+                      && request.resource.data.photoUrl.size() > 0
+                      && request.resource.data.challengeId is string
+                      && request.resource.data.challengeId.size() > 0;
+        allow update, delete: if false;
       }
 
       // Power-ups subcollection

@@ -1,7 +1,15 @@
 package dev.rahier.pouleparty.ui.challenges
 
+import android.content.ContentValues
+import android.net.Uri
+import android.provider.MediaStore
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,7 +27,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -33,14 +40,17 @@ import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -51,6 +61,7 @@ import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.model.Challenge
 import dev.rahier.pouleparty.ui.theme.CROrange
 import dev.rahier.pouleparty.ui.theme.CRPink
+import dev.rahier.pouleparty.ui.theme.HunterRed
 import dev.rahier.pouleparty.ui.theme.NeonGlowIntensity
 import dev.rahier.pouleparty.ui.theme.ZoneGreen
 import dev.rahier.pouleparty.ui.theme.neonGlow
@@ -67,10 +78,92 @@ import dev.rahier.pouleparty.ui.theme.gameboyStyle
 @Composable
 fun ChallengesSheet(
     onDismiss: () -> Unit,
+    isClosedForSubmissions: Boolean = false,
     viewModel: ChallengesViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val context = LocalContext.current
+    var pendingCameraUri by remember { mutableStateOf<Uri?>(null) }
+
+    LaunchedEffect(isClosedForSubmissions) {
+        viewModel.setClosedForSubmissions(isClosedForSubmissions)
+    }
+    LaunchedEffect(Unit) {
+        viewModel.effects.collect { effect ->
+            when (effect) {
+                is ChallengesEffect.ShowError -> {
+                    val msg = context.getString(R.string.challenge_upload_failed) + ": " + effect.message
+                    Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    val galleryLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        val targetId = state.photoTargetChallengeId
+        if (uri != null && targetId != null) {
+            val bytes = runCatching {
+                context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+            }.getOrNull()
+            if (bytes != null) {
+                viewModel.onIntent(ChallengesIntent.PhotoPicked(targetId, bytes))
+            } else {
+                viewModel.onIntent(ChallengesIntent.PhotoSourceCancelled)
+            }
+        } else {
+            viewModel.onIntent(ChallengesIntent.PhotoSourceCancelled)
+        }
+    }
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.TakePicture()
+    ) { success ->
+        val targetId = state.photoTargetChallengeId
+        val uri = pendingCameraUri
+        pendingCameraUri = null
+        if (success && uri != null && targetId != null) {
+            val bytes = runCatching {
+                context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+            }.getOrNull()
+            if (bytes != null) {
+                viewModel.onIntent(ChallengesIntent.PhotoPicked(targetId, bytes))
+            } else {
+                viewModel.onIntent(ChallengesIntent.PhotoSourceCancelled)
+            }
+        } else {
+            viewModel.onIntent(ChallengesIntent.PhotoSourceCancelled)
+        }
+    }
+
+    if (state.photoTargetChallenge != null) {
+        PhotoSourceDialog(
+            onTakePhoto = {
+                val values = ContentValues().apply {
+                    put(MediaStore.Images.Media.DISPLAY_NAME, "pouleparty_${System.currentTimeMillis()}.jpg")
+                    put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+                }
+                val uri = context.contentResolver.insert(
+                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                    values
+                )
+                if (uri != null) {
+                    pendingCameraUri = uri
+                    cameraLauncher.launch(uri)
+                } else {
+                    viewModel.onIntent(ChallengesIntent.PhotoSourceCancelled)
+                }
+            },
+            onPickFromLibrary = {
+                galleryLauncher.launch(
+                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                )
+            },
+            onCancel = { viewModel.onIntent(ChallengesIntent.PhotoSourceCancelled) }
+        )
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -114,7 +207,8 @@ fun ChallengesSheet(
                 ChallengesTab.CHALLENGES -> ChallengesTabContent(
                     modifier = Modifier.weight(1f).fillMaxWidth(),
                     state = state,
-                    onValidateTapped = { viewModel.onIntent(ChallengesIntent.ValidateTapped(it)) }
+                    onMarkAsDone = { viewModel.onIntent(ChallengesIntent.MarkAsDoneTapped(it)) },
+                    onSubmit = { viewModel.onIntent(ChallengesIntent.SubmitForValidationTapped(it)) }
                 )
                 ChallengesTab.LEADERBOARD -> LeaderboardTabContent(
                     modifier = Modifier.weight(1f).fillMaxWidth(),
@@ -127,36 +221,6 @@ fun ChallengesSheet(
                 onSelected = { viewModel.onIntent(ChallengesIntent.TabSelected(it)) }
             )
         }
-    }
-
-    // Confirmation dialog for validating a challenge
-    val pending = state.pendingChallenge
-    if (pending != null) {
-        AlertDialog(
-            onDismissRequest = { viewModel.onIntent(ChallengesIntent.DismissConfirmation) },
-            title = { Text(pending.title) },
-            text = { Text(stringResource(R.string.challenge_validate_confirm)) },
-            confirmButton = {
-                TextButton(
-                    onClick = { viewModel.onIntent(ChallengesIntent.ConfirmValidation) },
-                    enabled = !state.isSubmitting
-                ) {
-                    if (state.isSubmitting) {
-                        CircularProgressIndicator(modifier = Modifier.size(16.dp))
-                    } else {
-                        Text(stringResource(R.string.submit))
-                    }
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { viewModel.onIntent(ChallengesIntent.DismissConfirmation) },
-                    enabled = !state.isSubmitting
-                ) {
-                    Text(stringResource(R.string.cancel))
-                }
-            }
-        )
     }
 }
 
@@ -194,7 +258,8 @@ private fun SegmentedTabBar(
 private fun ChallengesTabContent(
     modifier: Modifier = Modifier,
     state: ChallengesUiState,
-    onValidateTapped: (Challenge) -> Unit
+    onMarkAsDone: (Challenge) -> Unit,
+    onSubmit: (Challenge) -> Unit
 ) {
     if (state.challenges.isEmpty()) {
         Box(
@@ -209,17 +274,36 @@ private fun ChallengesTabContent(
         }
         return
     }
-    val completedIds = state.completedIdsForCurrentHunter
     LazyColumn(
         modifier = modifier,
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        if (state.isClosedForSubmissions) {
+            item("closed-banner") {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(HunterRed, RoundedCornerShape(12.dp))
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.challenges_closed_banner),
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp
+                    )
+                }
+            }
+        }
         items(state.challenges, key = { it.id }) { challenge ->
             ChallengeRow(
                 challenge = challenge,
-                isCompleted = completedIds.contains(challenge.id),
-                onValidateTapped = { onValidateTapped(challenge) }
+                status = state.status(challenge),
+                isClosed = state.isClosedForSubmissions,
+                onMarkAsDone = { onMarkAsDone(challenge) },
+                onSubmit = { onSubmit(challenge) }
             )
         }
     }
@@ -228,17 +312,16 @@ private fun ChallengesTabContent(
 @Composable
 private fun ChallengeRow(
     challenge: Challenge,
-    isCompleted: Boolean,
-    onValidateTapped: () -> Unit
+    status: ChallengeStatus,
+    isClosed: Boolean,
+    onMarkAsDone: () -> Unit,
+    onSubmit: () -> Unit
 ) {
-    val completedBorder = if (isCompleted) {
+    val validated = status == ChallengeStatus.VALIDATED
+    val completedBorder = if (validated) {
         Modifier
             .neonGlow(ZoneGreen, NeonGlowIntensity.MEDIUM, cornerRadius = 14.dp)
-            .border(
-                width = 2.dp,
-                color = ZoneGreen,
-                shape = RoundedCornerShape(14.dp)
-            )
+            .border(width = 2.dp, color = ZoneGreen, shape = RoundedCornerShape(14.dp))
     } else {
         Modifier
     }
@@ -277,25 +360,50 @@ private fun ChallengeRow(
             )
         }
         Spacer(Modifier.size(12.dp))
+        val labelRes = when (status) {
+            ChallengeStatus.AVAILABLE -> R.string.challenge_mark_as_done
+            ChallengeStatus.PENDING_LOCAL -> R.string.challenge_submit_for_validation
+            ChallengeStatus.SUBMITTING -> R.string.challenge_uploading
+            ChallengeStatus.AWAITING_VALIDATION -> R.string.challenge_awaiting_validation
+            ChallengeStatus.VALIDATED -> R.string.challenge_done
+            ChallengeStatus.REJECTED -> R.string.challenge_rejected
+        }
+        val containerColor = when (status) {
+            ChallengeStatus.AVAILABLE -> CROrange
+            ChallengeStatus.PENDING_LOCAL -> CRPink
+            ChallengeStatus.SUBMITTING -> CROrange.copy(alpha = 0.6f)
+            ChallengeStatus.AWAITING_VALIDATION -> CROrange.copy(alpha = 0.25f)
+            ChallengeStatus.VALIDATED -> ZoneGreen
+            ChallengeStatus.REJECTED -> Color.Gray
+        }
+        val onClick: () -> Unit = when (status) {
+            ChallengeStatus.AVAILABLE -> onMarkAsDone
+            ChallengeStatus.PENDING_LOCAL -> onSubmit
+            else -> { -> }
+        }
         Button(
-            onClick = onValidateTapped,
-            enabled = !isCompleted,
+            onClick = onClick,
+            enabled = !isClosed && (status == ChallengeStatus.AVAILABLE || status == ChallengeStatus.PENDING_LOCAL),
             colors = ButtonDefaults.buttonColors(
-                containerColor = if (isCompleted) ZoneGreen else CROrange,
-                disabledContainerColor = ZoneGreen,
-                disabledContentColor = Color.Black
+                containerColor = containerColor,
+                disabledContainerColor = containerColor,
+                disabledContentColor = if (validated) Color.Black else Color.White
             ),
             shape = RoundedCornerShape(10.dp)
         ) {
-            Text(
-                text = if (isCompleted) {
-                    stringResource(R.string.challenge_done)
-                } else {
-                    stringResource(R.string.challenge_validate)
-                },
-                fontSize = 13.sp,
-                color = if (isCompleted) Color.Black else Color.White
-            )
+            if (status == ChallengeStatus.SUBMITTING) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(14.dp),
+                    color = Color.White,
+                    strokeWidth = 2.dp
+                )
+            } else {
+                Text(
+                    text = stringResource(labelRes),
+                    fontSize = 13.sp,
+                    color = if (validated) Color.Black else Color.White
+                )
+            }
         }
     }
 }
@@ -446,5 +554,76 @@ private fun RegularPlayerRow(rank: Int, entry: LeaderboardHunterEntry) {
             style = gameboyStyle(10),
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PhotoSourceDialog(
+    onTakePhoto: () -> Unit,
+    onPickFromLibrary: () -> Unit,
+    onCancel: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState()
+    ModalBottomSheet(
+        onDismissRequest = onCancel,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.background
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.challenge_add_photo),
+                style = bangerStyle(20),
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(CROrange, RoundedCornerShape(10.dp))
+                    .clickable { onTakePhoto() }
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.challenge_take_photo),
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(CRPink, RoundedCornerShape(10.dp))
+                    .clickable { onPickFromLibrary() }
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.challenge_choose_from_library),
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onCancel() }
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = stringResource(R.string.cancel),
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
     }
 }

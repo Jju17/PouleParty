@@ -9,6 +9,7 @@ import Testing
 @testable import PouleParty
 
 @MainActor
+@Suite(.serialized)
 struct ChallengesFeatureTests {
 
     private func makeChallenge(id: String, title: String = "t", body: String = "b", points: Int = 10) -> Challenge {
@@ -16,7 +17,7 @@ struct ChallengesFeatureTests {
     }
 
     private func makeCompletion(hunterId: String, ids: [String] = [], total: Int = 0, teamName: String = "") -> ChallengeCompletion {
-        ChallengeCompletion(hunterId: hunterId, completedChallengeIds: ids, totalPoints: total, teamName: teamName)
+        ChallengeCompletion(hunterId: hunterId, validatedChallengeIds: ids, repeatableCounts: [:], totalPoints: total, teamName: teamName)
     }
 
     // MARK: - Streaming
@@ -135,14 +136,12 @@ struct ChallengesFeatureTests {
         await store.send(.view(.markAsDoneTapped(challenge)))
     }
 
-    @Test func submitForValidationInvokesMarkChallengeCompleted() async {
+    @Test func submitForValidationOpensPhotoPicker() async {
         let challenge = makeChallenge(id: "c1", points: 25)
         let suite = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
         PendingChallengeStore.inject(suite)
         defer { PendingChallengeStore.resetForTesting() }
         PendingChallengeStore.add("c1", forGame: "g1")
-
-        let gotWrite = LockIsolated<(String, String, String, String, Int)?>(nil)
 
         var state = ChallengesFeature.State(
             gameId: "g1",
@@ -155,26 +154,64 @@ struct ChallengesFeatureTests {
 
         let store = TestStore(initialState: state) {
             ChallengesFeature()
-        } withDependencies: {
-            $0.apiClient.markChallengeCompleted = { gameId, hunterId, teamName, challengeId, points in
-                gotWrite.setValue((gameId, hunterId, teamName, challengeId, points))
-            }
         }
 
         await store.send(.view(.submitForValidationTapped(challenge))) {
+            $0.photoTarget = challenge
+        }
+    }
+
+    @Test func photoPickedInvokesSubmitChallenge() async {
+        let challenge = makeChallenge(id: "c1", points: 25)
+        let suite = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        PendingChallengeStore.inject(suite)
+        defer { PendingChallengeStore.resetForTesting() }
+        PendingChallengeStore.add("c1", forGame: "g1")
+
+        let gotSubmit = LockIsolated<(String, String, String, Challenge.ChallengeType, Int)?>(nil)
+
+        var state = ChallengesFeature.State(
+            gameId: "g1",
+            hunterId: "me",
+            hunterIds: ["me"],
+            myTeamName: "Team Me",
+            challenges: [challenge]
+        )
+        state.pendingLocalIds = ["c1"]
+        state.photoTarget = challenge
+
+        let store = TestStore(initialState: state) {
+            ChallengesFeature()
+        } withDependencies: {
+            $0.apiClient.submitChallenge = { gameId, challengeId, hunterId, type, data in
+                gotSubmit.setValue((gameId, challengeId, hunterId, type, data.count))
+                return ChallengeSubmission(
+                    firestoreId: "sub1",
+                    challengeId: challengeId,
+                    hunterId: hunterId,
+                    type: type,
+                    photoUrl: "https://example.com/x.jpg",
+                    status: .pending
+                )
+            }
+        }
+
+        let bytes = Data(repeating: 0xFF, count: 16)
+        await store.send(.view(.photoPicked(challengeId: "c1", data: bytes))) {
+            $0.photoTarget = nil
             $0.submittingIds = ["c1"]
         }
-        await store.receive(\.internal.completionWriteSucceeded) {
+        await store.receive(\.internal.submissionWriteSucceeded) {
             $0.submittingIds = []
             $0.pendingLocalIds = []
         }
 
-        let captured = gotWrite.value
+        let captured = gotSubmit.value
         #expect(captured?.0 == "g1")
-        #expect(captured?.1 == "me")
-        #expect(captured?.2 == "Team Me")
-        #expect(captured?.3 == "c1")
-        #expect(captured?.4 == 25)
+        #expect(captured?.1 == "c1")
+        #expect(captured?.2 == "me")
+        #expect(captured?.3 == .oneShot)
+        #expect(captured?.4 == 16)
         #expect(PendingChallengeStore.ids(forGame: "g1").isEmpty)
     }
 

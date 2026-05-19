@@ -3,9 +3,11 @@
 package dev.rahier.pouleparty.ui.huntermap
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.EmojiEvents
@@ -317,6 +319,50 @@ fun HunterMapScreen(
                             tint = Color.White
                         )
                     }
+                    if (state.pendingChallengeCount > 0) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .offset(x = 6.dp, y = (-6).dp)
+                                .background(CRPink, RoundedCornerShape(10.dp))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = state.pendingChallengeCount.toString(),
+                                color = Color.White,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            }
+
+            // PP-21 Phase 2 — banner reminding the hunter they have
+            // un-submitted challenges; tap opens the sheet.
+            if (state.hasChallenges && state.pendingChallengeCount > 0) {
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 56.dp, start = 16.dp, end = 16.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(CRPink)
+                        .neonGlow(CRPink, NeonGlowIntensity.SUBTLE, cornerRadius = 12.dp)
+                        .clickable { isChallengesSheetVisible = true }
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (state.pendingChallengeCount == 1) {
+                            stringResource(R.string.challenges_pending_banner_one)
+                        } else {
+                            stringResource(R.string.challenges_pending_banner_other, state.pendingChallengeCount)
+                        },
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        modifier = Modifier.weight(1f)
+                    )
                 }
             }
 
@@ -580,7 +626,13 @@ fun HunterMapScreen(
 
     // Challenges / Leaderboard sheet
     if (isChallengesSheetVisible) {
-        ChallengesSheet(onDismiss = { isChallengesSheetVisible = false })
+        ChallengesSheet(
+            onDismiss = {
+                isChallengesSheetVisible = false
+                viewModel.onIntent(HunterMapIntent.ChallengesSheetDismissed)
+            },
+            isClosedForSubmissions = state.isGameOver
+        )
     }
 
     // PP-18: leaderboard sheet shown when the trophy CTA is tapped.

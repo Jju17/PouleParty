@@ -9,7 +9,9 @@
 
 import ComposableArchitecture
 import os
+import PhotosUI
 import SwiftUI
+import UIKit
 
 private let logger = Logger(category: "Challenges")
 
@@ -22,6 +24,7 @@ enum ChallengeStatus: Equatable {
     case available
     case pendingLocal
     case submitting
+    case awaitingValidation
     case validated
     case rejected
 }
@@ -49,6 +52,11 @@ struct ChallengesFeature {
         /// the hunter's registration (or fallback to nickname) by the parent
         /// before the sheet is presented.
         var myTeamName: String = ""
+        // Captured at presentation time. Frozen for the lifetime of the
+        // sheet : if the game ends while the user keeps the sheet open,
+        // submissions stay enabled until the next reopen. Good enough
+        // for D-Day; reactive update would need a periodic tick.
+        var isClosedForSubmissions: Bool = false
         var selectedTab: ChallengesTab = .challenges
         var challenges: [Challenge] = []
         var completions: [ChallengeCompletion] = []
@@ -56,18 +64,28 @@ struct ChallengesFeature {
         var pendingChallenge: Challenge?
         var pendingLocalIds: Set<String> = []
         var submittingIds: Set<String> = []
+        var mySubmissions: [ChallengeSubmission] = []
+        var photoTarget: Challenge?
+        var uploadError: String?
 
         var myCompletedIds: Set<String> {
             guard let mine = completions.first(where: { $0.hunterId == hunterId }) else { return [] }
-            return Set(mine.completedChallengeIds)
+            return Set(mine.validatedChallengeIds)
         }
 
-        // `validated` wins over `submitting` wins over `pendingLocal`:
-        // a stale local intent for a now-validated challenge resolves
-        // to `validated`.
+        var awaitingValidationIds: Set<String> {
+            Set(mySubmissions.filter { $0.status == .pending }.map { $0.challengeId })
+        }
+
+        var rejectedIds: Set<String> {
+            Set(mySubmissions.filter { $0.status == .rejected }.map { $0.challengeId })
+        }
+
         func status(of challenge: Challenge) -> ChallengeStatus {
             if myCompletedIds.contains(challenge.id) { return .validated }
             if submittingIds.contains(challenge.id) { return .submitting }
+            if awaitingValidationIds.contains(challenge.id) { return .awaitingValidation }
+            if challenge.type == .oneShot && rejectedIds.contains(challenge.id) { return .rejected }
             if pendingLocalIds.contains(challenge.id) { return .pendingLocal }
             return .available
         }
@@ -126,6 +144,9 @@ struct ChallengesFeature {
             case onTask
             case markAsDoneTapped(Challenge)
             case submitForValidationTapped(Challenge)
+            case photoPicked(challengeId: String, data: Data)
+            case photoSourceCancelled
+            case uploadErrorDismissed
             case tabChanged(ChallengesTab)
         }
 
@@ -133,9 +154,10 @@ struct ChallengesFeature {
         enum Internal {
             case challengesUpdated([Challenge])
             case completionsUpdated([ChallengeCompletion])
+            case submissionsUpdated([ChallengeSubmission])
             case nicknamesFetched([String: String])
-            case completionWriteSucceeded(challengeId: String)
-            case completionWriteFailed(challengeId: String)
+            case submissionWriteSucceeded(challengeId: String)
+            case submissionWriteFailed(challengeId: String, message: String)
         }
     }
 
@@ -175,6 +197,7 @@ struct ChallengesFeature {
 
             case .view(.onTask):
                 let gameId = state.gameId
+                let hunterId = state.hunterId
                 let hunterIds = state.hunterIds
                 state.pendingLocalIds = PendingChallengeStore.ids(forGame: gameId)
                 return .merge(
@@ -189,12 +212,18 @@ struct ChallengesFeature {
                         }
                     },
                     .run { send in
+                        for await submissions in apiClient.hunterSubmissionsStream(gameId, hunterId) {
+                            await send(.internal(.submissionsUpdated(submissions)))
+                        }
+                    },
+                    .run { send in
                         let nicknames = (try? await apiClient.fetchUserNicknames(hunterIds)) ?? [:]
                         await send(.internal(.nicknamesFetched(nicknames)))
                     }
                 )
 
             case let .view(.markAsDoneTapped(challenge)):
+                guard !state.isClosedForSubmissions else { return .none }
                 guard state.status(of: challenge) == .available else { return .none }
                 let gameId = state.gameId
                 state.pendingLocalIds.insert(challenge.id)
@@ -202,20 +231,33 @@ struct ChallengesFeature {
                 return .none
 
             case let .view(.submitForValidationTapped(challenge)):
+                guard !state.isClosedForSubmissions else { return .none }
                 guard state.status(of: challenge) == .pendingLocal else { return .none }
-                state.submittingIds.insert(challenge.id)
+                state.photoTarget = challenge
+                return .none
+
+            case .view(.photoSourceCancelled):
+                state.photoTarget = nil
+                return .none
+
+            case .view(.uploadErrorDismissed):
+                state.uploadError = nil
+                return .none
+
+            case let .view(.photoPicked(challengeId, data)):
+                state.photoTarget = nil
+                guard let challenge = state.challenges.first(where: { $0.id == challengeId }) else { return .none }
+                state.submittingIds.insert(challengeId)
                 let gameId = state.gameId
                 let hunterId = state.hunterId
-                let teamName = state.myTeamName
-                let challengeId = challenge.id
-                let points = challenge.points
+                let type = challenge.type
                 return .run { send in
                     do {
-                        try await apiClient.markChallengeCompleted(gameId, hunterId, teamName, challengeId, points)
-                        await send(.internal(.completionWriteSucceeded(challengeId: challengeId)))
+                        _ = try await apiClient.submitChallenge(gameId, challengeId, hunterId, type, data)
+                        await send(.internal(.submissionWriteSucceeded(challengeId: challengeId)))
                     } catch {
-                        logger.error("markChallengeCompleted failed: \(error.localizedDescription)")
-                        await send(.internal(.completionWriteFailed(challengeId: challengeId)))
+                        logger.error("submitChallenge failed: \(error.localizedDescription)")
+                        await send(.internal(.submissionWriteFailed(challengeId: challengeId, message: error.localizedDescription)))
                     }
                 }
 
@@ -228,11 +270,16 @@ struct ChallengesFeature {
 
             case let .internal(.completionsUpdated(completions)):
                 state.completions = completions
-                // A sibling device validating the same challenge could
-                // resolve the row before the local submit handler does;
-                // drop the pending marker here so the disk store stays
-                // in sync with the server.
                 for id in state.myCompletedIds where state.pendingLocalIds.contains(id) {
+                    state.pendingLocalIds.remove(id)
+                    PendingChallengeStore.remove(id, forGame: state.gameId)
+                }
+                return .none
+
+            case let .internal(.submissionsUpdated(submissions)):
+                state.mySubmissions = submissions
+                let pendingOrValidated = Set(submissions.filter { $0.status != .rejected }.map { $0.challengeId })
+                for id in pendingOrValidated where state.pendingLocalIds.contains(id) {
                     state.pendingLocalIds.remove(id)
                     PendingChallengeStore.remove(id, forGame: state.gameId)
                 }
@@ -242,14 +289,15 @@ struct ChallengesFeature {
                 state.nicknames = nicknames
                 return .none
 
-            case let .internal(.completionWriteSucceeded(challengeId)):
+            case let .internal(.submissionWriteSucceeded(challengeId)):
                 state.submittingIds.remove(challengeId)
                 state.pendingLocalIds.remove(challengeId)
                 PendingChallengeStore.remove(challengeId, forGame: state.gameId)
                 return .none
 
-            case let .internal(.completionWriteFailed(challengeId)):
+            case let .internal(.submissionWriteFailed(challengeId, message)):
                 state.submittingIds.remove(challengeId)
+                state.uploadError = message
                 return .none
             }
         }
@@ -263,6 +311,14 @@ struct ChallengesFeature {
 
 struct ChallengesView: View {
     @Bindable var store: StoreOf<ChallengesFeature>
+    @State private var photoSource: PhotoSource?
+    @State private var pickerItem: PhotosPickerItem?
+
+    enum PhotoSource: Identifiable {
+        case library
+        case camera
+        var id: Int { self == .library ? 0 : 1 }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -310,12 +366,84 @@ struct ChallengesView: View {
         .alert(
             $store.scope(state: \.destination?.alert, action: \.destination.alert)
         )
+        .confirmationDialog(
+            "Add a photo",
+            isPresented: Binding(
+                get: { store.photoTarget != nil },
+                set: { newValue in
+                    if !newValue { store.send(.view(.photoSourceCancelled)) }
+                }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("Take a photo") { photoSource = .camera }
+            Button("Choose from library") { photoSource = .library }
+            Button("Cancel", role: .cancel) {
+                store.send(.view(.photoSourceCancelled))
+            }
+        }
+        .sheet(item: $photoSource) { source in
+            switch source {
+            case .library:
+                PhotosPicker(
+                    selection: $pickerItem,
+                    matching: .images,
+                    photoLibrary: .shared()
+                ) {
+                    Color.surface.ignoresSafeArea()
+                }
+                .photosPickerStyle(.inline)
+                .ignoresSafeArea()
+            case .camera:
+                CameraPicker { data in
+                    photoSource = nil
+                    if let data, let challenge = store.photoTarget {
+                        store.send(.view(.photoPicked(challengeId: challenge.id, data: data)))
+                    }
+                }
+                .ignoresSafeArea()
+            }
+        }
+        .onChange(of: pickerItem) { _, item in
+            guard let item else { return }
+            Task {
+                guard let data = try? await item.loadTransferable(type: Data.self),
+                      let image = UIImage(data: data),
+                      let jpeg = image.jpegDataResized() else {
+                    pickerItem = nil
+                    photoSource = nil
+                    return
+                }
+                if let challenge = store.photoTarget {
+                    store.send(.view(.photoPicked(challengeId: challenge.id, data: jpeg)))
+                }
+                pickerItem = nil
+                photoSource = nil
+            }
+        }
+        .alert(
+            "Upload failed",
+            isPresented: Binding(
+                get: { store.uploadError != nil },
+                set: { newValue in
+                    if !newValue { store.send(.view(.uploadErrorDismissed)) }
+                }
+            ),
+            presenting: store.uploadError
+        ) { _ in
+            Button("OK", role: .cancel) { store.send(.view(.uploadErrorDismissed)) }
+        } message: { message in
+            Text(message)
+        }
     }
 
     // MARK: Challenges tab
 
     @ViewBuilder
     private var challengesList: some View {
+        if store.isClosedForSubmissions {
+            closedForSubmissionsBanner
+        }
         if store.sortedChallenges.isEmpty {
             VStack {
                 Text("No challenges yet.")
@@ -330,6 +458,7 @@ struct ChallengesView: View {
                         ChallengeRow(
                             challenge: challenge,
                             status: store.state.status(of: challenge),
+                            isClosed: store.isClosedForSubmissions,
                             onMarkAsDone: { store.send(.view(.markAsDoneTapped(challenge))) },
                             onSubmit: { store.send(.view(.submitForValidationTapped(challenge))) }
                         )
@@ -338,6 +467,22 @@ struct ChallengesView: View {
                 .padding(16)
             }
         }
+    }
+
+    private var closedForSubmissionsBanner: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "clock.badge.exclamationmark.fill")
+                .foregroundStyle(.white)
+            Text("Time's up — challenges are closed.")
+                .font(.subheadline.bold())
+                .foregroundStyle(.white)
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(Color.hunterRed)
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
     }
 
     // MARK: Leaderboard tab
@@ -422,16 +567,18 @@ struct ChallengesView: View {
 private struct ChallengeRow: View {
     let challenge: Challenge
     let status: ChallengeStatus
+    let isClosed: Bool
     let onMarkAsDone: () -> Void
     let onSubmit: () -> Void
 
-    private var buttonLabel: String {
+    private var buttonLabel: LocalizedStringKey {
         switch status {
-        case .available: return "Je l'ai fait !"
-        case .pendingLocal: return "Soumettre pour validation"
-        case .submitting: return "…"
-        case .validated: return "✓ Validé"
-        case .rejected: return "Refusé"
+        case .available: return "I did it!"
+        case .pendingLocal: return "Submit for validation"
+        case .submitting: return "Uploading…"
+        case .awaitingValidation: return "⏳ Awaiting validation"
+        case .validated: return "✓ Validated"
+        case .rejected: return "Rejected"
         }
     }
 
@@ -440,6 +587,7 @@ private struct ChallengeRow: View {
         case .available: return Color.CROrange
         case .pendingLocal: return Color.CRPink
         case .submitting: return Color.CROrange.opacity(0.6)
+        case .awaitingValidation: return Color.CROrange.opacity(0.2)
         case .validated: return Color.success.opacity(0.15)
         case .rejected: return Color.gray.opacity(0.2)
         }
@@ -448,6 +596,7 @@ private struct ChallengeRow: View {
     private var labelColor: Color {
         switch status {
         case .validated: return Color.success
+        case .awaitingValidation: return Color.CROrange
         case .rejected: return Color.onSurface
         default: return Color.white
         }
@@ -485,9 +634,10 @@ private struct ChallengeRow: View {
                     .background(Capsule().fill(buttonFill))
                     .foregroundStyle(labelColor)
             }
-            .disabled(status == .submitting || status == .validated || status == .rejected)
+            .disabled(isClosed || status == .submitting || status == .awaitingValidation || status == .validated || status == .rejected)
         }
         .padding(12)
+        .opacity(isClosed && status != .validated ? 0.55 : 1.0)
         .background(
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color.surface)
@@ -556,6 +706,45 @@ private struct LeaderboardRow: View {
                     lineWidth: isHighlighted ? 2 : (emphasized ? 2 : 1)
                 )
         )
+    }
+}
+
+private struct CameraPicker: UIViewControllerRepresentable {
+    let onPicked: (Data?) -> Void
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.delegate = context.coordinator
+        if UIImagePickerController.isSourceTypeAvailable(.camera) {
+            picker.sourceType = .camera
+            picker.cameraCaptureMode = .photo
+        } else {
+            picker.sourceType = .photoLibrary
+        }
+        picker.allowsEditing = false
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator { Coordinator(onPicked: onPicked) }
+
+    final class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
+        let onPicked: (Data?) -> Void
+        init(onPicked: @escaping (Data?) -> Void) { self.onPicked = onPicked }
+
+        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
+            let image = (info[.originalImage] as? UIImage)
+            picker.dismiss(animated: true) { [onPicked] in
+                onPicked(image?.jpegDataResized())
+            }
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            picker.dismiss(animated: true) { [onPicked] in
+                onPicked(nil)
+            }
+        }
     }
 }
 

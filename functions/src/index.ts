@@ -57,6 +57,8 @@ export { submitFoundCode, getFoundCode } from "./gameplay";
 
 export { activatePowerUp } from "./powerUps";
 
+export { validateChallengeSubmission, applyOutOfZonePenalty } from "./validation";
+
 // Use Application Default Credentials so each deployed function
 // writes to the project it was deployed to. The previous hardcoded
 // `service-account.json` was always pointing at prod, which made

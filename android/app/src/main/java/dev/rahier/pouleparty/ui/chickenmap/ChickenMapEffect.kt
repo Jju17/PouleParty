@@ -6,4 +6,5 @@ sealed interface ChickenMapEffect {
     object NavigateToMenu : ChickenMapEffect
     /** Navigate to the victory screen with the post-game leaderboard. */
     object NavigateToVictory : ChickenMapEffect
+    object OpenValidationQueue : ChickenMapEffect
 }

@@ -16,4 +16,5 @@ sealed interface ChickenMapIntent {
     object PowerUpInventoryTapped : ChickenMapIntent
     object DismissPowerUpInventory : ChickenMapIntent
     data class ActivatePowerUp(val powerUp: PowerUp) : ChickenMapIntent
+    object ValidationQueueTapped : ChickenMapIntent
 }

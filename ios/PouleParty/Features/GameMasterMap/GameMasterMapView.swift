@@ -31,6 +31,28 @@ struct GameMasterMapView: View {
                             .foregroundStyle(Color.white)
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
+                    ZStack(alignment: .topTrailing) {
+                        Button {
+                            store.send(.view(.validationQueueTapped))
+                        } label: {
+                            Label("Validate", systemImage: "checkmark.seal.fill")
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 12)
+                                .background(Color.CRPink)
+                                .foregroundStyle(Color.white)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        if store.pendingSubmissionsCount > 0 {
+                            Text("\(store.pendingSubmissionsCount)")
+                                .font(.caption2.bold())
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.hunterRed)
+                                .foregroundStyle(Color.white)
+                                .clipShape(Capsule())
+                                .offset(x: 6, y: -6)
+                        }
+                    }
                     Button {
                         store.send(.view(.leaveGameTapped))
                     } label: {
@@ -43,6 +65,21 @@ struct GameMasterMapView: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.bottom, 8)
+            }
+            .sheet(isPresented: Binding(
+                get: { store.showValidationQueue },
+                set: { if !$0 { store.send(.view(.validationQueueDismissed)) } }
+            )) {
+                ValidationQueueView(
+                    store: Store(
+                        initialState: ValidationQueueFeature.State(
+                            gameId: store.game.id,
+                            hunterIds: store.game.hunterIds
+                        )
+                    ) {
+                        ValidationQueueFeature()
+                    }
+                )
             }
             .task {
                 store.send(.view(.onTask))

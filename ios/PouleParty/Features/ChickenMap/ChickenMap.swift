@@ -48,6 +48,9 @@ struct ChickenMapFeature {
         /// effect cancels (no more `chickenLocations` writes).
         var isGameOver: Bool = false
 
+        var showValidationQueue: Bool = false
+        var pendingSubmissionsCount: Int = 0
+
         /// CRIT-2 (audit 2026-05-17): the 4-digit code the chicken
         /// reads out to hunters who physically find them. Fetched
         /// once on map load via `apiClient.getFoundCode` — the value
@@ -115,6 +118,8 @@ struct ChickenMapFeature {
             case gameInitialized
             case infoButtonTapped
             case onTask
+            case validationQueueTapped
+            case validationQueueDismissed
         }
 
         @CasePathable
@@ -124,6 +129,7 @@ struct ChickenMapFeature {
             case gameUpdated(Game)
             case hunterLocationsUpdated([HunterLocation])
             case newLocationFetched(CLLocationCoordinate2D)
+            case pendingSubmissionsUpdated(Int)
             case powerUpCollected(PowerUp)
             case powerUpsUpdated([PowerUp])
             case timerTicked
@@ -444,6 +450,15 @@ struct ChickenMapFeature {
             case .view(.gameInfoDismissed):
                 state.showGameInfo = false
                 return .none
+            case .view(.validationQueueTapped):
+                state.showValidationQueue = true
+                return .none
+            case .view(.validationQueueDismissed):
+                state.showValidationQueue = false
+                return .none
+            case let .internal(.pendingSubmissionsUpdated(count)):
+                state.pendingSubmissionsCount = count
+                return .none
             case let .internal(.hunterLocationsUpdated(hunters)):
                 let sorted = hunters.sorted { $0.hunterId < $1.hunterId }
                 state.hunterAnnotations = sorted.enumerated().map { index, hunter in
@@ -513,6 +528,11 @@ struct ChickenMapFeature {
                         guard powerUpsEnabled else { return }
                         for await powerUps in apiClient.powerUpsStream(gameId) {
                             await send(.internal(.powerUpsUpdated(powerUps)))
+                        }
+                    },
+                    .run { send in
+                        for await subs in apiClient.pendingSubmissionsStream(gameId) {
+                            await send(.internal(.pendingSubmissionsUpdated(subs.count)))
                         }
                     }
                 ]

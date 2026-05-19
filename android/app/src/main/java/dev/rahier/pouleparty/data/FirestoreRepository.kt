@@ -12,6 +12,9 @@ import java.util.Date
 import dev.rahier.pouleparty.AppConstants
 import dev.rahier.pouleparty.model.Challenge
 import dev.rahier.pouleparty.model.ChallengeCompletion
+import dev.rahier.pouleparty.model.ChallengeSubmission
+import dev.rahier.pouleparty.model.ChallengeType
+import dev.rahier.pouleparty.model.SubmissionStatus
 import dev.rahier.pouleparty.model.ChickenLocation
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameStatus
@@ -33,7 +36,8 @@ import javax.inject.Singleton
 @Singleton
 class FirestoreRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
-    private val functions: com.google.firebase.functions.FirebaseFunctions
+    private val functions: com.google.firebase.functions.FirebaseFunctions,
+    private val storage: com.google.firebase.storage.FirebaseStorage,
 ) {
 
     companion object {
@@ -812,17 +816,6 @@ class FirestoreRepository @Inject constructor(
         awaitClose { listener.remove() }
     }
 
-    /**
-     * PP-36: decrement the hunter's `totalPoints` by 1 atomically. Used by
-     * the out-of-zone penalty timer (-1 point every 5 s while the hunter is
-     * outside the zone). Wrapped in a Firestore transaction so a concurrent
-     * `markChallengeCompleted` from a parallel challenge submission can't
-     * clobber the decrement (or vice versa). If no doc exists yet (the
-     * hunter has never completed a challenge), we still seed one at -1 so
-     * the leaderboard reflects the penalty. firestore.rules permits the
-     * hunter to write their own doc as long as `totalPoints` is
-     * monotonically non-increasing — see the PP-36 rule update.
-     */
     suspend fun decrementTotalPoints(gameId: String, hunterId: String) {
         if (gameId.isEmpty() || hunterId.isEmpty()) {
             Log.w(
@@ -831,79 +824,122 @@ class FirestoreRepository @Inject constructor(
             )
             return
         }
-        withRetry("decrementTotalPoints($gameId, $hunterId)") {
-            val docRef = firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
-                .collection(AppConstants.SUBCOLLECTION_CHALLENGE_COMPLETIONS).document(hunterId)
-            firestore.runTransaction { transaction ->
-                val snapshot = transaction.get(docRef)
-                val existing = if (snapshot.exists()) {
-                    safeToObject<ChallengeCompletion>(
-                        snapshot,
-                        "decrementTotalPoints($gameId, $hunterId)"
-                    )
-                } else {
-                    null
-                }
-                val data = mapOf(
-                    "hunterId" to hunterId,
-                    "completedChallengeIds" to (existing?.completedChallengeIds ?: emptyList()),
-                    "totalPoints" to ((existing?.totalPoints ?: 0) - 1),
-                    "teamName" to (existing?.teamName ?: "")
-                )
-                transaction.set(docRef, data)
-                null
-            }.await()
+        withRetry("applyOutOfZonePenalty($gameId, $hunterId)") {
+            functions
+                .getHttpsCallable("applyOutOfZonePenalty")
+                .call(mapOf("gameId" to gameId))
+                .await()
         }
     }
 
-    /**
-     * Marks a challenge as completed for the given hunter. Uses a Firestore transaction
-     * so concurrent writes don't lose updates. If the hunter already completed this
-     * challenge, it's a no-op (idempotent).
-     */
-    suspend fun markChallengeCompleted(
+    fun pendingSubmissionsFlow(gameId: String): Flow<List<ChallengeSubmission>> = callbackFlow {
+        val listener = firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
+            .collection(AppConstants.SUBCOLLECTION_CHALLENGE_SUBMISSIONS)
+            .whereEqualTo("status", SubmissionStatus.PENDING.firestoreValue)
+            .orderBy("submittedAt", Query.Direction.ASCENDING)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    logListenerError("Pending submissions ($gameId)", error)
+                    return@addSnapshotListener
+                }
+                if (snapshot == null) {
+                    trySend(emptyList())
+                    return@addSnapshotListener
+                }
+                val subs = snapshot.documents.mapNotNull { doc ->
+                    safeToObject<ChallengeSubmission>(doc, "Pending submissions ($gameId)")?.copy(id = doc.id)
+                }
+                trySend(subs)
+            }
+        awaitClose { listener.remove() }
+    }
+
+    suspend fun validateChallengeSubmission(gameId: String, submissionId: String, accept: Boolean) {
+        withRetry("validateChallengeSubmission($gameId, $submissionId, $accept)") {
+            functions
+                .getHttpsCallable("validateChallengeSubmission")
+                .call(mapOf(
+                    "gameId" to gameId,
+                    "submissionId" to submissionId,
+                    "accept" to accept,
+                ))
+                .await()
+        }
+    }
+
+    fun hunterSubmissionsFlow(gameId: String, hunterId: String): Flow<List<ChallengeSubmission>> = callbackFlow {
+        val listener = firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
+            .collection(AppConstants.SUBCOLLECTION_CHALLENGE_SUBMISSIONS)
+            .whereEqualTo("hunterId", hunterId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    logListenerError("Hunter submissions ($gameId, $hunterId)", error)
+                    return@addSnapshotListener
+                }
+                if (snapshot == null) {
+                    trySend(emptyList())
+                    return@addSnapshotListener
+                }
+                val submissions = snapshot.documents.mapNotNull { doc ->
+                    safeToObject<ChallengeSubmission>(doc, "Hunter submissions ($gameId, $hunterId)")?.copy(id = doc.id)
+                }
+                trySend(submissions)
+            }
+        awaitClose { listener.remove() }
+    }
+
+    suspend fun submitChallenge(
         gameId: String,
-        hunterId: String,
-        teamName: String,
         challengeId: String,
-        points: Int
-    ) {
-        if (gameId.isEmpty() || hunterId.isEmpty() || challengeId.isEmpty()) {
-            Log.w(
-                TAG,
-                "markChallengeCompleted skipped — gameId: '$gameId', hunterId: '$hunterId', challengeId: '$challengeId'"
-            )
-            return
+        hunterId: String,
+        type: ChallengeType,
+        photoBytes: ByteArray,
+    ): ChallengeSubmission {
+        val submissionsRef = firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
+            .collection(AppConstants.SUBCOLLECTION_CHALLENGE_SUBMISSIONS)
+        val existing = submissionsRef
+            .whereEqualTo("hunterId", hunterId)
+            .whereEqualTo("challengeId", challengeId)
+            .limit(10)
+            .get()
+            .await()
+        for (doc in existing.documents) {
+            val sub = safeToObject<ChallengeSubmission>(doc, "submitChallenge($gameId, $hunterId)")
+                ?: continue
+            if (sub.statusEnum == SubmissionStatus.PENDING) {
+                throw IllegalStateException("A submission for this challenge is already pending.")
+            }
+            if (type == ChallengeType.ONE_SHOT && sub.statusEnum == SubmissionStatus.VALIDATED) {
+                throw IllegalStateException("Challenge already validated.")
+            }
         }
-        withRetry("markChallengeCompleted($gameId, $hunterId, $challengeId)") {
-            val docRef = firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
-                .collection(AppConstants.SUBCOLLECTION_CHALLENGE_COMPLETIONS).document(hunterId)
-            firestore.runTransaction { transaction ->
-                val snapshot = transaction.get(docRef)
-                val existing = if (snapshot.exists()) {
-                    safeToObject<ChallengeCompletion>(
-                        snapshot,
-                        "markChallengeCompleted($gameId, $hunterId)"
-                    )
-                } else {
-                    null
-                }
-                if (existing != null && existing.completedChallengeIds.contains(challengeId)) {
-                    // Idempotent: already completed.
-                    return@runTransaction null
-                }
-                val updatedIds = (existing?.completedChallengeIds ?: emptyList()) + challengeId
-                val updatedTotal = (existing?.totalPoints ?: 0) + points
-                val data = mapOf(
-                    "hunterId" to hunterId,
-                    "completedChallengeIds" to updatedIds,
-                    "totalPoints" to updatedTotal,
-                    "teamName" to teamName
-                )
-                transaction.set(docRef, data)
-                null
-            }.await()
-        }
+        val newDoc = submissionsRef.document()
+        val submissionId = newDoc.id
+        val storageRef = storage.reference.child("gameSubmissions/$gameId/$submissionId.jpg")
+        val metadata = com.google.firebase.storage.StorageMetadata.Builder()
+            .setContentType("image/jpeg")
+            .build()
+        storageRef.putBytes(photoBytes, metadata).await()
+        val photoUrl = storageRef.downloadUrl.await().toString()
+        val submission = ChallengeSubmission(
+            id = submissionId,
+            challengeId = challengeId,
+            hunterId = hunterId,
+            type = type.firestoreValue,
+            submittedAt = Timestamp.now(),
+            photoUrl = photoUrl,
+            status = SubmissionStatus.PENDING.firestoreValue,
+        )
+        val data = mapOf(
+            "challengeId" to submission.challengeId,
+            "hunterId" to submission.hunterId,
+            "type" to submission.type,
+            "submittedAt" to submission.submittedAt,
+            "photoUrl" to submission.photoUrl,
+            "status" to submission.status,
+        )
+        newDoc.set(data).await()
+        return submission
     }
 
     /**

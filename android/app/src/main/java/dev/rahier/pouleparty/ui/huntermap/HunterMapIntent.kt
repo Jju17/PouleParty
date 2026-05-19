@@ -27,6 +27,7 @@ sealed interface HunterMapIntent {
     object InfoTapped : HunterMapIntent
     object DismissGameInfo : HunterMapIntent
     object CodeCopied : HunterMapIntent
+    object ChallengesSheetDismissed : HunterMapIntent
     data class ActivatePowerUp(val powerUp: PowerUp) : HunterMapIntent
     data class EnteredCodeChanged(val code: String) : HunterMapIntent
 }

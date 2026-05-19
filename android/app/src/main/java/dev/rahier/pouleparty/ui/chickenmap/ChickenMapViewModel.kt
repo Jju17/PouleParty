@@ -68,6 +68,7 @@ data class ChickenMapUiState(
      *  responds. */
     val chickenFoundCode: String = "",
     val previousWinnersCount: Int = -1,
+    val pendingSubmissionsCount: Int = 0,
     override val winnerNotification: String? = null,
     override val hasGameStarted: Boolean = false,
     val hasHuntStarted: Boolean = false,
@@ -134,6 +135,9 @@ class ChickenMapViewModel @Inject constructor(
             ChickenMapIntent.PowerUpInventoryTapped -> onPowerUpInventoryTapped()
             ChickenMapIntent.DismissPowerUpInventory -> dismissPowerUpInventory()
             is ChickenMapIntent.ActivatePowerUp -> activatePowerUp(intent.powerUp)
+            ChickenMapIntent.ValidationQueueTapped -> viewModelScope.launch {
+                _effects.send(ChickenMapEffect.OpenValidationQueue)
+            }
         }
     }
 
@@ -202,6 +206,7 @@ class ChickenMapViewModel @Inject constructor(
             streamJobs += viewModelScope.launch { trackHunters(game) }
             streamJobs += viewModelScope.launch { streamGameConfig() }
             streamJobs += viewModelScope.launch { streamPowerUps() }
+            streamJobs += viewModelScope.launch { streamPendingSubmissions() }
             streamJobs += viewModelScope.launch { sendHeartbeat(game) }
             // Run the stationary-rebroadcast loop in BOTH modes. The Chicken
             // broadcasts its position continuously so Radar Ping (3 s) has a
@@ -617,6 +622,12 @@ class ChickenMapViewModel @Inject constructor(
             _uiState.update {
                 it.copy(availablePowerUps = chickenPowerUps, collectedPowerUps = collected)
             }
+        }
+    }
+
+    private suspend fun streamPendingSubmissions() {
+        firestoreRepository.pendingSubmissionsFlow(gameId).collect { subs ->
+            _uiState.update { it.copy(pendingSubmissionsCount = subs.size) }
         }
     }
 

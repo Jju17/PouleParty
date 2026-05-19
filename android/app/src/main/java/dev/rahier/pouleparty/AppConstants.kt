@@ -10,6 +10,7 @@ object AppConstants {
     const val PREF_USER_NICKNAME = "userNickname"
     const val PREF_IS_MUSIC_MUTED = "isMusicMuted"
     const val PREF_LAST_MIGRATED_VERSION = "lastMigratedVersion"
+    const val PREF_PENDING_CHALLENGES = "pendingChallenges"
 
     // Firestore Collections
     const val COLLECTION_GAMES = "games"
@@ -18,6 +19,7 @@ object AppConstants {
     const val SUBCOLLECTION_POWER_UPS = "powerUps"
     const val SUBCOLLECTION_REGISTRATIONS = "registrations"
     const val SUBCOLLECTION_CHALLENGE_COMPLETIONS = "challengeCompletions"
+    const val SUBCOLLECTION_CHALLENGE_SUBMISSIONS = "challengeSubmissions"
     const val COLLECTION_USERS = "users"
     const val COLLECTION_CHALLENGES = "challenges"
 

@@ -81,12 +81,14 @@ class HunterMapViewModelBehaviorTest {
             every { mockUser.uid } returns hunterId
             every { auth.currentUser } returns mockUser
         }
+        val fakePrefs = dev.rahier.pouleparty.ui.challenges.FakePreferences()
         return HunterMapViewModel(
             firestoreRepository = firestoreRepository,
             locationRepository = locationRepository,
             analyticsRepository = mockk<dev.rahier.pouleparty.data.AnalyticsRepository>(relaxed = true),
             auth = auth,
-            savedStateHandle = SavedStateHandle(mapOf("gameId" to gameId, "hunterName" to hunterName))
+            savedStateHandle = SavedStateHandle(mapOf("gameId" to gameId, "hunterName" to hunterName)),
+            prefs = fakePrefs,
         )
     }
 

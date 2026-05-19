@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material3.*
@@ -15,7 +16,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mapbox.maps.CameraOptions
 import com.mapbox.maps.MapboxExperimental
@@ -43,6 +46,7 @@ import dev.rahier.pouleparty.ui.theme.*
 @Composable
 fun GameMasterMapScreen(
     onGoToMenu: () -> Unit,
+    onOpenValidationQueue: () -> Unit = {},
     viewModel: GameMasterMapViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -52,6 +56,7 @@ fun GameMasterMapScreen(
         viewModel.effects.collect { effect ->
             when (effect) {
                 GameMasterMapEffect.ReturnedToMenu -> onGoToMenu()
+                GameMasterMapEffect.OpenValidationQueue -> onOpenValidationQueue()
             }
         }
     }
@@ -164,6 +169,31 @@ fun GameMasterMapScreen(
                     Icon(Icons.Default.Group, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
                     Text("Hunters (${state.hunterAnnotations.size})")
+                }
+                Box {
+                    Button(
+                        onClick = { viewModel.onIntent(GameMasterMapIntent.ValidationQueueTapped) },
+                        colors = ButtonDefaults.buttonColors(containerColor = CRPink),
+                    ) {
+                        Icon(Icons.Default.CheckCircle, contentDescription = null)
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.challenge_validate))
+                    }
+                    if (state.pendingSubmissionsCount > 0) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .offset(x = 6.dp, y = (-6).dp)
+                                .background(HunterRed, RoundedCornerShape(50))
+                                .padding(horizontal = 6.dp, vertical = 2.dp),
+                        ) {
+                            Text(
+                                text = "${state.pendingSubmissionsCount}",
+                                color = Color.White,
+                                fontSize = 10.sp,
+                            )
+                        }
+                    }
                 }
                 IconButton(
                     onClick = { viewModel.onIntent(GameMasterMapIntent.LeaveGameTapped) },

@@ -89,6 +89,7 @@ data class HunterMapUiState(
     // gate this would be a free locator.
     val chickenLocation: Point? = null,
     val hasChallenges: Boolean = false,
+    val pendingChallengeCount: Int = 0,
     val winnerRegistrationFailed: Boolean = false,
     // CRIT-3 (audit 2026-05-17): hold the typed-in code (not a pre-built
     // Winner) between a failed `submitFoundCode` CF call and a retry. The
@@ -121,8 +122,11 @@ class HunterMapViewModel @Inject constructor(
     locationRepository: LocationRepository,
     analyticsRepository: dev.rahier.pouleparty.data.AnalyticsRepository,
     auth: FirebaseAuth,
-    savedStateHandle: SavedStateHandle
+    savedStateHandle: SavedStateHandle,
+    prefs: android.content.SharedPreferences,
 ) : BaseMapViewModel(firestoreRepository, locationRepository, analyticsRepository, auth) {
+
+    private val pendingChallengeStore = dev.rahier.pouleparty.ui.challenges.PendingChallengeStore(prefs)
 
     companion object {
         private const val TAG = "HunterMapViewModel"
@@ -155,9 +159,19 @@ class HunterMapViewModel @Inject constructor(
     private val _effects = Channel<HunterMapEffect>(Channel.BUFFERED)
     val effects: Flow<HunterMapEffect> = _effects.receiveAsFlow()
 
+    private fun refreshPendingChallengeCount() {
+        if (gameId.isEmpty()) return
+        _uiState.update { it.copy(pendingChallengeCount = pendingChallengeStore.ids(gameId).size) }
+    }
+
+    init {
+        refreshPendingChallengeCount()
+    }
+
     /** Single entry point for every user interaction. */
     fun onIntent(intent: HunterMapIntent) {
         when (intent) {
+            HunterMapIntent.ChallengesSheetDismissed -> refreshPendingChallengeCount()
             HunterMapIntent.AppResumed -> onAppResumed()
             HunterMapIntent.PowerUpInventoryTapped -> onPowerUpInventoryTapped()
             HunterMapIntent.DismissPowerUpInventory -> dismissPowerUpInventory()

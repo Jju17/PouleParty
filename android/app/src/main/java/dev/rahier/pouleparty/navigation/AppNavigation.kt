@@ -32,6 +32,7 @@ import dev.rahier.pouleparty.ui.gamemastermap.GameMasterMapScreen
 import dev.rahier.pouleparty.ui.onboarding.OnboardingScreen
 import dev.rahier.pouleparty.ui.home.HomeScreen
 import dev.rahier.pouleparty.ui.settings.SettingsScreen
+import dev.rahier.pouleparty.ui.validation.ValidationQueueScreen
 import dev.rahier.pouleparty.ui.victory.VictoryScreen
 import dev.rahier.pouleparty.util.getTrimmedString
 
@@ -50,6 +51,7 @@ object Routes {
     const val GAME_MASTER_MAP = "game_master_map/{gameId}"
     const val VICTORY = "victory/{gameId}/{hunterName}/{hunterId}/{isChicken}"
     const val SETTINGS = "settings"
+    const val VALIDATION_QUEUE = "validation_queue/{gameId}"
     fun gameCreation(gameId: String, isAdminCreation: Boolean = false) =
         "game_creation/$gameId?isAdminCreation=$isAdminCreation"
     fun chickenMap(gameId: String) = "chicken_map/$gameId?debug=false"
@@ -58,6 +60,7 @@ object Routes {
     fun gameMasterMap(gameId: String) = "game_master_map/$gameId"
     fun victory(gameId: String, hunterName: String, hunterId: String, isChicken: Boolean = false) =
         "victory/$gameId/${Uri.encode(hunterName)}/${Uri.encode(hunterId)}/$isChicken"
+    fun validationQueue(gameId: String) = "validation_queue/$gameId"
 }
 
 @Composable
@@ -230,16 +233,20 @@ fun AppNavigation() {
                 }
             )
         ) {
+            val gameId = it.arguments?.getString("gameId") ?: ""
             ChickenMapScreen(
                 onGoToMenu = {
                     navController.navigate(Routes.HOME) {
                         popUpTo(Routes.HOME) { inclusive = true }
                     }
                 },
-                onVictory = { gameId ->
-                    navController.navigate(Routes.victory(gameId, "", "", isChicken = true)) {
+                onVictory = { gid ->
+                    navController.navigate(Routes.victory(gid, "", "", isChicken = true)) {
                         popUpTo(Routes.HOME) { inclusive = false }
                     }
+                },
+                onOpenValidationQueue = {
+                    navController.navigate(Routes.validationQueue(gameId))
                 }
             )
         }
@@ -280,12 +287,25 @@ fun AppNavigation() {
             route = Routes.GAME_MASTER_MAP,
             arguments = listOf(navArgument("gameId") { type = NavType.StringType })
         ) {
+            val gameId = it.arguments?.getString("gameId") ?: ""
             GameMasterMapScreen(
                 onGoToMenu = {
                     navController.navigate(Routes.HOME) {
                         popUpTo(Routes.HOME) { inclusive = true }
                     }
+                },
+                onOpenValidationQueue = {
+                    navController.navigate(Routes.validationQueue(gameId))
                 }
+            )
+        }
+
+        composable(
+            route = Routes.VALIDATION_QUEUE,
+            arguments = listOf(navArgument("gameId") { type = NavType.StringType })
+        ) {
+            ValidationQueueScreen(
+                onDismiss = { navController.popBackStack() }
             )
         }
 

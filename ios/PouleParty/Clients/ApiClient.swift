@@ -9,6 +9,7 @@ import ComposableArchitecture
 import CoreLocation
 import FirebaseAuth
 import FirebaseFirestore
+import FirebaseStorage
 import FirebaseFunctions
 import os
 
@@ -86,12 +87,10 @@ struct ApiClient {
     var registrationsStream: (String) -> AsyncStream<[Registration]>
     var challengesStream: () -> AsyncStream<[Challenge]>
     var challengeCompletionsStream: (String) -> AsyncStream<[ChallengeCompletion]>
-    var markChallengeCompleted: (String, String, String, String, Int) async throws -> Void
-    /// PP-36: decrement the hunter's `totalPoints` by 1 atomically.
-    /// Used by the out-of-zone penalty timer (-1 point every 5 s while
-    /// the hunter is outside the zone). Transactional so concurrent
-    /// writes can't lose updates; idempotent in the sense that the
-    /// reducer's `lastPenaltyAt` guard prevents double-tick decrements.
+    var hunterSubmissionsStream: (_ gameId: String, _ hunterId: String) -> AsyncStream<[ChallengeSubmission]>
+    var pendingSubmissionsStream: (_ gameId: String) -> AsyncStream<[ChallengeSubmission]>
+    var submitChallenge: (_ gameId: String, _ challengeId: String, _ hunterId: String, _ type: Challenge.ChallengeType, _ photoData: Data) async throws -> ChallengeSubmission
+    var validateChallengeSubmission: (_ gameId: String, _ submissionId: String, _ accept: Bool) async throws -> Void
     var decrementTotalPoints: (_ gameId: String, _ hunterId: String) async throws -> Void
     var fetchUserNicknames: ([String]) async throws -> [String: String]
     /// Submit a report against another player (user-generated-content moderation).
@@ -247,6 +246,7 @@ private let powerUpsSubcollection = "powerUps"
 private let registrationsSubcollection = "registrations"
 private let challengesCollection = "challenges"
 private let challengeCompletionsSubcollection = "challengeCompletions"
+private let challengeSubmissionsSubcollection = "challengeSubmissions"
 private let maxRetries = 3
 private let initialDelayNs: UInt64 = 500_000_000
 
@@ -301,7 +301,10 @@ extension ApiClient: TestDependencyKey {
         registrationsStream: { _ in AsyncStream { _ in } },
         challengesStream: { AsyncStream { _ in } },
         challengeCompletionsStream: { _ in AsyncStream { _ in } },
-        markChallengeCompleted: { _, _, _, _, _ in },
+        hunterSubmissionsStream: { _, _ in AsyncStream { _ in } },
+        pendingSubmissionsStream: { _ in AsyncStream { _ in } },
+        submitChallenge: { _, _, _, _, _ in ChallengeSubmission() },
+        validateChallengeSubmission: { _, _, _ in },
         decrementTotalPoints: { _, _ in },
         fetchUserNicknames: { _ in [:] },
         reportPlayer: { _, _, _ in },
@@ -969,73 +972,123 @@ extension ApiClient: DependencyKey {
                 }
             }
         },
-        markChallengeCompleted: { gameId, hunterId, teamName, challengeId, points in
-            guard !gameId.isEmpty, !hunterId.isEmpty, !challengeId.isEmpty else {
-                logger.warning("markChallengeCompleted skipped — gameId: '\(gameId)', hunterId: '\(hunterId)', challengeId: '\(challengeId)'")
-                return
-            }
-            try await withRetry("markChallengeCompleted(\(gameId), \(hunterId), \(challengeId))") {
-                let db = Firestore.firestore()
-                let docRef = db.collection(gamesCollection).document(gameId)
-                    .collection(challengeCompletionsSubcollection).document(hunterId)
-                _ = try await db.runTransaction { transaction, errorPointer in
-                    let snapshot: DocumentSnapshot
-                    do {
-                        snapshot = try transaction.getDocument(docRef)
-                    } catch let error as NSError {
-                        errorPointer?.pointee = error
-                        return nil
+        hunterSubmissionsStream: { gameId, hunterId in
+            AsyncStream { continuation in
+                let listener = Firestore.firestore()
+                    .collection(gamesCollection).document(gameId)
+                    .collection(challengeSubmissionsSubcollection)
+                    .whereField("hunterId", isEqualTo: hunterId)
+                    .addSnapshotListener { snapshot, error in
+                        if let error {
+                            logListenerError("Challenge submissions (game \(gameId), hunter \(hunterId))", error)
+                        }
+                        guard let documents = snapshot?.documents else {
+                            continuation.yield([])
+                            return
+                        }
+                        let submissions = documents.compactMap { doc -> ChallengeSubmission? in
+                            do { return try doc.data(as: ChallengeSubmission.self) }
+                            catch {
+                                logger.error("Failed to decode ChallengeSubmission \(doc.documentID): \(error.localizedDescription)")
+                                return nil
+                            }
+                        }
+                        continuation.yield(submissions)
                     }
-                    let existing = (try? snapshot.data(as: ChallengeCompletion.self)) ?? ChallengeCompletion()
-                    if existing.completedChallengeIds.contains(challengeId) {
-                        // Idempotent — nothing to do.
-                        return nil
-                    }
-                    let payload: [String: Any] = [
-                        "completedChallengeIds": existing.completedChallengeIds + [challengeId],
-                        "totalPoints": existing.totalPoints + points,
-                        "teamName": teamName
-                    ]
-                    transaction.setData(payload, forDocument: docRef)
-                    return nil
+
+                continuation.onTermination = { _ in
+                    listener.remove()
                 }
             }
         },
+        pendingSubmissionsStream: { gameId in
+            AsyncStream { continuation in
+                let listener = Firestore.firestore()
+                    .collection(gamesCollection).document(gameId)
+                    .collection(challengeSubmissionsSubcollection)
+                    .whereField("status", isEqualTo: "pending")
+                    .order(by: "submittedAt", descending: false)
+                    .addSnapshotListener { snapshot, error in
+                        if let error {
+                            logListenerError("Pending submissions (game \(gameId))", error)
+                        }
+                        guard let documents = snapshot?.documents else {
+                            continuation.yield([])
+                            return
+                        }
+                        let subs = documents.compactMap { doc -> ChallengeSubmission? in
+                            do { return try doc.data(as: ChallengeSubmission.self) }
+                            catch {
+                                logger.error("Failed to decode ChallengeSubmission \(doc.documentID): \(error.localizedDescription)")
+                                return nil
+                            }
+                        }
+                        continuation.yield(subs)
+                    }
+                continuation.onTermination = { _ in listener.remove() }
+            }
+        },
+        submitChallenge: { gameId, challengeId, hunterId, type, photoData in
+            let db = Firestore.firestore()
+            let submissionsRef = db.collection(gamesCollection).document(gameId)
+                .collection(challengeSubmissionsSubcollection)
+            let existing = try await submissionsRef
+                .whereField("hunterId", isEqualTo: hunterId)
+                .whereField("challengeId", isEqualTo: challengeId)
+                .limit(to: 10)
+                .getDocuments()
+            for doc in existing.documents {
+                let sub = try? doc.data(as: ChallengeSubmission.self)
+                guard let sub else { continue }
+                if sub.status == .pending {
+                    throw NSError(domain: "ApiClient.submitChallenge", code: 1, userInfo: [NSLocalizedDescriptionKey: "A submission for this challenge is already pending."])
+                }
+                if type == .oneShot && sub.status == .validated {
+                    throw NSError(domain: "ApiClient.submitChallenge", code: 2, userInfo: [NSLocalizedDescriptionKey: "Challenge already validated."])
+                }
+            }
+            let newDoc = submissionsRef.document()
+            let submissionId = newDoc.documentID
+            let storageRef = Storage.storage().reference()
+                .child("gameSubmissions/\(gameId)/\(submissionId).jpg")
+            let metadata = StorageMetadata()
+            metadata.contentType = "image/jpeg"
+            _ = try await storageRef.putDataAsync(photoData, metadata: metadata)
+            let photoUrl = try await storageRef.downloadURL().absoluteString
+            let submission = ChallengeSubmission(
+                firestoreId: submissionId,
+                challengeId: challengeId,
+                hunterId: hunterId,
+                type: type,
+                submittedAt: Timestamp(date: .now),
+                photoUrl: photoUrl,
+                status: .pending
+            )
+            try newDoc.setData(from: submission)
+            return submission
+        },
+        validateChallengeSubmission: { gameId, submissionId, accept in
+            try await withRetry("validateChallengeSubmission(\(gameId), \(submissionId), \(accept))") {
+                let functions = Functions.functions(region: "europe-west1")
+                _ = try await functions
+                    .httpsCallable("validateChallengeSubmission")
+                    .call([
+                        "gameId": gameId,
+                        "submissionId": submissionId,
+                        "accept": accept,
+                    ])
+            }
+        },
         decrementTotalPoints: { gameId, hunterId in
-            // PP-36: out-of-zone penalty. Read the existing completion doc,
-            // subtract 1, write back — all inside a Firestore transaction so
-            // a concurrent `markChallengeCompleted` from a parallel challenge
-            // submission can't clobber the decrement (or vice versa).
-            // If no doc exists yet (the hunter has never completed a
-            // challenge), we still seed one at -1 so the leaderboard reflects
-            // the penalty. firestore.rules permits the hunter to write their
-            // own doc as long as `totalPoints` is monotonically non-increasing
-            // — see the PP-36 rule update.
             guard !gameId.isEmpty, !hunterId.isEmpty else {
                 logger.warning("decrementTotalPoints skipped — gameId: '\(gameId)', hunterId: '\(hunterId)'")
                 return
             }
-            try await withRetry("decrementTotalPoints(\(gameId), \(hunterId))") {
-                let db = Firestore.firestore()
-                let docRef = db.collection(gamesCollection).document(gameId)
-                    .collection(challengeCompletionsSubcollection).document(hunterId)
-                _ = try await db.runTransaction { transaction, errorPointer in
-                    let snapshot: DocumentSnapshot
-                    do {
-                        snapshot = try transaction.getDocument(docRef)
-                    } catch let error as NSError {
-                        errorPointer?.pointee = error
-                        return nil
-                    }
-                    let existing = (try? snapshot.data(as: ChallengeCompletion.self)) ?? ChallengeCompletion()
-                    let payload: [String: Any] = [
-                        "completedChallengeIds": existing.completedChallengeIds,
-                        "totalPoints": existing.totalPoints - 1,
-                        "teamName": existing.teamName
-                    ]
-                    transaction.setData(payload, forDocument: docRef)
-                    return nil
-                }
+            try await withRetry("applyOutOfZonePenalty(\(gameId), \(hunterId))") {
+                let functions = Functions.functions(region: "europe-west1")
+                _ = try await functions
+                    .httpsCallable("applyOutOfZonePenalty")
+                    .call(["gameId": gameId])
             }
         },
         fetchUserNicknames: { userIds in

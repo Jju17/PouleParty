@@ -92,6 +92,48 @@ struct ChickenMapView: View {
                         }
                 }
             }
+            .overlay(alignment: .topTrailing) {
+                ZStack(alignment: .topTrailing) {
+                    Button {
+                        store.send(.view(.validationQueueTapped))
+                    } label: {
+                        Image(systemName: "checkmark.seal.fill")
+                            .font(.title2)
+                            .foregroundStyle(Color.white)
+                            .padding(12)
+                            .background(Color.CRPink)
+                            .clipShape(Circle())
+                            .shadow(radius: 3)
+                    }
+                    if store.pendingSubmissionsCount > 0 {
+                        Text("\(store.pendingSubmissionsCount)")
+                            .font(.caption2.bold())
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.hunterRed)
+                            .foregroundStyle(Color.white)
+                            .clipShape(Capsule())
+                            .offset(x: 4, y: -4)
+                    }
+                }
+                .padding(.trailing, 16)
+                .padding(.top, 80)
+            }
+            .sheet(isPresented: Binding(
+                get: { store.showValidationQueue },
+                set: { if !$0 { store.send(.view(.validationQueueDismissed)) } }
+            )) {
+                ValidationQueueView(
+                    store: Store(
+                        initialState: ValidationQueueFeature.State(
+                            gameId: store.game.id,
+                            hunterIds: store.game.hunterIds
+                        )
+                    ) {
+                        ValidationQueueFeature()
+                    }
+                )
+            }
             .mapCommonOverlays(store.state)
             .overlay {
                 if !store.hasGameStarted {

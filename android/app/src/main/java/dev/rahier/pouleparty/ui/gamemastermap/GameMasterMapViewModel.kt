@@ -63,6 +63,7 @@ data class GameMasterMapUiState(
     override val countdownNumber: Int? = null,
     override val countdownText: String? = null,
     val previousWinnersCount: Int = -1,
+    val pendingSubmissionsCount: Int = 0,
     override val isOutsideZone: Boolean = false,
     override val availablePowerUps: List<PowerUp> = emptyList(),
     override val collectedPowerUps: List<PowerUp> = emptyList(),
@@ -101,6 +102,9 @@ class GameMasterMapViewModel @Inject constructor(
             GameMasterMapIntent.DismissHuntersDrawer -> _uiState.update { it.copy(showHuntersDrawer = false) }
             GameMasterMapIntent.LeaveGameTapped -> viewModelScope.launch {
                 _effects.send(GameMasterMapEffect.ReturnedToMenu)
+            }
+            GameMasterMapIntent.ValidationQueueTapped -> viewModelScope.launch {
+                _effects.send(GameMasterMapEffect.OpenValidationQueue)
             }
             is GameMasterMapIntent.DesignateHunterTapped ->
                 _uiState.update { it.copy(pendingChickenDesignation = intent.registration) }
@@ -205,6 +209,11 @@ class GameMasterMapViewModel @Inject constructor(
                 firestoreRepository.powerUpsFlow(gameId).collect { all ->
                     _uiState.update { it.copy(powerUpAnnotations = all.filter { p -> (p.collectedBy ?: "").isEmpty() }) }
                 }
+            }
+        }
+        streamJobs += viewModelScope.launch {
+            firestoreRepository.pendingSubmissionsFlow(gameId).collect { subs ->
+                _uiState.update { it.copy(pendingSubmissionsCount = subs.size) }
             }
         }
         streamJobs += viewModelScope.launch {

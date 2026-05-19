@@ -8,6 +8,10 @@
 	<string>Poule Party uses your location during an active game to place you on the map, keep the Chicken inside the shrinking game zone, and spawn nearby power-ups for you to collect. For example, when you join a game as a Hunter, your team sees the Chicken's live position within the zone so you can chase them in the real world.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Poule Party requests Always access so the Chicken's position keeps reaching the Hunters while the phone is in a pocket or backpack during an active game. For example, the Chicken can run through the neighbourhood with the screen off while the Hunters watch the zone follow them on their map. Background location stops as soon as the game ends.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Poule Party uses the camera so you can take a proof photo when you complete a challenge during a game. For example, snap a selfie of your team holding a beer at a partner bar to validate that challenge.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Poule Party reads from your photo library so you can pick an existing photo as proof of a completed challenge. For example, attach the team selfie you already took on the Grand-Place to validate the singing challenge.</string>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>NSSupportsLiveActivitiesFrequentUpdates</key>

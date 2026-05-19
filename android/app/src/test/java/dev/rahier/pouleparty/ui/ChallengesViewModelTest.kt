@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui
 
+import android.content.SharedPreferences
 import androidx.lifecycle.SavedStateHandle
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
@@ -9,6 +10,7 @@ import dev.rahier.pouleparty.model.Challenge
 import dev.rahier.pouleparty.model.ChallengeCompletion
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.Registration
+import dev.rahier.pouleparty.ui.challenges.ChallengeStatus
 import dev.rahier.pouleparty.ui.challenges.ChallengesIntent
 import dev.rahier.pouleparty.ui.challenges.ChallengesTab
 import dev.rahier.pouleparty.ui.challenges.ChallengesUiState
@@ -39,6 +41,9 @@ class ChallengesViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
     private lateinit var repo: FirestoreRepository
     private lateinit var auth: FirebaseAuth
+    private lateinit var prefs: SharedPreferences
+    private lateinit var prefsEditor: SharedPreferences.Editor
+    private var prefsBacking: String? = null
 
     @Before
     fun setUp() {
@@ -50,6 +55,21 @@ class ChallengesViewModelTest {
         coEvery { repo.getConfig(any()) } returns null
         coEvery { repo.fetchAllRegistrations(any()) } returns emptyList()
         coEvery { repo.fetchNicknames(any()) } returns emptyMap()
+        prefsBacking = null
+        prefs = mockk(relaxed = true)
+        prefsEditor = mockk(relaxed = true)
+        every { prefs.getString(any(), any()) } answers { prefsBacking ?: secondArg() }
+        every { prefs.edit() } returns prefsEditor
+        every { prefsEditor.putString(any(), any()) } answers {
+            prefsBacking = secondArg<String?>()
+            prefsEditor
+        }
+        every { prefsEditor.remove(any()) } answers {
+            prefsBacking = null
+            prefsEditor
+        }
+        every { prefsEditor.commit() } returns true
+        every { prefsEditor.apply() } returns Unit
     }
 
     @After
@@ -70,6 +90,7 @@ class ChallengesViewModelTest {
         mockUser(hunterId)
         return ChallengesViewModel(
             firestoreRepository = repo,
+            prefs = prefs,
             auth = auth,
             savedStateHandle = SavedStateHandle(mapOf("gameId" to gameId))
         )
@@ -95,7 +116,7 @@ class ChallengesViewModelTest {
         val completions = listOf(
             ChallengeCompletion(
                 hunterId = "h1",
-                completedChallengeIds = listOf("c1"),
+                validatedChallengeIds = listOf("c1"),
                 totalPoints = 10,
                 teamName = "Team Alpha"
             )
@@ -122,28 +143,29 @@ class ChallengesViewModelTest {
         assertEquals(ChallengesTab.LEADERBOARD, vm.uiState.value.selectedTab)
     }
 
-    // ── Validate flow ──────────────────────────────────────
+    // ── 2-tap validate flow ────────────────────────────────
 
     @Test
-    fun `ValidateTapped shows confirmation dialog state`() {
+    fun `MarkAsDone moves challenge to pendingLocal`() {
         val challenge = Challenge(id = "c1", title = "Hello", points = 5)
         every { repo.challengesStream() } returns flowOf(listOf(challenge))
         val vm = create()
         testDispatcher.scheduler.advanceUntilIdle()
 
-        vm.onIntent(ChallengesIntent.ValidateTapped(challenge))
-        assertEquals(challenge, vm.uiState.value.pendingChallenge)
+        vm.onIntent(ChallengesIntent.MarkAsDoneTapped(challenge))
+        assertEquals(setOf("c1"), vm.uiState.value.pendingLocalIds)
+        assertEquals(ChallengeStatus.PENDING_LOCAL, vm.uiState.value.status(challenge))
     }
 
     @Test
-    fun `ValidateTapped on already-completed challenge is a no-op`() {
+    fun `MarkAsDone on already-completed challenge is a no-op`() {
         val challenge = Challenge(id = "c1", title = "Hello", points = 5)
         every { repo.challengesStream() } returns flowOf(listOf(challenge))
         every { repo.challengeCompletionsStream("game-1") } returns flowOf(
             listOf(
                 ChallengeCompletion(
                     hunterId = "hunter-1",
-                    completedChallengeIds = listOf("c1"),
+                    validatedChallengeIds = listOf("c1"),
                     totalPoints = 5,
                     teamName = "Team"
                 )
@@ -152,22 +174,12 @@ class ChallengesViewModelTest {
         val vm = create(hunterId = "hunter-1")
         testDispatcher.scheduler.advanceUntilIdle()
 
-        vm.onIntent(ChallengesIntent.ValidateTapped(challenge))
-        assertNull(vm.uiState.value.pendingChallenge)
+        vm.onIntent(ChallengesIntent.MarkAsDoneTapped(challenge))
+        assertTrue(vm.uiState.value.pendingLocalIds.isEmpty())
     }
 
     @Test
-    fun `DismissConfirmation clears the pending challenge`() {
-        val challenge = Challenge(id = "c1", title = "Hello", points = 5)
-        val vm = create()
-        vm.onIntent(ChallengesIntent.ValidateTapped(challenge))
-        assertEquals(challenge, vm.uiState.value.pendingChallenge)
-        vm.onIntent(ChallengesIntent.DismissConfirmation)
-        assertNull(vm.uiState.value.pendingChallenge)
-    }
-
-    @Test
-    fun `ConfirmValidation calls markChallengeCompleted with correct args`() {
+    fun `SubmitForValidation opens photo picker for pending challenge`() {
         val challenge = Challenge(id = "c1", title = "Hello", points = 7)
         every { repo.challengesStream() } returns flowOf(listOf(challenge))
         coEvery { repo.getConfig("game-1") } returns Game(id = "game-1", hunterIds = listOf("hunter-1"))
@@ -178,30 +190,56 @@ class ChallengesViewModelTest {
         val vm = create(hunterId = "hunter-1")
         testDispatcher.scheduler.advanceUntilIdle()
 
-        vm.onIntent(ChallengesIntent.ValidateTapped(challenge))
-        vm.onIntent(ChallengesIntent.ConfirmValidation)
-        testDispatcher.scheduler.advanceUntilIdle()
+        vm.onIntent(ChallengesIntent.MarkAsDoneTapped(challenge))
+        vm.onIntent(ChallengesIntent.SubmitForValidationTapped(challenge))
 
-        coVerify {
-            repo.markChallengeCompleted(
-                gameId = "game-1",
-                hunterId = "hunter-1",
-                teamName = "Dream Team",
-                challengeId = "c1",
-                points = 7
-            )
-        }
-        assertNull(vm.uiState.value.pendingChallenge)
-        assertFalse(vm.uiState.value.isSubmitting)
+        assertEquals("c1", vm.uiState.value.photoTargetChallengeId)
+        coVerify(exactly = 0) { repo.submitChallenge(any(), any(), any(), any(), any()) }
     }
 
     @Test
-    fun `ConfirmValidation with no pending challenge is a no-op`() {
-        val vm = create()
-        vm.onIntent(ChallengesIntent.ConfirmValidation)
+    fun `PhotoPicked calls submitChallenge with correct args`() {
+        val challenge = Challenge(id = "c1", title = "Hello", points = 7)
+        every { repo.challengesStream() } returns flowOf(listOf(challenge))
+        coEvery { repo.getConfig("game-1") } returns Game(id = "game-1", hunterIds = listOf("hunter-1"))
+        coEvery { repo.fetchAllRegistrations("game-1") } returns listOf(
+            Registration(userId = "hunter-1", teamName = "Dream Team")
+        )
+        coEvery {
+            repo.submitChallenge(any(), any(), any(), any(), any())
+        } returns dev.rahier.pouleparty.model.ChallengeSubmission(id = "s1", challengeId = "c1", hunterId = "hunter-1")
+
+        val vm = create(hunterId = "hunter-1")
         testDispatcher.scheduler.advanceUntilIdle()
+        vm.onIntent(ChallengesIntent.MarkAsDoneTapped(challenge))
+        vm.onIntent(ChallengesIntent.SubmitForValidationTapped(challenge))
+        vm.onIntent(ChallengesIntent.PhotoPicked("c1", ByteArray(4) { 0 }))
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        coVerify {
+            repo.submitChallenge(
+                gameId = "game-1",
+                challengeId = "c1",
+                hunterId = "hunter-1",
+                type = any(),
+                photoBytes = any(),
+            )
+        }
+        assertTrue(vm.uiState.value.submittingIds.isEmpty())
+    }
+
+    @Test
+    fun `SubmitForValidation without pending intent is a no-op`() {
+        val challenge = Challenge(id = "c1", title = "Hello", points = 5)
+        every { repo.challengesStream() } returns flowOf(listOf(challenge))
+        val vm = create()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        vm.onIntent(ChallengesIntent.SubmitForValidationTapped(challenge))
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertNull(vm.uiState.value.photoTargetChallengeId)
         coVerify(exactly = 0) {
-            repo.markChallengeCompleted(any(), any(), any(), any(), any())
+            repo.submitChallenge(any(), any(), any(), any(), any())
         }
     }
 
@@ -280,13 +318,13 @@ class ChallengesViewModelTest {
         val completions = listOf(
             ChallengeCompletion(
                 hunterId = "h1",
-                completedChallengeIds = listOf("a", "b"),
+                validatedChallengeIds = listOf("a", "b"),
                 totalPoints = 15,
                 teamName = "Team"
             ),
             ChallengeCompletion(
                 hunterId = "h2",
-                completedChallengeIds = listOf("c"),
+                validatedChallengeIds = listOf("c"),
                 totalPoints = 5,
                 teamName = "Other"
             )

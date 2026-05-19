@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material3.*
@@ -63,6 +64,7 @@ import dev.rahier.pouleparty.ui.theme.*
 fun ChickenMapScreen(
     onGoToMenu: () -> Unit,
     onVictory: (gameId: String) -> Unit = {},
+    onOpenValidationQueue: () -> Unit = {},
     viewModel: ChickenMapViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -72,7 +74,6 @@ fun ChickenMapScreen(
 
     val view = LocalView.current
 
-    // One-shot navigation effects from the ViewModel.
     LaunchedEffect(viewModel) {
         viewModel.effects.collect { effect ->
             when (effect) {
@@ -81,6 +82,7 @@ fun ChickenMapScreen(
                     HapticManager.success(view)
                     onVictory(state.game.id)
                 }
+                ChickenMapEffect.OpenValidationQueue -> onOpenValidationQueue()
             }
         }
     }
@@ -273,6 +275,37 @@ fun ChickenMapScreen(
             }
             if (state.game.powerUps.enabled) {
                 ActivePowerUpBadge(game = state.game)
+            }
+            Spacer(Modifier.height(12.dp))
+            Box(modifier = Modifier.padding(end = 8.dp)) {
+                IconButton(
+                    onClick = { viewModel.onIntent(ChickenMapIntent.ValidationQueueTapped) },
+                    modifier = Modifier
+                        .shadow(4.dp, CircleShape)
+                        .background(CRPink, CircleShape)
+                        .size(40.dp),
+                ) {
+                    Icon(
+                        Icons.Default.CheckCircle,
+                        contentDescription = stringResource(R.string.validation_queue_title),
+                        tint = Color.White,
+                    )
+                }
+                if (state.pendingSubmissionsCount > 0) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .offset(x = 4.dp, y = (-4).dp)
+                            .background(HunterRed, CircleShape)
+                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                    ) {
+                        Text(
+                            text = "${state.pendingSubmissionsCount}",
+                            color = Color.White,
+                            fontSize = 10.sp,
+                        )
+                    }
+                }
             }
         }
 
