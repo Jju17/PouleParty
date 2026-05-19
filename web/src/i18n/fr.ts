@@ -255,6 +255,9 @@ export default {
       line2: "Tu vas recevoir un email avec ton code de validation et toutes les infos pour le jour J.",
       spamHint: "Pas d'email d'ici quelques minutes ? Vérifie tes spams ou écris à",
       cluck: "COT COT 🐔",
+      referenceLabel: "Référence",
+      noSessionTitle: "Page réservée\naux paiements",
+      noSessionBody: "Cette page s'affiche après un paiement Stripe. Si tu cherches à t'inscrire, reviens sur /inscription.",
     },
     cancel: {
       title: "Paiement\nannulé",

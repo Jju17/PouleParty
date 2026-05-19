@@ -270,6 +270,9 @@ export default {
       line2: "Je krijgt een e-mail met je validatiecode en alle praktische info voor de dag zelf.",
       spamHint: "Geen e-mail na enkele minuten? Check je spam of mail",
       cluck: "TOK TOK 🐔",
+      referenceLabel: "Referentie",
+      noSessionTitle: "Pagina alleen\nvoor betalingen",
+      noSessionBody: "Deze pagina verschijnt na een Stripe-betaling. Wil je je inschrijven? Ga terug naar /inschrijving.",
     },
     cancel: {
       title: "Betaling\ngeannuleerd",

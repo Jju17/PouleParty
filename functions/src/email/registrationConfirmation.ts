@@ -8,7 +8,7 @@ import { logger } from "firebase-functions/v2";
 // Localized on `reg.locale` (`fr`, `en`, `nl`). Unknown locales fall
 // back to `fr` since the D-Day audience is FR-first.
 
-interface RegistrationSnapshot {
+export interface RegistrationSnapshot {
   registrationId: string;
   batchId: string;
   playerName: string;
@@ -19,9 +19,9 @@ interface RegistrationSnapshot {
   locale: string;
 }
 
-type Locale = "fr" | "en" | "nl";
+export type Locale = "fr" | "en" | "nl";
 
-interface EmailStrings {
+export interface EmailStrings {
   subject: string;
   headerSubtitle: string;
   greeting: (name: string) => string;
@@ -93,7 +93,8 @@ const STRINGS: Record<Locale, EmailStrings> = {
   },
 };
 
-function pickStrings(locale: string): { strings: EmailStrings; lang: Locale } {
+// Exported for unit tests — see `test/registrationEmail.test.ts`.
+export function pickStrings(locale: string): { strings: EmailStrings; lang: Locale } {
   if (locale === "en" || locale === "nl") return { strings: STRINGS[locale], lang: locale };
   return { strings: STRINGS.fr, lang: "fr" };
 }
@@ -102,11 +103,13 @@ function pickStrings(locale: string): { strings: EmailStrings; lang: Locale } {
 // + `web/public/.well-known/{apple-app-site-association,assetlinks.json}`.
 // Carries only the validation code; the JoinFlow resolves the live
 // Game via `Game.registrationBatchId == registration.batchId`.
-function deeplinkFor(code: string): string {
+// Exported for unit tests — see `test/registrationEmail.test.ts`.
+export function deeplinkFor(code: string): string {
   return `https://pouleparty.be/join?code=${encodeURIComponent(code)}`;
 }
 
-function renderHtml(reg: RegistrationSnapshot, s: EmailStrings, lang: Locale): string {
+// Exported for unit tests — see `test/registrationEmail.test.ts`.
+export function renderHtml(reg: RegistrationSnapshot, s: EmailStrings, lang: Locale): string {
   const link = deeplinkFor(reg.code);
   // Email rendering notes:
   // 1. `color-scheme` + `supported-color-schemes` opt this email into the
@@ -201,7 +204,8 @@ function stripTags(value: string): string {
   return value.replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&");
 }
 
-function renderText(reg: RegistrationSnapshot, s: EmailStrings): string {
+// Exported for unit tests — see `test/registrationEmail.test.ts`.
+export function renderText(reg: RegistrationSnapshot, s: EmailStrings): string {
   const link = deeplinkFor(reg.code);
   return [
     stripTags(s.greeting(reg.playerName)),
@@ -220,7 +224,8 @@ function renderText(reg: RegistrationSnapshot, s: EmailStrings): string {
   ].join("\n");
 }
 
-function escapeHtml(value: string): string {
+// Exported for unit tests — see `test/registrationEmail.test.ts`.
+export function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")

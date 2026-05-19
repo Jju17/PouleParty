@@ -11,10 +11,6 @@ import UIKit
 import UserNotifications
 
 extension Notification.Name {
-    /// PP-52 — fallback channel for cold-start Universal Links when the
-    /// SwiftUI `.onContinueUserActivity` modifier doesn't fire. The
-    /// AppDelegate posts; `PoulePartyApp` listens via `.onReceive`.
-    /// `userInfo["url"]` is the `URL` that was tapped.
     static let pouleDeeplink = Notification.Name("dev.rahier.pouleparty.deeplink")
 }
 

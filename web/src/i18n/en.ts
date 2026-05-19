@@ -260,6 +260,9 @@ export default {
       line2: "You'll receive an email with your validation code and all the day-of details.",
       spamHint: "No email after a few minutes? Check your spam or write to",
       cluck: "CLUCK CLUCK 🐔",
+      referenceLabel: "Reference",
+      noSessionTitle: "Payment\npage",
+      noSessionBody: "This page is shown after a Stripe payment. If you're looking to register, head back to /registration.",
     },
     cancel: {
       title: "Payment\ncancelled",

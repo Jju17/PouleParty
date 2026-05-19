@@ -44,11 +44,20 @@ const EMPTY_FORM: FormState = {
   nicknameAlt: "",
 };
 
+// F3 (review 2026-05-19): mirror the server-side regex in
+// `functions/src/registrations.ts:validatePayload`. The previous client
+// regex `/^\S+@\S+\.\S+$/` was looser and let strings like
+// `a@b.com,c@d.com` pass client validation only to be 400-rejected by
+// the server — confusing UX. Same char-class on both sides keeps the
+// rejection inline at the form layer.
+const EMAIL_REGEX = /^[^\s@,]+@[^\s@,]+\.[^\s@,]+$/;
+
 function isFormValid(form: FormState): form is FormState & { teamSize: TeamSize } {
   if (form.teamSize === null) return false;
   if (!form.playerName.trim()) return false;
   if (!form.teamName.trim()) return false;
-  if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) return false;
+  const email = form.email.trim();
+  if (email.length === 0 || email.length > 254 || !EMAIL_REGEX.test(email)) return false;
   if (form.phone.trim().length < 6) return false;
   return true;
 }

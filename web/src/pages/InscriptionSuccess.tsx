@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useSearchParams } from "react-router-dom";
 import confetti from "canvas-confetti";
 import Layout from "../components/Layout";
 import { useI18n } from "../i18n";
@@ -60,20 +60,50 @@ function fireCelebration() {
 export default function InscriptionSuccess() {
   const { t, setLocale } = useI18n();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const s = t.inscription.success;
+  // F6 (review 2026-05-19): Stripe redirects to success_url with
+  // `?session_id={CHECKOUT_SESSION_ID}`. A real visitor coming from
+  // Checkout always carries it; a hand-typed URL doesn't. We don't trust
+  // it as proof of payment (the webhook is the source of truth), but
+  // its presence lets us decide between celebration vs "you reached
+  // this page in error" and gives the user a reference to quote if
+  // the confirmation email never arrives (F5 backstop).
+  const sessionId = searchParams.get("session_id")?.trim() ?? "";
 
   useEffect(() => {
     setLocale(localeFromPathname(location.pathname));
   }, [location.pathname, setLocale]);
 
   useEffect(() => {
+    // Only celebrate when we actually came from Stripe Checkout.
+    if (!sessionId) return;
     // Respect users who've opted out of motion at the OS level — no
     // confetti, the page still reads as "confirmed" via the animated
     // text below.
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduced) return;
     fireCelebration();
-  }, []);
+  }, [sessionId]);
+
+  // F6: no session_id → user landed here by accident (deeplink share,
+  // bookmark, typo). Don't fake a payment confirmation.
+  if (!sessionId) {
+    return (
+      <Layout>
+        <div className="max-w-md mx-auto text-center py-16">
+          <div className="text-5xl mb-4">🐔</div>
+          <h1
+            className="text-4xl mb-4 leading-none"
+            style={{ fontFamily: "Bangers, cursive", letterSpacing: "0.04em" }}
+          >
+            {s.noSessionTitle}
+          </h1>
+          <p className="text-base leading-relaxed">{s.noSessionBody}</p>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
@@ -115,6 +145,14 @@ export default function InscriptionSuccess() {
             julien@rahier.dev
           </a>
           .
+        </p>
+        {/* F5 (review 2026-05-19): if Resend fails on the first webhook
+            delivery the registration is paid but the user has no
+            confirmation email. The Stripe session id is a stable
+            reference the user can quote to support without depending on
+            the email pipeline. */}
+        <p className="mt-6 text-xs opacity-60 break-all font-mono">
+          {s.referenceLabel}: {sessionId}
         </p>
         <p
           className="text-3xl mt-8 text-[#FE6A00] animate-fade-in-up stagger-6"
