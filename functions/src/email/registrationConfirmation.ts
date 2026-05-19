@@ -93,7 +93,6 @@ const STRINGS: Record<Locale, EmailStrings> = {
   },
 };
 
-// Exported for unit tests — see `test/registrationEmail.test.ts`.
 export function pickStrings(locale: string): { strings: EmailStrings; lang: Locale } {
   if (locale === "en" || locale === "nl") return { strings: STRINGS[locale], lang: locale };
   return { strings: STRINGS.fr, lang: "fr" };
@@ -103,12 +102,10 @@ export function pickStrings(locale: string): { strings: EmailStrings; lang: Loca
 // + `web/public/.well-known/{apple-app-site-association,assetlinks.json}`.
 // Carries only the validation code; the JoinFlow resolves the live
 // Game via `Game.registrationBatchId == registration.batchId`.
-// Exported for unit tests — see `test/registrationEmail.test.ts`.
 export function deeplinkFor(code: string): string {
   return `https://pouleparty.be/join?code=${encodeURIComponent(code)}`;
 }
 
-// Exported for unit tests — see `test/registrationEmail.test.ts`.
 export function renderHtml(reg: RegistrationSnapshot, s: EmailStrings, lang: Locale): string {
   const link = deeplinkFor(reg.code);
   // Email rendering notes:
@@ -204,7 +201,6 @@ function stripTags(value: string): string {
   return value.replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&");
 }
 
-// Exported for unit tests — see `test/registrationEmail.test.ts`.
 export function renderText(reg: RegistrationSnapshot, s: EmailStrings): string {
   const link = deeplinkFor(reg.code);
   return [
@@ -224,7 +220,6 @@ export function renderText(reg: RegistrationSnapshot, s: EmailStrings): string {
   ].join("\n");
 }
 
-// Exported for unit tests — see `test/registrationEmail.test.ts`.
 export function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")

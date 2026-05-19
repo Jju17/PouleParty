@@ -1,0 +1,14 @@
+# Local admin service account: read by seedChallenges.ts on a dev
+# machine; deployed Cloud Functions use ADC (initializeApp() with no
+# args). Must never ship in the deploy bundle.
+service-account.json
+
+.env*
+test/
+**/*.test.ts
+**/*.test.js
+**/*.test.js.map
+.DS_Store
+*.log
+.vscode/
+node_modules/

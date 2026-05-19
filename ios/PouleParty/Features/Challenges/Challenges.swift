@@ -18,6 +18,14 @@ enum ChallengesTab: Equatable {
     case leaderboard
 }
 
+enum ChallengeStatus: Equatable {
+    case available
+    case pendingLocal
+    case submitting
+    case validated
+    case rejected
+}
+
 /// A single row in the leaderboard — either a hunter who has completed challenges
 /// or a hunter in `game.hunterIds` with no completion doc yet (displayed at 0 pts).
 struct ChallengeLeaderboardEntry: Equatable, Identifiable {
@@ -46,11 +54,22 @@ struct ChallengesFeature {
         var completions: [ChallengeCompletion] = []
         var nicknames: [String: String] = [:]
         var pendingChallenge: Challenge?
+        var pendingLocalIds: Set<String> = []
+        var submittingIds: Set<String> = []
 
-        /// Set of challenge IDs the current hunter has already completed.
         var myCompletedIds: Set<String> {
             guard let mine = completions.first(where: { $0.hunterId == hunterId }) else { return [] }
             return Set(mine.completedChallengeIds)
+        }
+
+        // `validated` wins over `submitting` wins over `pendingLocal`:
+        // a stale local intent for a now-validated challenge resolves
+        // to `validated`.
+        func status(of challenge: Challenge) -> ChallengeStatus {
+            if myCompletedIds.contains(challenge.id) { return .validated }
+            if submittingIds.contains(challenge.id) { return .submitting }
+            if pendingLocalIds.contains(challenge.id) { return .pendingLocal }
+            return .available
         }
 
         /// Challenges sorted by highest points desc, then by title for stability.
@@ -105,7 +124,8 @@ struct ChallengesFeature {
         enum View {
             case closeTapped
             case onTask
-            case validateTapped(Challenge)
+            case markAsDoneTapped(Challenge)
+            case submitForValidationTapped(Challenge)
             case tabChanged(ChallengesTab)
         }
 
@@ -114,7 +134,8 @@ struct ChallengesFeature {
             case challengesUpdated([Challenge])
             case completionsUpdated([ChallengeCompletion])
             case nicknamesFetched([String: String])
-            case completionWriteFailed
+            case completionWriteSucceeded(challengeId: String)
+            case completionWriteFailed(challengeId: String)
         }
     }
 
@@ -155,6 +176,7 @@ struct ChallengesFeature {
             case .view(.onTask):
                 let gameId = state.gameId
                 let hunterIds = state.hunterIds
+                state.pendingLocalIds = PendingChallengeStore.ids(forGame: gameId)
                 return .merge(
                     .run { send in
                         for await challenges in apiClient.challengesStream() {
@@ -172,27 +194,16 @@ struct ChallengesFeature {
                     }
                 )
 
-            case let .view(.validateTapped(challenge)):
-                guard !state.myCompletedIds.contains(challenge.id) else { return .none }
-                state.pendingChallenge = challenge
-                state.destination = .alert(
-                    AlertState {
-                        TextState("Did you send the proof on WhatsApp?")
-                    } actions: {
-                        ButtonState(role: .cancel) {
-                            TextState("Cancel")
-                        }
-                        ButtonState(action: .confirmValidation(challenge)) {
-                            TextState("Confirm")
-                        }
-                    } message: {
-                        TextState("Tap Confirm to validate this challenge.")
-                    }
-                )
+            case let .view(.markAsDoneTapped(challenge)):
+                guard state.status(of: challenge) == .available else { return .none }
+                let gameId = state.gameId
+                state.pendingLocalIds.insert(challenge.id)
+                PendingChallengeStore.add(challenge.id, forGame: gameId)
                 return .none
 
-            case let .destination(.presented(.alert(.confirmValidation(challenge)))):
-                state.pendingChallenge = nil
+            case let .view(.submitForValidationTapped(challenge)):
+                guard state.status(of: challenge) == .pendingLocal else { return .none }
+                state.submittingIds.insert(challenge.id)
                 let gameId = state.gameId
                 let hunterId = state.hunterId
                 let teamName = state.myTeamName
@@ -201,9 +212,10 @@ struct ChallengesFeature {
                 return .run { send in
                     do {
                         try await apiClient.markChallengeCompleted(gameId, hunterId, teamName, challengeId, points)
+                        await send(.internal(.completionWriteSucceeded(challengeId: challengeId)))
                     } catch {
                         logger.error("markChallengeCompleted failed: \(error.localizedDescription)")
-                        await send(.internal(.completionWriteFailed))
+                        await send(.internal(.completionWriteFailed(challengeId: challengeId)))
                     }
                 }
 
@@ -216,13 +228,28 @@ struct ChallengesFeature {
 
             case let .internal(.completionsUpdated(completions)):
                 state.completions = completions
+                // A sibling device validating the same challenge could
+                // resolve the row before the local submit handler does;
+                // drop the pending marker here so the disk store stays
+                // in sync with the server.
+                for id in state.myCompletedIds where state.pendingLocalIds.contains(id) {
+                    state.pendingLocalIds.remove(id)
+                    PendingChallengeStore.remove(id, forGame: state.gameId)
+                }
                 return .none
 
             case let .internal(.nicknamesFetched(nicknames)):
                 state.nicknames = nicknames
                 return .none
 
-            case .internal(.completionWriteFailed):
+            case let .internal(.completionWriteSucceeded(challengeId)):
+                state.submittingIds.remove(challengeId)
+                state.pendingLocalIds.remove(challengeId)
+                PendingChallengeStore.remove(challengeId, forGame: state.gameId)
+                return .none
+
+            case let .internal(.completionWriteFailed(challengeId)):
+                state.submittingIds.remove(challengeId)
                 return .none
             }
         }
@@ -302,8 +329,9 @@ struct ChallengesView: View {
                     ForEach(store.sortedChallenges) { challenge in
                         ChallengeRow(
                             challenge: challenge,
-                            isCompleted: store.myCompletedIds.contains(challenge.id),
-                            onValidate: { store.send(.view(.validateTapped(challenge))) }
+                            status: store.state.status(of: challenge),
+                            onMarkAsDone: { store.send(.view(.markAsDoneTapped(challenge))) },
+                            onSubmit: { store.send(.view(.submitForValidationTapped(challenge))) }
                         )
                     }
                 }
@@ -393,8 +421,45 @@ struct ChallengesView: View {
 
 private struct ChallengeRow: View {
     let challenge: Challenge
-    let isCompleted: Bool
-    let onValidate: () -> Void
+    let status: ChallengeStatus
+    let onMarkAsDone: () -> Void
+    let onSubmit: () -> Void
+
+    private var buttonLabel: String {
+        switch status {
+        case .available: return "Je l'ai fait !"
+        case .pendingLocal: return "Soumettre pour validation"
+        case .submitting: return "…"
+        case .validated: return "✓ Validé"
+        case .rejected: return "Refusé"
+        }
+    }
+
+    private var buttonFill: Color {
+        switch status {
+        case .available: return Color.CROrange
+        case .pendingLocal: return Color.CRPink
+        case .submitting: return Color.CROrange.opacity(0.6)
+        case .validated: return Color.success.opacity(0.15)
+        case .rejected: return Color.gray.opacity(0.2)
+        }
+    }
+
+    private var labelColor: Color {
+        switch status {
+        case .validated: return Color.success
+        case .rejected: return Color.onSurface
+        default: return Color.white
+        }
+    }
+
+    private var buttonAction: () -> Void {
+        switch status {
+        case .available: return onMarkAsDone
+        case .pendingLocal: return onSubmit
+        default: return {}
+        }
+    }
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -412,17 +477,15 @@ private struct ChallengeRow: View {
                     .foregroundStyle(Color.CROrange)
             }
             Spacer()
-            Button(action: onValidate) {
-                Text(isCompleted ? "✓ Done" : "Validate")
+            Button(action: buttonAction) {
+                Text(buttonLabel)
                     .font(.system(size: 13, weight: .bold))
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
-                    .background(
-                        Capsule().fill(isCompleted ? Color.success.opacity(0.15) : Color.CROrange)
-                    )
-                    .foregroundStyle(isCompleted ? Color.success : Color.white)
+                    .background(Capsule().fill(buttonFill))
+                    .foregroundStyle(labelColor)
             }
-            .disabled(isCompleted)
+            .disabled(status == .submitting || status == .validated || status == .rejected)
         }
         .padding(12)
         .background(
@@ -431,9 +494,9 @@ private struct ChallengeRow: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(isCompleted ? Color.success : Color.gray.opacity(0.2), lineWidth: isCompleted ? 2 : 1)
+                .stroke(status == .validated ? Color.success : Color.gray.opacity(0.2), lineWidth: status == .validated ? 2 : 1)
         )
-        .neonGlow(isCompleted ? Color.success : Color.clear, intensity: .medium)
+        .neonGlow(status == .validated ? Color.success : Color.clear, intensity: .medium)
     }
 }
 

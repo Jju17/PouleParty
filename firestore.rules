@@ -68,18 +68,15 @@ service cloud.firestore {
       // client-side update rule for `winners` exists anymore — any
       // attempt to write the field directly is denied by default.
 
-      // Only game participants can update power-up active effect fields.
-      // `gameMasterIds` is admin-SDK only — the chicken can't self-promote
-      // a GM via this path (PP-23). `chickenId` is gated by a dedicated
-      // rule below (PP-26). CRIT-3 (audit 2026-05-17) added `winners`
-      // and `hunterIds` to the deny list so a hunter can't bypass the
-      // dedicated hunterIds rule above or write winners through this
-      // permissive path (winners is callable-CF only now).
+      // Allow-list: only `status` (chicken cancels) and `lastHeartbeat`
+      // (heartbeat ping) are writable by participants. Power-up activation
+      // goes through the `activatePowerUp` callable; everything else on
+      // the Game doc is admin-SDK only or routed through dedicated rules.
       allow update: if request.auth != null
                     && (request.auth.uid == resource.data.creatorId
                         || request.auth.uid in resource.data.hunterIds)
-                    && !request.resource.data.diff(resource.data).affectedKeys()
-                        .hasAny(['gameMasterIds', 'chickenId', 'winners', 'hunterIds']);
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['status', 'lastHeartbeat']);
 
       // GameMaster (or the creator as a fallback when no GM has joined
       // yet) re-designates the chicken before the game starts. Single
@@ -97,14 +94,13 @@ service cloud.firestore {
                     && request.resource.data.chickenId.size() > 0
                     && !request.resource.data.hunterIds.hasAny([request.resource.data.chickenId]);
 
-      // Only the creator can update other game settings. `gameMasterIds`
-      // is admin-SDK only — `joinAsGameMaster` (PP-70) is the only path
-      // that mutates it. `chickenId` is gated by the dedicated PP-26
-      // rule above. CRIT-3 (audit 2026-05-17) added `winners` so the
-      // creator can't bypass the callable-only contract for winner
-      // submissions either.
+      // Creator-only settings edit, frozen once the game starts.
+      // `gameMasterIds` mutates only via `joinAsGameMaster`; `chickenId`
+      // goes through the dedicated rule above; `winners` is callable-only.
+      // `readyToLaunch` is listed for forward-compat with PP-71.
       allow update: if request.auth != null
                     && resource.data.creatorId == request.auth.uid
+                    && resource.data.status in ['waiting', 'readyToLaunch']
                     && !request.resource.data.diff(resource.data).affectedKeys()
                         .hasAny(['gameMasterIds', 'chickenId', 'winners']);
 
@@ -120,17 +116,17 @@ service cloud.firestore {
         allow read, write: if false;
       }
 
-      // Chicken locations subcollection. GameMasters (PP-23) read the
-      // chicken's location regardless of `gameMode` — they need it for
-      // the validator carte, even in `stayInTheZone` where hunters are
-      // blind to it. Writes are gated by the dedicated `chickenId`
-      // (PP-26): the chicken is the player designated by that field,
-      // not necessarily the creator.
+      // Hunter reads are gated by `gameMode` and the `invisible` flag —
+      // a modified client must NOT see the chicken's GPS in stayInTheZone
+      // or during invisibility. Creator (the chicken) and GameMasters
+      // keep unconditional access.
       match /chickenLocations/{docId} {
         allow read: if request.auth != null
                     && (request.auth.uid == get(/databases/$(database)/documents/games/$(gameId)).data.creatorId
-                        || request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.hunterIds
-                        || request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.get('gameMasterIds', []));
+                        || request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.get('gameMasterIds', [])
+                        || (request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.hunterIds
+                            && get(/databases/$(database)/documents/games/$(gameId)).data.gameMode == 'followTheChicken'
+                            && resource.data.get('invisible', false) == false));
         allow create, update: if request.auth != null
                       && request.auth.uid == get(/databases/$(database)/documents/games/$(gameId)).data.chickenId
                       && request.resource.data.keys().hasAll(['location', 'timestamp']);
@@ -200,9 +196,14 @@ service cloud.firestore {
       match /challengeCompletions/{hunterId} {
         allow read: if request.auth != null
                     && request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.hunterIds;
+        // Hunter self-writes blocked post-endDate so a cheater can't
+        // rack up points after the leaderboard freezes. PP-25 will add
+        // a validator clause that is NOT time-gated.
         allow create, update: if request.auth != null
                       && request.auth.uid == hunterId
-                      && request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.hunterIds;
+                      && request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.hunterIds
+                      && request.time.toMillis()
+                           < get(/databases/$(database)/documents/games/$(gameId)).data.timing.end.toMillis();
         allow delete: if false;
       }
 
@@ -216,18 +217,14 @@ service cloud.firestore {
         // never create power-ups — prevents anti-cheat gaps and drift between
         // chicken app state and Firestore.
         allow create: if false;
-        // Collection: only if not already collected, and collectedBy must match the user
+        // Collection only: set collectedBy + collectedAt by the collector.
+        // Activation goes through the `activatePowerUp` callable so the
+        // duration is server-authoritative.
         allow update: if request.auth != null
-                      && (
-                        // Collecting: set collectedBy + collectedAt (only if not already collected)
-                        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['collectedBy', 'collectedAt'])
-                         && request.resource.data.collectedBy == request.auth.uid
-                         && resource.data.get('collectedBy', null) == null)
-                        ||
-                        // Activating: set activatedAt/expiresAt (only by the collector)
-                        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['activatedAt', 'expiresAt'])
-                         && resource.data.get('collectedBy', null) == request.auth.uid)
-                      );
+                      && request.resource.data.diff(resource.data).affectedKeys()
+                          .hasOnly(['collectedBy', 'collectedAt'])
+                      && request.resource.data.collectedBy == request.auth.uid
+                      && resource.data.get('collectedBy', null) == null;
         allow delete: if false;
       }
     }

@@ -636,33 +636,24 @@ class FirestoreRepository @Inject constructor(
     }
 
     /**
-     * Activates a collected power-up atomically. Sets `activatedAt` / `expiresAt`
-     * on the power-up doc AND, if [activeEffectField] is non-null, sets
-     * `powerUps.activeEffects.<field>` on the game doc — both in a single
-     * Firestore transaction so the state never drifts (no half-activated
-     * power-up with no visible effect).
+     * Activates a collected power-up via the `activatePowerUp` callable.
+     * Trailing [activeEffectField] / [expiresAt] are ignored — duration
+     * is server-authoritative.
      */
     suspend fun activatePowerUp(
         gameId: String,
         powerUpId: String,
-        activeEffectField: String?,
-        expiresAt: Timestamp
+        @Suppress("UNUSED_PARAMETER") activeEffectField: String?,
+        @Suppress("UNUSED_PARAMETER") expiresAt: Timestamp
     ) {
         withRetry("activatePowerUp($gameId, $powerUpId)") {
-            val puRef = firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
-                .collection(AppConstants.SUBCOLLECTION_POWER_UPS).document(powerUpId)
-            val gameRef = firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
-            firestore.runTransaction { txn ->
-                val now = Timestamp.now()
-                txn.update(puRef, mapOf(
-                    "activatedAt" to now,
-                    "expiresAt" to expiresAt
+            functions
+                .getHttpsCallable("activatePowerUp")
+                .call(mapOf(
+                    "gameId" to gameId,
+                    "powerUpId" to powerUpId,
                 ))
-                if (activeEffectField != null) {
-                    txn.update(gameRef, activeEffectField, expiresAt)
-                }
-                null
-            }.await()
+                .await()
         }
     }
 

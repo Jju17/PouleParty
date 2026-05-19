@@ -44,12 +44,8 @@ const EMPTY_FORM: FormState = {
   nicknameAlt: "",
 };
 
-// F3 (review 2026-05-19): mirror the server-side regex in
-// `functions/src/registrations.ts:validatePayload`. The previous client
-// regex `/^\S+@\S+\.\S+$/` was looser and let strings like
-// `a@b.com,c@d.com` pass client validation only to be 400-rejected by
-// the server — confusing UX. Same char-class on both sides keeps the
-// rejection inline at the form layer.
+// Mirrors the server-side regex in `functions/src/registrations.ts`
+// so a paste like `a@b.com,c@d.com` fails inline instead of 400-ing.
 const EMAIL_REGEX = /^[^\s@,]+@[^\s@,]+\.[^\s@,]+$/;
 
 function isFormValid(form: FormState): form is FormState & { teamSize: TeamSize } {

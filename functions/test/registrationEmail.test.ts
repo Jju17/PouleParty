@@ -8,12 +8,6 @@ import {
   type RegistrationSnapshot,
 } from "../src/email/registrationConfirmation";
 
-// PP-52 — coverage for the Resend email template. We don't deliver any
-// emails here; we render the HTML + plain-text body in memory and pin the
-// invariants that matter at the inbox: locale routing, HTML escaping
-// (avoid XSS on the user's own name → mailbox view), deeplink encoding,
-// and absence of unresolved template placeholders.
-
 function snapshot(overrides: Partial<RegistrationSnapshot> = {}): RegistrationSnapshot {
   return {
     registrationId: "abc123registrationId",
@@ -27,8 +21,6 @@ function snapshot(overrides: Partial<RegistrationSnapshot> = {}): RegistrationSn
     ...overrides,
   };
 }
-
-// ─── pickStrings — locale routing ─────────────────────────────────────
 
 describe("pickStrings", () => {
   test("returns the FR pack by default", () => {
@@ -51,17 +43,12 @@ describe("pickStrings", () => {
   });
 
   test("falls back to FR for unknown locales", () => {
-    // D-Day audience is FR-first; an unexpected `locale` value (corrupt
-    // doc, future store-of-record drift) should never blow up — fall back
-    // to the friendliest pack.
     expect(pickStrings("de").lang).toBe("fr");
     expect(pickStrings("").lang).toBe("fr");
-    expect(pickStrings("EN").lang).toBe("fr"); // case-sensitive on purpose
+    expect(pickStrings("EN").lang).toBe("fr");
     expect(pickStrings("garbage").lang).toBe("fr");
   });
 });
-
-// ─── escapeHtml — XSS guard ───────────────────────────────────────────
 
 describe("escapeHtml", () => {
   test("escapes the five HTML-significant characters", () => {
@@ -73,8 +60,6 @@ describe("escapeHtml", () => {
   });
 
   test("escapes a <script> injection attempt", () => {
-    // The mail client renders our HTML; a malicious teamName must not
-    // become a live <script> tag in the inbox.
     expect(escapeHtml("<script>alert(1)</script>")).toBe(
       "&lt;script&gt;alert(1)&lt;/script&gt;"
     );
@@ -87,22 +72,16 @@ describe("escapeHtml", () => {
   });
 });
 
-// ─── deeplinkFor — URL encoding ───────────────────────────────────────
-
 describe("deeplinkFor", () => {
   test("builds the canonical pouleparty.be/join?code=… URL", () => {
     expect(deeplinkFor("ABCD23")).toBe("https://pouleparty.be/join?code=ABCD23");
   });
 
   test("URL-encodes characters that would break the query string", () => {
-    // generateCode() never emits these, but if a code is ever overridden
-    // from the console (debug / manual reissue) the URL must still parse.
     expect(deeplinkFor("AB CD")).toBe("https://pouleparty.be/join?code=AB%20CD");
     expect(deeplinkFor("A&B=C")).toBe("https://pouleparty.be/join?code=A%26B%3DC");
   });
 });
-
-// ─── renderHtml ───────────────────────────────────────────────────────
 
 describe("renderHtml", () => {
   test("includes the validation code, team name, player name", () => {
@@ -126,8 +105,6 @@ describe("renderHtml", () => {
   });
 
   test("HTML-escapes a name containing < > characters (XSS guard)", () => {
-    // The greeting wraps `escapeHtml(name)` in <strong>; if someone slips
-    // `<script>` into playerName via a curl bypass, we must not render it.
     const { strings } = pickStrings("fr");
     const html = renderHtml(snapshot({ playerName: "<script>alert(1)</script>" }), strings, "fr");
     expect(html).not.toContain("<script>alert(1)</script>");
@@ -145,11 +122,7 @@ describe("renderHtml", () => {
     for (const locale of ["fr", "en", "nl"] as const) {
       const { strings } = pickStrings(locale);
       const html = renderHtml(snapshot({ locale }), strings, locale);
-      // template literal substitution leaves no ${…}; presence of one
-      // means a string interpolation slipped through as a literal.
       expect(html).not.toMatch(/\$\{[^}]+\}/);
-      // i18n placeholder convention is `{name}`; we use no such tokens
-      // in the email template, so any survivor is a bug.
       expect(html).not.toMatch(/\{[a-zA-Z]+\}/);
     }
   });
@@ -162,8 +135,6 @@ describe("renderHtml", () => {
   });
 });
 
-// ─── renderText — plain-text fallback ─────────────────────────────────
-
 describe("renderText", () => {
   test("contains the validation code and the deeplink", () => {
     const { strings } = pickStrings("fr");
@@ -175,8 +146,6 @@ describe("renderText", () => {
   test("strips HTML tags from interpolated strings", () => {
     const { strings } = pickStrings("fr");
     const text = renderText(snapshot(), strings);
-    // The HTML strings include <strong>…</strong>; the text fallback must
-    // not surface tags to the user's plain-text reader.
     expect(text).not.toMatch(/<[a-z][^>]*>/);
   });
 
@@ -192,8 +161,6 @@ describe("renderText", () => {
     expect(text).toContain("regXYZ");
   });
 });
-
-// ─── localization parity — every pack has all fields filled ──────────
 
 describe("STRINGS parity", () => {
   test("each locale renders a non-empty subject and dDay", () => {

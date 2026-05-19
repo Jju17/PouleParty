@@ -7,14 +7,6 @@ import {
   validatePayload,
 } from "../src/registrations";
 
-// PP-52 — unit coverage for the pure helpers in `src/registrations.ts`.
-// The Firestore transaction + Stripe Checkout calls are not testable here
-// (would need the emulator); these tests pin the parts that ran zero
-// coverage before the 1.13.0 release: input validation, formula injection
-// guard, code-alphabet readability, locale routing, CORS origin echo.
-
-// ─── validatePayload ───────────────────────────────────────────────────
-
 function basePayload(overrides: Record<string, unknown> = {}): unknown {
   return {
     batchId: "game-06-06-2026",
@@ -144,20 +136,17 @@ describe("validatePayload — email", () => {
   });
 
   test("rejects email longer than 254 chars (RFC 5321)", () => {
-    // 255 chars total → strictly greater than MAX_EMAIL_LEN (254).
     const long = `${"x".repeat(251)}@a.b`;
     expect(() => validatePayload(basePayload({ email: long }))).toThrow(/email/);
   });
 
   test("accepts email at exactly the 254-char boundary", () => {
-    const exact = `${"x".repeat(250)}@a.b`; // 250 + 4 = 254
+    const exact = `${"x".repeat(250)}@a.b`;
     expect(exact.length).toBe(254);
     expect(() => validatePayload(basePayload({ email: exact }))).not.toThrow();
   });
 
   test("rejects email containing CR/LF (header injection)", () => {
-    // Resend POSTs over HTTP; CR/LF in the `to` array would let an attacker
-    // smuggle a `Bcc: victim@…` header. The tight regex excludes \s entirely.
     expect(() => validatePayload(basePayload({ email: "foo@bar.com\r\nBcc: x@y.com" }))).toThrow(/email/);
     expect(() => validatePayload(basePayload({ email: "foo@bar.com\nBcc: x@y.com" }))).toThrow(/email/);
   });
@@ -181,18 +170,12 @@ describe("validatePayload — email", () => {
   });
 });
 
-describe("validatePayload — phone (F1 + F2 refactor 2026-05-19)", () => {
-  // The formula-injection guard moved to `sheets.ts:escapeForSheet`
-  // (covered in test/sheets.test.ts). Firestore now stores the canonical
-  // phone; these tests pin that nothing leaks a leading quote into the
-  // store-of-record any more.
-
+describe("validatePayload — phone", () => {
   test("stores a plain local-format phone unmodified", () => {
     expect(validatePayload(basePayload({ phone: "0477123456" })).phone).toBe("0477123456");
   });
 
   test("stores an international-format phone unmodified (no leading quote)", () => {
-    // Previously this was stored as `'+32477123456` — F2 regression guard.
     expect(validatePayload(basePayload({ phone: "+32477123456" })).phone).toBe("+32477123456");
   });
 
@@ -212,7 +195,6 @@ describe("validatePayload — phone (F1 + F2 refactor 2026-05-19)", () => {
   });
 
   test("truncates phone longer than MAX_PHONE_LEN (20) before regex check", () => {
-    // 30 chars of digits is truncated to 20 → still matches /^[+\d\s().-]{6,20}$/
     const out = validatePayload(basePayload({ phone: "1".repeat(30) }));
     expect(out.phone.length).toBe(20);
   });
@@ -262,7 +244,7 @@ describe("validatePayload — locale fallback", () => {
 });
 
 describe("validatePayload — consent", () => {
-  test("rejects missing consentAcknowledgedAt (CRD Art. 8(2))", () => {
+  test("rejects missing consentAcknowledgedAt", () => {
     const p = basePayload();
     delete (p as Record<string, unknown>).consentAcknowledgedAt;
     expect(() => validatePayload(p)).toThrow(/consentAcknowledgedAt/);
@@ -286,8 +268,6 @@ describe("validatePayload — consent", () => {
   });
 });
 
-// ─── generateCode ──────────────────────────────────────────────────────
-
 describe("generateCode", () => {
   test("returns a 6-character string", () => {
     for (let i = 0; i < 200; i += 1) {
@@ -297,9 +277,6 @@ describe("generateCode", () => {
   });
 
   test("every character is drawn from the readable alphabet (no 0 / O / 1 / I)", () => {
-    // The alphabet skips ambiguous glyphs so the user can read it from the
-    // confirmation email at the bar on D-Day. Regression guard if anyone
-    // adds them back.
     expect(CODE_ALPHABET).not.toContain("0");
     expect(CODE_ALPHABET).not.toContain("O");
     expect(CODE_ALPHABET).not.toContain("1");
@@ -315,9 +292,6 @@ describe("generateCode", () => {
   });
 
   test("produces high entropy (no collisions across 5000 draws)", () => {
-    // 32^6 ≈ 1.07 B space → birthday collision near √N ≈ 32k. 5000 draws
-    // should never collide. A failure here usually means generateCode is
-    // back to Math.random() (which has known weaknesses post seed-recovery).
     const seen = new Set<string>();
     for (let i = 0; i < 5000; i += 1) {
       seen.add(generateCode());
@@ -325,8 +299,6 @@ describe("generateCode", () => {
     expect(seen.size).toBe(5000);
   });
 });
-
-// ─── originFor — CORS / redirect URL allowlist ─────────────────────────
 
 function reqWithOrigin(origin: string | string[] | undefined) {
   return { headers: { origin } as Record<string, string | string[] | undefined> };
@@ -345,7 +317,6 @@ describe("originFor", () => {
   });
 
   test("falls back to prod for an unknown origin", () => {
-    // A spoofed Origin can't redirect Stripe's success_url to attacker.com.
     expect(originFor(reqWithOrigin("https://evil.example"))).toBe("https://pouleparty.be");
   });
 
@@ -354,11 +325,7 @@ describe("originFor", () => {
   });
 
   test("falls back when Origin header is an array (multi-value)", () => {
-    expect(originFor(reqWithOrigin(["https://pouleparty.be"]))).toBe("https://pouleparty.be" === "https://pouleparty.be"
-      ? "https://pouleparty.be"
-      : "https://pouleparty.be");
-    // Real assertion: arrays aren't typeof === "string", so they fail the
-    // allowlist check and fall back to prod even when the value looks valid.
+    // Arrays fail the typeof === "string" check and fall back to prod.
     expect(originFor(reqWithOrigin(["https://pouleparty.be"]))).toBe("https://pouleparty.be");
   });
 
@@ -368,8 +335,6 @@ describe("originFor", () => {
     expect(originFor(reqWithOrigin("http://pouleparty.be"))).toBe("https://pouleparty.be");
   });
 });
-
-// ─── basePathForLocale ─────────────────────────────────────────────────
 
 describe("basePathForLocale", () => {
   test("maps each known locale to its slug", () => {

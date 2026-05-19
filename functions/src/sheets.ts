@@ -49,17 +49,8 @@ const HEADER_ROW = [
 
 const REFUND_HEADER_CELLS = ["refunded", "refundedAt"];
 
-/**
- * F1 + F2 (review 2026-05-19): defuse Google Sheets formula injection at
- * the only boundary where it actually matters. Sheets writes use
- * `valueInputOption: USER_ENTERED` which evaluates `+`, `-`, `=`, `@`
- * prefixes as formulas. The phone validator already restricts phone chars
- * to `[+\d\s().-]`, so only `+` and `-` can reach this writer — but a
- * future field (e.g. teamName, playerName) could legitimately start with
- * any of the four formula prefixes, so the helper covers all of them.
- *
- * Exported for unit tests.
- */
+// Sheets `USER_ENTERED` evaluates `+`, `-`, `=`, `@` prefixes as
+// formulas; the leading `'` keeps the cell literal.
 export function escapeForSheet(value: string): string {
   return /^[=+\-@]/.test(value) ? `'${value}` : value;
 }
@@ -161,10 +152,6 @@ export async function appendRegistrationRow(
           nowIso,
           reg.registrationId,
           reg.batchId,
-          // F2: escape every free-text field — Firestore is the canonical
-          // store, the Sheet is presentational, so the quote-prefix lives
-          // here. registrationId / batchId / email / code are generated
-          // server-side and can't start with a formula char.
           escapeForSheet(reg.playerName),
           escapeForSheet(reg.teamName),
           reg.email,

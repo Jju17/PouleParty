@@ -48,7 +48,6 @@ const ALLOWED_ORIGINS = new Set([
   "http://localhost:5173",
 ]);
 
-// Exported for unit tests — see `test/registrations.test.ts`.
 export function originFor(req: { headers: Record<string, string | string[] | undefined> }): string {
   const raw = req.headers.origin;
   const origin = typeof raw === "string" ? raw : undefined;
@@ -65,7 +64,6 @@ const LOCALE_BASE_PATH: Record<string, string> = {
   nl: "/inschrijving",
 };
 
-// Exported for unit tests — see `test/registrations.test.ts`.
 export function basePathForLocale(locale: string): string {
   return LOCALE_BASE_PATH[locale] ?? LOCALE_BASE_PATH.fr;
 }
@@ -136,7 +134,6 @@ const MAX_NAME_LEN = 60;
 const MAX_EMAIL_LEN = 254; // RFC 5321
 const MAX_PHONE_LEN = 20;
 
-// Exported for unit tests — see `test/registrations.test.ts`.
 export function validatePayload(body: unknown): RegistrationFormPayload {
   if (!body || typeof body !== "object") {
     throw new Error("Missing request body");
@@ -185,13 +182,6 @@ export function validatePayload(body: unknown): RegistrationFormPayload {
   if (!phone || !/^[+\d\s().-]{6,20}$/.test(phone)) {
     throw new Error("phone is required");
   }
-  // F2 (review 2026-05-19): formula-injection guard moved to `sheets.ts`.
-  // Firestore stores the canonical phone (no leading quote); the Sheet
-  // writer prepends `'` at the boundary where it actually matters.
-  // F1 (review 2026-05-19): the `=` / `@` branches of the previous guard
-  // were dead code — those chars are not in the phone regex char class
-  // and never reach the formula check. The Sheet writer now only checks
-  // for `+` / `-`, the two prefixes that can survive the phone regex.
 
   const teamSizeRaw = typeof b.teamSize === "number" ? b.teamSize : Number(b.teamSize);
   const teamSize = ALLOWED_TEAM_SIZES.find((s) => s === teamSizeRaw);
@@ -218,7 +208,6 @@ export function validatePayload(body: unknown): RegistrationFormPayload {
 // code stays readable when typed from the email at the bar.
 export const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
-// Exported for unit tests — see `test/registrations.test.ts`.
 export function generateCode(): string {
   // CRIT-5 (audit 2026-05-17): use `crypto.randomInt` instead of
   // `Math.random()`. V8's PRNG is xorshift128+, which is non-cryptographic

@@ -20,6 +20,10 @@ type SeedChallenge = {
   title: string;
   body: string;
   points: number;
+  type?: "oneShot" | "repeatable";
+  location?: admin.firestore.GeoPoint;
+  proximityRadiusMeters?: number;
+  partner?: string;
 };
 
 const challenges: SeedChallenge[] = [

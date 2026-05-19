@@ -18,6 +18,7 @@ enum AppConstants {
     static let prefUserNickname = "userNickname"
     static let prefIsMusicMuted = "isMusicMuted"
     static let prefLastMigratedVersion = "lastMigratedVersion"
+    static let prefPendingChallenges = "pendingChallenges"
 
     // MARK: - Time Intervals
     static let locationThrottleSeconds: TimeInterval = 5

@@ -92,10 +92,14 @@ struct ChallengesFeatureTests {
         }
     }
 
-    // MARK: - Validation flow
+    // MARK: - Validation flow (2-tap)
 
-    @Test func validateTappedPresentsConfirmAlert() async {
+    @Test func markAsDoneMovesChallengeToPendingLocal() async {
         let challenge = makeChallenge(id: "c1", title: "Run", body: "Run fast", points: 50)
+        let suite = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        PendingChallengeStore.inject(suite)
+        defer { PendingChallengeStore.resetForTesting() }
+
         let store = TestStore(
             initialState: ChallengesFeature.State(
                 gameId: "g",
@@ -107,26 +111,13 @@ struct ChallengesFeatureTests {
             ChallengesFeature()
         }
 
-        await store.send(.view(.validateTapped(challenge))) {
-            $0.pendingChallenge = challenge
-            $0.destination = .alert(
-                AlertState {
-                    TextState("Did you send the proof on WhatsApp?")
-                } actions: {
-                    ButtonState(role: .cancel) {
-                        TextState("Cancel")
-                    }
-                    ButtonState(action: .confirmValidation(challenge)) {
-                        TextState("Confirm")
-                    }
-                } message: {
-                    TextState("Tap Confirm to validate this challenge.")
-                }
-            )
+        await store.send(.view(.markAsDoneTapped(challenge))) {
+            $0.pendingLocalIds = ["c1"]
         }
+        #expect(PendingChallengeStore.ids(forGame: "g") == ["c1"])
     }
 
-    @Test func validateTappedForAlreadyCompletedChallengeIsNoop() async {
+    @Test func markAsDoneForAlreadyCompletedChallengeIsNoop() async {
         let challenge = makeChallenge(id: "c1")
         let completion = makeCompletion(hunterId: "me", ids: ["c1"], total: 10, teamName: "Me")
         let store = TestStore(
@@ -141,12 +132,16 @@ struct ChallengesFeatureTests {
             ChallengesFeature()
         }
 
-        await store.send(.view(.validateTapped(challenge)))
-        // No state change — TestStore exhaustivity confirms this.
+        await store.send(.view(.markAsDoneTapped(challenge)))
     }
 
-    @Test func confirmValidationInvokesMarkChallengeCompleted() async {
+    @Test func submitForValidationInvokesMarkChallengeCompleted() async {
         let challenge = makeChallenge(id: "c1", points: 25)
+        let suite = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        PendingChallengeStore.inject(suite)
+        defer { PendingChallengeStore.resetForTesting() }
+        PendingChallengeStore.add("c1", forGame: "g1")
+
         let gotWrite = LockIsolated<(String, String, String, String, Int)?>(nil)
 
         var state = ChallengesFeature.State(
@@ -156,16 +151,7 @@ struct ChallengesFeatureTests {
             myTeamName: "Team Me",
             challenges: [challenge]
         )
-        state.pendingChallenge = challenge
-        state.destination = .alert(
-            AlertState {
-                TextState("Did you send the proof on WhatsApp?")
-            } actions: {
-                ButtonState(action: .confirmValidation(challenge)) {
-                    TextState("Confirm")
-                }
-            }
-        )
+        state.pendingLocalIds = ["c1"]
 
         let store = TestStore(initialState: state) {
             ChallengesFeature()
@@ -175,11 +161,13 @@ struct ChallengesFeatureTests {
             }
         }
 
-        await store.send(.destination(.presented(.alert(.confirmValidation(challenge))))) {
-            $0.pendingChallenge = nil
-            $0.destination = nil
+        await store.send(.view(.submitForValidationTapped(challenge))) {
+            $0.submittingIds = ["c1"]
         }
-        await store.finish()
+        await store.receive(\.internal.completionWriteSucceeded) {
+            $0.submittingIds = []
+            $0.pendingLocalIds = []
+        }
 
         let captured = gotWrite.value
         #expect(captured?.0 == "g1")
@@ -187,6 +175,7 @@ struct ChallengesFeatureTests {
         #expect(captured?.2 == "Team Me")
         #expect(captured?.3 == "c1")
         #expect(captured?.4 == 25)
+        #expect(PendingChallengeStore.ids(forGame: "g1").isEmpty)
     }
 
     // MARK: - Leaderboard sorting & current hunter highlight

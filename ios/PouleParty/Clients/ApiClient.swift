@@ -668,23 +668,17 @@ extension ApiClient: DependencyKey {
                 }
             }
         },
-        activatePowerUp: { gameId, powerUpId, activeEffectField, expiresAt in
+        activatePowerUp: { gameId, powerUpId, _, _ in
+            // Trailing `activeEffectField` / `expiresAt` are ignored —
+            // duration is server-authoritative via the callable.
             try await withRetry("activatePowerUp(\(gameId), \(powerUpId))") {
-                let db = Firestore.firestore()
-                let puRef = db.collection(gamesCollection).document(gameId)
-                    .collection(powerUpsSubcollection).document(powerUpId)
-                let gameRef = db.collection(gamesCollection).document(gameId)
-                _ = try await db.runTransaction { transaction, _ in
-                    let now = Timestamp(date: .now)
-                    transaction.updateData([
-                        "activatedAt": now,
-                        "expiresAt": expiresAt
-                    ], forDocument: puRef)
-                    if let field = activeEffectField {
-                        transaction.updateData([field: expiresAt], forDocument: gameRef)
-                    }
-                    return nil
-                }
+                let functions = Functions.functions(region: "europe-west1")
+                _ = try await functions
+                    .httpsCallable("activatePowerUp")
+                    .call([
+                        "gameId": gameId,
+                        "powerUpId": powerUpId,
+                    ])
             }
         },
         powerUpsStream: { gameId in

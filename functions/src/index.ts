@@ -55,6 +55,8 @@ export { processAccountDeletion } from "./accountDeletion";
 // /private/security (no longer leaked on the public Game doc).
 export { submitFoundCode, getFoundCode } from "./gameplay";
 
+export { activatePowerUp } from "./powerUps";
+
 // Use Application Default Credentials so each deployed function
 // writes to the project it was deployed to. The previous hardcoded
 // `service-account.json` was always pointing at prod, which made
