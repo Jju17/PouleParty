@@ -20,7 +20,7 @@ struct Challenge: Codable, Equatable, Identifiable {
     var proximityRadiusMeters: Int? = nil
     var partner: String? = nil
 
-    var id: String { firestoreId ?? UUID().uuidString }
+    var id: String { firestoreId ?? "challenge::\(title)::\(points)" }
 
     enum ChallengeType: String, Codable, CaseIterable, Equatable {
         case oneShot
@@ -66,9 +66,6 @@ struct Challenge: Codable, Equatable, Identifiable {
         self.partner = partner
     }
 
-    // Missing keys default rather than throwing so legacy docs that
-    // pre-date the type/location/proximityRadiusMeters/partner fields
-    // decode cleanly until the migration backfills them.
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         firestoreId = try c.decodeIfPresent(String.self, forKey: .firestoreId)

@@ -92,7 +92,7 @@ struct ChickenMapView: View {
                         }
                 }
             }
-            .overlay(alignment: .topTrailing) {
+            .overlay(alignment: .bottomTrailing) {
                 ZStack(alignment: .topTrailing) {
                     Button {
                         store.send(.view(.validationQueueTapped))
@@ -117,22 +117,10 @@ struct ChickenMapView: View {
                     }
                 }
                 .padding(.trailing, 16)
-                .padding(.top, 80)
+                .padding(.bottom, 96)
             }
-            .sheet(isPresented: Binding(
-                get: { store.showValidationQueue },
-                set: { if !$0 { store.send(.view(.validationQueueDismissed)) } }
-            )) {
-                ValidationQueueView(
-                    store: Store(
-                        initialState: ValidationQueueFeature.State(
-                            gameId: store.game.id,
-                            hunterIds: store.game.hunterIds
-                        )
-                    ) {
-                        ValidationQueueFeature()
-                    }
-                )
+            .sheet(item: $store.scope(state: \.validationQueue, action: \.validationQueue)) { vqStore in
+                ValidationQueueView(store: vqStore)
             }
             .mapCommonOverlays(store.state)
             .overlay {

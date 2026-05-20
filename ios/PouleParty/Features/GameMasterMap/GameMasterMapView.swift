@@ -66,20 +66,8 @@ struct GameMasterMapView: View {
                 .padding(.horizontal, 16)
                 .padding(.bottom, 8)
             }
-            .sheet(isPresented: Binding(
-                get: { store.showValidationQueue },
-                set: { if !$0 { store.send(.view(.validationQueueDismissed)) } }
-            )) {
-                ValidationQueueView(
-                    store: Store(
-                        initialState: ValidationQueueFeature.State(
-                            gameId: store.game.id,
-                            hunterIds: store.game.hunterIds
-                        )
-                    ) {
-                        ValidationQueueFeature()
-                    }
-                )
+            .sheet(item: $store.scope(state: \.validationQueue, action: \.validationQueue)) { vqStore in
+                ValidationQueueView(store: vqStore)
             }
             .task {
                 store.send(.view(.onTask))

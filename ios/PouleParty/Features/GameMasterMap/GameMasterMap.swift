@@ -21,6 +21,7 @@ struct GameMasterMapFeature {
 
     @ObservableState
     struct State: Equatable {
+        @Presents var validationQueue: ValidationQueueFeature.State?
         var game: Game
         var chickenLocation: CLLocationCoordinate2D?
         var chickenIsInvisible: Bool = false
@@ -37,7 +38,6 @@ struct GameMasterMapFeature {
         var mapCircle: CircleOverlay?
         var showGameInfo: Bool = false
         var showHuntersDrawer: Bool = false
-        var showValidationQueue: Bool = false
         var pendingSubmissionsCount: Int = 0
         var winnerNotification: String? = nil
         var countdownNumber: Int? = nil
@@ -68,6 +68,7 @@ struct GameMasterMapFeature {
         case binding(BindingAction<State>)
         case delegate(Delegate)
         case `internal`(Internal)
+        case validationQueue(PresentationAction<ValidationQueueFeature.Action>)
         case view(View)
 
         @CasePathable
@@ -78,7 +79,6 @@ struct GameMasterMapFeature {
             case huntersDrawerTapped
             case huntersDrawerDismissed
             case validationQueueTapped
-            case validationQueueDismissed
             case leaveGameTapped
             // PP-86
             case designateHunterTapped(Registration)
@@ -248,10 +248,12 @@ struct GameMasterMapFeature {
                 state.showHuntersDrawer = false
                 return .none
             case .view(.validationQueueTapped):
-                state.showValidationQueue = true
+                state.validationQueue = ValidationQueueFeature.State(
+                    gameId: state.game.id,
+                    hunterIds: state.game.hunterIds
+                )
                 return .none
-            case .view(.validationQueueDismissed):
-                state.showValidationQueue = false
+            case .validationQueue:
                 return .none
             case let .internal(.pendingSubmissionsUpdated(count)):
                 state.pendingSubmissionsCount = count
@@ -299,6 +301,9 @@ struct GameMasterMapFeature {
                 state.designationError = message
                 return .none
             }
+        }
+        .ifLet(\.$validationQueue, action: \.validationQueue) {
+            ValidationQueueFeature()
         }
     }
 }

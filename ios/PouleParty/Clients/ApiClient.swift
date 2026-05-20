@@ -930,8 +930,11 @@ extension ApiClient: DependencyKey {
                             return
                         }
                         let challenges = documents.compactMap { doc -> Challenge? in
-                            do { return try doc.data(as: Challenge.self) }
-                            catch {
+                            do {
+                                var challenge = try doc.data(as: Challenge.self)
+                                challenge.firestoreId = doc.documentID
+                                return challenge
+                            } catch {
                                 logger.error("Failed to decode Challenge \(doc.documentID): \(error.localizedDescription)")
                                 return nil
                             }

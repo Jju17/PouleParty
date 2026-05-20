@@ -19,6 +19,7 @@ struct ChickenMapFeature {
     @ObservableState
     struct State: Equatable {
         @Presents var destination: Destination.State?
+        @Presents var validationQueue: ValidationQueueFeature.State?
         var game: Game
         var hunterAnnotations: [HunterAnnotation] = []
         var nextRadiusUpdate: Date?
@@ -48,7 +49,6 @@ struct ChickenMapFeature {
         /// effect cancels (no more `chickenLocations` writes).
         var isGameOver: Bool = false
 
-        var showValidationQueue: Bool = false
         var pendingSubmissionsCount: Int = 0
 
         /// CRIT-2 (audit 2026-05-17): the 4-digit code the chicken
@@ -98,6 +98,7 @@ struct ChickenMapFeature {
         case destination(PresentationAction<Destination.Action>)
         case `internal`(Internal)
         case powerUps(MapPowerUpsFeature.Action)
+        case validationQueue(PresentationAction<ValidationQueueFeature.Action>)
         case view(View)
 
         @CasePathable
@@ -119,7 +120,6 @@ struct ChickenMapFeature {
             case infoButtonTapped
             case onTask
             case validationQueueTapped
-            case validationQueueDismissed
         }
 
         @CasePathable
@@ -451,10 +451,12 @@ struct ChickenMapFeature {
                 state.showGameInfo = false
                 return .none
             case .view(.validationQueueTapped):
-                state.showValidationQueue = true
+                state.validationQueue = ValidationQueueFeature.State(
+                    gameId: state.game.id,
+                    hunterIds: state.game.hunterIds
+                )
                 return .none
-            case .view(.validationQueueDismissed):
-                state.showValidationQueue = false
+            case .validationQueue:
                 return .none
             case let .internal(.pendingSubmissionsUpdated(count)):
                 state.pendingSubmissionsCount = count
@@ -913,6 +915,9 @@ struct ChickenMapFeature {
         }
         .ifLet(\.$destination, action: \.destination) {
           Destination()
+        }
+        .ifLet(\.$validationQueue, action: \.validationQueue) {
+          ValidationQueueFeature()
         }
     }
 }
