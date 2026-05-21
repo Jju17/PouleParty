@@ -6,6 +6,26 @@ Format: [Keep a Changelog](https://keepachangelog.com/). Versions follow [Semant
 
 ---
 
+## [1.13.1], 2026-05-21
+
+**iOS**: 1.13.1 (1) · **Android**: 1.13.1 (38) · **Functions**: redeploy `confirmRegistrationPayment` + `createPendingRegistration` (Stripe Checkout product description rewrite to "Inscription événement physique 06/06/2026 Ixelles"), purge of 3 dead callables on both projects (`activatePowerUp` / `applyOutOfZonePenalty` / `validateChallengeSubmission`, none invoked by any v1.13.1 client — `apiClient.activatePowerUp` and `FirestoreRepository.activatePowerUp` are local Firestore transactions, not callables, despite the name collision) · **Firestore rules**: unchanged · **Web**: full redeploy (staging + prod) — inscription page copy rewrite
+
+Re-submission patch for the 1.13.0 App Store rejection (Guideline 5.1.5 Location + Guideline 3.1.1 In-App Purchase). Loosens the onboarding location gate so the app is functional with `When in Use` only, makes the D-Day inscription page explicit that the 12€ fee buys a real-world physical event (not digital content), and ships three orthogonal Home cleanups requested in passing.
+
+### Changed
+
+- **Onboarding location gate accepts `When in Use` (Guideline 5.1.5).** The location slide in onboarding used to hard-require `Always Allow` before unlocking the Next button — Apple flagged that as "the app is not functional when Background Location Services are disabled" two reviews in a row (1.12.x and 1.13.0). The gate now lets the user proceed once they granted any usable authorization (`When in Use` or `Always`). The `Always` upgrade stays available as an optional CTA on the same slide, with neutral copy ("For the smoothest experience during a hunt, you can also allow location in the background. Totally optional.") that no longer reads as a hard requirement. Same change on Android for `ACCESS_FINE_LOCATION` vs `ACCESS_BACKGROUND_LOCATION`. The Apple-rejected "Please select Always Allow so the Hunters can find you" wording is gone.
+- **D-Day inscription page is explicit about the physical event (Guideline 3.1.1).** The web inscription page (`pouleparty.be/inscription`, `/registration`, `/inschrijving`) now states upfront that the 12€ fee is a real-world in-person event registration: location (Ixelles, Brussels), date and time (Saturday June 6, 2026, 8:30 PM), what's included physically (welcome drink at the start bar, physical wristband, food and real-world prizes at the final spot), and a clarifying line that the mobile app is only used as a GPS tool during the live event. The Stripe Checkout product description and Stripe product name mirror the same framing ("Inscription événement physique 06/06/2026 Ixelles", "Inscription événement en présentiel"). FR / EN / NL all updated.
+
+### Removed
+
+- **"Admin mode" visible button on Home.** The visible "Admin mode" button under the Create Party CTA was discoverable to App Store reviewers and surfaced an internal-only entry point. It is gone. The admin code modal is now triggered exclusively by a 1.5-second long-press on the Create Party button itself — same flow, same `AdminCode.value = "jujurahier"` constant, just hidden from casual inspection.
+- **Debug map preview entry point + screen.** Long-pressing Create Party used to spawn a preset `stayInTheZone` game with every future shrunk circle pre-rendered as a debug visualization. The whole path is removed: `DebugMapSetupView` / `DebugMapSetupScreen` files, `NavigateToChickenMapDebug` / `NavigateToDebugMapConfig` effects, `chickenDebugGameStarted` action, `isDebugPreview` / `zonePreviewCircles` flags on `ChickenMapFeature` and `HunterMapFeature`, and the Android `chicken_map/{gameId}?debug={debug}` nav route. `computeDebugShiftedCircles` stays — the GameCreation wizard recap (PP-13) still uses it.
+- **"Want to create a party?" Home CTA.** The placeholder link that opened the localized `pouleparty.be/creer-une-partie` page is gone, along with the `CreatePartyURL.swift` / `CreatePartyUrl.kt` model + tests, the `webCreatePartyTapped` action / `WebCreatePartyTapped` intent, and the `OpenWebUrl` effect. The Create Party button itself is unchanged.
+- **One-free-game-per-day cap.** The old `countFreeGamesToday` Firestore query (`/games where creatorId == X and timing.start >= startOfDay`) plus the "Daily limit reached" alert it surfaced are gone. Anyone can create as many free games as they want. The `ApiClient.countFreeGamesToday` dependency, `FirestoreRepository.countFreeGamesToday`, the `dailyFreeLimitChecked` TCA action, and the `daily_limit_reached` strings are all removed.
+
+---
+
 ## [1.13.0], 2026-05-19
 
 **iOS**: 1.13.0 (1) · **Android**: 1.13.0 (37) · **Functions**: 7 new callables / triggers, full redeploy (staging + prod) · **Firestore rules**: redeploy (staging + prod) · **Web**: full redeploy (staging + prod) with App Check, paid registration form, Privacy + Terms rewrite

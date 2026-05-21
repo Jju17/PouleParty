@@ -85,7 +85,6 @@
     <string name="admin_mode">Admin mode</string>
     <string name="enter_the_admin_code">Enter the admin code</string>
     <string name="validate">Validate</string>
-    <string name="want_to_create_a_party">Want to create a party?</string>
     <string name="active_types">Active types</string>
     <string name="zone_radius">Zone radius</string>
     <string name="start_zone">Start zone</string>
@@ -157,7 +156,7 @@
     <string name="hunt_subtitle">Split into squads. Use the map to track them.\n\nThe Chicken could be hiding anywhere!</string>
     <string name="need_location">We Need Your Location</string>
     <string name="location_granted">You\'re all set! The game will track location even in the background.\n\nMaximum fun guaranteed!</string>
-    <string name="location_partial">Almost there! PouleParty needs to track your GPS in the background so the Chicken stays on the map when your phone is in your pocket. Your position is uploaded to Firebase Firestore and shared in real time with other players in your active game session only — tracking stops the moment the game ends.\n\nPlease allow background location.</string>
+    <string name="location_partial">Thanks! You\'re good to go.\n\nFor the smoothest experience during a hunt, you can also allow location in the background so the Chicken keeps broadcasting when the phone is in your pocket. Totally optional.</string>
     <string name="location_denied">Without location access, the game can\'t work.\nNo location = no map = no fun.\n\nYour GPS is uploaded to Firebase Firestore and shared with other players in your active game session only. Tracking stops automatically when the game ends. We never sell or share this data with advertisers.</string>
     <string name="location_service_channel_name">Game location tracking</string>
     <string name="location_service_channel_description">Keeps the app tracking your position during active games.</string>

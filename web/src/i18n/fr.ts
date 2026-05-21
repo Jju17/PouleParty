@@ -198,11 +198,12 @@ export default {
   },
   inscription: {
     intro: {
-      eyebrow: "Cache-cache GPS grandeur nature",
+      eyebrow: "Événement physique en présentiel · Ixelles, Bruxelles",
       title: "Rejoins\nla chasse !",
       body: [
-        "Une Poule déguisée se planque dans Ixelles.",
-        "Toi et ton équipe, vous la traquez.",
+        "Samedi 6 juin 2026 · 20h30 · Ixelles (Bruxelles).",
+        "Une Poule déguisée se planque dans le quartier.",
+        "Toi et ton équipe, vous la traquez à pied, dans la vraie vie.",
         "La zone rétrécit. La tension monte. Les coups bas sont autorisés. 😈",
       ],
       priceLine: "12 € / pers · Équipes de 3 à 5 · Sam. 6 juin · 20h30",
@@ -233,7 +234,7 @@ export default {
       phone: "Téléphone",
       players: "Joueurs",
       total: "TOTAL",
-      note: "12 € / pers · 1 verre offert au bar de départ · bracelet lieu final",
+      note: "Événement physique · Samedi 6 juin 2026 · 20h30 · Ixelles (Bruxelles). Par joueur : verre offert au bar de départ, bracelet physique, repas et lots réels au lieu final. L'application mobile sert uniquement d'outil GPS pendant l'événement en présentiel.",
       paymentSecure: "Paiement sécurisé via Stripe (CB · Apple Pay · Google Pay)",
       consentPrefix: "En cliquant Payer, tu acceptes les",
       consentTermsLink: "Conditions d'utilisation",

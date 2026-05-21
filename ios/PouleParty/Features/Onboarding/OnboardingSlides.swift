@@ -145,7 +145,7 @@ struct OnboardingLocationSlide: View {
 
             case .authorizedWhenInUse:
                 Group {
-                    BangerText("Almost there! The game needs to track the Chicken even when the app is in the background.\n\nPlease select \"Always Allow\" so the Hunters can find you!", size: 18)
+                    BangerText("Thanks! You're good to go.\n\nFor the smoothest experience during a hunt, you can also allow location in the background so the Chicken keeps broadcasting when the phone is in your pocket. Totally optional.", size: 18)
                         .multilineTextAlignment(.center)
                         .foregroundStyle(Color.onBackground.opacity(0.6))
                         .padding(.horizontal, 10)
@@ -153,14 +153,10 @@ struct OnboardingLocationSlide: View {
                     Button {
                         onRequestAlways()
                     } label: {
-                        // Apple rejected 1.11.1 under guideline 5.1.1(iv)
-                        // for using "Allow" on a button that precedes the
-                        // system permission dialog — reviewers read it as
-                        // pre-conditioning the user's answer. Use neutral
-                        // "Continue" instead. Do not revert to any variant
-                        // of "Allow" / "Autoriser" / "Toestaan" here
-                        // without re-reading the 1.11.1 App Review notes.
-                        BangerText("Continue", size: 20)
+                        // "Allow" / "Autoriser" / "Toestaan" were rejected
+                        // in 1.11.1 under 5.1.1(iv) for pre-conditioning the
+                        // system prompt. Keep wording neutral.
+                        BangerText("Background tracking", size: 18)
                             .foregroundStyle(.black)
                             .padding(.horizontal, 28)
                             .padding(.vertical, 14)

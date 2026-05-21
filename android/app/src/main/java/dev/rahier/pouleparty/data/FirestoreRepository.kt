@@ -20,7 +20,6 @@ import dev.rahier.pouleparty.powerups.model.PowerUp
 import dev.rahier.pouleparty.model.Registration
 import dev.rahier.pouleparty.model.Winner
 import dev.rahier.pouleparty.ui.gamelogic.PlayerRole
-import dev.rahier.pouleparty.util.startOfToday
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -710,23 +709,6 @@ class FirestoreRepository @Inject constructor(
             }
 
         awaitClose { listener.remove() }
-    }
-
-    suspend fun countFreeGamesToday(userId: String): Int {
-        return try {
-            val startOfDay = Timestamp(startOfToday().time)
-
-            val snapshot = firestore.collection(AppConstants.COLLECTION_GAMES)
-                .whereEqualTo("creatorId", userId)
-                .whereGreaterThanOrEqualTo("timing.start", startOfDay)
-                .get()
-                .await()
-
-            snapshot.documents.size
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to count free games today for $userId", e)
-            0
-        }
     }
 
     /**

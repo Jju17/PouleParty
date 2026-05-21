@@ -50,8 +50,6 @@ private enum class PendingPermissionAction { None, Start, CreateParty }
 fun HomeScreen(
     onNavigateToCreateParty: (gameId: String, isAdminCreation: Boolean) -> Unit,
     onNavigateToChickenMap: (String) -> Unit,
-    onNavigateToChickenMapDebug: (String) -> Unit = {},
-    onNavigateToDebugMapConfig: () -> Unit = {},
     onNavigateToHunterMap: (String, String) -> Unit,
     onNavigateToGameMasterMap: (String) -> Unit = {},
     onNavigateToVictory: (String) -> Unit,
@@ -66,17 +64,9 @@ fun HomeScreen(
         viewModel.effects.collect { effect ->
             when (effect) {
                 is HomeEffect.NavigateToChickenMap -> onNavigateToChickenMap(effect.gameId)
-                is HomeEffect.NavigateToChickenMapDebug -> onNavigateToChickenMapDebug(effect.gameId)
-                is HomeEffect.NavigateToDebugMapConfig -> onNavigateToDebugMapConfig()
                 is HomeEffect.NavigateToHunterMap -> onNavigateToHunterMap(effect.gameId, effect.hunterName)
                 is HomeEffect.NavigateToGameMasterMap -> onNavigateToGameMasterMap(effect.gameId)
                 is HomeEffect.NavigateToGameDone -> onNavigateToVictory(effect.gameId)
-                is HomeEffect.OpenWebUrl -> {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(effect.url)).apply {
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    }
-                    context.startActivity(intent)
-                }
             }
         }
     }
@@ -372,10 +362,9 @@ fun HomeScreen(
                         color = MaterialTheme.colorScheme.onBackground
                     )
                 }
-                // Hidden debug easter egg: long-press the Create Party
-                // button to skip the wizard and spawn a preset
-                // stayInTheZone game with every future shrunk circle
-                // rendered up front on the chicken map.
+                // Hidden admin-mode entry: long-press opens the admin
+                // code dialog (PP-45). The password isn't advertised via
+                // a visible button so Apple reviewers don't surface it.
                 Box(
                     modifier = Modifier
                         .padding(16.dp)
@@ -400,36 +389,6 @@ fun HomeScreen(
                         fontSize = 8.sp,
                         color = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
-                    )
-                }
-            }
-
-            // PP-42 placeholders: visible buttons whose behavior lands in
-            // PP-45 (admin mode unlock) and PP-46 (web CTA).
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-                modifier = Modifier.padding(bottom = 12.dp)
-            ) {
-                TextButton(
-                    onClick = { viewModel.onIntent(HomeIntent.AdminModeTapped) }
-                ) {
-                    Text(
-                        stringResource(R.string.admin_mode),
-                        fontFamily = GameBoyFont,
-                        fontSize = 8.sp,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
-                    )
-                }
-                TextButton(
-                    onClick = { viewModel.onIntent(HomeIntent.WebCreatePartyTapped) }
-                ) {
-                    Text(
-                        stringResource(R.string.want_to_create_a_party),
-                        fontFamily = GameBoyFont,
-                        fontSize = 8.sp,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-                        textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline
                     )
                 }
             }

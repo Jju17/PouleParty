@@ -35,12 +35,6 @@ struct ChickenMapFeature {
         var lastLiveActivityState: PoulePartyAttributes.ContentState?
         var powerUps: MapPowerUpsFeature.State = .init()
 
-        /// Long-press-on-Create-Party easter egg. When true,
-        /// `ChickenMapContent` draws every future shrunk circle on top
-        /// of the map at once, each with its own color. Not persisted.
-        var isDebugPreview: Bool = false
-        var zonePreviewCircles: [DebugShrinkCircle] = []
-
         /// PP-16: flipped to `true` when the game ends (time-out,
         /// zone collapse, all hunters found, or the chicken cancels).
         /// `gamePhase` then reports `.gameOver`, the map stays

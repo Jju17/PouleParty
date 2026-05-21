@@ -79,7 +79,6 @@
     <string name="admin_mode">Adminmodus</string>
     <string name="enter_the_admin_code">Voer de admincode in</string>
     <string name="validate">Valideren</string>
-    <string name="want_to_create_a_party">Een feest organiseren?</string>
     <string name="active_types">Actieve types</string>
     <string name="zone_radius">Zonestraal</string>
     <string name="start_zone">Startzone</string>
@@ -151,7 +150,7 @@
     <string name="hunt_subtitle">Vorm teams. Gebruik de kaart om ze op te sporen.\n\nDe Kip kan overal verstopt zitten!</string>
     <string name="need_location">We hebben je locatie nodig</string>
     <string name="location_granted">Alles klaar! Het spel volgt je locatie ook op de achtergrond.\n\nMaximaal plezier gegarandeerd!</string>
-    <string name="location_partial">Bijna klaar! PouleParty moet je GPS op de achtergrond volgen zodat de Kip op de kaart blijft wanneer je telefoon in je zak zit. Je positie wordt naar Firebase Firestore gestuurd en in real-time gedeeld met de andere spelers in jouw actieve sessie — het volgen stopt zodra het spel eindigt.\n\nSta achtergrondlocatie toe.</string>
+    <string name="location_partial">Bedankt! Je kunt aan de slag.\n\nVoor de soepelste ervaring tijdens een jacht kun je locatie ook op de achtergrond toestaan, zodat de Kip blijft uitzenden wanneer je telefoon in je zak zit. Helemaal optioneel.</string>
     <string name="location_denied">Zonder locatietoegang werkt het spel niet.\nGeen locatie = geen kaart = geen plezier.\n\nJe GPS wordt naar Firebase Firestore gestuurd en alleen gedeeld met de andere spelers in jouw actieve sessie. Het volgen stopt automatisch wanneer het spel eindigt. We verkopen deze gegevens nooit aan adverteerders.</string>
     <string name="always_allowed">Altijd toegestaan!</string>
     <string name="allow_always">Doorgaan</string>

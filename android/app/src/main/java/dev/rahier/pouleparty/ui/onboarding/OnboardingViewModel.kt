@@ -94,14 +94,7 @@ class OnboardingViewModel @Inject constructor(
 
     private fun nextPage() {
         val current = _uiState.value.currentPage
-        // Block on location slide unless background location is granted. The
-        // chickenCanSeeHunters flow and the stayInTheZone radar-ping loop
-        // both assume the chicken keeps broadcasting while the phone is
-        // backgrounded, fine-only silently breaks that promise, so we
-        // require Always at onboarding (matching the iOS gate).
-        if (current == 3 && !_uiState.value.hasBackgroundLocation) return
-        // Page 4 = notifications — non-blocking, always allow next
-        // Block on nickname slide (page 5) if nickname is empty or inappropriate
+        if (current == 3 && !_uiState.value.hasFineLocation) return
         if (current == 5) {
             val trimmed = _uiState.value.nickname.trim()
             if (trimmed.isEmpty()) return
@@ -138,16 +131,8 @@ class OnboardingViewModel @Inject constructor(
         _uiState.update { it.copy(showProfanityAlert = false) }
     }
 
-    /**
-     * Defensive final gate, mirrors every per-page check so the user can
-     * never exit onboarding with state that the per-page gates would have
-     * refused (empty nickname after a back+clear+swipe path, permission
-     * revoked in Settings between page 3 and here, etc.). Returns true only
-     * when background location is granted AND the nickname is non-empty AND
-     * passes the profanity filter. Surfaces the appropriate alert on failure.
-     */
     fun canCompleteOnboarding(): Boolean {
-        if (!_uiState.value.hasBackgroundLocation) {
+        if (!_uiState.value.hasFineLocation) {
             _uiState.update { it.copy(showLocationAlert = true) }
             return false
         }

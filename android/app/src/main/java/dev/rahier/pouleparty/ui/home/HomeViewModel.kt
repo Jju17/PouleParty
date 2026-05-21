@@ -130,10 +130,8 @@ class HomeViewModel @Inject constructor(
             HomeIntent.JoinAsHunterTapped -> onJoinAsHunterTapped()
             HomeIntent.SubmitJoinTapped -> onSubmitJoinTapped()
             HomeIntent.RefreshActiveGame -> checkForActiveGame()
-            HomeIntent.AdminModeTapped -> onAdminModeTapped()
             HomeIntent.AdminCodeDismissed -> _uiState.update { it.copy(isShowingAdminCodeDialog = false, adminCodeInput = "") }
             HomeIntent.AdminCodeErrorDismissed -> _uiState.update { it.copy(isShowingAdminCodeError = false) }
-            HomeIntent.WebCreatePartyTapped -> onWebCreatePartyTapped()
             is HomeIntent.GameCodeChanged -> onGameCodeChanged(intent.code)
             is HomeIntent.TeamNameChanged -> onTeamNameChanged(intent.name)
             is HomeIntent.AdminCodeChanged -> _uiState.update { it.copy(adminCodeInput = intent.code) }
@@ -215,20 +213,6 @@ class HomeViewModel @Inject constructor(
                 }
             }
         }
-    }
-
-    private fun onWebCreatePartyTapped() {
-        val lang = java.util.Locale.getDefault().language
-        val url = dev.rahier.pouleparty.model.CreatePartyUrl.forLanguage(lang)
-        viewModelScope.launch { _effects.send(HomeEffect.OpenWebUrl(url)) }
-    }
-
-    private fun onAdminModeTapped() {
-        if (!locationRepository.hasFineLocationPermission()) {
-            _uiState.update { it.copy(isShowingLocationRequired = true) }
-            return
-        }
-        _uiState.update { it.copy(isShowingAdminCodeDialog = true, adminCodeInput = "") }
     }
 
     /**
@@ -668,22 +652,11 @@ class HomeViewModel @Inject constructor(
         return true
     }
 
-    /**
-     * Debug easter egg: long-press on the Create Party button. Routes
-     * to [DebugMapSetupScreen] where the user places start + final
-     * pins and picks a radius — the actual game creation happens from
-     * that screen's Launch button so timing/seed can be finalized
-     * after the user is done dragging pins.
-     */
     private fun onCreatePartyLongPressed() {
         if (!locationRepository.hasFineLocationPermission()) {
             _uiState.update { it.copy(isShowingLocationRequired = true) }
             return
         }
-        if (auth.currentUser?.uid.isNullOrEmpty()) {
-            android.util.Log.e("HomeViewModel", "Debug party: no current user id")
-            return
-        }
-        viewModelScope.launch { _effects.send(HomeEffect.NavigateToDebugMapConfig) }
+        _uiState.update { it.copy(isShowingAdminCodeDialog = true, adminCodeInput = "") }
     }
 }

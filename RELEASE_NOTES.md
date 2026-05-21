@@ -157,6 +157,95 @@ Gemaakt in Brussel met veel te veel kip-thema energie.
 
 ---
 
+# Release 1.13.1
+
+> ⚠️ **Do not paste this "Summary" paragraph into any store field.** Only the blocks explicitly labelled **App Store Connect**, **Google Play Console**, or **App Review Notes** below are store-safe.
+
+**Summary (internal, do not paste):** re-submission patch for the 1.13.0 App Store rejection. Apple flagged 5.1.5 (Location: app not functional without Background Location) and 3.1.1 (IAP: paid web inscription = "game tickets"). Fix for 5.1.5: the onboarding location gate now lets the user proceed with `When in Use` only, the Always upgrade stays as an optional CTA on the slide. Fix for 3.1.1: the D-Day inscription page (EN/FR/NL) and the Stripe Checkout product description are rewritten to be explicit about the real-world physical event (Ixelles, June 6 2026 8:30 PM, drink + wristband + food + real prizes, app is a GPS tool only) — no App Review Notes change requested for this. Plus three orthogonal Home cleanups: visible "Admin mode" button gone (now a long-press on Create Party), debug map preview entry retired, "Want to create a party?" CTA + 1-free-game/day cap removed.
+
+---
+
+## 📱 App Store Connect — field "What's New in This Version"
+
+**English (U.S.)**
+
+Quick patch.
+
+LOCATION SETUP IS MORE FLEXIBLE
+You no longer have to grant background location to play. Granting "While Using" is enough to finish setup, and you can upgrade to "Always Allow" anytime if you want the Chicken to keep broadcasting when your phone is in your pocket.
+
+CLEANER HOME SCREEN
+Removed two old buttons that no longer made sense. The hidden admin mode for big events is still there, just tucked away on a long-press.
+
+NO MORE DAILY CAP
+You can now create as many free games as you want, no limit.
+
+**French**
+
+Petit patch.
+
+CONFIGURATION DE POSITION PLUS FLEXIBLE
+Plus besoin d'accorder la position en arrière-plan pour jouer. "Lorsque l'app est active" suffit pour terminer la configuration, et tu peux passer à "Toujours" à tout moment si tu veux que la Poule continue à émettre quand le téléphone est dans ta poche.
+
+ÉCRAN D'ACCUEIL ÉPURÉ
+On a retiré deux vieux boutons qui n'avaient plus de sens. Le mode admin pour les gros événements est toujours là, juste planqué sur un appui long.
+
+PLUS DE LIMITE QUOTIDIENNE
+Tu peux maintenant créer autant de parties gratuites que tu veux, sans limite.
+
+**Dutch**
+
+Korte patch.
+
+LOCATIE-INSTELLINGEN ZIJN FLEXIBELER
+Je hoeft niet langer achtergrondlocatie toe te staan om te spelen. "Tijdens gebruik" volstaat om de setup af te ronden, en je kunt op elk moment upgraden naar "Altijd toestaan" als je wilt dat de Kip blijft uitzenden wanneer je telefoon in je zak zit.
+
+OPGERUIMD HOMESCHERM
+Twee oude knoppen die geen zin meer hadden zijn weg. De verborgen adminmodus voor grote events is er nog steeds, maar nu verstopt achter een lange tik.
+
+GEEN DAGELIJKSE LIMIET MEER
+Je kunt nu zoveel gratis spellen aanmaken als je wilt, zonder limiet.
+
+---
+
+## 🤖 Google Play Console — field "Release notes"
+
+```
+<en-US>Location setup is more flexible: While Using is enough to finish setup, you can upgrade to Always anytime. Removed two old Home buttons (admin mode is still there on long-press). No more 1-free-game-per-day cap, create as many free games as you want.</en-US>
+<fr-FR>Configuration de position plus flexible : "Lorsque l'app est active" suffit pour terminer la configuration, tu peux passer à "Toujours" à tout moment. On a retiré deux vieux boutons d'accueil (le mode admin reste là, en appui long). Plus de limite d'une partie gratuite par jour : crée autant de parties que tu veux.</fr-FR>
+<nl-NL>Locatie-setup is flexibeler: "Tijdens gebruik" volstaat om de setup af te ronden, je kunt op elk moment upgraden naar "Altijd". Twee oude Home-knoppen verwijderd (adminmodus blijft, op lange tik). Geen 1-gratis-spel-per-dag limiet meer, maak zoveel spellen aan als je wilt.</nl-NL>
+```
+
+> **Promotional Text + Description**: voir la **section globale** en haut du fichier ("Store Listing — evergreen copy"). Pas d'update pour 1.13.1.
+
+---
+
+## 📝 App Store Connect — field "App Review Information → Notes"
+
+**Mandatory paste for 1.13.1** — re-submission addressing the 1.13.0 rejection under Guideline 5.1.5. Lead with what changed; the rest is unchanged context from 1.13.0 in case the reviewer is fresh.
+
+```
+PouleParty is a free real-world GPS hide-and-seek game. No sign-in (anonymous Firebase Auth).
+
+RESPONSE TO 1.13.0 REJECTION (GUIDELINE 5.1.5)
+The onboarding location slide no longer requires Always Allow before unlocking the Next button. Granting "While Using" is now sufficient to complete onboarding and play. The Always upgrade stays as an optional CTA on the slide with neutral copy ("For the smoothest experience during a hunt, you can also allow location in the background. Totally optional."). Background-location remains used only during an active game when granted; tracking stops automatically when the game ends.
+
+REPRODUCE THE PROMPT
+1. Open app, complete onboarding (any nickname). On the location slide, tap Continue to grant "While Using" → the Next button unlocks.
+2. Optional: tap the "Background tracking" button on the same slide to also grant Always.
+
+ADMIN MODE
+Long-press the "Create Party" button on Home (1.5 s) to reveal a code modal. The code is `jujurahier` (hardcoded, public, no auth). It only lifts the player cap from 5 to 500 for organizers running corporate events. Not an IAP, no payment, no server check.
+
+FREE EXPERIENCE
+The in-app experience is 100% free. No IAP, no ads, no subscriptions.
+
+ENCRYPTION
+Apple-standard HTTPS / Firebase TLS only. ITSAppUsesNonExemptEncryption = false.
+```
+
+---
+
 # Release 1.13.0
 
 > ⚠️ **Do not paste this "Summary" paragraph into any store field.** Only the blocks explicitly labelled **App Store Connect**, **Google Play Console**, or **App Review Notes** below are store-safe.

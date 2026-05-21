@@ -100,11 +100,6 @@ data class HunterMapUiState(
     // itself is also idempotent (returns AlreadyWinner on re-submission),
     // but this UX gate avoids the round-trip.
     val isSubmittingWinner: Boolean = false,
-    /** PP-36: mirrors the chicken-side `isDebugPreview` flag. When the
-     *  hunter map is driven by a previewer (snapshot tests, Compose
-     *  preview), the out-of-zone penalty must not fire. Live runs leave
-     *  this `false`. */
-    val isDebugPreview: Boolean = false,
     /** PP-36: epoch-millis of the last out-of-zone penalty tick. The 1 s
      *  timer fires the decrement only when the previous tick was ≥
      *  [AppConstants.OUT_OF_ZONE_PENALTY_INTERVAL_MS] ago, so the penalty
@@ -367,7 +362,6 @@ class HunterMapViewModel @Inject constructor(
                 val decision = evaluateOutOfZonePenalty(
                     isOutsideZone = zoneState.isOutsideZone,
                     isGameOver = zoneState.isGameOver,
-                    isDebugPreview = zoneState.isDebugPreview,
                     hunterId = hunterId,
                     lastPenaltyAt = zoneState.lastPenaltyAt,
                     nowMs = now.time,

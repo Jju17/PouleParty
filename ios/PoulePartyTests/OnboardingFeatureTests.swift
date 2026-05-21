@@ -193,10 +193,10 @@ struct OnboardingFeatureTests {
         await store.send(.nextButtonTapped)
     }
 
-    @Test func nextButtonBlockedOnPage3WithWhenInUseOnly() async {
-        // `.authorizedWhenInUse` used to let the user through, we now
-        // require `.authorizedAlways` because chicken broadcasts while
-        // the phone is backgrounded. Regression guard for that tightening.
+    @Test func nextButtonAllowedOnPage3WithWhenInUse() async {
+        // Apple 5.1.5 (rejection 1.13.0): WhenInUse must be sufficient
+        // to leave the location page. The Always upgrade stays as an
+        // optional CTA on the slide itself.
         var state = OnboardingFeature.State()
         state.currentPage = 3
         state.locationAuthorizationStatus = .authorizedWhenInUse
@@ -205,8 +205,9 @@ struct OnboardingFeatureTests {
             OnboardingFeature()
         }
 
-        // No state change, the reducer bails out of `.nextButtonTapped`.
-        await store.send(.nextButtonTapped)
+        await store.send(.nextButtonTapped) {
+            $0.currentPage = 4
+        }
     }
 
     @Test func nextButtonAllowedOnPage3WithAlwaysAuth() async {
@@ -361,10 +362,8 @@ struct OnboardingFeatureTests {
         }
     }
 
-    @Test func lastPageNextWithWhenInUseShowsLocationAlert() async {
-        // Final gate is re-checked on the last page in case the user flipped
-        // the permission back to "While Using" in Settings between page 3
-        // and the last slide, they must still grant Always to play.
+    @Test func lastPageNextWithWhenInUseCompletesOnboarding() async {
+        // Apple 5.1.5: final gate must accept WhenInUse, not require Always.
         var state = OnboardingFeature.State()
         state.currentPage = OnboardingFeature.totalPages - 1
         state.locationAuthorizationStatus = .authorizedWhenInUse
@@ -373,10 +372,10 @@ struct OnboardingFeatureTests {
         let store = TestStore(initialState: state) {
             OnboardingFeature()
         }
+        store.exhaustivity = .off
 
-        await store.send(.nextButtonTapped) {
-            $0.showLocationAlert = true
-        }
+        await store.send(.nextButtonTapped)
+        await store.receive(\.onboardingCompleted)
     }
 
     // MARK: - Page Swipe Blocking
@@ -435,10 +434,9 @@ struct OnboardingFeatureTests {
         }
     }
 
-    @Test func pageChangedBlocksForwardSwipePastLocationPageWithWhenInUse() async {
-        // Pager swipes are gated the same way as Next, fine-only (whenInUse)
-        // must NOT let the user past the location page, or the gate would
-        // be trivially bypassable by swiping instead of tapping Next.
+    @Test func pageChangedAllowsForwardSwipeFromLocationWithWhenInUse() async {
+        // Apple 5.1.5: WhenInUse must let the user past the location
+        // page via pager swipes too, matching the Next button gate.
         var state = OnboardingFeature.State()
         state.currentPage = 3
         state.locationAuthorizationStatus = .authorizedWhenInUse
@@ -446,13 +444,9 @@ struct OnboardingFeatureTests {
         let store = TestStore(initialState: state) {
             OnboardingFeature()
         }
-        store.exhaustivity = .off
 
         await store.send(.pageChanged(4)) {
             $0.currentPage = 4
-        }
-        await store.receive(\.pageSnappedBack) {
-            $0.currentPage = 3
         }
     }
 

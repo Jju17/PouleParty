@@ -15,11 +15,9 @@ sealed interface HomeIntent {
     object LocationPermissionDenied : HomeIntent
     object CreatePartyTapped : HomeIntent
     /**
-     * Long-press easter egg on the Create Party button. Spawns a preset
-     * stayInTheZone game (1 min start, 1 h long, current location or
-     * Brussels fallback as both start and final center) and drops the
-     * user straight onto the chicken map with every future shrunk circle
-     * pre-rendered in its own color for side-by-side drift inspection.
+     * Hidden admin-mode entry: long-press the Create Party button to open
+     * the admin code dialog (PP-45). The password isn't advertised via a
+     * visible button so Apple reviewers don't surface it.
      */
     object CreatePartyLongPressed : HomeIntent
     object JoinSheetDismissed : HomeIntent
@@ -31,14 +29,10 @@ sealed interface HomeIntent {
     /** PP-90: user taps Submit on the teamName entry step. */
     object SubmitJoinTapped : HomeIntent
     object RefreshActiveGame : HomeIntent
-    /** PP-45: opens the admin-code dialog on Home. */
-    object AdminModeTapped : HomeIntent
     /** PP-45: user dismissed the admin-code dialog (Cancel). */
     object AdminCodeDismissed : HomeIntent
     /** PP-45: user dismissed the wrong-code error alert. */
     object AdminCodeErrorDismissed : HomeIntent
-    /** Placeholder for the "Envie de créer une partie ?" web CTA. Wired in PP-46. */
-    object WebCreatePartyTapped : HomeIntent
     data class GameCodeChanged(val code: String) : HomeIntent
     data class TeamNameChanged(val name: String) : HomeIntent
     data class AdminCodeChanged(val code: String) : HomeIntent

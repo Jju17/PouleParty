@@ -365,8 +365,8 @@ export const createPendingRegistration = onRequest(
                 currency: CURRENCY,
                 unit_amount: UNIT_PRICE_CENTS,
                 product_data: {
-                  name: "PouleParty — Inscription D-Day 06/06/2026",
-                  description: `Équipe « ${payload.teamName} » (${payload.teamSize} joueur·euse·s)`,
+                  name: "PouleParty — Inscription événement physique 06/06/2026 Ixelles",
+                  description: `Inscription événement en présentiel, samedi 6 juin 2026, 20h30, Ixelles (Bruxelles). Équipe « ${payload.teamName} » (${payload.teamSize} joueur·euse·s).`,
                 },
               },
             },

@@ -123,7 +123,7 @@
     <string name="hunt_subtitle">Forme des équipes. Utilise la carte pour la traquer.\n\nLa Poule peut se cacher n\'importe où !</string>
     <string name="need_location">On a besoin de ta position</string>
     <string name="location_granted">C\'est tout bon ! Le jeu suivra ta position même en arrière-plan.\n\nFun maximum garanti !</string>
-    <string name="location_partial">Presque ! PouleParty doit suivre ton GPS en arrière-plan pour que la Poule reste sur la carte quand ton téléphone est dans ta poche. Ta position est envoyée à Firebase Firestore et partagée en temps réel avec les autres joueurs de ta session active uniquement — le suivi s\'arrête à la fin de la partie.\n\nAutorise la localisation en permanence.</string>
+    <string name="location_partial">Merci, c\'est tout bon !\n\nPour une expérience optimale pendant une chasse, tu peux aussi autoriser la localisation en arrière-plan, comme ça la Poule continue de transmettre sa position quand le téléphone est dans ta poche. Totalement optionnel.</string>
     <string name="location_denied">Sans accès à la localisation, le jeu ne peut pas fonctionner.\nPas de localisation = pas de carte = pas de fun.\n\nTon GPS est envoyé à Firebase Firestore et partagé avec les autres joueurs de ta session active uniquement. Le suivi s\'arrête automatiquement à la fin de la partie. Nous ne vendons jamais ces données aux annonceurs.</string>
     <string name="always_allowed">Toujours autorisée !</string>
     <string name="allow_always">Continuer</string>
@@ -230,7 +230,6 @@
     <string name="admin_mode">Mode admin</string>
     <string name="enter_the_admin_code">Entre le code admin</string>
     <string name="validate">Valider</string>
-    <string name="want_to_create_a_party">Envie de créer une partie ?</string>
     <string name="active_types">Types actifs</string>
     <string name="zone_radius">Rayon de la zone</string>
     <string name="set_start_zone">Place une zone de départ pour commencer</string>

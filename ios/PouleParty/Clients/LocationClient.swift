@@ -18,6 +18,12 @@ struct LocationClient {
     var stopTracking: () -> Void
 }
 
+extension CLAuthorizationStatus {
+    var isUsable: Bool {
+        self == .authorizedAlways || self == .authorizedWhenInUse
+    }
+}
+
 extension LocationClient: TestDependencyKey {
     static let testValue = LocationClient(
         authorizationStatus: { .authorizedWhenInUse },

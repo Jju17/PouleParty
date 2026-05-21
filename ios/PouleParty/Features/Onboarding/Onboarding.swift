@@ -64,13 +64,8 @@ struct OnboardingFeature {
                     await send(.notificationAuthorizationUpdated(status))
                 }
             case .nextButtonTapped:
-                // Block on location slide unless the user granted `.authorizedAlways`.
-                // The chicken-can-see-hunters mode and the stayInTheZone ping
-                // loop both assume the chicken keeps broadcasting with the
-                // phone backgrounded, `.authorizedWhenInUse` silently breaks
-                // that promise, so we require Always at onboarding.
                 if state.currentPage == Self.locationPageIndex {
-                    guard state.locationAuthorizationStatus == .authorizedAlways else { return .none }
+                    guard state.locationAuthorizationStatus.isUsable else { return .none }
                 }
                 // Notification page is non-blocking, always allow next
                 // Block on nickname slide if nickname is empty or inappropriate
@@ -86,12 +81,7 @@ struct OnboardingFeature {
                 if state.currentPage < Self.totalPages - 1 {
                     state.currentPage += 1
                 } else {
-                    // Defensive final gate, mirrors every per-page check so
-                    // the user can never exit onboarding with state the
-                    // per-page gates would have refused (permission revoked
-                    // in Settings between page 3 and here, nickname cleared
-                    // via a back-then-swipe path, etc.).
-                    guard state.locationAuthorizationStatus == .authorizedAlways else {
+                    guard state.locationAuthorizationStatus.isUsable else {
                         state.showLocationAlert = true
                         return .none
                     }
@@ -113,10 +103,9 @@ struct OnboardingFeature {
                 state.nickname = String(name.prefix(AppConstants.nicknameMaxLength))
                 return .none
             case let .pageChanged(page):
-                let locAuthorized = state.locationAuthorizationStatus == .authorizedAlways
+                let locAuthorized = state.locationAuthorizationStatus.isUsable
                 let nicknameValid = !state.nickname.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
 
-                // Block forward swipe past location page if not authorized
                 if page > Self.locationPageIndex && !locAuthorized {
                     state.currentPage = page
                     return .run { send in
@@ -275,7 +264,7 @@ struct OnboardingView: View {
 
                         Spacer()
 
-                        let isLocationPageBlocked = store.currentPage == 3 && store.locationAuthorizationStatus != .authorizedAlways
+                        let isLocationPageBlocked = store.currentPage == 3 && !store.locationAuthorizationStatus.isUsable
                         let isNicknamePageEmpty = store.currentPage == 5 && store.nickname.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                         let isNextDisabled = isLocationPageBlocked || isNicknamePageEmpty
                         Button {

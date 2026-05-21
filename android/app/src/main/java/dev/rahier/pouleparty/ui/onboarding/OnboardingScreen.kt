@@ -57,11 +57,7 @@ fun OnboardingScreen(
         val page = pagerState.currentPage
         val s = viewModel.uiState.value
 
-        // Block swipe past the location page unless Always/background was
-        // granted, matches iOS `.authorizedAlways` requirement. Fine-only
-        // isn't enough: the game tracks the chicken while the app is
-        // backgrounded, and we'd silently break that otherwise.
-        val isBlocked = (page > 3 && !s.hasBackgroundLocation) ||
+        val isBlocked = (page > 3 && !s.hasFineLocation) ||
                 (page > 5 && s.nickname.trim().isEmpty())
 
         if (isBlocked) {
@@ -209,7 +205,7 @@ fun OnboardingScreen(
                     Spacer(Modifier.width(1.dp))
                 }
 
-                val isLocationPageBlocked = state.currentPage == 3 && !state.hasBackgroundLocation
+                val isLocationPageBlocked = state.currentPage == 3 && !state.hasFineLocation
                 val isNicknamePageEmpty = state.currentPage == 5 && state.nickname.trim().isEmpty()
                 val isNextDisabled = isLocationPageBlocked || isNicknamePageEmpty
                 Box(

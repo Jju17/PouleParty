@@ -45,7 +45,6 @@ private var startedGameMock: Game {
 private func penaltyReadyState(
     lastPenaltyAt: Date? = nil,
     isGameOver: Bool = false,
-    isDebugPreview: Bool = false,
     isOutsideZone: Bool = true,
     hunterId: String = "hunter-1"
 ) -> HunterMapFeature.State {
@@ -53,7 +52,6 @@ private func penaltyReadyState(
     state.hunterId = hunterId
     state.isOutsideZone = isOutsideZone
     state.isGameOver = isGameOver
-    state.isDebugPreview = isDebugPreview
     state.lastPenaltyAt = lastPenaltyAt
     state.radius = 500
     return state
@@ -260,32 +258,6 @@ struct OutOfZonePenaltyTests {
         let state = penaltyReadyState(
             lastPenaltyAt: .now.addingTimeInterval(-10),
             isGameOver: true
-        )
-        let store = TestStore(initialState: state) {
-            HunterMapFeature()
-        } withDependencies: {
-            $0.apiClient.decrementTotalPoints = { _, _ in
-                calls.withValue { $0 += 1 }
-            }
-        }
-        store.exhaustivity = .off
-
-        await store.send(.internal(.timerTicked))
-
-        await store.finish()
-        #expect(calls.value == 0)
-    }
-
-    // MARK: - Scenario 8: debug preview → no penalty
-
-    /// Xcode canvas / snapshot tests / dev tools that drive the
-    /// hunter map without a real player must not bleed points.
-    /// `isDebugPreview = true` short-circuits the penalty.
-    @Test func debugPreviewFiresNoPenalty() async {
-        let calls = LockIsolated(0)
-        let state = penaltyReadyState(
-            lastPenaltyAt: .now.addingTimeInterval(-10),
-            isDebugPreview: true
         )
         let store = TestStore(initialState: state) {
             HunterMapFeature()

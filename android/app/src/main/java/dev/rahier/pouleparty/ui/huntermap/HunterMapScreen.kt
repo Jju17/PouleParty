@@ -439,8 +439,7 @@ fun HunterMapScreen(
             // disagree.
             if (state.isOutsideZone &&
                 state.hasGameStarted &&
-                !state.isGameOver &&
-                !state.isDebugPreview
+                !state.isGameOver
             ) {
                 Text(
                     text = stringResource(R.string.out_of_zone_losing_points),

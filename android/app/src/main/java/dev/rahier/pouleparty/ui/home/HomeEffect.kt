@@ -9,31 +9,10 @@ package dev.rahier.pouleparty.ui.home
 sealed interface HomeEffect {
     /** Navigate to the chicken map (rejoin or start as chicken). */
     data class NavigateToChickenMap(val gameId: String) : HomeEffect
-    /**
-     * Navigate to the chicken map in *debug preview* mode. Same screen
-     * as [NavigateToChickenMap] but flagged so every future shrunk
-     * circle is rendered up front. Fired by [DebugMapSetupScreen]'s
-     * Launch button — after the user has placed start + final pins.
-     */
-    data class NavigateToChickenMapDebug(val gameId: String) : HomeEffect
-
-    /**
-     * Show the map-config screen (reused from GameCreation) so the user
-     * can place the start + final pins and pick a radius before the
-     * debug party is created. Triggered by the long-press easter egg
-     * on the Create Party button.
-     */
-    object NavigateToDebugMapConfig : HomeEffect
     /** Navigate to the hunter map for a live game. */
     data class NavigateToHunterMap(val gameId: String, val hunterName: String) : HomeEffect
     /** Navigate to the GameMaster observer map (PP-24). */
     data class NavigateToGameMasterMap(val gameId: String) : HomeEffect
     /** Navigate to the post-game screen when the joined game is DONE. */
     data class NavigateToGameDone(val gameId: String) : HomeEffect
-    /**
-     * Open an external URL in the system browser. Used for the PP-46
-     * "Want to create a party?" CTA which routes to the localized
-     * landing page on `pouleparty.be`.
-     */
-    data class OpenWebUrl(val url: String) : HomeEffect
 }

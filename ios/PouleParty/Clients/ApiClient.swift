@@ -62,7 +62,6 @@ struct ApiClient {
     var activatePowerUp: (_ gameId: String, _ powerUpId: String, _ activeEffectField: String?, _ expiresAt: Timestamp) async throws -> Void
     var powerUpsStream: (String) -> AsyncStream<[PowerUp]>
     var updateHeartbeat: (String) async throws -> Void
-    var countFreeGamesToday: (String) async throws -> Int
     var fetchMyGames: (String) async throws -> [MyGame]
     var findRegistration: (String, String) async throws -> Registration?
     var createRegistration: (String, Registration) async throws -> Void
@@ -291,7 +290,6 @@ extension ApiClient: TestDependencyKey {
         activatePowerUp: { _, _, _, _ in },
         powerUpsStream: { _ in AsyncStream { _ in } },
         updateHeartbeat: { _ in },
-        countFreeGamesToday: { _ in 0 },
         fetchMyGames: { _ in [] },
         findRegistration: { _, _ in nil },
         createRegistration: { _, _ in },
@@ -729,19 +727,6 @@ extension ApiClient: DependencyKey {
                     "lastHeartbeat": Timestamp(date: .now)
                 ])
             }
-        },
-        countFreeGamesToday: { userId in
-            let db = Firestore.firestore()
-            let calendar = Calendar.current
-            let startOfDay = calendar.startOfDay(for: Date())
-            let startTimestamp = Timestamp(date: startOfDay)
-
-            let snapshot = try await db.collection(gamesCollection)
-                .whereField("creatorId", isEqualTo: userId)
-                .whereField("timing.start", isGreaterThanOrEqualTo: startTimestamp)
-                .getDocuments()
-
-            return snapshot.documents.count
         },
         fetchMyGames: { userId in
             // Run two queries in parallel: games I created + games I joined as a hunter.

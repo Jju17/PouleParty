@@ -82,17 +82,18 @@ class OnboardingViewModelBehaviorTest {
     }
 
     @Test
-    fun `NextPage on location slide blocked with fine but no background`() {
-        // Used to pass with fine-only, the whole point of the tightening.
-        // Regression guard: if this ever flips back, the chicken can silently
-        // stop broadcasting when the phone is pocketed.
+    fun `NextPage on location slide proceeds with fine-only permission`() {
+        // Apple 5.1.5 (rejection 1.13.0): the app must be functional
+        // without Always/Background. Fine is sufficient to leave the
+        // location slide; the Always upgrade prompt stays as an
+        // optional CTA on the slide itself.
         every { locationRepository.hasFineLocationPermission() } returns true
         every { locationRepository.hasBackgroundLocationPermission() } returns false
         val vm = createViewModel()
         vm.onIntent(OnboardingIntent.RefreshPermissions)
         vm.onIntent(OnboardingIntent.PageSet(3))
         vm.onIntent(OnboardingIntent.NextPage)
-        assertEquals(3, vm.uiState.value.currentPage)
+        assertEquals(4, vm.uiState.value.currentPage)
     }
 
     @Test
@@ -262,19 +263,17 @@ class OnboardingViewModelBehaviorTest {
     }
 
     @Test
-    fun `canCompleteOnboarding returns false and shows alert with fine but no background`() {
-        // The last-page gate must match the page-3 gate, otherwise a user
-        // could start with Always, swipe to the last page, revoke background
-        // in Settings, come back, and "Let's Go" would ship them into the
-        // game without the perm we need.
+    fun `canCompleteOnboarding returns true with fine but no background`() {
+        // Apple 5.1.5 (rejection 1.13.0): fine-only must be sufficient
+        // to complete onboarding. The Always upgrade is optional.
         every { locationRepository.hasFineLocationPermission() } returns true
         every { locationRepository.hasBackgroundLocationPermission() } returns false
         val vm = createViewModel()
         vm.onIntent(OnboardingIntent.RefreshPermissions)
         vm.onIntent(OnboardingIntent.NicknameChanged("Alice"))
         val ok = vm.canCompleteOnboarding()
-        assertFalse(ok)
-        assertTrue(vm.uiState.value.showLocationAlert)
+        assertTrue(ok)
+        assertFalse(vm.uiState.value.showLocationAlert)
     }
 
     @Test

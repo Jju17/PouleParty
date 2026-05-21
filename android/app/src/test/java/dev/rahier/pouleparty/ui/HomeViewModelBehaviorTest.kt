@@ -303,21 +303,21 @@ class HomeViewModelBehaviorTest {
     // ── PP-45: admin code dialog ──
 
     @Test
-    fun `AdminModeTapped without location shows location required alert and not dialog`() {
+    fun `CreatePartyLongPressed without location shows location required alert and not dialog`() {
         every { locationRepository.hasFineLocationPermission() } returns false
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
-        vm.onIntent(HomeIntent.AdminModeTapped)
+        vm.onIntent(HomeIntent.CreatePartyLongPressed)
         assertTrue(vm.uiState.value.isShowingLocationRequired)
         assertFalse(vm.uiState.value.isShowingAdminCodeDialog)
     }
 
     @Test
-    fun `AdminModeTapped with location opens admin code dialog`() {
+    fun `CreatePartyLongPressed with location opens admin code dialog`() {
         every { locationRepository.hasFineLocationPermission() } returns true
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
-        vm.onIntent(HomeIntent.AdminModeTapped)
+        vm.onIntent(HomeIntent.CreatePartyLongPressed)
         assertTrue(vm.uiState.value.isShowingAdminCodeDialog)
         assertEquals("", vm.uiState.value.adminCodeInput)
     }
@@ -327,7 +327,7 @@ class HomeViewModelBehaviorTest {
         every { locationRepository.hasFineLocationPermission() } returns true
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
-        vm.onIntent(HomeIntent.AdminModeTapped)
+        vm.onIntent(HomeIntent.CreatePartyLongPressed)
         vm.onIntent(HomeIntent.AdminCodeChanged(dev.rahier.pouleparty.model.AdminCode.VALUE))
         assertTrue(vm.validateAdminCode())
         assertFalse(vm.uiState.value.isShowingAdminCodeDialog)
@@ -340,7 +340,7 @@ class HomeViewModelBehaviorTest {
         every { locationRepository.hasFineLocationPermission() } returns true
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
-        vm.onIntent(HomeIntent.AdminModeTapped)
+        vm.onIntent(HomeIntent.CreatePartyLongPressed)
         vm.onIntent(HomeIntent.AdminCodeChanged("nope"))
         assertFalse(vm.validateAdminCode())
         assertFalse(vm.uiState.value.isShowingAdminCodeDialog)
@@ -353,31 +353,11 @@ class HomeViewModelBehaviorTest {
         every { locationRepository.hasFineLocationPermission() } returns true
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
-        vm.onIntent(HomeIntent.AdminModeTapped)
+        vm.onIntent(HomeIntent.CreatePartyLongPressed)
         vm.onIntent(HomeIntent.AdminCodeChanged("abc"))
         vm.onIntent(HomeIntent.AdminCodeDismissed)
         assertFalse(vm.uiState.value.isShowingAdminCodeDialog)
         assertEquals("", vm.uiState.value.adminCodeInput)
     }
 
-    // ── PP-46: web CTA ──
-
-    @Test
-    fun `WebCreatePartyTapped emits OpenWebUrl effect with localized URL`() = kotlinx.coroutines.test.runTest(testDispatcher) {
-        val vm = createViewModel()
-        testDispatcher.scheduler.advanceUntilIdle()
-        vm.onIntent(HomeIntent.WebCreatePartyTapped)
-        val effect = vm.effects.first()
-        assertTrue(effect is dev.rahier.pouleparty.ui.home.HomeEffect.OpenWebUrl)
-        // Verify the URL points at one of the 3 known PP-46 routes —
-        // which exact one depends on the test JVM's `Locale.getDefault()`
-        // (`fr` on Julien's mac, `en` on CI).
-        val url = (effect as dev.rahier.pouleparty.ui.home.HomeEffect.OpenWebUrl).url
-        val expected = setOf(
-            "https://pouleparty.be/creer-une-partie",
-            "https://pouleparty.be/create-a-party",
-            "https://pouleparty.be/een-feestje-organiseren",
-        )
-        assertTrue("URL `$url` not in $expected", expected.contains(url))
-    }
 }

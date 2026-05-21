@@ -54,8 +54,9 @@ struct HomeFeature {
         /// `isAdminCreation = true` or surfaces a `wrongCode` alert.
         var isShowingAdminCodeAlert: Bool = false
         var adminCodeInput: String = ""
-        /// True between `.adminModeTapped` and `.initialLocationResolved`,
-        /// so the seeded Game gets `isAdminCreation = true`.
+        /// True between `.adminCodeValidateTapped` (correct code) and
+        /// `.initialLocationResolved`, so the seeded Game gets
+        /// `isAdminCreation = true`.
         var pendingIsAdminCreation: Bool = false
     }
 
@@ -65,23 +66,16 @@ struct HomeFeature {
         case activeGameFound(Game, GameRole, GamePhase)
         case adminCodeDismissed
         case adminCodeValidateTapped
-        case adminModeTapped
         case binding(BindingAction<State>)
         case chickenConfigLocationRequested
         case chickenGameStarted(Game)
         case gameMasterGameStarted(Game)
         case completedGameFound(Game)
         case createPartyTapped
-        /// Long-press easter egg on the Create Party button. Skips the
-        /// whole wizard and drops the user straight onto the chicken map
-        /// with a preset game (stayInTheZone, starts in 1 min, 1 h long,
-        /// current loc or Brussels fallback for both start and final
-        /// center) so drift / shrink visuals can be eyeballed with every
-        /// future circle rendered at once.
+        /// Long-press easter egg on the Create Party button. Hidden entry
+        /// point to admin mode (PP-45): opens the admin code modal so the
+        /// password isn't advertised via a visible button on Home.
         case createPartyLongPressed
-        case launchDebugPreviewTapped
-        case chickenDebugGameStarted(Game)
-        case dailyFreeLimitChecked(allowed: Bool)
         case destination(PresentationAction<Destination.Action>)
         case destinationDismissed
         case gameNotFound
@@ -97,8 +91,6 @@ struct HomeFeature {
         case rulesButtonTapped
         case settingsButtonTapped
         case startButtonTapped
-        /// Placeholder for the "Envie de créer une partie ?" web CTA. Wired in PP-46.
-        case webCreatePartyTapped
         /// PP-52 — relayed from `AppFeature.deeplinkValidationCodeReceived`.
         /// Opens the join sheet (if not already open) and forwards the
         /// validation code to the nested `JoinFlowFeature` so the user
@@ -111,7 +103,6 @@ struct HomeFeature {
         @ObservableState
         enum State: Equatable {
             case alert(AlertState<Action.Alert>)
-            case debugMapConfig(ChickenMapConfigFeature.State)
             case gameCreation(GameCreationFeature.State)
             case gameRules
             case joinFlow(JoinFlowFeature.State)
@@ -120,7 +111,6 @@ struct HomeFeature {
 
         enum Action {
             case alert(Alert)
-            case debugMapConfig(ChickenMapConfigFeature.Action)
             case gameCreation(GameCreationFeature.Action)
             case joinFlow(JoinFlowFeature.Action)
             case settings(SettingsFeature.Action)
@@ -133,9 +123,6 @@ struct HomeFeature {
 
         var body: some ReducerOf<Self> {
             EmptyReducer()
-                .ifCaseLet(\.debugMapConfig, action: \.debugMapConfig) {
-                    ChickenMapConfigFeature()
-                }
                 .ifCaseLet(\.gameCreation, action: \.gameCreation) {
                     GameCreationFeature()
                 }
@@ -167,41 +154,13 @@ struct HomeFeature {
                 return .none
             case .binding:
                 return .none
-            case let .dailyFreeLimitChecked(allowed):
-                if allowed {
-                    return .send(.chickenConfigLocationRequested)
-                }
-                state.destination = .alert(
-                    AlertState {
-                        TextState("Daily limit reached")
-                    } actions: {
-                        ButtonState(role: .cancel) {
-                            TextState("OK")
-                        }
-                    } message: {
-                        TextState("You can only create 1 free game per day. Upgrade to a paid plan for unlimited games.")
-                    }
-                )
-                return .none
             case .createPartyTapped:
                 let chickenLocStatus = locationClient.authorizationStatus()
                 guard chickenLocStatus == .authorizedAlways || chickenLocStatus == .authorizedWhenInUse else {
                     return .send(.locationPermissionDenied)
                 }
                 MapWarmUp.warmUpIfNeeded()
-                return .run { [userClient, apiClient] send in
-                    guard let userId = userClient.currentUserId() else { return }
-                    let count = (try? await apiClient.countFreeGamesToday(userId)) ?? 0
-                    await send(.dailyFreeLimitChecked(allowed: count < 1))
-                }
-            case .adminModeTapped:
-                let chickenLocStatus = locationClient.authorizationStatus()
-                guard chickenLocStatus == .authorizedAlways || chickenLocStatus == .authorizedWhenInUse else {
-                    return .send(.locationPermissionDenied)
-                }
-                state.adminCodeInput = ""
-                state.isShowingAdminCodeAlert = true
-                return .none
+                return .send(.chickenConfigLocationRequested)
             case .adminCodeDismissed:
                 state.isShowingAdminCodeAlert = false
                 state.adminCodeInput = ""
@@ -223,76 +182,14 @@ struct HomeFeature {
                 state.pendingIsAdminCreation = true
                 MapWarmUp.warmUpIfNeeded()
                 return .send(.chickenConfigLocationRequested)
-            case .webCreatePartyTapped:
-                let lang = Locale.current.language.languageCode?.identifier
-                guard let url = CreatePartyURL.url(for: lang) else { return .none }
-                return .run { _ in
-                    await MainActor.run { UIApplication.shared.open(url) }
-                }
             case .createPartyLongPressed:
                 let chickenLocStatus = locationClient.authorizationStatus()
                 guard chickenLocStatus == .authorizedAlways || chickenLocStatus == .authorizedWhenInUse else {
                     return .send(.locationPermissionDenied)
                 }
-                guard let creatorId = userClient.currentUserId(), !creatorId.isEmpty else {
-                    Logger(category: "Home").error("Debug party: no current user id")
-                    return .none
-                }
-                let center = locationClient.lastLocation() ?? CLLocationCoordinate2D(
-                    latitude: AppConstants.defaultLatitude,
-                    longitude: AppConstants.defaultLongitude
-                )
-                MapWarmUp.warmUpIfNeeded()
-                // Seed just the fields the ChickenMapConfigView needs —
-                // gameMode (so the start/final pin picker shows both
-                // options), a default location and radius. Timing /
-                // seed / foundCode are finalized when the user taps
-                // "Launch Preview" so the countdown is always 60 s
-                // from launch time, no matter how long they spent
-                // dragging pins.
-                var game = Game(id: apiClient.newGameId())
-                game.name = "DEBUG PREVIEW"
-                game.creatorId = creatorId
-                game.chickenId = creatorId
-                game.gameMode = .stayInTheZone
-                game.maxPlayers = 1
-                game.initialLocation = center
-                game.finalLocation = center
-                game.zone.radius = 1500
-                game.powerUps.enabled = false
-                let sharedGame = Shared(value: game)
-                state.destination = .debugMapConfig(
-                    ChickenMapConfigFeature.State(game: sharedGame)
-                )
+                state.adminCodeInput = ""
+                state.isShowingAdminCodeAlert = true
                 return .none
-            case .launchDebugPreviewTapped:
-                guard case let .debugMapConfig(configState) = state.destination else {
-                    return .none
-                }
-                var game = configState.game
-                game.foundCode = Game.generateFoundCode()
-                let start = Date.now.addingTimeInterval(60)
-                game.timing.start = Timestamp(date: start)
-                game.timing.end = Timestamp(date: start.addingTimeInterval(3600))
-                game.timing.headStartMinutes = 0
-                let (interval, decline) = calculateNormalModeSettings(
-                    initialRadius: game.zone.radius,
-                    gameDurationMinutes: 60
-                )
-                game.zone.shrinkIntervalMinutes = interval
-                game.zone.shrinkMetersPerUpdate = decline
-                game.zone.driftSeed = withRandomNumberGenerator { generator in
-                    Int.random(in: 1...999_999, using: &generator)
-                }
-                state.destination = nil
-                return .run { [game] send in
-                    do {
-                        try await apiClient.setConfig(game)
-                        await send(.chickenDebugGameStarted(game))
-                    } catch {
-                        Logger(category: "Home").error("Debug party: setConfig failed: \(error)")
-                    }
-                }
             case let .destination(.presented(.gameCreation(.gameCreated(game)))):
                 state.destination = nil
                 return .send(.chickenGameStarted(game))
@@ -361,8 +258,6 @@ struct HomeFeature {
                     await send(.initialLocationResolved(location))
                 }
             case .chickenGameStarted:
-                return .none
-            case .chickenDebugGameStarted:
                 return .none
             case .gameMasterGameStarted:
                 return .none
@@ -656,10 +551,10 @@ struct HomeView: View {
                             )
                     }
                     .accessibilityLabel("Create a party")
-                    // Hidden debug easter egg: long-press the Create Party
-                    // button to skip the wizard and spawn a preset
-                    // stayInTheZone game with every future shrunk circle
-                    // rendered up front on the chicken map.
+                    // Hidden admin-mode entry: long-press the Create Party
+                    // button to open the admin code modal (PP-45). The
+                    // password is intentionally not advertised via a visible
+                    // button so Apple reviewers don't surface it.
                     .simultaneousGesture(
                         LongPressGesture(minimumDuration: 1.5)
                             .onEnded { _ in
@@ -668,30 +563,6 @@ struct HomeView: View {
                     )
                     .padding()
                 }
-
-                // PP-42 placeholders: visible buttons whose behavior lands in
-                // PP-45 (admin mode unlock) and PP-46 (web CTA).
-                VStack(spacing: 8) {
-                    Button {
-                        store.send(.adminModeTapped)
-                    } label: {
-                        Text("Admin mode")
-                            .font(.gameboy(size: 8))
-                            .foregroundStyle(Color.onBackground.opacity(0.6))
-                    }
-                    .accessibilityLabel("Admin mode")
-
-                    Button {
-                        store.send(.webCreatePartyTapped)
-                    } label: {
-                        Text("Want to create a party?")
-                            .font(.gameboy(size: 8))
-                            .foregroundStyle(Color.onBackground.opacity(0.6))
-                            .underline()
-                    }
-                    .accessibilityLabel("Want to create a party?")
-                }
-                .padding(.bottom, 12)
             }
 
         }
@@ -732,18 +603,6 @@ struct HomeView: View {
             GameCreationView(
                 store: creationStore,
                 onDismiss: { self.store.send(.destinationDismissed) }
-            )
-        }
-        .fullScreenCover(
-            item: $store.scope(
-                state: \.destination?.debugMapConfig,
-                action: \.destination.debugMapConfig
-            )
-        ) { configStore in
-            DebugMapSetupView(
-                store: configStore,
-                onLaunch: { self.store.send(.launchDebugPreviewTapped) },
-                onCancel: { self.store.send(.destinationDismissed) }
             )
         }
         .sheet(
