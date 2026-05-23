@@ -67,8 +67,7 @@ struct HunterMapView: View {
             .overlay(alignment: .top) {
                 if store.hasChallenges,
                    store.hasPendingChallenges,
-                   store.hasGameStarted,
-                   !store.isDebugPreview {
+                   store.hasGameStarted {
                     PendingChallengesBanner(
                         count: store.pendingChallengeCount,
                         onTap: { store.send(.view(.challengesButtonTapped)) }

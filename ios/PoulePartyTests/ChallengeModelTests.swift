@@ -39,6 +39,39 @@ struct ChallengeModelTests {
         #expect(challenge.proximityRadiusMeters == nil)
         #expect(challenge.partner == nil)
         #expect(challenge.lastUpdated == nil)
+        #expect(challenge.level == 1)
+        #expect(challenge.number == 0)
+    }
+
+    @Test func decodesLegacyDocWithoutLevelOrNumber() throws {
+        let challenge = try decode([
+            "title": "Sing the anthem",
+            "type": "oneShot",
+            "points": 150,
+        ])
+        #expect(challenge.level == 1)
+        #expect(challenge.number == 0)
+    }
+
+    @Test func decodesExplicitLevelAndNumber() throws {
+        let challenge = try decode([
+            "title": "Pyramide",
+            "level": 2,
+            "number": 7,
+        ])
+        #expect(challenge.level == 2)
+        #expect(challenge.number == 7)
+    }
+
+    @Test func decodesNumberZeroAsSentinel() throws {
+        // `0` means "not yet numbered" — the migration assigns a real
+        // value but a freshly seeded doc can land with the sentinel.
+        let challenge = try decode([
+            "title": "Pending number",
+            "level": 3,
+            "number": 0,
+        ])
+        #expect(challenge.number == 0)
     }
 
     @Test func decodesOneShotTypeExplicitly() throws {
@@ -104,7 +137,9 @@ struct ChallengeModelTests {
             type: .repeatable,
             location: GeoPoint(latitude: 50.8467, longitude: 4.3525),
             proximityRadiusMeters: 25,
-            partner: "Brussels Tourism"
+            partner: "Brussels Tourism",
+            level: 2,
+            number: 13
         )
         let encoded = try Firestore.Encoder().encode(original)
         let decoded = try Firestore.Decoder().decode(Challenge.self, from: encoded)
@@ -117,6 +152,8 @@ struct ChallengeModelTests {
         #expect(decoded.location?.longitude == original.location?.longitude)
         #expect(decoded.proximityRadiusMeters == original.proximityRadiusMeters)
         #expect(decoded.partner == original.partner)
+        #expect(decoded.level == original.level)
+        #expect(decoded.number == original.number)
     }
 
     @Test func defaultMemberwiseInitMatchesDecodedDefaults() {
@@ -125,6 +162,8 @@ struct ChallengeModelTests {
         #expect(memberwise.location == nil)
         #expect(memberwise.proximityRadiusMeters == nil)
         #expect(memberwise.partner == nil)
+        #expect(memberwise.level == 1)
+        #expect(memberwise.number == 0)
     }
 
     @Test func challengeTypeRawValues() {

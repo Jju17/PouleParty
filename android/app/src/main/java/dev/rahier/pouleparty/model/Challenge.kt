@@ -21,6 +21,12 @@ data class Challenge(
     val location: GeoPoint? = null,
     val proximityRadiusMeters: Int? = null,
     val partner: String? = null,
+    val level: Int = 1,
+    // `0` is a sentinel for "not yet numbered". `migrateChallengesV2`
+    // backfills every doc missing or set to 0 with the next free
+    // integer within its `level`; new docs created via the Console
+    // must ship with `number > 0`.
+    val number: Int = 0,
 ) {
     val typeEnum: ChallengeType
         get() = ChallengeType.fromFirestore(type)

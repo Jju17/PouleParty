@@ -29,6 +29,47 @@ class ChallengeModelTest {
     }
 
     @Test
+    fun `default Challenge has level 1 and number 0 sentinel`() {
+        val challenge = Challenge()
+        assertEquals(1, challenge.level)
+        assertEquals(0, challenge.number)
+    }
+
+    @Test
+    fun `Challenge keeps explicit level and number when set`() {
+        val challenge = Challenge(level = 2, number = 7)
+        assertEquals(2, challenge.level)
+        assertEquals(7, challenge.number)
+    }
+
+    @Test
+    fun `Challenge accepts number 0 as sentinel for not-yet-numbered`() {
+        // 0 = "not yet numbered". `migrateChallengesV2` assigns a real
+        // value at next deploy but a freshly seeded doc can land here.
+        val challenge = Challenge(level = 3, number = 0)
+        assertEquals(0, challenge.number)
+    }
+
+    @Test
+    fun `Challenge round-trips level and number via copy`() {
+        // Firestore `toObject()` calls the no-arg constructor and
+        // injects properties; copy() mirrors that contract for the
+        // values we care about staying intact.
+        val original = Challenge(
+            id = "lvl2-7",
+            title = "Pyramide",
+            type = "repeatable",
+            points = 100,
+            level = 2,
+            number = 7,
+        )
+        val roundTripped = original.copy()
+        assertEquals(2, roundTripped.level)
+        assertEquals(7, roundTripped.number)
+        assertEquals(ChallengeType.REPEATABLE, roundTripped.typeEnum)
+    }
+
+    @Test
     fun `typeEnum maps oneShot string to ONE_SHOT`() {
         val challenge = Challenge(type = "oneShot")
         assertEquals(ChallengeType.ONE_SHOT, challenge.typeEnum)

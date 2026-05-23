@@ -19,6 +19,12 @@ struct Challenge: Codable, Equatable, Identifiable {
     var location: GeoPoint? = nil
     var proximityRadiusMeters: Int? = nil
     var partner: String? = nil
+    var level: Int = 1
+    // `0` is a sentinel for "not yet numbered". `migrateChallengesV2`
+    // assigns the first free integer within `level` to every doc
+    // missing or set to 0; new challenges created via the Console must
+    // ship with `number > 0`.
+    var number: Int = 0
 
     var id: String { firestoreId ?? "challenge::\(title)::\(points)" }
 
@@ -42,6 +48,8 @@ struct Challenge: Codable, Equatable, Identifiable {
         case location
         case proximityRadiusMeters
         case partner
+        case level
+        case number
     }
 
     init(
@@ -53,7 +61,9 @@ struct Challenge: Codable, Equatable, Identifiable {
         type: ChallengeType = .oneShot,
         location: GeoPoint? = nil,
         proximityRadiusMeters: Int? = nil,
-        partner: String? = nil
+        partner: String? = nil,
+        level: Int = 1,
+        number: Int = 0
     ) {
         self.firestoreId = firestoreId
         self.title = title
@@ -64,6 +74,8 @@ struct Challenge: Codable, Equatable, Identifiable {
         self.location = location
         self.proximityRadiusMeters = proximityRadiusMeters
         self.partner = partner
+        self.level = level
+        self.number = number
     }
 
     init(from decoder: Decoder) throws {
@@ -77,6 +89,8 @@ struct Challenge: Codable, Equatable, Identifiable {
         location = try c.decodeIfPresent(GeoPoint.self, forKey: .location)
         proximityRadiusMeters = try c.decodeIfPresent(Int.self, forKey: .proximityRadiusMeters)
         partner = try c.decodeIfPresent(String.self, forKey: .partner)
+        level = try c.decodeIfPresent(Int.self, forKey: .level) ?? 1
+        number = try c.decodeIfPresent(Int.self, forKey: .number) ?? 0
     }
 }
 
