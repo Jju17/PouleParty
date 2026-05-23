@@ -101,15 +101,6 @@ data class Game(
      * firestore.rules `allow create` clause.
      */
     val isAdminCreation: Boolean = false,
-    /**
-     * PP-52 — links this game to a batch of pre-paid event registrations
-     * in the top-level `/eventRegistrations/{rid}` collection. When set,
-     * the JoinFlow surfaces a second textfield for the validation code
-     * the player received by email; the join is gated on a matching
-     * `eventRegistrations` doc with `batchId == this && paid == true`.
-     * Null for normal games (free join, no code required).
-     */
-    val registrationBatchId: String? = null
 ) {
     // ── Chicken Role (PP-26) ───────────────────────────
 

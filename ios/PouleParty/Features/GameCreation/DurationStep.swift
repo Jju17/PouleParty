@@ -34,12 +34,12 @@ struct DurationStep: GameCreationStepView {
                     } label: {
                         HStack {
                             BangerText(option.0, size: 28)
-                                .foregroundStyle(isSelected ? .black : Color.onBackground)
+                                .foregroundStyle(isSelected ? .white : Color.onBackground)
                             Spacer()
                             if isSelected {
                                 Image(systemName: "checkmark.circle.fill")
                                     .font(.title2)
-                                    .foregroundStyle(.black)
+                                    .foregroundStyle(.white)
                             }
                         }
                         .padding(.horizontal, 20)

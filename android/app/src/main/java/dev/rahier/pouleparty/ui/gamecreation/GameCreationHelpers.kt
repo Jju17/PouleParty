@@ -104,13 +104,13 @@ internal fun OptionCard(
                 Text(
                     text,
                     style = bangerStyle(22),
-                    color = if (isSelected) Color.Black else MaterialTheme.colorScheme.onBackground
+                    color = if (isSelected) Color.White else MaterialTheme.colorScheme.onBackground
                 )
                 if (subtitle != null) {
                     Text(
                         subtitle,
                         style = gameboyStyle(7),
-                        color = if (isSelected) Color.Black.copy(alpha = 0.7f)
+                        color = if (isSelected) Color.White.copy(alpha = 0.8f)
                         else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                     )
                 }
@@ -120,7 +120,7 @@ internal fun OptionCard(
                 Icon(
                     imageVector = Icons.Filled.CheckCircle,
                     contentDescription = null,
-                    tint = Color.Black,
+                    tint = Color.White,
                     modifier = Modifier.size(24.dp)
                 )
             }

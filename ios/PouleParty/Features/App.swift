@@ -31,13 +31,6 @@ struct AppFeature {
         case onboarding(OnboardingFeature.Action)
         case home(HomeFeature.Action)
         case victory(VictoryFeature.Action)
-        /// PP-52 — Universal Link `pouleparty.be/join?code=…` was
-        /// tapped. The PoulePartyApp scene parses the URL and forwards
-        /// the validation code here; we route the user to Home and
-        /// pre-fill the JoinFlow validation field. Mid-game states
-        /// ignore it (the email keeps the code in plain text as a
-        /// backup, so the hunter isn't stranded).
-        case deeplinkValidationCodeReceived(String)
     }
 
     @Dependency(\.apiClient) var apiClient
@@ -72,18 +65,6 @@ struct AppFeature {
                 return .none
             case .onboarding:
                 return .none
-            case let .deeplinkValidationCodeReceived(code):
-                switch state {
-                case .home:
-                    return .send(.home(.deeplinkValidationCodeReceived(code)))
-                case .onboarding:
-                    state = .home(HomeFeature.State())
-                    return .send(.home(.deeplinkValidationCodeReceived(code)))
-                case .chickenMap, .hunterMap, .gameMasterMap, .victory:
-                    // Mid-game: don't yank the player out. The email's
-                    // plain-text code stays the fallback.
-                    return .none
-                }
             case .chickenMap(.delegate(.returnedToMenu)):
                 state = AppFeature.State.home(HomeFeature.State())
                 return .none

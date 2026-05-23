@@ -146,8 +146,8 @@ class HomeViewModelBehaviorTest {
     }
 
     @Test
-    fun `onStartButtonTapped with permission opens join sheet`() {
-        every { locationRepository.hasFineLocationPermission() } returns true
+    fun `onStartButtonTapped opens join sheet without gating on location permission`() {
+        every { locationRepository.hasFineLocationPermission() } returns false
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
 
@@ -158,32 +158,8 @@ class HomeViewModelBehaviorTest {
     }
 
     @Test
-    fun `onStartButtonTapped without permission shows location alert and not join sheet`() {
+    fun `canCreateParty always returns true and never shows location alert`() {
         every { locationRepository.hasFineLocationPermission() } returns false
-        val vm = createViewModel()
-        testDispatcher.scheduler.advanceUntilIdle()
-
-        vm.onIntent(HomeIntent.StartButtonTapped)
-
-        assertTrue(vm.uiState.value.isShowingLocationRequired)
-        assertFalse(vm.uiState.value.isShowingJoinSheet)
-    }
-
-    @Test
-    fun `onCreatePartyTapped without permission returns false and shows alert`() {
-        every { locationRepository.hasFineLocationPermission() } returns false
-        val vm = createViewModel()
-        testDispatcher.scheduler.advanceUntilIdle()
-
-        val result = vm.canCreateParty()
-
-        assertFalse(result)
-        assertTrue(vm.uiState.value.isShowingLocationRequired)
-    }
-
-    @Test
-    fun `onCreatePartyTapped with permission returns true and does not show alert`() {
-        every { locationRepository.hasFineLocationPermission() } returns true
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
 
@@ -209,18 +185,7 @@ class HomeViewModelBehaviorTest {
     // ── Edge cases ─────────────────────────────────────────
 
     @Test
-    fun `StartButtonTapped without location permission shows alert and skips sheet`() {
-        every { locationRepository.hasFineLocationPermission() } returns false
-        val vm = createViewModel()
-        testDispatcher.scheduler.advanceUntilIdle()
-        vm.onIntent(HomeIntent.StartButtonTapped)
-        assertTrue(vm.uiState.value.isShowingLocationRequired)
-        assertFalse(vm.uiState.value.isShowingJoinSheet)
-    }
-
-    @Test
-    fun `StartButtonTapped with permission opens join sheet and resets fields`() {
-        every { locationRepository.hasFineLocationPermission() } returns true
+    fun `StartButtonTapped opens join sheet and resets fields`() {
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
         vm.onIntent(HomeIntent.GameCodeChanged("OLD123"))
@@ -233,7 +198,6 @@ class HomeViewModelBehaviorTest {
 
     @Test
     fun `JoinSheetDismissed clears all join state`() {
-        every { locationRepository.hasFineLocationPermission() } returns true
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
         vm.onIntent(HomeIntent.StartButtonTapped)
@@ -303,28 +267,18 @@ class HomeViewModelBehaviorTest {
     // ── PP-45: admin code dialog ──
 
     @Test
-    fun `CreatePartyLongPressed without location shows location required alert and not dialog`() {
+    fun `CreatePartyLongPressed opens admin code dialog without gating on location permission`() {
         every { locationRepository.hasFineLocationPermission() } returns false
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
         vm.onIntent(HomeIntent.CreatePartyLongPressed)
-        assertTrue(vm.uiState.value.isShowingLocationRequired)
-        assertFalse(vm.uiState.value.isShowingAdminCodeDialog)
-    }
-
-    @Test
-    fun `CreatePartyLongPressed with location opens admin code dialog`() {
-        every { locationRepository.hasFineLocationPermission() } returns true
-        val vm = createViewModel()
-        testDispatcher.scheduler.advanceUntilIdle()
-        vm.onIntent(HomeIntent.CreatePartyLongPressed)
         assertTrue(vm.uiState.value.isShowingAdminCodeDialog)
+        assertFalse(vm.uiState.value.isShowingLocationRequired)
         assertEquals("", vm.uiState.value.adminCodeInput)
     }
 
     @Test
     fun `validateAdminCode with correct code returns true and clears state`() {
-        every { locationRepository.hasFineLocationPermission() } returns true
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
         vm.onIntent(HomeIntent.CreatePartyLongPressed)
@@ -337,7 +291,6 @@ class HomeViewModelBehaviorTest {
 
     @Test
     fun `validateAdminCode with wrong code returns false and surfaces error`() {
-        every { locationRepository.hasFineLocationPermission() } returns true
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
         vm.onIntent(HomeIntent.CreatePartyLongPressed)
@@ -350,7 +303,6 @@ class HomeViewModelBehaviorTest {
 
     @Test
     fun `AdminCodeDismissed clears dialog state`() {
-        every { locationRepository.hasFineLocationPermission() } returns true
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
         vm.onIntent(HomeIntent.CreatePartyLongPressed)

@@ -157,7 +157,7 @@ struct OnboardingLocationSlide: View {
                         // in 1.11.1 under 5.1.1(iv) for pre-conditioning the
                         // system prompt. Keep wording neutral.
                         BangerText("Background tracking", size: 18)
-                            .foregroundStyle(.black)
+                            .foregroundStyle(.white)
                             .padding(.horizontal, 28)
                             .padding(.vertical, 14)
                             .background(
@@ -182,7 +182,7 @@ struct OnboardingLocationSlide: View {
                         }
                     } label: {
                         BangerText("Open Settings", size: 18)
-                            .foregroundStyle(.black)
+                            .foregroundStyle(.white)
                             .padding(.horizontal, 24)
                             .padding(.vertical, 10)
                             .background(
@@ -196,7 +196,7 @@ struct OnboardingLocationSlide: View {
 
             default:
                 Group {
-                    BangerText("Without it, the game can't work.\nNo location = no map = no fun.\n\nWe only share your position with other players while a game is in progress.", size: 18)
+                    BangerText("PouleParty uses your GPS during a game so the Chicken and Hunters can find each other on the map.\n\nYou can grant access now, or wait. We'll ask again when you start your first game.", size: 18)
                         .multilineTextAlignment(.center)
                         .foregroundStyle(Color.onBackground.opacity(0.6))
                         .padding(.horizontal, 10)
@@ -207,8 +207,8 @@ struct OnboardingLocationSlide: View {
                         // See the comment on the "Always" button above —
                         // Apple 5.1.1(iv) forbids "Allow" on a custom
                         // button that precedes the system location prompt.
-                        BangerText("Continue", size: 20)
-                            .foregroundStyle(.black)
+                        BangerText("Set up location", size: 20)
+                            .foregroundStyle(.white)
                             .padding(.horizontal, 28)
                             .padding(.vertical, 14)
                             .background(
@@ -274,7 +274,7 @@ struct OnboardingNotificationSlide: View {
                         }
                     } label: {
                         BangerText("Open Settings", size: 18)
-                            .foregroundStyle(.black)
+                            .foregroundStyle(.white)
                             .padding(.horizontal, 24)
                             .padding(.vertical, 10)
                             .background(
@@ -297,7 +297,7 @@ struct OnboardingNotificationSlide: View {
                         onRequestPermission()
                     } label: {
                         BangerText("Enable Notifications", size: 20)
-                            .foregroundStyle(.black)
+                            .foregroundStyle(.white)
                             .padding(.horizontal, 28)
                             .padding(.vertical, 14)
                             .background(

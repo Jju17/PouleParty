@@ -64,6 +64,7 @@ struct HomeFeature {
         case accountDeletionCompleted
         case activeGameBannerDismissed
         case activeGameFound(Game, GameRole, GamePhase)
+        case adminCodeAlertRequested
         case adminCodeDismissed
         case adminCodeValidateTapped
         case binding(BindingAction<State>)
@@ -81,6 +82,7 @@ struct HomeFeature {
         case gameNotFound
         case hunterGameJoined(Game, String)
         case initialLocationResolved(CLLocationCoordinate2D?)
+        case joinFlowAuthorized
         case joinGameButtonTapped
         case locationPermissionDenied
         case musicToggleTapped
@@ -91,11 +93,6 @@ struct HomeFeature {
         case rulesButtonTapped
         case settingsButtonTapped
         case startButtonTapped
-        /// PP-52 — relayed from `AppFeature.deeplinkValidationCodeReceived`.
-        /// Opens the join sheet (if not already open) and forwards the
-        /// validation code to the nested `JoinFlowFeature` so the user
-        /// only has to enter the gameCode they get on-site.
-        case deeplinkValidationCodeReceived(String)
     }
 
     @Reducer
@@ -155,10 +152,6 @@ struct HomeFeature {
             case .binding:
                 return .none
             case .createPartyTapped:
-                let chickenLocStatus = locationClient.authorizationStatus()
-                guard chickenLocStatus == .authorizedAlways || chickenLocStatus == .authorizedWhenInUse else {
-                    return .send(.locationPermissionDenied)
-                }
                 MapWarmUp.warmUpIfNeeded()
                 return .send(.chickenConfigLocationRequested)
             case .adminCodeDismissed:
@@ -183,10 +176,8 @@ struct HomeFeature {
                 MapWarmUp.warmUpIfNeeded()
                 return .send(.chickenConfigLocationRequested)
             case .createPartyLongPressed:
-                let chickenLocStatus = locationClient.authorizationStatus()
-                guard chickenLocStatus == .authorizedAlways || chickenLocStatus == .authorizedWhenInUse else {
-                    return .send(.locationPermissionDenied)
-                }
+                return .send(.adminCodeAlertRequested)
+            case .adminCodeAlertRequested:
                 state.adminCodeInput = ""
                 state.isShowingAdminCodeAlert = true
                 return .none
@@ -392,21 +383,11 @@ struct HomeFeature {
                 state.destination = .settings(SettingsFeature.State())
                 return .none
             case .startButtonTapped:
-                let startLocStatus = locationClient.authorizationStatus()
-                guard startLocStatus == .authorizedAlways || startLocStatus == .authorizedWhenInUse else {
-                    return .send(.locationPermissionDenied)
-                }
                 MapWarmUp.warmUpIfNeeded()
+                return .send(.joinFlowAuthorized)
+            case .joinFlowAuthorized:
                 state.destination = .joinFlow(JoinFlowFeature.State())
                 return .none
-
-            case let .deeplinkValidationCodeReceived(code):
-                if case .joinFlow = state.destination {
-                    // Already presented — just forward.
-                } else {
-                    state.destination = .joinFlow(JoinFlowFeature.State())
-                }
-                return .send(.destination(.presented(.joinFlow(.deeplinkValidationCodeReceived(code)))))
             }
         }
         .ifLet(\.$destination, action: \.destination) {

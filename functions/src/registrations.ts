@@ -1,6 +1,6 @@
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 import { getAppCheck } from "firebase-admin/app-check";
-import { onCall, onRequest, HttpsError } from "firebase-functions/v2/https";
+import { onRequest } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/v2";
 import { defineSecret } from "firebase-functions/params";
 import { randomInt } from "crypto";
@@ -101,9 +101,8 @@ interface RegistrationDoc {
    *  docs created before this field was introduced. */
   stripePaymentIntentId?: string;
   /** Set by `charge.refunded` webhook on a FULL refund. Pairs with
-   *  `paid: false` so the existing `where paid == true` queries in
-   *  `validateRegistrationCode` / `lookupGameByValidationCode`
-   *  filter out refunded inscriptions automatically. */
+   *  `paid: false` so the Google Sheet view of paid attendees stays
+   *  accurate and the wristband desk on D-Day skips refunded codes. */
   refunded?: boolean;
   refundedAt?: Timestamp;
   locale: string;
@@ -429,12 +428,11 @@ export const confirmRegistrationPayment = onRequest(
     }
 
     // Refund branch — fires when an inscription is refunded from the
-    // Stripe Dashboard (or via API). FULL refunds invalidate the
-    // registration so the email's validation code stops working in
-    // JoinFlow (`validateRegistrationCode` filters `where paid == true`).
-    // Partial refunds are ignored (e.g. refunding one player from a
-    // team of 4 to drop down to 3 — the inscription is still valid
-    // for the remaining players).
+    // Stripe Dashboard (or via API). FULL refunds mark the row as
+    // refunded in the Google Sheet so the wristband desk on D-Day
+    // skips the code. Partial refunds are ignored (e.g. refunding one
+    // player from a team of 4 to drop down to 3 — the inscription is
+    // still valid for the remaining players).
     if (event.type === "charge.refunded") {
       const charge = event.data.object;
       if (charge.amount_refunded < charge.amount) {
@@ -656,209 +654,3 @@ export const confirmRegistrationPayment = onRequest(
     res.status(200).json({ received: true });
   }
 );
-
-// ---------------------------------------------------------------------------
-// CRIT-1 (audit 2026-05-17) — server-side validation of registration codes.
-//
-// Both callables replace the client-side Firestore queries that used to live in
-// `ApiClient.lookupGameByValidationCode` / `validateRegistrationCode` (iOS) and
-// `FirestoreRepository.lookupGameByValidationCode` / `validateRegistrationCode`
-// (Android). Moving the lookup server-side lets `firestore.rules` lock
-// `/eventRegistrations` reads to `if false` so anonymous users can't enumerate
-// the collection and exfiltrate the email/phone/name PII of every paying
-// player. The callables return only what the JoinFlow needs (a boolean, or a
-// discriminated `{type, gameId, batchId}` payload), never PII.
-// ---------------------------------------------------------------------------
-
-// XPLAT-M6 (store-audit 2026-05-18) — per-UID rate limit on the two
-// validation callables. Threat model: brute-forcing a 6-char alphanum
-// code (32^6 ≈ 1 B combinations, ~50 valid codes per batch → 1 hit
-// every ~20 M attempts). The legitimate JoinFlow makes 1 call per
-// submit click, so 10 attempts inside a 10 min sliding window covers
-// any plausible typo retry while keeping a 60-min lockout in reserve.
-// Anonymous Auth UIDs are device-bound (one UID per fresh install) so
-// this is effectively per-device. Doc lives in `/validationRateLimits/{uid}`,
-// admin-SDK-only by firestore.rules.
-const VALIDATION_RATE_LIMIT_MAX = 10;
-const VALIDATION_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
-const VALIDATION_RATE_LIMIT_LOCK_MS = 60 * 60 * 1000;
-
-interface ValidationRateLimit {
-  attempts: number;
-  firstAttemptAt: Timestamp;
-  lockedUntil: Timestamp | null;
-}
-
-function validationRateLimitRef(uid: string) {
-  return db().collection("validationRateLimits").doc(uid);
-}
-
-/**
- * Single-transaction bump-and-check : reads the rate-limit doc, applies
- * sliding-window / lockout-expiry resets, increments the counter, then
- * either writes the new state or throws `resource-exhausted` if this
- * call pushes the user over the limit. Throws BEFORE the actual lookup
- * runs so brute-force attempts can't even reach the Firestore query.
- *
- * Failures and successes both count — a legit user retrying after a
- * typo is fine within the 10/10min budget, while an attacker hammering
- * the endpoint hits the wall on the same counter.
- */
-async function bumpValidationRateLimit(uid: string): Promise<void> {
-  await db().runTransaction(async (tx) => {
-    const ref = validationRateLimitRef(uid);
-    const snap = await tx.get(ref);
-    const now = Timestamp.now();
-    let rl: ValidationRateLimit = (snap.data() as ValidationRateLimit) ?? {
-      attempts: 0,
-      firstAttemptAt: now,
-      lockedUntil: null,
-    };
-
-    // Auto-clear an expired lockout so the user can resume after waiting.
-    if (rl.lockedUntil && rl.lockedUntil.toMillis() <= now.toMillis()) {
-      rl = { attempts: 0, firstAttemptAt: now, lockedUntil: null };
-    }
-    if (rl.lockedUntil) {
-      throw new HttpsError("resource-exhausted", "Too many validation attempts", {
-        lockedUntil: rl.lockedUntil.toMillis(),
-      });
-    }
-
-    // Sliding-window reset : if the first attempt fell outside the
-    // window, start fresh from this call.
-    if (
-      now.toMillis() - rl.firstAttemptAt.toMillis() >
-      VALIDATION_RATE_LIMIT_WINDOW_MS
-    ) {
-      rl = { attempts: 0, firstAttemptAt: now, lockedUntil: null };
-    }
-
-    const attempts = rl.attempts + 1;
-    const reachedLock = attempts >= VALIDATION_RATE_LIMIT_MAX;
-    const lockedUntil = reachedLock
-      ? Timestamp.fromMillis(now.toMillis() + VALIDATION_RATE_LIMIT_LOCK_MS)
-      : null;
-    tx.set(ref, {
-      attempts,
-      firstAttemptAt: rl.firstAttemptAt,
-      lockedUntil,
-    } satisfies ValidationRateLimit);
-
-    if (reachedLock) {
-      throw new HttpsError("resource-exhausted", "Too many validation attempts", {
-        lockedUntil: lockedUntil!.toMillis(),
-      });
-    }
-  });
-}
-// ---------------------------------------------------------------------------
-
-interface ValidateRegistrationCodeInput {
-  batchId?: string;
-  code?: string;
-}
-
-interface LookupGameByValidationCodeInput {
-  code?: string;
-}
-
-type LookupGameByValidationCodeResult =
-  | { type: "invalidCode" }
-  | { type: "gameNotYetCreated"; batchId: string }
-  | { type: "gameReady"; gameId: string; batchId: string };
-
-function normalizeBatchId(value: unknown): string {
-  return typeof value === "string" ? value.trim() : "";
-}
-
-function normalizeCode(value: unknown): string {
-  return typeof value === "string" ? value.trim().toUpperCase() : "";
-}
-
-/**
- * `validateRegistrationCode(batchId, code) -> { valid: boolean }`.
- * Returns true iff a paid eventRegistration exists for that pair.
- * Requires an authenticated caller (anonymous Auth is enough — the gate
- * is to prevent unauth curl scraping). Empty inputs return false rather
- * than throwing so the JoinFlow can stay on the entry step.
- */
-export const validateRegistrationCode = onCall<
-  ValidateRegistrationCodeInput,
-  Promise<{ valid: boolean }>
->({ region: REGION }, async (request) => {
-  if (!request.auth) {
-    throw new HttpsError("unauthenticated", "Sign in required");
-  }
-  const batchId = normalizeBatchId(request.data?.batchId);
-  const code = normalizeCode(request.data?.code);
-  if (!batchId || !code) return { valid: false };
-
-  // XPLAT-M6 (store-audit 2026-05-18): throws `resource-exhausted` if
-  // this UID has exceeded the per-window budget. Runs BEFORE the
-  // Firestore lookup so a brute-force loop hits the wall without ever
-  // touching `/eventRegistrations`.
-  await bumpValidationRateLimit(request.auth.uid);
-
-  const snap = await db()
-    .collection(COLLECTION)
-    .where("batchId", "==", batchId)
-    .where("code", "==", code)
-    .where("paid", "==", true)
-    .limit(1)
-    .get();
-
-  return { valid: !snap.empty };
-});
-
-/**
- * `lookupGameByValidationCode(code) -> {type, ...}`. Used by the
- * `pouleparty.be/join?code=…` deeplink resolution path. Distinguishes
- * three outcomes so the JoinFlow can show the right UI:
- *   - `invalidCode` — no paid registration matches the code
- *   - `gameNotYetCreated` — paid registration exists but no Game with
- *     `registrationBatchId == batchId` yet
- *   - `gameReady` — paid registration + active (non-`done`) Game found
- * Only the `gameId` + `batchId` are returned; the client fetches the
- * Game doc separately via the existing `/games/{id}` read path.
- */
-export const lookupGameByValidationCode = onCall<
-  LookupGameByValidationCodeInput,
-  Promise<LookupGameByValidationCodeResult>
->({ region: REGION }, async (request) => {
-  if (!request.auth) {
-    throw new HttpsError("unauthenticated", "Sign in required");
-  }
-  const code = normalizeCode(request.data?.code);
-  if (!code) return { type: "invalidCode" };
-
-  // XPLAT-M6 (store-audit 2026-05-18): shared rate-limit across both
-  // validation callables — see `bumpValidationRateLimit` above.
-  await bumpValidationRateLimit(request.auth.uid);
-
-  const regSnap = await db()
-    .collection(COLLECTION)
-    .where("code", "==", code)
-    .where("paid", "==", true)
-    .limit(1)
-    .get();
-  const regDoc = regSnap.docs[0];
-  if (!regDoc) return { type: "invalidCode" };
-
-  const batchIdRaw = (regDoc.data() as { batchId?: unknown }).batchId;
-  const batchId = normalizeBatchId(batchIdRaw);
-  if (!batchId) return { type: "invalidCode" };
-
-  const gameSnap = await db()
-    .collection("games")
-    .where("registrationBatchId", "==", batchId)
-    .limit(5)
-    .get();
-  const active = gameSnap.docs.find(
-    (d) => (d.data() as { status?: string }).status !== "done"
-  );
-  if (active) {
-    return { type: "gameReady", gameId: active.id, batchId };
-  }
-  return { type: "gameNotYetCreated", batchId };
-});

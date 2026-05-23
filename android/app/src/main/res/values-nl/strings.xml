@@ -151,10 +151,10 @@
     <string name="need_location">We hebben je locatie nodig</string>
     <string name="location_granted">Alles klaar! Het spel volgt je locatie ook op de achtergrond.\n\nMaximaal plezier gegarandeerd!</string>
     <string name="location_partial">Bedankt! Je kunt aan de slag.\n\nVoor de soepelste ervaring tijdens een jacht kun je locatie ook op de achtergrond toestaan, zodat de Kip blijft uitzenden wanneer je telefoon in je zak zit. Helemaal optioneel.</string>
-    <string name="location_denied">Zonder locatietoegang werkt het spel niet.\nGeen locatie = geen kaart = geen plezier.\n\nJe GPS wordt naar Firebase Firestore gestuurd en alleen gedeeld met de andere spelers in jouw actieve sessie. Het volgen stopt automatisch wanneer het spel eindigt. We verkopen deze gegevens nooit aan adverteerders.</string>
+    <string name="location_denied">PouleParty gebruikt je GPS tijdens een spel zodat de Kip en de Jagers elkaar op de kaart kunnen vinden.\n\nJe kunt nu toegang verlenen, of wachten. We vragen het opnieuw wanneer je je eerste spel start.</string>
     <string name="always_allowed">Altijd toegestaan!</string>
     <string name="allow_always">Doorgaan</string>
-    <string name="allow_location_access">Doorgaan</string>
+    <string name="allow_location_access">Locatie instellen</string>
     <string name="choose_nickname">Kies je bijnaam</string>
     <string name="nickname_subtitle">Zo zien andere spelers\nje in het spel.</string>
     <string name="your_nickname">Je bijnaam</string>
@@ -309,24 +309,10 @@
     <string name="gamemaster_join_title">GameMaster 🦅</string>
     <string name="gamemaster_password_hint">Code van 4 cijfers</string>
 
-    <string name="validation_code_title">Validatiecode</string>
-    <string name="validation_code_hint">Code uit je e-mail</string>
-    <string name="game_code_label">Spel %1$s</string>
-
-    <string name="deeplink_resolving_label">Code controleren…</string>
-    <string name="deeplink_party_not_open_title">Feest nog niet open</string>
-    <string name="deeplink_party_not_open_body">Je validatiecode is opgeslagen. Het feest is nog niet ingericht — kom op 6 juni terug met de spelcode die we ter plaatse aankondigen!</string>
-    <string name="deeplink_invalid_code_title">Ongeldige code</string>
-    <string name="deeplink_invalid_code_body">We vinden geen inschrijving die bij deze code hoort. Check de e-mail die we je hebben gestuurd, of mail julien@rahier.dev.</string>
-    <string name="deeplink_code_label">JE VALIDATIECODE</string>
-    <string name="deeplink_ok">OK</string>
-    <string name="deeplink_close">Sluiten</string>
-
     <!-- CRIT-8 (audit 2026-05-17) -->
     <string name="join_flow_gm_too_many_attempts">Te veel pogingen. Probeer opnieuw over %1$d min.</string>
     <string name="join_flow_gm_wrong_code">Verkeerde code. %1$d poging(en) over.</string>
     <string name="join_flow_gm_generic_error">Kon de GameMaster-code niet verifiëren. Probeer opnieuw.</string>
-    <string name="join_flow_validation_code_invalid">Ongeldige code. Controleer de e-mail die we hebben verstuurd.</string>
     <string name="join_flow_network_error">Netwerkfout</string>
 
     <!-- CRIT-8 (audit 2026-05-17): wizard voor het aanmaken van een spel -->

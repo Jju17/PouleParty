@@ -46,17 +46,17 @@ struct SelectionCard: View {
 
                 VStack(alignment: .leading, spacing: 4) {
                     BangerText(title, size: 22)
-                        .foregroundStyle(isSelected ? .black : Color.onBackground)
+                        .foregroundStyle(isSelected ? .white : Color.onBackground)
                     Text(subtitle)
                         .font(.gameboy(size: 7))
-                        .foregroundStyle(isSelected ? .black.opacity(0.7) : Color.onBackground.opacity(0.6))
+                        .foregroundStyle(isSelected ? .white.opacity(0.8) : Color.onBackground.opacity(0.6))
                 }
 
                 Spacer()
 
                 Image(systemName: "checkmark.circle.fill")
                     .font(.title2)
-                    .foregroundStyle(.black)
+                    .foregroundStyle(.white)
                     .opacity(isSelected ? 1 : 0)
             }
             .padding(.horizontal, 20)

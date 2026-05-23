@@ -18,10 +18,8 @@ import kotlinx.coroutines.tasks.await
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import dev.rahier.pouleparty.data.DeeplinkBus
 import dev.rahier.pouleparty.AppConstants
 import dev.rahier.pouleparty.MigrationManager
 import dev.rahier.pouleparty.model.Game
@@ -113,14 +111,6 @@ fun AppNavigation() {
 
     val hasCompletedOnboarding = prefs.getBoolean(AppConstants.PREF_ONBOARDING_COMPLETED, false)
     val startDestination = if (hasCompletedOnboarding) Routes.HOME else Routes.ONBOARDING
-
-    // CRIT-9 (audit 2026-05-17): keep DeeplinkBus informed of the top-of-stack
-    // route so it can drop App Link payloads that arrive while the user is in
-    // an active game. See DeeplinkBus.postValidationCode for the drop list.
-    val currentBackStackEntry by navController.currentBackStackEntryAsState()
-    LaunchedEffect(currentBackStackEntry) {
-        DeeplinkBus.updateCurrentRoute(currentBackStackEntry?.destination?.route)
-    }
 
     NavHost(navController = navController, startDestination = startDestination) {
 

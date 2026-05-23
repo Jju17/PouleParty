@@ -1,12 +1,9 @@
 package dev.rahier.pouleparty.ui.home
 
-import android.Manifest
 import android.content.Intent
 import android.media.MediaPlayer
 import android.net.Uri
 import android.provider.Settings
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.combinedClickable
@@ -17,14 +14,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.filled.ChevronLeft
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.*
-import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,8 +35,6 @@ import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.ui.home.components.GameRulesOverlay
 import dev.rahier.pouleparty.ui.home.components.JoinFlowBottomSheet
 import dev.rahier.pouleparty.ui.theme.*
-
-private enum class PendingPermissionAction { None, Start, CreateParty }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -109,8 +100,6 @@ fun HomeScreen(
         if (!state.isMusicMuted && !player.isPlaying) player.start()
     }
 
-    var pendingPermissionAction by remember { mutableStateOf<PendingPermissionAction>(PendingPermissionAction.None) }
-
     // PP-42: Forms a fresh Firestore-style auto-ID, then navigates straight
     // into the Free wizard. PlanSelection is gone; the cap (5) lives in the
     // wizard's Stepper. The admin entry point (PP-45) will pass `true` here.
@@ -120,24 +109,6 @@ fun HomeScreen(
             .document()
             .id
         onNavigateToCreateParty(gameId, isAdminCreation)
-    }
-
-    // Location permission launcher — triggered when Start or Create Party is tapped without
-    // permission. If user grants in the system dialog, we re-attempt the original action.
-    val locationPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        val action = pendingPermissionAction
-        pendingPermissionAction = PendingPermissionAction.None
-        if (granted) {
-            when (action) {
-                PendingPermissionAction.Start -> viewModel.onIntent(HomeIntent.StartButtonTapped)
-                PendingPermissionAction.CreateParty -> launchCreateParty(isAdminCreation = false)
-                PendingPermissionAction.None -> {}
-            }
-        } else {
-            viewModel.onIntent(HomeIntent.LocationPermissionDenied)
-        }
     }
 
     // Mute button bounce animation
@@ -198,14 +169,7 @@ fun HomeScreen(
             )
 
             TextButton(
-                onClick = {
-                    if (viewModel.hasLocationPermission()) {
-                        viewModel.onIntent(HomeIntent.StartButtonTapped)
-                    } else {
-                        pendingPermissionAction = PendingPermissionAction.Start
-                        locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-                    }
-                },
+                onClick = { viewModel.onIntent(HomeIntent.StartButtonTapped) },
                 modifier = Modifier
                     .width(200.dp)
                     .height(50.dp)
@@ -370,17 +334,8 @@ fun HomeScreen(
                         .padding(16.dp)
                         .border(2.dp, MaterialTheme.colorScheme.onBackground, RoundedCornerShape(12.dp))
                         .combinedClickable(
-                            onClick = {
-                                if (viewModel.hasLocationPermission()) {
-                                    launchCreateParty(isAdminCreation = false)
-                                } else {
-                                    pendingPermissionAction = PendingPermissionAction.CreateParty
-                                    locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-                                }
-                            },
-                            onLongClick = {
-                                viewModel.onIntent(HomeIntent.CreatePartyLongPressed)
-                            }
+                            onClick = { launchCreateParty(isAdminCreation = false) },
+                            onLongClick = { viewModel.onIntent(HomeIntent.CreatePartyLongPressed) }
                         )
                 ) {
                     Text(
@@ -409,9 +364,6 @@ fun HomeScreen(
             onJoinAsGameMasterTapped = { viewModel.onIntent(HomeIntent.JoinAsGameMasterTapped) },
             onGameMasterPasswordChanged = { viewModel.onIntent(HomeIntent.GameMasterPasswordChanged(it)) },
             onSubmitGameMasterPasswordTapped = { viewModel.onIntent(HomeIntent.SubmitGameMasterPasswordTapped) },
-            onValidationCodeChanged = { viewModel.onIntent(HomeIntent.ValidationCodeChanged(it)) },
-            onSubmitValidationCodeTapped = { viewModel.onIntent(HomeIntent.SubmitValidationCodeTapped) },
-            onDeeplinkDismissed = { viewModel.onIntent(HomeIntent.DeeplinkDismissed) },
         )
     }
 

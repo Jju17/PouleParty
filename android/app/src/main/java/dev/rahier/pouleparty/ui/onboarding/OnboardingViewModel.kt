@@ -94,11 +94,13 @@ class OnboardingViewModel @Inject constructor(
 
     private fun nextPage() {
         val current = _uiState.value.currentPage
-        if (current == 3 && !_uiState.value.hasFineLocation) return
+        // Apple 5.1.5 parity: every slide is skippable. Location is
+        // requested contextually at Create / Join / Start; an empty
+        // nickname is auto-generated in `canCompleteOnboarding`. The
+        // only remaining gate is profanity on a manually-typed nickname.
         if (current == 5) {
             val trimmed = _uiState.value.nickname.trim()
-            if (trimmed.isEmpty()) return
-            if (ProfanityFilter.containsProfanity(trimmed)) {
+            if (trimmed.isNotEmpty() && ProfanityFilter.containsProfanity(trimmed)) {
                 _uiState.update { it.copy(showProfanityAlert = true) }
                 return
             }
@@ -131,24 +133,20 @@ class OnboardingViewModel @Inject constructor(
         _uiState.update { it.copy(showProfanityAlert = false) }
     }
 
-    fun canCompleteOnboarding(): Boolean {
-        if (!_uiState.value.hasFineLocation) {
-            _uiState.update { it.copy(showLocationAlert = true) }
-            return false
-        }
+    /**
+     * Returns the final nickname to persist when the user taps "Let's Go".
+     * Returns null if the typed nickname triggers the profanity filter (the
+     * caller stays on the screen so the user can fix it). An empty nickname
+     * is auto-generated via [RandomNickname] — Apple 5.1.5 makes every
+     * slide skippable, and the player always needs a teamName.
+     */
+    fun resolveFinalNickname(): String? {
         val trimmed = _uiState.value.nickname.trim()
-        if (trimmed.isEmpty()) {
-            // Silently refuse, the "Let's Go" button is already gated on
-            // the nickname page, so this branch only fires if the UI state
-            // drifted out of sync. No alert needed; the user will see the
-            // nickname field empty and try again.
-            return false
-        }
-        if (ProfanityFilter.containsProfanity(trimmed)) {
+        if (trimmed.isNotEmpty() && ProfanityFilter.containsProfanity(trimmed)) {
             _uiState.update { it.copy(showProfanityAlert = true) }
-            return false
+            return null
         }
-        return true
+        return if (trimmed.isEmpty()) dev.rahier.pouleparty.util.RandomNickname.generate() else trimmed
     }
 
     val isLastPage: Boolean

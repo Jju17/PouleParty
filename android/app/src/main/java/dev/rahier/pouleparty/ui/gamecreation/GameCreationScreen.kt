@@ -312,7 +312,7 @@ private fun BottomBar(
             ) {
                 Text(
                     stringResource(R.string.start_game),
-                    color = Color.Black.copy(alpha = if (state.isZoneConfigured) 1f else 0.4f),
+                    color = Color.White.copy(alpha = if (state.isZoneConfigured) 1f else 0.5f),
                     style = bangerStyle(22)
                 )
             }
@@ -333,7 +333,7 @@ private fun BottomBar(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         stringResource(R.string.next),
-                        color = Color.Black.copy(alpha = if (canProceed) 1f else 0.4f),
+                        color = Color.White.copy(alpha = if (canProceed) 1f else 0.5f),
                         style = bangerStyle(22)
                     )
                     Spacer(Modifier.width(8.dp))
@@ -341,7 +341,7 @@ private fun BottomBar(
                         Icons.AutoMirrored.Filled.ArrowForward,
                         contentDescription = null,
                         modifier = Modifier.size(20.dp),
-                        tint = Color.Black.copy(alpha = if (canProceed) 1f else 0.4f)
+                        tint = Color.White.copy(alpha = if (canProceed) 1f else 0.5f)
                     )
                 }
             }

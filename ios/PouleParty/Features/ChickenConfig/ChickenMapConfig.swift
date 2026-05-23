@@ -505,7 +505,7 @@ struct ChickenMapConfigView: View {
                             .opacity(0.7)
                     }
                     .foregroundStyle(
-                        store.currentGame.zone.radius == size.meters ? .black : Color.onBackground
+                        store.currentGame.zone.radius == size.meters ? .white : Color.onBackground
                     )
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)

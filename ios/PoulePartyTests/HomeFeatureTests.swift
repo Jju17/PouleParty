@@ -15,46 +15,19 @@ struct HomeFeatureTests {
     @Test func startButtonTappedShowsJoinFlow() async {
         let store = TestStore(initialState: HomeFeature.State()) {
             HomeFeature()
-        } withDependencies: {
-            $0.locationClient.authorizationStatus = { .authorizedWhenInUse }
         }
+        store.exhaustivity = .off
 
-        await store.send(.startButtonTapped) {
+        await store.send(.startButtonTapped)
+        await store.receive(\.joinFlowAuthorized) {
             $0.destination = .joinFlow(JoinFlowFeature.State())
         }
     }
 
-    @Test func createPartyWithoutLocationShowsAlert() async {
+    @Test func createPartyStartsChickenConfigFlow() async {
         let store = TestStore(initialState: HomeFeature.State()) {
             HomeFeature()
         } withDependencies: {
-            $0.locationClient.authorizationStatus = { .denied }
-        }
-
-        await store.send(.createPartyTapped)
-        await store.receive(\.locationPermissionDenied) {
-            $0.destination = .alert(
-                AlertState {
-                    TextState("Location Required")
-                } actions: {
-                    ButtonState(action: .openSettings) {
-                        TextState("Open Settings")
-                    }
-                    ButtonState(role: .cancel) {
-                        TextState("OK")
-                    }
-                } message: {
-                    TextState("Location is the core of PouleParty! Your position is anonymous and only used during the game. Please enable location access to continue.")
-                }
-            )
-        }
-    }
-
-    @Test func createPartyWithLocationStartsChickenConfigFlow() async {
-        let store = TestStore(initialState: HomeFeature.State()) {
-            HomeFeature()
-        } withDependencies: {
-            $0.locationClient.authorizationStatus = { .authorizedWhenInUse }
             $0.userClient.currentUserId = { "user-123" }
         }
         store.exhaustivity = .off
@@ -66,25 +39,14 @@ struct HomeFeatureTests {
     @Test func createPartyLongPressOpensAdminCodeAlert() async {
         let store = TestStore(initialState: HomeFeature.State()) {
             HomeFeature()
-        } withDependencies: {
-            $0.locationClient.authorizationStatus = { .authorizedWhenInUse }
         }
-        await store.send(.createPartyLongPressed) {
+        store.exhaustivity = .off
+
+        await store.send(.createPartyLongPressed)
+        await store.receive(\.adminCodeAlertRequested) {
             $0.adminCodeInput = ""
             $0.isShowingAdminCodeAlert = true
         }
-    }
-
-    @Test func createPartyLongPressWithoutLocationFailsBeforeOpeningAlert() async {
-        let store = TestStore(initialState: HomeFeature.State()) {
-            HomeFeature()
-        } withDependencies: {
-            $0.locationClient.authorizationStatus = { .denied }
-        }
-        store.exhaustivity = .off
-        await store.send(.createPartyLongPressed)
-        await store.receive(\.locationPermissionDenied)
-        #expect(store.state.isShowingAdminCodeAlert == false)
     }
 
     @Test func adminCodeValidateWithCorrectCodeKicksOffLocationFlow() async {
