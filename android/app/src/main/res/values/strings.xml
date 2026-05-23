@@ -85,7 +85,6 @@
     <string name="admin_mode">Admin mode</string>
     <string name="enter_the_admin_code">Enter the admin code</string>
     <string name="validate">Validate</string>
-    <string name="want_to_create_a_party">Want to create a party?</string>
     <string name="active_types">Active types</string>
     <string name="zone_radius">Zone radius</string>
     <string name="start_zone">Start zone</string>
@@ -157,8 +156,8 @@
     <string name="hunt_subtitle">Split into squads. Use the map to track them.\n\nThe Chicken could be hiding anywhere!</string>
     <string name="need_location">We Need Your Location</string>
     <string name="location_granted">You\'re all set! The game will track location even in the background.\n\nMaximum fun guaranteed!</string>
-    <string name="location_partial">Almost there! PouleParty needs to track your GPS in the background so the Chicken stays on the map when your phone is in your pocket. Your position is uploaded to Firebase Firestore and shared in real time with other players in your active game session only — tracking stops the moment the game ends.\n\nPlease allow background location.</string>
-    <string name="location_denied">Without location access, the game can\'t work.\nNo location = no map = no fun.\n\nYour GPS is uploaded to Firebase Firestore and shared with other players in your active game session only. Tracking stops automatically when the game ends. We never sell or share this data with advertisers.</string>
+    <string name="location_partial">Thanks! You\'re good to go.\n\nFor the smoothest experience during a hunt, you can also allow location in the background so the Chicken keeps broadcasting when the phone is in your pocket. Totally optional.</string>
+    <string name="location_denied">PouleParty uses your GPS during a game so the Chicken and Hunters can find each other on the map.\n\nYou can grant access now, or wait. We\'ll ask again when you start your first game.</string>
     <string name="location_service_channel_name">Game location tracking</string>
     <string name="location_service_channel_description">Keeps the app tracking your position during active games.</string>
     <string name="location_service_title">Game in progress</string>
@@ -176,14 +175,15 @@
     <string name="report_player_success">Thanks — report submitted</string>
     <string name="report_player_error">Couldn\'t submit the report. Try again in a moment.</string>
     <string name="always_allowed">Always allowed!</string>
-    <!-- Button labels intentionally neutral ("Continue") instead of "Allow".
-         Apple rejected iOS 1.11.1 under guideline 5.1.1(iv) for using "Allow"
-         on an in-app button that precedes the system location prompt (seen
-         as pre-conditioning the user's answer). Keeping Android in sync
-         avoids cross-platform copy drift. Do not revert without re-reading
-         the 1.11.1 App Review notes. -->
+    <!-- Button labels intentionally neutral ("Set up location") instead of
+         "Allow" or "Grant now". Apple rejected iOS 1.11.1 under guideline
+         5.1.1(iv) for using "Allow" on an in-app button that precedes the
+         system location prompt (seen as pre-conditioning the user's
+         answer); "Grant now" carries the same risk. Keeping Android in
+         sync avoids cross-platform copy drift. Do not revert without
+         re-reading the 1.11.1 App Review notes. -->
     <string name="allow_always">Continue</string>
-    <string name="allow_location_access">Continue</string>
+    <string name="allow_location_access">Set up location</string>
     <string name="choose_nickname">Choose Your Nickname</string>
     <string name="nickname_subtitle">This is how other players\nwill see you in the game.</string>
     <string name="your_nickname">Your nickname</string>
@@ -337,29 +337,11 @@
     <string name="gamemaster_join_title">GameMaster 🦅</string>
     <string name="gamemaster_password_hint">4-digit code</string>
 
-    <!-- PP-52: validation code step shown in JoinFlow when the resolved
-         game has a non-null `registrationBatchId`. -->
-    <string name="validation_code_title">Validation code</string>
-    <string name="validation_code_hint">Code from your email</string>
-    <string name="game_code_label">Game %1$s</string>
-
-    <!-- PP-52 deeplink resolution screens (Universal Link / App Link from
-         the confirmation email). -->
-    <string name="deeplink_resolving_label">Checking your code…</string>
-    <string name="deeplink_party_not_open_title">Party not open yet</string>
-    <string name="deeplink_party_not_open_body">Your validation code is saved. The party hasn\'t been set up yet — come back on June 6 with the game code we\'ll announce on site!</string>
-    <string name="deeplink_invalid_code_title">Invalid code</string>
-    <string name="deeplink_invalid_code_body">We couldn\'t find any registration matching this code. Double-check the email we sent you, or contact julien@rahier.dev.</string>
-    <string name="deeplink_code_label">YOUR VALIDATION CODE</string>
-    <string name="deeplink_ok">OK</string>
-    <string name="deeplink_close">Close</string>
-
     <!-- CRIT-8 (audit 2026-05-17): JoinFlow error strings, previously
          hardcoded in HomeViewModel — broke EN/NL users. -->
     <string name="join_flow_gm_too_many_attempts">Too many attempts. Try again in %1$d min.</string>
     <string name="join_flow_gm_wrong_code">Wrong code. %1$d attempt(s) remaining.</string>
     <string name="join_flow_gm_generic_error">Could not verify the GameMaster code. Try again.</string>
-    <string name="join_flow_validation_code_invalid">Invalid code. Check the email we sent you.</string>
     <string name="join_flow_network_error">Network error</string>
 
     <!-- CRIT-8 (audit 2026-05-17): Game creation wizard steps, previously

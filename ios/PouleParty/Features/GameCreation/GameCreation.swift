@@ -720,7 +720,7 @@ struct GameCreationView: View {
                     store.send(.startGameButtonTapped)
                 } label: {
                     BangerText("Start Game", size: 22)
-                        .foregroundStyle(.black)
+                        .foregroundStyle(.white)
                         .padding(.horizontal, 28)
                         .padding(.vertical, 14)
                         .background(
@@ -742,7 +742,7 @@ struct GameCreationView: View {
                             .font(.gameboy(size: 10))
                         Image(systemName: "chevron.right")
                     }
-                    .foregroundStyle(nextDisabled ? .black.opacity(0.4) : .black)
+                    .foregroundStyle(nextDisabled ? .white.opacity(0.5) : .white)
                     .padding(.horizontal, 20)
                     .padding(.vertical, 12)
                     .background(nextDisabled ? AnyShapeStyle(Color.gray.opacity(0.3)) : AnyShapeStyle(Color.gradientFire))

@@ -43,13 +43,12 @@ data class OutOfZonePenaltyDecision(
 fun evaluateOutOfZonePenalty(
     isOutsideZone: Boolean,
     isGameOver: Boolean,
-    isDebugPreview: Boolean,
     hunterId: String,
     lastPenaltyAt: Long?,
     nowMs: Long,
     intervalMs: Long = AppConstants.OUT_OF_ZONE_PENALTY_INTERVAL_MS,
 ): OutOfZonePenaltyDecision {
-    if (isOutsideZone && !isGameOver && !isDebugPreview && hunterId.isNotEmpty()) {
+    if (isOutsideZone && !isGameOver && hunterId.isNotEmpty()) {
         return if (lastPenaltyAt == null) {
             OutOfZonePenaltyDecision(
                 newLastPenaltyAt = nowMs,

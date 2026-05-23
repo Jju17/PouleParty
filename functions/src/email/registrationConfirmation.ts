@@ -7,8 +7,16 @@ import { logger } from "firebase-functions/v2";
 //
 // Localized on `reg.locale` (`fr`, `en`, `nl`). Unknown locales fall
 // back to `fr` since the D-Day audience is FR-first.
+//
+// Frames the 6-char code as a physical wristband-pickup token, NOT
+// as an in-app join code. The mobile binaries shipped from 1.13.1
+// (4) onward no longer query this code or claim the legacy
+// `pouleparty.be/join?code=…` Universal Link / App Link — compliance
+// with Apple App Store 3.1.1 (paid digital content). All in-app
+// gameplay is free; the Stripe inscription is a real-world ticket
+// for the in-person event in Ixelles.
 
-export interface RegistrationSnapshot {
+interface RegistrationSnapshot {
   registrationId: string;
   batchId: string;
   playerName: string;
@@ -19,17 +27,15 @@ export interface RegistrationSnapshot {
   locale: string;
 }
 
-export type Locale = "fr" | "en" | "nl";
+type Locale = "fr" | "en" | "nl";
 
-export interface EmailStrings {
+interface EmailStrings {
   subject: string;
   headerSubtitle: string;
   greeting: (name: string) => string;
   body: (teamName: string, teamSize: number, dDay: string) => string;
   codeLabel: string;
-  ctaIntro: string;
-  cta: string;
-  fallback: (code: string) => string;
+  codeInstructions: string;
   support: string;
   reference: string;
   footer: string;
@@ -45,14 +51,11 @@ const STRINGS: Record<Locale, EmailStrings> = {
     headerSubtitle: "Inscription confirmée",
     greeting: (name) => `Salut <strong>${escapeHtml(name)}</strong>,`,
     body: (teamName, teamSize, dDay) =>
-      `Ton paiement est passé, ton équipe <strong>« ${escapeHtml(teamName)} »</strong> (${teamSize} joueur·euse·s) est officiellement inscrite pour le ${dDay}. Préparez vos baskets 🏃`,
-    codeLabel: "TON CODE DE VALIDATION",
-    ctaIntro:
-      "Le jour J, ouvre l'app PouleParty et tape sur le bouton ci-dessous depuis cet email pour rejoindre directement la partie&nbsp;:",
-    cta: "REJOINS LA PARTIE ICI LE 6 JUIN !",
-    fallback: (code) =>
-      `Si le bouton ne fonctionne pas, ouvre l'app PouleParty manuellement, tape le code de partie qu'on t'annoncera sur place puis ton code de validation <strong>${escapeHtml(code)}</strong>.`,
-    support: "Un souci&nbsp;? Écris à",
+      `Ton paiement est passé, ton équipe <strong>« ${escapeHtml(teamName)} »</strong> (${teamSize} joueur·euse·s) est officiellement inscrite pour le ${dDay}. Rendez-vous au bar de départ à Ixelles à 20h30. Préparez vos baskets 🏃`,
+    codeLabel: "TON CODE D'ENTRÉE",
+    codeInstructions:
+      "Présente ce code au bar de départ pour récupérer ton bracelet, ton verre de bienvenue, et le code de la partie qui sera annoncé sur place. Garde ce mail (ou note le code), c'est ton seul justificatif d'inscription.",
+    support: "Une question&nbsp;? Écris à",
     reference: "Référence inscription",
     footer: "PouleParty — Bruxelles 🇧🇪",
     dDay: "samedi 6 juin 2026",
@@ -62,13 +65,10 @@ const STRINGS: Record<Locale, EmailStrings> = {
     headerSubtitle: "Registration confirmed",
     greeting: (name) => `Hi <strong>${escapeHtml(name)}</strong>,`,
     body: (teamName, teamSize, dDay) =>
-      `Payment confirmed — your team <strong>"${escapeHtml(teamName)}"</strong> (${teamSize} players) is officially signed up for ${dDay}. Get those sneakers ready 🏃`,
-    codeLabel: "YOUR VALIDATION CODE",
-    ctaIntro:
-      "On the day, open the PouleParty app and tap the button below from this email to jump straight into the game:",
-    cta: "JOIN THE GAME HERE ON JUNE 6!",
-    fallback: (code) =>
-      `If the button doesn't work, open the PouleParty app manually, type the game code we'll announce on site, then your validation code <strong>${escapeHtml(code)}</strong>.`,
+      `Payment confirmed. Your team <strong>"${escapeHtml(teamName)}"</strong> (${teamSize} players) is officially signed up for ${dDay}. See you at the start bar in Ixelles at 8:30 PM. Get those sneakers ready 🏃`,
+    codeLabel: "YOUR ENTRY CODE",
+    codeInstructions:
+      "Show this code at the start bar to pick up your wristband, welcome drink, and the game code that will be announced on site. Keep this email (or note the code down). It is your only proof of registration.",
     support: "Anything wrong? Email",
     reference: "Registration reference",
     footer: "PouleParty — Brussels 🇧🇪",
@@ -79,13 +79,10 @@ const STRINGS: Record<Locale, EmailStrings> = {
     headerSubtitle: "Inschrijving bevestigd",
     greeting: (name) => `Hallo <strong>${escapeHtml(name)}</strong>,`,
     body: (teamName, teamSize, dDay) =>
-      `Betaling bevestigd — je team <strong>"${escapeHtml(teamName)}"</strong> (${teamSize} spelers) staat officieel ingeschreven voor ${dDay}. Haal die loopschoenen maar boven 🏃`,
-    codeLabel: "JE VALIDATIECODE",
-    ctaIntro:
-      "Op de dag zelf, open de PouleParty-app en tik op de knop hieronder in deze e-mail om meteen aan te sluiten:",
-    cta: "SLUIT JE AAN OP 6 JUNI!",
-    fallback: (code) =>
-      `Werkt de knop niet? Open de PouleParty-app handmatig, tik de spelcode in die we ter plaatse aankondigen, en daarna je validatiecode <strong>${escapeHtml(code)}</strong>.`,
+      `Betaling bevestigd. Je team <strong>"${escapeHtml(teamName)}"</strong> (${teamSize} spelers) staat officieel ingeschreven voor ${dDay}. Afspraak aan de startbar in Elsene om 20u30. Haal die loopschoenen maar boven 🏃`,
+    codeLabel: "JE TOEGANGSCODE",
+    codeInstructions:
+      "Toon deze code aan de startbar om je polsbandje, welkomstdrankje en de spelcode op te halen die ter plaatse wordt aangekondigd. Bewaar deze e-mail (of noteer de code). Het is je enige bewijs van inschrijving.",
     support: "Een probleem? Mail naar",
     reference: "Inschrijvingsreferentie",
     footer: "PouleParty — Brussel 🇧🇪",
@@ -93,28 +90,18 @@ const STRINGS: Record<Locale, EmailStrings> = {
   },
 };
 
-export function pickStrings(locale: string): { strings: EmailStrings; lang: Locale } {
+function pickStrings(locale: string): { strings: EmailStrings; lang: Locale } {
   if (locale === "en" || locale === "nl") return { strings: STRINGS[locale], lang: locale };
   return { strings: STRINGS.fr, lang: "fr" };
 }
 
-// Universal Link / App Link entry point — see PP-52 deeplink section
-// + `web/public/.well-known/{apple-app-site-association,assetlinks.json}`.
-// Carries only the validation code; the JoinFlow resolves the live
-// Game via `Game.registrationBatchId == registration.batchId`.
-export function deeplinkFor(code: string): string {
-  return `https://pouleparty.be/join?code=${encodeURIComponent(code)}`;
-}
-
-export function renderHtml(reg: RegistrationSnapshot, s: EmailStrings, lang: Locale): string {
-  const link = deeplinkFor(reg.code);
+function renderHtml(reg: RegistrationSnapshot, s: EmailStrings, lang: Locale): string {
   // Email rendering notes:
   // 1. `color-scheme` + `supported-color-schemes` opt this email into the
   //    OS-level dark-mode handling for Apple Mail / iOS Mail / Outlook 2019+
   //    instead of letting them apply their own (ugly) inversion heuristic.
   // 2. The outer wrap stays neutral (white in light, dark gray in dark) so
-  //    the card has a clean canvas in both modes — the previous CRBeige
-  //    background got muddied to brown under Apple Mail's dark-mode tint.
+  //    the card has a clean canvas in both modes.
   // 3. Brand orange + pink stay vibrant in both modes (no need to swap).
   return `<!DOCTYPE html>
 <html lang="${lang}">
@@ -170,15 +157,7 @@ export function renderHtml(reg: RegistrationSnapshot, s: EmailStrings, lang: Loc
                     </td>
                   </tr>
                 </table>
-                <p style="margin:0 0 24px;font-size:15px;line-height:1.5;">${s.ctaIntro}</p>
-                <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 auto;">
-                  <tr>
-                    <td style="background-color:#EF0778;border-radius:999px;">
-                      <a href="${link}" style="display:inline-block;padding:16px 32px;font-family:'Bangers',Impact,sans-serif;font-size:22px;letter-spacing:2px;color:#ffffff;text-decoration:none;">${escapeHtml(s.cta)}</a>
-                    </td>
-                  </tr>
-                </table>
-                <p class="pp-muted" style="margin:24px 0 0;font-size:13px;line-height:1.5;">${s.fallback(reg.code)}</p>
+                <p class="pp-muted" style="margin:0;font-size:14px;line-height:1.55;">${escapeHtml(s.codeInstructions)}</p>
               </td>
             </tr>
             <tr>
@@ -201,8 +180,7 @@ function stripTags(value: string): string {
   return value.replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&");
 }
 
-export function renderText(reg: RegistrationSnapshot, s: EmailStrings): string {
-  const link = deeplinkFor(reg.code);
+function renderText(reg: RegistrationSnapshot, s: EmailStrings): string {
   return [
     stripTags(s.greeting(reg.playerName)),
     ``,
@@ -210,17 +188,14 @@ export function renderText(reg: RegistrationSnapshot, s: EmailStrings): string {
     ``,
     `${s.codeLabel} : ${reg.code}`,
     ``,
-    stripTags(s.ctaIntro),
-    link,
-    ``,
-    stripTags(s.fallback(reg.code)),
+    s.codeInstructions,
     ``,
     `${stripTags(s.support)} ${SUPPORT_EMAIL}.`,
     `${s.reference} : ${reg.registrationId}`,
   ].join("\n");
 }
 
-export function escapeHtml(value: string): string {
+function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")

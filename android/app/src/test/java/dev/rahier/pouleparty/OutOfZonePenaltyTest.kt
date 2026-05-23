@@ -46,7 +46,6 @@ class OutOfZonePenaltyTest {
         val first = evaluateOutOfZonePenalty(
             isOutsideZone = true,
             isGameOver = false,
-            isDebugPreview = false,
             hunterId = hunterId,
             lastPenaltyAt = now - AppConstants.OUT_OF_ZONE_PENALTY_INTERVAL_MS,
             nowMs = now,
@@ -58,7 +57,6 @@ class OutOfZonePenaltyTest {
         val second = evaluateOutOfZonePenalty(
             isOutsideZone = true,
             isGameOver = false,
-            isDebugPreview = false,
             hunterId = hunterId,
             lastPenaltyAt = later - AppConstants.OUT_OF_ZONE_PENALTY_INTERVAL_MS,
             nowMs = later,
@@ -76,7 +74,6 @@ class OutOfZonePenaltyTest {
         val out = evaluateOutOfZonePenalty(
             isOutsideZone = true,
             isGameOver = false,
-            isDebugPreview = false,
             hunterId = hunterId,
             lastPenaltyAt = now - 4_000L,
             nowMs = now,
@@ -96,7 +93,6 @@ class OutOfZonePenaltyTest {
         val out = evaluateOutOfZonePenalty(
             isOutsideZone = false,
             isGameOver = false,
-            isDebugPreview = false,
             hunterId = hunterId,
             lastPenaltyAt = now - 4_000L,
             nowMs = now,
@@ -118,7 +114,6 @@ class OutOfZonePenaltyTest {
         val out = evaluateOutOfZonePenalty(
             isOutsideZone = true,
             isGameOver = false,
-            isDebugPreview = false,
             hunterId = hunterId,
             lastPenaltyAt = null,
             nowMs = now,
@@ -148,7 +143,6 @@ class OutOfZonePenaltyTest {
         val out = evaluateOutOfZonePenalty(
             isOutsideZone = false,
             isGameOver = false,
-            isDebugPreview = false,
             hunterId = hunterId,
             lastPenaltyAt = now - 10_000L,
             nowMs = now,
@@ -168,7 +162,6 @@ class OutOfZonePenaltyTest {
         val out = evaluateOutOfZonePenalty(
             isOutsideZone = false,
             isGameOver = false,
-            isDebugPreview = false,
             hunterId = hunterId,
             lastPenaltyAt = now - 10_000L,
             nowMs = now,
@@ -188,27 +181,6 @@ class OutOfZonePenaltyTest {
         val out = evaluateOutOfZonePenalty(
             isOutsideZone = true,
             isGameOver = true,
-            isDebugPreview = false,
-            hunterId = hunterId,
-            lastPenaltyAt = now - 10_000L,
-            nowMs = now,
-        )
-        assertEquals(false, out.shouldFirePenalty)
-    }
-
-    // MARK: - Scenario 8: debug preview → no penalty
-
-    /**
-     * Compose previews / snapshot tests / dev tools that drive the
-     * hunter map without a real player must not bleed points.
-     * `isDebugPreview = true` short-circuits the penalty.
-     */
-    @Test
-    fun `scenario8_debug preview fires no penalty`() {
-        val out = evaluateOutOfZonePenalty(
-            isOutsideZone = true,
-            isGameOver = false,
-            isDebugPreview = true,
             hunterId = hunterId,
             lastPenaltyAt = now - 10_000L,
             nowMs = now,
@@ -232,7 +204,6 @@ class OutOfZonePenaltyTest {
         val first = evaluateOutOfZonePenalty(
             isOutsideZone = true,
             isGameOver = false,
-            isDebugPreview = false,
             hunterId = hunterId,
             lastPenaltyAt = now - AppConstants.OUT_OF_ZONE_PENALTY_INTERVAL_MS,
             nowMs = now,
@@ -244,7 +215,6 @@ class OutOfZonePenaltyTest {
         val second = evaluateOutOfZonePenalty(
             isOutsideZone = true,
             isGameOver = false,
-            isDebugPreview = false,
             hunterId = hunterId,
             lastPenaltyAt = nextLast,
             nowMs = now,
@@ -267,7 +237,6 @@ class OutOfZonePenaltyTest {
         val out = evaluateOutOfZonePenalty(
             isOutsideZone = true,
             isGameOver = false,
-            isDebugPreview = false,
             hunterId = "",
             lastPenaltyAt = now - 10_000L,
             nowMs = now,
@@ -314,17 +283,9 @@ class OutOfZonePenaltyTest {
 
     // MARK: - ViewModel wiring stays alive (regression guard)
 
-    /**
-     * Defensive smoke test: the ViewModel ought to construct cleanly
-     * with the PP-36 `isDebugPreview` / `lastPenaltyAt` fields
-     * defaulted, so the production timer can run without an NPE.
-     * If a future refactor accidentally drops the defaults this test
-     * fires immediately.
-     */
     @Test
-    fun `HunterMapUiState defaults for PP-36 fields stay null and false`() {
+    fun `HunterMapUiState lastPenaltyAt default stays null`() {
         val state = dev.rahier.pouleparty.ui.huntermap.HunterMapUiState()
         assertNull(state.lastPenaltyAt)
-        assertEquals(false, state.isDebugPreview)
     }
 }

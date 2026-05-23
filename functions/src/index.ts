@@ -29,16 +29,12 @@ export { computeZoneConfiguration } from "./zoneCalculation";
 // Re-export the PP-52 event registration handlers (Stripe-backed web
 // inscription flow). The form posts to `createPendingRegistration`;
 // Stripe pings `confirmRegistrationPayment` once the checkout
-// session completes.
-// `validateRegistrationCode` + `lookupGameByValidationCode` were
-// added by CRIT-1 (audit 2026-05-17) to move the registration-code
-// lookups server-side so firestore.rules can lock `/eventRegistrations`
-// reads (the collection was leaking email/phone/name PII).
+// session completes. The handlers are entirely web-facing: the
+// mobile binaries no longer call any registration callable
+// (compliance with Apple 3.1.1 — see RELEASE_NOTES 1.13.1).
 export {
   createPendingRegistration,
   confirmRegistrationPayment,
-  validateRegistrationCode,
-  lookupGameByValidationCode,
 } from "./registrations";
 
 // AND-H6 (store-audit 2026-05-18): self-service account-deletion request

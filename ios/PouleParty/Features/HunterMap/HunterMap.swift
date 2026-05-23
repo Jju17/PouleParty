@@ -79,12 +79,6 @@ struct HunterMapFeature {
         /// `hunterLocations` writes).
         var isGameOver: Bool = false
 
-        /// PP-36: mirrors the chicken-side `isDebugPreview` flag —
-        /// when the hunter map is being driven by a previewer (Xcode
-        /// canvas, debug tools, snapshot tests) the out-of-zone
-        /// penalty must not fire. Live runs always leave this `false`.
-        var isDebugPreview: Bool = false
-
         /// PP-36: timestamp of the last out-of-zone penalty tick.
         /// The 1 s timer fires the decrement only when the previous
         /// tick was ≥ `outOfZonePenaltyIntervalSeconds` ago, so the
@@ -1056,7 +1050,6 @@ struct HunterMapFeature {
                 // 4 s → 0 / 12 s → -2 acceptance criteria.
                 if state.isOutsideZone,
                    !state.isGameOver,
-                   !state.isDebugPreview,
                    !state.hunterId.isEmpty {
                     let now = state.nowDate
                     let dueAt = state.lastPenaltyAt

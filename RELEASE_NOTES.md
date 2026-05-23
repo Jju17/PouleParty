@@ -157,6 +157,233 @@ Gemaakt in Brussel met veel te veel kip-thema energie.
 
 ---
 
+# Release 1.13.1
+
+> ⚠️ **Do not paste any "Summary" paragraph into any store field.** Only the blocks explicitly labelled **App Store Connect**, **Google Play Console**, or **App Review Notes** below are store-safe.
+>
+> From this release onward, every store-submitted build number (the `(N)` after the marketing version) gets its own subsection below. Older builds stay in the file so the trace of "what was submitted, when, and what reviewer copy went with it" is auditable.
+
+---
+
+## Build (5) — submitted 2026-05-22 (replaces (4))
+
+**iOS**: 1.13.1 (5) · **Android**: 1.13.1 (41) (unchanged — Android was never affected by the QA1623 issue below)
+
+**Summary (internal, do not paste):** the (4) build was uploaded to App Store Connect and got an "Uploaded with warnings" QA1623 bundle-validation warning: the `UIRequiredDeviceCapabilities = ["gps"]` key we added in (4) "may not contain values that would prevent this application from running on devices that were supported by previous versions". Previous published builds (1.13.0 etc.) shipped without that key, so the App Store treats them as running on any iOS device — including Wi-Fi iPads with no GPS. Adding the `gps` capability now would orphan those existing users on update, which Apple's store rules forbid. Build (5) drops the key entirely. The 5.1.5 story now rests on (a) the deferred location prompts (still in place from (4)) and (b) an explicit ask to App Review in the Notes to test on a GPS-capable device. The 3.1.1 changes from (4) are untouched. **Android (41) is unaffected** — no `gps` capability was declared there. The (4) build in App Store Connect is now superseded by (5); do not select it for submission.
+
+> **Process learning**: `UIRequiredDeviceCapabilities` can only ever be **loosened** between versions (drop a key, allow more devices). Once a marketing version has shipped without a capability, every subsequent build in that marketing line must keep allowing those devices. For a future fresh major version where we want to filter Wi-Fi iPads from the start, the capability would have to be declared on the **first** ever build of that version — too late for 1.13.x. Captured in memory as [[reference-qa1623-required-capabilities]].
+
+---
+
+### 📱 App Store Connect — field "What's New in This Version"
+
+Unchanged from Build (4) below. No user-facing copy changed between (4) and (5); the delta is entirely the dropped Info.plist key.
+
+### 🤖 Google Play Console — field "Release notes"
+
+Not applicable — Android was never re-uploaded for (5).
+
+### 📝 App Store Connect — field "App Review Information → Notes"
+
+**Mandatory paste for 1.13.1 (5)** — replaces the (4) Notes paste, drops the `UIRequiredDeviceCapabilities` claim, and adds an explicit ask to use a GPS-capable review device.
+
+```
+PouleParty is a free GPS hide-and-seek game. No IAP, no ads, no subscriptions, no sign-in (anonymous Firebase Auth).
+
+PLEASE REVIEW ON A GPS-CAPABLE DEVICE
+PouleParty is a real-world hide-and-seek game whose entire gameplay loop (shrinking zone around the Chicken, Hunters chasing them on the map) requires GPS hardware. The (3) build was reviewed on iPad Air 11" M3 — likely a Wi-Fi model with no GPS chip — which is why "the app is not functional when Location Services are disabled" was flagged. We are not able to declare UIRequiredDeviceCapabilities = ["gps"] because Wi-Fi iPad users are already on 1.13.0 and Apple's QA1623 rule prevents us from orphaning them on update. Please review (5) on an iPhone or an iPad Cellular so the GPS-dependent gameplay can be exercised.
+
+5.1.5 — APP IS NOW FUNCTIONAL WITHOUT ANY LOCATION PERMISSION:
+Every location prompt that fired on a Home tap in (3) is removed in (4)+. Tapping Create Party, long-pressing for admin mode, and tapping Start no longer prompt for permission. Onboarding is fully skippable. The system "While Using" prompt now fires only at the screen that needs a coordinate (wizard's zone-placement step for the Chicken, hunter map mount for a Hunter who has just typed a game code).
+
+REPRODUCE THE PROMPT-FREE PATH:
+1. Fresh install. Tap Next through every onboarding slide.
+2. Land on Home. No prompt.
+3. Tap Create Party. Wizard opens. Still no prompt.
+4. Step to the zone-placement step. The system "While Using" prompt fires now, in context.
+
+3.1.1 — THE BINARY NO LONGER REFERENCES THE STRIPE INSCRIPTION:
+- JoinFlow's "validation code" step is removed. Every Hunter, paid or not, joins by typing the 6-char game code, like any free game.
+- The two Cloud Functions used for code lookup (validateRegistrationCode, lookupGameByValidationCode) are deleted from both Firebase projects.
+- The com.apple.developer.associated-domains entitlement is removed. The binary claims no association with pouleparty.be. The .well-known/apple-app-site-association file is removed from hosting.
+- The Game model has no registrationBatchId field on the client.
+- The confirmation email (FR/EN/NL) is rewritten: no app CTA, the 6-char code is now a wristband-pickup token to present at the start bar on D-Day.
+
+The Stripe inscription on pouleparty.be remains a web-only purchase for an in-person event (Ixelles, June 6 2026, 12 EUR — wristband, drink, food, real-world prizes). The app binary has zero awareness of it.
+
+ADMIN MODE
+Long-press "Create Party" on Home (1.5s) reveals a code modal. Code is `jujurahier`, hardcoded, public, no auth. Lifts the player cap from 5 to 500 for corporate-event organizers. Not an IAP.
+
+ENCRYPTION
+Standard HTTPS / Firebase TLS. ITSAppUsesNonExemptEncryption = false.
+```
+
+---
+
+### 📨 ASC Reply — to send 2026-05-22 in response to Submission ID `5d45a00a-0e7a-4128-8b65-f50928ddcaee`
+
+Updated vs the (4) draft to drop the UIRequiredDeviceCapabilities claim and explicitly ask Apple Review to test on a GPS-capable device.
+
+```
+Hi App Review,
+
+The (5) build I am submitting now addresses both findings. (The earlier (4) upload had to be discarded — adding UIRequiredDeviceCapabilities = ["gps"] to Info.plist triggered the QA1623 binary-validation warning because previous published versions of PouleParty shipped without that key, so the store treats them as compatible with all iOS devices. Apple's rule rightly prevents us from orphaning existing Wi-Fi iPad users on update.)
+
+5.1.5 — Two parts:
+
+a) PouleParty's entire gameplay (shrinking GPS zone, Hunters chasing the Chicken on a real-world map) is structurally impossible without GPS hardware. The iPad Air 11-inch used to review (3) is likely a Wi-Fi model with no GPS chip, on which the app cannot exercise its core functionality by design. Could the (5) build be reviewed on an iPhone or an iPad Cellular instead? Both have GPS.
+
+b) Every location prompt that fired on a Home tap in (3) is removed. Onboarding is fully skippable. The system "While Using" prompt now fires only at the screen that needs a coordinate (wizard's zone-placement step, or hunter map mount). A reviewer can install, tap Next through onboarding, land on Home, browse Settings, read the Privacy and Terms links, and never see a permission prompt.
+
+3.1.1 — The binary is now structurally unaware of the Stripe inscription on our website:
+- JoinFlow's "validation code" step is removed. Every Hunter joins via the 6-char game code, like any free game.
+- The two Cloud Functions for code lookup are deleted from both our Firebase projects.
+- The com.apple.developer.associated-domains entitlement is removed; the binary claims no URL on pouleparty.be. The .well-known/apple-app-site-association file is removed from hosting.
+- The Game model has no registrationBatchId field on the client.
+- The confirmation email is rewritten: no app CTA, the 6-char code is framed as a wristband-pickup token for the in-person event.
+
+The Stripe inscription on pouleparty.be remains a web-only purchase for a real-world event (Ixelles, June 6, 2026 — wristband, drink, food, prizes). The app has zero awareness of it.
+
+Please review (5) on a GPS-capable device. Happy to set up a short video walk-through if anything is unclear.
+
+Thanks,
+Julien Rahier
+julien@rahier.dev
+```
+
+---
+
+## Build (4) — uploaded to ASC 2026-05-22, **superseded by (5) before submission**
+
+> ⚠️ **Do not select this build in App Store Connect.** It was uploaded but never submitted for review — the bundle got an "Uploaded with warnings" QA1623 validation message because we added `UIRequiredDeviceCapabilities = ["gps"]` to Info.plist, which Apple's store rules forbid on a marketing version that already shipped without it (would orphan Wi-Fi iPad users on update). See Build (5) above for the corrected build. The store-paste blocks below stay for audit; the (5) section is what got submitted.
+
+**iOS**: 1.13.1 (4) · **Android**: 1.13.1 (41)
+
+**Summary (internal, do not paste):** second re-submission patch for the 1.13.0 → 1.13.1 (3) double rejection on Guidelines 5.1.5 (Location) and 3.1.1 (IAP). The (3) build's surface fixes (skippable onboarding, neutral CTA copy, 3.1.1 response paragraph) were not enough; Apple still flagged both items on iPad Air 11-inch (M3). The (4) build goes after the root causes structurally: `UIRequiredDeviceCapabilities = [gps]` so Wi-Fi iPads (no GPS hardware) are filtered out at the App Store level and the review device must support GPS; every `requestWhenInUse()` call on Home is deferred all the way to the screen that actually needs a coordinate; and the **entire in-app event-registration validation gate is removed from both binaries** — no more `validationCodeEntry` JoinFlow step, no more `lookupGameByValidationCode` / `validateRegistrationCode` callables, no more `pouleparty.be/join` Universal Link / App Link, no `Game.registrationBatchId` field on the client. The Stripe inscription on pouleparty.be stays as a pure web payment for a real-world event; the 6-char code is now a wristband-pickup token at the start bar. Confirmation email rewritten (FR/EN/NL) to drop the "tap to join the game" CTA and frame the code as the entry token.
+
+---
+
+### 📱 App Store Connect — field "What's New in This Version"
+
+**English (U.S.)**
+
+Quick patch.
+
+FASTER ONBOARDING
+Every step is now skippable. Tap Next, Next, Next and you're on Home in seconds. No nickname? We'll pick a fun one for you. No location yet? We'll ask when you actually start a game.
+
+CLEANER HOME SCREEN
+Removed two old buttons that no longer made sense. The hidden admin mode for big events is still there, just tucked away on a long-press.
+
+NO MORE DAILY CAP
+You can now create as many free games as you want, no limit.
+
+**French**
+
+Petit patch.
+
+ONBOARDING ACCÉLÉRÉ
+Chaque étape est maintenant skippable. Tape Suivant, Suivant, Suivant et tu es sur l'accueil en quelques secondes. Pas de pseudo ? On t'en attribue un fun. Pas encore de localisation ? On la demande seulement quand tu lances une partie.
+
+ÉCRAN D'ACCUEIL ÉPURÉ
+On a retiré deux vieux boutons qui n'avaient plus de sens. Le mode admin pour les gros événements est toujours là, juste planqué sur un appui long.
+
+PLUS DE LIMITE QUOTIDIENNE
+Tu peux maintenant créer autant de parties gratuites que tu veux, sans limite.
+
+**Dutch**
+
+Korte patch.
+
+SNELLERE ONBOARDING
+Elke stap is nu overslaan-baar. Tik op Volgende, Volgende, Volgende en je bent op Home in enkele seconden. Geen bijnaam? We kiezen een leuke voor je. Nog geen locatie? Die vragen we pas wanneer je een spel start.
+
+OPGERUIMD HOMESCHERM
+Twee oude knoppen die geen zin meer hadden zijn weg. De verborgen adminmodus voor grote events is er nog steeds, maar nu verstopt achter een lange tik.
+
+GEEN DAGELIJKSE LIMIET MEER
+Je kunt nu zoveel gratis spellen aanmaken als je wilt, zonder limiet.
+
+---
+
+### 🤖 Google Play Console — field "Release notes"
+
+```
+<en-US>Faster onboarding: every step is now skippable. No nickname? We pick a fun one for you. No location yet? We ask only when you start a game. Removed two old Home buttons (admin mode is still there on long-press). No more 1-free-game-per-day cap, create as many free games as you want.</en-US>
+<fr-FR>Onboarding accéléré : chaque étape est maintenant skippable. Pas de pseudo ? On t'en attribue un fun. Pas encore de localisation ? On la demande au lancement d'une partie. On a retiré deux vieux boutons d'accueil (le mode admin reste là, en appui long). Plus de limite d'une partie gratuite par jour.</fr-FR>
+<nl-NL>Snellere onboarding: elke stap is nu overslaan-baar. Geen bijnaam? Wij kiezen een leuke voor je. Nog geen locatie? Die vragen we pas bij het starten van een spel. Twee oude Home-knoppen verwijderd (adminmodus blijft, op lange tik). Geen 1-gratis-spel-per-dag limiet meer.</nl-NL>
+```
+
+> **Promotional Text + Description**: voir la **section globale** en haut du fichier ("Store Listing — evergreen copy"). Pas d'update pour 1.13.1.
+
+---
+
+### 📝 App Store Connect — field "App Review Information → Notes"
+
+**Mandatory paste for 1.13.1 (4)** — second re-submission addressing the 1.13.0 → 1.13.1 (3) double rejection on Guidelines 5.1.5 (Location) and 3.1.1 (IAP). Lead with what we changed structurally vs (3); the rest is unchanged context for a fresh reviewer.
+
+```
+PouleParty is a free GPS hide-and-seek game. No IAP, no ads, no subscriptions, no sign-in (anonymous Firebase Auth).
+
+5.1.5 — TWO STRUCTURAL FIXES IN (4):
+1) UIRequiredDeviceCapabilities = ["gps"] is now declared in Info.plist. The gameplay loop (shrinking zone around the Chicken, Hunters chasing on the map) is structurally impossible without GPS hardware. The (3) review device (iPad Air 11" M3) is a Wi-Fi iPad with no GPS chip. The App Store now filters Wi-Fi iPads at install time.
+2) Every location prompt that fired on a Home tap is removed. Tapping Create Party, long-pressing for admin mode, and tapping Start no longer prompt. The system "While Using" prompt fires only at the screen that needs a coordinate (the wizard's zone-placement step, or the hunter map mount).
+
+REPRODUCE THE PROMPT-FREE PATH:
+1. Fresh install. Tap Next through every onboarding slide.
+2. Land on Home. No prompt.
+3. Tap Create Party. Wizard opens. Still no prompt.
+4. Step to the zone-placement step. The system "While Using" prompt fires now, in context.
+
+3.1.1 — THE BINARY NO LONGER REFERENCES THE STRIPE INSCRIPTION:
+- JoinFlow's "validation code" step is removed. Every Hunter, paid or not, joins by typing the 6-char game code, like any free game.
+- The two Cloud Functions used for code lookup (validateRegistrationCode, lookupGameByValidationCode) are deleted from both Firebase projects.
+- The com.apple.developer.associated-domains entitlement is removed. The binary claims no association with pouleparty.be. The .well-known/apple-app-site-association file is removed from hosting.
+- The Game model has no registrationBatchId field on the client.
+- The confirmation email (FR/EN/NL) is rewritten: no app CTA, the 6-char code is now a wristband-pickup token to present at the start bar on D-Day.
+
+The Stripe inscription on pouleparty.be remains a web-only purchase for an in-person event (Ixelles, June 6 2026, 12 EUR — wristband, drink, food, real-world prizes). The app binary has zero awareness of it.
+
+ADMIN MODE
+Long-press "Create Party" on Home (1.5s) reveals a code modal. Code is `jujurahier`, hardcoded, public, no auth. Lifts the player cap from 5 to 500 for corporate-event organizers. Not an IAP.
+
+ENCRYPTION
+Standard HTTPS / Firebase TLS. ITSAppUsesNonExemptEncryption = false.
+```
+
+---
+
+### 📨 ASC Reply — sent 2026-05-22 in response to Submission ID `5d45a00a-0e7a-4128-8b65-f50928ddcaee`
+
+Posted in the App Store Connect message thread of the rejected (3) submission, after archive (4) was uploaded and ready for review. Purpose: tell the reviewer that the new build addresses both findings structurally, and ask for the next review to land on a GPS-capable device. We did **not** accept Apple's "approve as-is, fix in next update" offer because (3) still contained the validation-code in-app gate.
+
+```
+Hi App Review,
+
+The (4) build I am submitting now addresses both findings structurally rather than at the surface level.
+
+5.1.5 — Two changes:
+1) UIRequiredDeviceCapabilities = ["gps"] is now declared in Info.plist. PouleParty is a GPS hide-and-seek game that cannot run without GPS hardware by design. The iPad Air 11-inch used to review (3) is a Wi-Fi model with no GPS chip; (4) is filtered at install time on those devices so App Review will be served from a GPS-capable device.
+2) Every location prompt that fired on a Home tap (Create Party / Start / admin long-press) is removed. The system "While Using" prompt now fires only at the screen that needs a coordinate — the wizard's zone-placement step, or the hunter map mount.
+
+3.1.1 — The binary is now structurally unaware of the Stripe inscription on our website:
+- JoinFlow's "validation code" step is removed. Every Hunter joins via the 6-char game code, like any free game.
+- The two Cloud Functions for code lookup are deleted from both our Firebase projects.
+- The com.apple.developer.associated-domains entitlement is removed; the binary claims no URL on pouleparty.be. The .well-known/apple-app-site-association file is removed from hosting.
+- The Game model has no registrationBatchId field on the client.
+- The confirmation email is rewritten: no app CTA, the 6-char code is framed as a wristband-pickup token for the in-person event.
+
+The Stripe inscription on pouleparty.be remains a web-only purchase for a real-world event (Ixelles, June 6, 2026 — wristband, drink, food, prizes). The app has zero awareness of it.
+
+Please review (4) on a GPS-capable device. Happy to set up a short video walk-through if anything is unclear.
+
+Thanks,
+Julien Rahier
+julien@rahier.dev
+```
+
+---
+
 # Release 1.13.0
 
 > ⚠️ **Do not paste this "Summary" paragraph into any store field.** Only the blocks explicitly labelled **App Store Connect**, **Google Play Console**, or **App Review Notes** below are store-safe.

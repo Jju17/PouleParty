@@ -123,11 +123,11 @@
     <string name="hunt_subtitle">Forme des équipes. Utilise la carte pour la traquer.\n\nLa Poule peut se cacher n\'importe où !</string>
     <string name="need_location">On a besoin de ta position</string>
     <string name="location_granted">C\'est tout bon ! Le jeu suivra ta position même en arrière-plan.\n\nFun maximum garanti !</string>
-    <string name="location_partial">Presque ! PouleParty doit suivre ton GPS en arrière-plan pour que la Poule reste sur la carte quand ton téléphone est dans ta poche. Ta position est envoyée à Firebase Firestore et partagée en temps réel avec les autres joueurs de ta session active uniquement — le suivi s\'arrête à la fin de la partie.\n\nAutorise la localisation en permanence.</string>
-    <string name="location_denied">Sans accès à la localisation, le jeu ne peut pas fonctionner.\nPas de localisation = pas de carte = pas de fun.\n\nTon GPS est envoyé à Firebase Firestore et partagé avec les autres joueurs de ta session active uniquement. Le suivi s\'arrête automatiquement à la fin de la partie. Nous ne vendons jamais ces données aux annonceurs.</string>
+    <string name="location_partial">Merci, c\'est tout bon !\n\nPour une expérience optimale pendant une chasse, tu peux aussi autoriser la localisation en arrière-plan, comme ça la Poule continue de transmettre sa position quand le téléphone est dans ta poche. Totalement optionnel.</string>
+    <string name="location_denied">PouleParty utilise ton GPS pendant une partie pour que la Poule et les chasseurs se retrouvent sur la carte.\n\nTu peux autoriser maintenant, ou attendre. On te redemandera au démarrage de ta première partie.</string>
     <string name="always_allowed">Toujours autorisée !</string>
     <string name="allow_always">Continuer</string>
-    <string name="allow_location_access">Continuer</string>
+    <string name="allow_location_access">Configurer la localisation</string>
     <string name="choose_nickname">Choisis ton pseudo</string>
     <string name="nickname_subtitle">C\'est comme ça que les autres joueurs\nte verront dans la partie.</string>
     <string name="your_nickname">Ton pseudo</string>
@@ -230,7 +230,6 @@
     <string name="admin_mode">Mode admin</string>
     <string name="enter_the_admin_code">Entre le code admin</string>
     <string name="validate">Valider</string>
-    <string name="want_to_create_a_party">Envie de créer une partie ?</string>
     <string name="active_types">Types actifs</string>
     <string name="zone_radius">Rayon de la zone</string>
     <string name="set_start_zone">Place une zone de départ pour commencer</string>
@@ -331,24 +330,10 @@
     <string name="gamemaster_join_title">GameMaster 🦅</string>
     <string name="gamemaster_password_hint">Code à 4 chiffres</string>
 
-    <string name="validation_code_title">Code de validation</string>
-    <string name="validation_code_hint">Code reçu par email</string>
-    <string name="game_code_label">Partie %1$s</string>
-
-    <string name="deeplink_resolving_label">Vérification du code…</string>
-    <string name="deeplink_party_not_open_title">Partie pas encore ouverte</string>
-    <string name="deeplink_party_not_open_body">Ton code de validation est sauvegardé. La partie n\'est pas encore configurée — reviens le 6 juin avec le code de partie qu\'on t\'annoncera sur place !</string>
-    <string name="deeplink_invalid_code_title">Code invalide</string>
-    <string name="deeplink_invalid_code_body">On ne trouve aucune inscription correspondant à ce code. Vérifie l\'email qu\'on t\'a envoyé, ou contacte julien@rahier.dev.</string>
-    <string name="deeplink_code_label">TON CODE DE VALIDATION</string>
-    <string name="deeplink_ok">OK</string>
-    <string name="deeplink_close">Fermer</string>
-
     <!-- CRIT-8 (audit 2026-05-17) -->
     <string name="join_flow_gm_too_many_attempts">Trop de tentatives. Réessaie dans %1$d min.</string>
     <string name="join_flow_gm_wrong_code">Mauvais code. %1$d tentative(s) restante(s).</string>
     <string name="join_flow_gm_generic_error">Impossible de vérifier le code GameMaster. Réessaie.</string>
-    <string name="join_flow_validation_code_invalid">Code invalide. Vérifie l\'email qu\'on t\'a envoyé.</string>
     <string name="join_flow_network_error">Erreur réseau</string>
 
     <!-- CRIT-8 (audit 2026-05-17): wizard de création de partie -->

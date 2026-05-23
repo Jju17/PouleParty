@@ -64,20 +64,15 @@ struct OnboardingFeature {
                     await send(.notificationAuthorizationUpdated(status))
                 }
             case .nextButtonTapped:
-                // Block on location slide unless the user granted `.authorizedAlways`.
-                // The chicken-can-see-hunters mode and the stayInTheZone ping
-                // loop both assume the chicken keeps broadcasting with the
-                // phone backgrounded, `.authorizedWhenInUse` silently breaks
-                // that promise, so we require Always at onboarding.
-                if state.currentPage == Self.locationPageIndex {
-                    guard state.locationAuthorizationStatus == .authorizedAlways else { return .none }
-                }
-                // Notification page is non-blocking, always allow next
-                // Block on nickname slide if nickname is empty or inappropriate
+                // Apple 5.1.5: every slide is skippable. Location and
+                // nickname are no longer gates — location is requested
+                // contextually at Create / Join / Start, and an empty
+                // nickname is auto-generated in `.onboardingCompleted`.
+                // The only remaining gate is profanity: if the user typed
+                // something inappropriate, block until they fix it.
                 if state.currentPage == Self.nicknamePageIndex {
                     let trimmed = state.nickname.trimmingCharacters(in: .whitespacesAndNewlines)
-                    guard !trimmed.isEmpty else { return .none }
-                    if ProfanityFilter.containsProfanity(trimmed) {
+                    if !trimmed.isEmpty && ProfanityFilter.containsProfanity(trimmed) {
                         state.showProfanityAlert = true
                         return .none
                     }
@@ -86,18 +81,8 @@ struct OnboardingFeature {
                 if state.currentPage < Self.totalPages - 1 {
                     state.currentPage += 1
                 } else {
-                    // Defensive final gate, mirrors every per-page check so
-                    // the user can never exit onboarding with state the
-                    // per-page gates would have refused (permission revoked
-                    // in Settings between page 3 and here, nickname cleared
-                    // via a back-then-swipe path, etc.).
-                    guard state.locationAuthorizationStatus == .authorizedAlways else {
-                        state.showLocationAlert = true
-                        return .none
-                    }
                     let trimmed = state.nickname.trimmingCharacters(in: .whitespacesAndNewlines)
-                    guard !trimmed.isEmpty else { return .none }
-                    if ProfanityFilter.containsProfanity(trimmed) {
+                    if !trimmed.isEmpty && ProfanityFilter.containsProfanity(trimmed) {
                         state.showProfanityAlert = true
                         return .none
                     }
@@ -113,28 +98,9 @@ struct OnboardingFeature {
                 state.nickname = String(name.prefix(AppConstants.nicknameMaxLength))
                 return .none
             case let .pageChanged(page):
-                let locAuthorized = state.locationAuthorizationStatus == .authorizedAlways
-                let nicknameValid = !state.nickname.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-
-                // Block forward swipe past location page if not authorized
-                if page > Self.locationPageIndex && !locAuthorized {
-                    state.currentPage = page
-                    return .run { send in
-                        try? await Task.sleep(for: .milliseconds(50))
-                        await send(.pageSnappedBack(Self.locationPageIndex))
-                    }
-                    .cancellable(id: CancelID.snapBack, cancelInFlight: true)
-                }
-                // Notification page is non-blocking
-                // Block forward swipe past nickname page if empty
-                if page > Self.nicknamePageIndex && !nicknameValid {
-                    state.currentPage = page
-                    return .run { send in
-                        try? await Task.sleep(for: .milliseconds(50))
-                        await send(.pageSnappedBack(Self.nicknamePageIndex))
-                    }
-                    .cancellable(id: CancelID.snapBack, cancelInFlight: true)
-                }
+                // Apple 5.1.5: pager swipes are unblocked alongside the
+                // Next button. Location and nickname are deferred (see
+                // `.nextButtonTapped`).
                 state.currentPage = page
                 return .none
             case let .pageSnappedBack(page):
@@ -171,13 +137,18 @@ struct OnboardingFeature {
                 return .none
             case .onboardingCompleted:
                 let trimmedNickname = state.nickname.trimmingCharacters(in: .whitespacesAndNewlines)
-                state.$savedNickname.withLock { $0 = trimmedNickname }
+                // Apple 5.1.5: nickname is skippable; assign a random
+                // `AdjectiveNoun##` pseudonym so the player always has a
+                // teamName by the time they hit Home.
+                let finalNickname = trimmedNickname.isEmpty ? RandomNickname.generate() : trimmedNickname
+                state.nickname = finalNickname
+                state.$savedNickname.withLock { $0 = finalNickname }
                 state.$hasCompletedOnboarding.withLock { $0 = true }
                 analyticsClient.onboardingCompleted()
                 return .merge(
                     .cancel(id: CancelID.snapBack),
                     .run { [userClient] _ in
-                        await userClient.saveNickname(trimmedNickname)
+                        await userClient.saveNickname(finalNickname)
                     }
                 )
             }
@@ -275,23 +246,19 @@ struct OnboardingView: View {
 
                         Spacer()
 
-                        let isLocationPageBlocked = store.currentPage == 3 && store.locationAuthorizationStatus != .authorizedAlways
-                        let isNicknamePageEmpty = store.currentPage == 5 && store.nickname.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                        let isNextDisabled = isLocationPageBlocked || isNicknamePageEmpty
                         Button {
                             store.send(.nextButtonTapped)
                         } label: {
                             BangerText(store.currentPage == OnboardingFeature.totalPages - 1 ? "Let's go!" : "Next", size: 22)
-                                .foregroundStyle(.black.opacity(isNextDisabled ? 0.6 : 1.0))
+                                .foregroundStyle(.white)
                                 .padding(.horizontal, 32)
                                 .padding(.vertical, 12)
                                 .background(
                                     Capsule()
-                                        .fill(isNextDisabled ? AnyShapeStyle(Color.CROrange.opacity(0.4)) : AnyShapeStyle(Color.gradientFire))
+                                        .fill(Color.gradientFire)
                                                                         )
-                                .shadow(color: .black.opacity(isNextDisabled ? 0 : 0.2), radius: 4, y: 2)
+                                .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
                         }
-                        .disabled(isNextDisabled)
                     }
                     .padding(.horizontal, 30)
                 }

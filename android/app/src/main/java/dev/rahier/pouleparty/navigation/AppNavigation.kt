@@ -18,10 +18,8 @@ import kotlinx.coroutines.tasks.await
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import dev.rahier.pouleparty.data.DeeplinkBus
 import dev.rahier.pouleparty.AppConstants
 import dev.rahier.pouleparty.MigrationManager
 import dev.rahier.pouleparty.model.Game
@@ -40,13 +38,7 @@ object Routes {
     const val ONBOARDING = "onboarding"
     const val HOME = "home"
     const val GAME_CREATION = "game_creation/{gameId}?isAdminCreation={isAdminCreation}"
-    // `debug` is an optional query-style arg: defaults to false so every
-    // existing navigate-to-chicken-map call site keeps working unchanged.
-    // The long-press easter egg flips it on via [chickenMapDebug].
-    const val CHICKEN_MAP = "chicken_map/{gameId}?debug={debug}"
-    /** Long-press easter egg: hosts [DebugMapSetupScreen] which lets the
-     * user place start + final pins before creating the preview game. */
-    const val DEBUG_MAP_CONFIG = "debug_map_config"
+    const val CHICKEN_MAP = "chicken_map/{gameId}"
     const val HUNTER_MAP = "hunter_map/{gameId}/{hunterName}"
     const val GAME_MASTER_MAP = "game_master_map/{gameId}"
     const val VICTORY = "victory/{gameId}/{hunterName}/{hunterId}/{isChicken}"
@@ -54,8 +46,7 @@ object Routes {
     const val VALIDATION_QUEUE = "validation_queue/{gameId}"
     fun gameCreation(gameId: String, isAdminCreation: Boolean = false) =
         "game_creation/$gameId?isAdminCreation=$isAdminCreation"
-    fun chickenMap(gameId: String) = "chicken_map/$gameId?debug=false"
-    fun chickenMapDebug(gameId: String) = "chicken_map/$gameId?debug=true"
+    fun chickenMap(gameId: String) = "chicken_map/$gameId"
     fun hunterMap(gameId: String, hunterName: String) = "hunter_map/$gameId/${Uri.encode(hunterName)}"
     fun gameMasterMap(gameId: String) = "game_master_map/$gameId"
     fun victory(gameId: String, hunterName: String, hunterId: String, isChicken: Boolean = false) =
@@ -124,14 +115,6 @@ fun AppNavigation() {
     val hasCompletedOnboarding = prefs.getBoolean(AppConstants.PREF_ONBOARDING_COMPLETED, false)
     val startDestination = if (hasCompletedOnboarding) Routes.HOME else Routes.ONBOARDING
 
-    // CRIT-9 (audit 2026-05-17): keep DeeplinkBus informed of the top-of-stack
-    // route so it can drop App Link payloads that arrive while the user is in
-    // an active game. See DeeplinkBus.postValidationCode for the drop list.
-    val currentBackStackEntry by navController.currentBackStackEntryAsState()
-    LaunchedEffect(currentBackStackEntry) {
-        DeeplinkBus.updateCurrentRoute(currentBackStackEntry?.destination?.route)
-    }
-
     NavHost(navController = navController, startDestination = startDestination) {
 
         composable(Routes.ONBOARDING) {
@@ -168,14 +151,6 @@ fun AppNavigation() {
                     navController.navigate(Routes.chickenMap(gameId)) {
                         popUpTo(Routes.HOME) { inclusive = false }
                     }
-                },
-                onNavigateToChickenMapDebug = { gameId ->
-                    navController.navigate(Routes.chickenMapDebug(gameId)) {
-                        popUpTo(Routes.HOME) { inclusive = false }
-                    }
-                },
-                onNavigateToDebugMapConfig = {
-                    navController.navigate(Routes.DEBUG_MAP_CONFIG)
                 },
                 onNavigateToHunterMap = { gameId, hunterName ->
                     navController.navigate(Routes.hunterMap(gameId, hunterName)) {
@@ -226,11 +201,7 @@ fun AppNavigation() {
         composable(
             route = Routes.CHICKEN_MAP,
             arguments = listOf(
-                navArgument("gameId") { type = NavType.StringType },
-                navArgument("debug") {
-                    type = NavType.BoolType
-                    defaultValue = false
-                }
+                navArgument("gameId") { type = NavType.StringType }
             )
         ) {
             val gameId = it.arguments?.getString("gameId") ?: ""
@@ -248,17 +219,6 @@ fun AppNavigation() {
                 onOpenValidationQueue = {
                     navController.navigate(Routes.validationQueue(gameId))
                 }
-            )
-        }
-
-        composable(route = Routes.DEBUG_MAP_CONFIG) {
-            dev.rahier.pouleparty.ui.debugpreview.DebugMapSetupScreen(
-                onCancel = { navController.popBackStack() },
-                onLaunched = { gameId ->
-                    navController.navigate(Routes.chickenMapDebug(gameId)) {
-                        popUpTo(Routes.HOME) { inclusive = false }
-                    }
-                },
             )
         }
 

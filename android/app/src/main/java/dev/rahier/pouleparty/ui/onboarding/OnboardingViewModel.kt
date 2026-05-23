@@ -94,18 +94,13 @@ class OnboardingViewModel @Inject constructor(
 
     private fun nextPage() {
         val current = _uiState.value.currentPage
-        // Block on location slide unless background location is granted. The
-        // chickenCanSeeHunters flow and the stayInTheZone radar-ping loop
-        // both assume the chicken keeps broadcasting while the phone is
-        // backgrounded, fine-only silently breaks that promise, so we
-        // require Always at onboarding (matching the iOS gate).
-        if (current == 3 && !_uiState.value.hasBackgroundLocation) return
-        // Page 4 = notifications — non-blocking, always allow next
-        // Block on nickname slide (page 5) if nickname is empty or inappropriate
+        // Apple 5.1.5 parity: every slide is skippable. Location is
+        // requested contextually at Create / Join / Start; an empty
+        // nickname is auto-generated in `canCompleteOnboarding`. The
+        // only remaining gate is profanity on a manually-typed nickname.
         if (current == 5) {
             val trimmed = _uiState.value.nickname.trim()
-            if (trimmed.isEmpty()) return
-            if (ProfanityFilter.containsProfanity(trimmed)) {
+            if (trimmed.isNotEmpty() && ProfanityFilter.containsProfanity(trimmed)) {
                 _uiState.update { it.copy(showProfanityAlert = true) }
                 return
             }
@@ -139,31 +134,19 @@ class OnboardingViewModel @Inject constructor(
     }
 
     /**
-     * Defensive final gate, mirrors every per-page check so the user can
-     * never exit onboarding with state that the per-page gates would have
-     * refused (empty nickname after a back+clear+swipe path, permission
-     * revoked in Settings between page 3 and here, etc.). Returns true only
-     * when background location is granted AND the nickname is non-empty AND
-     * passes the profanity filter. Surfaces the appropriate alert on failure.
+     * Returns the final nickname to persist when the user taps "Let's Go".
+     * Returns null if the typed nickname triggers the profanity filter (the
+     * caller stays on the screen so the user can fix it). An empty nickname
+     * is auto-generated via [RandomNickname] — Apple 5.1.5 makes every
+     * slide skippable, and the player always needs a teamName.
      */
-    fun canCompleteOnboarding(): Boolean {
-        if (!_uiState.value.hasBackgroundLocation) {
-            _uiState.update { it.copy(showLocationAlert = true) }
-            return false
-        }
+    fun resolveFinalNickname(): String? {
         val trimmed = _uiState.value.nickname.trim()
-        if (trimmed.isEmpty()) {
-            // Silently refuse, the "Let's Go" button is already gated on
-            // the nickname page, so this branch only fires if the UI state
-            // drifted out of sync. No alert needed; the user will see the
-            // nickname field empty and try again.
-            return false
-        }
-        if (ProfanityFilter.containsProfanity(trimmed)) {
+        if (trimmed.isNotEmpty() && ProfanityFilter.containsProfanity(trimmed)) {
             _uiState.update { it.copy(showProfanityAlert = true) }
-            return false
+            return null
         }
-        return true
+        return if (trimmed.isEmpty()) dev.rahier.pouleparty.util.RandomNickname.generate() else trimmed
     }
 
     val isLastPage: Boolean

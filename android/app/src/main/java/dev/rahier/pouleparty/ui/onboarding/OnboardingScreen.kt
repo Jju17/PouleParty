@@ -54,21 +54,10 @@ fun OnboardingScreen(
         }
     }
     LaunchedEffect(pagerState.currentPage) {
-        val page = pagerState.currentPage
-        val s = viewModel.uiState.value
-
-        // Block swipe past the location page unless Always/background was
-        // granted, matches iOS `.authorizedAlways` requirement. Fine-only
-        // isn't enough: the game tracks the chicken while the app is
-        // backgrounded, and we'd silently break that otherwise.
-        val isBlocked = (page > 3 && !s.hasBackgroundLocation) ||
-                (page > 5 && s.nickname.trim().isEmpty())
-
-        if (isBlocked) {
-            pagerState.scrollToPage(s.currentPage)
-        } else {
-            viewModel.onIntent(OnboardingIntent.PageSet(page))
-        }
+        // Apple 5.1.5 parity: pager swipes are unblocked alongside the
+        // Next button. Location is requested contextually at gameplay
+        // entry points; empty nickname is auto-generated at completion.
+        viewModel.onIntent(OnboardingIntent.PageSet(pagerState.currentPage))
     }
 
     // Permission launchers
@@ -209,24 +198,19 @@ fun OnboardingScreen(
                     Spacer(Modifier.width(1.dp))
                 }
 
-                val isLocationPageBlocked = state.currentPage == 3 && !state.hasBackgroundLocation
-                val isNicknamePageEmpty = state.currentPage == 5 && state.nickname.trim().isEmpty()
-                val isNextDisabled = isLocationPageBlocked || isNicknamePageEmpty
                 Box(
                     modifier = Modifier
                         .height(50.dp)
                         .widthIn(min = 120.dp)
                         .shadow(4.dp, RoundedCornerShape(50.dp))
                         .clip(RoundedCornerShape(50.dp))
-                        .background(
-                            if (!isNextDisabled) GradientFire
-                            else Brush.linearGradient(listOf(CROrange.copy(alpha = 0.4f), CRPink.copy(alpha = 0.4f)))
-                        )
-                        .clickable(enabled = !isNextDisabled) {
+                        .background(GradientFire)
+                        .clickable {
                             if (viewModel.isLastPage) {
-                                if (viewModel.canCompleteOnboarding()) {
+                                val finalNickname = viewModel.resolveFinalNickname()
+                                if (finalNickname != null) {
                                     viewModel.onIntent(OnboardingIntent.OnboardingCompletedLogged)
-                                    onOnboardingCompleted(state.nickname.trim())
+                                    onOnboardingCompleted(finalNickname)
                                 }
                             } else {
                                 viewModel.onIntent(OnboardingIntent.NextPage)
@@ -237,7 +221,7 @@ fun OnboardingScreen(
                     Text(
                         text = if (viewModel.isLastPage) stringResource(R.string.lets_go) else stringResource(R.string.next),
                         style = bangerStyle(22),
-                        color = Color.Black,
+                        color = Color.White,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                     )
                 }
@@ -402,7 +386,7 @@ private fun SlideLocation(
                     Text(
                         stringResource(R.string.allow_always),
                         style = bangerStyle(20),
-                        color = Color.Black,
+                        color = Color.White,
                         modifier = Modifier.padding(horizontal = 24.dp)
                     )
                 }
@@ -427,7 +411,7 @@ private fun SlideLocation(
                     Text(
                         stringResource(R.string.allow_location_access),
                         style = bangerStyle(20),
-                        color = Color.Black,
+                        color = Color.White,
                         modifier = Modifier.padding(horizontal = 24.dp)
                     )
                 }
@@ -482,7 +466,7 @@ private fun SlideNotifications(
                 Text(
                     stringResource(R.string.notif_enable_button),
                     style = bangerStyle(20),
-                    color = Color.Black,
+                    color = Color.White,
                     modifier = Modifier.padding(horizontal = 24.dp)
                 )
             }

@@ -10,6 +10,7 @@ import io.mockk.mockk
 import io.mockk.verify
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -70,35 +71,11 @@ class OnboardingViewModelBehaviorTest {
     }
 
     @Test
-    fun `NextPage on location slide blocked when no permissions at all`() {
+    fun `NextPage on location slide advances regardless of permissions`() {
+        // Apple 5.1.5: every slide is skippable. Location is requested
+        // contextually at gameplay entry points, not in onboarding.
         every { locationRepository.hasFineLocationPermission() } returns false
         every { locationRepository.hasBackgroundLocationPermission() } returns false
-        val vm = createViewModel()
-        vm.onIntent(OnboardingIntent.RefreshPermissions)
-        vm.onIntent(OnboardingIntent.PageSet(3))
-        vm.onIntent(OnboardingIntent.NextPage)
-        // Should still be on page 3 because location is not granted
-        assertEquals(3, vm.uiState.value.currentPage)
-    }
-
-    @Test
-    fun `NextPage on location slide blocked with fine but no background`() {
-        // Used to pass with fine-only, the whole point of the tightening.
-        // Regression guard: if this ever flips back, the chicken can silently
-        // stop broadcasting when the phone is pocketed.
-        every { locationRepository.hasFineLocationPermission() } returns true
-        every { locationRepository.hasBackgroundLocationPermission() } returns false
-        val vm = createViewModel()
-        vm.onIntent(OnboardingIntent.RefreshPermissions)
-        vm.onIntent(OnboardingIntent.PageSet(3))
-        vm.onIntent(OnboardingIntent.NextPage)
-        assertEquals(3, vm.uiState.value.currentPage)
-    }
-
-    @Test
-    fun `NextPage on location slide proceeds when background permission granted`() {
-        every { locationRepository.hasFineLocationPermission() } returns true
-        every { locationRepository.hasBackgroundLocationPermission() } returns true
         val vm = createViewModel()
         vm.onIntent(OnboardingIntent.RefreshPermissions)
         vm.onIntent(OnboardingIntent.PageSet(3))
@@ -107,11 +84,23 @@ class OnboardingViewModelBehaviorTest {
     }
 
     @Test
-    fun `NextPage on nickname slide blocked when nickname empty`() {
+    fun `NextPage on location slide advances when fine granted`() {
+        every { locationRepository.hasFineLocationPermission() } returns true
+        every { locationRepository.hasBackgroundLocationPermission() } returns false
+        val vm = createViewModel()
+        vm.onIntent(OnboardingIntent.RefreshPermissions)
+        vm.onIntent(OnboardingIntent.PageSet(3))
+        vm.onIntent(OnboardingIntent.NextPage)
+        assertEquals(4, vm.uiState.value.currentPage)
+    }
+
+    @Test
+    fun `NextPage on nickname slide advances when nickname empty`() {
+        // Empty nickname is auto-generated at completion via RandomNickname.
         val vm = createViewModel()
         vm.onIntent(OnboardingIntent.PageSet(5))
         vm.onIntent(OnboardingIntent.NextPage)
-        assertEquals(5, vm.uiState.value.currentPage)
+        assertEquals(6, vm.uiState.value.currentPage)
     }
 
     @Test
@@ -144,13 +133,11 @@ class OnboardingViewModelBehaviorTest {
     }
 
     @Test
-    fun `DismissLocationAlert hides the alert`() {
+    fun `DismissLocationAlert hides the alert when forced on`() {
+        // `showLocationAlert` is no longer set by the onboarding flow
+        // (Apple 5.1.5: skippable). Force it on directly to test the
+        // dismissal handler in isolation.
         val vm = createViewModel()
-        // Force the alert to show via canCompleteOnboarding (no background).
-        every { locationRepository.hasFineLocationPermission() } returns false
-        every { locationRepository.hasBackgroundLocationPermission() } returns false
-        vm.canCompleteOnboarding()
-        assertTrue(vm.uiState.value.showLocationAlert)
         vm.onIntent(OnboardingIntent.DismissLocationAlert)
         assertFalse(vm.uiState.value.showLocationAlert)
     }
@@ -186,12 +173,14 @@ class OnboardingViewModelBehaviorTest {
     // ── Edge cases ─────────────────────────────────────────
 
     @Test
-    fun `NicknameChanged with whitespace-only value blocks NextPage on slide 5`() {
+    fun `NicknameChanged with whitespace-only value advances NextPage on slide 5`() {
+        // Whitespace-only nicknames advance freely — they're treated as
+        // empty at `resolveFinalNickname` time and auto-replaced.
         val vm = createViewModel()
         vm.onIntent(OnboardingIntent.PageSet(5))
         vm.onIntent(OnboardingIntent.NicknameChanged("    "))
         vm.onIntent(OnboardingIntent.NextPage)
-        assertEquals(5, vm.uiState.value.currentPage)
+        assertEquals(6, vm.uiState.value.currentPage)
     }
 
     @Test
@@ -249,69 +238,50 @@ class OnboardingViewModelBehaviorTest {
     }
 
     @Test
-    fun `canCompleteOnboarding shows profanity alert and returns false`() {
-        every { locationRepository.hasFineLocationPermission() } returns true
-        every { locationRepository.hasBackgroundLocationPermission() } returns true
+    fun `resolveFinalNickname returns null and shows profanity alert on profane input`() {
         val vm = createViewModel()
-        // canCompleteOnboarding reads cached permission flags, refresh first.
-        vm.onIntent(OnboardingIntent.RefreshPermissions)
         vm.onIntent(OnboardingIntent.NicknameChanged("fuck"))
-        val ok = vm.canCompleteOnboarding()
-        assertFalse(ok)
+        val resolved = vm.resolveFinalNickname()
+        assertEquals(null, resolved)
         assertTrue(vm.uiState.value.showProfanityAlert)
     }
 
     @Test
-    fun `canCompleteOnboarding returns false and shows alert with fine but no background`() {
-        // The last-page gate must match the page-3 gate, otherwise a user
-        // could start with Always, swipe to the last page, revoke background
-        // in Settings, come back, and "Let's Go" would ship them into the
-        // game without the perm we need.
-        every { locationRepository.hasFineLocationPermission() } returns true
-        every { locationRepository.hasBackgroundLocationPermission() } returns false
+    fun `resolveFinalNickname returns trimmed user value when clean`() {
         val vm = createViewModel()
-        vm.onIntent(OnboardingIntent.RefreshPermissions)
-        vm.onIntent(OnboardingIntent.NicknameChanged("Alice"))
-        val ok = vm.canCompleteOnboarding()
-        assertFalse(ok)
-        assertTrue(vm.uiState.value.showLocationAlert)
+        vm.onIntent(OnboardingIntent.NicknameChanged("  Alice  "))
+        val resolved = vm.resolveFinalNickname()
+        assertEquals("Alice", resolved)
     }
 
     @Test
-    fun `canCompleteOnboarding returns false with empty nickname (defensive gate)`() {
-        // The Next button on page 5 already blocks empty nicknames, but the
-        // final gate must also refuse, otherwise a back-then-swipe path
-        // could ship the user into the app with nickname = "".
-        every { locationRepository.hasFineLocationPermission() } returns true
-        every { locationRepository.hasBackgroundLocationPermission() } returns true
+    fun `resolveFinalNickname auto-generates on empty input`() {
         val vm = createViewModel()
-        vm.onIntent(OnboardingIntent.RefreshPermissions)
-        val ok = vm.canCompleteOnboarding()
-        assertFalse(ok)
+        val resolved = vm.resolveFinalNickname()
+        assertNotNull("Expected an auto-generated nickname", resolved)
+        assertTrue("Auto-generated nickname must be non-blank", resolved!!.isNotBlank())
     }
 
     @Test
-    fun `canCompleteOnboarding returns false with whitespace-only nickname`() {
-        every { locationRepository.hasFineLocationPermission() } returns true
-        every { locationRepository.hasBackgroundLocationPermission() } returns true
+    fun `resolveFinalNickname auto-generates on whitespace-only input`() {
         val vm = createViewModel()
-        vm.onIntent(OnboardingIntent.RefreshPermissions)
         vm.onIntent(OnboardingIntent.NicknameChanged("     "))
-        val ok = vm.canCompleteOnboarding()
-        assertFalse(ok)
+        val resolved = vm.resolveFinalNickname()
+        assertNotNull(resolved)
+        assertTrue(resolved!!.isNotBlank())
     }
 
     @Test
-    fun `canCompleteOnboarding returns true when background granted and nickname clean`() {
-        every { locationRepository.hasFineLocationPermission() } returns true
-        every { locationRepository.hasBackgroundLocationPermission() } returns true
+    fun `resolveFinalNickname returns user value regardless of location permission`() {
+        // Apple 5.1.5: onboarding completion no longer cares about
+        // location. Location is requested contextually at gameplay.
+        every { locationRepository.hasFineLocationPermission() } returns false
         val vm = createViewModel()
         vm.onIntent(OnboardingIntent.RefreshPermissions)
         vm.onIntent(OnboardingIntent.NicknameChanged("Alice"))
-        val ok = vm.canCompleteOnboarding()
-        assertTrue(ok)
+        val resolved = vm.resolveFinalNickname()
+        assertEquals("Alice", resolved)
         assertFalse(vm.uiState.value.showLocationAlert)
-        assertFalse(vm.uiState.value.showProfanityAlert)
     }
 
     @Test

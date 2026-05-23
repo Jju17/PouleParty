@@ -1,12 +1,9 @@
 package dev.rahier.pouleparty.ui.home
 
-import android.Manifest
 import android.content.Intent
 import android.media.MediaPlayer
 import android.net.Uri
 import android.provider.Settings
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.combinedClickable
@@ -17,14 +14,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.filled.ChevronLeft
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.*
-import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,15 +36,11 @@ import dev.rahier.pouleparty.ui.home.components.GameRulesOverlay
 import dev.rahier.pouleparty.ui.home.components.JoinFlowBottomSheet
 import dev.rahier.pouleparty.ui.theme.*
 
-private enum class PendingPermissionAction { None, Start, CreateParty }
-
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
     onNavigateToCreateParty: (gameId: String, isAdminCreation: Boolean) -> Unit,
     onNavigateToChickenMap: (String) -> Unit,
-    onNavigateToChickenMapDebug: (String) -> Unit = {},
-    onNavigateToDebugMapConfig: () -> Unit = {},
     onNavigateToHunterMap: (String, String) -> Unit,
     onNavigateToGameMasterMap: (String) -> Unit = {},
     onNavigateToVictory: (String) -> Unit,
@@ -66,17 +55,9 @@ fun HomeScreen(
         viewModel.effects.collect { effect ->
             when (effect) {
                 is HomeEffect.NavigateToChickenMap -> onNavigateToChickenMap(effect.gameId)
-                is HomeEffect.NavigateToChickenMapDebug -> onNavigateToChickenMapDebug(effect.gameId)
-                is HomeEffect.NavigateToDebugMapConfig -> onNavigateToDebugMapConfig()
                 is HomeEffect.NavigateToHunterMap -> onNavigateToHunterMap(effect.gameId, effect.hunterName)
                 is HomeEffect.NavigateToGameMasterMap -> onNavigateToGameMasterMap(effect.gameId)
                 is HomeEffect.NavigateToGameDone -> onNavigateToVictory(effect.gameId)
-                is HomeEffect.OpenWebUrl -> {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(effect.url)).apply {
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    }
-                    context.startActivity(intent)
-                }
             }
         }
     }
@@ -119,8 +100,6 @@ fun HomeScreen(
         if (!state.isMusicMuted && !player.isPlaying) player.start()
     }
 
-    var pendingPermissionAction by remember { mutableStateOf<PendingPermissionAction>(PendingPermissionAction.None) }
-
     // PP-42: Forms a fresh Firestore-style auto-ID, then navigates straight
     // into the Free wizard. PlanSelection is gone; the cap (5) lives in the
     // wizard's Stepper. The admin entry point (PP-45) will pass `true` here.
@@ -130,24 +109,6 @@ fun HomeScreen(
             .document()
             .id
         onNavigateToCreateParty(gameId, isAdminCreation)
-    }
-
-    // Location permission launcher — triggered when Start or Create Party is tapped without
-    // permission. If user grants in the system dialog, we re-attempt the original action.
-    val locationPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        val action = pendingPermissionAction
-        pendingPermissionAction = PendingPermissionAction.None
-        if (granted) {
-            when (action) {
-                PendingPermissionAction.Start -> viewModel.onIntent(HomeIntent.StartButtonTapped)
-                PendingPermissionAction.CreateParty -> launchCreateParty(isAdminCreation = false)
-                PendingPermissionAction.None -> {}
-            }
-        } else {
-            viewModel.onIntent(HomeIntent.LocationPermissionDenied)
-        }
     }
 
     // Mute button bounce animation
@@ -208,14 +169,7 @@ fun HomeScreen(
             )
 
             TextButton(
-                onClick = {
-                    if (viewModel.hasLocationPermission()) {
-                        viewModel.onIntent(HomeIntent.StartButtonTapped)
-                    } else {
-                        pendingPermissionAction = PendingPermissionAction.Start
-                        locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-                    }
-                },
+                onClick = { viewModel.onIntent(HomeIntent.StartButtonTapped) },
                 modifier = Modifier
                     .width(200.dp)
                     .height(50.dp)
@@ -372,26 +326,16 @@ fun HomeScreen(
                         color = MaterialTheme.colorScheme.onBackground
                     )
                 }
-                // Hidden debug easter egg: long-press the Create Party
-                // button to skip the wizard and spawn a preset
-                // stayInTheZone game with every future shrunk circle
-                // rendered up front on the chicken map.
+                // Hidden admin-mode entry: long-press opens the admin
+                // code dialog (PP-45). The password isn't advertised via
+                // a visible button so Apple reviewers don't surface it.
                 Box(
                     modifier = Modifier
                         .padding(16.dp)
                         .border(2.dp, MaterialTheme.colorScheme.onBackground, RoundedCornerShape(12.dp))
                         .combinedClickable(
-                            onClick = {
-                                if (viewModel.hasLocationPermission()) {
-                                    launchCreateParty(isAdminCreation = false)
-                                } else {
-                                    pendingPermissionAction = PendingPermissionAction.CreateParty
-                                    locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-                                }
-                            },
-                            onLongClick = {
-                                viewModel.onIntent(HomeIntent.CreatePartyLongPressed)
-                            }
+                            onClick = { launchCreateParty(isAdminCreation = false) },
+                            onLongClick = { viewModel.onIntent(HomeIntent.CreatePartyLongPressed) }
                         )
                 ) {
                     Text(
@@ -400,36 +344,6 @@ fun HomeScreen(
                         fontSize = 8.sp,
                         color = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
-                    )
-                }
-            }
-
-            // PP-42 placeholders: visible buttons whose behavior lands in
-            // PP-45 (admin mode unlock) and PP-46 (web CTA).
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-                modifier = Modifier.padding(bottom = 12.dp)
-            ) {
-                TextButton(
-                    onClick = { viewModel.onIntent(HomeIntent.AdminModeTapped) }
-                ) {
-                    Text(
-                        stringResource(R.string.admin_mode),
-                        fontFamily = GameBoyFont,
-                        fontSize = 8.sp,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
-                    )
-                }
-                TextButton(
-                    onClick = { viewModel.onIntent(HomeIntent.WebCreatePartyTapped) }
-                ) {
-                    Text(
-                        stringResource(R.string.want_to_create_a_party),
-                        fontFamily = GameBoyFont,
-                        fontSize = 8.sp,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-                        textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline
                     )
                 }
             }
@@ -450,9 +364,6 @@ fun HomeScreen(
             onJoinAsGameMasterTapped = { viewModel.onIntent(HomeIntent.JoinAsGameMasterTapped) },
             onGameMasterPasswordChanged = { viewModel.onIntent(HomeIntent.GameMasterPasswordChanged(it)) },
             onSubmitGameMasterPasswordTapped = { viewModel.onIntent(HomeIntent.SubmitGameMasterPasswordTapped) },
-            onValidationCodeChanged = { viewModel.onIntent(HomeIntent.ValidationCodeChanged(it)) },
-            onSubmitValidationCodeTapped = { viewModel.onIntent(HomeIntent.SubmitValidationCodeTapped) },
-            onDeeplinkDismissed = { viewModel.onIntent(HomeIntent.DeeplinkDismissed) },
         )
     }
 

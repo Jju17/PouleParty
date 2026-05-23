@@ -87,13 +87,6 @@ data class ChickenMapUiState(
      *  collapse, all hunters found). The map stays visible,
      *  controls grey, GPS stops. Mirrors iOS `isGameOver`. */
     val isGameOver: Boolean = false,
-    /**
-     * Long-press-on-Create-Party easter egg. When true,
-     * [ChickenMapScreen] draws every future shrunk circle on top of the
-     * map at once, each with its own palette color. Not persisted.
-     */
-    val isDebugPreview: Boolean = false,
-    val zonePreviewCircles: List<dev.rahier.pouleparty.ui.gamelogic.DebugShrinkCircle> = emptyList(),
 ) : dev.rahier.pouleparty.ui.map.MapUiState
 
 @HiltViewModel
@@ -106,7 +99,6 @@ class ChickenMapViewModel @Inject constructor(
 ) : BaseMapViewModel(firestoreRepository, locationRepository, analyticsRepository, auth) {
 
     override val gameId: String = savedStateHandle["gameId"] ?: ""
-    private val isDebugPreview: Boolean = savedStateHandle.get<Boolean>("debug") ?: false
     override val playerId: String = auth.currentUser?.uid ?: ""
 
     /** PP-18: exposed for the leaderboard sheet so it can highlight the current user's row. */
@@ -114,7 +106,7 @@ class ChickenMapViewModel @Inject constructor(
     override val analyticsRole: String = "chicken"
     override val logTag: String = "ChickenMapVM"
 
-    private val _uiState = MutableStateFlow(ChickenMapUiState(isDebugPreview = isDebugPreview))
+    private val _uiState = MutableStateFlow(ChickenMapUiState())
     val uiState: StateFlow<ChickenMapUiState> = _uiState.asStateFlow()
 
     private val _effects = Channel<ChickenMapEffect>(Channel.BUFFERED)
@@ -177,18 +169,12 @@ class ChickenMapViewModel @Inject constructor(
                 initialRadius = game.zone.radius,
                 currentRadius = lastRadius.toDouble()
             )
-            val zonePreviewCircles = if (isDebugPreview) {
-                dev.rahier.pouleparty.ui.gamelogic.computeDebugShiftedCircles(game)
-            } else {
-                emptyList()
-            }
             _uiState.update {
                 it.copy(
                     game = game,
                     radius = lastRadius,
                     nextRadiusUpdate = lastUpdate,
                     circleCenter = interpolatedCenter,
-                    zonePreviewCircles = zonePreviewCircles,
                 )
             }
 

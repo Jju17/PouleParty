@@ -15,81 +15,38 @@ struct HomeFeatureTests {
     @Test func startButtonTappedShowsJoinFlow() async {
         let store = TestStore(initialState: HomeFeature.State()) {
             HomeFeature()
-        } withDependencies: {
-            $0.locationClient.authorizationStatus = { .authorizedWhenInUse }
         }
+        store.exhaustivity = .off
 
-        await store.send(.startButtonTapped) {
+        await store.send(.startButtonTapped)
+        await store.receive(\.joinFlowAuthorized) {
             $0.destination = .joinFlow(JoinFlowFeature.State())
         }
     }
 
-    @Test func createPartyWithoutLocationShowsAlert() async {
+    @Test func createPartyStartsChickenConfigFlow() async {
         let store = TestStore(initialState: HomeFeature.State()) {
             HomeFeature()
         } withDependencies: {
-            $0.locationClient.authorizationStatus = { .denied }
-        }
-
-        await store.send(.createPartyTapped)
-        await store.receive(\.locationPermissionDenied) {
-            $0.destination = .alert(
-                AlertState {
-                    TextState("Location Required")
-                } actions: {
-                    ButtonState(action: .openSettings) {
-                        TextState("Open Settings")
-                    }
-                    ButtonState(role: .cancel) {
-                        TextState("OK")
-                    }
-                } message: {
-                    TextState("Location is the core of PouleParty! Your position is anonymous and only used during the game. Please enable location access to continue.")
-                }
-            )
-        }
-    }
-
-    @Test func createPartyWithLocationKicksOffDailyFreeLimitCheck() async {
-        // PP-42: PlanSelection was retired. Tapping "Create Party" with
-        // location granted now flows directly into the daily-free-limit check
-        // (no intermediary sheet) and surfaces a `dailyFreeLimitChecked`
-        // action when the limit allows another game.
-        let store = TestStore(initialState: HomeFeature.State()) {
-            HomeFeature()
-        } withDependencies: {
-            $0.locationClient.authorizationStatus = { .authorizedWhenInUse }
             $0.userClient.currentUserId = { "user-123" }
-            $0.apiClient.countFreeGamesToday = { _ in 0 }
         }
         store.exhaustivity = .off
 
         await store.send(.createPartyTapped)
-        await store.receive(\.dailyFreeLimitChecked)
+        await store.receive(\.chickenConfigLocationRequested)
     }
 
-    @Test func adminModeTappedOpensCodeAlert() async {
+    @Test func createPartyLongPressOpensAdminCodeAlert() async {
         let store = TestStore(initialState: HomeFeature.State()) {
             HomeFeature()
-        } withDependencies: {
-            $0.locationClient.authorizationStatus = { .authorizedWhenInUse }
         }
-        await store.send(.adminModeTapped) {
+        store.exhaustivity = .off
+
+        await store.send(.createPartyLongPressed)
+        await store.receive(\.adminCodeAlertRequested) {
             $0.adminCodeInput = ""
             $0.isShowingAdminCodeAlert = true
         }
-    }
-
-    @Test func adminModeTappedWithoutLocationFailsBeforeOpeningAlert() async {
-        let store = TestStore(initialState: HomeFeature.State()) {
-            HomeFeature()
-        } withDependencies: {
-            $0.locationClient.authorizationStatus = { .denied }
-        }
-        store.exhaustivity = .off
-        await store.send(.adminModeTapped)
-        await store.receive(\.locationPermissionDenied)
-        #expect(store.state.isShowingAdminCodeAlert == false)
     }
 
     @Test func adminCodeValidateWithCorrectCodeKicksOffLocationFlow() async {
@@ -137,15 +94,6 @@ struct HomeFeatureTests {
             $0.isShowingAdminCodeAlert = false
             $0.adminCodeInput = ""
         }
-    }
-
-    @Test func webCreatePartyTappedIsANoOpUntilPP46() async {
-        // PP-42: the "Envie de créer une partie ?" button is a UI placeholder;
-        // PP-46 wires it to the localized landing page.
-        let store = TestStore(initialState: HomeFeature.State()) {
-            HomeFeature()
-        }
-        await store.send(.webCreatePartyTapped)
     }
 
     @Test func initialStateHasDefaultValues() {

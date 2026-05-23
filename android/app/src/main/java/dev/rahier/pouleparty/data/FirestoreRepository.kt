@@ -23,7 +23,6 @@ import dev.rahier.pouleparty.powerups.model.PowerUp
 import dev.rahier.pouleparty.model.Registration
 import dev.rahier.pouleparty.model.Winner
 import dev.rahier.pouleparty.ui.gamelogic.PlayerRole
-import dev.rahier.pouleparty.util.startOfToday
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -383,99 +382,6 @@ class FirestoreRepository @Inject constructor(
         awaitClose { listener.remove() }
     }
 
-    /**
-     * PP-52 deeplink resolution result. Mirrors iOS
-     * `ValidationCodeLookupResult` so the JoinFlow can branch the
-     * deeplink UX into "ready / not yet open / invalid code".
-     */
-    sealed class ValidationCodeLookupResult {
-        object InvalidCode : ValidationCodeLookupResult()
-        data class GameNotYetCreated(val batchId: String) : ValidationCodeLookupResult()
-        data class GameReady(val game: Game) : ValidationCodeLookupResult()
-    }
-
-    /**
-     * PP-52 — looks up the paid `eventRegistration` for the given
-     * validation code, then finds the matching Game (if any) via
-     * `Game.registrationBatchId`. Distinguishes "code matches nothing"
-     * from "code valid but Game not created yet" so the deeplink UI
-     * can show an appropriate message. Throws on network failure so
-     * the caller can surface a retryable error instead of conflating
-     * it with an invalid code.
-     */
-    suspend fun lookupGameByValidationCode(code: String): ValidationCodeLookupResult {
-        // CRIT-1 (audit 2026-05-17): routed via callable CF so firestore.rules
-        // can lock /eventRegistrations reads. The CF returns only a discriminated
-        // `{ type, gameId, batchId }` payload — no email/phone/name PII. For the
-        // `gameReady` case we fetch the public Game doc by id (still allowed by
-        // rules) to keep the existing `GameReady(Game)` contract.
-        val trimmed = code.trim().uppercase()
-        if (trimmed.isEmpty()) return ValidationCodeLookupResult.InvalidCode
-
-        val callable = functions
-            .getHttpsCallable("lookupGameByValidationCode")
-            .call(mapOf("code" to trimmed))
-            .await()
-        @Suppress("UNCHECKED_CAST")
-        val raw = callable.getData() as? Map<String, Any?>
-            ?: throw IllegalStateException("lookupGameByValidationCode: malformed response")
-
-        return when (val type = raw["type"] as? String) {
-            "invalidCode" -> ValidationCodeLookupResult.InvalidCode
-            "gameNotYetCreated" -> {
-                val batchId = (raw["batchId"] as? String).orEmpty()
-                ValidationCodeLookupResult.GameNotYetCreated(batchId)
-            }
-            "gameReady" -> {
-                val gameId = (raw["gameId"] as? String).orEmpty()
-                if (gameId.isEmpty()) {
-                    ValidationCodeLookupResult.InvalidCode
-                } else {
-                    val doc = firestore.collection(AppConstants.COLLECTION_GAMES)
-                        .document(gameId)
-                        .get()
-                        .await()
-                    val game = safeToObject<Game>(doc, "lookupGameByValidationCode($gameId)")?.copy(id = doc.id)
-                    if (game != null) {
-                        ValidationCodeLookupResult.GameReady(game)
-                    } else {
-                        Log.e(TAG, "lookupGameByValidationCode: failed to load Game $gameId")
-                        ValidationCodeLookupResult.InvalidCode
-                    }
-                }
-            }
-            else -> {
-                Log.e(TAG, "lookupGameByValidationCode: unknown type=$type")
-                ValidationCodeLookupResult.InvalidCode
-            }
-        }
-    }
-
-    /**
-     * PP-52 — true when a paid `eventRegistrations` doc matches the given
-     * `batchId + code` pair. CRIT-1 (audit 2026-05-17): routed via callable
-     * CF so firestore.rules can lock /eventRegistrations reads. Returns false
-     * on any error so the UI shows "invalid code" rather than a confusing
-     * crash.
-     */
-    suspend fun validateRegistrationCode(batchId: String, code: String): Boolean {
-        val trimmedBatch = batchId.trim()
-        val trimmedCode = code.trim().uppercase()
-        if (trimmedBatch.isEmpty() || trimmedCode.isEmpty()) return false
-        return try {
-            val callable = functions
-                .getHttpsCallable("validateRegistrationCode")
-                .call(mapOf("batchId" to trimmedBatch, "code" to trimmedCode))
-                .await()
-            @Suppress("UNCHECKED_CAST")
-            val raw = callable.getData() as? Map<String, Any?> ?: return false
-            (raw["valid"] as? Boolean) == true
-        } catch (e: Exception) {
-            Log.e(TAG, "validateRegistrationCode($trimmedBatch/$trimmedCode) failed", e)
-            false
-        }
-    }
-
     suspend fun createRegistration(gameId: String, registration: Registration) {
         if (gameId.isEmpty() || registration.userId.isEmpty()) {
             Log.w(TAG, "createRegistration skipped — gameId: '$gameId', userId: '${registration.userId}'")
@@ -705,23 +611,6 @@ class FirestoreRepository @Inject constructor(
             }
 
         awaitClose { listener.remove() }
-    }
-
-    suspend fun countFreeGamesToday(userId: String): Int {
-        return try {
-            val startOfDay = Timestamp(startOfToday().time)
-
-            val snapshot = firestore.collection(AppConstants.COLLECTION_GAMES)
-                .whereEqualTo("creatorId", userId)
-                .whereGreaterThanOrEqualTo("timing.start", startOfDay)
-                .get()
-                .await()
-
-            snapshot.documents.size
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to count free games today for $userId", e)
-            0
-        }
     }
 
     /**

@@ -117,8 +117,7 @@ struct HunterMapView: View {
                 // actual writes can't disagree.
                 if store.isOutsideZone,
                    store.hasGameStarted,
-                   !store.isGameOver,
-                   !store.isDebugPreview {
+                   !store.isGameOver {
                     OutOfZonePenaltyOverlay()
                 }
             }

@@ -198,11 +198,12 @@ export default {
   },
   inscription: {
     intro: {
-      eyebrow: "Real-life GPS hide-and-seek",
+      eyebrow: "Real-world in-person event · Ixelles, Brussels",
       title: "Join\nthe hunt!",
       body: [
-        "A Chicken in costume hides somewhere in Ixelles.",
-        "Your team has to track them down.",
+        "Saturday, June 6, 2026 · 8:30 PM · Ixelles (Brussels).",
+        "A Chicken in costume hides somewhere in the neighbourhood.",
+        "Your team has to track them down on foot, in real life.",
         "The zone shrinks. The pressure rises. Dirty tricks allowed. 😈",
       ],
       priceLine: "€12 / player · Teams of 3 to 5 · Sat. June 6 · 8:30 PM",
@@ -233,7 +234,7 @@ export default {
       phone: "Phone",
       players: "Players",
       total: "TOTAL",
-      note: "€12 / player · 1 free drink at the starting bar · wristband at the final spot",
+      note: "In-person event · Saturday June 6, 2026 · 8:30 PM · Ixelles (Brussels). Per player: welcome drink at the start bar, physical wristband, food and real-world prizes at the final spot. The mobile app is only used as a GPS tool during the live event.",
       paymentSecure: "Secure payment via Stripe (Card · Apple Pay · Google Pay)",
       // XPLAT-H5 (store-audit 2026-05-18, updated 2026-05-18 PM):
       // implicit consent at submit. Disclosure rendered right above

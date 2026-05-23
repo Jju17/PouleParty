@@ -213,11 +213,12 @@ export default {
   },
   inscription: {
     intro: {
-      eyebrow: "Echte GPS-verstoppertje",
+      eyebrow: "Live evenement op locatie · Elsene, Brussel",
       title: "Doe mee\nmet de jacht!",
       body: [
-        "Een verklede Kip verstopt zich ergens in Elsene.",
-        "Jij en je team moeten haar opsporen.",
+        "Zaterdag 6 juni 2026 · 20u30 · Elsene (Brussel).",
+        "Een verklede Kip verstopt zich ergens in de buurt.",
+        "Jij en je team moeten haar te voet opsporen, in het echt.",
         "De zone krimpt. De spanning stijgt. Vuile trucs toegestaan. 😈",
       ],
       priceLine: "€12 / persoon · Teams van 3 tot 5 · Za. 6 juni · 20u30",
@@ -248,7 +249,7 @@ export default {
       phone: "Telefoon",
       players: "Spelers",
       total: "TOTAAL",
-      note: "€12 / persoon · 1 gratis drankje aan de startbar · armband op de eindlocatie",
+      note: "Live evenement · Zaterdag 6 juni 2026 · 20u30 · Elsene (Brussel). Per speler: welkomstdrankje aan de startbar, fysieke armband, eten en echte prijzen op de eindlocatie. De mobiele app dient enkel als GPS-tool tijdens het live evenement.",
       paymentSecure: "Veilige betaling via Stripe (Kaart · Apple Pay · Google Pay)",
       consentPrefix: "Door op Betalen te klikken aanvaard je de",
       consentTermsLink: "Gebruiksvoorwaarden",

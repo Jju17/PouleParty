@@ -31,35 +31,6 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-
-            <!-- PP-52 — App Link for /join?code=... deeplinks coming
-                 from the registration confirmation email. autoVerify
-                 makes Android query
-                 https://pouleparty.be/.well-known/assetlinks.json at
-                 install time to verify the package_name +
-                 sha256_cert_fingerprints listed there match the
-                 installed app, in which case the OS opens the link in
-                 the app instead of the browser. -->
-            <!-- HIGH-16 (audit 2026-05-17): switched from pathPrefix="/join"
-                 (which is a string-prefix match — also captures /joinparty,
-                 /joiner etc.) to android:path="/join" exact match. iOS
-                 Associated Domains use exact-segment matching and were
-                 stricter; this aligns Android with iOS so a future
-                 /joinparty route on web can't be silently hijacked by
-                 the app.
-                 AND-H3 (store-audit 2026-05-18): added www.pouleparty.be
-                 host so deeplinks coming from mail clients that auto-
-                 prepend www.* also open the app. assetlinks.json must
-                 be served at both apex and www subdomain. -->
-            <intent-filter android:autoVerify="true">
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" />
-                <data android:host="pouleparty.be" />
-                <data android:host="www.pouleparty.be" />
-                <data android:path="/join" />
-            </intent-filter>
         </activity>
 
         <service

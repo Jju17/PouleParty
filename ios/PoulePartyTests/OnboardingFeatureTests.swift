@@ -123,32 +123,52 @@ struct OnboardingFeatureTests {
         }
     }
 
-    @Test func emptyNicknameBlocksNextOnPage5() async {
+    @Test func emptyNicknameAdvancesOnPage5() async {
+        // Apple 5.1.5: nickname is skippable. An empty value just falls
+        // through to the next slide; final auto-generation happens at
+        // onboarding completion.
         var state = OnboardingFeature.State()
         state.currentPage = 5
         state.nickname = ""
-        state.locationAuthorizationStatus = .authorizedAlways
 
         let store = TestStore(initialState: state) {
             OnboardingFeature()
         }
 
-        // Tapping next with empty nickname should not change state
-        await store.send(.nextButtonTapped)
+        await store.send(.nextButtonTapped) {
+            $0.currentPage = 6
+        }
     }
 
-    @Test func whitespaceOnlyNicknameBlocksNextOnPage5() async {
+    @Test func whitespaceOnlyNicknameAdvancesOnPage5() async {
         var state = OnboardingFeature.State()
         state.currentPage = 5
         state.nickname = "   "
-        state.locationAuthorizationStatus = .authorizedAlways
 
         let store = TestStore(initialState: state) {
             OnboardingFeature()
         }
 
-        // Tapping next with whitespace-only nickname should not change state
-        await store.send(.nextButtonTapped)
+        await store.send(.nextButtonTapped) {
+            $0.currentPage = 6
+        }
+    }
+
+    @Test func profaneNicknameBlocksNextOnPage5() async {
+        // The only remaining nickname gate: a manually-typed profane
+        // value still triggers the alert. Empty / random / clean names
+        // all advance freely.
+        var state = OnboardingFeature.State()
+        state.currentPage = 5
+        state.nickname = "fuck"
+
+        let store = TestStore(initialState: state) {
+            OnboardingFeature()
+        }
+
+        await store.send(.nextButtonTapped) {
+            $0.showProfanityAlert = true
+        }
     }
 
     @Test func validNicknameAllowsNextOnPage5() async {
@@ -166,9 +186,11 @@ struct OnboardingFeatureTests {
         }
     }
 
-    // MARK: - Location Permission Gates
+    // MARK: - Location slide is fully skippable (Apple 5.1.5)
 
-    @Test func nextButtonBlockedOnPage3WithoutLocationAuth() async {
+    @Test func nextButtonAdvancesOnPage3WithNotDetermined() async {
+        // Apple 5.1.5: location is requested contextually at Create /
+        // Join / Start, not during onboarding. Every slide is skippable.
         var state = OnboardingFeature.State()
         state.currentPage = 3
         state.locationAuthorizationStatus = .notDetermined
@@ -177,11 +199,12 @@ struct OnboardingFeatureTests {
             OnboardingFeature()
         }
 
-        // Should not advance past location page without authorization
-        await store.send(.nextButtonTapped)
+        await store.send(.nextButtonTapped) {
+            $0.currentPage = 4
+        }
     }
 
-    @Test func nextButtonBlockedOnPage3WithDeniedLocation() async {
+    @Test func nextButtonAdvancesOnPage3WithDenied() async {
         var state = OnboardingFeature.State()
         state.currentPage = 3
         state.locationAuthorizationStatus = .denied
@@ -190,13 +213,12 @@ struct OnboardingFeatureTests {
             OnboardingFeature()
         }
 
-        await store.send(.nextButtonTapped)
+        await store.send(.nextButtonTapped) {
+            $0.currentPage = 4
+        }
     }
 
-    @Test func nextButtonBlockedOnPage3WithWhenInUseOnly() async {
-        // `.authorizedWhenInUse` used to let the user through, we now
-        // require `.authorizedAlways` because chicken broadcasts while
-        // the phone is backgrounded. Regression guard for that tightening.
+    @Test func nextButtonAdvancesOnPage3WithWhenInUse() async {
         var state = OnboardingFeature.State()
         state.currentPage = 3
         state.locationAuthorizationStatus = .authorizedWhenInUse
@@ -205,11 +227,12 @@ struct OnboardingFeatureTests {
             OnboardingFeature()
         }
 
-        // No state change, the reducer bails out of `.nextButtonTapped`.
-        await store.send(.nextButtonTapped)
+        await store.send(.nextButtonTapped) {
+            $0.currentPage = 4
+        }
     }
 
-    @Test func nextButtonAllowedOnPage3WithAlwaysAuth() async {
+    @Test func nextButtonAdvancesOnPage3WithAlways() async {
         var state = OnboardingFeature.State()
         state.currentPage = 3
         state.locationAuthorizationStatus = .authorizedAlways
@@ -221,18 +244,6 @@ struct OnboardingFeatureTests {
         await store.send(.nextButtonTapped) {
             $0.currentPage = 4
         }
-    }
-
-    @Test func nextButtonBlockedOnPage3WithRestrictedLocation() async {
-        var state = OnboardingFeature.State()
-        state.currentPage = 3
-        state.locationAuthorizationStatus = .restricted
-
-        let store = TestStore(initialState: state) {
-            OnboardingFeature()
-        }
-
-        await store.send(.nextButtonTapped)
     }
 
     // MARK: - Location Authorization Updates
@@ -282,21 +293,25 @@ struct OnboardingFeatureTests {
         }
     }
 
-    @Test func lastPageNextWithoutLocationShowsAlert() async {
+    // MARK: - Onboarding Completion
+
+    @Test func lastPageNextWithoutLocationCompletesOnboarding() async {
+        // Apple 5.1.5: even without any location permission, hitting
+        // "Let's go" on the last page completes onboarding. Location is
+        // requested contextually at gameplay entry points.
         var state = OnboardingFeature.State()
         state.currentPage = OnboardingFeature.totalPages - 1
         state.locationAuthorizationStatus = .denied
+        state.nickname = "Alice"
 
         let store = TestStore(initialState: state) {
             OnboardingFeature()
         }
+        store.exhaustivity = .off
 
-        await store.send(.nextButtonTapped) {
-            $0.showLocationAlert = true
-        }
+        await store.send(.nextButtonTapped)
+        await store.receive(\.onboardingCompleted)
     }
-
-    // MARK: - Onboarding Completion
 
     @Test func lastPageNextWithLocationTriggersCompletion() async {
         var state = OnboardingFeature.State()
@@ -313,43 +328,46 @@ struct OnboardingFeatureTests {
         await store.receive(\.onboardingCompleted)
     }
 
-    @Test func lastPageNextWithEmptyNicknameSilentlyRefuses() async {
-        // Defensive gate: the nickname slide already blocks empty names,
-        // but the last page must also refuse, protects against a state
-        // drift where the user backs up, clears the nickname, then swipes
-        // forward. No alert needed; they'll see the empty field and retry.
+    @Test func lastPageNextWithEmptyNicknameAutoGenerates() async {
+        // Empty nickname triggers `RandomNickname.generate()` in
+        // `.onboardingCompleted`. The exact value is non-deterministic
+        // (random PRNG), so we just assert completion fired and the
+        // saved nickname is non-empty.
         var state = OnboardingFeature.State()
         state.currentPage = OnboardingFeature.totalPages - 1
-        state.locationAuthorizationStatus = .authorizedAlways
         state.nickname = ""
 
         let store = TestStore(initialState: state) {
             OnboardingFeature()
         }
+        store.exhaustivity = .off
 
-        // No state change: reducer bails out without emitting onboardingCompleted.
         await store.send(.nextButtonTapped)
+        await store.receive(\.onboardingCompleted)
+        #expect(!store.state.nickname.isEmpty)
+        #expect(!store.state.savedNickname.isEmpty)
     }
 
-    @Test func lastPageNextWithWhitespaceNicknameSilentlyRefuses() async {
+    @Test func lastPageNextWithWhitespaceNicknameAutoGenerates() async {
         var state = OnboardingFeature.State()
         state.currentPage = OnboardingFeature.totalPages - 1
-        state.locationAuthorizationStatus = .authorizedAlways
         state.nickname = "   "
 
         let store = TestStore(initialState: state) {
             OnboardingFeature()
         }
+        store.exhaustivity = .off
 
         await store.send(.nextButtonTapped)
+        await store.receive(\.onboardingCompleted)
+        #expect(!store.state.nickname.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
     }
 
     @Test func lastPageNextWithProfaneNicknameShowsProfanityAlert() async {
-        // Mirrors the per-page profanity gate, the last page catches it
-        // too if state drifts.
+        // The only remaining final-page gate: profanity. A manually-typed
+        // inappropriate value still blocks completion.
         var state = OnboardingFeature.State()
         state.currentPage = OnboardingFeature.totalPages - 1
-        state.locationAuthorizationStatus = .authorizedAlways
         state.nickname = "fuck"
 
         let store = TestStore(initialState: state) {
@@ -361,10 +379,7 @@ struct OnboardingFeatureTests {
         }
     }
 
-    @Test func lastPageNextWithWhenInUseShowsLocationAlert() async {
-        // Final gate is re-checked on the last page in case the user flipped
-        // the permission back to "While Using" in Settings between page 3
-        // and the last slide, they must still grant Always to play.
+    @Test func lastPageNextWithWhenInUseCompletesOnboarding() async {
         var state = OnboardingFeature.State()
         state.currentPage = OnboardingFeature.totalPages - 1
         state.locationAuthorizationStatus = .authorizedWhenInUse
@@ -373,15 +388,17 @@ struct OnboardingFeatureTests {
         let store = TestStore(initialState: state) {
             OnboardingFeature()
         }
+        store.exhaustivity = .off
 
-        await store.send(.nextButtonTapped) {
-            $0.showLocationAlert = true
-        }
+        await store.send(.nextButtonTapped)
+        await store.receive(\.onboardingCompleted)
     }
 
-    // MARK: - Page Swipe Blocking
+    // MARK: - Page Swipes (Apple 5.1.5: never blocked)
 
-    @Test func pageChangedBlocksForwardSwipePastLocationPage() async {
+    @Test func pageChangedAllowsForwardSwipePastLocationPage() async {
+        // Pager swipes are unblocked alongside the Next button. Location
+        // is requested contextually at gameplay entry points.
         var state = OnboardingFeature.State()
         state.currentPage = 3
         state.locationAuthorizationStatus = .notDetermined
@@ -389,34 +406,23 @@ struct OnboardingFeatureTests {
         let store = TestStore(initialState: state) {
             OnboardingFeature()
         }
-        store.exhaustivity = .off
 
-        // Swiping forward to page 4 without location should snap back
         await store.send(.pageChanged(4)) {
             $0.currentPage = 4
         }
-        await store.receive(\.pageSnappedBack) {
-            $0.currentPage = 3
-        }
     }
 
-    @Test func pageChangedBlocksForwardSwipePastNicknamePage() async {
+    @Test func pageChangedAllowsForwardSwipePastNicknamePage() async {
         var state = OnboardingFeature.State()
         state.currentPage = 5
-        state.locationAuthorizationStatus = .authorizedAlways
         state.nickname = ""
 
         let store = TestStore(initialState: state) {
             OnboardingFeature()
         }
-        store.exhaustivity = .off
 
-        // Swiping forward to page 6 without nickname should snap back
         await store.send(.pageChanged(6)) {
             $0.currentPage = 6
-        }
-        await store.receive(\.pageSnappedBack) {
-            $0.currentPage = 5
         }
     }
 
@@ -435,10 +441,9 @@ struct OnboardingFeatureTests {
         }
     }
 
-    @Test func pageChangedBlocksForwardSwipePastLocationPageWithWhenInUse() async {
-        // Pager swipes are gated the same way as Next, fine-only (whenInUse)
-        // must NOT let the user past the location page, or the gate would
-        // be trivially bypassable by swiping instead of tapping Next.
+    @Test func pageChangedAllowsForwardSwipeFromLocationWithWhenInUse() async {
+        // Apple 5.1.5: WhenInUse must let the user past the location
+        // page via pager swipes too, matching the Next button gate.
         var state = OnboardingFeature.State()
         state.currentPage = 3
         state.locationAuthorizationStatus = .authorizedWhenInUse
@@ -446,13 +451,9 @@ struct OnboardingFeatureTests {
         let store = TestStore(initialState: state) {
             OnboardingFeature()
         }
-        store.exhaustivity = .off
 
         await store.send(.pageChanged(4)) {
             $0.currentPage = 4
-        }
-        await store.receive(\.pageSnappedBack) {
-            $0.currentPage = 3
         }
     }
 
