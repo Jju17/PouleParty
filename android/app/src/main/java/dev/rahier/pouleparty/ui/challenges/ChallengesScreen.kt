@@ -50,6 +50,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -378,6 +379,9 @@ private fun ChallengeRow(
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        val langCode = LocalConfiguration.current.locales[0].language
+        val displayTitle = challenge.localizedTitle(langCode)
+        val displayBody = challenge.localizedBody(langCode)
         Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (challenge.number > 0) {
@@ -390,16 +394,16 @@ private fun ChallengeRow(
                     )
                 }
                 Text(
-                    text = challenge.title,
+                    text = displayTitle,
                     style = bangerStyle(18),
                     color = MaterialTheme.colorScheme.onBackground,
                     fontWeight = FontWeight.Bold,
                 )
             }
-            if (challenge.body.isNotBlank()) {
+            if (displayBody.isNotBlank()) {
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    text = challenge.body,
+                    text = displayBody,
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.75f)
                 )

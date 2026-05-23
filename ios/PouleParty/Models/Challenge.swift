@@ -11,8 +11,6 @@ import Foundation
 
 struct Challenge: Codable, Equatable, Identifiable {
     @DocumentID var firestoreId: String?
-    var title: String = ""
-    var body: String = ""
     var points: Int = 0
     var lastUpdated: Timestamp?
     var type: ChallengeType = .oneShot
@@ -28,22 +26,23 @@ struct Challenge: Codable, Equatable, Identifiable {
     var titleByLocale: [String: String] = [:]
     var bodyByLocale: [String: String] = [:]
 
-    var id: String { firestoreId ?? "challenge::\(title)::\(points)" }
+    var id: String { firestoreId ?? "challenge::\(level)::\(number)::\(points)" }
 
-    /// Locale → text with a 3-level cascade: requested locale, then
-    /// `"fr"` (the D-Day FR-first audience), then the legacy `title`.
-    /// Empty strings count as missing so a partially-populated doc
-    /// falls through to a usable value.
+    /// Locale → text with a 2-level cascade: requested locale, then
+    /// `"fr"` (the D-Day FR-first audience). Empty strings count as
+    /// missing so a partially-populated doc falls through cleanly.
+    /// Returns `""` when both are missing — that surfaces the bug
+    /// immediately in the UI so the admin populates the maps.
     func localizedTitle(_ locale: String) -> String {
         if let v = titleByLocale[locale], !v.isEmpty { return v }
         if let v = titleByLocale["fr"], !v.isEmpty { return v }
-        return title
+        return ""
     }
 
     func localizedBody(_ locale: String) -> String {
         if let v = bodyByLocale[locale], !v.isEmpty { return v }
         if let v = bodyByLocale["fr"], !v.isEmpty { return v }
-        return body
+        return ""
     }
 
     enum ChallengeType: String, Codable, CaseIterable, Equatable {
@@ -58,8 +57,6 @@ struct Challenge: Codable, Equatable, Identifiable {
 
     enum CodingKeys: String, CodingKey {
         case firestoreId
-        case title
-        case body
         case points
         case lastUpdated
         case type
@@ -74,8 +71,6 @@ struct Challenge: Codable, Equatable, Identifiable {
 
     init(
         firestoreId: String? = nil,
-        title: String = "",
-        body: String = "",
         points: Int = 0,
         lastUpdated: Timestamp? = nil,
         type: ChallengeType = .oneShot,
@@ -88,8 +83,6 @@ struct Challenge: Codable, Equatable, Identifiable {
         bodyByLocale: [String: String] = [:]
     ) {
         self.firestoreId = firestoreId
-        self.title = title
-        self.body = body
         self.points = points
         self.lastUpdated = lastUpdated
         self.type = type
@@ -105,8 +98,6 @@ struct Challenge: Codable, Equatable, Identifiable {
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         firestoreId = try c.decodeIfPresent(String.self, forKey: .firestoreId)
-        title = try c.decodeIfPresent(String.self, forKey: .title) ?? ""
-        body = try c.decodeIfPresent(String.self, forKey: .body) ?? ""
         points = try c.decodeIfPresent(Int.self, forKey: .points) ?? 0
         lastUpdated = try c.decodeIfPresent(Timestamp.self, forKey: .lastUpdated)
         type = try c.decodeIfPresent(ChallengeType.self, forKey: .type) ?? .oneShot
@@ -124,11 +115,21 @@ extension Challenge {
     static var mock: Challenge {
         Challenge(
             firestoreId: "mock-challenge",
-            title: "Climb the highest roof",
-            body: "Take a selfie on top of the tallest rooftop you can find.",
             points: 50,
             lastUpdated: Timestamp(date: .now),
-            type: .oneShot
+            type: .oneShot,
+            level: 1,
+            number: 1,
+            titleByLocale: [
+                "fr": "Grimper sur le toit le plus haut",
+                "en": "Climb the highest roof",
+                "nl": "Klim op het hoogste dak",
+            ],
+            bodyByLocale: [
+                "fr": "Selfie sur le plus haut toit que tu trouves.",
+                "en": "Take a selfie on top of the tallest rooftop you can find.",
+                "nl": "Maak een selfie op het hoogste dak dat je kunt vinden.",
+            ]
         )
     }
 }

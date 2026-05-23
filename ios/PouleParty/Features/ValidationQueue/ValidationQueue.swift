@@ -256,6 +256,9 @@ private struct SubmissionRow: View {
     let teamName: String
     let onTap: () -> Void
 
+    @Environment(\.locale) private var locale
+    private var langCode: String { locale.language.languageCode?.identifier ?? "fr" }
+
     var body: some View {
         Button(action: onTap) {
             HStack(alignment: .top, spacing: 12) {
@@ -281,7 +284,7 @@ private struct SubmissionRow: View {
                     HStack(spacing: 6) {
                         Image(systemName: typeIcon)
                             .foregroundStyle(typeColor)
-                        Text(challenge?.title ?? submission.challengeId)
+                        Text(challenge?.localizedTitle(langCode) ?? submission.challengeId)
                             .font(.headline)
                             .foregroundStyle(Color.onSurface)
                             .lineLimit(1)
@@ -327,6 +330,9 @@ private struct SubmissionDetailView: View {
     let onReject: () -> Void
     let onClose: () -> Void
 
+    @Environment(\.locale) private var locale
+    private var langCode: String { locale.language.languageCode?.identifier ?? "fr" }
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
@@ -354,9 +360,9 @@ private struct SubmissionDetailView: View {
                         .font(.title2.bold())
                         .foregroundStyle(Color.CRPink)
                     if let challenge {
-                        Text(challenge.title)
+                        Text(challenge.localizedTitle(langCode))
                             .font(.headline)
-                        Text(challenge.body)
+                        Text(challenge.localizedBody(langCode))
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                         Text("\(challenge.points) pts")

@@ -8,12 +8,30 @@ type Locale = "fr" | "en" | "nl";
 
 interface ChallengeDoc {
   id: string;
-  title: string;
-  body: string;
   points: number;
   type: "oneShot" | "repeatable";
   level: number;
   number: number;
+  titleByLocale: Record<string, string>;
+  bodyByLocale: Record<string, string>;
+}
+
+/**
+ * Locale → text with a 2-level cascade matching the iOS/Android
+ * `localizedTitle` accessor: requested locale, then `"fr"` (FR-first
+ * audience). Empty strings count as missing so a partially-populated
+ * doc falls through cleanly. Returns `""` when both are missing —
+ * the empty cell surfaces the bug so the admin populates the maps.
+ */
+function pickLocalized(
+  map: Record<string, string>,
+  locale: Locale
+): string {
+  const v = map?.[locale];
+  if (typeof v === "string" && v.length > 0) return v;
+  const fr = map?.["fr"];
+  if (typeof fr === "string" && fr.length > 0) return fr;
+  return "";
 }
 
 interface SheetStrings {
@@ -91,7 +109,7 @@ function groupAndSort(docs: ChallengeDoc[]): Map<number, ChallengeDoc[]> {
     const list = byLevel.get(level) ?? [];
     list.sort((a, b) => {
       if (a.number !== b.number) return a.number - b.number;
-      return a.title.localeCompare(b.title);
+      return a.id.localeCompare(b.id);
     });
     sorted.set(level, list);
   }
@@ -112,15 +130,17 @@ function renderHtml(docs: ChallengeDoc[], lang: Locale): string {
                 const isRep = c.type === "repeatable";
                 const badge = isRep ? s.repeatableBadge : s.oneShotBadge;
                 const num = c.number > 0 ? `#${c.number}` : "";
+                const title = pickLocalized(c.titleByLocale, lang);
+                const body = pickLocalized(c.bodyByLocale, lang);
                 return `
               <li class="challenge ${isRep ? "rep" : "one"}">
                 <div class="num">${escapeHtml(num)}</div>
                 <div class="body">
                   <div class="title-row">
-                    <span class="title">${escapeHtml(c.title)}</span>
+                    <span class="title">${escapeHtml(title)}</span>
                     <span class="badge">${escapeHtml(badge)}</span>
                   </div>
-                  <div class="desc">${escapeHtml(c.body)}</div>
+                  <div class="desc">${escapeHtml(body)}</div>
                 </div>
                 <div class="pts">${c.points} ${escapeHtml(s.pointsSuffix)}</div>
               </li>`;
@@ -265,14 +285,22 @@ export const renderChallengesSheet = onRequest(
       const snap = await getFirestore().collection("challenges").get();
       const docs: ChallengeDoc[] = snap.docs.map((doc) => {
         const d = doc.data();
+        const titleByLocale =
+          d.titleByLocale && typeof d.titleByLocale === "object"
+            ? (d.titleByLocale as Record<string, string>)
+            : {};
+        const bodyByLocale =
+          d.bodyByLocale && typeof d.bodyByLocale === "object"
+            ? (d.bodyByLocale as Record<string, string>)
+            : {};
         return {
           id: doc.id,
-          title: typeof d.title === "string" ? d.title : "",
-          body: typeof d.body === "string" ? d.body : "",
           points: typeof d.points === "number" ? d.points : 0,
           type: d.type === "repeatable" ? "repeatable" : "oneShot",
           level: typeof d.level === "number" && d.level > 0 ? d.level : 1,
           number: typeof d.number === "number" ? d.number : 0,
+          titleByLocale,
+          bodyByLocale,
         };
       });
 

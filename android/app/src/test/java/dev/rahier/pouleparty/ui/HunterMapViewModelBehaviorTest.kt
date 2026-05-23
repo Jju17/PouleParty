@@ -373,7 +373,10 @@ class HunterMapViewModelBehaviorTest {
     @Test
     fun `hasChallenges becomes true when stream emits non-empty list`() {
         val challenge = dev.rahier.pouleparty.model.Challenge(
-            id = "c1", title = "Sing", body = "Sing loudly", points = 10
+            id = "c1",
+            points = 10,
+            titleByLocale = mapOf("fr" to "Sing"),
+            bodyByLocale = mapOf("fr" to "Sing loudly"),
         )
         io.mockk.every { firestoreRepository.challengesStream() } returns
             kotlinx.coroutines.flow.flowOf(listOf(challenge))
@@ -390,7 +393,7 @@ class HunterMapViewModelBehaviorTest {
         testDispatcher.scheduler.advanceUntilIdle()
         assertFalse(vm.uiState.value.hasChallenges)
 
-        flow.value = listOf(dev.rahier.pouleparty.model.Challenge(id = "c1", title = "T", body = "B", points = 5))
+        flow.value = listOf(dev.rahier.pouleparty.model.Challenge(id = "c1", points = 5, titleByLocale = mapOf("fr" to "T")))
         testDispatcher.scheduler.advanceUntilIdle()
         assertTrue(vm.uiState.value.hasChallenges)
     }
@@ -398,7 +401,7 @@ class HunterMapViewModelBehaviorTest {
     @Test
     fun `hasChallenges handles non-empty then empty transition`() {
         val flow = kotlinx.coroutines.flow.MutableStateFlow<List<dev.rahier.pouleparty.model.Challenge>>(
-            listOf(dev.rahier.pouleparty.model.Challenge(id = "c1", title = "T", body = "B", points = 5))
+            listOf(dev.rahier.pouleparty.model.Challenge(id = "c1", points = 5, titleByLocale = mapOf("fr" to "T")))
         )
         io.mockk.every { firestoreRepository.challengesStream() } returns flow
         val vm = createViewModel()
@@ -412,8 +415,8 @@ class HunterMapViewModelBehaviorTest {
 
     @Test
     fun `hasChallenges reflects latest emission across multiple updates`() {
-        val c1 = dev.rahier.pouleparty.model.Challenge(id = "c1", title = "T1", body = "B", points = 5)
-        val c2 = dev.rahier.pouleparty.model.Challenge(id = "c2", title = "T2", body = "B", points = 10)
+        val c1 = dev.rahier.pouleparty.model.Challenge(id = "c1", points = 5, titleByLocale = mapOf("fr" to "T1"))
+        val c2 = dev.rahier.pouleparty.model.Challenge(id = "c2", points = 10, titleByLocale = mapOf("fr" to "T2"))
         val flow = kotlinx.coroutines.flow.MutableStateFlow(listOf(c1))
         io.mockk.every { firestoreRepository.challengesStream() } returns flow
         val vm = createViewModel()

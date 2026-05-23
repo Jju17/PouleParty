@@ -90,24 +90,25 @@ struct ChallengesFeature {
             return .available
         }
 
-        /// Challenges sorted by highest points desc, then by title for stability.
+        /// Challenges sorted by highest points desc, then by `id` for
+        /// stability (locale-independent tie-break).
         var sortedChallenges: [Challenge] {
             challenges.sorted { lhs, rhs in
                 if lhs.points != rhs.points { return lhs.points > rhs.points }
-                return lhs.title < rhs.title
+                return lhs.id < rhs.id
             }
         }
 
-        /// Challenges grouped by `level`, ascending. Each group keeps the
-        /// same points-desc / title-asc order as `sortedChallenges`. The
-        /// UI walks this to render one section per level with a header.
+        /// Challenges grouped by `level`, ascending. Each group keeps
+        /// the points-desc / id-asc order. The UI walks this to render
+        /// one section per level with a header.
         var challengesByLevel: [(level: Int, challenges: [Challenge])] {
             Dictionary(grouping: challenges) { $0.level }
                 .keys.sorted()
                 .map { level in
                     let entries = (challenges.filter { $0.level == level }).sorted { lhs, rhs in
                         if lhs.points != rhs.points { return lhs.points > rhs.points }
-                        return lhs.title < rhs.title
+                        return lhs.id < rhs.id
                     }
                     return (level, entries)
                 }

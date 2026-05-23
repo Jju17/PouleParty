@@ -16,11 +16,11 @@ struct ChallengeProgressTests {
     ) -> Challenge {
         Challenge(
             firestoreId: id,
-            title: id,
             points: 10,
             type: type,
             level: level,
-            number: 1
+            number: 1,
+            titleByLocale: ["fr": id]
         )
     }
 

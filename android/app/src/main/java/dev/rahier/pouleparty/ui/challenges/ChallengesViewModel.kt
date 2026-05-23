@@ -70,7 +70,7 @@ data class ChallengesUiState(
             .toSortedMap()
             .map { (level, list) ->
                 level to list.sortedWith(
-                    compareByDescending<Challenge> { it.points }.thenBy { it.title }
+                    compareByDescending<Challenge> { it.points }.thenBy { it.id }
                 )
             }
 

@@ -41,6 +41,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -108,15 +109,17 @@ fun ValidationQueueScreen(
                     )
                 }
             } else {
+                val langCode = LocalConfiguration.current.locales[0].language
                 LazyColumn(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     items(state.submissions, key = { it.id }) { submission ->
+                        val ch = state.challenge(submission)
                         SubmissionRow(
                             submission = submission,
-                            challengeTitle = state.challenge(submission)?.title ?: submission.challengeId,
-                            challengePoints = state.challenge(submission)?.points ?: 0,
+                            challengeTitle = ch?.localizedTitle(langCode) ?: submission.challengeId,
+                            challengePoints = ch?.points ?: 0,
                             teamName = state.teamName(submission.hunterId),
                             onTap = { viewModel.onIntent(ValidationQueueIntent.SubmissionTapped(submission)) },
                         )
@@ -126,11 +129,13 @@ fun ValidationQueueScreen(
 
             val selected = state.selected
             if (selected != null) {
+                val langCode = LocalConfiguration.current.locales[0].language
+                val sel = state.challenge(selected)
                 SubmissionDetailDialog(
                     submission = selected,
-                    challengeTitle = state.challenge(selected)?.title ?: selected.challengeId,
-                    challengeBody = state.challenge(selected)?.body ?: "",
-                    challengePoints = state.challenge(selected)?.points ?: 0,
+                    challengeTitle = sel?.localizedTitle(langCode) ?: selected.challengeId,
+                    challengeBody = sel?.localizedBody(langCode) ?: "",
+                    challengePoints = sel?.points ?: 0,
                     teamName = state.teamName(selected.hunterId),
                     isBusy = state.busyIds.contains(selected.id),
                     onValidate = { viewModel.onIntent(ValidationQueueIntent.ValidateTapped(selected)) },

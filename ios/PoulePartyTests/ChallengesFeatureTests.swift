@@ -13,7 +13,13 @@ import Testing
 struct ChallengesFeatureTests {
 
     private func makeChallenge(id: String, title: String = "t", body: String = "b", points: Int = 10) -> Challenge {
-        Challenge(firestoreId: id, title: title, body: body, points: points, lastUpdated: nil)
+        Challenge(
+            firestoreId: id,
+            points: points,
+            lastUpdated: nil,
+            titleByLocale: ["fr": title],
+            bodyByLocale: ["fr": body]
+        )
     }
 
     private func makeCompletion(hunterId: String, ids: [String] = [], total: Int = 0, teamName: String = "") -> ChallengeCompletion {

@@ -101,8 +101,18 @@ class ChallengesViewModelTest {
     @Test
     fun `challenges stream populates state`() {
         val streamed = listOf(
-            Challenge(id = "c1", title = "Take a photo", body = "Selfie with a stranger", points = 10),
-            Challenge(id = "c2", title = "Drink water", body = "Stay hydrated", points = 5)
+            Challenge(
+                id = "c1",
+                points = 10,
+                titleByLocale = mapOf("fr" to "Take a photo"),
+                bodyByLocale = mapOf("fr" to "Selfie with a stranger"),
+            ),
+            Challenge(
+                id = "c2",
+                points = 5,
+                titleByLocale = mapOf("fr" to "Drink water"),
+                bodyByLocale = mapOf("fr" to "Stay hydrated"),
+            )
         )
         every { repo.challengesStream() } returns flowOf(streamed)
         val vm = create()
@@ -147,7 +157,7 @@ class ChallengesViewModelTest {
 
     @Test
     fun `MarkAsDone moves challenge to pendingLocal`() {
-        val challenge = Challenge(id = "c1", title = "Hello", points = 5)
+        val challenge = Challenge(id = "c1", points = 5, titleByLocale = mapOf("fr" to "Hello"))
         every { repo.challengesStream() } returns flowOf(listOf(challenge))
         val vm = create()
         testDispatcher.scheduler.advanceUntilIdle()
@@ -159,7 +169,7 @@ class ChallengesViewModelTest {
 
     @Test
     fun `MarkAsDone on already-completed challenge is a no-op`() {
-        val challenge = Challenge(id = "c1", title = "Hello", points = 5)
+        val challenge = Challenge(id = "c1", points = 5, titleByLocale = mapOf("fr" to "Hello"))
         every { repo.challengesStream() } returns flowOf(listOf(challenge))
         every { repo.challengeCompletionsStream("game-1") } returns flowOf(
             listOf(
@@ -180,7 +190,7 @@ class ChallengesViewModelTest {
 
     @Test
     fun `SubmitForValidation opens photo picker for pending challenge`() {
-        val challenge = Challenge(id = "c1", title = "Hello", points = 7)
+        val challenge = Challenge(id = "c1", points = 7, titleByLocale = mapOf("fr" to "Hello"))
         every { repo.challengesStream() } returns flowOf(listOf(challenge))
         coEvery { repo.getConfig("game-1") } returns Game(id = "game-1", hunterIds = listOf("hunter-1"))
         coEvery { repo.fetchAllRegistrations("game-1") } returns listOf(
@@ -199,7 +209,7 @@ class ChallengesViewModelTest {
 
     @Test
     fun `PhotoPicked calls submitChallenge with correct args`() {
-        val challenge = Challenge(id = "c1", title = "Hello", points = 7)
+        val challenge = Challenge(id = "c1", points = 7, titleByLocale = mapOf("fr" to "Hello"))
         every { repo.challengesStream() } returns flowOf(listOf(challenge))
         coEvery { repo.getConfig("game-1") } returns Game(id = "game-1", hunterIds = listOf("hunter-1"))
         coEvery { repo.fetchAllRegistrations("game-1") } returns listOf(
@@ -230,7 +240,7 @@ class ChallengesViewModelTest {
 
     @Test
     fun `SubmitForValidation without pending intent is a no-op`() {
-        val challenge = Challenge(id = "c1", title = "Hello", points = 5)
+        val challenge = Challenge(id = "c1", points = 5, titleByLocale = mapOf("fr" to "Hello"))
         every { repo.challengesStream() } returns flowOf(listOf(challenge))
         val vm = create()
         testDispatcher.scheduler.advanceUntilIdle()

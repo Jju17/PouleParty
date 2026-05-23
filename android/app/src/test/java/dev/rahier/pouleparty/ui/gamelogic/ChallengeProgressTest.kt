@@ -15,11 +15,11 @@ class ChallengeProgressTest {
         type: ChallengeType = ChallengeType.ONE_SHOT,
     ): Challenge = Challenge(
         id = id,
-        title = id,
         points = 10,
         type = type.firestoreValue,
         level = level,
         number = 1,
+        titleByLocale = mapOf("fr" to id),
     )
 
     @Test

@@ -4,6 +4,7 @@ import com.google.firebase.firestore.GeoPoint
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ChallengeModelTest {
@@ -22,8 +23,6 @@ class ChallengeModelTest {
     fun `default Challenge keeps existing fields with their previous defaults`() {
         val challenge = Challenge()
         assertEquals("", challenge.id)
-        assertEquals("", challenge.title)
-        assertEquals("", challenge.body)
         assertEquals(0, challenge.points)
         assertNotNull(challenge.lastUpdated)
     }
@@ -44,24 +43,19 @@ class ChallengeModelTest {
 
     @Test
     fun `Challenge accepts number 0 as sentinel for not-yet-numbered`() {
-        // 0 = "not yet numbered". `migrateChallengesV2` assigns a real
-        // value at next deploy but a freshly seeded doc can land here.
         val challenge = Challenge(level = 3, number = 0)
         assertEquals(0, challenge.number)
     }
 
     @Test
     fun `Challenge round-trips level and number via copy`() {
-        // Firestore `toObject()` calls the no-arg constructor and
-        // injects properties; copy() mirrors that contract for the
-        // values we care about staying intact.
         val original = Challenge(
             id = "lvl2-7",
-            title = "Pyramide",
             type = "repeatable",
             points = 100,
             level = 2,
             number = 7,
+            titleByLocale = mapOf("fr" to "Pyramide"),
         )
         val roundTripped = original.copy()
         assertEquals(2, roundTripped.level)
@@ -97,12 +91,12 @@ class ChallengeModelTest {
     fun `Challenge can carry GeoPoint location and proximity radius`() {
         val challenge = Challenge(
             id = "bar-le-cirio",
-            title = "Drink a beer at Le Cirio",
             type = "repeatable",
             points = 5,
             location = GeoPoint(50.8503, 4.3517),
             proximityRadiusMeters = 50,
             partner = "InBev",
+            titleByLocale = mapOf("fr" to "Drink a beer at Le Cirio"),
         )
         assertEquals(50.8503, challenge.location?.latitude)
         assertEquals(4.3517, challenge.location?.longitude)
@@ -113,8 +107,6 @@ class ChallengeModelTest {
 
     @Test
     fun `proximityRadiusMeters can be nil explicitly`() {
-        // `null` = no proximity check (distinct from the default 100 m
-        // the migration sets).
         val challenge = Challenge(
             id = "anywhere",
             type = "oneShot",
@@ -139,5 +131,54 @@ class ChallengeModelTest {
     @Test
     fun `fromFirestore is null-safe`() {
         assertEquals(ChallengeType.ONE_SHOT, ChallengeType.fromFirestore(null))
+    }
+
+    @Test
+    fun `default Challenge has empty locale maps`() {
+        val challenge = Challenge()
+        assertTrue(challenge.titleByLocale.isEmpty())
+        assertTrue(challenge.bodyByLocale.isEmpty())
+    }
+
+    @Test
+    fun `localizedTitle returns requested locale when present`() {
+        val challenge = Challenge(
+            titleByLocale = mapOf("fr" to "FR", "en" to "EN", "nl" to "NL")
+        )
+        assertEquals("FR", challenge.localizedTitle("fr"))
+        assertEquals("EN", challenge.localizedTitle("en"))
+        assertEquals("NL", challenge.localizedTitle("nl"))
+    }
+
+    @Test
+    fun `localizedTitle falls back to fr when locale missing`() {
+        val challenge = Challenge(titleByLocale = mapOf("fr" to "FR"))
+        assertEquals("FR", challenge.localizedTitle("en"))
+        assertEquals("FR", challenge.localizedTitle("de"))
+    }
+
+    @Test
+    fun `localizedTitle returns empty when map is empty`() {
+        val challenge = Challenge(titleByLocale = emptyMap())
+        assertEquals("", challenge.localizedTitle("fr"))
+        assertEquals("", challenge.localizedTitle("en"))
+    }
+
+    @Test
+    fun `localizedTitle treats empty string as missing`() {
+        val challenge = Challenge(
+            titleByLocale = mapOf("fr" to "FR", "en" to "")
+        )
+        assertEquals("FR", challenge.localizedTitle("en"))
+    }
+
+    @Test
+    fun `localizedBody follows same cascade`() {
+        val challenge = Challenge(bodyByLocale = mapOf("fr" to "FR body"))
+        assertEquals("FR body", challenge.localizedBody("fr"))
+        assertEquals("FR body", challenge.localizedBody("en"))
+
+        val challenge2 = Challenge(bodyByLocale = emptyMap())
+        assertEquals("", challenge2.localizedBody("fr"))
     }
 }
