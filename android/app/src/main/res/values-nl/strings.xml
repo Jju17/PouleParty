@@ -288,6 +288,8 @@
     <string name="challenges_closed_banner">Tijd is om — de uitdagingen zijn gesloten.</string>
     <string name="challenge_points_format">%d pnt</string>
     <string name="challenges_empty">Nog geen uitdagingen. Kom later terug!</string>
+    <string name="challenge_level_header">Niveau %1$d</string>
+    <string name="challenge_level_locked_label">🔒 Ontgrendel bij %1$d / %2$d</string>
     <string name="leaderboard_empty">Nog geen jagers.</string>
 
     <!-- My Games -->

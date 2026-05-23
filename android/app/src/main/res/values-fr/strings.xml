@@ -292,6 +292,8 @@
     <string name="challenges_closed_banner">Temps écoulé — les défis sont fermés.</string>
     <string name="challenge_points_format">%d pts</string>
     <string name="challenges_empty">Aucun défi pour l\'instant. Reviens plus tard !</string>
+    <string name="challenge_level_header">Niveau %1$d</string>
+    <string name="challenge_level_locked_label">🔒 Débloqué à %1$d / %2$d</string>
     <string name="leaderboard_empty">Aucun chasseur pour l\'instant.</string>
 
     <!-- My Games -->

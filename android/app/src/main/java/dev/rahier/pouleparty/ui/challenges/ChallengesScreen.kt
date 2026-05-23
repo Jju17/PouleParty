@@ -261,7 +261,8 @@ private fun ChallengesTabContent(
     onMarkAsDone: (Challenge) -> Unit,
     onSubmit: (Challenge) -> Unit
 ) {
-    if (state.challenges.isEmpty()) {
+    val groups = state.challengesByLevel
+    if (groups.isEmpty()) {
         Box(
             modifier = modifier.padding(32.dp),
             contentAlignment = Alignment.Center
@@ -297,13 +298,52 @@ private fun ChallengesTabContent(
                 }
             }
         }
-        items(state.challenges, key = { it.id }) { challenge ->
-            ChallengeRow(
-                challenge = challenge,
-                status = state.status(challenge),
-                isClosed = state.isClosedForSubmissions,
-                onMarkAsDone = { onMarkAsDone(challenge) },
-                onSubmit = { onSubmit(challenge) }
+        groups.forEach { (level, levelChallenges) ->
+            val locked = state.isLevelLocked(level)
+            val progress = state.progressForLevel(level)
+            item(key = "header-$level") {
+                LevelHeader(level = level, isLocked = locked, progress = progress)
+            }
+            items(levelChallenges, key = { it.id }) { challenge ->
+                ChallengeRow(
+                    challenge = challenge,
+                    status = state.status(challenge),
+                    isClosed = state.isClosedForSubmissions,
+                    isLevelLocked = locked,
+                    onMarkAsDone = { onMarkAsDone(challenge) },
+                    onSubmit = { onSubmit(challenge) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LevelHeader(
+    level: Int,
+    isLocked: Boolean,
+    progress: dev.rahier.pouleparty.ui.gamelogic.LevelProgress,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = stringResource(R.string.challenge_level_header, level),
+            style = bangerStyle(18),
+            color = MaterialTheme.colorScheme.onBackground,
+            fontWeight = FontWeight.Bold,
+        )
+        if (isLocked) {
+            Spacer(Modifier.size(8.dp))
+            Text(
+                text = stringResource(
+                    R.string.challenge_level_locked_label,
+                    progress.validated,
+                    progress.total,
+                ),
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
             )
         }
     }
@@ -314,6 +354,7 @@ private fun ChallengeRow(
     challenge: Challenge,
     status: ChallengeStatus,
     isClosed: Boolean,
+    isLevelLocked: Boolean,
     onMarkAsDone: () -> Unit,
     onSubmit: () -> Unit
 ) {
@@ -338,12 +379,23 @@ private fun ChallengeRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = challenge.title,
-                style = bangerStyle(18),
-                color = MaterialTheme.colorScheme.onBackground,
-                fontWeight = FontWeight.Bold
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (challenge.number > 0) {
+                    Text(
+                        text = "#${challenge.number}",
+                        style = bangerStyle(18),
+                        color = CROrange,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(end = 6.dp),
+                    )
+                }
+                Text(
+                    text = challenge.title,
+                    style = bangerStyle(18),
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
             if (challenge.body.isNotBlank()) {
                 Spacer(Modifier.height(2.dp))
                 Text(
@@ -381,9 +433,11 @@ private fun ChallengeRow(
             ChallengeStatus.PENDING_LOCAL -> onSubmit
             else -> { -> }
         }
+        val canSubmit = status == ChallengeStatus.PENDING_LOCAL && !isLevelLocked
+        val canMark = status == ChallengeStatus.AVAILABLE
         Button(
             onClick = onClick,
-            enabled = !isClosed && (status == ChallengeStatus.AVAILABLE || status == ChallengeStatus.PENDING_LOCAL),
+            enabled = !isClosed && (canMark || canSubmit),
             colors = ButtonDefaults.buttonColors(
                 containerColor = containerColor,
                 disabledContainerColor = containerColor,

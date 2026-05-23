@@ -13,6 +13,8 @@ import dev.rahier.pouleparty.model.ChallengeCompletion
 import dev.rahier.pouleparty.model.ChallengeSubmission
 import dev.rahier.pouleparty.model.ChallengeType
 import dev.rahier.pouleparty.model.SubmissionStatus
+import dev.rahier.pouleparty.ui.gamelogic.ChallengeProgress
+import dev.rahier.pouleparty.ui.gamelogic.LevelProgress
 import dev.rahier.pouleparty.util.ImageCompression
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -61,6 +63,28 @@ data class ChallengesUiState(
         pendingLocalIds.contains(of.id) -> ChallengeStatus.PENDING_LOCAL
         else -> ChallengeStatus.AVAILABLE
     }
+
+    val challengesByLevel: List<Pair<Int, List<Challenge>>>
+        get() = challenges
+            .groupBy { it.level }
+            .toSortedMap()
+            .map { (level, list) ->
+                level to list.sortedWith(
+                    compareByDescending<Challenge> { it.points }.thenBy { it.title }
+                )
+            }
+
+    fun isLevelLocked(level: Int): Boolean = !ChallengeProgress.isLevelUnlocked(
+        level = level,
+        challenges = challenges,
+        validatedChallengeIds = completedIdsForCurrentHunter,
+    )
+
+    fun progressForLevel(level: Int): LevelProgress = ChallengeProgress.levelProgress(
+        level = level,
+        challenges = challenges,
+        validatedChallengeIds = completedIdsForCurrentHunter,
+    )
 
     val photoTargetChallenge: Challenge?
         get() = challenges.firstOrNull { it.id == photoTargetChallengeId }
@@ -158,6 +182,7 @@ class ChallengesViewModel @Inject constructor(
     private fun onSubmitForValidationTapped(challenge: Challenge) {
         val state = _uiState.value
         if (state.isClosedForSubmissions) return
+        if (state.isLevelLocked(challenge.level)) return
         if (state.status(challenge) != ChallengeStatus.PENDING_LOCAL) return
         _uiState.update { it.copy(photoTargetChallengeId = challenge.id) }
     }

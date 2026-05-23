@@ -324,6 +324,8 @@
     <string name="challenges_closed_banner">Time\'s up — challenges are closed.</string>
     <string name="challenge_points_format">%d pts</string>
     <string name="challenges_empty">No challenges yet. Check back later!</string>
+    <string name="challenge_level_header">Level %1$d</string>
+    <string name="challenge_level_locked_label">🔒 Unlock at %1$d / %2$d</string>
     <string name="leaderboard_empty">No hunters yet.</string>
 
     <string name="mapbox_access_token" translatable="false">pk.eyJ1Ijoiamp1MTciLCJhIjoiY21wYmZpZzhyMDRvejJxc2J4cWM4YXY2YyJ9.kzhYo5q-xC_2gC8S73SDrA</string>

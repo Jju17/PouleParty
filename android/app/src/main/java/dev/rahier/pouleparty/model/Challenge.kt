@@ -27,9 +27,25 @@ data class Challenge(
     // integer within its `level`; new docs created via the Console
     // must ship with `number > 0`.
     val number: Int = 0,
+    val titleByLocale: Map<String, String> = emptyMap(),
+    val bodyByLocale: Map<String, String> = emptyMap(),
 ) {
     val typeEnum: ChallengeType
         get() = ChallengeType.fromFirestore(type)
+
+    /** Locale → text with a 3-level cascade: requested locale, then
+     *  `"fr"` (the D-Day FR-first audience), then the legacy `title`.
+     *  Empty strings count as missing so a partially-populated doc
+     *  falls through to a usable value. */
+    fun localizedTitle(locale: String): String =
+        titleByLocale[locale]?.takeIf { it.isNotEmpty() }
+            ?: titleByLocale["fr"]?.takeIf { it.isNotEmpty() }
+            ?: title
+
+    fun localizedBody(locale: String): String =
+        bodyByLocale[locale]?.takeIf { it.isNotEmpty() }
+            ?: bodyByLocale["fr"]?.takeIf { it.isNotEmpty() }
+            ?: body
 }
 
 enum class ChallengeType(val firestoreValue: String) {

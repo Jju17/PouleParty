@@ -98,6 +98,37 @@ struct ChallengesFeature {
             }
         }
 
+        /// Challenges grouped by `level`, ascending. Each group keeps the
+        /// same points-desc / title-asc order as `sortedChallenges`. The
+        /// UI walks this to render one section per level with a header.
+        var challengesByLevel: [(level: Int, challenges: [Challenge])] {
+            Dictionary(grouping: challenges) { $0.level }
+                .keys.sorted()
+                .map { level in
+                    let entries = (challenges.filter { $0.level == level }).sorted { lhs, rhs in
+                        if lhs.points != rhs.points { return lhs.points > rhs.points }
+                        return lhs.title < rhs.title
+                    }
+                    return (level, entries)
+                }
+        }
+
+        func isLevelLocked(_ level: Int) -> Bool {
+            !ChallengeProgress.isLevelUnlocked(
+                level: level,
+                challenges: challenges,
+                validatedChallengeIds: myCompletedIds
+            )
+        }
+
+        func progressForLevel(_ level: Int) -> (validated: Int, total: Int, threshold: Int) {
+            ChallengeProgress.levelProgress(
+                level: level,
+                challenges: challenges,
+                validatedChallengeIds: myCompletedIds
+            )
+        }
+
         /// The leaderboard for all hunters in the game. Hunters without a
         /// completion doc appear with 0 pts. Sorted by points desc, then by
         /// team name for stable ordering on ties.
@@ -232,6 +263,7 @@ struct ChallengesFeature {
 
             case let .view(.submitForValidationTapped(challenge)):
                 guard !state.isClosedForSubmissions else { return .none }
+                guard !state.isLevelLocked(challenge.level) else { return .none }
                 guard state.status(of: challenge) == .pendingLocal else { return .none }
                 state.photoTarget = challenge
                 return .none
@@ -444,7 +476,7 @@ struct ChallengesView: View {
         if store.isClosedForSubmissions {
             closedForSubmissionsBanner
         }
-        if store.sortedChallenges.isEmpty {
+        if store.challengesByLevel.isEmpty {
             VStack {
                 Text("No challenges yet.")
                     .font(.body)
@@ -454,14 +486,22 @@ struct ChallengesView: View {
         } else {
             ScrollView {
                 LazyVStack(spacing: 12) {
-                    ForEach(store.sortedChallenges) { challenge in
-                        ChallengeRow(
-                            challenge: challenge,
-                            status: store.state.status(of: challenge),
-                            isClosed: store.isClosedForSubmissions,
-                            onMarkAsDone: { store.send(.view(.markAsDoneTapped(challenge))) },
-                            onSubmit: { store.send(.view(.submitForValidationTapped(challenge))) }
+                    ForEach(store.challengesByLevel, id: \.level) { group in
+                        LevelHeader(
+                            level: group.level,
+                            isLocked: store.state.isLevelLocked(group.level),
+                            progress: store.state.progressForLevel(group.level)
                         )
+                        ForEach(group.challenges) { challenge in
+                            ChallengeRow(
+                                challenge: challenge,
+                                status: store.state.status(of: challenge),
+                                isClosed: store.isClosedForSubmissions,
+                                isLevelLocked: store.state.isLevelLocked(challenge.level),
+                                onMarkAsDone: { store.send(.view(.markAsDoneTapped(challenge))) },
+                                onSubmit: { store.send(.view(.submitForValidationTapped(challenge))) }
+                            )
+                        }
                     }
                 }
                 .padding(16)
@@ -564,12 +604,37 @@ struct ChallengesView: View {
 
 // MARK: - Rows
 
+private struct LevelHeader: View {
+    let level: Int
+    let isLocked: Bool
+    let progress: (validated: Int, total: Int, threshold: Int)
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Text("Level \(level)")
+                .font(.headline.bold())
+                .foregroundStyle(Color.onSurface)
+            if isLocked {
+                Text("🔒 Unlock at \(progress.validated) / \(progress.total)")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+        }
+        .padding(.top, 4)
+    }
+}
+
 private struct ChallengeRow: View {
     let challenge: Challenge
     let status: ChallengeStatus
     let isClosed: Bool
+    let isLevelLocked: Bool
     let onMarkAsDone: () -> Void
     let onSubmit: () -> Void
+
+    @Environment(\.locale) private var locale
+    private var langCode: String { locale.language.languageCode?.identifier ?? "fr" }
 
     private var buttonLabel: LocalizedStringKey {
         switch status {
@@ -610,14 +675,30 @@ private struct ChallengeRow: View {
         }
     }
 
+    private var isButtonDisabled: Bool {
+        if isClosed { return true }
+        switch status {
+        case .pendingLocal: return isLevelLocked
+        case .submitting, .awaitingValidation, .validated, .rejected: return true
+        case .available: return false
+        }
+    }
+
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(challenge.title)
-                    .font(.headline)
-                    .bold()
-                    .foregroundStyle(Color.onSurface)
-                Text(challenge.body)
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    if challenge.number > 0 {
+                        Text("#\(challenge.number)")
+                            .font(.headline.bold())
+                            .foregroundStyle(Color.CROrange)
+                    }
+                    Text(challenge.localizedTitle(langCode))
+                        .font(.headline)
+                        .bold()
+                        .foregroundStyle(Color.onSurface)
+                }
+                Text(challenge.localizedBody(langCode))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                 Text("\(challenge.points) pts")
@@ -634,7 +715,7 @@ private struct ChallengeRow: View {
                     .background(Capsule().fill(buttonFill))
                     .foregroundStyle(labelColor)
             }
-            .disabled(isClosed || status == .submitting || status == .awaitingValidation || status == .validated || status == .rejected)
+            .disabled(isButtonDisabled)
         }
         .padding(12)
         .opacity(isClosed && status != .validated ? 0.55 : 1.0)

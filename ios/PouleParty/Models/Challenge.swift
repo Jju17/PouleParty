@@ -25,8 +25,26 @@ struct Challenge: Codable, Equatable, Identifiable {
     // missing or set to 0; new challenges created via the Console must
     // ship with `number > 0`.
     var number: Int = 0
+    var titleByLocale: [String: String] = [:]
+    var bodyByLocale: [String: String] = [:]
 
     var id: String { firestoreId ?? "challenge::\(title)::\(points)" }
+
+    /// Locale → text with a 3-level cascade: requested locale, then
+    /// `"fr"` (the D-Day FR-first audience), then the legacy `title`.
+    /// Empty strings count as missing so a partially-populated doc
+    /// falls through to a usable value.
+    func localizedTitle(_ locale: String) -> String {
+        if let v = titleByLocale[locale], !v.isEmpty { return v }
+        if let v = titleByLocale["fr"], !v.isEmpty { return v }
+        return title
+    }
+
+    func localizedBody(_ locale: String) -> String {
+        if let v = bodyByLocale[locale], !v.isEmpty { return v }
+        if let v = bodyByLocale["fr"], !v.isEmpty { return v }
+        return body
+    }
 
     enum ChallengeType: String, Codable, CaseIterable, Equatable {
         case oneShot
@@ -50,6 +68,8 @@ struct Challenge: Codable, Equatable, Identifiable {
         case partner
         case level
         case number
+        case titleByLocale
+        case bodyByLocale
     }
 
     init(
@@ -63,7 +83,9 @@ struct Challenge: Codable, Equatable, Identifiable {
         proximityRadiusMeters: Int? = nil,
         partner: String? = nil,
         level: Int = 1,
-        number: Int = 0
+        number: Int = 0,
+        titleByLocale: [String: String] = [:],
+        bodyByLocale: [String: String] = [:]
     ) {
         self.firestoreId = firestoreId
         self.title = title
@@ -76,6 +98,8 @@ struct Challenge: Codable, Equatable, Identifiable {
         self.partner = partner
         self.level = level
         self.number = number
+        self.titleByLocale = titleByLocale
+        self.bodyByLocale = bodyByLocale
     }
 
     init(from decoder: Decoder) throws {
@@ -91,6 +115,8 @@ struct Challenge: Codable, Equatable, Identifiable {
         partner = try c.decodeIfPresent(String.self, forKey: .partner)
         level = try c.decodeIfPresent(Int.self, forKey: .level) ?? 1
         number = try c.decodeIfPresent(Int.self, forKey: .number) ?? 0
+        titleByLocale = try c.decodeIfPresent([String: String].self, forKey: .titleByLocale) ?? [:]
+        bodyByLocale = try c.decodeIfPresent([String: String].self, forKey: .bodyByLocale) ?? [:]
     }
 }
 

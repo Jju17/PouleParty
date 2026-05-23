@@ -1,9 +1,9 @@
 /**
  * One-off migration script for the global `/challenges` collection.
  *
- * Groups the PP-27 + PP-31 backfills in a single pass:
+ * Backfills missing fields in a single pass:
  *   - `type`                  → "oneShot" when missing
- *   - `proximityRadiusMeters` → 100 when missing (PP-27 / PP-72 anti-cheat default)
+ *   - `proximityRadiusMeters` → 100 when missing (anti-cheat default)
  *   - `level`                 → 1 when missing or 0 (best-effort; admin can retouch via Console)
  *   - `number`                → next free integer within the doc's level (1, 2, 3, …)
  *                               when missing or 0. Admin-assigned numbers > 0 are preserved.
