@@ -41,10 +41,14 @@ struct HomeFeatureTests {
     @Test func createPartyLongPressOpensAdminCodeAlert() async {
         let store = TestStore(initialState: HomeFeature.State()) {
             HomeFeature()
+        } withDependencies: {
+            $0.continuousClock = ImmediateClock()
         }
         store.exhaustivity = .off
 
-        await store.send(.createPartyLongPressed)
+        await store.send(.createPartyLongPressed) {
+            $0.suppressNextTap = true
+        }
         await store.receive(\.adminCodeAlertRequested) {
             $0.adminCodeInput = ""
             $0.isShowingAdminCodeAlert = true
@@ -91,10 +95,14 @@ struct HomeFeatureTests {
     @Test func startButtonLongPressOpensDemoCodeAlert() async {
         let store = TestStore(initialState: HomeFeature.State()) {
             HomeFeature()
+        } withDependencies: {
+            $0.continuousClock = ImmediateClock()
         }
         store.exhaustivity = .off
 
-        await store.send(.startButtonLongPressed)
+        await store.send(.startButtonLongPressed) {
+            $0.suppressNextTap = true
+        }
         await store.receive(\.demoCodeAlertRequested) {
             $0.demoCodeInput = ""
             $0.isShowingDemoCodeAlert = true
