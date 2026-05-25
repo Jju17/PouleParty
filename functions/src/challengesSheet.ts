@@ -6,7 +6,8 @@ const REGION = "europe-west1";
 
 type Locale = "fr" | "en" | "nl";
 
-interface ChallengeDoc {
+export type { Locale, Category };
+export interface ChallengeDoc {
   id: string;
   points: number;
   type: "oneShot" | "repeatable";
@@ -18,7 +19,7 @@ interface ChallengeDoc {
 
 type Category = "street" | "bar" | "special" | "other";
 
-function categoryOf(id: string): Category {
+export function categoryOf(id: string): Category {
   if (id.startsWith("street-")) return "street";
   if (id.startsWith("bar-")) return "bar";
   if (id.startsWith("special-")) return "special";
@@ -33,7 +34,7 @@ const CATEGORY_ORDER: Category[] = ["street", "bar", "special", "other"];
  * `localizedTitle` accessor: requested locale, then `"fr"`. Empty
  * strings count as missing.
  */
-function pickLocalized(map: Record<string, string>, locale: Locale): string {
+export function pickLocalized(map: Record<string, string>, locale: Locale): string {
   const v = map?.[locale];
   if (typeof v === "string" && v.length > 0) return v;
   const fr = map?.["fr"];
@@ -222,21 +223,7 @@ function escapeHtml(value: string): string {
     .replace(/'/g, "&#39;");
 }
 
-/**
- * Joins the localized title + body into the row text. Most seed
- * challenges put the action in `body` and keep `title` as a short
- * label that's redundant once joined — so we render `body` when
- * present and fall back to `title` otherwise. The admin can rewrite
- * the body to read naturally on its own; the printed sheet only
- * shows the body string.
- */
-function rowText(doc: ChallengeDoc, locale: Locale): string {
-  const body = pickLocalized(doc.bodyByLocale, locale);
-  if (body.length > 0) return body;
-  return pickLocalized(doc.titleByLocale, locale);
-}
-
-function groupByCategory(docs: ChallengeDoc[]): Map<Category, ChallengeDoc[]> {
+export function groupByCategory(docs: ChallengeDoc[]): Map<Category, ChallengeDoc[]> {
   const buckets = new Map<Category, ChallengeDoc[]>();
   for (const c of docs) {
     const cat = categoryOf(c.id);
@@ -264,7 +251,7 @@ function groupByCategory(docs: ChallengeDoc[]): Map<Category, ChallengeDoc[]> {
  * design — once the data model gains a `requiresIdProof: Boolean`
  * field, replace this with a clean check.
  */
-function requiresId(body: string): boolean {
+export function requiresId(body: string): boolean {
   const v = body.toLowerCase();
   return (
     v.includes("pièce d'identité") ||
@@ -278,7 +265,7 @@ function requiresId(body: string): boolean {
 /**
  * Heuristic for "validated at end of game" challenges (special).
  */
-function endOfGameValidation(body: string): boolean {
+export function endOfGameValidation(body: string): boolean {
   const v = body.toLowerCase();
   return (
     v.includes("validé par la poule en fin") ||
@@ -436,7 +423,7 @@ function renderChallengesPage(docs: ChallengeDoc[], lang: Locale, s: SheetString
   </section>`;
 }
 
-function resolveLocale(req: { path?: string; query?: Record<string, unknown> }): Locale {
+export function resolveLocale(req: { path?: string; query?: Record<string, unknown> }): Locale {
   const q = typeof req.query?.lang === "string" ? req.query.lang.toLowerCase() : "";
   if (q === "fr" || q === "en" || q === "nl") return q;
   const path = (req.path ?? "").toLowerCase();
@@ -446,7 +433,7 @@ function resolveLocale(req: { path?: string; query?: Record<string, unknown> }):
   return "fr";
 }
 
-function renderHtml(docs: ChallengeDoc[], lang: Locale): string {
+export function renderHtml(docs: ChallengeDoc[], lang: Locale): string {
   const s = STRINGS[lang];
   return `<!DOCTYPE html>
 <html lang="${lang}">
