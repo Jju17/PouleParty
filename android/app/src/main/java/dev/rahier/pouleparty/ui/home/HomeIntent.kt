@@ -42,4 +42,13 @@ sealed interface HomeIntent {
     data class GameMasterPasswordChanged(val code: String) : HomeIntent
     /** PP-88: user tapped Submit on the GM password entry step. */
     object SubmitGameMasterPasswordTapped : HomeIntent
+    /**
+     * Hidden demo-mode entry: long-press the START button to open the
+     * App Review code dialog. Reviewers tap through gameplay screens
+     * with mocked data instead of needing a real game / GPS fix.
+     */
+    object StartButtonLongPressed : HomeIntent
+    object DemoCodeDismissed : HomeIntent
+    object DemoCodeErrorDismissed : HomeIntent
+    data class DemoCodeChanged(val code: String) : HomeIntent
 }

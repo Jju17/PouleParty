@@ -360,4 +360,14 @@
     <string name="wizard_recap_role_organizer">Organisateur 📋</string>
     <string name="wizard_recap_yes">Oui</string>
     <string name="wizard_recap_no">Non</string>
+
+    <!-- App Review demo mode (entrée cachée : appui long sur START) -->
+    <string name="demo_code_title">Code App Review</string>
+    <string name="demo_code_prompt">Entre le code App Review</string>
+    <string name="demo_mode_title">Mode Demo</string>
+    <string name="demo_mode_quit">Quitter le demo</string>
+    <string name="demo_tab_chicken_map">Carte Poule</string>
+    <string name="demo_tab_hunter_map">Carte Chasseur</string>
+    <string name="demo_tab_game_master_map">Carte Arbitre</string>
+    <string name="demo_tab_victory">Victoire</string>
 </resources>

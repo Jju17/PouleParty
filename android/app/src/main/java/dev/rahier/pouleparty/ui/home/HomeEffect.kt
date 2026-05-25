@@ -15,4 +15,6 @@ sealed interface HomeEffect {
     data class NavigateToGameMasterMap(val gameId: String) : HomeEffect
     /** Navigate to the post-game screen when the joined game is DONE. */
     data class NavigateToGameDone(val gameId: String) : HomeEffect
+    /** Navigate to the App Review demo screen. */
+    object NavigateToDemoMode : HomeEffect
 }

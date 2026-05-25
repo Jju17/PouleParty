@@ -369,4 +369,14 @@
     <string name="wizard_recap_role_organizer">Organizer 📋</string>
     <string name="wizard_recap_yes">Yes</string>
     <string name="wizard_recap_no">No</string>
+
+    <!-- App Review demo mode (hidden entry: long-press START on Home) -->
+    <string name="demo_code_title">App Review code</string>
+    <string name="demo_code_prompt">Enter the App Review code</string>
+    <string name="demo_mode_title">Demo Mode</string>
+    <string name="demo_mode_quit">Quit Demo</string>
+    <string name="demo_tab_chicken_map">Chicken Map</string>
+    <string name="demo_tab_hunter_map">Hunter Map</string>
+    <string name="demo_tab_game_master_map">GameMaster Map</string>
+    <string name="demo_tab_victory">Victory</string>
 </resources>

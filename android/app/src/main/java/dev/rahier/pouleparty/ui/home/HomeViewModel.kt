@@ -41,6 +41,10 @@ data class HomeUiState(
     val isShowingAdminCodeDialog: Boolean = false,
     val adminCodeInput: String = "",
     val isShowingAdminCodeError: Boolean = false,
+    /** App Review demo-code dialog open / current input / wrong-code error. */
+    val isShowingDemoCodeDialog: Boolean = false,
+    val demoCodeInput: String = "",
+    val isShowingDemoCodeError: Boolean = false,
     /** PP-88: 4-digit buffer + last error from joinAsGameMaster. */
     val gameMasterPasswordInput: String = "",
     val gameMasterPasswordError: String? = null,
@@ -102,6 +106,35 @@ class HomeViewModel @Inject constructor(
             HomeIntent.JoinAsGameMasterTapped -> onJoinAsGameMasterTapped()
             is HomeIntent.GameMasterPasswordChanged -> onGameMasterPasswordChanged(intent.code)
             HomeIntent.SubmitGameMasterPasswordTapped -> onSubmitGameMasterPasswordTapped()
+            HomeIntent.StartButtonLongPressed -> onStartButtonLongPressed()
+            HomeIntent.DemoCodeDismissed -> _uiState.update { it.copy(isShowingDemoCodeDialog = false, demoCodeInput = "") }
+            HomeIntent.DemoCodeErrorDismissed -> _uiState.update { it.copy(isShowingDemoCodeError = false) }
+            is HomeIntent.DemoCodeChanged -> _uiState.update { it.copy(demoCodeInput = intent.code) }
+        }
+    }
+
+    private fun onStartButtonLongPressed() {
+        _uiState.update { it.copy(isShowingDemoCodeDialog = true, demoCodeInput = "") }
+    }
+
+    /**
+     * Validates the entered App Review demo code. On match, emits
+     * [HomeEffect.NavigateToDemoMode] so the screen can route to the
+     * demo experience. On mismatch, surfaces the wrong-code alert.
+     */
+    fun validateDemoCode() {
+        val entered = _uiState.value.demoCodeInput.trim()
+        if (entered == dev.rahier.pouleparty.model.DemoCode.VALUE) {
+            _uiState.update { it.copy(isShowingDemoCodeDialog = false, demoCodeInput = "") }
+            viewModelScope.launch { _effects.send(HomeEffect.NavigateToDemoMode) }
+        } else {
+            _uiState.update {
+                it.copy(
+                    isShowingDemoCodeDialog = false,
+                    demoCodeInput = "",
+                    isShowingDemoCodeError = true,
+                )
+            }
         }
     }
 

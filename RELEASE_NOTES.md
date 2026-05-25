@@ -165,9 +165,157 @@ Gemaakt in Brussel met veel te veel kip-thema energie.
 
 ---
 
-## Build (5) — submitted 2026-05-22 (replaces (4))
+## Build (8) — submitted 2026-05-24, **approved by Apple App Review 2026-05-25** ✅
+
+**iOS**: 1.13.1 (8) · **Android**: 1.13.1 (42) (no change — Android demo mode uses `ScrollableTabRow` with visible labels and is unaffected)
+
+> 🎉 First clean approval of the 1.13.1 cycle, after 5.1.5 (location) + 3.1.1 (IAP) + 2.1 / 2.1(a) (demo mode + Create Party hang) reviewer feedback across (3), (5), (7), (8). The structural responses — UIRequiredDeviceCapabilities walkback + deferred location prompts + full removal of the in-app Stripe inscription gate + interactive Demo Mode + the long-press / Game-Over / discoverability fixes — landed. Build (8) is the one that ships.
+
+**Summary (internal, do not paste):** caught two iOS-specific Demo Mode bugs during local QA on (7) before uploading:
+
+1. **"Game Over" alert popped on the Hunter tab as soon as the user swiped to it.** Root cause in `MockDemoData.swift`: `doneGame` was built as a mutated copy of `liveGame` and inherited the **same `id`**. The demo `gameConfigStream` switches on `gameId == doneGame.id`, which matched every demo tab's `liveGame.id` subscription — so HunterMap (and GameMasterMap) received `status = .done`, triggering the `"The game has ended!"` alert in `HunterMap.swift:768`. Fix: give `doneGame` a distinct id (`"DEMO0000000000000000000000000DONE"`). Only the Victory tab passes that id to its store; the live tabs keep `liveGame.id` and the stream correctly yields the in-progress game.
+2. **Discoverability + countdown timer obstruction.** The TabView's `.page` style rendered four tiny white dots at the bottom-center that (a) didn't read as "swipe between tabs" to a non-iOS-power-user reviewer and (b) overlaid the chicken map's "Map update in: 04:XX" countdown HUD. Replaced with a `Picker(.segmented)` at the top showing `🐔 Chicken / 🏃 Hunter / 👁 GM / 🏆 Victory` labels — explicit, tappable, and pulls the dots out of the map area so the countdown is fully visible.
+
+Android's demo screen already uses `ScrollableTabRow` with visible text labels, so neither bug exists there; AAB (42) is unchanged.
+
+> Build (7) was archived locally but never uploaded to ASC. (8) supersedes it.
+
+---
+
+### 📱 App Store Connect — field "What's New in This Version"
+
+Unchanged from Build (4) below.
+
+### 🤖 Google Play Console — field "Release notes"
+
+Not applicable — Android (42) is unchanged.
+
+### 📝 App Store Connect — field "App Review Information → Notes"
+
+Identical to the (6) block below. The demo-mode unlock instructions (long-press START → `appreview`) and the rest still apply verbatim.
+
+### 📨 ASC Reply — to send 2026-05-24 in response to Submission ID `5d45a00a-0e7a-4128-8b65-f50928ddcaee`
+
+Identical to the (6) ASC Reply block below.
+
+---
+
+## Build (7) — archived locally 2026-05-24, **never uploaded — superseded by (8)**
+
+> ⚠️ **Do not upload this archive.** Two Demo Mode bugs were caught during local QA on this build before sending it to App Store Connect: Game Over alert firing on the Hunter tab (shared `doneGame.id` collision) and unreadable swipe-only tab navigation (4-dots page indicator hid the chicken map countdown). Both fixed in (8); upload that one instead.
+
+**iOS**: 1.13.1 (7) · **Android**: 1.13.1 (42) (no change — Android was never affected)
+
+**Summary (internal, do not paste):** caught a SwiftUI gesture bug **before uploading (6)** — `Button` + `.simultaneousGesture(LongPressGesture)` fires BOTH the long-press's `onEnded` (at 1.5 s) AND the Button's tap (on touch-up release), so long-pressing START opened the demo-code alert then immediately auto-dismissed it and opened the JoinFlow modal underneath. Same bug on Create Party long-press (existing admin-code flow since PP-45, never surfaced because Apple reviewers don't typically long-press). Fix is a `suppressNextTap: Bool` flag on `HomeFeature.State`: set to true on `createPartyLongPressed` / `startButtonLongPressed`, checked at the top of `createPartyTapped` / `startButtonTapped` (returns `.none` if set), auto-cleared via a 600 ms `clock.sleep` in case the touch never produces a trailing tap (drag-out). No other changes vs (6); demo mode + Create Party timeout fix from (6) are intact. Android uses `combinedClickable` which properly arbitrates between click + long-click — no equivalent bug there, AAB (42) is the same binary.
+
+> Build (6) was archived locally but never uploaded to ASC, so the build number doesn't need to be preserved. (7) replaces it cleanly. The store-paste blocks under (6) below stay as-is — App Review Notes, ASC Reply, What's New all apply identically to (7); just substitute the build number when pasting.
+
+---
+
+## Build (6) — archived locally 2026-05-24, **never uploaded — superseded by (7)**
+
+> ⚠️ **Do not upload this archive.** The SwiftUI long-press gesture bug fixed in (7) was caught during local QA before this archive was sent to App Store Connect. Use the (7) archive instead. The store-paste blocks below (App Review Notes, ASC Reply) are identical for (7) — they reference the build behavior, not the build number.
+
+**iOS**: 1.13.1 (6) · **Android**: 1.13.1 (42)
+
+**Summary (internal, do not paste):** (5) was rejected on Guidelines 2.1 (Information Needed) and 2.1(a) (App Completeness). 5.1.5 and 3.1.1 from the previous review rounds were NOT flagged on (5) — the (5) fixes worked. Two new problems:
+> - **2.1(a)**: the Create Party button was unresponsive on iPad Air 11" M3 (no GPS hardware) because `HomeFeature.chickenConfigLocationRequested` awaited the first coordinate from `locationClient.startTracking()` indefinitely. (6) adds a 3-second timeout that falls through to `initialLocationResolved(nil)` so the wizard always opens with the Brussels default zone. Android had no equivalent bug.
+> - **2.1**: Apple Review couldn't see the app's features without a real game code / real-time multiplayer / GPS. Since PouleParty uses anonymous Firebase Auth (no accounts → no demo account possible), Apple's alternative is "a demonstration mode". (6) adds an interactive in-app Demo Mode reached by long-pressing the START button on Home (1.5s) and entering the code `appreview` in a masked text field. The demo screen has 4 tabs (Chicken Map / Hunter Map / GameMaster Map / Victory) that render the real UI with mocked dependencies — no Firestore, no GPS, no other players required.
+
+Same long-press + code pattern as the existing admin code (`jujurahier`), so the demo entry point is invisible to regular users. iOS uses `ApiClient.demo` / `LocationClient.demo` / `UserClient.demo` extensions whose streams `.yield()` canned values once and stay alive forever, so the live `ChickenMapView` / `HunterMapView` / `GameMasterMapView` / `VictoryView` render unchanged. Android uses dedicated demo composables that reuse the shared map building blocks (the live screens are too tightly coupled to Hilt + Firestore to override deps cleanly). No server changes; no Functions / rules / web redeploy this build.
+
+---
+
+### 📱 App Store Connect — field "What's New in This Version"
+
+Unchanged from Build (4) below. The bug fix and demo mode are invisible to regular users — no user-facing copy delta worth surfacing in the store listing.
+
+### 🤖 Google Play Console — field "Release notes"
+
+Unchanged from Build (4) below. (Demo mode is iOS-driven and Apple-specific; on Android it ships for cross-platform parity but isn't worth calling out in Google Play.)
+
+### 📝 App Store Connect — field "App Review Information → Notes"
+
+**Mandatory paste for 1.13.1 (6)** — leads with the demo-mode unlock so the reviewer can exercise every feature without a real game code.
+
+```
+PouleParty is a free GPS hide-and-seek game. No IAP, no ads, no subscriptions, no sign-in (anonymous Firebase Auth).
+
+DEMO MODE (NEW IN BUILD 6)
+The app uses anonymous Firebase Auth — there is no account to provide for a demo login. Instead, we built an in-app demonstration mode that exposes every gameplay screen without requiring a real-time multiplayer game or GPS hardware.
+
+How to reach Demo Mode:
+1. Open the app fresh. Tap Next through every onboarding slide (no permission prompts will appear).
+2. On the Home screen, LONG-PRESS the START button for ~1.5 seconds. A modal will appear asking for a code.
+3. Enter the code: appreview
+4. Submit. You land on the Demo Mode screen.
+
+Demo Mode has 4 tabs you can swipe between:
+- Chicken Map — the player who hides. See your zone, the shrinking circle, your live (mocked) position, and pre-placed power-ups.
+- Hunter Map — the players who chase. See the chicken's live position within the zone, your team, and pre-placed power-ups.
+- GameMaster Map — the observer/validator. See everyone on the map at once, including the chicken, every hunter, and every power-up.
+- Victory — the post-game leaderboard screen with a mocked winners list.
+
+A "Quit Demo" button at the top of the screen returns you to Home.
+
+PLEASE REVIEW ON A GPS-CAPABLE DEVICE
+Outside of Demo Mode, PouleParty's actual gameplay requires GPS hardware (zone shrinks around the player's live position; Hunters chase a real chicken). iPad Air 11" M3 (the device used to review (3), (5)) is a Wi-Fi-only iPad with no GPS chip; we cannot declare UIRequiredDeviceCapabilities = ["gps"] because Apple's QA1623 rule prevents us from orphaning existing 1.13.0 Wi-Fi-iPad users on update. Please run (6) on an iPhone or iPad Cellular for the GPS-dependent flows — Demo Mode itself works fine on any device.
+
+FIX FROM (5)
+The Create Party button was unresponsive on (5) on iPad Air because the app awaited the first GPS coordinate before opening the wizard. On a device with no GPS, the wait never resolved. (6) adds a 3-second timeout that falls through to a default location so the wizard always opens.
+
+CONFIRMED-RESOLVED FROM PREVIOUS REVIEWS (no change in (6))
+- 5.1.5: every onboarding slide is skippable; the system "While Using" location prompt fires only at the screen that needs a coordinate (zone-placement step in the wizard, hunter map mount).
+- 3.1.1: the binary is structurally unaware of the Stripe inscription on our website. No validation-code step, no deeplink, no Cloud Functions for code lookup, no entitlement claim on pouleparty.be.
+
+ADMIN MODE (UNCHANGED, separate from demo mode)
+Long-press the "Create Party" button on Home (1.5s) reveals a code modal. Code is `jujurahier`. Lifts the player cap from 5 to 500 for corporate-event organizers. Not an IAP.
+
+ENCRYPTION
+Standard HTTPS / Firebase TLS. ITSAppUsesNonExemptEncryption = false.
+```
+
+---
+
+### 📨 ASC Reply — to send 2026-05-24 in response to Submission ID `5d45a00a-0e7a-4128-8b65-f50928ddcaee`
+
+Updated vs the (5) draft to acknowledge the new (5) rejection, point at the demo-mode unlock, and explain the Create Party fix.
+
+```
+Hi App Review,
+
+Thanks for the (5) review. Both issues are addressed in (6), which I am submitting now.
+
+2.1 — Information Needed (demo mode)
+PouleParty uses anonymous Firebase Auth, so there is no account or password to provide. (6) ships an interactive in-app Demo Mode that exposes every gameplay screen without requiring a real-time multiplayer game or GPS hardware.
+
+To reach Demo Mode:
+1. On Home, long-press the START button for about 1.5 seconds.
+2. A modal will appear asking for a code.
+3. Enter: appreview
+4. Submit.
+
+The Demo Mode screen has four tabs (Chicken Map, Hunter Map, GameMaster Map, Victory) that render the real gameplay UI with mocked data. You can pan and zoom the map, see the chicken and hunter markers, see pre-placed power-ups, see the countdown timer, see the GameMaster observer view, and see the post-game leaderboard — all without needing a real game, real GPS, or real other players. A "Quit Demo" button returns you to Home.
+
+2.1(a) — Create Party unresponsive
+Diagnosed and fixed. The (5) code awaited the first GPS coordinate from CoreLocation before opening the Create Party wizard. On the iPad Air 11" M3 used for review (a Wi-Fi-only iPad with no GPS chip), that wait never resolved, so the button looked dead. (6) adds a 3-second timeout: if no coordinate arrives, the wizard opens with the Brussels city-center fallback. Create Party now opens reliably on every device.
+
+Outside of Demo Mode, the actual gameplay still requires GPS hardware — the zone shrinks around the player's live position and Hunters chase a real-world chicken. As explained in the (5) reply, we cannot declare UIRequiredDeviceCapabilities = ["gps"] because of QA1623 (would orphan existing 1.13.0 Wi-Fi-iPad users on update). Please run the post-demo flows on an iPhone or iPad Cellular if you want to exercise the live gameplay; Demo Mode itself works on any device.
+
+Confirmed resolved from previous rounds and unchanged in (6): 5.1.5 (skippable onboarding + deferred location prompts) and 3.1.1 (the binary has zero awareness of the Stripe inscription on our website).
+
+Thanks,
+Julien Rahier
+julien@rahier.dev
+```
+
+---
+
+## Build (5) — submitted 2026-05-22 (rejected by Apple 2026-05-23 on Guidelines 2.1 / 2.1(a); superseded by (6))
 
 **iOS**: 1.13.1 (5) · **Android**: 1.13.1 (41) (unchanged — Android was never affected by the QA1623 issue below)
+
+> ⚠️ The (5) rejection was **NOT** a 5.1.5 or 3.1.1 issue — those were resolved. The new rejection was on 2.1 (no demo mode, reviewer couldn't sign in with a Game Code) and 2.1(a) (Create Party button unresponsive on iPad Air Wi-Fi). Both fixed in (6); see the section above.
 
 **Summary (internal, do not paste):** the (4) build was uploaded to App Store Connect and got an "Uploaded with warnings" QA1623 bundle-validation warning: the `UIRequiredDeviceCapabilities = ["gps"]` key we added in (4) "may not contain values that would prevent this application from running on devices that were supported by previous versions". Previous published builds (1.13.0 etc.) shipped without that key, so the App Store treats them as running on any iOS device — including Wi-Fi iPads with no GPS. Adding the `gps` capability now would orphan those existing users on update, which Apple's store rules forbid. Build (5) drops the key entirely. The 5.1.5 story now rests on (a) the deferred location prompts (still in place from (4)) and (b) an explicit ask to App Review in the Notes to test on a GPS-capable device. The 3.1.1 changes from (4) are untouched. **Android (41) is unaffected** — no `gps` capability was declared there. The (4) build in App Store Connect is now superseded by (5); do not select it for submission.
 
