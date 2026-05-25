@@ -58,6 +58,11 @@ struct HomeFeature {
         /// `.initialLocationResolved`, so the seeded Game gets
         /// `isAdminCreation = true`.
         var pendingIsAdminCreation: Bool = false
+        var isShowingDemoCodeAlert: Bool = false
+        var demoCodeInput: String = ""
+        /// SwiftUI Button's tap fires alongside `.simultaneousGesture(LongPressGesture)`
+        /// on release; this flag eats the trailing tap so the alert stays up.
+        var suppressNextTap: Bool = false
     }
 
     enum Action: BindableAction {
@@ -77,6 +82,11 @@ struct HomeFeature {
         /// point to admin mode (PP-45): opens the admin code modal so the
         /// password isn't advertised via a visible button on Home.
         case createPartyLongPressed
+        case demoCodeAlertRequested
+        case demoCodeDismissed
+        case demoCodeValidateTapped
+        case demoModeRequested
+        case startButtonLongPressed
         case destination(PresentationAction<Destination.Action>)
         case destinationDismissed
         case gameNotFound
@@ -93,6 +103,7 @@ struct HomeFeature {
         case rulesButtonTapped
         case settingsButtonTapped
         case startButtonTapped
+        case suppressNextTapCleared
     }
 
     @Reducer
@@ -152,6 +163,10 @@ struct HomeFeature {
             case .binding:
                 return .none
             case .createPartyTapped:
+                if state.suppressNextTap {
+                    state.suppressNextTap = false
+                    return .none
+                }
                 MapWarmUp.warmUpIfNeeded()
                 return .send(.chickenConfigLocationRequested)
             case .adminCodeDismissed:
@@ -176,10 +191,45 @@ struct HomeFeature {
                 MapWarmUp.warmUpIfNeeded()
                 return .send(.chickenConfigLocationRequested)
             case .createPartyLongPressed:
-                return .send(.adminCodeAlertRequested)
+                state.suppressNextTap = true
+                return .merge(
+                    .send(.adminCodeAlertRequested),
+                    .run { send in
+                        try? await clock.sleep(for: .milliseconds(600))
+                        await send(.suppressNextTapCleared)
+                    }
+                )
             case .adminCodeAlertRequested:
                 state.adminCodeInput = ""
                 state.isShowingAdminCodeAlert = true
+                return .none
+            case .startButtonLongPressed:
+                state.suppressNextTap = true
+                return .merge(
+                    .send(.demoCodeAlertRequested),
+                    .run { send in
+                        try? await clock.sleep(for: .milliseconds(600))
+                        await send(.suppressNextTapCleared)
+                    }
+                )
+            case .suppressNextTapCleared:
+                state.suppressNextTap = false
+                return .none
+            case .demoCodeAlertRequested:
+                state.demoCodeInput = ""
+                state.isShowingDemoCodeAlert = true
+                return .none
+            case .demoCodeDismissed:
+                state.isShowingDemoCodeAlert = false
+                state.demoCodeInput = ""
+                return .none
+            case .demoCodeValidateTapped:
+                let entered = state.demoCodeInput.trimmingCharacters(in: .whitespaces).lowercased()
+                state.isShowingDemoCodeAlert = false
+                state.demoCodeInput = ""
+                guard entered == DemoCode.value else { return .none }
+                return .send(.demoModeRequested)
+            case .demoModeRequested:
                 return .none
             case let .destination(.presented(.gameCreation(.gameCreated(game)))):
                 state.destination = nil
@@ -239,14 +289,40 @@ struct HomeFeature {
                 )
                 return .none
             case .chickenConfigLocationRequested:
-                return .run { [locationClient] send in
-                    var location: CLLocationCoordinate2D? = nil
-                    for await coordinate in locationClient.startTracking() {
-                        location = coordinate
+                return .run { [locationClient, clock] send in
+                    let stream = AsyncStream<CLLocationCoordinate2D?> { continuation in
+                        let locationTask = Task {
+                            for await coordinate in locationClient.startTracking() {
+                                continuation.yield(coordinate)
+                                continuation.finish()
+                                return
+                            }
+                            continuation.finish()
+                        }
+                        let timeoutTask = Task {
+                            // Wi-Fi-only iPads (no GPS) never receive a
+                            // coordinate from CoreLocation. Without this
+                            // fallback, the wizard never opens and the
+                            // Create Party button looks dead. The wizard
+                            // handles `nil` by falling back to the default
+                            // zone center (Brussels) — see App Review build
+                            // (5) rejection notes.
+                            try? await clock.sleep(for: .seconds(3))
+                            continuation.yield(nil)
+                            continuation.finish()
+                        }
+                        continuation.onTermination = { _ in
+                            locationTask.cancel()
+                            timeoutTask.cancel()
+                        }
+                    }
+                    var resolved: CLLocationCoordinate2D? = nil
+                    for await value in stream {
+                        resolved = value
                         break
                     }
                     locationClient.stopTracking()
-                    await send(.initialLocationResolved(location))
+                    await send(.initialLocationResolved(resolved))
                 }
             case .chickenGameStarted:
                 return .none
@@ -383,6 +459,10 @@ struct HomeFeature {
                 state.destination = .settings(SettingsFeature.State())
                 return .none
             case .startButtonTapped:
+                if state.suppressNextTap {
+                    state.suppressNextTap = false
+                    return .none
+                }
                 MapWarmUp.warmUpIfNeeded()
                 return .send(.joinFlowAuthorized)
             case .joinFlowAuthorized:
@@ -438,6 +518,12 @@ struct HomeView: View {
                     }
                     .accessibilityLabel("Start game")
                     .frame(width: 200, height: 50)
+                    .simultaneousGesture(
+                        LongPressGesture(minimumDuration: 1.5)
+                            .onEnded { _ in
+                                store.send(.startButtonLongPressed)
+                            }
+                    )
 
                     Text("Press start to play")
                         .font(.gameboy(size: 12))
@@ -610,6 +696,18 @@ struct HomeView: View {
             Button("Cancel", role: .cancel) { store.send(.adminCodeDismissed) }
         } message: {
             Text("Enter the admin code")
+        }
+        .alert(
+            "Demo Mode",
+            isPresented: $store.isShowingDemoCodeAlert
+        ) {
+            SecureField("App Review code", text: $store.demoCodeInput)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+            Button("Validate") { store.send(.demoCodeValidateTapped) }
+            Button("Cancel", role: .cancel) { store.send(.demoCodeDismissed) }
+        } message: {
+            Text("Enter the App Review code")
         }
         .alert(
             $store.scope(

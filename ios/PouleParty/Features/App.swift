@@ -20,6 +20,7 @@ struct AppFeature {
         case gameMasterMap(GameMasterMapFeature.State)
         case home(HomeFeature.State)
         case victory(VictoryFeature.State)
+        case demoMode(DemoModeFeature.State)
     }
 
     enum Action {
@@ -31,6 +32,7 @@ struct AppFeature {
         case onboarding(OnboardingFeature.Action)
         case home(HomeFeature.Action)
         case victory(VictoryFeature.Action)
+        case demoMode(DemoModeFeature.Action)
     }
 
     @Dependency(\.apiClient) var apiClient
@@ -118,7 +120,13 @@ struct AppFeature {
             case .home(.accountDeletionCompleted):
                 state = .onboarding(OnboardingFeature.State())
                 return .none
-            case .chickenMap, .hunterMap, .gameMasterMap, .home, .victory:
+            case .home(.demoModeRequested):
+                state = .demoMode(DemoModeFeature.State())
+                return .none
+            case .demoMode(.delegate(.exitDemo)):
+                state = .home(HomeFeature.State())
+                return .none
+            case .chickenMap, .hunterMap, .gameMasterMap, .home, .victory, .demoMode:
                 return .none
             }
         }
@@ -139,6 +147,9 @@ struct AppFeature {
         }
         .ifCaseLet(\.victory, action: \.victory) {
             VictoryFeature()
+        }
+        .ifCaseLet(\.demoMode, action: \.demoMode) {
+            DemoModeFeature()
         }
     }
 }
@@ -172,6 +183,10 @@ struct AppView: View {
             case .victory:
                 if let store = store.scope(state: \.victory, action: \.victory) {
                     VictoryView(store: store)
+                }
+            case .demoMode:
+                if let store = store.scope(state: \.demoMode, action: \.demoMode) {
+                    DemoModeView(store: store)
                 }
             }
         }

@@ -33,7 +33,7 @@ android {
         applicationId = "dev.rahier.pouleparty2"
         minSdk = 26
         targetSdk = 35
-        versionCode = 41
+        versionCode = 42
         versionName = "1.13.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

@@ -29,6 +29,8 @@ struct HomeFeatureTests {
             HomeFeature()
         } withDependencies: {
             $0.userClient.currentUserId = { "user-123" }
+            $0.continuousClock = ImmediateClock()
+            $0.withRandomNumberGenerator = WithRandomNumberGenerator(SystemRandomNumberGenerator())
         }
         store.exhaustivity = .off
 
@@ -55,6 +57,9 @@ struct HomeFeatureTests {
         state.adminCodeInput = AdminCode.value
         let store = TestStore(initialState: state) {
             HomeFeature()
+        } withDependencies: {
+            $0.continuousClock = ImmediateClock()
+            $0.withRandomNumberGenerator = WithRandomNumberGenerator(SystemRandomNumberGenerator())
         }
         store.exhaustivity = .off
         await store.send(.adminCodeValidateTapped) {
@@ -80,6 +85,48 @@ struct HomeFeatureTests {
             // OK — the wrong-code alert is presented.
         } else {
             Issue.record("Expected wrong-code alert destination")
+        }
+    }
+
+    @Test func startButtonLongPressOpensDemoCodeAlert() async {
+        let store = TestStore(initialState: HomeFeature.State()) {
+            HomeFeature()
+        }
+        store.exhaustivity = .off
+
+        await store.send(.startButtonLongPressed)
+        await store.receive(\.demoCodeAlertRequested) {
+            $0.demoCodeInput = ""
+            $0.isShowingDemoCodeAlert = true
+        }
+    }
+
+    @Test func demoCodeValidateWithCorrectCodeSendsDemoModeRequested() async {
+        var state = HomeFeature.State()
+        state.isShowingDemoCodeAlert = true
+        state.demoCodeInput = DemoCode.value
+        let store = TestStore(initialState: state) {
+            HomeFeature()
+        }
+        store.exhaustivity = .off
+        await store.send(.demoCodeValidateTapped) {
+            $0.isShowingDemoCodeAlert = false
+            $0.demoCodeInput = ""
+        }
+        await store.receive(\.demoModeRequested)
+    }
+
+    @Test func demoCodeValidateWithWrongCodeDoesNothing() async {
+        var state = HomeFeature.State()
+        state.isShowingDemoCodeAlert = true
+        state.demoCodeInput = "nope"
+        let store = TestStore(initialState: state) {
+            HomeFeature()
+        }
+        store.exhaustivity = .off
+        await store.send(.demoCodeValidateTapped) {
+            $0.isShowingDemoCodeAlert = false
+            $0.demoCodeInput = ""
         }
     }
 

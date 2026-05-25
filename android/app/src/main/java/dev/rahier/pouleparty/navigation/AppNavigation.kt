@@ -28,6 +28,7 @@ import dev.rahier.pouleparty.ui.chickenmap.ChickenMapScreen
 import dev.rahier.pouleparty.ui.huntermap.HunterMapScreen
 import dev.rahier.pouleparty.ui.gamemastermap.GameMasterMapScreen
 import dev.rahier.pouleparty.ui.onboarding.OnboardingScreen
+import dev.rahier.pouleparty.ui.demo.DemoModeScreen
 import dev.rahier.pouleparty.ui.home.HomeScreen
 import dev.rahier.pouleparty.ui.settings.SettingsScreen
 import dev.rahier.pouleparty.ui.validation.ValidationQueueScreen
@@ -44,6 +45,7 @@ object Routes {
     const val VICTORY = "victory/{gameId}/{hunterName}/{hunterId}/{isChicken}"
     const val SETTINGS = "settings"
     const val VALIDATION_QUEUE = "validation_queue/{gameId}"
+    const val DEMO = "demo"
     fun gameCreation(gameId: String, isAdminCreation: Boolean = false) =
         "game_creation/$gameId?isAdminCreation=$isAdminCreation"
     fun chickenMap(gameId: String) = "chicken_map/$gameId"
@@ -169,7 +171,16 @@ fun AppNavigation() {
                 },
                 onNavigateToSettings = {
                     navController.navigate(Routes.SETTINGS)
+                },
+                onNavigateToDemoMode = {
+                    navController.navigate(Routes.DEMO)
                 }
+            )
+        }
+
+        composable(Routes.DEMO) {
+            DemoModeScreen(
+                onExit = { navController.popBackStack() }
             )
         }
 

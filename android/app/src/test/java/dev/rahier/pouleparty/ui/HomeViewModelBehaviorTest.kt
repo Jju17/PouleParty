@@ -312,4 +312,53 @@ class HomeViewModelBehaviorTest {
         assertEquals("", vm.uiState.value.adminCodeInput)
     }
 
+    // ── App Review demo code dialog ──
+
+    @Test
+    fun `StartButtonLongPressed opens demo code dialog`() {
+        val vm = createViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+        vm.onIntent(HomeIntent.StartButtonLongPressed)
+        assertTrue(vm.uiState.value.isShowingDemoCodeDialog)
+        assertEquals("", vm.uiState.value.demoCodeInput)
+    }
+
+    @Test
+    fun `validateDemoCode with correct code clears state and emits NavigateToDemoMode`() = kotlinx.coroutines.test.runTest(testDispatcher) {
+        val vm = createViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+        vm.onIntent(HomeIntent.StartButtonLongPressed)
+        vm.onIntent(HomeIntent.DemoCodeChanged(dev.rahier.pouleparty.model.DemoCode.VALUE))
+        vm.validateDemoCode()
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertFalse(vm.uiState.value.isShowingDemoCodeDialog)
+        assertEquals("", vm.uiState.value.demoCodeInput)
+        assertFalse(vm.uiState.value.isShowingDemoCodeError)
+        val effect = vm.effects.first()
+        assertEquals(dev.rahier.pouleparty.ui.home.HomeEffect.NavigateToDemoMode, effect)
+    }
+
+    @Test
+    fun `validateDemoCode with wrong code surfaces error and emits no effect`() {
+        val vm = createViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+        vm.onIntent(HomeIntent.StartButtonLongPressed)
+        vm.onIntent(HomeIntent.DemoCodeChanged("nope"))
+        vm.validateDemoCode()
+        assertFalse(vm.uiState.value.isShowingDemoCodeDialog)
+        assertEquals("", vm.uiState.value.demoCodeInput)
+        assertTrue(vm.uiState.value.isShowingDemoCodeError)
+    }
+
+    @Test
+    fun `DemoCodeDismissed clears dialog state`() {
+        val vm = createViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+        vm.onIntent(HomeIntent.StartButtonLongPressed)
+        vm.onIntent(HomeIntent.DemoCodeChanged("abc"))
+        vm.onIntent(HomeIntent.DemoCodeDismissed)
+        assertFalse(vm.uiState.value.isShowingDemoCodeDialog)
+        assertEquals("", vm.uiState.value.demoCodeInput)
+    }
+
 }

@@ -375,4 +375,14 @@
     <string name="wizard_recap_role_organizer">Organisator 📋</string>
     <string name="wizard_recap_yes">Ja</string>
     <string name="wizard_recap_no">Nee</string>
+
+    <!-- App Review demo-modus (verborgen ingang: lang ingedrukt op START) -->
+    <string name="demo_code_title">App Review-code</string>
+    <string name="demo_code_prompt">Voer de App Review-code in</string>
+    <string name="demo_mode_title">Demo-modus</string>
+    <string name="demo_mode_quit">Demo verlaten</string>
+    <string name="demo_tab_chicken_map">Kipkaart</string>
+    <string name="demo_tab_hunter_map">Jagerskaart</string>
+    <string name="demo_tab_game_master_map">Scheidsrechterkaart</string>
+    <string name="demo_tab_victory">Overwinning</string>
 </resources>

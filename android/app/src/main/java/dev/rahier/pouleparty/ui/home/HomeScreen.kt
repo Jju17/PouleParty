@@ -45,6 +45,7 @@ fun HomeScreen(
     onNavigateToGameMasterMap: (String) -> Unit = {},
     onNavigateToVictory: (String) -> Unit,
     onNavigateToSettings: () -> Unit = {},
+    onNavigateToDemoMode: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -58,6 +59,7 @@ fun HomeScreen(
                 is HomeEffect.NavigateToHunterMap -> onNavigateToHunterMap(effect.gameId, effect.hunterName)
                 is HomeEffect.NavigateToGameMasterMap -> onNavigateToGameMasterMap(effect.gameId)
                 is HomeEffect.NavigateToGameDone -> onNavigateToVictory(effect.gameId)
+                HomeEffect.NavigateToDemoMode -> onNavigateToDemoMode()
             }
         }
     }
@@ -168,13 +170,17 @@ fun HomeScreen(
                 color = MaterialTheme.colorScheme.onBackground
             )
 
-            TextButton(
-                onClick = { viewModel.onIntent(HomeIntent.StartButtonTapped) },
+            Box(
                 modifier = Modifier
                     .width(200.dp)
                     .height(50.dp)
                     .alpha(alpha)
                     .border(4.dp, MaterialTheme.colorScheme.onBackground, RoundedCornerShape(12.dp))
+                    .combinedClickable(
+                        onClick = { viewModel.onIntent(HomeIntent.StartButtonTapped) },
+                        onLongClick = { viewModel.onIntent(HomeIntent.StartButtonLongPressed) },
+                    ),
+                contentAlignment = Alignment.Center,
             ) {
                 Text(
                     stringResource(R.string.start),
@@ -449,6 +455,53 @@ fun HomeScreen(
             title = { Text(stringResource(R.string.wrong_code)) },
             confirmButton = {
                 TextButton(onClick = { viewModel.onIntent(HomeIntent.AdminCodeErrorDismissed) }) {
+                    Text(stringResource(R.string.ok))
+                }
+            }
+        )
+    }
+
+    // App Review demo code dialog
+    if (state.isShowingDemoCodeDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.onIntent(HomeIntent.DemoCodeDismissed) },
+            title = { Text(stringResource(R.string.demo_code_title)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.demo_code_prompt))
+                    OutlinedTextField(
+                        value = state.demoCodeInput,
+                        onValueChange = { viewModel.onIntent(HomeIntent.DemoCodeChanged(it)) },
+                        singleLine = true,
+                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                            keyboardType = androidx.compose.ui.text.input.KeyboardType.Password,
+                            autoCorrectEnabled = false
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { viewModel.validateDemoCode() }) {
+                    Text(stringResource(R.string.validate))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.onIntent(HomeIntent.DemoCodeDismissed) }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
+    // Wrong demo code error
+    if (state.isShowingDemoCodeError) {
+        AlertDialog(
+            onDismissRequest = { viewModel.onIntent(HomeIntent.DemoCodeErrorDismissed) },
+            title = { Text(stringResource(R.string.wrong_code)) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.onIntent(HomeIntent.DemoCodeErrorDismissed) }) {
                     Text(stringResource(R.string.ok))
                 }
             }
