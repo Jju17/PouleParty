@@ -451,8 +451,16 @@ fun HunterMapScreen(
                 countdownText = state.countdownText
             )
 
-            // Pre-game overlay
-            if (!state.hasGameStarted) {
+            // PP-71: waiting overlay when the host hasn't tapped LAUNCH yet.
+            if (state.game.gameStatusEnum == dev.rahier.pouleparty.model.GameStatus.READY_TO_LAUNCH) {
+                dev.rahier.pouleparty.ui.map.ReadyToLaunchOverlay(
+                    role = dev.rahier.pouleparty.ui.map.LaunchOverlayRole.WAITER,
+                    isLaunching = false,
+                    errorMessage = null,
+                    onLaunchTapped = {},
+                    onErrorDismissed = {},
+                )
+            } else if (!state.hasGameStarted) {
                 PreGameOverlay(
                     isChicken = false,
                     gameModTitle = state.game.gameModEnum.title,

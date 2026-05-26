@@ -121,7 +121,15 @@ struct HunterMapView: View {
                 }
             }
             .overlay {
-                if !store.hasGameStarted {
+                if store.game.status == .readyToLaunch {
+                    ReadyToLaunchOverlay(
+                        role: .waiter,
+                        isLaunching: false,
+                        errorMessage: nil,
+                        onLaunchTapped: {},
+                        onErrorDismissed: {}
+                    )
+                } else if !store.hasGameStarted {
                     PreGameOverlay(
                         role: .hunter,
                         gameModTitle: store.game.gameMode.title,

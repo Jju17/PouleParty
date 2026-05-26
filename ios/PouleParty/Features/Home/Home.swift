@@ -249,7 +249,7 @@ struct HomeFeature {
             case let .destination(.presented(.joinFlow(.delegate(.joinGame(game, hunterName))))):
                 state.destination = nil
                 switch game.status {
-                case .waiting, .inProgress:
+                case .waiting, .readyToLaunch, .inProgress:
                     return .send(.hunterGameJoined(game, hunterName))
                 case .done:
                     return .send(.completedGameFound(game))

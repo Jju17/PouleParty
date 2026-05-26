@@ -294,6 +294,7 @@ private struct GameStatusBadge: View {
     private var label: String {
         switch status {
         case .waiting: "Waiting"
+        case .readyToLaunch: "Ready"
         case .inProgress: "Live"
         case .done: "Done"
         }
@@ -302,6 +303,7 @@ private struct GameStatusBadge: View {
     private var color: Color {
         switch status {
         case .waiting: .CROrange
+        case .readyToLaunch: .CROrange
         case .inProgress: Color(hex: 0x16A34A)
         case .done: .onBackground.opacity(0.3)
         }

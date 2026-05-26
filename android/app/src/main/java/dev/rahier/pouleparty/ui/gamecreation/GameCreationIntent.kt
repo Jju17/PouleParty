@@ -31,6 +31,8 @@ sealed interface GameCreationIntent {
     data class PowerUpsToggled(val enabled: Boolean) : GameCreationIntent
     data class PowerUpTypeToggled(val type: PowerUpType) : GameCreationIntent
     data class ChickenCanSeeHuntersToggled(val value: Boolean) : GameCreationIntent
+    /** PP-71: chicken toggled "Manual launch" inside the START_TIME step. */
+    data class ManualStartToggled(val enabled: Boolean) : GameCreationIntent
     data class LocationSelected(val point: Point) : GameCreationIntent
     data class FinalLocationSelected(val point: Point?) : GameCreationIntent
     /** PP-88: chicken toggled the GameMaster role on/off on the wizard step. */

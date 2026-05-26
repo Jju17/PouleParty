@@ -235,6 +235,7 @@ struct GameCreationFeature {
         case backTapped
         case binding(BindingAction<State>)
         case chickenCanSeeHuntersChanged(Bool)
+        case manualStartChanged(Bool)
         case chickenHeadStartChanged(Double)
         case configSaveFailed
         case destination(PresentationAction<Destination.Action>)
@@ -325,6 +326,10 @@ struct GameCreationFeature {
 
             case let .chickenCanSeeHuntersChanged(value):
                 state.$game.withLock { $0.chickenCanSeeHunters = value }
+                return .none
+
+            case let .manualStartChanged(value):
+                state.$game.withLock { $0.manualStartEnabled = value }
                 return .none
 
             case let .chickenHeadStartChanged(minutes):

@@ -30,6 +30,27 @@ struct StartTimeStep: GameCreationStepView {
             .tint(Color.CROrange)
             .padding(.horizontal, 24)
 
+            VStack(alignment: .leading, spacing: 8) {
+                Toggle(isOn: Binding(
+                    get: { store.currentGame.manualStartEnabled },
+                    set: { store.send(.manualStartChanged($0)) }
+                )) {
+                    Text("Manual launch")
+                        .font(.headline.bold())
+                        .foregroundStyle(Color.onSurface)
+                }
+                .tint(Color.CROrange)
+
+                Text(
+                    store.currentGame.manualStartEnabled
+                        ? "At the planned time a LAUNCH button appears. The party starts when you tap it. The time above is indicative only."
+                        : "Toggle on to gate the start behind a LAUNCH button. Useful when logistics run late."
+                )
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 24)
+
             Spacer()
         }
     }

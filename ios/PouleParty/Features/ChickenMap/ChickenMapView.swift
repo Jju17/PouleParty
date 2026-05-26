@@ -124,7 +124,15 @@ struct ChickenMapView: View {
             }
             .mapCommonOverlays(store.state)
             .overlay {
-                if !store.hasGameStarted {
+                if store.game.status == .readyToLaunch {
+                    ReadyToLaunchOverlay(
+                        role: .launcher,
+                        isLaunching: store.isLaunching,
+                        errorMessage: store.launchError,
+                        onLaunchTapped: { store.send(.view(.launchTapped)) },
+                        onErrorDismissed: { store.send(.view(.launchErrorDismissed)) }
+                    )
+                } else if !store.hasGameStarted {
                     PreGameOverlay(
                         role: .chicken,
                         gameModTitle: store.game.gameMode.title,

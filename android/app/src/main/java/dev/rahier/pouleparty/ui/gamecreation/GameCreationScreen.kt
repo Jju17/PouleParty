@@ -191,13 +191,15 @@ fun GameCreationScreen(
                     )
                     GameCreationStep.START_TIME -> StartTimeStep(
                         startDate = state.game.startDate,
+                        manualStartEnabled = state.game.manualStartEnabled,
                         showDatePicker = state.showDatePicker,
                         showTimePicker = state.showTimePicker,
                         onTapTime = { viewModel.onIntent(GameCreationIntent.StartTimeTapped) },
                         onDismissDatePicker = { viewModel.onIntent(GameCreationIntent.DismissDatePicker) },
                         onDismissTimePicker = { viewModel.onIntent(GameCreationIntent.DismissTimePicker) },
                         onDateSelected = { y, m, d -> viewModel.onIntent(GameCreationIntent.StartDateChanged(y, m, d)) },
-                        onTimeSelected = { h, m -> viewModel.onIntent(GameCreationIntent.StartTimeChanged(h, m)) }
+                        onTimeSelected = { h, m -> viewModel.onIntent(GameCreationIntent.StartTimeChanged(h, m)) },
+                        onManualStartToggled = { viewModel.onIntent(GameCreationIntent.ManualStartToggled(it)) }
                     )
                     GameCreationStep.DURATION -> DurationStep(
                         gameDurationMinutes = state.gameDurationMinutes,

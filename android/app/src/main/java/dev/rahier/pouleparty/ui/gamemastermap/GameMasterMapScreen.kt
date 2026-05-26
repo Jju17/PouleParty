@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -170,28 +171,39 @@ fun GameMasterMapScreen(
                     Spacer(Modifier.width(8.dp))
                     Text("Hunters (${state.hunterAnnotations.size})")
                 }
-                Box {
+                if (state.isGameOver) {
                     Button(
-                        onClick = { viewModel.onIntent(GameMasterMapIntent.ValidationQueueTapped) },
-                        colors = ButtonDefaults.buttonColors(containerColor = CRPink),
+                        onClick = { viewModel.onIntent(GameMasterMapIntent.LeaderboardTapped) },
+                        colors = ButtonDefaults.buttonColors(containerColor = CROrange),
                     ) {
-                        Icon(Icons.Default.CheckCircle, contentDescription = null)
+                        Icon(Icons.Default.EmojiEvents, contentDescription = null)
                         Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.challenge_validate))
+                        Text("Leaderboard")
                     }
-                    if (state.pendingSubmissionsCount > 0) {
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .offset(x = 6.dp, y = (-6).dp)
-                                .background(HunterRed, RoundedCornerShape(50))
-                                .padding(horizontal = 6.dp, vertical = 2.dp),
+                } else {
+                    Box {
+                        Button(
+                            onClick = { viewModel.onIntent(GameMasterMapIntent.ValidationQueueTapped) },
+                            colors = ButtonDefaults.buttonColors(containerColor = CRPink),
                         ) {
-                            Text(
-                                text = "${state.pendingSubmissionsCount}",
-                                color = Color.White,
-                                fontSize = 10.sp,
-                            )
+                            Icon(Icons.Default.CheckCircle, contentDescription = null)
+                            Spacer(Modifier.width(6.dp))
+                            Text(stringResource(R.string.challenge_validate))
+                        }
+                        if (state.pendingSubmissionsCount > 0) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .offset(x = 6.dp, y = (-6).dp)
+                                    .background(HunterRed, RoundedCornerShape(50))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp),
+                            ) {
+                                Text(
+                                    text = "${state.pendingSubmissionsCount}",
+                                    color = Color.White,
+                                    fontSize = 10.sp,
+                                )
+                            }
                         }
                     }
                 }
@@ -251,6 +263,39 @@ fun GameMasterMapScreen(
                             Text("OK")
                         }
                     },
+                )
+            }
+
+            // PP-71: LAUNCH overlay when the chicken set manual start
+            // and is waiting for someone to tap the button.
+            if (state.game.gameStatusEnum == dev.rahier.pouleparty.model.GameStatus.READY_TO_LAUNCH) {
+                dev.rahier.pouleparty.ui.map.ReadyToLaunchOverlay(
+                    role = dev.rahier.pouleparty.ui.map.LaunchOverlayRole.LAUNCHER,
+                    isLaunching = state.isLaunching,
+                    errorMessage = state.launchError,
+                    onLaunchTapped = { viewModel.onIntent(GameMasterMapIntent.LaunchTapped) },
+                    onErrorDismissed = { viewModel.onIntent(GameMasterMapIntent.LaunchErrorDismissed) },
+                )
+            }
+
+            if (state.showGameOverAlert) {
+                AlertDialog(
+                    onDismissRequest = { viewModel.onIntent(GameMasterMapIntent.GameOverAlertDismissed) },
+                    title = { Text("Game ended") },
+                    text = { Text(state.gameOverMessage) },
+                    confirmButton = {
+                        TextButton(onClick = { viewModel.onIntent(GameMasterMapIntent.GameOverAlertDismissed) }) {
+                            Text("OK")
+                        }
+                    },
+                )
+            }
+
+            if (state.showLeaderboard) {
+                dev.rahier.pouleparty.ui.components.GameLeaderboardSheet(
+                    game = state.game,
+                    currentUserId = "",
+                    onDismiss = { viewModel.onIntent(GameMasterMapIntent.LeaderboardDismissed) },
                 )
             }
         }

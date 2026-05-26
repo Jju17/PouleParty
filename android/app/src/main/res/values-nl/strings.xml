@@ -354,6 +354,9 @@
     <string name="wizard_start_time_title">Wanneer?</string>
     <string name="wizard_start_time_subtitle">Kies de startdatum en -tijd</string>
     <string name="wizard_start_time_tap_to_change">Tik om te wijzigen</string>
+    <string name="wizard_manual_start_title">Handmatige start</string>
+    <string name="wizard_manual_start_description_off">Schakel in om de start achter een LAUNCH-knop te zetten. Handig als de logistiek vertraging oploopt.</string>
+    <string name="wizard_manual_start_description_on">Op het geplande tijdstip verschijnt een LAUNCH-knop. Het feest start zodra je tikt. De tijd hierboven is indicatief.</string>
     <string name="wizard_participation_title">Doe je mee?</string>
     <string name="wizard_participation_subtitle">Speel je zelf ook mee?</string>
     <string name="wizard_participation_chicken">Ik ben de Kip</string>

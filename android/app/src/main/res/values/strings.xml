@@ -367,6 +367,9 @@
     <string name="wizard_start_time_title">When?</string>
     <string name="wizard_start_time_subtitle">Choose the start date and time</string>
     <string name="wizard_start_time_tap_to_change">Tap to change</string>
+    <string name="wizard_manual_start_title">Manual launch</string>
+    <string name="wizard_manual_start_description_off">Toggle on to gate the start behind a LAUNCH button. Useful when logistics run late.</string>
+    <string name="wizard_manual_start_description_on">At the planned time a LAUNCH button appears. The party starts when you tap it. The time above is indicative only.</string>
     <string name="wizard_participation_title">Are you playing?</string>
     <string name="wizard_participation_subtitle">Are you playing too?</string>
     <string name="wizard_participation_chicken">I am the Chicken</string>

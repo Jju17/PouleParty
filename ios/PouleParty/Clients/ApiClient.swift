@@ -115,6 +115,13 @@ struct ApiClient {
     /// `deterministicDriftCenter` helpers can be deleted (handled by
     /// the PP-13 Phase 2 / PP-14 Phase 2 tickets, NOT this one).
     var computeZoneConfiguration: (_ input: ComputeZoneConfigurationInput) async throws -> ComputeZoneConfigurationOutput
+    // MARK: - Manual launch (PP-71)
+    /// Promotes a `readyToLaunch` game to `inProgress`, stamps
+    /// `timing.actualStart` on the server, recomputes `timing.end`,
+    /// and enqueues the runtime Cloud Tasks deferred at creation.
+    /// Returns the actual start timestamp so the caller can advance
+    /// its local countdown without waiting for the Firestore stream.
+    var launchGame: (_ gameId: String) async throws -> Date
 }
 
 /// CRIT-3 (audit 2026-05-17): rejection reason from the `submitFoundCode`
@@ -290,7 +297,8 @@ extension ApiClient: TestDependencyKey {
                 shrinkMetersPerUpdate: 75,
                 circles: []
             )
-        }
+        },
+        launchGame: { _ in Date() }
     )
 }
 
@@ -1166,6 +1174,17 @@ extension ApiClient: DependencyKey {
                 shrinkMetersPerUpdate: shrinkMetersPerUpdate,
                 circles: circles
             )
+        },
+        launchGame: { gameId in
+            let functions = Functions.functions(region: "europe-west1")
+            let result = try await functions
+                .httpsCallable("launchGame")
+                .call(["gameId": gameId])
+            let dict = result.data as? [String: Any] ?? [:]
+            let millis = (dict["actualStartMillis"] as? Int)
+                ?? (dict["actualStartMillis"] as? Int64).map { Int($0) }
+                ?? Int(Date().timeIntervalSince1970 * 1000)
+            return Date(timeIntervalSince1970: TimeInterval(millis) / 1000)
         }
     )
 }

@@ -256,7 +256,7 @@ struct OnboardingView: View {
                                 .background(
                                     Capsule()
                                         .fill(Color.gradientFire)
-                                                                        )
+                                )
                                 .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
                         }
                     }

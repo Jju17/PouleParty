@@ -70,6 +70,18 @@ data class GameMasterMapUiState(
     override val showPowerUpInventory: Boolean = false,
     override val powerUpNotification: String? = null,
     override val lastActivatedPowerUpType: PowerUpType? = null,
+    /** PP-71: in flight while `launchGame` runs. */
+    val isLaunching: Boolean = false,
+    /** PP-71: last error from `launchGame`. Null clears the alert. */
+    val launchError: String? = null,
+    /** True once `game.status == DONE` lands. Drives the leaderboard CTA
+     *  in the bottom bar + greys / hides validation controls. */
+    val isGameOver: Boolean = false,
+    /** One-shot "the game has ended" alert raised the first time the
+     *  GM sees `status == DONE`. */
+    val showGameOverAlert: Boolean = false,
+    val gameOverMessage: String = "",
+    val showLeaderboard: Boolean = false,
 ) : MapUiState
 
 @HiltViewModel
@@ -124,6 +136,27 @@ class GameMasterMapViewModel @Inject constructor(
                         _uiState.update { it.copy(designationError = e.message ?: "Failed to designate chicken") }
                     }
                 }
+            }
+            GameMasterMapIntent.LaunchTapped -> onLaunchTapped()
+            GameMasterMapIntent.LaunchErrorDismissed -> _uiState.update { it.copy(launchError = null) }
+            GameMasterMapIntent.LeaderboardTapped -> _uiState.update { it.copy(showLeaderboard = true) }
+            GameMasterMapIntent.LeaderboardDismissed -> _uiState.update { it.copy(showLeaderboard = false) }
+            GameMasterMapIntent.GameOverAlertDismissed -> _uiState.update { it.copy(showGameOverAlert = false) }
+        }
+    }
+
+    private fun onLaunchTapped() {
+        val state = _uiState.value
+        if (state.game.gameStatusEnum != dev.rahier.pouleparty.model.GameStatus.READY_TO_LAUNCH) return
+        if (state.isLaunching) return
+        _uiState.update { it.copy(isLaunching = true, launchError = null) }
+        viewModelScope.launch {
+            try {
+                firestoreRepository.launchGame(state.game.id)
+                _uiState.update { it.copy(isLaunching = false) }
+            } catch (e: Exception) {
+                Log.e("GameMasterMapVM", "launchGame failed", e)
+                _uiState.update { it.copy(isLaunching = false, launchError = e.message ?: "Launch failed") }
             }
         }
     }
@@ -245,6 +278,8 @@ class GameMasterMapViewModel @Inject constructor(
 
     private fun onGameUpdated(game: Game) {
         val previousCount = _uiState.value.previousWinnersCount
+        val wasGameOver = _uiState.value.isGameOver
+        val isNowDone = game.gameStatusEnum == dev.rahier.pouleparty.model.GameStatus.DONE
         val notif = if (previousCount >= 0) {
             detectNewWinners(winners = game.winners, previousCount = previousCount)
         } else null
@@ -253,6 +288,11 @@ class GameMasterMapViewModel @Inject constructor(
                 game = game,
                 winnerNotification = notif ?: it.winnerNotification,
                 previousWinnersCount = game.winners.size,
+                isGameOver = isNowDone || it.isGameOver,
+                showGameOverAlert = if (!wasGameOver && isNowDone) true else it.showGameOverAlert,
+                gameOverMessage = if (!wasGameOver && isNowDone)
+                    "Open the leaderboard from the trophy button, or leave the game from the menu."
+                else it.gameOverMessage,
             )
         }
         if (notif != null) {

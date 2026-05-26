@@ -383,8 +383,17 @@ fun ChickenMapScreen(
             countdownText = state.countdownText
         )
 
-        // Pre-game overlay
-        if (!state.hasGameStarted) {
+        // PP-71: LAUNCH overlay takes priority over the pre-game countdown
+        // when the game is in `readyToLaunch` (manual-start mode).
+        if (state.game.gameStatusEnum == dev.rahier.pouleparty.model.GameStatus.READY_TO_LAUNCH) {
+            dev.rahier.pouleparty.ui.map.ReadyToLaunchOverlay(
+                role = dev.rahier.pouleparty.ui.map.LaunchOverlayRole.LAUNCHER,
+                isLaunching = state.isLaunching,
+                errorMessage = state.launchError,
+                onLaunchTapped = { viewModel.onIntent(ChickenMapIntent.LaunchTapped) },
+                onErrorDismissed = { viewModel.onIntent(ChickenMapIntent.LaunchErrorDismissed) },
+            )
+        } else if (!state.hasGameStarted) {
             PreGameOverlay(
                 isChicken = true,
                 gameModTitle = state.game.gameModEnum.title,

@@ -68,15 +68,28 @@ service cloud.firestore {
       // client-side update rule for `winners` exists anymore — any
       // attempt to write the field directly is denied by default.
 
-      // Allow-list: only `status` (chicken cancels) and `lastHeartbeat`
-      // (heartbeat ping) are writable by participants. Power-up activation
-      // goes through the `activatePowerUp` callable; everything else on
-      // the Game doc is admin-SDK only or routed through dedicated rules.
+      // Cancel-or-end: the creator (chicken) can flip `status` to
+      // `done` from any pre-done state — `waiting`, `readyToLaunch`,
+      // or `inProgress`. Covers pre-game cancel + mid-game cancel +
+      // the chicken's local "natural game over" detection (timer
+      // ran out, all hunters found). Every other status transition
+      // — start, launch — goes through Cloud Functions (admin SDK),
+      // so a hunter can't write `status: 'inProgress'` to bypass the
+      // LAUNCH gate and a stray client can't resurrect a finished
+      // game. Power-up activation is on `activatePowerUp`.
+      allow update: if request.auth != null
+                    && request.auth.uid == resource.data.creatorId
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['status'])
+                    && resource.data.status in ['waiting', 'readyToLaunch', 'inProgress']
+                    && request.resource.data.status == 'done';
+
+      // Heartbeat ping: any participant can keep the doc fresh.
       allow update: if request.auth != null
                     && (request.auth.uid == resource.data.creatorId
                         || request.auth.uid in resource.data.hunterIds)
                     && request.resource.data.diff(resource.data).affectedKeys()
-                        .hasOnly(['status', 'lastHeartbeat']);
+                        .hasOnly(['lastHeartbeat']);
 
       // GameMaster (or the creator as a fallback when no GM has joined
       // yet) re-designates the chicken before the game starts. Single
@@ -96,13 +109,14 @@ service cloud.firestore {
 
       // Creator-only settings edit, frozen once the game starts.
       // `gameMasterIds` mutates only via `joinAsGameMaster`; `chickenId`
-      // goes through the dedicated rule above; `winners` is callable-only.
-      // `readyToLaunch` is listed for forward-compat with PP-71.
+      // goes through the dedicated rule above; `winners` is callable-only;
+      // `status` goes through the cancel-only rule above (every other
+      // transition is server-scheduled).
       allow update: if request.auth != null
                     && resource.data.creatorId == request.auth.uid
                     && resource.data.status in ['waiting', 'readyToLaunch']
                     && !request.resource.data.diff(resource.data).affectedKeys()
-                        .hasAny(['gameMasterIds', 'chickenId', 'winners']);
+                        .hasAny(['gameMasterIds', 'chickenId', 'winners', 'status']);
 
       // Only the creator can delete, and only while still in `waiting`.
       allow delete: if request.auth != null

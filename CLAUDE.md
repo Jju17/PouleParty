@@ -39,11 +39,14 @@ The game-creation wizard splits zone setup into two dedicated sub-steps:
 
 ### Game Lifecycle
 1. Chicken creates game → Firestore document created → Cloud Functions schedule status transitions and notifications via Cloud Tasks
-2. Game starts at `timing.start` (status: waiting → inProgress)
+2. Game starts at `timing.start` (status: waiting → inProgress, OR waiting → `readyToLaunch` in manual-start mode — see below)
 3. Hunters get a head start delay (`timing.headStartMinutes`) before the hunt begins
 4. Zone shrinks periodically until collapse or `timing.end`
 5. Hunters who find the chicken enter the found code → added to `winners` array
 6. Game ends when time runs out, zone collapses, chicken cancels, or all hunters find the chicken
+
+### Manual launch (PP-71)
+When the chicken toggles **manual launch** on the `startTime` wizard step, the wizard sets `Game.manualStartEnabled: true`. At `timing.start` the Cloud Task flips `status` to **`readyToLaunch`** instead of `inProgress`. The chicken + every GameMaster see a full-screen LAUNCH overlay (`Features/Map/ReadyToLaunchOverlay.swift` / `ui/map/ReadyToLaunchOverlay.kt`); hunters see a passive waiting overlay. Tapping LAUNCH calls the `launchGame` callable, which atomically flips `status → inProgress`, stamps `timing.actualStart` server-side, recomputes `timing.end = actualStart + (planned end − planned start)`, and enqueues the runtime Cloud Tasks (status→done, hunter_start notif, zone_shrink notifs, power-up batches) deferred at creation. `Game.hunterStartDate` is computed from `effectiveStartDate = actualStart ?? start + headStartMinutes`, so every downstream timer stays anchored on the real start. Two simultaneous LAUNCH taps end up with a single `actualStart` thanks to the Firestore transaction. `chicken_start` notif still fires at the planned `timing.start` in both modes (the manual-mode "gather now" reminder). `firestore.rules` blocks every client-side status write to `inProgress` / `readyToLaunch` — only `creator → 'done'` from `waiting` / `readyToLaunch` is allowed (cancel game).
 
 ### Paid event registrations (PP-52)
 
@@ -120,10 +123,10 @@ cd web && npm run dev
 
 ```
 /games/{gameId}
-  ├── id, name, maxPlayers, gameMode, chickenCanSeeHunters, isAdminCreation
+  ├── id, name, maxPlayers, gameMode, chickenCanSeeHunters, isAdminCreation, manualStartEnabled (PP-71)
   ├── registrationBatchId (PP-52, optional — links the game to a batch of pre-paid web registrations in `/eventRegistrations`; when set, JoinFlow gates the join on a validation code)
-  ├── foundCode, hunterIds, gameMasterIds, status, winners, creatorId, chickenId, lastHeartbeat
-  ├── timing: { start, end, headStartMinutes }
+  ├── foundCode, hunterIds, gameMasterIds, status (one of `waiting` / `readyToLaunch` (PP-71) / `inProgress` / `done`), winners, creatorId, chickenId, lastHeartbeat
+  ├── timing: { start, end, headStartMinutes, actualStart (PP-71, server-stamped at LAUNCH when `manualStartEnabled == true`) }
   ├── zone: { center, finalCenter, radius, shrinkIntervalMinutes, shrinkMetersPerUpdate, driftSeed }
   ├── powerUps: { enabled, enabledTypes, activeEffects: { invisibility, zoneFreeze, radarPing, decoy, jammer } }
   ├── /chickenLocations/latest     → Single doc, overwritten each position update

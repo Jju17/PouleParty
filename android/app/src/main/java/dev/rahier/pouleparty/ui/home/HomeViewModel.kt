@@ -339,7 +339,7 @@ class HomeViewModel @Inject constructor(
                     _uiState.update { it.copy(isShowingGameNotFound = true) }
                     return@launch
                 }
-                GameStatus.WAITING, GameStatus.IN_PROGRESS -> Unit
+                GameStatus.WAITING, GameStatus.READY_TO_LAUNCH, GameStatus.IN_PROGRESS -> Unit
             }
             when (role) {
                 PlayerRole.CHICKEN -> _effects.send(HomeEffect.NavigateToChickenMap(game.id))
@@ -482,7 +482,8 @@ class HomeViewModel @Inject constructor(
                     )
                 }
                 val effect = when (game.gameStatusEnum) {
-                    GameStatus.WAITING, GameStatus.IN_PROGRESS -> HomeEffect.NavigateToHunterMap(game.id, teamName)
+                    GameStatus.WAITING, GameStatus.READY_TO_LAUNCH, GameStatus.IN_PROGRESS ->
+                        HomeEffect.NavigateToHunterMap(game.id, teamName)
                     GameStatus.DONE -> HomeEffect.NavigateToGameDone(game.id)
                 }
                 _effects.send(effect)

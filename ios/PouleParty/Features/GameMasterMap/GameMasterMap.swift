@@ -22,7 +22,9 @@ struct GameMasterMapFeature {
     @ObservableState
     struct State: Equatable {
         @Presents var validationQueue: ValidationQueueFeature.State?
+        @Presents var destination: Destination.State?
         var game: Game
+        var showLeaderboard: Bool = false
         var chickenLocation: CLLocationCoordinate2D?
         var chickenIsInvisible: Bool = false
         var hunterAnnotations: [HunterAnnotation] = []
@@ -49,6 +51,11 @@ struct GameMasterMapFeature {
         /// started, network).
         var designationError: String?
 
+        /// PP-71: in flight while `launchGame` runs.
+        var isLaunching: Bool = false
+        /// PP-71: last error from `launchGame`.
+        var launchError: String?
+
         // MARK: - MapFeatureState surface (GM has no power-up tray)
         var availablePowerUps: [PowerUp] { [] }
         var collectedPowerUps: [PowerUp] { [] }
@@ -58,15 +65,33 @@ struct GameMasterMapFeature {
         /// The GM has no per-player zone check — they are pure spectator.
         var isOutsideZone: Bool { false }
         var hasGameStarted: Bool { nowDate >= game.startDate }
-        /// PP-18: the GM is a spectator — they don't play, so the
-        /// leaderboard CTA never appears on this map. Hard-coded
-        /// `false` to satisfy the shared `MapFeatureState` contract.
-        var isGameOver: Bool { false }
+        /// Reflects `game.status == .done` so the GM gets the same
+        /// "show leaderboard CTA + grey controls" treatment hunters and
+        /// chickens get at the end of a game (cancel, time-out, all
+        /// hunters found).
+        var isGameOver: Bool { game.status == .done }
+    }
+
+    @Reducer
+    struct Destination {
+        @ObservableState
+        enum State: Equatable {
+            case alert(AlertState<Action.Alert>)
+        }
+
+        enum Action {
+            case alert(Alert)
+
+            enum Alert: Equatable {
+                case gameOver
+            }
+        }
     }
 
     enum Action: BindableAction {
         case binding(BindingAction<State>)
         case delegate(Delegate)
+        case destination(PresentationAction<Destination.Action>)
         case `internal`(Internal)
         case validationQueue(PresentationAction<ValidationQueueFeature.Action>)
         case view(View)
@@ -80,6 +105,10 @@ struct GameMasterMapFeature {
             case huntersDrawerDismissed
             case validationQueueTapped
             case leaveGameTapped
+            case launchTapped
+            case launchErrorDismissed
+            case leaderboardTapped
+            case leaderboardDismissed
             // PP-86
             case designateHunterTapped(Registration)
             case designateConfirmTapped
@@ -92,6 +121,8 @@ struct GameMasterMapFeature {
             case gameUpdated(Game)
             case chickenLocationUpdated(CLLocationCoordinate2D?, isInvisible: Bool)
             case hunterLocationsUpdated([HunterLocation])
+            case launchSucceeded
+            case launchFailed(String)
             case powerUpsUpdated([PowerUp])
             case timerTicked
             case winnerNotificationDismissed
@@ -171,6 +202,7 @@ struct GameMasterMapFeature {
                     }
                 )
             case let .internal(.gameUpdated(game)):
+                let wasGameOver = state.game.status == .done
                 state.game = game
                 let (lastUpdate, lastRadius) = game.findLastUpdate()
                 state.radius = lastRadius
@@ -185,6 +217,19 @@ struct GameMasterMapFeature {
                     center: circleCenter,
                     radius: CLLocationDistance(lastRadius)
                 )
+                if !wasGameOver, game.status == .done, state.destination == nil {
+                    state.destination = .alert(
+                        AlertState {
+                            TextState("Game ended")
+                        } actions: {
+                            ButtonState(action: .gameOver) {
+                                TextState("OK")
+                            }
+                        } message: {
+                            TextState("Open the leaderboard from the trophy button, or leave the game from the menu.")
+                        }
+                    )
+                }
                 if state.previousWinnersCount >= 0,
                    let notif = detectNewWinners(
                        winners: game.winners,
@@ -261,6 +306,37 @@ struct GameMasterMapFeature {
             case .view(.leaveGameTapped):
                 return .send(.delegate(.returnedToMenu))
 
+            case .view(.leaderboardTapped):
+                state.showLeaderboard = true
+                return .none
+
+            case .view(.leaderboardDismissed):
+                state.showLeaderboard = false
+                return .none
+
+            case .destination(.presented(.alert(.gameOver))):
+                return .none
+
+            case .destination:
+                return .none
+
+            case .view(.launchTapped):
+                return handleLaunchTapped(&state)
+
+            case .view(.launchErrorDismissed):
+                state.launchError = nil
+                return .none
+
+            case .internal(.launchSucceeded):
+                state.isLaunching = false
+                state.launchError = nil
+                return .none
+
+            case let .internal(.launchFailed(message)):
+                state.isLaunching = false
+                state.launchError = message
+                return .none
+
             // PP-86 — Designate the chicken
             case let .view(.designateHunterTapped(reg)):
                 state.pendingChickenDesignation = reg
@@ -304,6 +380,25 @@ struct GameMasterMapFeature {
         }
         .ifLet(\.$validationQueue, action: \.validationQueue) {
             ValidationQueueFeature()
+        }
+        .ifLet(\.$destination, action: \.destination) {
+            Destination()
+        }
+    }
+
+    private func handleLaunchTapped(_ state: inout State) -> Effect<Action> {
+        guard state.game.status == .readyToLaunch,
+              !state.isLaunching else { return .none }
+        state.isLaunching = true
+        state.launchError = nil
+        let gameId = state.game.id
+        return .run { send in
+            do {
+                _ = try await apiClient.launchGame(gameId)
+                await send(.internal(.launchSucceeded))
+            } catch {
+                await send(.internal(.launchFailed(error.localizedDescription)))
+            }
         }
     }
 }

@@ -1086,4 +1086,18 @@ class FirestoreRepository @Inject constructor(
             circles = circles,
         )
     }
+
+    /**
+     * PP-71: promotes a `readyToLaunch` game to `inProgress`, stamps
+     * `timing.actualStart` server-side, recomputes `timing.end`, and
+     * enqueues the runtime Cloud Tasks deferred at creation. Throws if
+     * the caller isn't the creator or a GameMaster, or if the game is
+     * not in `readyToLaunch`.
+     */
+    suspend fun launchGame(gameId: String) {
+        functions
+            .getHttpsCallable("launchGame")
+            .call(hashMapOf("gameId" to gameId))
+            .await()
+    }
 }

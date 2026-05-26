@@ -540,6 +540,7 @@ private fun GameRow(
 private fun GameStatusBadge(status: GameStatus) {
     val (label, color) = when (status) {
         GameStatus.WAITING -> "Waiting" to CROrange
+        GameStatus.READY_TO_LAUNCH -> "Ready" to CROrange
         GameStatus.IN_PROGRESS -> "Live" to Success
         GameStatus.DONE -> "Done" to MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f)
     }

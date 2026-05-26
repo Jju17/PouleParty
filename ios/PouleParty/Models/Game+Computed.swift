@@ -75,8 +75,16 @@ extension Game {
         }
     }
 
+    /// PP-71: post-launch this is the server-stamped real start; before
+    /// the launch (or in auto-start mode) it falls through to the
+    /// planned `start`. Every downstream timer must read this instead
+    /// of `startDate` to stay in sync with the recomputed `end`.
+    var effectiveStartDate: Date {
+        timing.actualStart?.dateValue() ?? startDate
+    }
+
     var hunterStartDate: Date {
-        startDate.addingTimeInterval(timing.headStartMinutes * 60)
+        effectiveStartDate.addingTimeInterval(timing.headStartMinutes * 60)
     }
 
     var gameCode: String {

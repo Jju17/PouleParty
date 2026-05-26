@@ -13,7 +13,14 @@ data class Timing(
         ((System.currentTimeMillis() + 7_200_000) / 60_000) * 60_000
     )),
     val end: Timestamp = Timestamp(Date(System.currentTimeMillis() + 3_900_000)),
-    val headStartMinutes: Double = 0.0
+    val headStartMinutes: Double = 0.0,
+    /**
+     * PP-71: server-set timestamp of the effective launch when
+     * `manualStartEnabled == true`. `null` until the LAUNCH callable
+     * fires; read by `hunterStartDate` (and the recomputed `end`)
+     * to anchor every downstream timer on the actual start.
+     */
+    val actualStart: Timestamp? = null,
 )
 
 data class Zone(
@@ -101,6 +108,12 @@ data class Game(
      * firestore.rules `allow create` clause.
      */
     val isAdminCreation: Boolean = false,
+    /**
+     * PP-71: when true, the game waits for an explicit LAUNCH tap from
+     * the chicken or a GameMaster at `timing.start` instead of starting
+     * automatically.
+     */
+    val manualStartEnabled: Boolean = false,
 ) {
     // ── Chicken Role (PP-26) ───────────────────────────
 
@@ -185,7 +198,18 @@ data class Game(
 
     val startDate: Date get() = timing.start.toDate()
     val endDate: Date get() = timing.end.toDate()
-    val hunterStartDate: Date get() = Date(startDate.time + (timing.headStartMinutes * 60 * 1000).toLong())
+
+    /**
+     * PP-71: post-launch this is the server-stamped real start; before
+     * the launch (or in auto-start mode) it falls through to the
+     * planned `start`. Every downstream timer must read this instead
+     * of `startDate` to stay in sync with the recomputed `end`.
+     */
+    @get:Exclude
+    val effectiveStartDate: Date get() = timing.actualStart?.toDate() ?: startDate
+
+    val hunterStartDate: Date get() =
+        Date(effectiveStartDate.time + (timing.headStartMinutes * 60 * 1000).toLong())
 
     val gameCode: String
         get() = id.take(6).uppercase()

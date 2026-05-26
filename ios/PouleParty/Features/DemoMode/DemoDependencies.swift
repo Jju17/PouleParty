@@ -99,7 +99,8 @@ extension ApiClient {
                     shrinkMetersPerUpdate: 50,
                     circles: []
                 )
-            }
+            },
+            launchGame: { _ in Date() }
         )
     }
 

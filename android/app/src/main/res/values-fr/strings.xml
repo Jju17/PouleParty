@@ -358,6 +358,9 @@
     <string name="wizard_start_time_title">Quand ?</string>
     <string name="wizard_start_time_subtitle">Choisis la date et l\'heure de départ</string>
     <string name="wizard_start_time_tap_to_change">Appuie pour changer</string>
+    <string name="wizard_manual_start_title">Démarrage manuel</string>
+    <string name="wizard_manual_start_description_off">Active pour bloquer le départ derrière un bouton LAUNCH. Pratique quand la logistique prend du retard.</string>
+    <string name="wizard_manual_start_description_on">À l\'heure prévue, un bouton LAUNCH apparaît. La partie démarre quand tu le tapes. L\'heure ci-dessus est indicative.</string>
     <string name="wizard_participation_title">Tu participes ?</string>
     <string name="wizard_participation_subtitle">Est-ce que tu joues aussi ?</string>
     <string name="wizard_participation_chicken">Je suis la Poule</string>

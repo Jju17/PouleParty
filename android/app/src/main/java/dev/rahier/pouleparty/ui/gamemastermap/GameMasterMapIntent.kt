@@ -16,4 +16,13 @@ sealed class GameMasterMapIntent {
     data object DesignateCancelTapped : GameMasterMapIntent()
     /** PP-86: dismiss the post-failure error alert. */
     data object DesignationErrorDismissed : GameMasterMapIntent()
+    /** PP-71: GM taps LAUNCH when status == READY_TO_LAUNCH. */
+    data object LaunchTapped : GameMasterMapIntent()
+    /** PP-71: dismisses the error alert after a failed launchGame call. */
+    data object LaunchErrorDismissed : GameMasterMapIntent()
+    /** Game-over leaderboard CTA. */
+    data object LeaderboardTapped : GameMasterMapIntent()
+    data object LeaderboardDismissed : GameMasterMapIntent()
+    /** Dismisses the one-shot "game ended" alert. */
+    data object GameOverAlertDismissed : GameMasterMapIntent()
 }

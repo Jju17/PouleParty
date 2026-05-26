@@ -761,10 +761,13 @@ struct HunterMapFeature {
                 state.hasChallenges = hasChallenges
                 return .none
             case let .internal(.gameConfigUpdated(game)):
-                // React to game cancelled/ended by chicken or Cloud Function
+                // React to game cancelled/ended by chicken or Cloud Function.
+                // The trophy CTA in the bottom bar reveals once `isGameOver`
+                // flips; the alert is the explicit "the game ended" signal.
                 if game.status == .done, state.destination == nil {
                     locationClient.stopTracking()
                     state.game = game
+                    state.isGameOver = true
                     let endState = PoulePartyAttributes.ContentState(
                         radiusMeters: state.radius,
                         nextShrinkDate: nil,
@@ -775,13 +778,13 @@ struct HunterMapFeature {
                     )
                     state.destination = .alert(
                         AlertState {
-                            TextState("Game Over")
+                            TextState("Game ended")
                         } actions: {
                             ButtonState(action: .gameOver) {
                                 TextState("OK")
                             }
                         } message: {
-                            TextState("The game has ended!")
+                            TextState("Open the leaderboard from the trophy button, or leave the game from the menu.")
                         }
                     )
                     return .run { _ in
@@ -796,6 +799,14 @@ struct HunterMapFeature {
                 state.game = game
                 state.radius = lastRadius
                 state.nextRadiusUpdate = lastUpdate
+                // Safety net: if `status == .done` arrived while another
+                // modal was up (sheet, alert), the early branch above didn't
+                // get to flip `isGameOver`. Catch it here so the bottom-bar
+                // trophy CTA still appears as soon as the modal closes.
+                if game.status == .done && !state.isGameOver {
+                    state.isGameOver = true
+                    locationClient.stopTracking()
+                }
 
                 if game.gameMode != .stayInTheZone {
                     if let currentCircle = state.mapCircle {
@@ -904,20 +915,25 @@ struct HunterMapFeature {
             case .internal(.timerTicked):
                 state.nowDate = .now
 
-                // Countdown phases (hunter perspective)
+                // Countdown phases (hunter perspective). Same gate as
+                // the chicken: in manual-start mode, nothing counts down
+                // until the chicken/GM actually taps LAUNCH and the
+                // server stamps `actualStart`.
+                let hasLaunched = !state.game.manualStartEnabled
+                    || state.game.timing.actualStart != nil
                 let countdownResult = evaluateCountdown(
                     phases: [
                         CountdownPhase(
-                            targetDate: state.game.startDate,
+                            targetDate: state.game.effectiveStartDate,
                             completionText: "🐔 is hiding!",
                             showNumericCountdown: true,
-                            isEnabled: state.game.timing.headStartMinutes > 0
+                            isEnabled: hasLaunched && state.game.timing.headStartMinutes > 0
                         ),
                         CountdownPhase(
                             targetDate: state.game.hunterStartDate,
                             completionText: "LET'S HUNT! 🔍",
                             showNumericCountdown: true,
-                            isEnabled: true
+                            isEnabled: hasLaunched
                         )
                     ],
                     currentCountdownNumber: state.countdownNumber,

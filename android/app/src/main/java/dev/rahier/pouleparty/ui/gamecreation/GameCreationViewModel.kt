@@ -214,6 +214,7 @@ class GameCreationViewModel @Inject constructor(
             is GameCreationIntent.PowerUpsToggled -> togglePowerUps(intent.enabled)
             is GameCreationIntent.PowerUpTypeToggled -> togglePowerUpType(intent.type)
             is GameCreationIntent.ChickenCanSeeHuntersToggled -> toggleChickenCanSeeHunters(intent.value)
+            is GameCreationIntent.ManualStartToggled -> toggleManualStart(intent.enabled)
             is GameCreationIntent.LocationSelected -> onLocationSelected(intent.point)
             is GameCreationIntent.FinalLocationSelected -> onFinalLocationSelected(intent.point)
             is GameCreationIntent.GameMasterEnabledChanged -> _uiState.update { it.copy(isGameMasterEnabled = intent.enabled) }
@@ -469,6 +470,10 @@ class GameCreationViewModel @Inject constructor(
 
     private fun toggleChickenCanSeeHunters(value: Boolean) {
         _uiState.update { it.copy(game = it.game.withChickenCanSeeHunters(value)) }
+    }
+
+    private fun toggleManualStart(enabled: Boolean) {
+        _uiState.update { it.copy(game = it.game.copy(manualStartEnabled = enabled)) }
     }
 
     private fun onLocationSelected(point: Point) {

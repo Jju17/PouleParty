@@ -87,6 +87,10 @@ data class ChickenMapUiState(
      *  collapse, all hunters found). The map stays visible,
      *  controls grey, GPS stops. Mirrors iOS `isGameOver`. */
     val isGameOver: Boolean = false,
+    /** PP-71: in flight while `launchGame` runs. */
+    val isLaunching: Boolean = false,
+    /** PP-71: last error from `launchGame`. Null clears the alert. */
+    val launchError: String? = null,
 ) : dev.rahier.pouleparty.ui.map.MapUiState
 
 @HiltViewModel
@@ -129,6 +133,24 @@ class ChickenMapViewModel @Inject constructor(
             is ChickenMapIntent.ActivatePowerUp -> activatePowerUp(intent.powerUp)
             ChickenMapIntent.ValidationQueueTapped -> viewModelScope.launch {
                 _effects.send(ChickenMapEffect.OpenValidationQueue)
+            }
+            ChickenMapIntent.LaunchTapped -> onLaunchTapped()
+            ChickenMapIntent.LaunchErrorDismissed -> _uiState.update { it.copy(launchError = null) }
+        }
+    }
+
+    private fun onLaunchTapped() {
+        val state = _uiState.value
+        if (state.game.gameStatusEnum != GameStatus.READY_TO_LAUNCH) return
+        if (state.isLaunching) return
+        _uiState.update { it.copy(isLaunching = true, launchError = null) }
+        viewModelScope.launch {
+            try {
+                firestoreRepository.launchGame(state.game.id)
+                _uiState.update { it.copy(isLaunching = false) }
+            } catch (e: Exception) {
+                Log.e(logTag, "launchGame failed", e)
+                _uiState.update { it.copy(isLaunching = false, launchError = e.message ?: "Launch failed") }
             }
         }
     }
@@ -179,12 +201,7 @@ class ChickenMapViewModel @Inject constructor(
             }
 
             if (game.gameStatusEnum == GameStatus.WAITING) {
-                try {
-                    firestoreRepository.updateGameStatus(gameId, GameStatus.IN_PROGRESS)
-                    analyticsRepository.gameStarted(gameMode = game.gameMode)
-                } catch (e: Exception) {
-                    Log.e("ChickenMapVM", "Failed to update game status to inProgress", e)
-                }
+                analyticsRepository.gameStarted(gameMode = game.gameMode)
             }
 
             streamJobs += startTimer()
@@ -216,20 +233,26 @@ class ChickenMapViewModel @Inject constructor(
                 val huntStarted = now.after(state.game.hunterStartDate) || now == state.game.hunterStartDate
                 _uiState.update { it.copy(nowDate = now, hasGameStarted = gameStarted, hasHuntStarted = huntStarted) }
 
-                // Countdown phases (chicken perspective)
+                // Countdown phases (chicken perspective). In manual-start
+                // mode, neither phase fires until the chicken/GM taps
+                // LAUNCH and the server stamps `actualStart`. `startDate`
+                // is just "when status flips to readyToLaunch" in that
+                // mode \u2014 the real start is `effectiveStartDate`.
+                val hasLaunched = !state.game.manualStartEnabled ||
+                    state.game.timing.actualStart != null
                 val countdownResult = evaluateCountdown(
                     phases = listOf(
                         CountdownPhase(
-                            targetDate = state.game.startDate,
+                            targetDate = state.game.effectiveStartDate,
                             completionText = "RUN! \uD83D\uDC14",
                             showNumericCountdown = true,
-                            isEnabled = true
+                            isEnabled = hasLaunched
                         ),
                         CountdownPhase(
                             targetDate = state.game.hunterStartDate,
                             completionText = "\uD83D\uDD0D Hunters incoming!",
                             showNumericCountdown = false,
-                            isEnabled = state.game.timing.headStartMinutes > 0
+                            isEnabled = hasLaunched && state.game.timing.headStartMinutes > 0
                         )
                     ),
                     now = now,

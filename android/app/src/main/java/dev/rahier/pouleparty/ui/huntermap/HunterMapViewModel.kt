@@ -267,20 +267,23 @@ class HunterMapViewModel @Inject constructor(
                 val gameStarted = now.after(state.game.hunterStartDate) || now == state.game.hunterStartDate
                 _uiState.update { it.copy(nowDate = now, hasGameStarted = gameStarted) }
 
-                // Countdown phases (hunter perspective)
+                // Countdown phases (hunter perspective). Same manual-start
+                // gate as the chicken: nothing fires before LAUNCH.
+                val hasLaunched = !state.game.manualStartEnabled ||
+                    state.game.timing.actualStart != null
                 val countdownResult = evaluateCountdown(
                     phases = listOf(
                         CountdownPhase(
-                            targetDate = state.game.startDate,
+                            targetDate = state.game.effectiveStartDate,
                             completionText = "\uD83D\uDC14 is hiding!",
                             showNumericCountdown = true,
-                            isEnabled = state.game.timing.headStartMinutes > 0
+                            isEnabled = hasLaunched && state.game.timing.headStartMinutes > 0
                         ),
                         CountdownPhase(
                             targetDate = state.game.hunterStartDate,
                             completionText = "LET'S HUNT! \uD83D\uDD0D",
                             showNumericCountdown = true,
-                            isEnabled = true
+                            isEnabled = hasLaunched
                         )
                     ),
                     now = now,
@@ -410,11 +413,18 @@ class HunterMapViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             game = updatedGame,
+                            isGameOver = true,
                             showGameOverAlert = true,
-                            gameOverMessage = "The game has ended!"
+                            gameOverMessage = "Open the leaderboard from the trophy button, or leave the game from the menu."
                         )
                     }
                     return@collect
+                }
+                if (updatedGame.gameStatusEnum == GameStatus.DONE && !_uiState.value.isGameOver) {
+                    // Safety net: alert was already showing for another
+                    // reason. Still flip isGameOver so the trophy CTA
+                    // appears in the bottom bar.
+                    _uiState.update { it.copy(isGameOver = true) }
                 }
 
                 val (lastUpdate, lastRadius) = updatedGame.findLastUpdate()

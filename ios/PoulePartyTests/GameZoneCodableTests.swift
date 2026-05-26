@@ -105,6 +105,7 @@ struct GameZoneCodableTests {
                 "activeEffects": [:] as [String: Any],
             ] as [String: Any],
             "isAdminCreation": false,
+            "manualStartEnabled": false,
         ]
         let game = try Firestore.Decoder().decode(Game.self, from: dict)
         #expect(game.id == "abc123")

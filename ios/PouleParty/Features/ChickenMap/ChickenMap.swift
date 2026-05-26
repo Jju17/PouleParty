@@ -53,6 +53,14 @@ struct ChickenMapFeature {
         /// doc. Empty until the CF responds.
         var chickenFoundCode: String = ""
 
+        /// PP-71: in flight while the `launchGame` callable runs.
+        /// Drives the LAUNCH button's spinner + disabled state.
+        var isLaunching: Bool = false
+        /// Last error string returned by `launchGame`. Rendered as an
+        /// alert on top of the LAUNCH overlay. Cleared by
+        /// `launchErrorDismissed`.
+        var launchError: String?
+
         // MARK: - MapFeatureState passthroughs (child → parent surface)
         var availablePowerUps: [PowerUp] { powerUps.available }
         var collectedPowerUps: [PowerUp] { powerUps.collected }
@@ -112,6 +120,8 @@ struct ChickenMapFeature {
             case gameInfoDismissed
             case gameInitialized
             case infoButtonTapped
+            case launchTapped
+            case launchErrorDismissed
             case onTask
             case validationQueueTapped
         }
@@ -122,6 +132,8 @@ struct ChickenMapFeature {
             case foundCodeFetched(String)
             case gameUpdated(Game)
             case hunterLocationsUpdated([HunterLocation])
+            case launchSucceeded
+            case launchFailed(String)
             case newLocationFetched(CLLocationCoordinate2D)
             case pendingSubmissionsUpdated(Int)
             case powerUpCollected(PowerUp)
@@ -389,6 +401,35 @@ struct ChickenMapFeature {
                 }
 
                 return effects.isEmpty ? .none : .merge(effects)
+            case .view(.launchTapped):
+                guard state.game.status == .readyToLaunch,
+                      !state.isLaunching else { return .none }
+                state.isLaunching = true
+                state.launchError = nil
+                let gameId = state.game.id
+                return .run { send in
+                    do {
+                        _ = try await apiClient.launchGame(gameId)
+                        await send(.internal(.launchSucceeded))
+                    } catch {
+                        await send(.internal(.launchFailed(error.localizedDescription)))
+                    }
+                }
+
+            case .view(.launchErrorDismissed):
+                state.launchError = nil
+                return .none
+
+            case .internal(.launchSucceeded):
+                state.isLaunching = false
+                state.launchError = nil
+                return .none
+
+            case let .internal(.launchFailed(message)):
+                state.isLaunching = false
+                state.launchError = message
+                return .none
+
             case .view(.cancelGameButtonTapped):
                 // PP-16: cancelling a game that already ended is a
                 // no-op — the gameOver alert already updated the
@@ -722,39 +763,38 @@ struct ChickenMapFeature {
                 let initialLAState = state.liveActivityState
                 state.lastLiveActivityState = initialLAState
 
-                guard state.game.status == .waiting else {
-                    return .run { _ in
-                        await liveActivityClient.start(attributes, initialLAState)
-                    }
-                }
-                let gameId = state.game.id
                 let gameMode = state.game.gameMode.rawValue
+                let wasWaiting = state.game.status == .waiting
                 return .run { [analyticsClient] _ in
                     await liveActivityClient.start(attributes, initialLAState)
-                    do {
-                        try await apiClient.updateGameStatus(gameId, .inProgress)
+                    if wasWaiting {
                         analyticsClient.gameStarted(gameMode: gameMode)
-                    } catch {
-                        logger.error("Failed to update game status to inProgress: \(error)")
                     }
                 }
             case .internal(.timerTicked):
                 state.nowDate = .now
 
-                // Countdown phases (chicken perspective)
+                // Countdown phases (chicken perspective).
+                // In manual-start mode, the planned `startDate` is just
+                // "when status flips to readyToLaunch" — the real start is
+                // whenever the chicken/GM taps LAUNCH and the server
+                // stamps `actualStart`. Both phases gate on that so the
+                // 3-2-1 RUN doesn't fire before LAUNCH.
+                let hasLaunched = !state.game.manualStartEnabled
+                    || state.game.timing.actualStart != nil
                 let countdownResult = evaluateCountdown(
                     phases: [
                         CountdownPhase(
-                            targetDate: state.game.startDate,
+                            targetDate: state.game.effectiveStartDate,
                             completionText: "RUN! 🐔",
                             showNumericCountdown: true,
-                            isEnabled: true
+                            isEnabled: hasLaunched
                         ),
                         CountdownPhase(
                             targetDate: state.game.hunterStartDate,
                             completionText: "🔍 Hunters incoming!",
                             showNumericCountdown: false,
-                            isEnabled: state.game.timing.headStartMinutes > 0
+                            isEnabled: hasLaunched && state.game.timing.headStartMinutes > 0
                         )
                     ],
                     currentCountdownNumber: state.countdownNumber,

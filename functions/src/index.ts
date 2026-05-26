@@ -5,6 +5,7 @@ import { getMessaging } from "firebase-admin/messaging";
 import { onDocumentCreated, onDocumentDeleted, onDocumentUpdated } from "firebase-functions/v2/firestore";
 import { onTaskDispatched } from "firebase-functions/v2/tasks";
 import { defineSecret } from "firebase-functions/params";
+import * as logger from "firebase-functions/logger";
 import {
   deterministicDriftCenterServer,
   filterEnabledTypesServer,
@@ -56,6 +57,11 @@ export { activatePowerUp } from "./powerUps";
 export { validateChallengeSubmission, applyOutOfZonePenalty } from "./validation";
 
 export { renderChallengesSheet } from "./challengesSheet";
+
+// PP-71: manual-start launch callable. Advances `readyToLaunch` →
+// `inProgress`, stamps `timing.actualStart`, recomputes `timing.end`,
+// and enqueues the runtime Cloud Tasks deferred at creation time.
+export { launchGame } from "./launchGame";
 
 // Use Application Default Credentials so each deployed function
 // writes to the project it was deployed to. The previous hardcoded
@@ -316,6 +322,9 @@ export const transitionGameStatus = onTaskDispatched(
       expectedCurrentStatus: string;
     };
 
+    logger.info(
+      `[transitionGameStatus] handler invoked gameId=${gameId} expected=${expectedCurrentStatus} target=${targetStatus}`
+    );
     const ref = db.collection("games").doc(gameId);
     // CRIT-11 (audit 2026-05-17): atomic compare-and-set. Without the
     // transaction, a client write (e.g. chicken cancels → status: "done")
@@ -323,9 +332,20 @@ export const transitionGameStatus = onTaskDispatched(
     // targetStatus, resurrecting a finished game.
     await db.runTransaction(async (tx) => {
       const snap = await tx.get(ref);
-      if (!snap.exists) return;
-      if (snap.data()?.status === expectedCurrentStatus) {
+      if (!snap.exists) {
+        logger.info(`[transitionGameStatus] doc missing gameId=${gameId}`);
+        return;
+      }
+      const currentStatus = snap.data()?.status;
+      if (currentStatus === expectedCurrentStatus) {
+        logger.info(
+          `[transitionGameStatus] applying gameId=${gameId} ${currentStatus} -> ${targetStatus}`
+        );
         tx.update(ref, { status: targetStatus });
+      } else {
+        logger.info(
+          `[transitionGameStatus] skipped gameId=${gameId} current=${currentStatus} (expected=${expectedCurrentStatus})`
+        );
       }
     });
   }
@@ -643,20 +663,37 @@ async function scheduleGameLifecycleTasks(
     spawnPowerUpBatch: [],
   };
 
-  // Schedule waiting → inProgress at startTimestamp
+  // PP-71: manual-start games defer everything that depends on the
+  // *effective* start to the `launchGame` callable. At creation we
+  // only schedule the status flip to `readyToLaunch` + the
+  // chicken_start notif (the planned-time "gathering reminder").
+  const manualStartEnabled = data.manualStartEnabled === true;
+  logger.info(
+    `[scheduleGameLifecycleTasks] gameId=${gameId} manualStartEnabled=${manualStartEnabled} rawValue=${JSON.stringify(data.manualStartEnabled)}`
+  );
+
+  // Schedule the start-time status flip:
+  //  - auto-start:     waiting → inProgress
+  //  - manual-start:   waiting → readyToLaunch
   if (startTimestamp) {
     const id = `status-start-${gameId}`;
+    const chosenTarget = manualStartEnabled ? "readyToLaunch" : "inProgress";
+    logger.info(
+      `[scheduleGameLifecycleTasks] enqueueing status-start gameId=${gameId} targetStatus=${chosenTarget} scheduleTime=${startTimestamp.toISOString()}`
+    );
     await statusQueue.enqueue(
       {
         gameId,
-        targetStatus: "inProgress",
+        targetStatus: chosenTarget,
         expectedCurrentStatus: "waiting",
       },
       { scheduleTime: startTimestamp, id }
     );
     enqueuedTasksByQueue.transitionGameStatus.push(id);
 
-    // Schedule chicken_start notification
+    // Schedule chicken_start notification — fires in both modes. In
+    // manual-start mode it tells hunters the planned time is now and
+    // they should gather; the chicken/GM still has to tap LAUNCH.
     const chickenStartId = `notif-chickenstart-${gameId}`;
     await notifQueue.enqueue(
       { gameId, notificationType: "chicken_start" },
@@ -664,23 +701,22 @@ async function scheduleGameLifecycleTasks(
     );
     enqueuedTasksByQueue.sendGameNotification.push(chickenStartId);
 
-    // Schedule the initial power-up batch at game start — not earlier,
-    // so power-ups don't sit in Firestore while the game is still in
-    // `waiting` state (which could be hours or days for a scheduled game).
-    const initialSpawnId = `spawn-${gameId}-0`;
-    await spawnQueue.enqueue(
-      {
-        gameId,
-        batchIndex: 0,
-        count: POWER_UP_INITIAL_BATCH_SIZE,
-      },
-      { scheduleTime: startTimestamp, id: initialSpawnId }
-    );
-    enqueuedTasksByQueue.spawnPowerUpBatch.push(initialSpawnId);
+    if (!manualStartEnabled) {
+      // Initial power-up batch at game start. In manual-start mode
+      // this is deferred to `launchGame` so power-ups don't sit in
+      // Firestore while the chicken waits to tap LAUNCH.
+      const initialSpawnId = `spawn-${gameId}-0`;
+      await spawnQueue.enqueue(
+        { gameId, batchIndex: 0, count: POWER_UP_INITIAL_BATCH_SIZE },
+        { scheduleTime: startTimestamp, id: initialSpawnId }
+      );
+      enqueuedTasksByQueue.spawnPowerUpBatch.push(initialSpawnId);
+    }
   }
 
-  // Schedule inProgress → done at endTimestamp
-  if (endTimestamp) {
+  // Schedule inProgress → done at endTimestamp. In manual-start mode
+  // we don't know the real `end` until launch, so this is deferred.
+  if (endTimestamp && !manualStartEnabled) {
     const id = `status-end-${gameId}`;
     await statusQueue.enqueue(
       {
@@ -693,8 +729,11 @@ async function scheduleGameLifecycleTasks(
     enqueuedTasksByQueue.transitionGameStatus.push(id);
   }
 
-  // Compute hunterStartDate = startTimestamp + chickenHeadStartMinutes
-  if (startTimestamp && endTimestamp) {
+  // Compute hunterStartDate = startTimestamp + chickenHeadStartMinutes.
+  // Skipped entirely in manual-start mode — `launchGame` plants the
+  // hunter_start notif + zone_shrink + periodic spawns from the
+  // *actual* start.
+  if (startTimestamp && endTimestamp && !manualStartEnabled) {
     const hunterStartDate = new Date(
       startTimestamp.getTime() + headStartMinutes * 60 * 1000
     );

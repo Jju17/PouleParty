@@ -41,6 +41,11 @@ struct Game: Codable, Equatable, Identifiable {
     /// admin code (`jujurahier`). Garde-fou client only — see PP-45 and the
     /// firestore.rules `allow create` clause.
     var isAdminCreation: Bool = false
+    /// PP-71: when true, the game waits for an explicit LAUNCH tap from
+    /// the chicken or a GameMaster at `timing.start` instead of starting
+    /// automatically. Lets the host absorb logistical delays without
+    /// burning the planned countdown.
+    var manualStartEnabled: Bool = false
 
     // MARK: - Nested Types
 
@@ -52,6 +57,11 @@ struct Game: Codable, Equatable, Identifiable {
         }()
         var end: Timestamp = .init(date: Date.now.addingTimeInterval(3900))
         var headStartMinutes: Double = 0
+        /// PP-71: server-set timestamp of the effective launch when
+        /// `manualStartEnabled == true`. `nil` until the LAUNCH callable
+        /// fires; read by `hunterStartDate` (and the recomputed `end`)
+        /// to anchor every downstream timer on the actual start.
+        var actualStart: Timestamp? = nil
     }
 
     struct Zone: Codable, Equatable {
@@ -100,6 +110,10 @@ struct Game: Codable, Equatable, Identifiable {
 
     enum GameStatus: String, CaseIterable, Equatable, Codable {
         case waiting
+        /// PP-71: only used when `manualStartEnabled == true`. Reached
+        /// at `timing.start`; the LAUNCH callable advances it to
+        /// `inProgress` and stamps `timing.actualStart`.
+        case readyToLaunch
         case inProgress
         case done
 
