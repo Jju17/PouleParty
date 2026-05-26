@@ -9,7 +9,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material3.*
@@ -32,7 +31,9 @@ import com.mapbox.maps.viewannotation.geometry
 import com.mapbox.maps.viewannotation.viewAnnotationOptions
 import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.ui.components.GMChickenMarker
+import dev.rahier.pouleparty.ui.components.GameInfoDialog
 import dev.rahier.pouleparty.ui.components.HunterMapMarker
+import dev.rahier.pouleparty.ui.components.MapTopBar
 import dev.rahier.pouleparty.ui.components.circlePolygonPoints
 import dev.rahier.pouleparty.ui.components.outerBoundsPoints
 import dev.rahier.pouleparty.ui.components.zoomForRadius
@@ -137,18 +138,15 @@ fun GameMasterMapScreen(
                 }
             }
 
-            // Top header
-            Surface(
-                modifier = Modifier.fillMaxWidth().align(Alignment.TopCenter),
-                color = CROrange,
-                shape = RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp),
-            ) {
-                Column(
-                    modifier = Modifier.statusBarsPadding().padding(horizontal = 16.dp, vertical = 12.dp),
-                ) {
-                    Text("GameMaster 🦅", color = Color.White, style = MaterialTheme.typography.titleMedium)
-                    Text("Arbitre · ${state.hunterAnnotations.size} hunters", color = Color.White.copy(alpha = 0.85f))
-                }
+            // Top bar (shared component with chicken/hunter — includes
+            // the info button on the right).
+            Box(modifier = Modifier.align(Alignment.TopCenter)) {
+                MapTopBar(
+                    titleRes = R.string.you_are_gamemaster,
+                    subtitle = "Arbitre · ${state.hunterAnnotations.size} hunters",
+                    gradientColors = listOf(CRPink, CROrange),
+                    onInfoTapped = { viewModel.onIntent(GameMasterMapIntent.InfoTapped) },
+                )
             }
 
             // Bottom action bar
@@ -206,12 +204,6 @@ fun GameMasterMapScreen(
                             }
                         }
                     }
-                }
-                IconButton(
-                    onClick = { viewModel.onIntent(GameMasterMapIntent.LeaveGameTapped) },
-                    modifier = Modifier.background(Color.White.copy(alpha = 0.2f), RoundedCornerShape(12.dp)),
-                ) {
-                    Icon(Icons.Default.Close, contentDescription = "Leave", tint = Color.White)
                 }
             }
 
@@ -296,6 +288,17 @@ fun GameMasterMapScreen(
                     game = state.game,
                     currentUserId = "",
                     onDismiss = { viewModel.onIntent(GameMasterMapIntent.LeaderboardDismissed) },
+                )
+            }
+
+            if (state.showGameInfo) {
+                GameInfoDialog(
+                    game = state.game,
+                    codeCopied = state.codeCopied,
+                    onCodeCopied = { viewModel.onIntent(GameMasterMapIntent.CodeCopied) },
+                    onDismiss = { viewModel.onIntent(GameMasterMapIntent.DismissGameInfo) },
+                    onCancelGame = { viewModel.onIntent(GameMasterMapIntent.LeaveGameTapped) },
+                    leaveGameLabel = stringResource(R.string.quit),
                 )
             }
         }

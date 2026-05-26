@@ -66,15 +66,6 @@ struct GameMasterMapView: View {
                             }
                         }
                     }
-                    Button {
-                        store.send(.view(.leaveGameTapped))
-                    } label: {
-                        Image(systemName: "xmark")
-                            .padding(12)
-                            .background(Color.white.opacity(0.2))
-                            .foregroundStyle(Color.white)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                    }
                 }
                 .padding(.horizontal, 16)
                 .padding(.bottom, 8)
@@ -160,18 +151,11 @@ struct GameMasterMapView: View {
                 get: { store.showGameInfo },
                 set: { if !$0 { store.send(.view(.gameInfoDismissed)) } }
             )) {
-                NavigationStack {
-                    GameInfoView(game: store.game)
-                        .toolbar {
-                            ToolbarItem {
-                                Button {
-                                    store.send(.view(.gameInfoDismissed))
-                                } label: {
-                                    Image(systemName: "xmark")
-                                }
-                            }
-                        }
-                }
+                GameInfoSheet(
+                    game: store.game,
+                    onCancelGame: { store.send(.view(.leaveGameTapped)) },
+                    leaveGameLabel: "Leave game"
+                )
             }
             .overlay {
                 if store.game.status == .readyToLaunch {
@@ -274,17 +258,3 @@ private struct GameMasterHuntersListView: View {
     }
 }
 
-private struct GameInfoView: View {
-    let game: Game
-
-    var body: some View {
-        List {
-            LabeledContent("Game code", value: game.gameCode)
-            LabeledContent("Mode", value: game.gameMode.title)
-            LabeledContent("Hunters", value: "\(game.hunterIds.count)")
-            LabeledContent("Winners", value: "\(game.winners.count)")
-        }
-        .navigationTitle(game.name.isEmpty ? "Game" : game.name)
-        .navigationBarTitleDisplayMode(.inline)
-    }
-}

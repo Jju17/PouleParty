@@ -82,6 +82,9 @@ data class GameMasterMapUiState(
     val showGameOverAlert: Boolean = false,
     val gameOverMessage: String = "",
     val showLeaderboard: Boolean = false,
+    /** Mirrors the chicken/hunter GameInfoDialog: flips to true for
+     *  ~1.5s when the user taps the copy button on the game code. */
+    val codeCopied: Boolean = false,
 ) : MapUiState
 
 @HiltViewModel
@@ -142,6 +145,13 @@ class GameMasterMapViewModel @Inject constructor(
             GameMasterMapIntent.LeaderboardTapped -> _uiState.update { it.copy(showLeaderboard = true) }
             GameMasterMapIntent.LeaderboardDismissed -> _uiState.update { it.copy(showLeaderboard = false) }
             GameMasterMapIntent.GameOverAlertDismissed -> _uiState.update { it.copy(showGameOverAlert = false) }
+            GameMasterMapIntent.CodeCopied -> {
+                _uiState.update { it.copy(codeCopied = true) }
+                viewModelScope.launch {
+                    delay(1500L)
+                    _uiState.update { it.copy(codeCopied = false) }
+                }
+            }
         }
     }
 

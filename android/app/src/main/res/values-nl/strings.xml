@@ -104,6 +104,7 @@
 
     <!-- Hunter Map -->
     <string name="you_are_hunter">Jij bent de Jager</string>
+    <string name="you_are_gamemaster">GameMaster 🦅</string>
     <string name="quit">Verlaten</string>
     <string name="quit_game">Spel verlaten</string>
     <string name="quit_game_message">Weet je zeker dat je het spel wilt verlaten?</string>

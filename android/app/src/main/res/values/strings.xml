@@ -110,6 +110,7 @@
 
     <!-- Hunter Map -->
     <string name="you_are_hunter">You are the Hunter</string>
+    <string name="you_are_gamemaster">GameMaster 🦅</string>
     <string name="quit">Quit</string>
     <string name="quit_game">Quit game</string>
     <string name="quit_game_message">Are you sure you want to quit the game?</string>

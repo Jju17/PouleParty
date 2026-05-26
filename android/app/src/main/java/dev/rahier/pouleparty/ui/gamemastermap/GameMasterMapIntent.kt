@@ -25,4 +25,6 @@ sealed class GameMasterMapIntent {
     data object LeaderboardDismissed : GameMasterMapIntent()
     /** Dismisses the one-shot "game ended" alert. */
     data object GameOverAlertDismissed : GameMasterMapIntent()
+    /** Game code "copy to clipboard" tap inside the info dialog. */
+    data object CodeCopied : GameMasterMapIntent()
 }

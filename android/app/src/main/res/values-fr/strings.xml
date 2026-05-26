@@ -77,6 +77,7 @@
 
     <!-- Hunter Map -->
     <string name="you_are_hunter">Tu es le Chasseur</string>
+    <string name="you_are_gamemaster">GameMaster 🦅</string>
     <string name="quit">Quitter</string>
     <string name="quit_game">Quitter la partie</string>
     <string name="quit_game_message">Es-tu sûr de vouloir quitter la partie ?</string>
