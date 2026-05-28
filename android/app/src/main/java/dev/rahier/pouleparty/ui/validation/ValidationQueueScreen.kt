@@ -18,8 +18,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -178,13 +180,29 @@ private fun SubmissionRow(
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        AsyncImage(
-            model = submission.photoUrl,
-            contentDescription = null,
-            modifier = Modifier
-                .size(72.dp)
-                .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.15f), RoundedCornerShape(8.dp)),
-        )
+        if (submission.mediaTypeEnum == dev.rahier.pouleparty.model.SubmissionMediaType.VIDEO) {
+            Box(
+                modifier = Modifier
+                    .size(72.dp)
+                    .background(Color.Black, RoundedCornerShape(8.dp)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.PlayArrow,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(32.dp),
+                )
+            }
+        } else {
+            AsyncImage(
+                model = submission.mediaUrl,
+                contentDescription = null,
+                modifier = Modifier
+                    .size(72.dp)
+                    .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.15f), RoundedCornerShape(8.dp)),
+            )
+        }
         Spacer(Modifier.size(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -239,13 +257,30 @@ private fun SubmissionDetailDialog(
         title = { Text(challengeTitle) },
         text = {
             Column {
-                AsyncImage(
-                    model = submission.photoUrl,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color.Black, RoundedCornerShape(12.dp)),
-                )
+                if (submission.mediaTypeEnum == dev.rahier.pouleparty.model.SubmissionMediaType.VIDEO) {
+                    androidx.compose.ui.viewinterop.AndroidView(
+                        factory = { ctx ->
+                            android.widget.VideoView(ctx).apply {
+                                setVideoURI(android.net.Uri.parse(submission.mediaUrl))
+                                setMediaController(android.widget.MediaController(ctx).also { mc -> mc.setAnchorView(this) })
+                                setOnPreparedListener { it.isLooping = false }
+                                start()
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(16f / 9f)
+                            .background(Color.Black, RoundedCornerShape(12.dp)),
+                    )
+                } else {
+                    AsyncImage(
+                        model = submission.mediaUrl,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color.Black, RoundedCornerShape(12.dp)),
+                    )
+                }
                 Spacer(Modifier.height(12.dp))
                 Text(text = teamName, fontWeight = FontWeight.Bold, color = CRPink, fontSize = 18.sp)
                 if (challengeBody.isNotBlank()) {

@@ -89,7 +89,6 @@ data class HunterMapUiState(
     // gate this would be a free locator.
     val chickenLocation: Point? = null,
     val hasChallenges: Boolean = false,
-    val pendingChallengeCount: Int = 0,
     val winnerRegistrationFailed: Boolean = false,
     // CRIT-3 (audit 2026-05-17): hold the typed-in code (not a pre-built
     // Winner) between a failed `submitFoundCode` CF call and a retry. The
@@ -118,10 +117,7 @@ class HunterMapViewModel @Inject constructor(
     analyticsRepository: dev.rahier.pouleparty.data.AnalyticsRepository,
     auth: FirebaseAuth,
     savedStateHandle: SavedStateHandle,
-    prefs: android.content.SharedPreferences,
 ) : BaseMapViewModel(firestoreRepository, locationRepository, analyticsRepository, auth) {
-
-    private val pendingChallengeStore = dev.rahier.pouleparty.ui.challenges.PendingChallengeStore(prefs)
 
     companion object {
         private const val TAG = "HunterMapViewModel"
@@ -154,19 +150,10 @@ class HunterMapViewModel @Inject constructor(
     private val _effects = Channel<HunterMapEffect>(Channel.BUFFERED)
     val effects: Flow<HunterMapEffect> = _effects.receiveAsFlow()
 
-    private fun refreshPendingChallengeCount() {
-        if (gameId.isEmpty()) return
-        _uiState.update { it.copy(pendingChallengeCount = pendingChallengeStore.ids(gameId).size) }
-    }
-
-    init {
-        refreshPendingChallengeCount()
-    }
-
     /** Single entry point for every user interaction. */
     fun onIntent(intent: HunterMapIntent) {
         when (intent) {
-            HunterMapIntent.ChallengesSheetDismissed -> refreshPendingChallengeCount()
+            HunterMapIntent.ChallengesSheetDismissed -> Unit
             HunterMapIntent.AppResumed -> onAppResumed()
             HunterMapIntent.PowerUpInventoryTapped -> onPowerUpInventoryTapped()
             HunterMapIntent.DismissPowerUpInventory -> dismissPowerUpInventory()
@@ -186,6 +173,9 @@ class HunterMapViewModel @Inject constructor(
             is HunterMapIntent.EnteredCodeChanged -> onEnteredCodeChanged(intent.code)
             HunterMapIntent.RetryWinnerRegistration -> retryWinnerRegistration()
             HunterMapIntent.DismissWinnerRegistrationError -> dismissWinnerRegistrationError()
+            HunterMapIntent.ViewLeaderboardTapped -> viewModelScope.launch {
+                _effects.send(HunterMapEffect.NavigateToVictory)
+            }
         }
     }
 
@@ -407,24 +397,17 @@ class HunterMapViewModel @Inject constructor(
     private suspend fun streamGameConfig(game: Game) {
         firestoreRepository.gameConfigFlow(gameId).collect { updatedGame ->
             if (updatedGame != null) {
-                // React to game cancelled/ended by chicken or Cloud Function
-                if (updatedGame.gameStatusEnum == GameStatus.DONE && !_uiState.value.showGameOverAlert) {
+                // React to game cancelled/ended by chicken or Cloud Function.
+                // The hunter stays on the map with `isGameOver = true` so
+                // the "Game ended" banner appears; tapping the banner
+                // fires `ViewLeaderboardTapped` → NavigateToVictory →
+                // Victory / leaderboard screen.
+                if (updatedGame.gameStatusEnum == GameStatus.DONE && !_uiState.value.isGameOver) {
                     cancelStreams()
                     _uiState.update {
-                        it.copy(
-                            game = updatedGame,
-                            isGameOver = true,
-                            showGameOverAlert = true,
-                            gameOverMessage = "Open the leaderboard from the trophy button, or leave the game from the menu."
-                        )
+                        it.copy(game = updatedGame, isGameOver = true)
                     }
                     return@collect
-                }
-                if (updatedGame.gameStatusEnum == GameStatus.DONE && !_uiState.value.isGameOver) {
-                    // Safety net: alert was already showing for another
-                    // reason. Still flip isGameOver so the trophy CTA
-                    // appears in the bottom bar.
-                    _uiState.update { it.copy(isGameOver = true) }
                 }
 
                 val (lastUpdate, lastRadius) = updatedGame.findLastUpdate()

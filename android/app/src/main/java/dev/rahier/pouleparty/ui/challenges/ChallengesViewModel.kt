@@ -1,6 +1,5 @@
 package dev.rahier.pouleparty.ui.challenges
 
-import android.content.SharedPreferences
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -12,6 +11,7 @@ import dev.rahier.pouleparty.model.Challenge
 import dev.rahier.pouleparty.model.ChallengeCompletion
 import dev.rahier.pouleparty.model.ChallengeSubmission
 import dev.rahier.pouleparty.model.ChallengeType
+import dev.rahier.pouleparty.model.SubmissionMediaType
 import dev.rahier.pouleparty.model.SubmissionStatus
 import dev.rahier.pouleparty.ui.gamelogic.ChallengeProgress
 import dev.rahier.pouleparty.ui.gamelogic.LevelProgress
@@ -32,13 +32,13 @@ data class ChallengesUiState(
     val completions: List<ChallengeCompletion> = emptyList(),
     val mySubmissions: List<ChallengeSubmission> = emptyList(),
     val hunterIds: List<String> = emptyList(),
-    val nicknames: Map<String, String> = emptyMap(),
     val registrations: Map<String, String> = emptyMap(),
     val currentHunterId: String = "",
     val currentTeamName: String = "",
-    val pendingLocalIds: Set<String> = emptySet(),
     val submittingIds: Set<String> = emptySet(),
-    val photoTargetChallengeId: String? = null,
+    /** Challenge whose camera capture sheet should currently be open.
+     *  Single-tap flow: set on "Doing it" tap, cleared by capture or cancel. */
+    val captureTargetChallengeId: String? = null,
     val isClosedForSubmissions: Boolean = false,
 ) {
     val completedIdsForCurrentHunter: Set<String>
@@ -60,7 +60,6 @@ data class ChallengesUiState(
         submittingIds.contains(of.id) -> ChallengeStatus.SUBMITTING
         awaitingValidationIds.contains(of.id) -> ChallengeStatus.AWAITING_VALIDATION
         of.typeEnum == ChallengeType.ONE_SHOT && rejectedIds.contains(of.id) -> ChallengeStatus.REJECTED
-        pendingLocalIds.contains(of.id) -> ChallengeStatus.PENDING_LOCAL
         else -> ChallengeStatus.AVAILABLE
     }
 
@@ -86,8 +85,8 @@ data class ChallengesUiState(
         validatedChallengeIds = completedIdsForCurrentHunter,
     )
 
-    val photoTargetChallenge: Challenge?
-        get() = challenges.firstOrNull { it.id == photoTargetChallengeId }
+    val captureTargetChallenge: Challenge?
+        get() = challenges.firstOrNull { it.id == captureTargetChallengeId }
 
     val leaderboardEntries: List<LeaderboardHunterEntry>
         get() {
@@ -96,7 +95,6 @@ data class ChallengesUiState(
                 val completion = completionByHunter[hunterId]
                 val team = registrations[hunterId]
                     ?: completion?.teamName?.takeIf { it.isNotBlank() }
-                    ?: nicknames[hunterId]
                     ?: "Hunter"
                 LeaderboardHunterEntry(
                     hunterId = hunterId,
@@ -121,7 +119,6 @@ data class LeaderboardHunterEntry(
 @HiltViewModel
 class ChallengesViewModel @Inject constructor(
     private val firestoreRepository: FirestoreRepository,
-    prefs: SharedPreferences,
     auth: FirebaseAuth,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -132,13 +129,9 @@ class ChallengesViewModel @Inject constructor(
 
     private val gameId: String = savedStateHandle["gameId"] ?: ""
     private val hunterId: String = auth.currentUser?.uid ?: ""
-    private val pendingStore = PendingChallengeStore(prefs)
 
     private val _uiState = MutableStateFlow(
-        ChallengesUiState(
-            currentHunterId = hunterId,
-            pendingLocalIds = if (gameId.isNotEmpty()) pendingStore.ids(gameId) else emptySet(),
-        )
+        ChallengesUiState(currentHunterId = hunterId)
     )
     val uiState: StateFlow<ChallengesUiState> = _uiState.asStateFlow()
 
@@ -155,10 +148,9 @@ class ChallengesViewModel @Inject constructor(
     fun onIntent(intent: ChallengesIntent) {
         when (intent) {
             is ChallengesIntent.TabSelected -> onTabSelected(intent.tab)
-            is ChallengesIntent.MarkAsDoneTapped -> onMarkAsDoneTapped(intent.challenge)
-            is ChallengesIntent.SubmitForValidationTapped -> onSubmitForValidationTapped(intent.challenge)
-            is ChallengesIntent.PhotoPicked -> onPhotoPicked(intent.challengeId, intent.bytes)
-            is ChallengesIntent.PhotoSourceCancelled -> _uiState.update { it.copy(photoTargetChallengeId = null) }
+            is ChallengesIntent.DoingItTapped -> onDoingItTapped(intent.challenge)
+            is ChallengesIntent.MediaCaptured -> onMediaCaptured(intent.challengeId, intent.bytes, intent.mediaType)
+            is ChallengesIntent.CaptureCancelled -> _uiState.update { it.copy(captureTargetChallengeId = null) }
             is ChallengesIntent.UploadErrorDismissed -> Unit
         }
     }
@@ -167,52 +159,43 @@ class ChallengesViewModel @Inject constructor(
         _uiState.update { it.copy(selectedTab = tab) }
     }
 
-    private fun onMarkAsDoneTapped(challenge: Challenge) {
-        val state = _uiState.value
-        if (state.isClosedForSubmissions) return
-        if (state.status(challenge) != ChallengeStatus.AVAILABLE) return
-        if (gameId.isNotEmpty()) pendingStore.add(challenge.id, gameId)
-        _uiState.update { it.copy(pendingLocalIds = it.pendingLocalIds + challenge.id) }
-    }
-
     fun setClosedForSubmissions(closed: Boolean) {
         _uiState.update { it.copy(isClosedForSubmissions = closed) }
     }
 
-    private fun onSubmitForValidationTapped(challenge: Challenge) {
+    private fun onDoingItTapped(challenge: Challenge) {
         val state = _uiState.value
         if (state.isClosedForSubmissions) return
         if (state.isLevelLocked(challenge.level)) return
-        if (state.status(challenge) != ChallengeStatus.PENDING_LOCAL) return
-        _uiState.update { it.copy(photoTargetChallengeId = challenge.id) }
+        if (state.status(challenge) != ChallengeStatus.AVAILABLE) return
+        _uiState.update { it.copy(captureTargetChallengeId = challenge.id) }
     }
 
-    private fun onPhotoPicked(challengeId: String, bytes: ByteArray) {
+    private fun onMediaCaptured(challengeId: String, bytes: ByteArray, mediaType: SubmissionMediaType) {
         val state = _uiState.value
         val challenge = state.challenges.firstOrNull { it.id == challengeId } ?: return
         _uiState.update {
             it.copy(
-                photoTargetChallengeId = null,
+                captureTargetChallengeId = null,
                 submittingIds = it.submittingIds + challengeId
             )
         }
         viewModelScope.launch {
             try {
-                val compressed = ImageCompression.compressJpeg(bytes)
+                val payload = if (mediaType == SubmissionMediaType.IMAGE) {
+                    ImageCompression.compressJpeg(bytes)
+                } else {
+                    bytes
+                }
                 firestoreRepository.submitChallenge(
                     gameId = gameId,
                     challengeId = challengeId,
                     hunterId = state.currentHunterId,
                     type = challenge.typeEnum,
-                    photoBytes = compressed,
+                    mediaBytes = payload,
+                    mediaType = mediaType,
                 )
-                if (gameId.isNotEmpty()) pendingStore.remove(challengeId, gameId)
-                _uiState.update {
-                    it.copy(
-                        submittingIds = it.submittingIds - challengeId,
-                        pendingLocalIds = it.pendingLocalIds - challengeId,
-                    )
-                }
+                _uiState.update { it.copy(submittingIds = it.submittingIds - challengeId) }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to submit challenge", e)
                 _uiState.update { it.copy(submittingIds = it.submittingIds - challengeId) }
@@ -233,17 +216,7 @@ class ChallengesViewModel @Inject constructor(
         if (gameId.isEmpty()) return
         viewModelScope.launch {
             firestoreRepository.challengeCompletionsStream(gameId).collect { completions ->
-                _uiState.update { state ->
-                    val justCompleted = completions
-                        .firstOrNull { it.hunterId == state.currentHunterId }
-                        ?.validatedChallengeIds
-                        ?.toSet()
-                        ?: emptySet()
-                    val newPending = state.pendingLocalIds - justCompleted
-                    val removed = state.pendingLocalIds - newPending
-                    removed.forEach { pendingStore.remove(it, gameId) }
-                    state.copy(completions = completions, pendingLocalIds = newPending)
-                }
+                _uiState.update { it.copy(completions = completions) }
             }
         }
     }
@@ -252,16 +225,7 @@ class ChallengesViewModel @Inject constructor(
         if (gameId.isEmpty() || hunterId.isEmpty()) return
         viewModelScope.launch {
             firestoreRepository.hunterSubmissionsFlow(gameId, hunterId).collect { submissions ->
-                _uiState.update { state ->
-                    val pendingOrValidated = submissions
-                        .filter { it.statusEnum != SubmissionStatus.REJECTED }
-                        .map { it.challengeId }
-                        .toSet()
-                    val newPending = state.pendingLocalIds - pendingOrValidated
-                    val removed = state.pendingLocalIds - newPending
-                    removed.forEach { pendingStore.remove(it, gameId) }
-                    state.copy(mySubmissions = submissions, pendingLocalIds = newPending)
-                }
+                _uiState.update { it.copy(mySubmissions = submissions) }
             }
         }
     }
@@ -280,15 +244,11 @@ class ChallengesViewModel @Inject constructor(
                 val registrationsByUserId = registrations
                     .filter { it.teamName.isNotBlank() }
                     .associate { it.userId to it.teamName }
-                val nicknames = firestoreRepository.fetchNicknames(hunterIds)
-                val currentTeamName = registrationsByUserId[hunterId]
-                    ?: nicknames[hunterId]
-                    ?: ""
+                val currentTeamName = registrationsByUserId[hunterId] ?: ""
                 _uiState.update {
                     it.copy(
                         hunterIds = hunterIds,
                         registrations = registrationsByUserId,
-                        nicknames = nicknames,
                         currentTeamName = currentTeamName
                     )
                 }

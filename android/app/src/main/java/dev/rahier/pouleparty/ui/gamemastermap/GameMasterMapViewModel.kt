@@ -74,14 +74,10 @@ data class GameMasterMapUiState(
     val isLaunching: Boolean = false,
     /** PP-71: last error from `launchGame`. Null clears the alert. */
     val launchError: String? = null,
-    /** True once `game.status == DONE` lands. Drives the leaderboard CTA
-     *  in the bottom bar + greys / hides validation controls. */
+    /** True once `game.status == DONE` lands. Drives the "Game ended"
+     *  banner overlay; tapping the banner fires `ViewLeaderboardTapped`
+     *  which routes to the Victory / leaderboard screen. */
     val isGameOver: Boolean = false,
-    /** One-shot "the game has ended" alert raised the first time the
-     *  GM sees `status == DONE`. */
-    val showGameOverAlert: Boolean = false,
-    val gameOverMessage: String = "",
-    val showLeaderboard: Boolean = false,
     /** Mirrors the chicken/hunter GameInfoDialog: flips to true for
      *  ~1.5s when the user taps the copy button on the game code. */
     val codeCopied: Boolean = false,
@@ -142,9 +138,9 @@ class GameMasterMapViewModel @Inject constructor(
             }
             GameMasterMapIntent.LaunchTapped -> onLaunchTapped()
             GameMasterMapIntent.LaunchErrorDismissed -> _uiState.update { it.copy(launchError = null) }
-            GameMasterMapIntent.LeaderboardTapped -> _uiState.update { it.copy(showLeaderboard = true) }
-            GameMasterMapIntent.LeaderboardDismissed -> _uiState.update { it.copy(showLeaderboard = false) }
-            GameMasterMapIntent.GameOverAlertDismissed -> _uiState.update { it.copy(showGameOverAlert = false) }
+            GameMasterMapIntent.ViewLeaderboardTapped -> viewModelScope.launch {
+                _effects.send(GameMasterMapEffect.NavigateToVictory)
+            }
             GameMasterMapIntent.CodeCopied -> {
                 _uiState.update { it.copy(codeCopied = true) }
                 viewModelScope.launch {
@@ -288,7 +284,6 @@ class GameMasterMapViewModel @Inject constructor(
 
     private fun onGameUpdated(game: Game) {
         val previousCount = _uiState.value.previousWinnersCount
-        val wasGameOver = _uiState.value.isGameOver
         val isNowDone = game.gameStatusEnum == dev.rahier.pouleparty.model.GameStatus.DONE
         val notif = if (previousCount >= 0) {
             detectNewWinners(winners = game.winners, previousCount = previousCount)
@@ -299,10 +294,6 @@ class GameMasterMapViewModel @Inject constructor(
                 winnerNotification = notif ?: it.winnerNotification,
                 previousWinnersCount = game.winners.size,
                 isGameOver = isNowDone || it.isGameOver,
-                showGameOverAlert = if (!wasGameOver && isNowDone) true else it.showGameOverAlert,
-                gameOverMessage = if (!wasGameOver && isNowDone)
-                    "Open the leaderboard from the trophy button, or leave the game from the menu."
-                else it.gameOverMessage,
             )
         }
         if (notif != null) {
@@ -312,6 +303,9 @@ class GameMasterMapViewModel @Inject constructor(
                 _uiState.update { it.copy(winnerNotification = null) }
             }
         }
+        // GM stays on the map at game end. The "Game ended" banner
+        // appears when `isGameOver` flips; tapping it fires
+        // `ViewLeaderboardTapped` → NavigateToVictory.
     }
 
     override fun onCleared() {

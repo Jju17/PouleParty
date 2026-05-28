@@ -102,9 +102,6 @@ fun ChickenMapScreen(
     }
 
     var selectedPowerUpType by remember { mutableStateOf<PowerUpType?>(null) }
-    // PP-18: manual leaderboard CTA — closed by default at gameOver so
-    // the chicken keeps watching the map until they tap the trophy.
-    var showLeaderboard by remember { mutableStateOf(false) }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -301,6 +298,21 @@ fun ChickenMapScreen(
             onInfoTapped = { viewModel.onIntent(ChickenMapIntent.InfoTapped) }
         )
 
+        // "Game ended → tap to see leaderboard" banner. Shown on top
+        // of the map once `status == DONE`. Tapping navigates to the
+        // Victory screen (which has the canonical "Back to menu" CTA).
+        if (state.isGameOver) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 92.dp, start = 16.dp, end = 16.dp)
+            ) {
+                dev.rahier.pouleparty.ui.components.GameEndedBanner(
+                    onTap = { viewModel.onIntent(ChickenMapIntent.ViewLeaderboardTapped) }
+                )
+            }
+        }
+
         // Bottom bar
         Row(
             modifier = Modifier
@@ -339,28 +351,6 @@ fun ChickenMapScreen(
                 }
             }
 
-            // PP-18: leaderboard CTA visible at gameOver — sits to the
-            // left of FOUND. FOUND is hidden at gameOver on chicken so
-            // the trophy becomes the primary action.
-            if (state.isGameOver) {
-                Button(
-                    onClick = { showLeaderboard = true },
-                    colors = ButtonDefaults.buttonColors(containerColor = CROrange),
-                    shape = RoundedCornerShape(50.dp),
-                    modifier = Modifier
-                        .size(width = 50.dp, height = 40.dp)
-                        .neonGlow(CROrange, NeonGlowIntensity.SUBTLE, cornerRadius = 20.dp),
-                    contentPadding = PaddingValues(0.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.EmojiEvents,
-                        contentDescription = stringResource(R.string.view_leaderboard),
-                        tint = Color.White,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-
             // FOUND button (only visible after game starts, hidden at gameOver per PP-18)
             if (state.hasGameStarted && !state.isGameOver) {
                 Button(
@@ -383,19 +373,27 @@ fun ChickenMapScreen(
             countdownText = state.countdownText
         )
 
-        // PP-71: LAUNCH overlay takes priority over the pre-game countdown
-        // when the game is in `readyToLaunch` (manual-start mode).
+        // PP-71: unified pre-game overlay. Status == READY_TO_LAUNCH
+        // flips it into manual-launch mode (LAUNCH button); otherwise
+        // it ticks down to `timing.start`.
         if (state.game.gameStatusEnum == dev.rahier.pouleparty.model.GameStatus.READY_TO_LAUNCH) {
-            dev.rahier.pouleparty.ui.map.ReadyToLaunchOverlay(
-                role = dev.rahier.pouleparty.ui.map.LaunchOverlayRole.LAUNCHER,
+            PreGameOverlay(
+                role = dev.rahier.pouleparty.ui.components.PreGameRole.CHICKEN,
+                gameModTitle = state.game.gameModEnum.title,
+                gameCode = state.game.gameCode,
+                targetDate = state.game.startDate,
+                nowDate = state.nowDate,
+                connectedHunters = state.game.hunterIds.size,
+                onCancelGame = { viewModel.onIntent(ChickenMapIntent.CancelGameTapped) },
+                isManualStart = true,
                 isLaunching = state.isLaunching,
-                errorMessage = state.launchError,
+                launchErrorMessage = state.launchError,
                 onLaunchTapped = { viewModel.onIntent(ChickenMapIntent.LaunchTapped) },
-                onErrorDismissed = { viewModel.onIntent(ChickenMapIntent.LaunchErrorDismissed) },
+                onLaunchErrorDismissed = { viewModel.onIntent(ChickenMapIntent.LaunchErrorDismissed) },
             )
         } else if (!state.hasGameStarted) {
             PreGameOverlay(
-                isChicken = true,
+                role = dev.rahier.pouleparty.ui.components.PreGameRole.CHICKEN,
                 gameModTitle = state.game.gameModEnum.title,
                 gameCode = state.game.gameCode,
                 targetDate = state.game.startDate,
@@ -503,12 +501,4 @@ fun ChickenMapScreen(
         )
     }
 
-    // PP-18: leaderboard sheet shown when the trophy CTA is tapped.
-    if (showLeaderboard) {
-        GameLeaderboardSheet(
-            game = state.game,
-            currentUserId = viewModel.currentUserId(),
-            onDismiss = { showLeaderboard = false }
-        )
-    }
 }

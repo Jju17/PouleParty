@@ -38,6 +38,20 @@ struct GameStartCountdownOverlay: View {
 
 // MARK: - Pre-Game Overlay
 
+/// Full-screen "lobby" overlay shown on every active map (chicken /
+/// hunter / GameMaster) **before** the game starts. Three flavours:
+///
+/// - **Auto-start (default)**: shows the countdown to `targetDate`
+///   (planned `timing.start`). When the countdown reaches the
+///   `countdownThresholdSeconds` window the overlay self-hides so
+///   the 3-2-1-GO! `GameStartCountdownOverlay` takes over.
+/// - **Manual-start launcher** (`isManualStart == true` && role is
+///   chicken or GameMaster): replaces the countdown copy with the big
+///   LAUNCH button. Tapping calls `onLaunchTapped`. Shows a spinner +
+///   "Launching…" while the callable is in flight, and an inline
+///   alert via `launchErrorMessage`.
+/// - **Manual-start waiter** (`isManualStart == true` && role is
+///   hunter): passive "Waiting for the chicken to launch" message.
 struct PreGameOverlay: View {
     let role: GameRole
     let gameModTitle: String
@@ -46,6 +60,14 @@ struct PreGameOverlay: View {
     let nowDate: Date
     var connectedHunters: Int = 0
     var onCancelGame: (() -> Void)? = nil
+    /// PP-71: when true, the overlay shifts from "countdown to start"
+    /// into the manual-launch mode (LAUNCH button for chicken/GM,
+    /// passive waiter for hunters).
+    var isManualStart: Bool = false
+    var isLaunching: Bool = false
+    var launchErrorMessage: String? = nil
+    var onLaunchTapped: (() -> Void)? = nil
+    var onLaunchErrorDismissed: (() -> Void)? = nil
 
     @State private var codeCopied = false
 
@@ -74,9 +96,25 @@ struct PreGameOverlay: View {
         return 48
     }
 
-    /// Hide when the 3-2-1 countdown takes over
+    /// Hide the auto-start countdown overlay when the 3-2-1 takes
+    /// over. The manual-start variant stays visible until the
+    /// launcher taps LAUNCH (the parent un-mounts the overlay by
+    /// flipping out of `.readyToLaunch`).
     private var isVisible: Bool {
-        secondsRemaining > Int(AppConstants.countdownThresholdSeconds)
+        if isManualStart { return true }
+        return secondsRemaining > Int(AppConstants.countdownThresholdSeconds)
+    }
+
+    private var isLauncherRole: Bool {
+        role == .chicken || role == .gameMaster
+    }
+
+    private var headerTitle: String {
+        switch role {
+        case .chicken: return "You are the 🐔"
+        case .hunter: return "You are the Hunter"
+        case .gameMaster: return "You are the GameMaster 🦅"
+        }
     }
 
     var body: some View {
@@ -86,7 +124,7 @@ struct PreGameOverlay: View {
                     .ignoresSafeArea()
 
                 VStack(spacing: 24) {
-                    BangerText(role == .chicken ? "You are the 🐔" : "You are the Hunter", size: 32)
+                    BangerText(headerTitle, size: 32)
                         .foregroundStyle(.white)
 
                     Text(gameModTitle)
@@ -143,32 +181,113 @@ struct PreGameOverlay: View {
                     }
                     .padding(.top, 8)
 
-                    VStack(spacing: 8) {
-                        Text("Game starts in")
-                            .font(.system(size: 14))
-                            .foregroundStyle(.white.opacity(0.6))
-                        Text(formattedTime)
-                            .font(.gameboy(size: timerFontSize))
-                            .foregroundStyle(Color.CROrange)
-                            .neonGlow(.CROrange, intensity: .medium)
-                            .contentTransition(.numericText())
-                            .animation(.linear(duration: 0.3), value: secondsRemaining)
-                    }
-                    .padding(.top, 16)
+                    if isManualStart {
+                        // Push the manual-launch CTA + Cancel button
+                        // toward the lower portion of the screen
+                        // (~3/4 height) so the launcher's thumb has a
+                        // natural reach and the info up top reads as
+                        // a header rather than a centered card.
+                        Spacer(minLength: 24)
+                            .frame(maxHeight: .infinity)
+                        manualStartSection
 
-                    if let onCancelGame {
-                        Button {
-                            onCancelGame()
-                        } label: {
-                            Text("Cancel game")
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundStyle(Color.danger)
+                        if let onCancelGame {
+                            Button {
+                                onCancelGame()
+                            } label: {
+                                Text("Cancel game")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundStyle(Color.danger)
+                            }
+                            .padding(.top, 4)
                         }
-                        .padding(.top, 8)
+                        Spacer().frame(height: 60)
+                    } else {
+                        VStack(spacing: 8) {
+                            Text("Game starts in")
+                                .font(.system(size: 14))
+                                .foregroundStyle(.white.opacity(0.6))
+                            Text(formattedTime)
+                                .font(.gameboy(size: timerFontSize))
+                                .foregroundStyle(Color.CROrange)
+                                .neonGlow(.CROrange, intensity: .medium)
+                                .contentTransition(.numericText())
+                                .animation(.linear(duration: 0.3), value: secondsRemaining)
+                        }
+                        .padding(.top, 16)
+
+                        if let onCancelGame {
+                            Button {
+                                onCancelGame()
+                            } label: {
+                                Text("Cancel game")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundStyle(Color.danger)
+                            }
+                            .padding(.top, 8)
+                        }
                     }
                 }
+                .frame(maxWidth: .infinity, maxHeight: isManualStart ? .infinity : nil)
+                .padding(32)
             }
         }
         .animation(.easeOut(duration: 0.4), value: isVisible)
+        .alert(
+            "Launch failed",
+            isPresented: Binding(
+                get: { launchErrorMessage != nil },
+                set: { newValue in if !newValue { onLaunchErrorDismissed?() } }
+            ),
+            presenting: launchErrorMessage
+        ) { _ in
+            Button("OK", role: .cancel) { onLaunchErrorDismissed?() }
+        } message: { message in
+            Text(message)
+        }
+    }
+
+    @ViewBuilder
+    private var manualStartSection: some View {
+        if isLauncherRole, let onLaunchTapped {
+            VStack(spacing: 12) {
+                Text("Ready when you are")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.white.opacity(0.6))
+                Button(action: onLaunchTapped) {
+                    HStack(spacing: 12) {
+                        if isLaunching {
+                            ProgressView()
+                                .progressViewStyle(.circular)
+                                .tint(.white)
+                        }
+                        Text(isLaunching ? "Launching…" : "LAUNCH GAME")
+                            .font(.title.bold())
+                            .foregroundStyle(.white)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 18)
+                    .background(
+                        LinearGradient(
+                            colors: [Color.CROrange, Color.CRPink],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                }
+                .disabled(isLaunching)
+            }
+        } else {
+            VStack(spacing: 8) {
+                Text("Waiting for the chicken to launch")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.white.opacity(0.7))
+                ProgressView()
+                    .progressViewStyle(.circular)
+                    .tint(.white)
+                    .scaleEffect(1.2)
+            }
+        }
     }
 }

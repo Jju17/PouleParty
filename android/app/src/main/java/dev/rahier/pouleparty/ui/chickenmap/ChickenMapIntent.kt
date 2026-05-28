@@ -21,4 +21,6 @@ sealed interface ChickenMapIntent {
     object LaunchTapped : ChickenMapIntent
     /** PP-71: dismisses the error alert after a failed launchGame call. */
     object LaunchErrorDismissed : ChickenMapIntent
+    /** Banner tap at game-end → navigate to the Victory / leaderboard page. */
+    object ViewLeaderboardTapped : ChickenMapIntent
 }

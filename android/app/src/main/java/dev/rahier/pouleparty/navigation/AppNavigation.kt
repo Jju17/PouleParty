@@ -267,7 +267,12 @@ fun AppNavigation() {
                 },
                 onOpenValidationQueue = {
                     navController.navigate(Routes.validationQueue(gameId))
-                }
+                },
+                onVictory = { gid ->
+                    navController.navigate(Routes.victory(gid, "", "", isChicken = false)) {
+                        popUpTo(Routes.HOME) { inclusive = false }
+                    }
+                },
             )
         }
 

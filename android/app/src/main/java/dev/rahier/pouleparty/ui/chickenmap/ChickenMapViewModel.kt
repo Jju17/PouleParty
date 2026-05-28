@@ -83,9 +83,14 @@ data class ChickenMapUiState(
     override val lastActivatedPowerUpType: PowerUpType? = null,
     val activatingPowerUpId: String? = null,
     val shouldNavigateToVictory: Boolean = false,
-    /** PP-16: flipped to true when the game ends (time-out, zone
-     *  collapse, all hunters found). The map stays visible,
-     *  controls grey, GPS stops. Mirrors iOS `isGameOver`. */
+    /** Flipped to true when the chicken explicitly cancels the game.
+     *  Distinguishes "chicken cancelled → go home" from "natural game
+     *  end → go to Victory" once `status == DONE` arrives via the
+     *  gameConfig stream (both paths write the same terminal status,
+     *  but the UX diverges). Mirrors iOS `isCancelling`. */
+    val isCancelling: Boolean = false,
+    /** True once the game is over for any reason. Drives the bottom-
+     *  bar trophy CTA + greys gameplay controls. Mirrors iOS. */
     val isGameOver: Boolean = false,
     /** PP-71: in flight while `launchGame` runs. */
     val isLaunching: Boolean = false,
@@ -136,6 +141,9 @@ class ChickenMapViewModel @Inject constructor(
             }
             ChickenMapIntent.LaunchTapped -> onLaunchTapped()
             ChickenMapIntent.LaunchErrorDismissed -> _uiState.update { it.copy(launchError = null) }
+            ChickenMapIntent.ViewLeaderboardTapped -> viewModelScope.launch {
+                _effects.send(ChickenMapEffect.NavigateToVictory)
+            }
         }
     }
 
@@ -503,15 +511,20 @@ class ChickenMapViewModel @Inject constructor(
     private suspend fun streamGameConfig() {
         firestoreRepository.gameConfigFlow(gameId).collect { updatedGame ->
             if (updatedGame != null) {
-                // React to game cancelled/ended by external source
-                if (updatedGame.gameStatusEnum == GameStatus.DONE && !_uiState.value.showGameOverAlert) {
+                // Natural game end: server-confirmed status flipped to
+                // DONE and the chicken didn't cancel it themselves
+                // (`confirmCancelGame` sets `isCancelling` and navigates
+                // home directly via NavigateToMenu). The chicken stays
+                // on the map with `isGameOver = true` so the "Game
+                // ended" banner appears; tapping the banner fires
+                // `ViewLeaderboardTapped` → NavigateToVictory →
+                // Victory / leaderboard screen.
+                if (updatedGame.gameStatusEnum == GameStatus.DONE
+                    && !_uiState.value.isGameOver
+                    && !_uiState.value.isCancelling) {
                     cancelStreams()
                     _uiState.update {
-                        it.copy(
-                            game = updatedGame,
-                            showGameOverAlert = true,
-                            gameOverMessage = "The game has ended!"
-                        )
+                        it.copy(game = updatedGame, isGameOver = true)
                     }
                     return@collect
                 }
@@ -543,11 +556,11 @@ class ChickenMapViewModel @Inject constructor(
                     }
                 }
 
-                // PP-16: end the game when all hunters have found
-                // the chicken. Stay on the map (no auto-Victory),
-                // grey controls via `isGameOver`, stop GPS. Chicken
-                // is authoritative for the Firestore `status = DONE`
-                // write.
+                // End the game when all hunters have found the chicken.
+                // Chicken is authoritative for the Firestore `status = DONE`
+                // write. After the write lands, the gameConfig stream
+                // re-fires above and routes the chicken to Victory via
+                // the natural-end branch.
                 if (!_uiState.value.isGameOver &&
                     updatedGame.hunterIds.isNotEmpty() &&
                     updatedGame.winners.size >= updatedGame.hunterIds.size) {
@@ -557,9 +570,6 @@ class ChickenMapViewModel @Inject constructor(
                     } catch (e: Exception) {
                         android.util.Log.e("ChickenMapVM", "Failed to set game DONE when all hunters found", e)
                     }
-                    cancelStreams()
-                    _uiState.update { it.copy(isGameOver = true) }
-                    return@collect
                 }
             }
         }
@@ -576,7 +586,7 @@ class ChickenMapViewModel @Inject constructor(
     }
 
     private fun confirmCancelGame() {
-        _uiState.update { it.copy(showCancelAlert = false) }
+        _uiState.update { it.copy(showCancelAlert = false, isCancelling = true) }
         viewModelScope.launch {
             try { firestoreRepository.updateGameStatus(gameId, GameStatus.DONE) } catch (e: Exception) { Log.e("ChickenMapVM", "Failed to update game status", e) }
             _effects.send(ChickenMapEffect.NavigateToMenu)

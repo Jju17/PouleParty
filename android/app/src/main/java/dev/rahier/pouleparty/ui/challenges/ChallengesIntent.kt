@@ -1,13 +1,20 @@
 package dev.rahier.pouleparty.ui.challenges
 
 import dev.rahier.pouleparty.model.Challenge
+import dev.rahier.pouleparty.model.SubmissionMediaType
 
 sealed interface ChallengesIntent {
     data class TabSelected(val tab: ChallengesTab) : ChallengesIntent
-    data class MarkAsDoneTapped(val challenge: Challenge) : ChallengesIntent
-    data class SubmitForValidationTapped(val challenge: Challenge) : ChallengesIntent
-    data class PhotoPicked(val challengeId: String, val bytes: ByteArray) : ChallengesIntent
-    data object PhotoSourceCancelled : ChallengesIntent
+    /** Single-tap flow: tapping "Doing it" opens the camera immediately. */
+    data class DoingItTapped(val challenge: Challenge) : ChallengesIntent
+    /** Native camera returned a captured photo OR short video. Auto-submitted. */
+    data class MediaCaptured(
+        val challengeId: String,
+        val bytes: ByteArray,
+        val mediaType: SubmissionMediaType,
+    ) : ChallengesIntent
+    /** User backed out of the camera without capturing. */
+    data object CaptureCancelled : ChallengesIntent
     data object UploadErrorDismissed : ChallengesIntent
 }
 
@@ -18,7 +25,6 @@ enum class ChallengesTab {
 
 enum class ChallengeStatus {
     AVAILABLE,
-    PENDING_LOCAL,
     SUBMITTING,
     AWAITING_VALIDATION,
     VALIDATED,

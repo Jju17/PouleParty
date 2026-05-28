@@ -177,12 +177,16 @@ service cloud.firestore {
       // instead of `userId`.
       match /registrations/{visitorId} {
         // Readable by the registration owner, the chicken creator,
-        // and any GameMaster on the game. The GM needs every doc so
-        // the validator carte can label markers + the "Désigner la
-        // poule" drawer (PP-86) can list candidates.
+        // any GameMaster on the game, and any hunter in the game. The
+        // GM needs every doc so the validator carte can label markers
+        // + the "Désigner la poule" drawer (PP-86) can list candidates.
+        // Hunters need every doc so the challenges leaderboard can show
+        // team names for everyone (replacing the old `/users` nickname
+        // fetch, which was a permissions hole for cross-hunter reads).
         allow read: if request.auth != null
                     && (visitorId == request.auth.uid
                         || get(/databases/$(database)/documents/games/$(gameId)).data.creatorId == request.auth.uid
+                        || request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.hunterIds
                         || request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.get('gameMasterIds', []));
         allow create: if request.auth != null
                       && visitorId == request.auth.uid
@@ -214,11 +218,12 @@ service cloud.firestore {
                       && request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.hunterIds
                       && request.time.toMillis()
                            < get(/databases/$(database)/documents/games/$(gameId)).data.timing.end.toMillis()
-                      && request.resource.data.keys().hasAll(['challengeId', 'hunterId', 'type', 'submittedAt', 'photoUrl', 'status'])
+                      && request.resource.data.keys().hasAll(['challengeId', 'hunterId', 'type', 'submittedAt', 'mediaUrl', 'mediaType', 'status'])
                       && request.resource.data.status == 'pending'
                       && request.resource.data.type in ['oneShot', 'repeatable']
-                      && request.resource.data.photoUrl is string
-                      && request.resource.data.photoUrl.size() > 0
+                      && request.resource.data.mediaType in ['image', 'video']
+                      && request.resource.data.mediaUrl is string
+                      && request.resource.data.mediaUrl.size() > 0
                       && request.resource.data.challengeId is string
                       && request.resource.data.challengeId.size() > 0;
         allow update, delete: if false;
@@ -228,7 +233,8 @@ service cloud.firestore {
       match /powerUps/{powerUpId} {
         allow read: if request.auth != null
                     && (request.auth.uid == get(/databases/$(database)/documents/games/$(gameId)).data.creatorId
-                        || request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.hunterIds);
+                        || request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.hunterIds
+                        || request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.get('gameMasterIds', []));
         // Power-ups are spawned exclusively by the `spawnPowerUpBatch` /
         // `onGameCreated` Cloud Functions (admin SDK bypasses rules). Clients
         // never create power-ups — prevents anti-cheat gaps and drift between

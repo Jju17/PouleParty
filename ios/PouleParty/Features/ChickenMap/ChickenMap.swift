@@ -43,6 +43,13 @@ struct ChickenMapFeature {
         /// effect cancels (no more `chickenLocations` writes).
         var isGameOver: Bool = false
 
+        /// Flipped to `true` when the chicken explicitly cancels the
+        /// game. Distinguishes "chicken cancelled → go home" from
+        /// "natural game end → go to Victory" once `status == .done`
+        /// arrives via the gameConfig stream (both write the same
+        /// terminal status, but the UX diverges).
+        var isCancelling: Bool = false
+
         var pendingSubmissionsCount: Int = 0
 
         /// CRIT-2 (audit 2026-05-17): the 4-digit code the chicken
@@ -124,6 +131,9 @@ struct ChickenMapFeature {
             case launchErrorDismissed
             case onTask
             case validationQueueTapped
+            /// Banner tap at game-end → navigate to the Victory /
+            /// leaderboard page (parent handles via `gameEnded` delegate).
+            case viewLeaderboardTapped
         }
 
         @CasePathable
@@ -144,8 +154,12 @@ struct ChickenMapFeature {
 
         @CasePathable
         enum Delegate {
-            case allHuntersFound
             case returnedToMenu
+            /// Natural game end — server-confirmed `status == .done` for any
+            /// reason other than the chicken's own cancel (timer expired,
+            /// all hunters found, server task fired). Parent navigates to
+            /// the Victory / leaderboard screen.
+            case gameEnded(Game)
         }
     }
 
@@ -192,6 +206,7 @@ struct ChickenMapFeature {
                 return .none
             case .destination(.presented(.alert(.cancelGame))):
                 locationClient.stopTracking()
+                state.isCancelling = true
                 let gameId = state.game.id
                 let winnersCount = state.game.winners.count
                 return .run { [analyticsClient] send in
@@ -332,6 +347,7 @@ struct ChickenMapFeature {
                 // Detect newly activated power-ups (compare old vs new)
                 let activatedPowerUp = detectActivatedPowerUp(oldGame: state.game, newGame: game)
 
+                let wasDone = state.game.status == .done
                 state.game = game
 
                 // Update Live Activity with new game state
@@ -398,6 +414,19 @@ struct ChickenMapFeature {
                         }
                         await liveActivityClient.end(nil)
                     })
+                }
+
+                // Natural game end: server-confirmed status flipped to
+                // `.done` and the chicken didn't cancel it themselves
+                // (the cancel handler sets `isCancelling` and navigates
+                // home directly via `returnedToMenu`). The map stays
+                // on screen with `isGameOver = true` so the "Game
+                // ended" banner appears; tapping the banner fires
+                // `viewLeaderboardTapped` which sends the parent the
+                // `.gameEnded` delegate.
+                if !wasDone, game.status == .done, !state.isCancelling, !state.isGameOver {
+                    state.isGameOver = true
+                    locationClient.stopTracking()
                 }
 
                 return effects.isEmpty ? .none : .merge(effects)
@@ -491,6 +520,8 @@ struct ChickenMapFeature {
                     hunterIds: state.game.hunterIds
                 )
                 return .none
+            case .view(.viewLeaderboardTapped):
+                return .send(.delegate(.gameEnded(state.game)))
             case .validationQueue:
                 return .none
             case let .internal(.pendingSubmissionsUpdated(count)):

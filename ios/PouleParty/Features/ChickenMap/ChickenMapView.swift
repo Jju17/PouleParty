@@ -9,9 +9,6 @@ import SwiftUI
 struct ChickenMapView: View {
     @Bindable var store: StoreOf<ChickenMapFeature>
     @State private var selectedPowerUp: PowerUp?
-    /// PP-18: manual leaderboard CTA — sheet stays closed by default
-    /// even at gameOver so the chicken keeps watching the map.
-    @State private var showLeaderboard: Bool = false
     /// HIGH-11 (audit 2026-05-17): mirror of HunterMapView. iOS may
     /// suspend the background writer loop; on resume we push one fresh
     /// `chickenLocations/latest` write so hunters don't see a stale
@@ -41,14 +38,10 @@ struct ChickenMapView: View {
             .safeAreaInset(edge: .bottom) {
                 MapBottomBar(
                     state: store.state,
-                    // PP-18: chicken hides the FOUND button at gameOver so
-                    // the leaderboard CTA takes its slot. The chicken can
-                    // still hand off the foundCode manually before that.
                     isActionButtonVisible: !store.state.isGameOver,
                     actionAccessibilityLabel: "I have been found",
                     onActionTapped: { store.send(.view(.beenFoundButtonTapped)) },
                     onInventoryTapped: { store.send(.powerUps(.inventoryTapped)) },
-                    onLeaderboardTapped: { showLeaderboard = true },
                     isChicken: true
                 )
             }
@@ -125,12 +118,19 @@ struct ChickenMapView: View {
             .mapCommonOverlays(store.state)
             .overlay {
                 if store.game.status == .readyToLaunch {
-                    ReadyToLaunchOverlay(
-                        role: .launcher,
+                    PreGameOverlay(
+                        role: .chicken,
+                        gameModTitle: store.game.gameMode.title,
+                        gameCode: store.game.gameCode,
+                        targetDate: store.game.startDate,
+                        nowDate: store.nowDate,
+                        connectedHunters: store.game.hunterIds.count,
+                        onCancelGame: { store.send(.view(.cancelGameButtonTapped)) },
+                        isManualStart: true,
                         isLaunching: store.isLaunching,
-                        errorMessage: store.launchError,
+                        launchErrorMessage: store.launchError,
                         onLaunchTapped: { store.send(.view(.launchTapped)) },
-                        onErrorDismissed: { store.send(.view(.launchErrorDismissed)) }
+                        onLaunchErrorDismissed: { store.send(.view(.launchErrorDismissed)) }
                     )
                 } else if !store.hasGameStarted {
                     PreGameOverlay(
@@ -152,10 +152,17 @@ struct ChickenMapView: View {
                 onInventoryDismiss: { store.send(.powerUps(.inventoryDismissed)) },
                 onActivatePowerUp: { store.send(.powerUps(.activateTapped($0))) }
             )
-            // PP-18 — manual leaderboard CTA at gameOver.
-            .sheet(isPresented: $showLeaderboard) {
-                GameLeaderboardSheet(game: store.game)
+            .overlay(alignment: .top) {
+                if store.state.isGameOver {
+                    GameEndedBanner(onTap: {
+                        store.send(.view(.viewLeaderboardTapped))
+                    })
+                    .padding(.top, 88)
+                    .padding(.horizontal, 16)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                }
             }
+            .animation(.easeInOut(duration: 0.25), value: store.state.isGameOver)
     }
 }
 

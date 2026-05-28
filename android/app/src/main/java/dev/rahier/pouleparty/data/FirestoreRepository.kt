@@ -14,6 +14,7 @@ import dev.rahier.pouleparty.model.Challenge
 import dev.rahier.pouleparty.model.ChallengeCompletion
 import dev.rahier.pouleparty.model.ChallengeSubmission
 import dev.rahier.pouleparty.model.ChallengeType
+import dev.rahier.pouleparty.model.SubmissionMediaType
 import dev.rahier.pouleparty.model.SubmissionStatus
 import dev.rahier.pouleparty.model.ChickenLocation
 import dev.rahier.pouleparty.model.Game
@@ -782,7 +783,8 @@ class FirestoreRepository @Inject constructor(
         challengeId: String,
         hunterId: String,
         type: ChallengeType,
-        photoBytes: ByteArray,
+        mediaBytes: ByteArray,
+        mediaType: SubmissionMediaType,
     ): ChallengeSubmission {
         val submissionsRef = firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
             .collection(AppConstants.SUBCOLLECTION_CHALLENGE_SUBMISSIONS)
@@ -804,19 +806,22 @@ class FirestoreRepository @Inject constructor(
         }
         val newDoc = submissionsRef.document()
         val submissionId = newDoc.id
-        val storageRef = storage.reference.child("gameSubmissions/$gameId/$submissionId.jpg")
+        val extension = if (mediaType == SubmissionMediaType.VIDEO) "mp4" else "jpg"
+        val contentType = if (mediaType == SubmissionMediaType.VIDEO) "video/mp4" else "image/jpeg"
+        val storageRef = storage.reference.child("gameSubmissions/$gameId/$submissionId.$extension")
         val metadata = com.google.firebase.storage.StorageMetadata.Builder()
-            .setContentType("image/jpeg")
+            .setContentType(contentType)
             .build()
-        storageRef.putBytes(photoBytes, metadata).await()
-        val photoUrl = storageRef.downloadUrl.await().toString()
+        storageRef.putBytes(mediaBytes, metadata).await()
+        val mediaUrl = storageRef.downloadUrl.await().toString()
         val submission = ChallengeSubmission(
             id = submissionId,
             challengeId = challengeId,
             hunterId = hunterId,
             type = type.firestoreValue,
             submittedAt = Timestamp.now(),
-            photoUrl = photoUrl,
+            mediaUrl = mediaUrl,
+            mediaType = mediaType.firestoreValue,
             status = SubmissionStatus.PENDING.firestoreValue,
         )
         val data = mapOf(
@@ -824,36 +829,12 @@ class FirestoreRepository @Inject constructor(
             "hunterId" to submission.hunterId,
             "type" to submission.type,
             "submittedAt" to submission.submittedAt,
-            "photoUrl" to submission.photoUrl,
+            "mediaUrl" to submission.mediaUrl,
+            "mediaType" to submission.mediaType,
             "status" to submission.status,
         )
         newDoc.set(data).await()
         return submission
-    }
-
-    /**
-     * Fetches the nickname for each of the given user ids. Missing users
-     * simply don't appear in the returned map.
-     */
-    suspend fun fetchNicknames(userIds: List<String>): Map<String, String> {
-        if (userIds.isEmpty()) return emptyMap()
-        val result = mutableMapOf<String, String>()
-        for (userId in userIds.distinct()) {
-            if (userId.isEmpty()) continue
-            try {
-                val doc = firestore.collection(AppConstants.COLLECTION_USERS)
-                    .document(userId)
-                    .get()
-                    .await()
-                val nickname = doc.getString("nickname")
-                if (!nickname.isNullOrEmpty()) {
-                    result[userId] = nickname
-                }
-            } catch (e: Exception) {
-                Log.w(TAG, "Failed to fetch nickname for $userId", e)
-            }
-        }
-        return result
     }
 
     suspend fun saveNickname(userId: String, nickname: String) {

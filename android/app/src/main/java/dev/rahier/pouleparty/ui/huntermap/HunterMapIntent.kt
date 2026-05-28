@@ -28,6 +28,8 @@ sealed interface HunterMapIntent {
     object DismissGameInfo : HunterMapIntent
     object CodeCopied : HunterMapIntent
     object ChallengesSheetDismissed : HunterMapIntent
+    /** Banner tap at game-end → navigate to the Victory / leaderboard page. */
+    object ViewLeaderboardTapped : HunterMapIntent
     data class ActivatePowerUp(val powerUp: PowerUp) : HunterMapIntent
     data class EnteredCodeChanged(val code: String) : HunterMapIntent
 }

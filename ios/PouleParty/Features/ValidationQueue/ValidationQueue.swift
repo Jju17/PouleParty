@@ -1,3 +1,4 @@
+import AVKit
 import ComposableArchitecture
 import FirebaseFirestore
 import os
@@ -15,7 +16,6 @@ struct ValidationQueueFeature {
         var submissions: [ChallengeSubmission] = []
         var challenges: [Challenge] = []
         var registrations: [Registration] = []
-        var nicknames: [String: String] = [:]
         var selected: ChallengeSubmission?
         var busyIds: Set<String> = []
         var error: String?
@@ -29,7 +29,7 @@ struct ValidationQueueFeature {
                !reg.teamName.isEmpty {
                 return reg.teamName
             }
-            return nicknames[hunterId] ?? "Hunter"
+            return "Hunter"
         }
     }
 
@@ -54,7 +54,6 @@ struct ValidationQueueFeature {
             case submissionsUpdated([ChallengeSubmission])
             case challengesUpdated([Challenge])
             case registrationsLoaded([Registration])
-            case nicknamesFetched([String: String])
             case validateSucceeded(String)
             case validateFailed(String, String)
         }
@@ -73,7 +72,7 @@ struct ValidationQueueFeature {
 
             case .view(.onTask):
                 let gameId = state.gameId
-                let hunterIds = state.hunterIds
+                logger.info("[ValidationQueue] onTask for game \(gameId, privacy: .public)")
                 return .merge(
                     .run { send in
                         for await subs in apiClient.pendingSubmissionsStream(gameId) {
@@ -89,10 +88,6 @@ struct ValidationQueueFeature {
                         for await regs in apiClient.registrationsStream(gameId) {
                             await send(.internal(.registrationsLoaded(regs)))
                         }
-                    },
-                    .run { send in
-                        let nicknames = (try? await apiClient.fetchUserNicknames(hunterIds)) ?? [:]
-                        await send(.internal(.nicknamesFetched(nicknames)))
                     }
                 )
 
@@ -132,10 +127,6 @@ struct ValidationQueueFeature {
                 state.registrations = regs
                 return .none
 
-            case let .internal(.nicknamesFetched(nicknames)):
-                state.nicknames = nicknames
-                return .none
-
             case let .internal(.validateSucceeded(id)):
                 state.busyIds.remove(id)
                 state.selected = nil
@@ -150,10 +141,17 @@ struct ValidationQueueFeature {
     }
 
     private func validate(state: inout State, submission: ChallengeSubmission, accept: Bool) -> Effect<Action> {
-        guard let id = submission.firestoreId, !id.isEmpty else { return .none }
-        if state.busyIds.contains(id) { return .none }
+        guard let id = submission.firestoreId, !id.isEmpty else {
+            logger.warning("[ValidationQueue] validate tap dropped — submission.firestoreId is nil. challengeId=\(submission.challengeId, privacy: .public) hunterId=\(submission.hunterId, privacy: .public)")
+            return .none
+        }
+        if state.busyIds.contains(id) {
+            logger.info("[ValidationQueue] validate tap dropped — already busy on \(id, privacy: .public)")
+            return .none
+        }
         state.busyIds.insert(id)
         let gameId = state.gameId
+        logger.info("[ValidationQueue] validate \(id, privacy: .public) accept=\(accept)")
         return .run { send in
             do {
                 try await apiClient.validateChallengeSubmission(gameId, id, accept)
@@ -262,17 +260,28 @@ private struct SubmissionRow: View {
     var body: some View {
         Button(action: onTap) {
             HStack(alignment: .top, spacing: 12) {
-                AsyncImage(url: URL(string: submission.photoUrl)) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image.resizable().scaledToFill()
-                    case .failure:
-                        Image(systemName: "photo")
-                            .foregroundStyle(.secondary)
-                    case .empty:
-                        ProgressView()
-                    @unknown default:
-                        EmptyView()
+                Group {
+                    if submission.mediaType == .video {
+                        ZStack {
+                            Color.black
+                            Image(systemName: "play.rectangle.fill")
+                                .font(.system(size: 28))
+                                .foregroundStyle(.white)
+                        }
+                    } else {
+                        AsyncImage(url: URL(string: submission.mediaUrl)) { phase in
+                            switch phase {
+                            case .success(let image):
+                                image.resizable().scaledToFill()
+                            case .failure:
+                                Image(systemName: "photo")
+                                    .foregroundStyle(.secondary)
+                            case .empty:
+                                ProgressView()
+                            @unknown default:
+                                EmptyView()
+                            }
+                        }
                     }
                 }
                 .frame(width: 72, height: 72)
@@ -331,23 +340,36 @@ private struct SubmissionDetailView: View {
     let onClose: () -> Void
 
     @Environment(\.locale) private var locale
+    @State private var videoPlayer: AVPlayer?
+    @State private var videoErrorMessage: String?
     private var langCode: String { locale.language.languageCode?.identifier ?? "fr" }
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                AsyncImage(url: URL(string: submission.photoUrl)) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image.resizable().scaledToFit()
-                    case .failure:
-                        Image(systemName: "photo")
-                            .font(.system(size: 60))
-                            .foregroundStyle(.secondary)
-                    case .empty:
-                        ProgressView()
-                    @unknown default:
-                        EmptyView()
+                Group {
+                    if submission.mediaType == .video,
+                       let url = URL(string: submission.mediaUrl) {
+                        VideoPlayerSection(
+                            url: url,
+                            player: $videoPlayer,
+                            errorMessage: $videoErrorMessage
+                        )
+                    } else {
+                        AsyncImage(url: URL(string: submission.mediaUrl)) { phase in
+                            switch phase {
+                            case .success(let image):
+                                image.resizable().scaledToFit()
+                            case .failure:
+                                Image(systemName: "photo")
+                                    .font(.system(size: 60))
+                                    .foregroundStyle(.secondary)
+                            case .empty:
+                                ProgressView()
+                            @unknown default:
+                                EmptyView()
+                            }
+                        }
                     }
                 }
                 .frame(maxWidth: .infinity)
@@ -419,5 +441,80 @@ private struct SubmissionDetailView: View {
                 }
             }
         }
+    }
+}
+
+/// Video player section that surfaces AVPlayer errors as a retry CTA.
+/// Without this, a failed network load (common on flaky connections to
+/// Firebase Storage) leaves the validator staring at a black frame.
+private struct VideoPlayerSection: View {
+    let url: URL
+    @Binding var player: AVPlayer?
+    @Binding var errorMessage: String?
+
+    var body: some View {
+        ZStack {
+            if let player {
+                VideoPlayer(player: player)
+                    .aspectRatio(16/9, contentMode: .fit)
+            } else {
+                Color.black.aspectRatio(16/9, contentMode: .fit)
+                ProgressView().tint(.white)
+            }
+            if let errorMessage {
+                VStack(spacing: 12) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 32))
+                        .foregroundStyle(Color.CROrange)
+                    Text(errorMessage)
+                        .font(.subheadline)
+                        .foregroundStyle(.white)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 24)
+                    Button {
+                        loadPlayer()
+                    } label: {
+                        Text("Retry")
+                            .font(.headline)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 10)
+                            .background(Color.CROrange)
+                            .foregroundStyle(.white)
+                            .clipShape(Capsule())
+                    }
+                }
+                .padding()
+                .background(.black.opacity(0.7))
+            }
+        }
+        .task(id: url) {
+            loadPlayer()
+            // Observe item status via KVO-bridged Combine. When the
+            // player's currentItem fails, surface the error so the user
+            // can retry instead of staring at black.
+            guard let item = player?.currentItem else { return }
+            for await status in item.publisher(for: \.status).values {
+                switch status {
+                case .failed:
+                    let msg = item.error?.localizedDescription ?? "Could not load video."
+                    await MainActor.run { errorMessage = msg }
+                    return
+                case .readyToPlay:
+                    await MainActor.run { errorMessage = nil }
+                default:
+                    break
+                }
+            }
+        }
+    }
+
+    private func loadPlayer() {
+        errorMessage = nil
+        let asset = AVURLAsset(url: url, options: [
+            "AVURLAssetPreferPreciseDurationAndTimingKey": false,
+        ])
+        let item = AVPlayerItem(asset: asset)
+        item.preferredForwardBufferDuration = 2
+        player = AVPlayer(playerItem: item)
     }
 }

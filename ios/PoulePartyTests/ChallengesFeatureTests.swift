@@ -62,7 +62,7 @@ struct ChallengesFeatureTests {
         }
     }
 
-    @Test func nicknamesFetchedPopulatesState() async {
+    @Test func registrationsUpdatedPopulatesState() async {
         let store = TestStore(
             initialState: ChallengesFeature.State(
                 gameId: "g",
@@ -73,8 +73,11 @@ struct ChallengesFeatureTests {
             ChallengesFeature()
         }
 
-        await store.send(.internal(.nicknamesFetched(["h2": "Bob"]))) {
-            $0.nicknames = ["h2": "Bob"]
+        await store.send(.internal(.registrationsUpdated([
+            Registration(userId: "h2", teamName: "Bob"),
+            Registration(userId: "h3", teamName: ""),  // empty teamName filtered out
+        ]))) {
+            $0.registrations = ["h2": "Bob"]
         }
     }
 
@@ -234,7 +237,7 @@ struct ChallengesFeatureTests {
             hunterIds: ["me", "h2", "h3", "h4"],
             challenges: [],
             completions: completions,
-            nicknames: ["me": "Me", "h4": "D"]
+            registrations: ["me": "Me", "h4": "D"]
         )
 
         let entries = state.leaderboard
@@ -244,40 +247,43 @@ struct ChallengesFeatureTests {
         #expect(entries[0].teamName == "Team B")
         #expect(entries[1].hunterId == "h3")
         #expect(entries[1].totalPoints == 10)
-        // Hunters without completion docs fall back to nickname, 0 pts, sorted
-        // alphabetically by team name.
+        // Hunters without completion docs fall back to the team name from
+        // their registration doc, 0 pts, sorted alphabetically.
         #expect(entries[2].totalPoints == 0)
         #expect(entries[3].totalPoints == 0)
         let zeroPointIds = Set([entries[2].hunterId, entries[3].hunterId])
         #expect(zeroPointIds == Set(["me", "h4"]))
     }
 
-    @Test func leaderboardFallsBackToNicknameWhenTeamNameMissing() async {
+    @Test func leaderboardFallsBackToRegisteredTeamNameWhenNoCompletion() async {
         let completions: [ChallengeCompletion] = []  // nobody completed anything
         let state = ChallengesFeature.State(
             gameId: "g",
             hunterId: "me",
             hunterIds: ["me", "h2"],
             completions: completions,
-            nicknames: ["me": "Julien", "h2": "Bob"]
+            registrations: ["me": "Julien", "h2": "Bob"]
         )
 
         let entries = state.leaderboard
-        // Alphabetical by team (nickname) since ties on 0 pts
+        // Alphabetical by team (registration) since ties on 0 pts
         #expect(entries.map(\.teamName) == ["Bob", "Julien"])
     }
 
-    @Test func leaderboardPrefersChallengeCompletionTeamNameOverNickname() async {
-        let completions = [makeCompletion(hunterId: "me", ids: ["c1"], total: 5, teamName: "Poule Team")]
+    @Test func leaderboardPrefersRegistrationTeamNameOverCompletionTeamName() async {
+        // PP-90: registration teamName is the live source of truth. If the
+        // user edits it post-completion, the leaderboard reflects the new
+        // value rather than the snapshot baked into the completion doc.
+        let completions = [makeCompletion(hunterId: "me", ids: ["c1"], total: 5, teamName: "Old Team")]
         let state = ChallengesFeature.State(
             gameId: "g",
             hunterId: "me",
             hunterIds: ["me"],
             completions: completions,
-            nicknames: ["me": "Fallback Nickname"]
+            registrations: ["me": "New Team"]
         )
 
-        #expect(state.leaderboard.first?.teamName == "Poule Team")
+        #expect(state.leaderboard.first?.teamName == "New Team")
     }
 
     // MARK: - Current hunter highlight helper

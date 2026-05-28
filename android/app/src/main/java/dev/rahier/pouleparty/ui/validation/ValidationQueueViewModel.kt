@@ -23,7 +23,6 @@ data class ValidationQueueUiState(
     val submissions: List<ChallengeSubmission> = emptyList(),
     val challenges: List<Challenge> = emptyList(),
     val registrations: List<Registration> = emptyList(),
-    val nicknames: Map<String, String> = emptyMap(),
     val selected: ChallengeSubmission? = null,
     val busyIds: Set<String> = emptySet(),
     val error: String? = null,
@@ -34,7 +33,7 @@ data class ValidationQueueUiState(
     fun teamName(forHunterId: String): String {
         val reg = registrations.firstOrNull { it.userId == forHunterId }
         if (reg != null && reg.teamName.isNotBlank()) return reg.teamName
-        return nicknames[forHunterId] ?: "Hunter"
+        return "Hunter"
     }
 }
 
@@ -61,7 +60,6 @@ class ValidationQueueViewModel @Inject constructor(
             streamSubmissions()
             streamChallenges()
             streamRegistrations()
-            loadGameMembers()
         }
     }
 
@@ -138,15 +136,4 @@ class ValidationQueueViewModel @Inject constructor(
         }
     }
 
-    private fun loadGameMembers() {
-        viewModelScope.launch {
-            try {
-                val game = firestoreRepository.getConfig(gameId) ?: return@launch
-                val nicknames = firestoreRepository.fetchNicknames(game.hunterIds)
-                _uiState.update { it.copy(nicknames = nicknames) }
-            } catch (e: Exception) {
-                Log.w(TAG, "loadGameMembers failed", e)
-            }
-        }
-    }
 }

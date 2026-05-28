@@ -7,10 +7,15 @@ service firebase.storage {
                   && (request.auth.uid == firestore.get(/databases/(default)/documents/games/$(gameId)).data.creatorId
                       || request.auth.uid in firestore.get(/databases/(default)/documents/games/$(gameId)).data.hunterIds
                       || request.auth.uid in firestore.get(/databases/(default)/documents/games/$(gameId)).data.get('gameMasterIds', []));
+      // Hunters upload either a still image (proof of presence) or a
+      // short video (≤ 10 s on iOS at medium quality). 25 MB ceiling
+      // covers the worst-case 10 s clip at ~12 Mbps; photos are well
+      // below this after the client-side resize.
       allow write: if request.auth != null
                    && request.auth.uid in firestore.get(/databases/(default)/documents/games/$(gameId)).data.hunterIds
-                   && request.resource.size < 5 * 1024 * 1024
-                   && request.resource.contentType.matches('image/.*');
+                   && request.resource.size < 25 * 1024 * 1024
+                   && (request.resource.contentType.matches('image/.*')
+                       || request.resource.contentType.matches('video/.*'));
       allow delete: if false;
     }
 

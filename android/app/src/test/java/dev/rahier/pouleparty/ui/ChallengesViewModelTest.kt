@@ -1,8 +1,6 @@
 package dev.rahier.pouleparty.ui
 
-import android.content.SharedPreferences
 import androidx.lifecycle.SavedStateHandle
-import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import dev.rahier.pouleparty.data.FirestoreRepository
@@ -10,24 +8,21 @@ import dev.rahier.pouleparty.model.Challenge
 import dev.rahier.pouleparty.model.ChallengeCompletion
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.Registration
+import dev.rahier.pouleparty.model.SubmissionMediaType
 import dev.rahier.pouleparty.ui.challenges.ChallengeStatus
 import dev.rahier.pouleparty.ui.challenges.ChallengesIntent
 import dev.rahier.pouleparty.ui.challenges.ChallengesTab
 import dev.rahier.pouleparty.ui.challenges.ChallengesUiState
 import dev.rahier.pouleparty.ui.challenges.ChallengesViewModel
-import dev.rahier.pouleparty.ui.challenges.LeaderboardHunterEntry
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.junit.After
@@ -41,9 +36,6 @@ class ChallengesViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
     private lateinit var repo: FirestoreRepository
     private lateinit var auth: FirebaseAuth
-    private lateinit var prefs: SharedPreferences
-    private lateinit var prefsEditor: SharedPreferences.Editor
-    private var prefsBacking: String? = null
 
     @Before
     fun setUp() {
@@ -54,22 +46,6 @@ class ChallengesViewModelTest {
         every { repo.challengeCompletionsStream(any()) } returns emptyFlow()
         coEvery { repo.getConfig(any()) } returns null
         coEvery { repo.fetchAllRegistrations(any()) } returns emptyList()
-        coEvery { repo.fetchNicknames(any()) } returns emptyMap()
-        prefsBacking = null
-        prefs = mockk(relaxed = true)
-        prefsEditor = mockk(relaxed = true)
-        every { prefs.getString(any(), any()) } answers { prefsBacking ?: secondArg() }
-        every { prefs.edit() } returns prefsEditor
-        every { prefsEditor.putString(any(), any()) } answers {
-            prefsBacking = secondArg<String?>()
-            prefsEditor
-        }
-        every { prefsEditor.remove(any()) } answers {
-            prefsBacking = null
-            prefsEditor
-        }
-        every { prefsEditor.commit() } returns true
-        every { prefsEditor.apply() } returns Unit
     }
 
     @After
@@ -90,7 +66,6 @@ class ChallengesViewModelTest {
         mockUser(hunterId)
         return ChallengesViewModel(
             firestoreRepository = repo,
-            prefs = prefs,
             auth = auth,
             savedStateHandle = SavedStateHandle(mapOf("gameId" to gameId))
         )
@@ -101,18 +76,8 @@ class ChallengesViewModelTest {
     @Test
     fun `challenges stream populates state`() {
         val streamed = listOf(
-            Challenge(
-                id = "c1",
-                points = 10,
-                titleByLocale = mapOf("fr" to "Take a photo"),
-                bodyByLocale = mapOf("fr" to "Selfie with a stranger"),
-            ),
-            Challenge(
-                id = "c2",
-                points = 5,
-                titleByLocale = mapOf("fr" to "Drink water"),
-                bodyByLocale = mapOf("fr" to "Stay hydrated"),
-            )
+            Challenge(id = "c1", points = 10, titleByLocale = mapOf("fr" to "Take a photo")),
+            Challenge(id = "c2", points = 5, titleByLocale = mapOf("fr" to "Drink water"))
         )
         every { repo.challengesStream() } returns flowOf(streamed)
         val vm = create()
@@ -153,22 +118,22 @@ class ChallengesViewModelTest {
         assertEquals(ChallengesTab.LEADERBOARD, vm.uiState.value.selectedTab)
     }
 
-    // ── 2-tap validate flow ────────────────────────────────
+    // ── Single-tap "Doing it" flow ─────────────────────────
 
     @Test
-    fun `MarkAsDone moves challenge to pendingLocal`() {
+    fun `DoingIt sets captureTarget for an available challenge`() {
         val challenge = Challenge(id = "c1", points = 5, titleByLocale = mapOf("fr" to "Hello"))
         every { repo.challengesStream() } returns flowOf(listOf(challenge))
         val vm = create()
         testDispatcher.scheduler.advanceUntilIdle()
 
-        vm.onIntent(ChallengesIntent.MarkAsDoneTapped(challenge))
-        assertEquals(setOf("c1"), vm.uiState.value.pendingLocalIds)
-        assertEquals(ChallengeStatus.PENDING_LOCAL, vm.uiState.value.status(challenge))
+        vm.onIntent(ChallengesIntent.DoingItTapped(challenge))
+        assertEquals("c1", vm.uiState.value.captureTargetChallengeId)
+        assertEquals(challenge, vm.uiState.value.captureTargetChallenge)
     }
 
     @Test
-    fun `MarkAsDone on already-completed challenge is a no-op`() {
+    fun `DoingIt on an already-completed challenge is a no-op`() {
         val challenge = Challenge(id = "c1", points = 5, titleByLocale = mapOf("fr" to "Hello"))
         every { repo.challengesStream() } returns flowOf(listOf(challenge))
         every { repo.challengeCompletionsStream("game-1") } returns flowOf(
@@ -184,31 +149,12 @@ class ChallengesViewModelTest {
         val vm = create(hunterId = "hunter-1")
         testDispatcher.scheduler.advanceUntilIdle()
 
-        vm.onIntent(ChallengesIntent.MarkAsDoneTapped(challenge))
-        assertTrue(vm.uiState.value.pendingLocalIds.isEmpty())
+        vm.onIntent(ChallengesIntent.DoingItTapped(challenge))
+        assertNull(vm.uiState.value.captureTargetChallengeId)
     }
 
     @Test
-    fun `SubmitForValidation opens photo picker for pending challenge`() {
-        val challenge = Challenge(id = "c1", points = 7, titleByLocale = mapOf("fr" to "Hello"))
-        every { repo.challengesStream() } returns flowOf(listOf(challenge))
-        coEvery { repo.getConfig("game-1") } returns Game(id = "game-1", hunterIds = listOf("hunter-1"))
-        coEvery { repo.fetchAllRegistrations("game-1") } returns listOf(
-            Registration(userId = "hunter-1", teamName = "Dream Team")
-        )
-
-        val vm = create(hunterId = "hunter-1")
-        testDispatcher.scheduler.advanceUntilIdle()
-
-        vm.onIntent(ChallengesIntent.MarkAsDoneTapped(challenge))
-        vm.onIntent(ChallengesIntent.SubmitForValidationTapped(challenge))
-
-        assertEquals("c1", vm.uiState.value.photoTargetChallengeId)
-        coVerify(exactly = 0) { repo.submitChallenge(any(), any(), any(), any(), any()) }
-    }
-
-    @Test
-    fun `PhotoPicked calls submitChallenge with correct args`() {
+    fun `MediaCaptured uploads + clears captureTarget`() {
         val challenge = Challenge(id = "c1", points = 7, titleByLocale = mapOf("fr" to "Hello"))
         every { repo.challengesStream() } returns flowOf(listOf(challenge))
         coEvery { repo.getConfig("game-1") } returns Game(id = "game-1", hunterIds = listOf("hunter-1"))
@@ -216,14 +162,19 @@ class ChallengesViewModelTest {
             Registration(userId = "hunter-1", teamName = "Dream Team")
         )
         coEvery {
-            repo.submitChallenge(any(), any(), any(), any(), any())
+            repo.submitChallenge(any(), any(), any(), any(), any(), any())
         } returns dev.rahier.pouleparty.model.ChallengeSubmission(id = "s1", challengeId = "c1", hunterId = "hunter-1")
 
         val vm = create(hunterId = "hunter-1")
         testDispatcher.scheduler.advanceUntilIdle()
-        vm.onIntent(ChallengesIntent.MarkAsDoneTapped(challenge))
-        vm.onIntent(ChallengesIntent.SubmitForValidationTapped(challenge))
-        vm.onIntent(ChallengesIntent.PhotoPicked("c1", ByteArray(4) { 0 }))
+        vm.onIntent(ChallengesIntent.DoingItTapped(challenge))
+        vm.onIntent(
+            ChallengesIntent.MediaCaptured(
+                "c1",
+                ByteArray(4) { 0 },
+                SubmissionMediaType.IMAGE,
+            )
+        )
         testDispatcher.scheduler.advanceUntilIdle()
 
         coVerify {
@@ -232,25 +183,24 @@ class ChallengesViewModelTest {
                 challengeId = "c1",
                 hunterId = "hunter-1",
                 type = any(),
-                photoBytes = any(),
+                mediaBytes = any(),
+                mediaType = SubmissionMediaType.IMAGE,
             )
         }
+        assertNull(vm.uiState.value.captureTargetChallengeId)
         assertTrue(vm.uiState.value.submittingIds.isEmpty())
     }
 
     @Test
-    fun `SubmitForValidation without pending intent is a no-op`() {
+    fun `DoingIt while submitting is a no-op`() {
         val challenge = Challenge(id = "c1", points = 5, titleByLocale = mapOf("fr" to "Hello"))
         every { repo.challengesStream() } returns flowOf(listOf(challenge))
-        val vm = create()
-        testDispatcher.scheduler.advanceUntilIdle()
-
-        vm.onIntent(ChallengesIntent.SubmitForValidationTapped(challenge))
-        testDispatcher.scheduler.advanceUntilIdle()
-        assertNull(vm.uiState.value.photoTargetChallengeId)
-        coVerify(exactly = 0) {
-            repo.submitChallenge(any(), any(), any(), any(), any())
-        }
+        val state = ChallengesUiState(
+            challenges = listOf(challenge),
+            submittingIds = setOf("c1"),
+            currentHunterId = "hunter-1"
+        )
+        assertEquals(ChallengeStatus.SUBMITTING, state.status(challenge))
     }
 
     // ── Leaderboard ────────────────────────────────────────
@@ -278,7 +228,6 @@ class ChallengesViewModelTest {
         assertEquals(50, board[0].totalPoints)
         assertEquals("h1", board[1].hunterId)
         assertEquals(20, board[1].totalPoints)
-        // The two zero-point hunters come next — tied, sorted by name ascending
         assertEquals(0, board[2].totalPoints)
         assertEquals(0, board[3].totalPoints)
         assertEquals("Beta", board[2].displayName)
@@ -286,19 +235,7 @@ class ChallengesViewModelTest {
     }
 
     @Test
-    fun `leaderboard uses nickname fallback when no team registration`() {
-        val state = ChallengesUiState(
-            hunterIds = listOf("h1"),
-            nicknames = mapOf("h1" to "PixelKing"),
-            currentHunterId = "h1"
-        )
-        val board = state.leaderboardEntries
-        assertEquals(1, board.size)
-        assertEquals("PixelKing", board[0].displayName)
-    }
-
-    @Test
-    fun `leaderboard falls back to Hunter when no team and no nickname`() {
+    fun `leaderboard falls back to Hunter when no team registration`() {
         val state = ChallengesUiState(
             hunterIds = listOf("h1"),
             currentHunterId = "h1"
@@ -319,7 +256,6 @@ class ChallengesViewModelTest {
         val current = board.firstOrNull { it.isCurrentHunter }
         assertNotNull(current)
         assertEquals("h2", current?.hunterId)
-        // The other entry must not be flagged as current
         assertFalse(board.first { it.hunterId == "h1" }.isCurrentHunter)
     }
 

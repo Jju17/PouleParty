@@ -76,10 +76,9 @@ struct ApiClient {
     var challengeCompletionsStream: (String) -> AsyncStream<[ChallengeCompletion]>
     var hunterSubmissionsStream: (_ gameId: String, _ hunterId: String) -> AsyncStream<[ChallengeSubmission]>
     var pendingSubmissionsStream: (_ gameId: String) -> AsyncStream<[ChallengeSubmission]>
-    var submitChallenge: (_ gameId: String, _ challengeId: String, _ hunterId: String, _ type: Challenge.ChallengeType, _ photoData: Data) async throws -> ChallengeSubmission
+    var submitChallenge: (_ gameId: String, _ challengeId: String, _ hunterId: String, _ type: Challenge.ChallengeType, _ mediaData: Data, _ mediaType: ChallengeSubmission.MediaType) async throws -> ChallengeSubmission
     var validateChallengeSubmission: (_ gameId: String, _ submissionId: String, _ accept: Bool) async throws -> Void
     var decrementTotalPoints: (_ gameId: String, _ hunterId: String) async throws -> Void
-    var fetchUserNicknames: ([String]) async throws -> [String: String]
     /// Submit a report against another player (user-generated-content moderation).
     /// Writes a doc to `/reports/{autoId}` which is readable only by the admin SDK.
     var reportPlayer: (_ gameId: String, _ reportedUserId: String, _ reportedNickname: String) async throws -> Void
@@ -276,10 +275,9 @@ extension ApiClient: TestDependencyKey {
         challengeCompletionsStream: { _ in AsyncStream { _ in } },
         hunterSubmissionsStream: { _, _ in AsyncStream { _ in } },
         pendingSubmissionsStream: { _ in AsyncStream { _ in } },
-        submitChallenge: { _, _, _, _, _ in ChallengeSubmission() },
+        submitChallenge: { _, _, _, _, _, _ in ChallengeSubmission() },
         validateChallengeSubmission: { _, _, _ in },
         decrementTotalPoints: { _, _ in },
-        fetchUserNicknames: { _ in [:] },
         reportPlayer: { _, _, _ in },
         newGameId: { "test-game-id" },
         setGameMasterPassword: { _, _ in },
@@ -877,8 +875,19 @@ extension ApiClient: DependencyKey {
                             return
                         }
                         let submissions = documents.compactMap { doc -> ChallengeSubmission? in
-                            do { return try doc.data(as: ChallengeSubmission.self) }
-                            catch {
+                            do {
+                                var sub = try doc.data(as: ChallengeSubmission.self)
+                                // `@DocumentID` injection is bypassed by our
+                                // custom `init(from:)`. Set the id explicitly
+                                // from the snapshot path so the validator
+                                // queue (and any consumer that calls the
+                                // `validateChallengeSubmission` callable with
+                                // `submission.firestoreId`) doesn't no-op.
+                                if sub.firestoreId == nil || sub.firestoreId?.isEmpty == true {
+                                    sub.firestoreId = doc.documentID
+                                }
+                                return sub
+                            } catch {
                                 logger.error("Failed to decode ChallengeSubmission \(doc.documentID): \(error.localizedDescription)")
                                 return nil
                             }
@@ -907,8 +916,13 @@ extension ApiClient: DependencyKey {
                             return
                         }
                         let subs = documents.compactMap { doc -> ChallengeSubmission? in
-                            do { return try doc.data(as: ChallengeSubmission.self) }
-                            catch {
+                            do {
+                                var sub = try doc.data(as: ChallengeSubmission.self)
+                                if sub.firestoreId == nil || sub.firestoreId?.isEmpty == true {
+                                    sub.firestoreId = doc.documentID
+                                }
+                                return sub
+                            } catch {
                                 logger.error("Failed to decode ChallengeSubmission \(doc.documentID): \(error.localizedDescription)")
                                 return nil
                             }
@@ -918,7 +932,7 @@ extension ApiClient: DependencyKey {
                 continuation.onTermination = { _ in listener.remove() }
             }
         },
-        submitChallenge: { gameId, challengeId, hunterId, type, photoData in
+        submitChallenge: { gameId, challengeId, hunterId, type, mediaData, mediaType in
             let db = Firestore.firestore()
             let submissionsRef = db.collection(gamesCollection).document(gameId)
                 .collection(challengeSubmissionsSubcollection)
@@ -939,19 +953,22 @@ extension ApiClient: DependencyKey {
             }
             let newDoc = submissionsRef.document()
             let submissionId = newDoc.documentID
+            let fileExtension = mediaType == .video ? "mp4" : "jpg"
+            let contentType = mediaType == .video ? "video/mp4" : "image/jpeg"
             let storageRef = Storage.storage().reference()
-                .child("gameSubmissions/\(gameId)/\(submissionId).jpg")
+                .child("gameSubmissions/\(gameId)/\(submissionId).\(fileExtension)")
             let metadata = StorageMetadata()
-            metadata.contentType = "image/jpeg"
-            _ = try await storageRef.putDataAsync(photoData, metadata: metadata)
-            let photoUrl = try await storageRef.downloadURL().absoluteString
+            metadata.contentType = contentType
+            _ = try await storageRef.putDataAsync(mediaData, metadata: metadata)
+            let mediaUrl = try await storageRef.downloadURL().absoluteString
             let submission = ChallengeSubmission(
                 firestoreId: submissionId,
                 challengeId: challengeId,
                 hunterId: hunterId,
                 type: type,
                 submittedAt: Timestamp(date: .now),
-                photoUrl: photoUrl,
+                mediaUrl: mediaUrl,
+                mediaType: mediaType,
                 status: .pending
             )
             try newDoc.setData(from: submission)
@@ -980,30 +997,6 @@ extension ApiClient: DependencyKey {
                     .httpsCallable("applyOutOfZonePenalty")
                     .call(["gameId": gameId])
             }
-        },
-        fetchUserNicknames: { userIds in
-            let uniqueIds = Array(Set(userIds)).filter { !$0.isEmpty }
-            guard !uniqueIds.isEmpty else { return [:] }
-            // Firestore `in` queries are limited to 30 values — batch accordingly.
-            let batchSize = 30
-            let db = Firestore.firestore()
-            var result: [String: String] = [:]
-            for start in stride(from: 0, to: uniqueIds.count, by: batchSize) {
-                let chunk = Array(uniqueIds[start..<min(start + batchSize, uniqueIds.count)])
-                do {
-                    let snapshot = try await db.collection("users")
-                        .whereField(FieldPath.documentID(), in: chunk)
-                        .getDocuments()
-                    for doc in snapshot.documents {
-                        if let nickname = doc.data()["nickname"] as? String, !nickname.isEmpty {
-                            result[doc.documentID] = nickname
-                        }
-                    }
-                } catch {
-                    logger.warning("fetchUserNicknames chunk failed: \(error.localizedDescription)")
-                }
-            }
-            return result
         },
         reportPlayer: { gameId, reportedUserId, reportedNickname in
             guard let reporterId = Auth.auth().currentUser?.uid else {

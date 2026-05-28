@@ -76,10 +76,9 @@ extension ApiClient {
                     continuation.yield([])
                 }
             },
-            submitChallenge: { _, _, _, _, _ in ChallengeSubmission() },
+            submitChallenge: { _, _, _, _, _, _ in ChallengeSubmission() },
             validateChallengeSubmission: { _, _, _ in },
             decrementTotalPoints: { _, _ in },
-            fetchUserNicknames: { _ in [:] },
             reportPlayer: { _, _, _ in },
             newGameId: { MockDemoData.liveGame.id },
             setGameMasterPassword: { _, _ in },

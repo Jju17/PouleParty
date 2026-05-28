@@ -31,58 +31,49 @@ struct GameMasterMapView: View {
                             .foregroundStyle(Color.white)
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
-                    if store.isGameOver {
+                    ZStack(alignment: .topTrailing) {
                         Button {
-                            store.send(.view(.leaderboardTapped))
+                            store.send(.view(.validationQueueTapped))
                         } label: {
-                            Label("Leaderboard", systemImage: "trophy.fill")
+                            Label("Validate", systemImage: "checkmark.seal.fill")
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 12)
-                                .background(Color.CROrange)
+                                .background(Color.CRPink)
                                 .foregroundStyle(Color.white)
                                 .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
-                    } else {
-                        ZStack(alignment: .topTrailing) {
-                            Button {
-                                store.send(.view(.validationQueueTapped))
-                            } label: {
-                                Label("Validate", systemImage: "checkmark.seal.fill")
-                                    .padding(.horizontal, 14)
-                                    .padding(.vertical, 12)
-                                    .background(Color.CRPink)
-                                    .foregroundStyle(Color.white)
-                                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                            }
-                            if store.pendingSubmissionsCount > 0 {
-                                Text("\(store.pendingSubmissionsCount)")
-                                    .font(.caption2.bold())
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(Color.hunterRed)
-                                    .foregroundStyle(Color.white)
-                                    .clipShape(Capsule())
-                                    .offset(x: 6, y: -6)
-                            }
+                        if store.pendingSubmissionsCount > 0 {
+                            Text("\(store.pendingSubmissionsCount)")
+                                .font(.caption2.bold())
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.hunterRed)
+                                .foregroundStyle(Color.white)
+                                .clipShape(Capsule())
+                                .offset(x: 6, y: -6)
                         }
                     }
                 }
                 .padding(.horizontal, 16)
                 .padding(.bottom, 8)
             }
-            .alert(
-                $store.scope(
-                    state: \.destination?.alert,
-                    action: \.destination.alert
-                )
-            )
-            .sheet(isPresented: Binding(
-                get: { store.showLeaderboard },
-                set: { if !$0 { store.send(.view(.leaderboardDismissed)) } }
-            )) {
-                GameLeaderboardSheet(game: store.game)
+            .overlay(alignment: .top) {
+                if store.isGameOver {
+                    GameEndedBanner(onTap: {
+                        store.send(.view(.viewLeaderboardTapped))
+                    })
+                    .padding(.top, 76)
+                    .padding(.horizontal, 16)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                }
             }
-            .sheet(item: $store.scope(state: \.validationQueue, action: \.validationQueue)) { vqStore in
+            .animation(.easeInOut(duration: 0.25), value: store.isGameOver)
+            // PP-25: validation queue presents as a fullScreenCover to
+            // avoid sheet stacking conflicts with the hunters / info
+            // sheets attached to the same view (SwiftUI gets confused
+            // with >2 sheet modifiers and may freeze when a new sheet
+            // tries to present while others are pending).
+            .fullScreenCover(item: $store.scope(state: \.validationQueue, action: \.validationQueue)) { vqStore in
                 ValidationQueueView(store: vqStore)
             }
             .task {
@@ -159,12 +150,27 @@ struct GameMasterMapView: View {
             }
             .overlay {
                 if store.game.status == .readyToLaunch {
-                    ReadyToLaunchOverlay(
-                        role: .launcher,
+                    PreGameOverlay(
+                        role: .gameMaster,
+                        gameModTitle: store.game.gameMode.title,
+                        gameCode: store.game.gameCode,
+                        targetDate: store.game.startDate,
+                        nowDate: store.nowDate,
+                        connectedHunters: store.game.hunterIds.count,
+                        isManualStart: true,
                         isLaunching: store.isLaunching,
-                        errorMessage: store.launchError,
+                        launchErrorMessage: store.launchError,
                         onLaunchTapped: { store.send(.view(.launchTapped)) },
-                        onErrorDismissed: { store.send(.view(.launchErrorDismissed)) }
+                        onLaunchErrorDismissed: { store.send(.view(.launchErrorDismissed)) }
+                    )
+                } else if !store.hasGameStarted {
+                    PreGameOverlay(
+                        role: .gameMaster,
+                        gameModTitle: store.game.gameMode.title,
+                        gameCode: store.game.gameCode,
+                        targetDate: store.game.startDate,
+                        nowDate: store.nowDate,
+                        connectedHunters: store.game.hunterIds.count
                     )
                 }
             }

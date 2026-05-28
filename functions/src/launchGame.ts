@@ -221,7 +221,16 @@ export const launchGame = onCall<LaunchGameInput, Promise<LaunchGameResult>>(
           `Game is not ready to launch (current status: ${status ?? "unknown"})`
         );
       }
-      const actualStart = Timestamp.now();
+      // Stamp `actualStart` a few seconds in the future so every client
+      // (chicken + hunters + GMs) catches the 3-2-1-GO! countdown phase
+      // between LAUNCH tap and the real start, instead of jumping
+      // straight to "RUN!". Mirrors `countdownThresholdSeconds = 3` on
+      // the client; +1s buffer so the "3" frame is rendered cleanly
+      // even with a small network round-trip.
+      const LAUNCH_COUNTDOWN_MS = 4 * 1000;
+      const actualStart = Timestamp.fromMillis(
+        Timestamp.now().toMillis() + LAUNCH_COUNTDOWN_MS
+      );
       const endTimestamp = Timestamp.fromMillis(
         actualStart.toMillis() + originalDurationMs
       );

@@ -50,13 +50,6 @@ struct HunterMapFeature {
         // this would be a free locator.
         var chickenLocation: CLLocationCoordinate2D? = nil
         var hasChallenges: Bool = false
-
-        // Recomputed on every observable change; SwiftUI re-evaluates
-        // when state changes (notably on challenges-sheet dismiss).
-        var pendingChallengeCount: Int {
-            PendingChallengeStore.ids(forGame: game.id).count
-        }
-        var hasPendingChallenges: Bool { pendingChallengeCount > 0 }
         // CRIT-3 (audit 2026-05-17): we now hold the typed-in code +
         // attempt count between a failed `submitFoundCode` CF call and a
         // user-triggered retry. The server stamps the winner's timestamp
@@ -146,6 +139,9 @@ struct HunterMapFeature {
             case infoButtonTapped
             case onTask
             case submitCodeButtonTapped
+            /// Banner tap at game-end → navigate to the Victory /
+            /// leaderboard page (parent handles via `gameEnded` delegate).
+            case viewLeaderboardTapped
         }
 
         @CasePathable
@@ -174,8 +170,11 @@ struct HunterMapFeature {
 
         @CasePathable
         enum Delegate {
-            case allHuntersFound
             case returnedToMenu
+            /// Game ended for any reason (chicken cancelled, timer
+            /// expired, all hunters found). Parent navigates to the
+            /// Victory / leaderboard screen.
+            case gameEnded(Game)
         }
     }
 
@@ -310,6 +309,8 @@ struct HunterMapFeature {
             case .view(.gameInfoDismissed):
                 state.showGameInfo = false
                 return .none
+            case .view(.viewLeaderboardTapped):
+                return .send(.delegate(.gameEnded(state.game)))
             case .internal(.winnerNotificationDismissed):
                 state.winnerNotification = nil
                 return .none
@@ -496,7 +497,7 @@ struct HunterMapFeature {
                 return .none
             case .delegate(.returnedToMenu):
                 return .none
-            case .delegate(.allHuntersFound):
+            case .delegate(.gameEnded):
                 return .none
             case .internal(.winnerRegistered):
                 state.isSubmittingWinner = false
@@ -762,9 +763,11 @@ struct HunterMapFeature {
                 return .none
             case let .internal(.gameConfigUpdated(game)):
                 // React to game cancelled/ended by chicken or Cloud Function.
-                // The trophy CTA in the bottom bar reveals once `isGameOver`
-                // flips; the alert is the explicit "the game ended" signal.
-                if game.status == .done, state.destination == nil {
+                // The hunter stays on the map with `isGameOver = true` so
+                // the "Game ended" banner appears; tapping the banner
+                // fires `viewLeaderboardTapped` → `.gameEnded` delegate
+                // → AppFeature transitions to the Victory screen.
+                if game.status == .done, !state.isGameOver {
                     locationClient.stopTracking()
                     state.game = game
                     state.isGameOver = true
@@ -775,17 +778,6 @@ struct HunterMapFeature {
                         winnersCount: game.winners.count,
                         isOutsideZone: false,
                         gamePhase: .gameOver
-                    )
-                    state.destination = .alert(
-                        AlertState {
-                            TextState("Game ended")
-                        } actions: {
-                            ButtonState(action: .gameOver) {
-                                TextState("OK")
-                            }
-                        } message: {
-                            TextState("Open the leaderboard from the trophy button, or leave the game from the menu.")
-                        }
                     )
                     return .run { _ in
                         await liveActivityClient.end(endState)

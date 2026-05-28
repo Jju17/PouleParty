@@ -9,7 +9,6 @@
 
 import ComposableArchitecture
 import os
-import PhotosUI
 import SwiftUI
 import UIKit
 
@@ -22,7 +21,6 @@ enum ChallengesTab: Equatable {
 
 enum ChallengeStatus: Equatable {
     case available
-    case pendingLocal
     case submitting
     case awaitingValidation
     case validated
@@ -60,12 +58,16 @@ struct ChallengesFeature {
         var selectedTab: ChallengesTab = .challenges
         var challenges: [Challenge] = []
         var completions: [ChallengeCompletion] = []
-        var nicknames: [String: String] = [:]
-        var pendingChallenge: Challenge?
-        var pendingLocalIds: Set<String> = []
+        /// Hunter UID → teamName, streamed from `/games/{gameId}/registrations`.
+        /// Used as the display-name source for the leaderboard. Hunters
+        /// without a registration doc fall back to a generic "Hunter".
+        var registrations: [String: String] = [:]
         var submittingIds: Set<String> = []
         var mySubmissions: [ChallengeSubmission] = []
-        var photoTarget: Challenge?
+        /// Challenge whose camera capture sheet should currently be open.
+        /// Single-tap flow: tapping "Doing it" sets this; the captured
+        /// media auto-submits and clears it.
+        var captureTarget: Challenge?
         var uploadError: String?
 
         var myCompletedIds: Set<String> {
@@ -86,7 +88,6 @@ struct ChallengesFeature {
             if submittingIds.contains(challenge.id) { return .submitting }
             if awaitingValidationIds.contains(challenge.id) { return .awaitingValidation }
             if challenge.type == .oneShot && rejectedIds.contains(challenge.id) { return .rejected }
-            if pendingLocalIds.contains(challenge.id) { return .pendingLocal }
             return .available
         }
 
@@ -146,10 +147,11 @@ struct ChallengesFeature {
             )
             let entries = hunterIds.map { hid -> ChallengeLeaderboardEntry in
                 let completion = byHunter[hid]
-                let fallback = nicknames[hid] ?? "Hunter"
+                let registeredTeamName = registrations[hid]
                 let teamName: String = {
+                    if let registeredTeamName, !registeredTeamName.isEmpty { return registeredTeamName }
                     if let completion, !completion.teamName.isEmpty { return completion.teamName }
-                    return fallback
+                    return "Hunter"
                 }()
                 return ChallengeLeaderboardEntry(
                     hunterId: hid,
@@ -174,10 +176,9 @@ struct ChallengesFeature {
         enum View {
             case closeTapped
             case onTask
-            case markAsDoneTapped(Challenge)
-            case submitForValidationTapped(Challenge)
-            case photoPicked(challengeId: String, data: Data)
-            case photoSourceCancelled
+            case doingItTapped(Challenge)
+            case mediaCaptured(challengeId: String, data: Data, mediaType: ChallengeSubmission.MediaType)
+            case captureCancelled
             case uploadErrorDismissed
             case tabChanged(ChallengesTab)
         }
@@ -187,7 +188,7 @@ struct ChallengesFeature {
             case challengesUpdated([Challenge])
             case completionsUpdated([ChallengeCompletion])
             case submissionsUpdated([ChallengeSubmission])
-            case nicknamesFetched([String: String])
+            case registrationsUpdated([Registration])
             case submissionWriteSucceeded(challengeId: String)
             case submissionWriteFailed(challengeId: String, message: String)
         }
@@ -230,8 +231,6 @@ struct ChallengesFeature {
             case .view(.onTask):
                 let gameId = state.gameId
                 let hunterId = state.hunterId
-                let hunterIds = state.hunterIds
-                state.pendingLocalIds = PendingChallengeStore.ids(forGame: gameId)
                 return .merge(
                     .run { send in
                         for await challenges in apiClient.challengesStream() {
@@ -249,36 +248,29 @@ struct ChallengesFeature {
                         }
                     },
                     .run { send in
-                        let nicknames = (try? await apiClient.fetchUserNicknames(hunterIds)) ?? [:]
-                        await send(.internal(.nicknamesFetched(nicknames)))
+                        for await regs in apiClient.registrationsStream(gameId) {
+                            await send(.internal(.registrationsUpdated(regs)))
+                        }
                     }
                 )
 
-            case let .view(.markAsDoneTapped(challenge)):
-                guard !state.isClosedForSubmissions else { return .none }
-                guard state.status(of: challenge) == .available else { return .none }
-                let gameId = state.gameId
-                state.pendingLocalIds.insert(challenge.id)
-                PendingChallengeStore.add(challenge.id, forGame: gameId)
-                return .none
-
-            case let .view(.submitForValidationTapped(challenge)):
+            case let .view(.doingItTapped(challenge)):
                 guard !state.isClosedForSubmissions else { return .none }
                 guard !state.isLevelLocked(challenge.level) else { return .none }
-                guard state.status(of: challenge) == .pendingLocal else { return .none }
-                state.photoTarget = challenge
+                guard state.status(of: challenge) == .available else { return .none }
+                state.captureTarget = challenge
                 return .none
 
-            case .view(.photoSourceCancelled):
-                state.photoTarget = nil
+            case .view(.captureCancelled):
+                state.captureTarget = nil
                 return .none
 
             case .view(.uploadErrorDismissed):
                 state.uploadError = nil
                 return .none
 
-            case let .view(.photoPicked(challengeId, data)):
-                state.photoTarget = nil
+            case let .view(.mediaCaptured(challengeId, data, mediaType)):
+                state.captureTarget = nil
                 guard let challenge = state.challenges.first(where: { $0.id == challengeId }) else { return .none }
                 state.submittingIds.insert(challengeId)
                 let gameId = state.gameId
@@ -286,7 +278,7 @@ struct ChallengesFeature {
                 let type = challenge.type
                 return .run { send in
                     do {
-                        _ = try await apiClient.submitChallenge(gameId, challengeId, hunterId, type, data)
+                        _ = try await apiClient.submitChallenge(gameId, challengeId, hunterId, type, data, mediaType)
                         await send(.internal(.submissionWriteSucceeded(challengeId: challengeId)))
                     } catch {
                         logger.error("submitChallenge failed: \(error.localizedDescription)")
@@ -303,29 +295,24 @@ struct ChallengesFeature {
 
             case let .internal(.completionsUpdated(completions)):
                 state.completions = completions
-                for id in state.myCompletedIds where state.pendingLocalIds.contains(id) {
-                    state.pendingLocalIds.remove(id)
-                    PendingChallengeStore.remove(id, forGame: state.gameId)
-                }
                 return .none
 
             case let .internal(.submissionsUpdated(submissions)):
                 state.mySubmissions = submissions
-                let pendingOrValidated = Set(submissions.filter { $0.status != .rejected }.map { $0.challengeId })
-                for id in pendingOrValidated where state.pendingLocalIds.contains(id) {
-                    state.pendingLocalIds.remove(id)
-                    PendingChallengeStore.remove(id, forGame: state.gameId)
-                }
                 return .none
 
-            case let .internal(.nicknamesFetched(nicknames)):
-                state.nicknames = nicknames
+            case let .internal(.registrationsUpdated(regs)):
+                state.registrations = Dictionary(
+                    regs.compactMap { reg -> (String, String)? in
+                        guard !reg.teamName.isEmpty else { return nil }
+                        return (reg.userId, reg.teamName)
+                    },
+                    uniquingKeysWith: { first, _ in first }
+                )
                 return .none
 
             case let .internal(.submissionWriteSucceeded(challengeId)):
                 state.submittingIds.remove(challengeId)
-                state.pendingLocalIds.remove(challengeId)
-                PendingChallengeStore.remove(challengeId, forGame: state.gameId)
                 return .none
 
             case let .internal(.submissionWriteFailed(challengeId, message)):
@@ -344,14 +331,6 @@ struct ChallengesFeature {
 
 struct ChallengesView: View {
     @Bindable var store: StoreOf<ChallengesFeature>
-    @State private var photoSource: PhotoSource?
-    @State private var pickerItem: PhotosPickerItem?
-
-    enum PhotoSource: Identifiable {
-        case library
-        case camera
-        var id: Int { self == .library ? 0 : 1 }
-    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -399,60 +378,35 @@ struct ChallengesView: View {
         .alert(
             $store.scope(state: \.destination?.alert, action: \.destination.alert)
         )
-        .confirmationDialog(
-            "Add a photo",
+        // Single-tap flow: tapping "Doing it" on a row sets
+        // `captureTarget`, which presents the native camera in
+        // photo OR video mode. The capture handler sends
+        // `mediaCaptured` (auto-submit) or `captureCancelled`.
+        .fullScreenCover(
             isPresented: Binding(
-                get: { store.photoTarget != nil },
+                get: { store.captureTarget != nil },
                 set: { newValue in
-                    if !newValue { store.send(.view(.photoSourceCancelled)) }
+                    if !newValue { store.send(.view(.captureCancelled)) }
                 }
-            ),
-            titleVisibility: .visible
+            )
         ) {
-            Button("Take a photo") { photoSource = .camera }
-            Button("Choose from library") { photoSource = .library }
-            Button("Cancel", role: .cancel) {
-                store.send(.view(.photoSourceCancelled))
-            }
-        }
-        .sheet(item: $photoSource) { source in
-            switch source {
-            case .library:
-                PhotosPicker(
-                    selection: $pickerItem,
-                    matching: .images,
-                    photoLibrary: .shared()
-                ) {
-                    Color.surface.ignoresSafeArea()
-                }
-                .photosPickerStyle(.inline)
-                .ignoresSafeArea()
-            case .camera:
-                CameraPicker { data in
-                    photoSource = nil
-                    if let data, let challenge = store.photoTarget {
-                        store.send(.view(.photoPicked(challengeId: challenge.id, data: data)))
-                    }
-                }
-                .ignoresSafeArea()
-            }
-        }
-        .onChange(of: pickerItem) { _, item in
-            guard let item else { return }
-            Task {
-                guard let data = try? await item.loadTransferable(type: Data.self),
-                      let image = UIImage(data: data),
-                      let jpeg = image.jpegDataResized() else {
-                    pickerItem = nil
-                    photoSource = nil
+            CameraPicker { result in
+                guard let challenge = store.captureTarget else {
+                    store.send(.view(.captureCancelled))
                     return
                 }
-                if let challenge = store.photoTarget {
-                    store.send(.view(.photoPicked(challengeId: challenge.id, data: jpeg)))
+                switch result {
+                case .none:
+                    store.send(.view(.captureCancelled))
+                case let .some(data, mediaType):
+                    store.send(.view(.mediaCaptured(
+                        challengeId: challenge.id,
+                        data: data,
+                        mediaType: mediaType
+                    )))
                 }
-                pickerItem = nil
-                photoSource = nil
             }
+            .ignoresSafeArea()
         }
         .alert(
             "Upload failed",
@@ -499,8 +453,7 @@ struct ChallengesView: View {
                                 status: store.state.status(of: challenge),
                                 isClosed: store.isClosedForSubmissions,
                                 isLevelLocked: store.state.isLevelLocked(challenge.level),
-                                onMarkAsDone: { store.send(.view(.markAsDoneTapped(challenge))) },
-                                onSubmit: { store.send(.view(.submitForValidationTapped(challenge))) }
+                                onDoingIt: { store.send(.view(.doingItTapped(challenge))) }
                             )
                         }
                     }
@@ -631,16 +584,14 @@ private struct ChallengeRow: View {
     let status: ChallengeStatus
     let isClosed: Bool
     let isLevelLocked: Bool
-    let onMarkAsDone: () -> Void
-    let onSubmit: () -> Void
+    let onDoingIt: () -> Void
 
     @Environment(\.locale) private var locale
     private var langCode: String { locale.language.languageCode?.identifier ?? "fr" }
 
     private var buttonLabel: LocalizedStringKey {
         switch status {
-        case .available: return "I did it!"
-        case .pendingLocal: return "Submit for validation"
+        case .available: return "Doing it!"
         case .submitting: return "Uploading…"
         case .awaitingValidation: return "⏳ Awaiting validation"
         case .validated: return "✓ Validated"
@@ -651,7 +602,6 @@ private struct ChallengeRow: View {
     private var buttonFill: Color {
         switch status {
         case .available: return Color.CROrange
-        case .pendingLocal: return Color.CRPink
         case .submitting: return Color.CROrange.opacity(0.6)
         case .awaitingValidation: return Color.CROrange.opacity(0.2)
         case .validated: return Color.success.opacity(0.15)
@@ -670,8 +620,7 @@ private struct ChallengeRow: View {
 
     private var buttonAction: () -> Void {
         switch status {
-        case .available: return onMarkAsDone
-        case .pendingLocal: return onSubmit
+        case .available: return onDoingIt
         default: return {}
         }
     }
@@ -679,9 +628,8 @@ private struct ChallengeRow: View {
     private var isButtonDisabled: Bool {
         if isClosed { return true }
         switch status {
-        case .pendingLocal: return isLevelLocked
         case .submitting, .awaitingValidation, .validated, .rejected: return true
-        case .available: return false
+        case .available: return isLevelLocked
         }
     }
 
@@ -791,17 +739,32 @@ private struct LeaderboardRow: View {
     }
 }
 
+/// Native iOS camera picker that lets the user toggle between photo
+/// and short video via the standard segmented control. Returns the
+/// captured bytes + the media type, or `nil` on cancel.
 private struct CameraPicker: UIViewControllerRepresentable {
-    let onPicked: (Data?) -> Void
+    enum Result {
+        case none
+        case some(Data, ChallengeSubmission.MediaType)
+    }
+    let onCaptured: (Result) -> Void
+
+    /// 10 s cap on video duration — keeps Firebase Storage uploads
+    /// snappy on cellular and validation queue clips quick to review.
+    private static let maxVideoDurationSeconds: TimeInterval = 10
 
     func makeUIViewController(context: Context) -> UIImagePickerController {
         let picker = UIImagePickerController()
         picker.delegate = context.coordinator
         if UIImagePickerController.isSourceTypeAvailable(.camera) {
             picker.sourceType = .camera
+            picker.mediaTypes = ["public.image", "public.movie"]
             picker.cameraCaptureMode = .photo
+            picker.videoMaximumDuration = Self.maxVideoDurationSeconds
+            picker.videoQuality = .typeMedium
         } else {
             picker.sourceType = .photoLibrary
+            picker.mediaTypes = ["public.image", "public.movie"]
         }
         picker.allowsEditing = false
         return picker
@@ -809,23 +772,40 @@ private struct CameraPicker: UIViewControllerRepresentable {
 
     func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
 
-    func makeCoordinator() -> Coordinator { Coordinator(onPicked: onPicked) }
+    func makeCoordinator() -> Coordinator { Coordinator(onCaptured: onCaptured) }
 
     final class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
-        let onPicked: (Data?) -> Void
-        init(onPicked: @escaping (Data?) -> Void) { self.onPicked = onPicked }
+        let onCaptured: (Result) -> Void
+        init(onCaptured: @escaping (Result) -> Void) { self.onCaptured = onCaptured }
 
+        // No `picker.dismiss(animated:)` calls here. The picker is the
+        // content of a SwiftUI `fullScreenCover`, so dismissal is driven
+        // by the cover's `isPresented` binding flipping when the reducer
+        // clears `captureTarget`. Calling `dismiss` on the picker itself
+        // races the cover and ends up swallowing `onCaptured` — exactly
+        // the "I sent my photo and nothing happens" bug.
         func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
-            let image = (info[.originalImage] as? UIImage)
-            picker.dismiss(animated: true) { [onPicked] in
-                onPicked(image?.jpegDataResized())
+            let mediaType = info[.mediaType] as? String ?? "public.image"
+            if mediaType == "public.movie", let url = info[.mediaURL] as? URL {
+                let data = try? Data(contentsOf: url)
+                if let data {
+                    onCaptured(.some(data, .video))
+                } else {
+                    onCaptured(.none)
+                }
+            } else if let image = info[.originalImage] as? UIImage {
+                if let jpeg = image.jpegDataResized() {
+                    onCaptured(.some(jpeg, .image))
+                } else {
+                    onCaptured(.none)
+                }
+            } else {
+                onCaptured(.none)
             }
         }
 
         func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
-            picker.dismiss(animated: true) { [onPicked] in
-                onPicked(nil)
-            }
+            onCaptured(.none)
         }
     }
 }

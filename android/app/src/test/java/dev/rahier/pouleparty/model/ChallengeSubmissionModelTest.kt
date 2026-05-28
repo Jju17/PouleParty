@@ -59,7 +59,7 @@ class ChallengeSubmissionModelTest {
             hunterId = "h-1",
             type = "oneShot",
             submittedAt = now,
-            photoUrl = "gs://bucket/x.jpg",
+            mediaUrl = "gs://bucket/x.jpg",
             status = "validated",
             validatedBy = "gm-uid",
             validatedAt = now,

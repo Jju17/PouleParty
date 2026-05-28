@@ -49,6 +49,7 @@ import dev.rahier.pouleparty.ui.theme.*
 fun GameMasterMapScreen(
     onGoToMenu: () -> Unit,
     onOpenValidationQueue: () -> Unit = {},
+    onVictory: (gameId: String) -> Unit = {},
     viewModel: GameMasterMapViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -59,6 +60,7 @@ fun GameMasterMapScreen(
             when (effect) {
                 GameMasterMapEffect.ReturnedToMenu -> onGoToMenu()
                 GameMasterMapEffect.OpenValidationQueue -> onOpenValidationQueue()
+                GameMasterMapEffect.NavigateToVictory -> onVictory(state.game.id)
             }
         }
     }
@@ -169,39 +171,28 @@ fun GameMasterMapScreen(
                     Spacer(Modifier.width(8.dp))
                     Text("Hunters (${state.hunterAnnotations.size})")
                 }
-                if (state.isGameOver) {
+                Box {
                     Button(
-                        onClick = { viewModel.onIntent(GameMasterMapIntent.LeaderboardTapped) },
-                        colors = ButtonDefaults.buttonColors(containerColor = CROrange),
+                        onClick = { viewModel.onIntent(GameMasterMapIntent.ValidationQueueTapped) },
+                        colors = ButtonDefaults.buttonColors(containerColor = CRPink),
                     ) {
-                        Icon(Icons.Default.EmojiEvents, contentDescription = null)
+                        Icon(Icons.Default.CheckCircle, contentDescription = null)
                         Spacer(Modifier.width(6.dp))
-                        Text("Leaderboard")
+                        Text(stringResource(R.string.challenge_validate))
                     }
-                } else {
-                    Box {
-                        Button(
-                            onClick = { viewModel.onIntent(GameMasterMapIntent.ValidationQueueTapped) },
-                            colors = ButtonDefaults.buttonColors(containerColor = CRPink),
+                    if (state.pendingSubmissionsCount > 0) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .offset(x = 6.dp, y = (-6).dp)
+                                .background(HunterRed, RoundedCornerShape(50))
+                                .padding(horizontal = 6.dp, vertical = 2.dp),
                         ) {
-                            Icon(Icons.Default.CheckCircle, contentDescription = null)
-                            Spacer(Modifier.width(6.dp))
-                            Text(stringResource(R.string.challenge_validate))
-                        }
-                        if (state.pendingSubmissionsCount > 0) {
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.TopEnd)
-                                    .offset(x = 6.dp, y = (-6).dp)
-                                    .background(HunterRed, RoundedCornerShape(50))
-                                    .padding(horizontal = 6.dp, vertical = 2.dp),
-                            ) {
-                                Text(
-                                    text = "${state.pendingSubmissionsCount}",
-                                    color = Color.White,
-                                    fontSize = 10.sp,
-                                )
-                            }
+                            Text(
+                                text = "${state.pendingSubmissionsCount}",
+                                color = Color.White,
+                                fontSize = 10.sp,
+                            )
                         }
                     }
                 }
@@ -258,37 +249,50 @@ fun GameMasterMapScreen(
                 )
             }
 
-            // PP-71: LAUNCH overlay when the chicken set manual start
-            // and is waiting for someone to tap the button.
+            // Unified pre-game overlay. READY_TO_LAUNCH flips it into
+            // manual-launch mode (LAUNCH button — GM has the same
+            // authority as the chicken to start the party); before the
+            // planned `timing.start` it ticks down so the GM sees the
+            // same lobby UI as everyone else.
             if (state.game.gameStatusEnum == dev.rahier.pouleparty.model.GameStatus.READY_TO_LAUNCH) {
-                dev.rahier.pouleparty.ui.map.ReadyToLaunchOverlay(
-                    role = dev.rahier.pouleparty.ui.map.LaunchOverlayRole.LAUNCHER,
+                dev.rahier.pouleparty.ui.components.PreGameOverlay(
+                    role = dev.rahier.pouleparty.ui.components.PreGameRole.GAME_MASTER,
+                    gameModTitle = state.game.gameModEnum.title,
+                    gameCode = state.game.gameCode,
+                    targetDate = state.game.startDate,
+                    nowDate = state.nowDate,
+                    connectedHunters = state.game.hunterIds.size,
+                    isManualStart = true,
                     isLaunching = state.isLaunching,
-                    errorMessage = state.launchError,
+                    launchErrorMessage = state.launchError,
                     onLaunchTapped = { viewModel.onIntent(GameMasterMapIntent.LaunchTapped) },
-                    onErrorDismissed = { viewModel.onIntent(GameMasterMapIntent.LaunchErrorDismissed) },
+                    onLaunchErrorDismissed = { viewModel.onIntent(GameMasterMapIntent.LaunchErrorDismissed) },
+                )
+            } else if (!state.hasGameStarted) {
+                dev.rahier.pouleparty.ui.components.PreGameOverlay(
+                    role = dev.rahier.pouleparty.ui.components.PreGameRole.GAME_MASTER,
+                    gameModTitle = state.game.gameModEnum.title,
+                    gameCode = state.game.gameCode,
+                    targetDate = state.game.startDate,
+                    nowDate = state.nowDate,
+                    connectedHunters = state.game.hunterIds.size,
                 )
             }
 
-            if (state.showGameOverAlert) {
-                AlertDialog(
-                    onDismissRequest = { viewModel.onIntent(GameMasterMapIntent.GameOverAlertDismissed) },
-                    title = { Text("Game ended") },
-                    text = { Text(state.gameOverMessage) },
-                    confirmButton = {
-                        TextButton(onClick = { viewModel.onIntent(GameMasterMapIntent.GameOverAlertDismissed) }) {
-                            Text("OK")
-                        }
-                    },
-                )
-            }
-
-            if (state.showLeaderboard) {
-                dev.rahier.pouleparty.ui.components.GameLeaderboardSheet(
-                    game = state.game,
-                    currentUserId = "",
-                    onDismiss = { viewModel.onIntent(GameMasterMapIntent.LeaderboardDismissed) },
-                )
+            // "Game ended → tap to see leaderboard" banner. Shown on
+            // top of the map once `status == DONE`. Tapping navigates
+            // to the Victory screen (which has the canonical "Back to
+            // menu" CTA).
+            if (state.isGameOver) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 92.dp, start = 16.dp, end = 16.dp)
+                ) {
+                    dev.rahier.pouleparty.ui.components.GameEndedBanner(
+                        onTap = { viewModel.onIntent(GameMasterMapIntent.ViewLeaderboardTapped) }
+                    )
+                }
             }
 
             if (state.showGameInfo) {

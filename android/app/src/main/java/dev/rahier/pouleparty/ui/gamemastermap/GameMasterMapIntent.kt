@@ -20,11 +20,8 @@ sealed class GameMasterMapIntent {
     data object LaunchTapped : GameMasterMapIntent()
     /** PP-71: dismisses the error alert after a failed launchGame call. */
     data object LaunchErrorDismissed : GameMasterMapIntent()
-    /** Game-over leaderboard CTA. */
-    data object LeaderboardTapped : GameMasterMapIntent()
-    data object LeaderboardDismissed : GameMasterMapIntent()
-    /** Dismisses the one-shot "game ended" alert. */
-    data object GameOverAlertDismissed : GameMasterMapIntent()
+    /** Banner tap at game-end → navigate to the Victory / leaderboard page. */
+    data object ViewLeaderboardTapped : GameMasterMapIntent()
     /** Game code "copy to clipboard" tap inside the info dialog. */
     data object CodeCopied : GameMasterMapIntent()
 }

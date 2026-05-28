@@ -84,6 +84,19 @@ struct JoinFlowFeature {
                 return .none
 
             case let .codeChanged(rawCode):
+                // Ignore transient `.code` binding updates that fire after the
+                // user already moved past code entry (e.g. autocaps re-fire or
+                // focus teardown during the animated transition to the team-name
+                // form). Without this gate, a single stray fire on a 6-char
+                // `state.code` falls through to the "kick off validation" path
+                // below and yanks the user back to `.codeValidated`.
+                switch state.step {
+                case .enteringCode, .validating, .codeNotFound, .networkError, .codeValidated:
+                    break
+                case .joiningWithTeamName, .submittingJoin,
+                     .gameMasterPasswordEntry, .submittingGameMasterPassword:
+                    return .none
+                }
                 let normalized = rawCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
                 if normalized.count == AppConstants.gameCodeLength,
                    normalized.allSatisfy({ $0.isLetter || $0.isNumber }) {

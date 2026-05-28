@@ -101,28 +101,10 @@ fun ChallengesSheet(
         }
     }
 
-    val galleryLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.PickVisualMedia()
-    ) { uri ->
-        val targetId = state.photoTargetChallengeId
-        if (uri != null && targetId != null) {
-            val bytes = runCatching {
-                context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
-            }.getOrNull()
-            if (bytes != null) {
-                viewModel.onIntent(ChallengesIntent.PhotoPicked(targetId, bytes))
-            } else {
-                viewModel.onIntent(ChallengesIntent.PhotoSourceCancelled)
-            }
-        } else {
-            viewModel.onIntent(ChallengesIntent.PhotoSourceCancelled)
-        }
-    }
-
-    val cameraLauncher = rememberLauncherForActivityResult(
+    val photoLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.TakePicture()
     ) { success ->
-        val targetId = state.photoTargetChallengeId
+        val targetId = state.captureTargetChallengeId
         val uri = pendingCameraUri
         pendingCameraUri = null
         if (success && uri != null && targetId != null) {
@@ -130,17 +112,42 @@ fun ChallengesSheet(
                 context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
             }.getOrNull()
             if (bytes != null) {
-                viewModel.onIntent(ChallengesIntent.PhotoPicked(targetId, bytes))
+                viewModel.onIntent(ChallengesIntent.MediaCaptured(targetId, bytes, dev.rahier.pouleparty.model.SubmissionMediaType.IMAGE))
             } else {
-                viewModel.onIntent(ChallengesIntent.PhotoSourceCancelled)
+                viewModel.onIntent(ChallengesIntent.CaptureCancelled)
             }
         } else {
-            viewModel.onIntent(ChallengesIntent.PhotoSourceCancelled)
+            viewModel.onIntent(ChallengesIntent.CaptureCancelled)
         }
     }
 
-    if (state.photoTargetChallenge != null) {
-        PhotoSourceDialog(
+    val videoLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CaptureVideo()
+    ) { success ->
+        val targetId = state.captureTargetChallengeId
+        val uri = pendingCameraUri
+        pendingCameraUri = null
+        if (success && uri != null && targetId != null) {
+            val bytes = runCatching {
+                context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+            }.getOrNull()
+            if (bytes != null) {
+                viewModel.onIntent(ChallengesIntent.MediaCaptured(targetId, bytes, dev.rahier.pouleparty.model.SubmissionMediaType.VIDEO))
+            } else {
+                viewModel.onIntent(ChallengesIntent.CaptureCancelled)
+            }
+        } else {
+            viewModel.onIntent(ChallengesIntent.CaptureCancelled)
+        }
+    }
+
+    if (state.captureTargetChallenge != null) {
+        // Single-tap flow: tapping "Doing it" lands here. We can't open a
+        // single Android camera intent that supports both photo + video
+        // toggle natively (iOS's UIImagePickerController does, Android
+        // doesn't), so we surface a centered Material modal with two
+        // primary actions. Backdrop / system back dismiss = cancel.
+        MediaCapturePickerDialog(
             onTakePhoto = {
                 val values = ContentValues().apply {
                     put(MediaStore.Images.Media.DISPLAY_NAME, "pouleparty_${System.currentTimeMillis()}.jpg")
@@ -152,17 +159,28 @@ fun ChallengesSheet(
                 )
                 if (uri != null) {
                     pendingCameraUri = uri
-                    cameraLauncher.launch(uri)
+                    photoLauncher.launch(uri)
                 } else {
-                    viewModel.onIntent(ChallengesIntent.PhotoSourceCancelled)
+                    viewModel.onIntent(ChallengesIntent.CaptureCancelled)
                 }
             },
-            onPickFromLibrary = {
-                galleryLauncher.launch(
-                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+            onRecordVideo = {
+                val values = ContentValues().apply {
+                    put(MediaStore.Video.Media.DISPLAY_NAME, "pouleparty_${System.currentTimeMillis()}.mp4")
+                    put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
+                }
+                val uri = context.contentResolver.insert(
+                    MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
+                    values
                 )
+                if (uri != null) {
+                    pendingCameraUri = uri
+                    videoLauncher.launch(uri)
+                } else {
+                    viewModel.onIntent(ChallengesIntent.CaptureCancelled)
+                }
             },
-            onCancel = { viewModel.onIntent(ChallengesIntent.PhotoSourceCancelled) }
+            onCancel = { viewModel.onIntent(ChallengesIntent.CaptureCancelled) }
         )
     }
 
@@ -208,8 +226,7 @@ fun ChallengesSheet(
                 ChallengesTab.CHALLENGES -> ChallengesTabContent(
                     modifier = Modifier.weight(1f).fillMaxWidth(),
                     state = state,
-                    onMarkAsDone = { viewModel.onIntent(ChallengesIntent.MarkAsDoneTapped(it)) },
-                    onSubmit = { viewModel.onIntent(ChallengesIntent.SubmitForValidationTapped(it)) }
+                    onDoingIt = { viewModel.onIntent(ChallengesIntent.DoingItTapped(it)) }
                 )
                 ChallengesTab.LEADERBOARD -> LeaderboardTabContent(
                     modifier = Modifier.weight(1f).fillMaxWidth(),
@@ -259,8 +276,7 @@ private fun SegmentedTabBar(
 private fun ChallengesTabContent(
     modifier: Modifier = Modifier,
     state: ChallengesUiState,
-    onMarkAsDone: (Challenge) -> Unit,
-    onSubmit: (Challenge) -> Unit
+    onDoingIt: (Challenge) -> Unit
 ) {
     val groups = state.challengesByLevel
     if (groups.isEmpty()) {
@@ -311,8 +327,7 @@ private fun ChallengesTabContent(
                     status = state.status(challenge),
                     isClosed = state.isClosedForSubmissions,
                     isLevelLocked = locked,
-                    onMarkAsDone = { onMarkAsDone(challenge) },
-                    onSubmit = { onSubmit(challenge) }
+                    onDoingIt = { onDoingIt(challenge) }
                 )
             }
         }
@@ -356,8 +371,7 @@ private fun ChallengeRow(
     status: ChallengeStatus,
     isClosed: Boolean,
     isLevelLocked: Boolean,
-    onMarkAsDone: () -> Unit,
-    onSubmit: () -> Unit
+    onDoingIt: () -> Unit
 ) {
     val validated = status == ChallengeStatus.VALIDATED
     val completedBorder = if (validated) {
@@ -417,8 +431,7 @@ private fun ChallengeRow(
         }
         Spacer(Modifier.size(12.dp))
         val labelRes = when (status) {
-            ChallengeStatus.AVAILABLE -> R.string.challenge_mark_as_done
-            ChallengeStatus.PENDING_LOCAL -> R.string.challenge_submit_for_validation
+            ChallengeStatus.AVAILABLE -> R.string.challenge_doing_it
             ChallengeStatus.SUBMITTING -> R.string.challenge_uploading
             ChallengeStatus.AWAITING_VALIDATION -> R.string.challenge_awaiting_validation
             ChallengeStatus.VALIDATED -> R.string.challenge_done
@@ -426,22 +439,19 @@ private fun ChallengeRow(
         }
         val containerColor = when (status) {
             ChallengeStatus.AVAILABLE -> CROrange
-            ChallengeStatus.PENDING_LOCAL -> CRPink
             ChallengeStatus.SUBMITTING -> CROrange.copy(alpha = 0.6f)
             ChallengeStatus.AWAITING_VALIDATION -> CROrange.copy(alpha = 0.25f)
             ChallengeStatus.VALIDATED -> ZoneGreen
             ChallengeStatus.REJECTED -> Color.Gray
         }
         val onClick: () -> Unit = when (status) {
-            ChallengeStatus.AVAILABLE -> onMarkAsDone
-            ChallengeStatus.PENDING_LOCAL -> onSubmit
+            ChallengeStatus.AVAILABLE -> onDoingIt
             else -> { -> }
         }
-        val canSubmit = status == ChallengeStatus.PENDING_LOCAL && !isLevelLocked
-        val canMark = status == ChallengeStatus.AVAILABLE
+        val canDoIt = status == ChallengeStatus.AVAILABLE && !isLevelLocked
         Button(
             onClick = onClick,
-            enabled = !isClosed && (canMark || canSubmit),
+            enabled = !isClosed && canDoIt,
             colors = ButtonDefaults.buttonColors(
                 containerColor = containerColor,
                 disabledContainerColor = containerColor,
@@ -615,73 +625,61 @@ private fun RegularPlayerRow(rank: Int, entry: LeaderboardHunterEntry) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Two-option modal that's properly centered on the screen (unlike the
+ * previous ModalBottomSheet which floated at the bottom and felt
+ * detached from the source row). Photo or short video — same flow as
+ * iOS's native camera segmented control, just split into two intents
+ * because Android has no equivalent.
+ */
 @Composable
-private fun PhotoSourceDialog(
+private fun MediaCapturePickerDialog(
     onTakePhoto: () -> Unit,
-    onPickFromLibrary: () -> Unit,
+    onRecordVideo: () -> Unit,
     onCancel: () -> Unit
 ) {
-    val sheetState = rememberModalBottomSheetState()
-    ModalBottomSheet(
+    androidx.compose.material3.AlertDialog(
         onDismissRequest = onCancel,
-        sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.background
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
+        title = {
             Text(
-                text = stringResource(R.string.challenge_add_photo),
+                text = stringResource(R.string.challenge_capture_title),
                 style = bangerStyle(20),
                 color = MaterialTheme.colorScheme.onBackground
             )
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(CROrange, RoundedCornerShape(10.dp))
-                    .clickable { onTakePhoto() }
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically
+        },
+        text = {
+            Text(
+                text = stringResource(R.string.challenge_capture_subtitle),
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+            )
+        },
+        confirmButton = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(
-                    text = stringResource(R.string.challenge_take_photo),
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold
-                )
+                Button(
+                    onClick = onTakePhoto,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = CROrange),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text(stringResource(R.string.challenge_take_photo), color = Color.White)
+                }
+                Button(
+                    onClick = onRecordVideo,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = CRPink),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text(stringResource(R.string.challenge_record_video), color = Color.White)
+                }
             }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(CRPink, RoundedCornerShape(10.dp))
-                    .clickable { onPickFromLibrary() }
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = stringResource(R.string.challenge_choose_from_library),
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onCancel() }
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = stringResource(R.string.cancel),
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-                    fontWeight = FontWeight.SemiBold
-                )
+        },
+        dismissButton = {
+            androidx.compose.material3.TextButton(onClick = onCancel) {
+                Text(stringResource(R.string.cancel))
             }
         }
-    }
+    )
 }

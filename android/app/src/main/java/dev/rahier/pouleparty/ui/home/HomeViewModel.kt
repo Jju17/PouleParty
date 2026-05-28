@@ -382,6 +382,20 @@ class HomeViewModel @Inject constructor(
     private fun onGameCodeChanged(code: String) {
         val normalized = code.trim().uppercase()
         _uiState.update { it.copy(gameCode = normalized) }
+        // Ignore transient text-field updates that fire after the user has
+        // already moved past code entry (e.g. autocaps re-fire or focus
+        // teardown during the animated transition to the team-name form).
+        // Without this gate, a single stray fire on a 6-char code falls
+        // through to `validateCode` below and yanks the user back to
+        // `CodeValidated`.
+        when (_uiState.value.joinStep) {
+            is JoinFlowStep.EnteringCode,
+            is JoinFlowStep.Validating,
+            is JoinFlowStep.CodeValidated,
+            is JoinFlowStep.CodeNotFound,
+            is JoinFlowStep.NetworkError -> Unit
+            else -> return
+        }
         if (normalized.length == AppConstants.GAME_CODE_LENGTH
             && normalized.all { it.isLetter() || it.isDigit() }
         ) {

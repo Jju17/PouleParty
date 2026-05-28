@@ -22,9 +22,7 @@ struct GameMasterMapFeature {
     @ObservableState
     struct State: Equatable {
         @Presents var validationQueue: ValidationQueueFeature.State?
-        @Presents var destination: Destination.State?
         var game: Game
-        var showLeaderboard: Bool = false
         var chickenLocation: CLLocationCoordinate2D?
         var chickenIsInvisible: Bool = false
         var hunterAnnotations: [HunterAnnotation] = []
@@ -72,26 +70,9 @@ struct GameMasterMapFeature {
         var isGameOver: Bool { game.status == .done }
     }
 
-    @Reducer
-    struct Destination {
-        @ObservableState
-        enum State: Equatable {
-            case alert(AlertState<Action.Alert>)
-        }
-
-        enum Action {
-            case alert(Alert)
-
-            enum Alert: Equatable {
-                case gameOver
-            }
-        }
-    }
-
     enum Action: BindableAction {
         case binding(BindingAction<State>)
         case delegate(Delegate)
-        case destination(PresentationAction<Destination.Action>)
         case `internal`(Internal)
         case validationQueue(PresentationAction<ValidationQueueFeature.Action>)
         case view(View)
@@ -107,8 +88,9 @@ struct GameMasterMapFeature {
             case leaveGameTapped
             case launchTapped
             case launchErrorDismissed
-            case leaderboardTapped
-            case leaderboardDismissed
+            /// Banner tap at game-end → navigate to the Victory /
+            /// leaderboard page (parent handles via `gameEnded` delegate).
+            case viewLeaderboardTapped
             // PP-86
             case designateHunterTapped(Registration)
             case designateConfirmTapped
@@ -135,6 +117,10 @@ struct GameMasterMapFeature {
         @CasePathable
         enum Delegate {
             case returnedToMenu
+            /// Game ended (status flipped to `.done`). Parent navigates
+            /// to the Victory / leaderboard screen so the GM has a clear
+            /// "Back to menu" path.
+            case gameEnded(Game)
         }
     }
 
@@ -202,7 +188,6 @@ struct GameMasterMapFeature {
                     }
                 )
             case let .internal(.gameUpdated(game)):
-                let wasGameOver = state.game.status == .done
                 state.game = game
                 let (lastUpdate, lastRadius) = game.findLastUpdate()
                 state.radius = lastRadius
@@ -217,19 +202,11 @@ struct GameMasterMapFeature {
                     center: circleCenter,
                     radius: CLLocationDistance(lastRadius)
                 )
-                if !wasGameOver, game.status == .done, state.destination == nil {
-                    state.destination = .alert(
-                        AlertState {
-                            TextState("Game ended")
-                        } actions: {
-                            ButtonState(action: .gameOver) {
-                                TextState("OK")
-                            }
-                        } message: {
-                            TextState("Open the leaderboard from the trophy button, or leave the game from the menu.")
-                        }
-                    )
-                }
+                // Game ended (status flipped to `.done`). The GM stays
+                // on the map with `isGameOver` (computed from
+                // `game.status`) so the "Game ended" banner appears;
+                // tapping the banner fires `viewLeaderboardTapped` →
+                // `.gameEnded` delegate → Victory navigation.
                 if state.previousWinnersCount >= 0,
                    let notif = detectNewWinners(
                        winners: game.winners,
@@ -306,19 +283,8 @@ struct GameMasterMapFeature {
             case .view(.leaveGameTapped):
                 return .send(.delegate(.returnedToMenu))
 
-            case .view(.leaderboardTapped):
-                state.showLeaderboard = true
-                return .none
-
-            case .view(.leaderboardDismissed):
-                state.showLeaderboard = false
-                return .none
-
-            case .destination(.presented(.alert(.gameOver))):
-                return .none
-
-            case .destination:
-                return .none
+            case .view(.viewLeaderboardTapped):
+                return .send(.delegate(.gameEnded(state.game)))
 
             case .view(.launchTapped):
                 return handleLaunchTapped(&state)
@@ -380,9 +346,6 @@ struct GameMasterMapFeature {
         }
         .ifLet(\.$validationQueue, action: \.validationQueue) {
             ValidationQueueFeature()
-        }
-        .ifLet(\.$destination, action: \.destination) {
-            Destination()
         }
     }
 

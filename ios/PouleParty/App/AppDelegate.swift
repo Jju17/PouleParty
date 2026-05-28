@@ -20,6 +20,17 @@ class AppDelegate: NSObject, UIApplicationDelegate, MessagingDelegate, UNUserNot
         // configure-time and caches the choice for the process lifetime.
         AppCheck.setAppCheckProviderFactory(PoulePartyAppCheckProviderFactory())
         FirebaseApp.configure()
+        // Bigger `URLCache.shared` so AsyncImage / AVPlayer responses
+        // backed by Firebase Storage hit local disk on revisit instead
+        // of re-downloading. iOS defaults to 4 MB memory / 20 MB disk,
+        // which is too small for the validator queue's 10-20 image
+        // submissions per game. 50 MB memory / 250 MB disk gives the
+        // validator instant scroll-back after the first load. Cache
+        // bytes are evicted by iOS under pressure, so this is safe.
+        URLCache.shared = URLCache(
+            memoryCapacity: 50 * 1024 * 1024,
+            diskCapacity: 250 * 1024 * 1024
+        )
         MigrationManager.runIfNeeded()
         Messaging.messaging().delegate = self
         UNUserNotificationCenter.current().delegate = self
