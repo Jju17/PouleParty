@@ -233,7 +233,7 @@ struct ChallengesFeature {
                 let hunterId = state.hunterId
                 return .merge(
                     .run { send in
-                        for await challenges in apiClient.challengesStream() {
+                        for await challenges in apiClient.challengesStream(gameId) {
                             await send(.internal(.challengesUpdated(challenges)))
                         }
                     },

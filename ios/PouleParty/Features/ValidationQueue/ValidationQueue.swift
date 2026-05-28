@@ -80,7 +80,7 @@ struct ValidationQueueFeature {
                         }
                     },
                     .run { send in
-                        for await challenges in apiClient.challengesStream() {
+                        for await challenges in apiClient.challengesStream(gameId) {
                             await send(.internal(.challengesUpdated(challenges)))
                         }
                     },

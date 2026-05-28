@@ -42,7 +42,7 @@ class ChallengesViewModelTest {
         Dispatchers.setMain(testDispatcher)
         repo = mockk(relaxed = true)
         auth = mockk(relaxed = true)
-        every { repo.challengesStream() } returns emptyFlow()
+        every { repo.challengesStream(any()) } returns emptyFlow()
         every { repo.challengeCompletionsStream(any()) } returns emptyFlow()
         coEvery { repo.getConfig(any()) } returns null
         coEvery { repo.fetchAllRegistrations(any()) } returns emptyList()
@@ -79,7 +79,7 @@ class ChallengesViewModelTest {
             Challenge(id = "c1", points = 10, titleByLocale = mapOf("fr" to "Take a photo")),
             Challenge(id = "c2", points = 5, titleByLocale = mapOf("fr" to "Drink water"))
         )
-        every { repo.challengesStream() } returns flowOf(streamed)
+        every { repo.challengesStream(any()) } returns flowOf(streamed)
         val vm = create()
         testDispatcher.scheduler.advanceUntilIdle()
         assertEquals(2, vm.uiState.value.challenges.size)
@@ -123,7 +123,7 @@ class ChallengesViewModelTest {
     @Test
     fun `DoingIt sets captureTarget for an available challenge`() {
         val challenge = Challenge(id = "c1", points = 5, titleByLocale = mapOf("fr" to "Hello"))
-        every { repo.challengesStream() } returns flowOf(listOf(challenge))
+        every { repo.challengesStream(any()) } returns flowOf(listOf(challenge))
         val vm = create()
         testDispatcher.scheduler.advanceUntilIdle()
 
@@ -135,7 +135,7 @@ class ChallengesViewModelTest {
     @Test
     fun `DoingIt on an already-completed challenge is a no-op`() {
         val challenge = Challenge(id = "c1", points = 5, titleByLocale = mapOf("fr" to "Hello"))
-        every { repo.challengesStream() } returns flowOf(listOf(challenge))
+        every { repo.challengesStream(any()) } returns flowOf(listOf(challenge))
         every { repo.challengeCompletionsStream("game-1") } returns flowOf(
             listOf(
                 ChallengeCompletion(
@@ -156,7 +156,7 @@ class ChallengesViewModelTest {
     @Test
     fun `MediaCaptured uploads + clears captureTarget`() {
         val challenge = Challenge(id = "c1", points = 7, titleByLocale = mapOf("fr" to "Hello"))
-        every { repo.challengesStream() } returns flowOf(listOf(challenge))
+        every { repo.challengesStream(any()) } returns flowOf(listOf(challenge))
         coEvery { repo.getConfig("game-1") } returns Game(id = "game-1", hunterIds = listOf("hunter-1"))
         coEvery { repo.fetchAllRegistrations("game-1") } returns listOf(
             Registration(userId = "hunter-1", teamName = "Dream Team")
@@ -194,7 +194,7 @@ class ChallengesViewModelTest {
     @Test
     fun `DoingIt while submitting is a no-op`() {
         val challenge = Challenge(id = "c1", points = 5, titleByLocale = mapOf("fr" to "Hello"))
-        every { repo.challengesStream() } returns flowOf(listOf(challenge))
+        every { repo.challengesStream(any()) } returns flowOf(listOf(challenge))
         val state = ChallengesUiState(
             challenges = listOf(challenge),
             submittingIds = setOf("c1"),

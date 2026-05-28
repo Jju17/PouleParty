@@ -121,8 +121,9 @@ class ValidationQueueViewModel @Inject constructor(
     }
 
     private fun streamChallenges() {
+        if (gameId.isEmpty()) return
         viewModelScope.launch {
-            firestoreRepository.challengesStream().collect { challenges ->
+            firestoreRepository.challengesStream(gameId).collect { challenges ->
                 _uiState.update { it.copy(challenges = challenges) }
             }
         }

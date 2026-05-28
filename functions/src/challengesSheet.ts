@@ -433,6 +433,14 @@ export function resolveLocale(req: { path?: string; query?: Record<string, unkno
   return "fr";
 }
 
+export function extractGameId(req: { path?: string }): string | null {
+  const path = req.path ?? "";
+  const match = path.match(/^\/challenges-(?:fr|en|nl)\/([^/?#]+)/i);
+  if (!match) return null;
+  const gameId = match[1].trim();
+  return gameId.length > 0 ? gameId : null;
+}
+
 export function renderHtml(docs: ChallengeDoc[], lang: Locale): string {
   const s = STRINGS[lang];
   return `<!DOCTYPE html>
@@ -790,8 +798,29 @@ export const renderChallengesSheet = onRequest(
       return;
     }
     const lang = resolveLocale(req);
+    const gameId = extractGameId(req);
+    if (!gameId) {
+      res.status(400).send(
+        "Game ID required in URL: pouleparty.be/challenges-" +
+          lang +
+          "/<gameId>"
+      );
+      return;
+    }
     try {
-      const snap = await getFirestore().collection("challenges").get();
+      const snap = await getFirestore()
+        .collection("games")
+        .doc(gameId)
+        .collection("challenges")
+        .get();
+      if (snap.empty) {
+        res.status(404).send(
+          "No challenges found for game " +
+            gameId +
+            " (the game may not exist or its challenges weren't snapshotted)."
+        );
+        return;
+      }
       const docs: ChallengeDoc[] = snap.docs.map((doc) => {
         const d = doc.data();
         const titleByLocale =

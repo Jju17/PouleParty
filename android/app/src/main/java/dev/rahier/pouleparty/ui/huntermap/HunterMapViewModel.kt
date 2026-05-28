@@ -185,8 +185,9 @@ class HunterMapViewModel @Inject constructor(
     }
 
     private fun observeChallengesAvailability() {
+        if (gameId.isEmpty()) return
         viewModelScope.launch {
-            firestoreRepository.challengesStream()
+            firestoreRepository.challengesStream(gameId)
                 .catch { e ->
                     // PP-64: a synchronous flow error (offline / rules
                     // hiccup) should not crash the hunter map. Mirror the

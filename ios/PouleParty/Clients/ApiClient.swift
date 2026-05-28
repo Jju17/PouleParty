@@ -72,7 +72,7 @@ struct ApiClient {
     /// instant a new hunter joins, instead of staying frozen on the load-time
     /// snapshot.
     var registrationsStream: (String) -> AsyncStream<[Registration]>
-    var challengesStream: () -> AsyncStream<[Challenge]>
+    var challengesStream: (_ gameId: String) -> AsyncStream<[Challenge]>
     var challengeCompletionsStream: (String) -> AsyncStream<[ChallengeCompletion]>
     var hunterSubmissionsStream: (_ gameId: String, _ hunterId: String) -> AsyncStream<[ChallengeSubmission]>
     var pendingSubmissionsStream: (_ gameId: String) -> AsyncStream<[ChallengeSubmission]>
@@ -271,7 +271,7 @@ extension ApiClient: TestDependencyKey {
         createRegistration: { _, _ in },
         fetchAllRegistrations: { _ in [] },
         registrationsStream: { _ in AsyncStream { _ in } },
-        challengesStream: { AsyncStream { _ in } },
+        challengesStream: { _ in AsyncStream { _ in } },
         challengeCompletionsStream: { _ in AsyncStream { _ in } },
         hunterSubmissionsStream: { _, _ in AsyncStream { _ in } },
         pendingSubmissionsStream: { _ in AsyncStream { _ in } },
@@ -802,9 +802,10 @@ extension ApiClient: DependencyKey {
                 }
             }
         },
-        challengesStream: {
+        challengesStream: { gameId in
             AsyncStream { continuation in
                 let listener = Firestore.firestore()
+                    .collection(gamesCollection).document(gameId)
                     .collection(challengesCollection)
                     .addSnapshotListener { snapshot, error in
                         if let error {

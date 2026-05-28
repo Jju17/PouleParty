@@ -56,7 +56,7 @@ extension ApiClient {
                     continuation.yield(MockDemoData.registrations)
                 }
             },
-            challengesStream: {
+            challengesStream: { _ in
                 demoStream { continuation in
                     continuation.yield([])
                 }

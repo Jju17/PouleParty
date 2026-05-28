@@ -208,6 +208,17 @@ service cloud.firestore {
         allow create, update, delete: if false;
       }
 
+      // Per-game snapshot of the challenges catalog. Written exclusively
+      // by `onGameCreated` (admin SDK); read by everyone with a role on
+      // the game.
+      match /challenges/{challengeId} {
+        allow read: if request.auth != null
+                    && (request.auth.uid == get(/databases/$(database)/documents/games/$(gameId)).data.creatorId
+                        || request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.hunterIds
+                        || request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.get('gameMasterIds', []));
+        allow write: if false;
+      }
+
       match /challengeSubmissions/{submissionId} {
         allow read: if request.auth != null
                     && (request.auth.uid == get(/databases/$(database)/documents/games/$(gameId)).data.creatorId
@@ -257,11 +268,11 @@ service cloud.firestore {
       allow read, create, update, delete: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Global challenges catalog — populated by devs via the Firebase Console.
-    // Authenticated clients can read; no client writes.
+    // Admin-only template. Cloud Functions read it via admin SDK and
+    // snapshot it into `/games/{gameId}/challenges` at game creation.
+    // Clients never touch this collection at runtime.
     match /challenges/{challengeId} {
-      allow read: if request.auth != null;
-      allow write: if false;
+      allow read, write: if false;
     }
 
     // GameMaster rate-limit counters (PP-70). One doc per

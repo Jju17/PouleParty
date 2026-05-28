@@ -913,8 +913,49 @@ export const onGameCreated = onDocumentCreated(
       console.error(`Failed to schedule tasks for game ${gameId}:`, error);
       throw error;
     }
+
+    try {
+      await snapshotChallengesIntoGame(gameId);
+    } catch (error) {
+      logger.error(
+        `[onGameCreated] snapshotChallengesIntoGame failed for ${gameId}: ${(error as Error).message}`
+      );
+    }
   }
 );
+
+async function snapshotChallengesIntoGame(gameId: string): Promise<void> {
+  const gameChallengesRef = db
+    .collection("games")
+    .doc(gameId)
+    .collection("challenges");
+
+  const existing = await gameChallengesRef.limit(1).get();
+  if (!existing.empty) {
+    logger.info(
+      `[snapshotChallengesIntoGame] gameId=${gameId} already has challenges; skipping`
+    );
+    return;
+  }
+
+  const templateSnap = await db.collection("challenges").get();
+  if (templateSnap.empty) {
+    logger.warn(
+      `[snapshotChallengesIntoGame] global /challenges is empty; gameId=${gameId} starts with no challenges`
+    );
+    return;
+  }
+
+  const batch = db.batch();
+  for (const doc of templateSnap.docs) {
+    batch.set(gameChallengesRef.doc(doc.id), doc.data());
+  }
+  await batch.commit();
+
+  logger.info(
+    `[snapshotChallengesIntoGame] copied ${templateSnap.size} challenges into games/${gameId}/challenges`
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Firestore trigger: detect new winners

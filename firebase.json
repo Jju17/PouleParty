@@ -45,6 +45,13 @@
         }
       },
       {
+        "source": "/challenges-fr/**",
+        "function": {
+          "functionId": "renderChallengesSheet",
+          "region": "europe-west1"
+        }
+      },
+      {
         "source": "/challenges-en",
         "function": {
           "functionId": "renderChallengesSheet",
@@ -52,7 +59,21 @@
         }
       },
       {
+        "source": "/challenges-en/**",
+        "function": {
+          "functionId": "renderChallengesSheet",
+          "region": "europe-west1"
+        }
+      },
+      {
         "source": "/challenges-nl",
+        "function": {
+          "functionId": "renderChallengesSheet",
+          "region": "europe-west1"
+        }
+      },
+      {
+        "source": "/challenges-nl/**",
         "function": {
           "functionId": "renderChallengesSheet",
           "region": "europe-west1"

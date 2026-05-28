@@ -86,10 +86,13 @@ export const validateChallengeSubmission = onCall<
       return { status: "rejected", pointsAwarded: 0 };
     }
 
-    const challengeRef = db.collection("challenges").doc(challengeId);
+    const challengeRef = gameRef.collection("challenges").doc(challengeId);
     const challengeSnap = await tx.get(challengeRef);
     if (!challengeSnap.exists) {
-      throw new HttpsError("not-found", `Challenge ${challengeId} not found`);
+      throw new HttpsError(
+        "not-found",
+        `Challenge ${challengeId} not found in game ${gameId}`
+      );
     }
     const challenge = challengeSnap.data() ?? {};
     const points = typeof challenge.points === "number" ? challenge.points : 0;

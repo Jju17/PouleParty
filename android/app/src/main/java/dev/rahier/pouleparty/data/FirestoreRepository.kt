@@ -658,9 +658,14 @@ class FirestoreRepository @Inject constructor(
 
     // ── Challenges ───────────────────────────────────────
 
-    /** Live stream of the global `/challenges` collection, ordered by points desc. */
-    fun challengesStream(): Flow<List<Challenge>> = callbackFlow {
-        val listener = firestore.collection(AppConstants.COLLECTION_CHALLENGES)
+    fun challengesStream(gameId: String): Flow<List<Challenge>> = callbackFlow {
+        if (gameId.isEmpty()) {
+            trySend(emptyList())
+            awaitClose { }
+            return@callbackFlow
+        }
+        val listener = firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
+            .collection(AppConstants.COLLECTION_CHALLENGES)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     logListenerError("Challenges", error)

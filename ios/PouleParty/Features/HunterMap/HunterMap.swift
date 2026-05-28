@@ -751,7 +751,7 @@ struct HunterMapFeature {
 
                 effects.append(
                     .run { send in
-                        for await challenges in apiClient.challengesStream() {
+                        for await challenges in apiClient.challengesStream(gameId) {
                             await send(.internal(.challengesAvailabilityUpdated(!challenges.isEmpty)))
                         }
                     }

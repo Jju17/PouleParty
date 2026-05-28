@@ -70,7 +70,7 @@ class BaseMapViewModelTeardownTest {
         every { firestoreRepository.powerUpsFlow(any()) } returns powerUps
         every { firestoreRepository.hunterLocationsFlow(any()) } returns emptyFlow()
         every { firestoreRepository.chickenLocationFlow(any()) } returns emptyFlow()
-        every { firestoreRepository.challengesStream() } returns emptyFlow()
+        every { firestoreRepository.challengesStream(any()) } returns emptyFlow()
         every { locationRepository.locationFlow() } returns emptyFlow()
     }
 

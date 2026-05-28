@@ -43,7 +43,7 @@ class HunterMapViewModelBehaviorTest {
         io.mockk.every { firestoreRepository.gameConfigFlow(any()) } returns kotlinx.coroutines.flow.emptyFlow()
         io.mockk.every { firestoreRepository.powerUpsFlow(any()) } returns kotlinx.coroutines.flow.emptyFlow()
         io.mockk.every { firestoreRepository.chickenLocationFlow(any()) } returns kotlinx.coroutines.flow.emptyFlow()
-        io.mockk.every { firestoreRepository.challengesStream() } returns kotlinx.coroutines.flow.emptyFlow()
+        io.mockk.every { firestoreRepository.challengesStream(any()) } returns kotlinx.coroutines.flow.emptyFlow()
         // CRIT-2/CRIT-3 (audit 2026-05-17): the foundCode check is now
         // server-side via `submitFoundCode`. Default the mock to accept
         // only the Game.mock canonical code "1234" — every other code
@@ -361,7 +361,7 @@ class HunterMapViewModelBehaviorTest {
 
     @Test
     fun `hasChallenges is false when stream emits empty list`() {
-        io.mockk.every { firestoreRepository.challengesStream() } returns
+        io.mockk.every { firestoreRepository.challengesStream(any()) } returns
             kotlinx.coroutines.flow.flowOf(emptyList())
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
@@ -376,7 +376,7 @@ class HunterMapViewModelBehaviorTest {
             titleByLocale = mapOf("fr" to "Sing"),
             bodyByLocale = mapOf("fr" to "Sing loudly"),
         )
-        io.mockk.every { firestoreRepository.challengesStream() } returns
+        io.mockk.every { firestoreRepository.challengesStream(any()) } returns
             kotlinx.coroutines.flow.flowOf(listOf(challenge))
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
@@ -386,7 +386,7 @@ class HunterMapViewModelBehaviorTest {
     @Test
     fun `hasChallenges handles empty then non-empty transition`() {
         val flow = kotlinx.coroutines.flow.MutableStateFlow<List<dev.rahier.pouleparty.model.Challenge>>(emptyList())
-        io.mockk.every { firestoreRepository.challengesStream() } returns flow
+        io.mockk.every { firestoreRepository.challengesStream(any()) } returns flow
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
         assertFalse(vm.uiState.value.hasChallenges)
@@ -401,7 +401,7 @@ class HunterMapViewModelBehaviorTest {
         val flow = kotlinx.coroutines.flow.MutableStateFlow<List<dev.rahier.pouleparty.model.Challenge>>(
             listOf(dev.rahier.pouleparty.model.Challenge(id = "c1", points = 5, titleByLocale = mapOf("fr" to "T")))
         )
-        io.mockk.every { firestoreRepository.challengesStream() } returns flow
+        io.mockk.every { firestoreRepository.challengesStream(any()) } returns flow
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
         assertTrue(vm.uiState.value.hasChallenges)
@@ -416,7 +416,7 @@ class HunterMapViewModelBehaviorTest {
         val c1 = dev.rahier.pouleparty.model.Challenge(id = "c1", points = 5, titleByLocale = mapOf("fr" to "T1"))
         val c2 = dev.rahier.pouleparty.model.Challenge(id = "c2", points = 10, titleByLocale = mapOf("fr" to "T2"))
         val flow = kotlinx.coroutines.flow.MutableStateFlow(listOf(c1))
-        io.mockk.every { firestoreRepository.challengesStream() } returns flow
+        io.mockk.every { firestoreRepository.challengesStream(any()) } returns flow
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
         assertTrue(vm.uiState.value.hasChallenges)
@@ -436,7 +436,7 @@ class HunterMapViewModelBehaviorTest {
 
     @Test
     fun `hasChallenges stays false when stream errors without emitting`() {
-        io.mockk.every { firestoreRepository.challengesStream() } returns
+        io.mockk.every { firestoreRepository.challengesStream(any()) } returns
             kotlinx.coroutines.flow.flow { throw RuntimeException("boom") }
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
