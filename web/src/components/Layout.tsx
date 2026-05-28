@@ -1,40 +1,19 @@
 import type { ReactNode } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useI18n } from "../i18n";
+import { routePath, type Locale } from "../i18n/routes";
 import { useTheme } from "../theme";
 
-// Pages whose URL itself carries the locale (PP-46 CreateParty +
-// PP-52 Inscription/Success/Cancel). The header toggle navigates to
-// the matching slug instead of just flipping the i18n state — without
-// this, the page's own pathname-based `setLocale` useEffect would
-// snap the locale right back on the next render.
-type LocaleSlug = "fr" | "en" | "nl";
-
-const LOCALIZED_ROUTE_FAMILIES: Record<LocaleSlug, string>[] = [
-  // PP-46 — "create a party"
-  { fr: "/creer-une-partie", en: "/create-a-party", nl: "/een-feestje-organiseren" },
-  // PP-52 — inscription wizard (matches any sub-route like /success or /cancel)
-  { fr: "/inscription", en: "/registration", nl: "/inschrijving" },
-];
-
-function localizedPathFor(pathname: string, target: LocaleSlug): string | null {
-  for (const family of LOCALIZED_ROUTE_FAMILIES) {
-    for (const slug of Object.values(family)) {
-      if (pathname === slug || pathname.startsWith(`${slug}/`)) {
-        const tail = pathname.slice(slug.length); // "" or "/success" / "/cancel"
-        return family[target] + tail;
-      }
-    }
-  }
-  return null;
-}
+const NEXT_LOCALE: Record<Locale, Locale> = {
+  en: "fr",
+  fr: "nl",
+  nl: "en",
+};
 
 export default function Layout({ children }: { children: ReactNode }) {
   const { locale, t, setLocale } = useI18n();
   const { theme, toggleTheme } = useTheme();
   const isDark = theme === "dark";
-  const location = useLocation();
-  const navigate = useNavigate();
 
   const footerLink = (to: string, label: string) => (
     <Link
@@ -60,32 +39,27 @@ export default function Layout({ children }: { children: ReactNode }) {
       {/* Header */}
       <header className="px-4 py-4 sm:px-6 sm:py-6 flex justify-between items-center max-w-4xl mx-auto w-full">
         <Link
-          to="/"
+          to={routePath("home", locale)}
           className="text-2xl sm:text-3xl font-bold tracking-wide hover:scale-105 transition-transform duration-300 pb-1 shrink-0"
           style={{ fontFamily: "Bangers, cursive", letterSpacing: "0.06em", lineHeight: 1, backgroundImage: "linear-gradient(to right, #FE6A00, #EF0778)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", color: "transparent" }}
         >
           Poule Party
         </Link>
         <nav className="flex items-center gap-2">
+          {/* PP-99 — Locale toggle. `setLocale` navigates to the
+              equivalent path in the new locale, so `/fr/inscription`
+              becomes `/nl/inschrijving` rather than dropping the user
+              on `/nl` (the home of the new locale). */}
           <button
-            onClick={() => {
-              const next: LocaleSlug = locale === "en" ? "fr" : locale === "fr" ? "nl" : "en";
-              const swap = localizedPathFor(location.pathname, next);
-              if (swap) {
-                // Destination page's own `setLocale` useEffect will
-                // pin the locale once React Router lands there.
-                navigate({ pathname: swap, search: location.search }, { replace: true });
-              } else {
-                setLocale(next);
-              }
-            }}
+            onClick={() => setLocale(NEXT_LOCALE[locale])}
             className={`px-2.5 py-1.5 rounded-full border-2 text-xs font-bold transition-all duration-300 ${
               isDark
                 ? "border-[#FF8C33] text-[#FF8C33] hover:bg-[#FF8C33] hover:text-[#1A1A2E]"
                 : "border-[#FE6A00] text-[#FE6A00] hover:bg-[#FE6A00] hover:text-white"
             }`}
+            aria-label={`Switch to ${NEXT_LOCALE[locale].toUpperCase()}`}
           >
-            {locale === "en" ? "FR" : locale === "fr" ? "NL" : "EN"}
+            {NEXT_LOCALE[locale].toUpperCase()}
           </button>
         </nav>
       </header>
@@ -98,11 +72,11 @@ export default function Layout({ children }: { children: ReactNode }) {
       {/* Footer */}
       <footer className={`p-6 text-center text-sm ${isDark ? "text-gray-400" : "text-gray-600"}`}>
         <div className="flex justify-center gap-4 mb-2">
-          {footerLink("/privacy", t.nav.privacy)}
+          {footerLink(routePath("privacy", locale), t.nav.privacy)}
           <span>·</span>
-          {footerLink("/terms", t.nav.terms)}
+          {footerLink(routePath("terms", locale), t.nav.terms)}
           <span>·</span>
-          {footerLink("/support", t.nav.support)}
+          {footerLink(routePath("support", locale), t.nav.support)}
         </div>
         &copy; {new Date().getFullYear()} Julien Rahier. {t.footer.rights}
       </footer>
@@ -118,7 +92,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         aria-label="Toggle dark mode"
         tabIndex={0}
       >
-        {isDark ? "\u2600\uFE0F" : "\uD83C\uDF19"}
+        {isDark ? "☀️" : "🌙"}
       </button>
     </div>
   );

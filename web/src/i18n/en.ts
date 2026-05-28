@@ -39,7 +39,7 @@ export default {
       "We use Firebase Analytics to collect anonymous usage data (app opens, screen views) and Firebase Crashlytics for crash reports, to improve the app. No personally identifiable information is collected through these services.",
     paidEventData: "Paid event registration:",
     paidEventDataText:
-      "When you register for a paid PouleParty event on the web form (pouleparty.be/registration), we collect: the captain's full name, team name, email address, phone number, team size, your IP address and locale, the Stripe Checkout session ID, and a 6-character validation code we generate for the event. This data is stored in our `/eventRegistrations` Firestore collection and transmitted to the third-party services listed below for payment, confirmation email delivery, and on-site logistics. Payment card details are never collected by us — they are entered directly on Stripe's hosted Checkout page.",
+      "When you register for a paid PouleParty event on the web form (pouleparty.be/en/registration), we collect: the captain's full name, team name, email address, phone number, team size, your IP address and locale, the Stripe Checkout session ID, and a 6-character validation code we generate for the event. This data is stored in our `/eventRegistrations` Firestore collection and transmitted to the third-party services listed below for payment, confirmation email delivery, and on-site logistics. Payment card details are never collected by us — they are entered directly on Stripe's hosted Checkout page.",
     legalBasis: "Legal Basis for Processing",
     legalBasisIntro: "Under the GDPR (Art. 6), we process your data based on the following legal grounds:",
     legalBasisConsent: "Consent (Art. 6(1)(a)):",
@@ -136,7 +136,7 @@ export default {
       "By downloading, installing or using Poule Party, or by registering for a paid PouleParty event, you agree to these Terms of Use. If you do not agree, please do not use the app or register for an event.",
     description: "Description of the Service",
     descriptionText:
-      "Poule Party is a free location-based mobile game where one player (the Chicken) hides while other players (Hunters) try to find them using a real-time map with a shrinking zone. Separately, we organize occasional paid in-person PouleParty events in Brussels (the \"D-Day\" event series), for which tickets can be purchased on the web at pouleparty.be/registration; the in-app experience itself is and remains free of charge.",
+      "Poule Party is a free location-based mobile game where one player (the Chicken) hides while other players (Hunters) try to find them using a real-time map with a shrinking zone. Separately, we organize occasional paid in-person PouleParty events in Brussels (the \"D-Day\" event series), for which tickets can be purchased on the web at pouleparty.be/en/registration; the in-app experience itself is and remains free of charge.",
     parties: "Contracting Party",
     partiesText:
       "PouleParty is operated by Julien Rahier, sole trader registered in Belgium, contact julien@rahier.dev. For paid events, you contract directly with Julien Rahier as the event organizer. No company sits between you and us.",
@@ -263,7 +263,7 @@ export default {
       cluck: "CLUCK CLUCK 🐔",
       referenceLabel: "Reference",
       noSessionTitle: "Payment\npage",
-      noSessionBody: "This page is shown after a Stripe payment. If you're looking to register, head back to /registration.",
+      noSessionBody: "This page is shown after a Stripe payment. If you're looking to register, head back to /en/registration.",
     },
     cancel: {
       title: "Payment\ncancelled",
@@ -314,5 +314,11 @@ export default {
       "Something went wrong. Try again or email us at julien@rahier.dev.",
     formErrorInvalidEmail: "Please enter a valid email address.",
     fallbackHint: "Form not working? You can also email us directly:",
+  },
+  notFound: {
+    eyebrow: "404 · Cluck cluck...",
+    title: "This page\ndoes not exist.",
+    body: "The Chicken must have pecked the link. Head back home and pick the hunt up from there.",
+    cta: "BACK TO HOME",
   },
 };

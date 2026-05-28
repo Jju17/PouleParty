@@ -1,17 +1,16 @@
-import { useEffect, useMemo, useState } from "react";
-import { useLocation, useSearchParams } from "react-router-dom";
+import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import Layout from "../components/Layout";
 import { useI18n } from "../i18n";
-import { localeFromPathname } from "./inscriptionPaths";
+import { routePath } from "../i18n/routes";
 import { getAppCheckToken } from "../appCheck";
 import { isAllowedBatchId } from "../registrationBatches";
 
 // PP-52 — 3-step inscription wizard (intro → form → récap → Stripe).
-// All copy comes from `t.inscription.*` (en/fr/nl). The page pins
-// its locale based on the URL slug (`/inscription` = FR,
-// `/registration` = EN, `/inschrijving` = NL), same convention as
-// PP-46's "create a party" page. The header toggle still works
-// in-session if a visitor wants to switch.
+// All copy comes from `t.inscription.*` (en/fr/nl). PP-99: the page's
+// locale comes from the URL prefix (`/fr/inscription`,
+// `/en/registration`, `/nl/inschrijving`) via `<I18nProvider>` — no
+// per-page pinning needed.
 
 const API_ENDPOINT = "/api/createPendingRegistration";
 const UNIT_PRICE_EUR = 12;
@@ -59,16 +58,9 @@ function isFormValid(form: FormState): form is FormState & { teamSize: TeamSize 
 }
 
 export default function Inscription() {
-  const { t, locale, setLocale } = useI18n();
-  const location = useLocation();
+  const { t, locale } = useI18n();
   const [searchParams] = useSearchParams();
   const batchId = searchParams.get("batchId")?.trim() ?? "";
-
-  // Pin the locale to the URL slug on mount; the header toggle still
-  // lets the visitor flip languages in-session.
-  useEffect(() => {
-    setLocale(localeFromPathname(location.pathname));
-  }, [location.pathname, setLocale]);
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   // Tracks the last navigation direction so step swaps slide from the
@@ -181,6 +173,8 @@ export default function Inscription() {
               total={total}
               submitting={submitting}
               error={error}
+              termsHref={routePath("terms", locale)}
+              privacyHref={routePath("privacy", locale)}
               onBack={() => goTo(2)}
               onPay={submit}
             />
@@ -344,6 +338,8 @@ function RecapStep({
   total,
   submitting,
   error,
+  termsHref,
+  privacyHref,
   onBack,
   onPay,
 }: {
@@ -352,6 +348,8 @@ function RecapStep({
   total: number;
   submitting: boolean;
   error: string | null;
+  termsHref: string;
+  privacyHref: string;
   onBack: () => void;
   onPay: () => void;
 }) {
@@ -405,11 +403,11 @@ function RecapStep({
           `consentAcknowledgedAt` timestamp server-side. */}
       <p className="mt-5 text-xs opacity-75 leading-relaxed text-center">
         {recap.consentPrefix}{" "}
-        <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-[#FE6A00] underline">
+        <a href={termsHref} target="_blank" rel="noopener noreferrer" className="text-[#FE6A00] underline">
           {recap.consentTermsLink}
         </a>
         {recap.consentJoin}
-        <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-[#FE6A00] underline">
+        <a href={privacyHref} target="_blank" rel="noopener noreferrer" className="text-[#FE6A00] underline">
           {recap.consentPrivacyLink}
         </a>
         {recap.consentSuffix}

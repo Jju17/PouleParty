@@ -336,16 +336,16 @@ describe("originFor", () => {
   });
 });
 
-describe("basePathForLocale", () => {
-  test("maps each known locale to its slug", () => {
-    expect(basePathForLocale("fr")).toBe("/inscription");
-    expect(basePathForLocale("en")).toBe("/registration");
-    expect(basePathForLocale("nl")).toBe("/inschrijving");
+describe("basePathForLocale (PP-99 — locale-prefixed slugs)", () => {
+  test("maps each known locale to its localized slug under /<locale>/", () => {
+    expect(basePathForLocale("fr")).toBe("/fr/inscription");
+    expect(basePathForLocale("en")).toBe("/en/registration");
+    expect(basePathForLocale("nl")).toBe("/nl/inschrijving");
   });
 
-  test("falls back to /inscription for unknown locales", () => {
-    expect(basePathForLocale("de")).toBe("/inscription");
-    expect(basePathForLocale("")).toBe("/inscription");
-    expect(basePathForLocale("FR")).toBe("/inscription"); // case-sensitive
+  test("falls back to /fr/inscription for unknown locales", () => {
+    expect(basePathForLocale("de")).toBe("/fr/inscription");
+    expect(basePathForLocale("")).toBe("/fr/inscription");
+    expect(basePathForLocale("FR")).toBe("/fr/inscription"); // case-sensitive
   });
 });

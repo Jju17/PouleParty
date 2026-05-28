@@ -50,7 +50,7 @@ When the chicken toggles **manual launch** on the `startTime` wizard step, the w
 
 ### Paid event registrations (PP-52)
 
-For real-world events where players pay to participate (D-Day 06/06/2026 being the first), inscriptions happen on the public web form (`pouleparty.be/inscription` FR, `/registration` EN, `/inschrijving` NL) **before** any in-app Game exists. The flow:
+For real-world events where players pay to participate (D-Day 06/06/2026 being the first), inscriptions happen on the public web form (`pouleparty.be/fr/inscription` FR, `/en/registration` EN, `/nl/inschrijving` NL — PP-99 i18n URL convention with `/<locale>/<localized-slug>` prefix; legacy slugs without prefix continue to 301 to the new ones) **before** any in-app Game exists. The flow:
 
 1. **Form submit → Stripe Checkout** : `createPendingRegistration` Cloud Function writes a `/eventRegistrations/{rid}` doc with `paid: false` + a unique 6-char alphanum code, then opens a Stripe Checkout Session (12€ × teamSize, EUR). `success_url` / `cancel_url` are built from the request's `Origin` header (staging vs prod) and the visitor's locale.
 2. **Stripe webhook → idempotent flip** : `confirmRegistrationPayment` verifies the Stripe signature, flips `paid: true` inside a transaction (re-deliveries are noops), then runs side effects: send a localized confirmation email via Resend (FR / EN / NL) and append a row to the D-Day Google Sheet. Email + Sheet failures are logged but don't 5xx Stripe (would re-trigger the webhook past the idempotency guard, losing the side effects entirely).

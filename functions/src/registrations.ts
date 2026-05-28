@@ -55,17 +55,18 @@ export function originFor(req: { headers: Record<string, string | string[] | und
   return FALLBACK_ORIGIN;
 }
 
-// Mirror of `web/src/pages/inscriptionPaths.ts`. Used to build the
-// Stripe Checkout `success_url` / `cancel_url` on the same slug the
-// visitor came from so they don't get bounced into a foreign language.
-const LOCALE_BASE_PATH: Record<string, string> = {
-  fr: "/inscription",
-  en: "/registration",
-  nl: "/inschrijving",
+// PP-99 — Mirror of `web/src/i18n/routes.ts:ROUTES.inscription`. Used
+// to build the Stripe Checkout `success_url` / `cancel_url` on the
+// same locale-prefixed + localized slug the visitor came from so they
+// don't get bounced into a foreign language.
+const LOCALE_INSCRIPTION_PATH: Record<string, string> = {
+  fr: "/fr/inscription",
+  en: "/en/registration",
+  nl: "/nl/inschrijving",
 };
 
 export function basePathForLocale(locale: string): string {
-  return LOCALE_BASE_PATH[locale] ?? LOCALE_BASE_PATH.fr;
+  return LOCALE_INSCRIPTION_PATH[locale] ?? LOCALE_INSCRIPTION_PATH.fr;
 }
 
 interface RegistrationFormPayload {

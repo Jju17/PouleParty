@@ -1,28 +1,10 @@
-import { useEffect } from "react";
-import { useLocation } from "react-router-dom";
 import Layout from "../components/Layout";
 import { useI18n } from "../i18n";
 
-/**
- * The 3 routes that render this page each pin a specific locale. The
- * mobile apps build the URL from the device language and open it in the
- * browser; the URL slug is therefore the source of truth for which
- * language to display.
- */
-const ROUTE_LOCALE_MAP: Record<string, "fr" | "en" | "nl"> = {
-  "/creer-une-partie": "fr",
-  "/create-a-party": "en",
-  "/een-feestje-organiseren": "nl",
-};
-
+// PP-99 — Locale is derived from the URL prefix (`/fr/...`, `/en/...`,
+// `/nl/...`) by `<I18nProvider>`. No per-page pinning needed.
 export default function CreateParty() {
-  const { t, setLocale } = useI18n();
-  const location = useLocation();
-
-  useEffect(() => {
-    const forced = ROUTE_LOCALE_MAP[location.pathname];
-    if (forced) setLocale(forced);
-  }, [location.pathname, setLocale]);
+  const { t } = useI18n();
 
   return (
     <Layout>

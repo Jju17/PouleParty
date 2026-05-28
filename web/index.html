@@ -23,6 +23,10 @@
     <script>
       // Sync dark class before React renders to avoid flash of wrong theme
       (function(){var t=localStorage.getItem("theme");var d=t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme:dark)").matches);if(d)document.documentElement.classList.add("dark")})();
+      // PP-99: pin <html lang> to the URL prefix before React boots so
+      // screen readers + no-JS crawlers see the right locale on first
+      // paint. React's <I18nProvider> re-applies it post-hydration.
+      (function(){var s=location.pathname.split("/")[1];if(s==="fr"||s==="en"||s==="nl")document.documentElement.lang=s})();
     </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>

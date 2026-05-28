@@ -71,6 +71,15 @@ interface SheetStrings {
   proofLegend: string;
   goodHunt: string;
   emptyState: string;
+  // PP-99 error pages (CF returns branded HTML instead of plain text).
+  errorMissingGameIdTitle: string;
+  errorMissingGameIdBody: string;
+  errorGameNotFoundTitle: string;
+  errorGameNotFoundBody: string;
+  errorMethodNotAllowedTitle: string;
+  errorMethodNotAllowedBody: string;
+  errorInternalTitle: string;
+  errorInternalBody: string;
 }
 
 const STRINGS: Record<Locale, SheetStrings> = {
@@ -118,6 +127,18 @@ const STRINGS: Record<Locale, SheetStrings> = {
     proofLegend: "Preuves sur le groupe WhatsApp partagé",
     goodHunt: "BONNE CHASSE !",
     emptyState: "Aucun défi pour le moment.",
+    errorMissingGameIdTitle: "Code de partie manquant",
+    errorMissingGameIdBody:
+      "Il manque l'identifiant de partie dans l'URL. Le format attendu : pouleparty.be/fr/challenges/&lt;gameId&gt;. Vérifie ton email d'invitation pour le bon lien.",
+    errorGameNotFoundTitle: "Cot cot... aucune liste trouvée",
+    errorGameNotFoundBody:
+      "Aucune liste de défis n'existe pour ce code. Vérifie que tu as bien copié l'URL depuis ton email, ou demande au chicken de te renvoyer le lien.",
+    errorMethodNotAllowedTitle: "Méthode non autorisée",
+    errorMethodNotAllowedBody:
+      "Cette page n'accepte que les requêtes GET. Si tu as cliqué sur un lien et que tu vois ça, écris-nous.",
+    errorInternalTitle: "Petit pépin technique",
+    errorInternalBody:
+      "Quelque chose s'est mal passé de notre côté. Réessaie dans un instant ; si ça persiste, écris-nous à julien@rahier.dev.",
   },
   en: {
     pageTitle: "PouleParty — Challenges sheet",
@@ -163,6 +184,18 @@ const STRINGS: Record<Locale, SheetStrings> = {
     proofLegend: "Proofs in the shared WhatsApp group",
     goodHunt: "HAPPY HUNTING !",
     emptyState: "No challenges yet.",
+    errorMissingGameIdTitle: "Game code missing",
+    errorMissingGameIdBody:
+      "The game ID is missing from the URL. Expected format: pouleparty.be/en/challenges/&lt;gameId&gt;. Double-check the invitation email for the right link.",
+    errorGameNotFoundTitle: "Cluck cluck... no list found",
+    errorGameNotFoundBody:
+      "No challenges list exists for this code. Make sure you copied the URL from the email correctly, or ask the chicken to resend it.",
+    errorMethodNotAllowedTitle: "Method not allowed",
+    errorMethodNotAllowedBody:
+      "This page only accepts GET requests. If you got here by clicking a link, write to us.",
+    errorInternalTitle: "Tiny technical glitch",
+    errorInternalBody:
+      "Something broke on our side. Try again in a moment; if it keeps failing, write to julien@rahier.dev.",
   },
   nl: {
     pageTitle: "PouleParty — Uitdagingenlijst",
@@ -208,6 +241,18 @@ const STRINGS: Record<Locale, SheetStrings> = {
     proofLegend: "Bewijzen in de gedeelde WhatsApp-groep",
     goodHunt: "GOEDE JACHT !",
     emptyState: "Nog geen uitdagingen.",
+    errorMissingGameIdTitle: "Spelcode ontbreekt",
+    errorMissingGameIdBody:
+      "De game-ID ontbreekt in de URL. Verwacht formaat: pouleparty.be/nl/challenges/&lt;gameId&gt;. Controleer je uitnodigingsmail voor de juiste link.",
+    errorGameNotFoundTitle: "Tok tok... geen lijst gevonden",
+    errorGameNotFoundBody:
+      "Voor deze code bestaat geen uitdagingenlijst. Controleer of je de URL correct uit de e-mail hebt overgenomen, of vraag de Kip om hem opnieuw te sturen.",
+    errorMethodNotAllowedTitle: "Methode niet toegestaan",
+    errorMethodNotAllowedBody:
+      "Deze pagina accepteert alleen GET-verzoeken. Als je hier via een link bent beland, laat het ons weten.",
+    errorInternalTitle: "Klein technisch foutje",
+    errorInternalBody:
+      "Er ging iets mis aan onze kant. Probeer het over een momentje opnieuw; als het blijft falen, schrijf naar julien@rahier.dev.",
   },
 };
 
@@ -423,19 +468,25 @@ function renderChallengesPage(docs: ChallengeDoc[], lang: Locale, s: SheetString
   </section>`;
 }
 
+// PP-99 — URL shape served by Firebase hosting rewrites:
+//   /<locale>/challenges/<gameId>
+// where <locale> is one of `fr`, `en`, `nl`. The `?lang=` query param
+// is still honoured as a manual override (useful when curl-ing the
+// CF directly without going through hosting).
 export function resolveLocale(req: { path?: string; query?: Record<string, unknown> }): Locale {
   const q = typeof req.query?.lang === "string" ? req.query.lang.toLowerCase() : "";
   if (q === "fr" || q === "en" || q === "nl") return q;
-  const path = (req.path ?? "").toLowerCase();
-  if (path.includes("-fr")) return "fr";
-  if (path.includes("-en")) return "en";
-  if (path.includes("-nl")) return "nl";
+  const match = (req.path ?? "").match(/^\/(fr|en|nl)\//i);
+  if (match) {
+    const seg = match[1].toLowerCase();
+    if (seg === "fr" || seg === "en" || seg === "nl") return seg;
+  }
   return "fr";
 }
 
 export function extractGameId(req: { path?: string }): string | null {
   const path = req.path ?? "";
-  const match = path.match(/^\/challenges-(?:fr|en|nl)\/([^/?#]+)/i);
+  const match = path.match(/^\/(?:fr|en|nl)\/challenges\/([^/?#]+)/i);
   if (!match) return null;
   const gameId = match[1].trim();
   return gameId.length > 0 ? gameId : null;
@@ -785,6 +836,140 @@ export function renderHtml(docs: ChallengeDoc[], lang: Locale): string {
 </html>`;
 }
 
+// PP-99 — branded error page for the 4 failure modes of
+// `renderChallengesSheet`. Same beige + Bangers + Press Start 2P
+// look as the success sheet, just a single centered card. No DB
+// access, no images, no fetch outside Google Fonts so it renders
+// even when the function is in a degraded state.
+export function renderErrorPage(
+  lang: Locale,
+  title: string,
+  body: string,
+): string {
+  const s = STRINGS[lang];
+  return `<!DOCTYPE html>
+<html lang="${lang}">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${escapeHtml(s.brandTitle)} — ${escapeHtml(title)}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Press+Start+2P&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        color-scheme: light dark;
+        --beige: #FDF9D5;
+        --beige-warm: #FFE8C8;
+        --orange: #FE6A00;
+        --pink: #EF0778;
+        --ink: #1A1A2E;
+        --ink-mute: #5A5A6E;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; min-height: 100%; }
+      body {
+        background: radial-gradient(ellipse at center, var(--beige) 0%, var(--beige-warm) 100%);
+        background-attachment: fixed;
+        color: var(--ink);
+        font-family: 'Press Start 2P', ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 13px;
+        line-height: 1.7;
+        letter-spacing: 0.4px;
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+        padding: 32px 20px;
+      }
+      .wrap {
+        margin: auto;
+        max-width: 540px;
+        width: 100%;
+        text-align: center;
+      }
+      .chicken {
+        font-size: 64px;
+        line-height: 1;
+        display: inline-block;
+        animation: bob 2s ease-in-out infinite;
+      }
+      @keyframes bob {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-8px); }
+      }
+      .brand {
+        margin: 18px 0 6px;
+        font-family: 'Bangers', 'Arial Black', sans-serif;
+        font-size: 56px;
+        letter-spacing: 4px;
+        line-height: 0.95;
+        background: linear-gradient(90deg, var(--orange), var(--pink));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      .tagline {
+        font-size: 9px;
+        letter-spacing: 3px;
+        color: var(--ink-mute);
+        margin-bottom: 28px;
+      }
+      .card {
+        background: #FFFCEB;
+        border: 2px solid var(--ink);
+        border-radius: 16px;
+        padding: 28px 24px;
+        box-shadow: 6px 6px 0 var(--ink);
+      }
+      .card-title {
+        font-family: 'Bangers', 'Arial Black', sans-serif;
+        font-size: 32px;
+        letter-spacing: 2px;
+        color: var(--pink);
+        margin: 0 0 14px;
+        line-height: 1.1;
+      }
+      .card-body {
+        font-size: 11px;
+        line-height: 1.85;
+        color: var(--ink);
+      }
+      .home-cta {
+        display: inline-block;
+        margin-top: 28px;
+        padding: 14px 24px;
+        font-family: 'Bangers', 'Arial Black', sans-serif;
+        font-size: 18px;
+        letter-spacing: 3px;
+        color: #ffffff;
+        background: linear-gradient(135deg, var(--orange), var(--pink));
+        border-radius: 999px;
+        text-decoration: none;
+        box-shadow: 0 4px 16px rgba(239, 7, 120, 0.35);
+        transition: transform 0.2s ease;
+      }
+      .home-cta:hover { transform: scale(1.05); }
+      @media (prefers-color-scheme: dark) {
+        body { background: radial-gradient(ellipse at center, #1A1A2E 0%, #0F1626 100%); color: #F5F1DA; }
+        .card { background: #16213E; border-color: #F5F1DA; box-shadow: 6px 6px 0 var(--pink); }
+        .card-body { color: #F5F1DA; }
+        .tagline { color: #B0AFC4; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <span class="chicken" aria-hidden="true">🐔</span>
+      <h1 class="brand">${escapeHtml(s.brandTitle)}</h1>
+      <p class="tagline">${escapeHtml(s.brandTagline)}</p>
+      <div class="card">
+        <h2 class="card-title">${escapeHtml(title)}</h2>
+        <p class="card-body">${body}</p>
+      </div>
+      <a class="home-cta" href="/${lang}">${escapeHtml(s.goodHunt)}</a>
+    </div>
+  </body>
+</html>`;
+}
+
 export const renderChallengesSheet = onRequest(
   {
     region: REGION,
@@ -793,17 +978,19 @@ export const renderChallengesSheet = onRequest(
     concurrency: 20,
   },
   async (req, res) => {
+    const lang = resolveLocale(req);
+    const s = STRINGS[lang];
+    res.set("Content-Type", "text/html; charset=utf-8");
     if (req.method !== "GET" && req.method !== "HEAD") {
-      res.status(405).send("Method not allowed");
+      res.status(405).send(
+        renderErrorPage(lang, s.errorMethodNotAllowedTitle, s.errorMethodNotAllowedBody)
+      );
       return;
     }
-    const lang = resolveLocale(req);
     const gameId = extractGameId(req);
     if (!gameId) {
       res.status(400).send(
-        "Game ID required in URL: pouleparty.be/challenges-" +
-          lang +
-          "/<gameId>"
+        renderErrorPage(lang, s.errorMissingGameIdTitle, s.errorMissingGameIdBody)
       );
       return;
     }
@@ -815,9 +1002,7 @@ export const renderChallengesSheet = onRequest(
         .get();
       if (snap.empty) {
         res.status(404).send(
-          "No challenges found for game " +
-            gameId +
-            " (the game may not exist or its challenges weren't snapshotted)."
+          renderErrorPage(lang, s.errorGameNotFoundTitle, s.errorGameNotFoundBody)
         );
         return;
       }
@@ -842,12 +1027,13 @@ export const renderChallengesSheet = onRequest(
         };
       });
 
-      res.set("Content-Type", "text/html; charset=utf-8");
       res.set("Cache-Control", "public, max-age=300, stale-while-revalidate=600");
       res.status(200).send(renderHtml(docs, lang));
     } catch (err) {
       logger.error("renderChallengesSheet failed", err);
-      res.status(500).send("Internal error");
+      res.status(500).send(
+        renderErrorPage(lang, s.errorInternalTitle, s.errorInternalBody)
+      );
     }
   }
 );

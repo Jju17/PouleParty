@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   categoryOf,
   endOfGameValidation,
+  extractGameId,
   groupByCategory,
   pickLocalized,
   renderHtml,
@@ -144,10 +145,10 @@ describe("resolveLocale", () => {
     expect(resolveLocale({ query: { lang: "nl" } })).toBe("nl");
     expect(resolveLocale({ query: { lang: "FR" } })).toBe("fr");
   });
-  test("path lang is used when query missing", () => {
-    expect(resolveLocale({ path: "/challenges-en" })).toBe("en");
-    expect(resolveLocale({ path: "/challenges-nl" })).toBe("nl");
-    expect(resolveLocale({ path: "/challenges-fr" })).toBe("fr");
+  test("path prefix is used when query missing (PP-99 /<locale>/challenges/<gameId>)", () => {
+    expect(resolveLocale({ path: "/en/challenges/abc123" })).toBe("en");
+    expect(resolveLocale({ path: "/nl/challenges/abc123" })).toBe("nl");
+    expect(resolveLocale({ path: "/fr/challenges/abc123" })).toBe("fr");
   });
   test("defaults to fr (FR-first audience) when no signal", () => {
     expect(resolveLocale({})).toBe("fr");
@@ -156,7 +157,30 @@ describe("resolveLocale", () => {
     expect(resolveLocale({ query: { lang: "" } })).toBe("fr");
   });
   test("query wins over path when both present", () => {
-    expect(resolveLocale({ query: { lang: "nl" }, path: "/challenges-en" })).toBe("nl");
+    expect(resolveLocale({ query: { lang: "nl" }, path: "/en/challenges/abc123" })).toBe("nl");
+  });
+  test("non-locale first segment doesn't match", () => {
+    expect(resolveLocale({ path: "/foo/challenges/abc123" })).toBe("fr");
+  });
+});
+
+describe("extractGameId (PP-99 /<locale>/challenges/<gameId>)", () => {
+  test("extracts gameId across all three locales", () => {
+    expect(extractGameId({ path: "/fr/challenges/abc123" })).toBe("abc123");
+    expect(extractGameId({ path: "/en/challenges/abc123" })).toBe("abc123");
+    expect(extractGameId({ path: "/nl/challenges/abc123" })).toBe("abc123");
+  });
+  test("returns null when locale prefix missing", () => {
+    expect(extractGameId({ path: "/challenges/abc123" })).toBe(null);
+    expect(extractGameId({ path: "/challenges-fr/abc123" })).toBe(null);
+  });
+  test("returns null when gameId missing", () => {
+    expect(extractGameId({ path: "/fr/challenges/" })).toBe(null);
+    expect(extractGameId({ path: "/fr/challenges" })).toBe(null);
+  });
+  test("ignores trailing query / fragment", () => {
+    expect(extractGameId({ path: "/fr/challenges/abc123?print=1" })).toBe("abc123");
+    expect(extractGameId({ path: "/fr/challenges/abc123#top" })).toBe("abc123");
   });
 });
 

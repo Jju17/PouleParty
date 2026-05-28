@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import Layout from "../components/Layout";
 import ClickableChicken from "../components/ClickableChicken";
 import { useI18n } from "../i18n";
-import { basePathForLocale } from "./inscriptionPaths";
+import { routePath } from "../i18n/routes";
 
 // PouleParty D-Day registration cutoff. After this instant the Home CTA
 // stops rendering so visitors don't land on a form for a past event.
@@ -13,7 +13,7 @@ const D_DAY_BATCH_ID = "game-06-06-2026";
 export default function Home() {
   const { t, locale } = useI18n();
   const showDDayCta = Date.now() < D_DAY_CTA_CUTOFF.getTime();
-  const inscriptionHref = `${basePathForLocale(locale)}?batchId=${D_DAY_BATCH_ID}`;
+  const inscriptionHref = `${routePath("inscription", locale)}?batchId=${D_DAY_BATCH_ID}`;
 
   return (
     <Layout>

@@ -1,13 +1,13 @@
 import { useEffect } from "react";
-import { useLocation, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import confetti from "canvas-confetti";
 import Layout from "../components/Layout";
 import { useI18n } from "../i18n";
-import { localeFromPathname } from "./inscriptionPaths";
 
 // PP-52 — Stripe success_url lands here after a confirmed payment.
 // The confirmation email (Resend) is the source of truth for the
 // validation code; this page is the festive "you're in!" celebration.
+// PP-99: locale comes from the URL prefix via `<I18nProvider>`.
 
 // PouleParty brand palette — confetti picks from these so the burst
 // reads as "the chicken won" rather than a generic shower.
@@ -58,17 +58,12 @@ function fireCelebration() {
 }
 
 export default function InscriptionSuccess() {
-  const { t, setLocale } = useI18n();
-  const location = useLocation();
+  const { t } = useI18n();
   const [searchParams] = useSearchParams();
   const s = t.inscription.success;
   // Stripe always appends `?session_id={CHECKOUT_SESSION_ID}` on
   // redirect; absence = the user hit the URL directly (no celebration).
   const sessionId = searchParams.get("session_id")?.trim() ?? "";
-
-  useEffect(() => {
-    setLocale(localeFromPathname(location.pathname));
-  }, [location.pathname, setLocale]);
 
   useEffect(() => {
     if (!sessionId) return;

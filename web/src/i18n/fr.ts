@@ -39,7 +39,7 @@ export default {
       "Nous utilisons Firebase Analytics pour collecter des données d'utilisation anonymes (ouvertures de l'app, vues d'écran) et Firebase Crashlytics pour les rapports de crash, afin d'améliorer l'application. Aucune information personnelle identifiable n'est collectée via ces services.",
     paidEventData: "Inscription à un événement payant :",
     paidEventDataText:
-      "Lorsque tu t'inscris à un événement PouleParty payant via le formulaire web (pouleparty.be/inscription), nous collectons : le nom complet du capitaine, le nom d'équipe, l'adresse email, le numéro de téléphone, la taille de l'équipe, ton adresse IP et ta langue, l'identifiant de session Stripe Checkout, ainsi qu'un code de validation à 6 caractères que nous générons pour l'événement. Ces données sont stockées dans notre collection Firestore `/eventRegistrations` et transmises aux services tiers listés ci-dessous pour le paiement, l'envoi de l'email de confirmation et la logistique sur place. Les données de carte bancaire ne sont jamais collectées par nous — elles sont saisies directement sur la page Checkout hébergée par Stripe.",
+      "Lorsque tu t'inscris à un événement PouleParty payant via le formulaire web (pouleparty.be/fr/inscription), nous collectons : le nom complet du capitaine, le nom d'équipe, l'adresse email, le numéro de téléphone, la taille de l'équipe, ton adresse IP et ta langue, l'identifiant de session Stripe Checkout, ainsi qu'un code de validation à 6 caractères que nous générons pour l'événement. Ces données sont stockées dans notre collection Firestore `/eventRegistrations` et transmises aux services tiers listés ci-dessous pour le paiement, l'envoi de l'email de confirmation et la logistique sur place. Les données de carte bancaire ne sont jamais collectées par nous — elles sont saisies directement sur la page Checkout hébergée par Stripe.",
     legalBasis: "Base légale du traitement",
     legalBasisIntro: "Conformément au RGPD (Art. 6), nous traitons vos données sur les bases légales suivantes :",
     legalBasisConsent: "Consentement (Art. 6(1)(a)) :",
@@ -136,7 +136,7 @@ export default {
       "En téléchargeant, installant ou utilisant Poule Party, ou en t'inscrivant à un événement PouleParty payant, tu acceptes ces conditions d'utilisation. Si tu n'es pas d'accord, n'utilise pas l'application et ne t'inscris pas à un événement.",
     description: "Description du service",
     descriptionText:
-      "Poule Party est un jeu mobile gratuit basé sur la géolocalisation dans lequel un joueur (la Poule) se cache tandis que les autres joueurs (les Chasseurs) tentent de la trouver à l'aide d'une carte en temps réel avec une zone qui rétrécit. Séparément, nous organisons occasionnellement des événements PouleParty payants en personne à Bruxelles (la série d'événements « D-Day »), dont les billets peuvent être achetés sur le web à l'adresse pouleparty.be/inscription ; l'expérience in-app, elle, reste entièrement gratuite.",
+      "Poule Party est un jeu mobile gratuit basé sur la géolocalisation dans lequel un joueur (la Poule) se cache tandis que les autres joueurs (les Chasseurs) tentent de la trouver à l'aide d'une carte en temps réel avec une zone qui rétrécit. Séparément, nous organisons occasionnellement des événements PouleParty payants en personne à Bruxelles (la série d'événements « D-Day »), dont les billets peuvent être achetés sur le web à l'adresse pouleparty.be/fr/inscription ; l'expérience in-app, elle, reste entièrement gratuite.",
     parties: "Partie contractante",
     partiesText:
       "PouleParty est exploité par Julien Rahier, indépendant en personne physique enregistré en Belgique, contact julien@rahier.dev. Pour les événements payants, tu contractes directement avec Julien Rahier en qualité d'organisateur de l'événement. Aucune société ne s'interpose entre toi et nous.",
@@ -258,7 +258,7 @@ export default {
       cluck: "COT COT 🐔",
       referenceLabel: "Référence",
       noSessionTitle: "Page réservée\naux paiements",
-      noSessionBody: "Cette page s'affiche après un paiement Stripe. Si tu cherches à t'inscrire, reviens sur /inscription.",
+      noSessionBody: "Cette page s'affiche après un paiement Stripe. Si tu cherches à t'inscrire, reviens sur /fr/inscription.",
     },
     cancel: {
       title: "Paiement\nannulé",
@@ -309,5 +309,11 @@ export default {
       "Quelque chose a planté. Réessaie ou écris-nous à julien@rahier.dev.",
     formErrorInvalidEmail: "Merci de saisir une adresse email valide.",
     fallbackHint: "Le formulaire ne marche pas ? Tu peux aussi nous écrire directement :",
+  },
+  notFound: {
+    eyebrow: "404 · Cot cot...",
+    title: "Cette page\nn'existe pas.",
+    body: "La Poule a dû picorer le lien. Reviens à l'accueil et reprends la chasse.",
+    cta: "RETOUR À L'ACCUEIL",
   },
 };

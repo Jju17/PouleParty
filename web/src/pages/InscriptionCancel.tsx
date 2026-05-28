@@ -1,27 +1,21 @@
-import { useEffect } from "react";
-import { Link, useLocation, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import Layout from "../components/Layout";
 import { useI18n } from "../i18n";
-import { basePathForLocale, localeFromPathname } from "./inscriptionPaths";
+import { routePath } from "../i18n/routes";
 
 // PP-52 — Stripe cancel_url lands here when the user backs out of the
 // Checkout page. The pending registration doc stays around with
 // `paid: false` and will simply never get an email; no cleanup needed.
-
+// PP-99: locale comes from the URL prefix via `<I18nProvider>`.
 export default function InscriptionCancel() {
-  const { t, locale, setLocale } = useI18n();
+  const { t, locale } = useI18n();
   const c = t.inscription.cancel;
-  const location = useLocation();
   const [searchParams] = useSearchParams();
   // Preserve the batchId so the "retry" link drops them back on
   // the same event registration flow.
   const batchId = searchParams.get("batchId") ?? "";
 
-  useEffect(() => {
-    setLocale(localeFromPathname(location.pathname));
-  }, [location.pathname, setLocale]);
-
-  const retryHref = `${basePathForLocale(locale)}?batchId=${encodeURIComponent(batchId)}`;
+  const retryHref = `${routePath("inscription", locale)}?batchId=${encodeURIComponent(batchId)}`;
 
   return (
     <Layout>

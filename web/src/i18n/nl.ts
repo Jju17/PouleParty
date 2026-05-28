@@ -40,7 +40,7 @@ export default {
       "We gebruiken Firebase Analytics om anonieme gebruiksgegevens te verzamelen (app-openingen, schermweergaves) en Firebase Crashlytics voor crashrapporten, om de app te verbeteren. Er worden via deze diensten geen persoonlijk identificeerbare gegevens verzameld.",
     paidEventData: "Inschrijving voor een betaald evenement:",
     paidEventDataText:
-      "Wanneer je je inschrijft voor een betaald PouleParty-evenement via het webformulier (pouleparty.be/inschrijving), verzamelen we: de volledige naam van de kapitein, de teamnaam, het e-mailadres, het telefoonnummer, de teamgrootte, je IP-adres en taal, het Stripe Checkout-sessie-ID, en een validatiecode van 6 tekens die we voor het evenement genereren. Deze gegevens worden opgeslagen in onze Firestore-collectie `/eventRegistrations` en doorgegeven aan de hieronder vermelde derde partijen voor de betaling, het versturen van de bevestigingsmail en de logistiek ter plaatse. Betaalkaartgegevens worden nooit door ons verzameld — ze worden rechtstreeks ingevoerd op de door Stripe gehoste Checkout-pagina.",
+      "Wanneer je je inschrijft voor een betaald PouleParty-evenement via het webformulier (pouleparty.be/nl/inschrijving), verzamelen we: de volledige naam van de kapitein, de teamnaam, het e-mailadres, het telefoonnummer, de teamgrootte, je IP-adres en taal, het Stripe Checkout-sessie-ID, en een validatiecode van 6 tekens die we voor het evenement genereren. Deze gegevens worden opgeslagen in onze Firestore-collectie `/eventRegistrations` en doorgegeven aan de hieronder vermelde derde partijen voor de betaling, het versturen van de bevestigingsmail en de logistiek ter plaatse. Betaalkaartgegevens worden nooit door ons verzameld — ze worden rechtstreeks ingevoerd op de door Stripe gehoste Checkout-pagina.",
     legalBasis: "Rechtsgrondslag voor de verwerking",
     legalBasisIntro:
       "Op grond van de AVG (art. 6) verwerken we uw gegevens op basis van de volgende rechtsgrondslagen:",
@@ -150,7 +150,7 @@ export default {
       "Door Poule Party te downloaden, installeren of gebruiken, of door je in te schrijven voor een betaald PouleParty-evenement, ga je akkoord met deze gebruiksvoorwaarden. Als je niet akkoord gaat, gebruik de app dan niet en schrijf je niet in voor een evenement.",
     description: "Beschrijving van de dienst",
     descriptionText:
-      "Poule Party is een gratis mobiele game op basis van locatie, waarbij één speler (de Kip) zich verstopt terwijl andere spelers (Jagers) haar proberen te vinden via een realtime kaart met een krimpende zone. Daarnaast organiseren we af en toe betaalde PouleParty-evenementen in persoon in Brussel (de \"D-Day\"-evenementenreeks), waarvoor tickets kunnen worden gekocht op het web via pouleparty.be/inschrijving; de in-app-ervaring zelf is en blijft gratis.",
+      "Poule Party is een gratis mobiele game op basis van locatie, waarbij één speler (de Kip) zich verstopt terwijl andere spelers (Jagers) haar proberen te vinden via een realtime kaart met een krimpende zone. Daarnaast organiseren we af en toe betaalde PouleParty-evenementen in persoon in Brussel (de \"D-Day\"-evenementenreeks), waarvoor tickets kunnen worden gekocht op het web via pouleparty.be/nl/inschrijving; de in-app-ervaring zelf is en blijft gratis.",
     parties: "Contracterende partij",
     partiesText:
       "PouleParty wordt uitgebaat door Julien Rahier, in België geregistreerd als zelfstandige in eigen naam, contact julien@rahier.dev. Voor betaalde evenementen sluit je je contract rechtstreeks met Julien Rahier als organisator van het evenement. Er zit geen enkele vennootschap tussen jou en ons.",
@@ -273,7 +273,7 @@ export default {
       cluck: "TOK TOK 🐔",
       referenceLabel: "Referentie",
       noSessionTitle: "Pagina alleen\nvoor betalingen",
-      noSessionBody: "Deze pagina verschijnt na een Stripe-betaling. Wil je je inschrijven? Ga terug naar /inschrijving.",
+      noSessionBody: "Deze pagina verschijnt na een Stripe-betaling. Wil je je inschrijven? Ga terug naar /nl/inschrijving.",
     },
     cancel: {
       title: "Betaling\ngeannuleerd",
@@ -324,5 +324,11 @@ export default {
       "Er is iets misgelopen. Probeer opnieuw of mail ons op julien@rahier.dev.",
     formErrorInvalidEmail: "Geef een geldig e-mailadres in.",
     fallbackHint: "Werkt het formulier niet? Je kan ons ook rechtstreeks mailen:",
+  },
+  notFound: {
+    eyebrow: "404 · Tok tok...",
+    title: "Deze pagina\nbestaat niet.",
+    body: "De Kip heeft vast de link opgepikt. Ga terug naar de startpagina en pak de jacht opnieuw op.",
+    cta: "TERUG NAAR HOME",
   },
 };

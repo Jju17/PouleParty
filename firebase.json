@@ -22,6 +22,27 @@
         ]
       }
     ],
+    "redirects": [
+      { "source": "/inscription", "destination": "/fr/inscription", "type": 301 },
+      { "source": "/inscription/success", "destination": "/fr/inscription/success", "type": 301 },
+      { "source": "/inscription/cancel", "destination": "/fr/inscription/cancel", "type": 301 },
+      { "source": "/registration", "destination": "/en/registration", "type": 301 },
+      { "source": "/registration/success", "destination": "/en/registration/success", "type": 301 },
+      { "source": "/registration/cancel", "destination": "/en/registration/cancel", "type": 301 },
+      { "source": "/inschrijving", "destination": "/nl/inschrijving", "type": 301 },
+      { "source": "/inschrijving/success", "destination": "/nl/inschrijving/success", "type": 301 },
+      { "source": "/inschrijving/cancel", "destination": "/nl/inschrijving/cancel", "type": 301 },
+      { "source": "/creer-une-partie", "destination": "/fr/creer-une-partie", "type": 301 },
+      { "source": "/create-a-party", "destination": "/en/create-a-party", "type": 301 },
+      { "source": "/een-feestje-organiseren", "destination": "/nl/een-feestje-organiseren", "type": 301 },
+      { "source": "/challenges-fr/:gameId", "destination": "/fr/challenges/:gameId", "type": 301 },
+      { "source": "/challenges-en/:gameId", "destination": "/en/challenges/:gameId", "type": 301 },
+      { "source": "/challenges-nl/:gameId", "destination": "/nl/challenges/:gameId", "type": 301 },
+      { "source": "/privacy", "destination": "/fr/confidentialite", "type": 301 },
+      { "source": "/terms", "destination": "/fr/conditions", "type": 301 },
+      { "source": "/support", "destination": "/fr/support", "type": 301 },
+      { "source": "/delete-account", "destination": "/fr/supprimer-compte", "type": 301 }
+    ],
     "rewrites": [
       {
         "source": "/api/createPendingRegistration",
@@ -38,42 +59,21 @@
         }
       },
       {
-        "source": "/challenges-fr",
+        "source": "/fr/challenges/**",
         "function": {
           "functionId": "renderChallengesSheet",
           "region": "europe-west1"
         }
       },
       {
-        "source": "/challenges-fr/**",
+        "source": "/en/challenges/**",
         "function": {
           "functionId": "renderChallengesSheet",
           "region": "europe-west1"
         }
       },
       {
-        "source": "/challenges-en",
-        "function": {
-          "functionId": "renderChallengesSheet",
-          "region": "europe-west1"
-        }
-      },
-      {
-        "source": "/challenges-en/**",
-        "function": {
-          "functionId": "renderChallengesSheet",
-          "region": "europe-west1"
-        }
-      },
-      {
-        "source": "/challenges-nl",
-        "function": {
-          "functionId": "renderChallengesSheet",
-          "region": "europe-west1"
-        }
-      },
-      {
-        "source": "/challenges-nl/**",
+        "source": "/nl/challenges/**",
         "function": {
           "functionId": "renderChallengesSheet",
           "region": "europe-west1"
