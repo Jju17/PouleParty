@@ -146,24 +146,16 @@ fun PreGameOverlay(
         visible = isVisible,
         exit = fadeOut(animationSpec = tween(500))
     ) {
-        // Manual-start uses Top alignment + a flexible Spacer between
-        // info and launch so the launch button + cancel land in the
-        // lower half (~3/4 height) — natural thumb reach instead of a
-        // centered-card feel. Auto-start keeps the centered layout.
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = 0.7f)),
-            contentAlignment = if (isManualStart) Alignment.TopCenter else Alignment.Center
+            contentAlignment = Alignment.Center
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(24.dp),
-                modifier = if (isManualStart) {
-                    Modifier.fillMaxSize().padding(horizontal = 32.dp, vertical = 32.dp)
-                } else {
-                    Modifier.padding(32.dp)
-                },
+                modifier = Modifier.padding(32.dp),
             ) {
                 Text(
                     text = stringResource(headerRes),
@@ -251,14 +243,12 @@ fun PreGameOverlay(
                 }
 
                 if (isManualStart) {
-                    // Flexible spacer pushes the launch section + cancel
-                    // toward the lower half of the screen.
-                    Spacer(Modifier.weight(1f).fillMaxWidth())
                     if (isLauncherRole && onLaunchTapped != null) {
                         Text(
                             text = "Ready when you are",
                             fontSize = 14.sp,
-                            color = Color.White.copy(alpha = 0.6f)
+                            color = Color.White.copy(alpha = 0.6f),
+                            modifier = Modifier.padding(top = 16.dp)
                         )
                         Button(
                             onClick = onLaunchTapped,
@@ -339,12 +329,6 @@ fun PreGameOverlay(
                             color = Danger
                         )
                     }
-                }
-                if (isManualStart) {
-                    // Lower bottom margin so the launch chunk sits at
-                    // roughly 70-75% screen height, not glued to the
-                    // bottom safe area. Mirrors the iOS layout shift.
-                    Spacer(Modifier.weight(0.4f).fillMaxWidth())
                 }
             }
         }

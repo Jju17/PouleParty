@@ -31,6 +31,10 @@ enum AppConstants {
     // MARK: - Game Defaults
     static let defaultLatitude = 50.8466
     static let defaultLongitude = 4.3528
+    /// Default zone radius the wizard starts from. Mirrors the `Game.Zone`
+    /// struct default and the Android `DEFAULT_INITIAL_RADIUS`. Compiled
+    /// fallback for the `default_initial_radius_meters` Remote Config key.
+    static let defaultInitialRadiusMeters: Double = 1500
 
     // MARK: - Location
     static let locationMinDistanceMeters: CLLocationDistance = 10

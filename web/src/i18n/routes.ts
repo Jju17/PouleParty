@@ -54,25 +54,20 @@ export const ROUTES: Record<RouteKey, Record<Locale, string>> = {
     en: "create-a-party",
     nl: "een-feestje-organiseren",
   },
-  privacy: {
-    fr: "confidentialite",
-    en: "privacy",
-    nl: "privacy",
-  },
-  terms: {
-    fr: "conditions",
-    en: "terms",
-    nl: "voorwaarden",
-  },
-  support: {
-    fr: "support",
-    en: "support",
-    nl: "support",
-  },
+  // PP-99 — Legal / utility slugs intentionally stay in English on all
+  // three locales (`privacy`, `terms`, `support`, `delete-account`).
+  // Same convention as Apple, Microsoft, Booking for legal pages:
+  // the words are tech-universal, the URLs are predictable, the user
+  // who types `/fr/privacy` gets the page rather than a 404. Product
+  // slugs (`inscription`, `creer-une-partie`) stay fully localized to
+  // preserve the FR-first brand voice + SEO in the local market.
+  privacy: { fr: "privacy", en: "privacy", nl: "privacy" },
+  terms: { fr: "terms", en: "terms", nl: "terms" },
+  support: { fr: "support", en: "support", nl: "support" },
   deleteAccount: {
-    fr: "supprimer-compte",
+    fr: "delete-account",
     en: "delete-account",
-    nl: "account-verwijderen",
+    nl: "delete-account",
   },
 };
 

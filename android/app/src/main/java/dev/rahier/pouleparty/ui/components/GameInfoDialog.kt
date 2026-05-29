@@ -91,22 +91,3 @@ fun GameInfoDialog(
     )
 }
 
-/**
- * Shared game over alert dialog.
- */
-@Composable
-fun GameOverAlertDialog(
-    message: String,
-    onConfirm: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = { },
-        title = { Text(stringResource(R.string.game_over)) },
-        text = { Text(message) },
-        confirmButton = {
-            TextButton(onClick = onConfirm) {
-                Text(stringResource(R.string.ok))
-            }
-        }
-    )
-}

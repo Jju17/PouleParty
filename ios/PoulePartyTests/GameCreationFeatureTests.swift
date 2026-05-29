@@ -375,12 +375,10 @@ struct GameCreationFeatureTests {
     }
 
     @Test func powerUpTypeToggledCanRemoveUnavailableTypeInStayInTheZone() async {
-        var state = makeState(gameMode: .stayInTheZone)
-        // INVISIBILITY is unavailable in stayInTheZone — toggle it ON
-        // first since PP-35 default doesn't include it.
-        state.$game.withLock {
-            $0.powerUps.enabledTypes.append(PowerUp.PowerUpType.invisibility.rawValue)
-        }
+        let state = makeState(gameMode: .stayInTheZone)
+        // INVISIBILITY ships enabled by default. It's unavailable in
+        // stayInTheZone, so the guard does not apply — one toggle removes it.
+        #expect(state.game.powerUps.enabledTypes.contains(PowerUp.PowerUpType.invisibility.rawValue))
         let store = makeStore(state: state)
         store.exhaustivity = .off
         await store.send(.powerUpTypeToggled(.invisibility))

@@ -326,17 +326,7 @@ struct ChickenMapFeatureTests {
         store.exhaustivity = .off
 
         await store.send(.internal(.timerTicked)) {
-            $0.destination = .alert(
-                AlertState {
-                    TextState("Game Over")
-                } actions: {
-                    ButtonState(action: .gameOver) {
-                        TextState("OK")
-                    }
-                } message: {
-                    TextState("Time's up! The Chicken survived!")
-                }
-            )
+            $0.isGameOver = true
         }
     }
 
@@ -367,42 +357,9 @@ struct ChickenMapFeatureTests {
 
         await store.send(.destination(.presented(.alert(.cancelGame)))) {
             $0.destination = nil
+            $0.isCancelling = true
         }
         await store.receive(\.delegate.returnedToMenu)
-    }
-
-    @Test func gameOverAlertKeepsChickenOnMap() async {
-        // PP-16 changed the gameOver alert behaviour: dismissing the
-        // alert no longer auto-transitions to Victory. The chicken
-        // stays on the map (gamePhase already flipped to .gameOver
-        // so the gameplay controls are greyed) and sees PP-17's red
-        // timer + PP-18's leaderboard CTA. No `.allHuntersFound`
-        // delegate fires.
-        var state = ChickenMapFeature.State(game: .mock)
-        state.destination = .alert(
-            AlertState {
-                TextState("Game Over")
-            } actions: {
-                ButtonState(action: .gameOver) {
-                    TextState("OK")
-                }
-            } message: {
-                TextState("Time's up! The Chicken survived!")
-            }
-        )
-
-        let store = TestStore(initialState: state) {
-            ChickenMapFeature()
-        } withDependencies: {
-            $0.apiClient.updateGameStatus = { _, _ in }
-            $0.liveActivityClient.end = { _ in }
-        }
-        store.exhaustivity = .off
-
-        await store.send(.destination(.presented(.alert(.gameOver)))) {
-            $0.destination = nil
-        }
-        // No follow-up delegate action — chicken stays on the map.
     }
 
     // MARK: - Winner auto-dismiss effect

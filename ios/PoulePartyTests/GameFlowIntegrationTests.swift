@@ -76,17 +76,7 @@ struct GameFlowIntegrationTests {
         store.exhaustivity = .off
 
         await store.send(.internal(.timerTicked)) {
-            $0.destination = .alert(
-                AlertState {
-                    TextState("Game Over")
-                } actions: {
-                    ButtonState(action: .gameOver) {
-                        TextState("OK")
-                    }
-                } message: {
-                    TextState("Time's up! The Chicken survived!")
-                }
-            )
+            $0.isGameOver = true
         }
     }
 
@@ -108,17 +98,7 @@ struct GameFlowIntegrationTests {
 
         await store.send(.internal(.gameConfigUpdated( endedGame))) {
             $0.game = endedGame
-            $0.destination = .alert(
-                AlertState {
-                    TextState("Game Over")
-                } actions: {
-                    ButtonState(action: .gameOver) {
-                        TextState("OK")
-                    }
-                } message: {
-                    TextState("The game has ended!")
-                }
-            )
+            $0.isGameOver = true
         }
     }
 

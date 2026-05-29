@@ -176,7 +176,6 @@ struct ChickenMapFeature {
 
             enum Alert: Equatable {
                 case cancelGame
-                case gameOver
                 case noGameFound
             }
         }
@@ -219,23 +218,6 @@ struct ChickenMapFeature {
                             .error("Failed to update game status to done: \(error.localizedDescription)")
                     }
                     await send(.delegate(.returnedToMenu))
-                }
-            case .destination(.presented(.alert(.gameOver))):
-                // PP-16: the alert closes and the chicken stays on
-                // the map (gamePhase already flipped to .gameOver
-                // when the timer / zone collapsed, so the gameplay
-                // controls are greyed). Don't auto-transition to
-                // Victory — the map shows the final state plus
-                // PP-17's red timer and PP-18's leaderboard CTA.
-                let gameId = state.game.id
-                return .run { _ in
-                    await liveActivityClient.end(nil)
-                    do {
-                        try await apiClient.updateGameStatus(gameId, .done)
-                    } catch {
-                        Logger(category: "ChickenMapFeature")
-                            .error("Failed to update game status to done: \(error.localizedDescription)")
-                    }
                 }
             case .destination:
                 return .none
@@ -849,8 +831,7 @@ struct ChickenMapFeature {
                 guard state.destination == nil else { return .none }
                 guard state.hasHuntStarted else { return .none }
 
-                // Game over by time
-                if checkGameOverByTime(endDate: state.game.endDate) {
+                if !state.isGameOver, checkGameOverByTime(endDate: state.game.endDate) {
                     HapticManager.notification(.warning)
                     state.isGameOver = true
                     locationClient.stopTracking()
@@ -864,17 +845,6 @@ struct ChickenMapFeature {
                     )
                     let gameId = state.game.id
                     let winnersCount = state.game.winners.count
-                    state.destination = .alert(
-                        AlertState {
-                            TextState("Game Over")
-                        } actions: {
-                            ButtonState(action: .gameOver) {
-                                TextState("OK")
-                            }
-                        } message: {
-                            TextState("Time's up! The Chicken survived!")
-                        }
-                    )
                     return .run { [analyticsClient] _ in
                         await liveActivityClient.end(endState)
                         do {
@@ -900,7 +870,7 @@ struct ChickenMapFeature {
                     finalCoordinates: state.game.finalLocation,
                     initialRadius: state.game.zone.radius
                 ) {
-                    if result.isGameOver {
+                    if result.isGameOver, !state.isGameOver {
                         HapticManager.notification(.warning)
                         state.isGameOver = true
                         locationClient.stopTracking()
@@ -914,17 +884,6 @@ struct ChickenMapFeature {
                         )
                         let gameId = state.game.id
                         let winnersCount = state.game.winners.count
-                        state.destination = .alert(
-                            AlertState {
-                                TextState("Game Over")
-                            } actions: {
-                                ButtonState(action: .gameOver) {
-                                    TextState("OK")
-                                }
-                            } message: {
-                                TextState(result.gameOverMessage ?? "Game over")
-                            }
-                        )
                         return .run { [analyticsClient] _ in
                             await liveActivityClient.end(endState)
                             do {

@@ -317,7 +317,8 @@ struct GameTests {
             id: "test",
             timing: .init(
                 start: Timestamp(date: .now.addingTimeInterval(-1830)),
-                end: Timestamp(date: .now.addingTimeInterval(TimeInterval((duration - 30) * 60)))
+                end: Timestamp(date: .now.addingTimeInterval(TimeInterval((duration - 30) * 60))),
+                headStartMinutes: 0
             ),
             zone: .init(
                 radius: radius,
@@ -472,9 +473,9 @@ struct GameTests {
 
     // MARK: - Game defaults
 
-    @Test func defaultTimingHeadStartIsZero() {
+    @Test func defaultTimingHeadStartIsTwoMinutes() {
         let timing = Game.Timing()
-        #expect(timing.headStartMinutes == 0)
+        #expect(timing.headStartMinutes == 2)
     }
 
     @Test func defaultZoneValues() {
@@ -584,7 +585,8 @@ struct GameTests {
             id: "test",
             timing: .init(
                 start: Timestamp(date: .now.addingTimeInterval(-300)), // 5 min ago
-                end: Timestamp(date: .now.addingTimeInterval(3600))
+                end: Timestamp(date: .now.addingTimeInterval(3600)),
+                headStartMinutes: 0
             ),
             zone: .init(radius: 50000, shrinkIntervalMinutes: 5, shrinkMetersPerUpdate: 100)
         )

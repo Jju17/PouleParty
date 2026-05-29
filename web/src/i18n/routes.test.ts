@@ -49,15 +49,19 @@ describe("routePath", () => {
     expect(routePath("createParty", "nl")).toBe("/nl/een-feestje-organiseren");
   });
 
-  test("privacy / terms / support / deleteAccount fully covered", () => {
-    expect(routePath("privacy", "fr")).toBe("/fr/confidentialite");
+  test("legal / utility slugs stay in English on all 3 locales", () => {
+    // Apple / Microsoft / Booking convention: predictable tech-universal
+    // slugs for legal pages. Only product slugs (inscription, createParty)
+    // are fully localized.
+    expect(routePath("privacy", "fr")).toBe("/fr/privacy");
     expect(routePath("privacy", "en")).toBe("/en/privacy");
     expect(routePath("privacy", "nl")).toBe("/nl/privacy");
-    expect(routePath("terms", "fr")).toBe("/fr/conditions");
-    expect(routePath("terms", "nl")).toBe("/nl/voorwaarden");
+    expect(routePath("terms", "fr")).toBe("/fr/terms");
+    expect(routePath("terms", "en")).toBe("/en/terms");
+    expect(routePath("terms", "nl")).toBe("/nl/terms");
     expect(routePath("support", "fr")).toBe("/fr/support");
-    expect(routePath("deleteAccount", "fr")).toBe("/fr/supprimer-compte");
-    expect(routePath("deleteAccount", "nl")).toBe("/nl/account-verwijderen");
+    expect(routePath("deleteAccount", "fr")).toBe("/fr/delete-account");
+    expect(routePath("deleteAccount", "nl")).toBe("/nl/delete-account");
   });
 });
 

@@ -14,7 +14,7 @@ struct Game: Codable, Equatable, Identifiable {
     var name: String = ""
     var maxPlayers: Int = 10
     var gameMode: GameMode = .stayInTheZone
-    var chickenCanSeeHunters: Bool = false
+    var chickenCanSeeHunters: Bool = true
     var foundCode: String = ""
     var hunterIds: [String] = []
     var gameMasterIds: [String] = []
@@ -56,7 +56,7 @@ struct Game: Codable, Equatable, Identifiable {
             return .init(date: date.addingTimeInterval(Double(-seconds)))
         }()
         var end: Timestamp = .init(date: Date.now.addingTimeInterval(3900))
-        var headStartMinutes: Double = 0
+        var headStartMinutes: Double = 2
         /// PP-71: server-set timestamp of the effective launch when
         /// `manualStartEnabled == true`. `nil` until the LAUNCH callable
         /// fires; read by `hunterStartDate` (and the recomputed `end`)
@@ -87,16 +87,7 @@ struct Game: Codable, Equatable, Identifiable {
 
     struct GamePowerUps: Codable, Equatable {
         var enabled: Bool = false
-        /// PP-35: defaults shipped to players are intentionally narrow.
-        /// Only `zoneFreeze` (chicken) and `zonePreview` (hunter) ship
-        /// enabled, so a brand-new party never spawns the noisy
-        /// positional power-ups. The other types stay in the enum +
-        /// spawner so we can flip them back on per-game from Firestore
-        /// without a release.
-        var enabledTypes: [String] = [
-            PowerUp.PowerUpType.zoneFreeze.rawValue,
-            PowerUp.PowerUpType.zonePreview.rawValue,
-        ]
+        var enabledTypes: [String] = PowerUp.PowerUpType.allCases.map(\.rawValue)
         var activeEffects: ActiveEffects = ActiveEffects()
     }
 

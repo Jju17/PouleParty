@@ -370,9 +370,9 @@ class GameTest {
     // ── Game defaults ──
 
     @Test
-    fun `default timing headStart is zero`() {
+    fun `default timing headStart is two minutes`() {
         val timing = Timing()
-        assertEquals(0.0, timing.headStartMinutes, 0.0)
+        assertEquals(2.0, timing.headStartMinutes, 0.0)
     }
 
     @Test

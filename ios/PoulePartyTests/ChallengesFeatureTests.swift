@@ -102,14 +102,10 @@ struct ChallengesFeatureTests {
         }
     }
 
-    // MARK: - Validation flow (2-tap)
+    // MARK: - Single-tap capture flow
 
-    @Test func markAsDoneMovesChallengeToPendingLocal() async {
+    @Test func doingItOnAvailableChallengeOpensCapture() async {
         let challenge = makeChallenge(id: "c1", title: "Run", body: "Run fast", points: 50)
-        let suite = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
-        PendingChallengeStore.inject(suite)
-        defer { PendingChallengeStore.resetForTesting() }
-
         let store = TestStore(
             initialState: ChallengesFeature.State(
                 gameId: "g",
@@ -121,13 +117,12 @@ struct ChallengesFeatureTests {
             ChallengesFeature()
         }
 
-        await store.send(.view(.markAsDoneTapped(challenge))) {
-            $0.pendingLocalIds = ["c1"]
+        await store.send(.view(.doingItTapped(challenge))) {
+            $0.captureTarget = challenge
         }
-        #expect(PendingChallengeStore.ids(forGame: "g") == ["c1"])
     }
 
-    @Test func markAsDoneForAlreadyCompletedChallengeIsNoop() async {
+    @Test func doingItOnAlreadyValidatedChallengeIsNoop() async {
         let challenge = makeChallenge(id: "c1")
         let completion = makeCompletion(hunterId: "me", ids: ["c1"], total: 10, teamName: "Me")
         let store = TestStore(
@@ -142,42 +137,49 @@ struct ChallengesFeatureTests {
             ChallengesFeature()
         }
 
-        await store.send(.view(.markAsDoneTapped(challenge)))
+        await store.send(.view(.doingItTapped(challenge)))
     }
 
-    @Test func submitForValidationOpensPhotoPicker() async {
-        let challenge = makeChallenge(id: "c1", points: 25)
-        let suite = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
-        PendingChallengeStore.inject(suite)
-        defer { PendingChallengeStore.resetForTesting() }
-        PendingChallengeStore.add("c1", forGame: "g1")
-
+    @Test func doingItWhenSheetIsClosedForSubmissionsIsNoop() async {
+        let challenge = makeChallenge(id: "c1")
         var state = ChallengesFeature.State(
-            gameId: "g1",
+            gameId: "g",
             hunterId: "me",
             hunterIds: ["me"],
-            myTeamName: "Team Me",
             challenges: [challenge]
         )
-        state.pendingLocalIds = ["c1"]
+        state.isClosedForSubmissions = true
 
         let store = TestStore(initialState: state) {
             ChallengesFeature()
         }
 
-        await store.send(.view(.submitForValidationTapped(challenge))) {
-            $0.photoTarget = challenge
+        await store.send(.view(.doingItTapped(challenge)))
+    }
+
+    @Test func captureCancelledClearsTarget() async {
+        let challenge = makeChallenge(id: "c1")
+        var state = ChallengesFeature.State(
+            gameId: "g",
+            hunterId: "me",
+            hunterIds: ["me"],
+            challenges: [challenge]
+        )
+        state.captureTarget = challenge
+
+        let store = TestStore(initialState: state) {
+            ChallengesFeature()
+        }
+
+        await store.send(.view(.captureCancelled)) {
+            $0.captureTarget = nil
         }
     }
 
-    @Test func photoPickedInvokesSubmitChallenge() async {
+    @Test func mediaCapturedInvokesSubmitAndClearsState() async {
         let challenge = makeChallenge(id: "c1", points: 25)
-        let suite = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
-        PendingChallengeStore.inject(suite)
-        defer { PendingChallengeStore.resetForTesting() }
-        PendingChallengeStore.add("c1", forGame: "g1")
 
-        let gotSubmit = LockIsolated<(String, String, String, Challenge.ChallengeType, Int)?>(nil)
+        let gotSubmit = LockIsolated<(String, String, String, Challenge.ChallengeType, Int, ChallengeSubmission.MediaType)?>(nil)
 
         var state = ChallengesFeature.State(
             gameId: "g1",
@@ -186,33 +188,32 @@ struct ChallengesFeatureTests {
             myTeamName: "Team Me",
             challenges: [challenge]
         )
-        state.pendingLocalIds = ["c1"]
-        state.photoTarget = challenge
+        state.captureTarget = challenge
 
         let store = TestStore(initialState: state) {
             ChallengesFeature()
         } withDependencies: {
-            $0.apiClient.submitChallenge = { gameId, challengeId, hunterId, type, data in
-                gotSubmit.setValue((gameId, challengeId, hunterId, type, data.count))
+            $0.apiClient.submitChallenge = { gameId, challengeId, hunterId, type, data, mediaType in
+                gotSubmit.setValue((gameId, challengeId, hunterId, type, data.count, mediaType))
                 return ChallengeSubmission(
                     firestoreId: "sub1",
                     challengeId: challengeId,
                     hunterId: hunterId,
                     type: type,
-                    photoUrl: "https://example.com/x.jpg",
+                    mediaUrl: "https://example.com/x.jpg",
+                    mediaType: mediaType,
                     status: .pending
                 )
             }
         }
 
         let bytes = Data(repeating: 0xFF, count: 16)
-        await store.send(.view(.photoPicked(challengeId: "c1", data: bytes))) {
-            $0.photoTarget = nil
+        await store.send(.view(.mediaCaptured(challengeId: "c1", data: bytes, mediaType: .image))) {
+            $0.captureTarget = nil
             $0.submittingIds = ["c1"]
         }
         await store.receive(\.internal.submissionWriteSucceeded) {
             $0.submittingIds = []
-            $0.pendingLocalIds = []
         }
 
         let captured = gotSubmit.value
@@ -221,7 +222,37 @@ struct ChallengesFeatureTests {
         #expect(captured?.2 == "me")
         #expect(captured?.3 == .oneShot)
         #expect(captured?.4 == 16)
-        #expect(PendingChallengeStore.ids(forGame: "g1").isEmpty)
+        #expect(captured?.5 == .image)
+    }
+
+    @Test func mediaCaptureFailureSurfacesUploadError() async {
+        let challenge = makeChallenge(id: "c1")
+        var state = ChallengesFeature.State(
+            gameId: "g1",
+            hunterId: "me",
+            hunterIds: ["me"],
+            challenges: [challenge]
+        )
+        state.captureTarget = challenge
+
+        struct UploadFailed: Error, LocalizedError {
+            var errorDescription: String? { "Network unreachable" }
+        }
+
+        let store = TestStore(initialState: state) {
+            ChallengesFeature()
+        } withDependencies: {
+            $0.apiClient.submitChallenge = { _, _, _, _, _, _ in throw UploadFailed() }
+        }
+
+        await store.send(.view(.mediaCaptured(challengeId: "c1", data: Data([0x01]), mediaType: .image))) {
+            $0.captureTarget = nil
+            $0.submittingIds = ["c1"]
+        }
+        await store.receive(\.internal.submissionWriteFailed) {
+            $0.submittingIds = []
+            $0.uploadError = "Network unreachable"
+        }
     }
 
     // MARK: - Leaderboard sorting & current hunter highlight

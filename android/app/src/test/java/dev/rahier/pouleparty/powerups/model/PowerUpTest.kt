@@ -160,20 +160,15 @@ class PowerUpTest {
     }
 
     /**
-     * Defaults shipped to players: only `zoneFreeze` (chicken) and
-     * `zonePreview` (hunter). Keep this golden in lockstep with the iOS
+     * Defaults shipped to players: every power-up type is enabled. The
+     * server-side `stayInTheZone` filter still strips the position-only
+     * ones at spawn time. Keep this golden in lockstep with the iOS
      * sibling so a one-platform regression never sneaks in.
      */
     @Test
-    fun `default enabledTypes are narrow`() {
+    fun `default enabledTypes cover every type`() {
         val defaults = GamePowerUps().enabledTypes
-        assertEquals(
-            listOf(
-                PowerUpType.ZONE_FREEZE.firestoreValue,
-                PowerUpType.ZONE_PREVIEW.firestoreValue,
-            ),
-            defaults,
-        )
+        assertEquals(PowerUpType.entries.map { it.firestoreValue }, defaults)
     }
 
     // MARK: PP-37 parity goldens (PP-35 follow-up)

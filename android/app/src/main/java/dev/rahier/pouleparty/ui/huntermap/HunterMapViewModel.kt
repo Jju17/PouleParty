@@ -52,8 +52,6 @@ data class HunterMapUiState(
     override val radius: Int = 1500,
     override val circleCenter: Point? = null,
     val showLeaveAlert: Boolean = false,
-    val showGameOverAlert: Boolean = false,
-    val gameOverMessage: String = "",
     val isEnteringFoundCode: Boolean = false,
     val enteredCode: String = "",
     val showWrongCodeAlert: Boolean = false,
@@ -117,6 +115,7 @@ class HunterMapViewModel @Inject constructor(
     analyticsRepository: dev.rahier.pouleparty.data.AnalyticsRepository,
     auth: FirebaseAuth,
     savedStateHandle: SavedStateHandle,
+    private val remoteConfig: dev.rahier.pouleparty.config.RemoteConfigProvider,
 ) : BaseMapViewModel(firestoreRepository, locationRepository, analyticsRepository, auth) {
 
     companion object {
@@ -165,7 +164,6 @@ class HunterMapViewModel @Inject constructor(
             HunterMapIntent.LeaveGameTapped -> onLeaveGameTapped()
             HunterMapIntent.DismissLeaveAlert -> dismissLeaveAlert()
             HunterMapIntent.ConfirmLeaveGame -> confirmLeaveGame()
-            HunterMapIntent.ConfirmGameOver -> confirmGameOver()
             HunterMapIntent.InfoTapped -> onInfoTapped()
             HunterMapIntent.DismissGameInfo -> dismissGameInfo()
             HunterMapIntent.CodeCopied -> onCodeCopied()
@@ -293,7 +291,7 @@ class HunterMapViewModel @Inject constructor(
                     }
                 }
 
-                if (_uiState.value.showGameOverAlert) continue
+                if (_uiState.value.isGameOver) continue
                 if (!gameStarted) continue
 
                 // Game over by time
@@ -301,13 +299,7 @@ class HunterMapViewModel @Inject constructor(
                     // Fallback: also update status from hunter side in case chicken didn't
                     try { firestoreRepository.updateGameStatus(gameId, GameStatus.DONE) } catch (_: Exception) {}
                     cancelStreams()
-                    _uiState.update {
-                        it.copy(
-                            isGameOver = true,
-                            showGameOverAlert = true,
-                            gameOverMessage = "Time's up! The Chicken survived!"
-                        )
-                    }
+                    _uiState.update { it.copy(isGameOver = true) }
                     continue
                 }
 
@@ -330,13 +322,7 @@ class HunterMapViewModel @Inject constructor(
                         // Fallback: also update status from hunter side in case chicken didn't
                         try { firestoreRepository.updateGameStatus(gameId, GameStatus.DONE) } catch (_: Exception) {}
                         cancelStreams()
-                        _uiState.update {
-                            it.copy(
-                                isGameOver = true,
-                                showGameOverAlert = true,
-                                gameOverMessage = radiusResult.gameOverMessage ?: "Game over"
-                            )
-                        }
+                        _uiState.update { it.copy(isGameOver = true, previewCircle = null) }
                     } else {
                         _uiState.update {
                             it.copy(
@@ -773,13 +759,13 @@ class HunterMapViewModel @Inject constructor(
     private fun handleWrongCodeRejected() {
         val attempts = _uiState.value.wrongCodeAttempts + 1
         analyticsRepository.hunterWrongCode(attemptNumber = attempts)
-        val cooldown = if (attempts >= AppConstants.CODE_MAX_WRONG_ATTEMPTS)
-            System.currentTimeMillis() + AppConstants.CODE_COOLDOWN_MS
+        val cooldown = if (attempts >= remoteConfig.codeMaxWrongAttempts)
+            System.currentTimeMillis() + remoteConfig.codeCooldownMs
         else 0L
         _uiState.update {
             it.copy(
                 showWrongCodeAlert = true,
-                wrongCodeAttempts = if (attempts >= AppConstants.CODE_MAX_WRONG_ATTEMPTS) 0 else attempts,
+                wrongCodeAttempts = if (attempts >= remoteConfig.codeMaxWrongAttempts) 0 else attempts,
                 codeCooldownUntil = cooldown,
                 pendingFoundCode = null,
                 winnerRegistrationFailed = false,
@@ -883,14 +869,6 @@ class HunterMapViewModel @Inject constructor(
     private fun confirmLeaveGame() {
         _uiState.update { it.copy(showLeaveAlert = false, previewCircle = null) }
         viewModelScope.launch { _effects.send(HunterMapEffect.NavigateToMenu) }
-    }
-
-    private fun confirmGameOver() {
-        // PP-16: stay on the map. The alert closes; `isGameOver`
-        // greys the controls and `cancelStreams()` already cut the
-        // GPS stream when the timer / zone tick flipped the flag.
-        cancelStreams()
-        _uiState.update { it.copy(showGameOverAlert = false, previewCircle = null) }
     }
 
     val hunterSubtitle: String

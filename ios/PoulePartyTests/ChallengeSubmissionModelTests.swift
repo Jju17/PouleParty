@@ -15,14 +15,14 @@ struct ChallengeSubmissionModelTests {
             "hunterId": "h1",
             "type": "oneShot",
             "submittedAt": Timestamp(seconds: 1_700_000_000, nanoseconds: 0),
-            "photoUrl": "gs://bucket/games/g1/sub1.jpg",
+            "mediaUrl": "gs://bucket/games/g1/sub1.jpg",
             "status": "pending",
         ])
         #expect(sub.challengeId == "c1")
         #expect(sub.hunterId == "h1")
         #expect(sub.type == .oneShot)
         #expect(sub.status == .pending)
-        #expect(sub.photoUrl == "gs://bucket/games/g1/sub1.jpg")
+        #expect(sub.mediaUrl == "gs://bucket/games/g1/sub1.jpg")
         #expect(sub.validatedBy == nil)
         #expect(sub.validatedAt == nil)
     }
@@ -32,7 +32,7 @@ struct ChallengeSubmissionModelTests {
             "challengeId": "c1",
             "hunterId": "h1",
             "type": "repeatable",
-            "photoUrl": "url",
+            "mediaUrl": "url",
             "status": "validated",
             "validatedBy": "gm-uid",
             "validatedAt": Timestamp(seconds: 1_700_000_500, nanoseconds: 0),
@@ -48,7 +48,7 @@ struct ChallengeSubmissionModelTests {
             "challengeId": "c1",
             "hunterId": "h1",
             "type": "oneShot",
-            "photoUrl": "url",
+            "mediaUrl": "url",
             "status": "future-state",
         ])
         #expect(sub.status == .pending)
@@ -61,7 +61,7 @@ struct ChallengeSubmissionModelTests {
             hunterId: "hunter-1",
             type: .repeatable,
             submittedAt: Timestamp(seconds: 1_700_000_000, nanoseconds: 0),
-            photoUrl: "gs://bucket/games/g1/sub-id.jpg",
+            mediaUrl: "gs://bucket/games/g1/sub-id.jpg",
             status: .pending,
             validatedBy: nil,
             validatedAt: nil
@@ -72,7 +72,7 @@ struct ChallengeSubmissionModelTests {
         #expect(decoded.hunterId == original.hunterId)
         #expect(decoded.type == original.type)
         #expect(decoded.submittedAt == original.submittedAt)
-        #expect(decoded.photoUrl == original.photoUrl)
+        #expect(decoded.mediaUrl == original.mediaUrl)
         #expect(decoded.status == original.status)
         #expect(decoded.validatedBy == original.validatedBy)
         #expect(decoded.validatedAt == original.validatedAt)

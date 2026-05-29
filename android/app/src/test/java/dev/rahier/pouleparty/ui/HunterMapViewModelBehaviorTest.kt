@@ -87,6 +87,12 @@ class HunterMapViewModelBehaviorTest {
             analyticsRepository = mockk<dev.rahier.pouleparty.data.AnalyticsRepository>(relaxed = true),
             auth = auth,
             savedStateHandle = SavedStateHandle(mapOf("gameId" to gameId, "hunterName" to hunterName)),
+            remoteConfig = mockk(relaxed = true) {
+                io.mockk.every { adminCode } returns dev.rahier.pouleparty.model.AdminCode.VALUE
+                io.mockk.every { codeMaxWrongAttempts } returns dev.rahier.pouleparty.AppConstants.CODE_MAX_WRONG_ATTEMPTS
+                io.mockk.every { codeCooldownMs } returns dev.rahier.pouleparty.AppConstants.CODE_COOLDOWN_MS
+                io.mockk.every { defaultInitialRadius } returns dev.rahier.pouleparty.AppConstants.DEFAULT_INITIAL_RADIUS
+            },
         )
     }
 
@@ -228,15 +234,6 @@ class HunterMapViewModelBehaviorTest {
         // unit-level we only verify the state transition.
     }
 
-    // MARK:, Game over
-
-    @Test
-    fun `confirmGameOver clears alert (NavigateToVictory effect emitted)`() {
-        val vm = createViewModel()
-        vm.onIntent(HunterMapIntent.ConfirmGameOver)
-        assertFalse(vm.uiState.value.showGameOverAlert)
-    }
-
     // MARK:, Game info
 
     @Test
@@ -271,8 +268,8 @@ class HunterMapViewModelBehaviorTest {
     @Test
     fun `hunterSubtitle for followTheChicken`() {
         val vm = createViewModel()
-        // Default Game.mock is followTheChicken
-        assertEquals("Catch the \uD83D\uDC14 !", vm.hunterSubtitle)
+        // Default Game.mock is followTheChicken + chickenCanSeeHunters = true
+        assertEquals("Catch the \uD83D\uDC14 (she sees you! \uD83D\uDC40)", vm.hunterSubtitle)
     }
 
     // ── Edge cases ─────────────────────────────────────────
@@ -639,7 +636,8 @@ class HunterMapViewModelBehaviorTest {
             gameMode = dev.rahier.pouleparty.model.GameMod.FOLLOW_THE_CHICKEN.firestoreValue,
             status = dev.rahier.pouleparty.model.GameStatus.IN_PROGRESS.firestoreValue,
             timing = dev.rahier.pouleparty.model.Timing(
-                start = com.google.firebase.Timestamp(java.util.Date(now - 60_000)),
+                // Start far enough in the past to clear the 2-min default head start.
+                start = com.google.firebase.Timestamp(java.util.Date(now - 600_000)),
                 end = com.google.firebase.Timestamp(java.util.Date(now + 3_600_000))
             ),
             zone = dev.rahier.pouleparty.model.Zone(
@@ -707,12 +705,11 @@ class HunterMapViewModelBehaviorTest {
         testDispatcher.scheduler.runCurrent()
 
         assertTrue("isGameOver must flip true on timeout", vm.uiState.value.isGameOver)
-        assertTrue("gameOver alert must show", vm.uiState.value.showGameOverAlert)
         assertFalse("must NOT auto-transition to Victory", vm.uiState.value.shouldNavigateToVictory)
     }
 
     /** Scenario 2 (hunter): zone collapse flips `isGameOver`. No
-     *  auto-transition; `gameOverMessage` reflects the collapse. */
+     *  auto-transition. */
     @Test
     fun `pp19 zone collapse flips isGameOver and stops streams`() {
         val now = System.currentTimeMillis()
@@ -738,8 +735,6 @@ class HunterMapViewModelBehaviorTest {
         testDispatcher.scheduler.runCurrent()
 
         assertTrue("isGameOver must flip true on zone collapse", vm.uiState.value.isGameOver)
-        assertTrue("gameOver alert must show", vm.uiState.value.showGameOverAlert)
-        assertEquals("The zone has collapsed!", vm.uiState.value.gameOverMessage)
         assertFalse("must NOT auto-transition to Victory", vm.uiState.value.shouldNavigateToVictory)
     }
 
@@ -887,7 +882,8 @@ class HunterMapViewModelBehaviorTest {
             gameMode = dev.rahier.pouleparty.model.GameMod.FOLLOW_THE_CHICKEN.firestoreValue,
             status = dev.rahier.pouleparty.model.GameStatus.IN_PROGRESS.firestoreValue,
             timing = dev.rahier.pouleparty.model.Timing(
-                start = com.google.firebase.Timestamp(java.util.Date(now - 60_000)),
+                // Start far enough in the past to clear the 2-min default head start.
+                start = com.google.firebase.Timestamp(java.util.Date(now - 600_000)),
                 end = com.google.firebase.Timestamp(java.util.Date(now + 3_600_000))
             ),
             zone = dev.rahier.pouleparty.model.Zone(

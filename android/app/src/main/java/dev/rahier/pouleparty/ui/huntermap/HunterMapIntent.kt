@@ -23,7 +23,6 @@ sealed interface HunterMapIntent {
     object LeaveGameTapped : HunterMapIntent
     object DismissLeaveAlert : HunterMapIntent
     object ConfirmLeaveGame : HunterMapIntent
-    object ConfirmGameOver : HunterMapIntent
     object InfoTapped : HunterMapIntent
     object DismissGameInfo : HunterMapIntent
     object CodeCopied : HunterMapIntent

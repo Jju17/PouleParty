@@ -190,7 +190,6 @@ struct HunterMapFeature {
 
             enum Alert: Equatable {
                 case leaveGame
-                case gameOver
                 case wrongCode
                 case retryWinnerRegistration
             }
@@ -207,6 +206,7 @@ struct HunterMapFeature {
     @Dependency(\.liveActivityClient) var liveActivityClient
     @Dependency(\.locationClient) var locationClient
     @Dependency(\.analyticsClient) var analyticsClient
+    @Dependency(\.remoteConfigClient) var remoteConfigClient
 
     var body: some ReducerOf<Self> {
         BindingReducer()
@@ -270,21 +270,6 @@ struct HunterMapFeature {
                 return .run { send in
                     await liveActivityClient.end(nil)
                     await send(.delegate(.returnedToMenu))
-                }
-            case .destination(.presented(.alert(.gameOver))):
-                // PP-16: the alert closes and the hunter stays on
-                // the map (gamePhase is already .gameOver). No auto
-                // transition to Victory — PP-18 wires the manual
-                // leaderboard CTA.
-                state.previewCircle = nil
-                let gameId = state.game.id
-                return .run { _ in
-                    await liveActivityClient.end(nil)
-                    do {
-                        try await apiClient.updateGameStatus(gameId, .done)
-                    } catch {
-                        logger.error("Failed to update game status to done: \(error)")
-                    }
                 }
             case .destination(.presented(.alert(.retryWinnerRegistration))):
                 // Must live above the catch-all `case .destination:` below,
@@ -465,8 +450,8 @@ struct HunterMapFeature {
                 HapticManager.notification(.error)
                 state.wrongCodeAttempts += 1
                 analyticsClient.hunterWrongCode(attemptNumber: state.wrongCodeAttempts)
-                if state.wrongCodeAttempts >= AppConstants.codeMaxWrongAttempts {
-                    state.codeCooldownUntil = .now.addingTimeInterval(AppConstants.codeCooldownSeconds)
+                if state.wrongCodeAttempts >= remoteConfigClient.codeMaxWrongAttempts() {
+                    state.codeCooldownUntil = .now.addingTimeInterval(remoteConfigClient.codeCooldownSeconds())
                     state.wrongCodeAttempts = 0
                 }
                 state.destination = .alert(
@@ -949,8 +934,7 @@ struct HunterMapFeature {
                 guard state.destination == nil else { return .none }
                 guard state.hasGameStarted else { return .none }
 
-                // Game over by time
-                if checkGameOverByTime(endDate: state.game.endDate) {
+                if !state.isGameOver, checkGameOverByTime(endDate: state.game.endDate) {
                     HapticManager.notification(.warning)
                     state.isGameOver = true
                     locationClient.stopTracking()
@@ -961,17 +945,6 @@ struct HunterMapFeature {
                         winnersCount: state.game.winners.count,
                         isOutsideZone: false,
                         gamePhase: .gameOver
-                    )
-                    state.destination = .alert(
-                        AlertState {
-                            TextState("Game Over")
-                        } actions: {
-                            ButtonState(action: .gameOver) {
-                                TextState("OK")
-                            }
-                        } message: {
-                            TextState("Time's up! The Chicken survived!")
-                        }
                     )
                     return .run { _ in
                         await liveActivityClient.end(endState)
@@ -992,7 +965,7 @@ struct HunterMapFeature {
                     finalCoordinates: state.game.finalLocation,
                     initialRadius: state.game.zone.radius
                 ) {
-                    if result.isGameOver {
+                    if result.isGameOver, !state.isGameOver {
                         HapticManager.notification(.warning)
                         state.isGameOver = true
                         locationClient.stopTracking()
@@ -1004,17 +977,7 @@ struct HunterMapFeature {
                             isOutsideZone: false,
                             gamePhase: .gameOver
                         )
-                        state.destination = .alert(
-                            AlertState {
-                                TextState("Game Over")
-                            } actions: {
-                                ButtonState(action: .gameOver) {
-                                    TextState("OK")
-                                }
-                            } message: {
-                                TextState(result.gameOverMessage ?? "Game over")
-                            }
-                        )
+                        state.previewCircle = nil
                         return .run { _ in
                             await liveActivityClient.end(endState)
                         }

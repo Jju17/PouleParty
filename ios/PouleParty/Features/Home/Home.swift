@@ -149,6 +149,7 @@ struct HomeFeature {
     @Dependency(\.userClient) var userClient
     @Dependency(\.uuid) var uuid
     @Dependency(\.withRandomNumberGenerator) var withRandomNumberGenerator
+    @Dependency(\.remoteConfigClient) var remoteConfigClient
 
     var body: some ReducerOf<Self> {
         BindingReducer()
@@ -177,7 +178,7 @@ struct HomeFeature {
                 let entered = state.adminCodeInput.trimmingCharacters(in: .whitespaces)
                 state.isShowingAdminCodeAlert = false
                 state.adminCodeInput = ""
-                guard entered == AdminCode.value else {
+                guard entered == remoteConfigClient.adminCode() else {
                     state.destination = .alert(
                         AlertState {
                             TextState("Wrong code")
@@ -352,6 +353,7 @@ struct HomeFeature {
                 game.chickenId = creatorId
                 game.maxPlayers = 5
                 game.isAdminCreation = isAdmin
+                game.zone.radius = remoteConfigClient.defaultInitialRadius()
                 game.zone.driftSeed = withRandomNumberGenerator { generator in
                     Int.random(in: 1...999_999, using: &generator)
                 }

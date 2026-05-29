@@ -84,6 +84,12 @@ class HomeActivePhaseTest {
         prefs = prefs,
         auth = auth,
         appContext = mockk(relaxed = true),
+        remoteConfig = mockk(relaxed = true) {
+            io.mockk.every { adminCode } returns dev.rahier.pouleparty.model.AdminCode.VALUE
+            io.mockk.every { codeMaxWrongAttempts } returns dev.rahier.pouleparty.AppConstants.CODE_MAX_WRONG_ATTEMPTS
+            io.mockk.every { codeCooldownMs } returns dev.rahier.pouleparty.AppConstants.CODE_COOLDOWN_MS
+            io.mockk.every { defaultInitialRadius } returns dev.rahier.pouleparty.AppConstants.DEFAULT_INITIAL_RADIUS
+        },
     )
 
     // ── Phase wiring ──────────────────────────────────────

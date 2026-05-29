@@ -3,6 +3,7 @@
 //  PouleParty
 //
 
+import ComposableArchitecture
 import Firebase
 import FirebaseAppCheck
 import FirebaseMessaging
@@ -10,6 +11,8 @@ import UIKit
 import UserNotifications
 
 class AppDelegate: NSObject, UIApplicationDelegate, MessagingDelegate, UNUserNotificationCenterDelegate {
+
+    @Dependency(\.remoteConfigClient) var remoteConfigClient
 
     func application(
         _ application: UIApplication,
@@ -20,6 +23,10 @@ class AppDelegate: NSObject, UIApplicationDelegate, MessagingDelegate, UNUserNot
         // configure-time and caches the choice for the process lifetime.
         AppCheck.setAppCheckProviderFactory(PoulePartyAppCheckProviderFactory())
         FirebaseApp.configure()
+        // Remote Config: pull the latest tunable game values (admin code,
+        // found-code cooldown, default zone radius). Getters return the
+        // compiled defaults until this first fetch activates.
+        Task { await remoteConfigClient.activate() }
         // Bigger `URLCache.shared` so AsyncImage / AVPlayer responses
         // backed by Firebase Storage hit local disk on revisit instead
         // of re-downloading. iOS defaults to 4 MB memory / 20 MB disk,

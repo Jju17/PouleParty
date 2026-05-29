@@ -13,7 +13,7 @@ data class Timing(
         ((System.currentTimeMillis() + 7_200_000) / 60_000) * 60_000
     )),
     val end: Timestamp = Timestamp(Date(System.currentTimeMillis() + 3_900_000)),
-    val headStartMinutes: Double = 0.0,
+    val headStartMinutes: Double = 2.0,
     /**
      * PP-71: server-set timestamp of the effective launch when
      * `manualStartEnabled == true`. `null` until the LAUNCH callable
@@ -57,17 +57,7 @@ data class ActiveEffects(
 
 data class GamePowerUps(
     val enabled: Boolean = false,
-    /**
-     * PP-35: defaults shipped to players are intentionally narrow. Only
-     * `zoneFreeze` (chicken) and `zonePreview` (hunter) ship enabled, so
-     * a brand-new party never spawns the noisy positional power-ups.
-     * The other types stay in the enum + spawner so we can flip them
-     * back on per-game from Firestore without a release.
-     */
-    val enabledTypes: List<String> = listOf(
-        PowerUpType.ZONE_FREEZE.firestoreValue,
-        PowerUpType.ZONE_PREVIEW.firestoreValue,
-    ),
+    val enabledTypes: List<String> = PowerUpType.entries.map { it.firestoreValue },
     val activeEffects: ActiveEffects = ActiveEffects()
 )
 
@@ -76,7 +66,7 @@ data class Game(
     val name: String = "",
     val maxPlayers: Int = 10,
     val gameMode: String = GameMod.STAY_IN_THE_ZONE.firestoreValue,
-    val chickenCanSeeHunters: Boolean = false,
+    val chickenCanSeeHunters: Boolean = true,
     val foundCode: String = "",
     val hunterIds: List<String> = emptyList(),
     val gameMasterIds: List<String> = emptyList(),

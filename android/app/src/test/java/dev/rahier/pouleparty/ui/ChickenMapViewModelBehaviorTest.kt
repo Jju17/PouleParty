@@ -75,15 +75,6 @@ class ChickenMapViewModelBehaviorTest {
         assertFalse(vm.uiState.value.showCancelAlert)
     }
 
-    // MARK: - Game over
-
-    @Test
-    fun `confirmGameOver clears alert (NavigateToVictory effect emitted)`() {
-        val vm = createViewModel()
-        vm.onIntent(ChickenMapIntent.ConfirmGameOver)
-        assertFalse(vm.uiState.value.showGameOverAlert)
-    }
-
     // MARK: - Game info
 
     @Test
@@ -123,8 +114,8 @@ class ChickenMapViewModelBehaviorTest {
     @Test
     fun `chickenSubtitle for followTheChicken`() {
         val vm = createViewModel()
-        // Default game mock is followTheChicken
-        assertEquals("Don't be seen !", vm.chickenSubtitle)
+        // Default game mock is followTheChicken + chickenCanSeeHunters = true
+        assertEquals("You can see them 👀", vm.chickenSubtitle)
     }
 
     // MARK: - Confirm cancel game
@@ -279,10 +270,9 @@ class ChickenMapViewModelBehaviorTest {
     // `ChickenMapFeatureTests` PP-19 block.
 
     /** Scenario 1 (chicken): timeout — `nowDate >= endDate` flips
-     *  `isGameOver` and `showGameOverAlert`. No auto-transition to
-     *  Victory; map stays mounted. */
+     *  `isGameOver`. No auto-transition to Victory; map stays mounted. */
     @Test
-    fun `pp19 timeout flips isGameOver and shows alert without transition`() {
+    fun `pp19 timeout flips isGameOver without transition`() {
         val now = System.currentTimeMillis()
         val game = dev.rahier.pouleparty.model.Game(
             id = "test-id",
@@ -302,14 +292,13 @@ class ChickenMapViewModelBehaviorTest {
         testDispatcher.scheduler.runCurrent()
 
         assertTrue("isGameOver must flip true on timeout", vm.uiState.value.isGameOver)
-        assertTrue("gameOver alert must show", vm.uiState.value.showGameOverAlert)
         // The map is still mounted — no NavigateToVictory effect was
         // dispatched (effect emission is not asserted unit-level; the
         // post-condition is `isGameOver = true`, screen stays put).
     }
 
-    /** Scenario 2 (chicken): zone collapse → `isGameOver` flips,
-     *  `gameOverMessage` reflects the collapse reason. No auto-transition. */
+    /** Scenario 2 (chicken): zone collapse → `isGameOver` flips. No
+     *  auto-transition. */
     @Test
     fun `pp19 zone collapse flips isGameOver and stops streams`() {
         val now = System.currentTimeMillis()
@@ -337,8 +326,6 @@ class ChickenMapViewModelBehaviorTest {
         testDispatcher.scheduler.runCurrent()
 
         assertTrue("isGameOver must flip true on zone collapse", vm.uiState.value.isGameOver)
-        assertTrue("gameOver alert must show", vm.uiState.value.showGameOverAlert)
-        assertEquals("The zone has collapsed!", vm.uiState.value.gameOverMessage)
     }
 
     /** Scenario 5 (chicken): once `isGameOver` is set, no further

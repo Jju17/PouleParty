@@ -79,28 +79,6 @@ struct AllHuntersFoundTests {
         #expect(!game.hunterIds.isEmpty && game.winners.count >= game.hunterIds.count)
     }
 
-    // MARK: - Chicken state: allHuntersFound action
-
-    @Test func chickenAllHuntersFoundActionIsNoOp() async {
-        let store = TestStore(initialState: ChickenMapFeature.State(game: .mock)) {
-            ChickenMapFeature()
-        }
-
-        // allHuntersFound is handled by AppFeature, not ChickenMapFeature
-        await store.send(.delegate(.allHuntersFound))
-    }
-
-    // MARK: - Hunter state: allHuntersFound action
-
-    @Test func hunterAllHuntersFoundActionIsNoOp() async {
-        let store = TestStore(initialState: HunterMapFeature.State(game: .mock)) {
-            HunterMapFeature()
-        }
-
-        // allHuntersFound is handled by AppFeature, not HunterMapFeature
-        await store.send(.delegate(.allHuntersFound))
-    }
-
     // MARK: - Game lifecycle with all-found
 
     @Test func gameLifecycleWithAllHuntersFound() {

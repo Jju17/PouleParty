@@ -116,17 +116,8 @@ struct HunterMapFeatureTests {
         store.exhaustivity = .off
 
         await store.send(.internal(.timerTicked)) {
-            $0.destination = .alert(
-                AlertState {
-                    TextState("Game Over")
-                } actions: {
-                    ButtonState(action: .gameOver) {
-                        TextState("OK")
-                    }
-                } message: {
-                    TextState("The zone has collapsed!")
-                }
-            )
+            $0.isGameOver = true
+            $0.previewCircle = nil
         }
     }
 
@@ -400,17 +391,7 @@ struct HunterMapFeatureTests {
 
         await store.send(.internal(.gameConfigUpdated( game))) {
             $0.game = game
-            $0.destination = .alert(
-                AlertState {
-                    TextState("Game Over")
-                } actions: {
-                    ButtonState(action: .gameOver) {
-                        TextState("OK")
-                    }
-                } message: {
-                    TextState("The game has ended!")
-                }
-            )
+            $0.isGameOver = true
         }
     }
 
@@ -466,40 +447,6 @@ struct HunterMapFeatureTests {
             $0.destination = nil
         }
         await store.receive(\.delegate.returnedToMenu)
-    }
-
-    @Test func gameOverAlertKeepsHunterOnMap() async {
-        // PP-16: dismissing the gameOver alert no longer auto-transitions
-        // to Victory. The hunter stays on the map with `gamePhase ==
-        // .gameOver` so the gameplay controls are greyed and PP-18's
-        // manual leaderboard CTA is reachable. No `.allHuntersFound`
-        // delegate fires.
-        var state = HunterMapFeature.State(game: .mock)
-        state.destination = .alert(
-            AlertState {
-                TextState("Game Over")
-            } actions: {
-                ButtonState(action: .gameOver) {
-                    TextState("OK")
-                }
-            } message: {
-                TextState("The game has ended!")
-            }
-        )
-
-        let store = TestStore(initialState: state) {
-            HunterMapFeature()
-        } withDependencies: {
-            $0.apiClient.updateGameStatus = { _, _ in }
-            $0.liveActivityClient.end = { _ in }
-        }
-        store.exhaustivity = .off
-
-        await store.send(.destination(.presented(.alert(.gameOver)))) {
-            $0.destination = nil
-            $0.previewCircle = nil
-        }
-        // No follow-up delegate action — hunter stays on the map.
     }
 
     // MARK: - Game info
@@ -622,17 +569,7 @@ struct HunterMapFeatureTests {
         store.exhaustivity = .off
 
         await store.send(.internal(.timerTicked)) {
-            $0.destination = .alert(
-                AlertState {
-                    TextState("Game Over")
-                } actions: {
-                    ButtonState(action: .gameOver) {
-                        TextState("OK")
-                    }
-                } message: {
-                    TextState("Time's up! The Chicken survived!")
-                }
-            )
+            $0.isGameOver = true
         }
     }
 

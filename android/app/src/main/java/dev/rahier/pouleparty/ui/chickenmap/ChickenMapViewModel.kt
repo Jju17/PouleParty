@@ -55,8 +55,6 @@ data class ChickenMapUiState(
     override val radius: Int = 1500,
     override val circleCenter: Point? = null,
     val showCancelAlert: Boolean = false,
-    val showGameOverAlert: Boolean = false,
-    val gameOverMessage: String = "",
     override val showGameInfo: Boolean = false,
     val codeCopied: Boolean = false,
     val showFoundCode: Boolean = false,
@@ -127,7 +125,6 @@ class ChickenMapViewModel @Inject constructor(
             ChickenMapIntent.CancelGameTapped -> onCancelGameTapped()
             ChickenMapIntent.DismissCancelAlert -> dismissCancelAlert()
             ChickenMapIntent.ConfirmCancelGame -> confirmCancelGame()
-            ChickenMapIntent.ConfirmGameOver -> confirmGameOver()
             ChickenMapIntent.InfoTapped -> onInfoTapped()
             ChickenMapIntent.DismissGameInfo -> dismissGameInfo()
             ChickenMapIntent.FoundButtonTapped -> onFoundButtonTapped()
@@ -279,7 +276,7 @@ class ChickenMapViewModel @Inject constructor(
                     }
                 }
 
-                if (_uiState.value.showGameOverAlert) continue
+                if (_uiState.value.isGameOver) continue
                 if (!huntStarted) continue
 
                 // Game over by time
@@ -290,13 +287,7 @@ class ChickenMapViewModel @Inject constructor(
                         analyticsRepository.gameEnded(reason = "time_expired", winnersCount = state.game.winners.size)
                     } catch (e: Exception) { Log.e("ChickenMapVM", "Failed to update game status", e) }
                     cancelStreams()
-                    _uiState.update {
-                        it.copy(
-                            isGameOver = true,
-                            showGameOverAlert = true,
-                            gameOverMessage = "Time's up! The Chicken survived!"
-                        )
-                    }
+                    _uiState.update { it.copy(isGameOver = true) }
                     continue
                 }
 
@@ -322,13 +313,7 @@ class ChickenMapViewModel @Inject constructor(
                             analyticsRepository.gameEnded(reason = "zone_collapsed", winnersCount = state.game.winners.size)
                         } catch (e: Exception) { Log.e("ChickenMapVM", "Failed to update game status", e) }
                         cancelStreams()
-                        _uiState.update {
-                            it.copy(
-                                isGameOver = true,
-                                showGameOverAlert = true,
-                                gameOverMessage = radiusResult.gameOverMessage ?: "Game over"
-                            )
-                        }
+                        _uiState.update { it.copy(isGameOver = true) }
                     } else {
                         _uiState.update {
                             it.copy(
@@ -591,13 +576,6 @@ class ChickenMapViewModel @Inject constructor(
             try { firestoreRepository.updateGameStatus(gameId, GameStatus.DONE) } catch (e: Exception) { Log.e("ChickenMapVM", "Failed to update game status", e) }
             _effects.send(ChickenMapEffect.NavigateToMenu)
         }
-    }
-
-    private fun confirmGameOver() {
-        // PP-16: stay on the map. The alert closes; `isGameOver`
-        // greys the controls and the GPS stream has already been
-        // cancelled when the timer / zone tick flipped the flag.
-        _uiState.update { it.copy(showGameOverAlert = false) }
     }
 
     private fun onInfoTapped() {

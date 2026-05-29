@@ -7,7 +7,6 @@ sealed interface ChickenMapIntent {
     object CancelGameTapped : ChickenMapIntent
     object DismissCancelAlert : ChickenMapIntent
     object ConfirmCancelGame : ChickenMapIntent
-    object ConfirmGameOver : ChickenMapIntent
     object InfoTapped : ChickenMapIntent
     object DismissGameInfo : ChickenMapIntent
     object FoundButtonTapped : ChickenMapIntent

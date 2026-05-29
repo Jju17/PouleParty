@@ -6,6 +6,9 @@
   "storage": {
     "rules": "storage.rules"
   },
+  "remoteconfig": {
+    "template": "remoteconfig.template.json"
+  },
   "hosting": {
     "public": "web/dist",
     "ignore": ["firebase.json", "**/.DS_Store", "**/node_modules/**"],
@@ -38,10 +41,10 @@
       { "source": "/challenges-fr/:gameId", "destination": "/fr/challenges/:gameId", "type": 301 },
       { "source": "/challenges-en/:gameId", "destination": "/en/challenges/:gameId", "type": 301 },
       { "source": "/challenges-nl/:gameId", "destination": "/nl/challenges/:gameId", "type": 301 },
-      { "source": "/privacy", "destination": "/fr/confidentialite", "type": 301 },
-      { "source": "/terms", "destination": "/fr/conditions", "type": 301 },
+      { "source": "/privacy", "destination": "/fr/privacy", "type": 301 },
+      { "source": "/terms", "destination": "/fr/terms", "type": 301 },
       { "source": "/support", "destination": "/fr/support", "type": 301 },
-      { "source": "/delete-account", "destination": "/fr/supprimer-compte", "type": 301 }
+      { "source": "/delete-account", "destination": "/fr/delete-account", "type": 301 }
     ],
     "rewrites": [
       {

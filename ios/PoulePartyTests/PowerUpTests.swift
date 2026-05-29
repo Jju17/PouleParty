@@ -165,15 +165,13 @@ struct PowerUpTests {
         #expect(availablePowerUpTypes(for: .stayInTheZone) == expected)
     }
 
-    /// Defaults shipped to players: only `zoneFreeze` (chicken) and
-    /// `zonePreview` (hunter). Keep this golden in lockstep with the
+    /// Defaults shipped to players: every power-up type is enabled. The
+    /// server-side `stayInTheZone` filter still strips the position-only
+    /// ones at spawn time. Keep this golden in lockstep with the
     /// Android sibling so a one-platform regression never sneaks in.
-    @Test func defaultEnabledTypesAreNarrow() {
+    @Test func defaultEnabledTypesCoverEveryType() {
         let defaults = Game.GamePowerUps().enabledTypes
-        #expect(defaults == [
-            PowerUp.PowerUpType.zoneFreeze.rawValue,
-            PowerUp.PowerUpType.zonePreview.rawValue,
-        ])
+        #expect(defaults == PowerUp.PowerUpType.allCases.map(\.rawValue))
     }
 
     // MARK: PP-37 parity goldens (PP-35 follow-up)

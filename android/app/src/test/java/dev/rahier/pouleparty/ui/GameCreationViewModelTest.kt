@@ -93,6 +93,12 @@ class GameCreationViewModelTest {
             locationRepository = locationRepository,
             analyticsRepository = analyticsRepository,
             auth = auth,
+            remoteConfig = mockk(relaxed = true) {
+                io.mockk.every { adminCode } returns dev.rahier.pouleparty.model.AdminCode.VALUE
+                io.mockk.every { codeMaxWrongAttempts } returns dev.rahier.pouleparty.AppConstants.CODE_MAX_WRONG_ATTEMPTS
+                io.mockk.every { codeCooldownMs } returns dev.rahier.pouleparty.AppConstants.CODE_COOLDOWN_MS
+                io.mockk.every { defaultInitialRadius } returns dev.rahier.pouleparty.AppConstants.DEFAULT_INITIAL_RADIUS
+            },
             savedStateHandle = SavedStateHandle(
                 mapOf(
                     "gameId" to gameId,
@@ -457,8 +463,8 @@ class GameCreationViewModelTest {
         advanceUntilIdle()
         val zone = vm.uiState.value.game.zone
         assertEquals(5.0, zone.shrinkIntervalMinutes, 0.0)
-        // 60 min / 5 = 12 shrinks, (1500 - 100) / 12 = 116.67
-        assertEquals(116.67, zone.shrinkMetersPerUpdate, 0.1)
+        // (60 - 2 headStart) / 5 = 11.6 shrinks, (1500 - 100) / 11.6 ≈ 120.69
+        assertEquals(120.69, zone.shrinkMetersPerUpdate, 0.1)
     }
 
     // ── Head start ──
@@ -758,15 +764,13 @@ class GameCreationViewModelTest {
     fun `togglePowerUpType can remove unavailable type in stayInTheZone`() {
         val vm = createViewModel()
         vm.onIntent(GameCreationIntent.GameModeChanged(GameMod.STAY_IN_THE_ZONE))
-        // Force INVISIBILITY enabled — PP-35 default only ships ZONE_FREEZE + ZONE_PREVIEW.
-        vm.onIntent(GameCreationIntent.PowerUpTypeToggled(PowerUpType.INVISIBILITY))
+        // Defaults ship every type enabled. INVISIBILITY is unavailable in
+        // stayInTheZone — removable in a single toggle, since the guard
+        // counts only AVAILABLE enabled types.
         assertTrue(
-            "INVISIBILITY should be enabled after seed toggle",
+            "INVISIBILITY ships enabled by default",
             vm.uiState.value.game.powerUps.enabledTypes.contains(PowerUpType.INVISIBILITY.firestoreValue)
         )
-        // INVISIBILITY is unavailable in stayInTheZone — removable even if it
-        // were the only enabled type, since the guard counts only AVAILABLE
-        // enabled types (PP-35 strict filter).
         vm.onIntent(GameCreationIntent.PowerUpTypeToggled(PowerUpType.INVISIBILITY))
         assertFalse(vm.uiState.value.game.powerUps.enabledTypes.contains(PowerUpType.INVISIBILITY.firestoreValue))
     }
@@ -775,9 +779,8 @@ class GameCreationViewModelTest {
     fun `togglePowerUpType re-adds unavailable type`() {
         val vm = createViewModel()
         vm.onIntent(GameCreationIntent.GameModeChanged(GameMod.STAY_IN_THE_ZONE))
-        // INVISIBILITY is not in the PP-35 default set, so first toggle ADDS,
-        // second toggle REMOVES, third toggle ADDS again.
-        vm.onIntent(GameCreationIntent.PowerUpTypeToggled(PowerUpType.INVISIBILITY))
+        // INVISIBILITY ships enabled. First toggle REMOVES, second toggle
+        // RE-ADDS — guard does not apply to unavailable types.
         vm.onIntent(GameCreationIntent.PowerUpTypeToggled(PowerUpType.INVISIBILITY))
         vm.onIntent(GameCreationIntent.PowerUpTypeToggled(PowerUpType.INVISIBILITY))
         assertTrue(vm.uiState.value.game.powerUps.enabledTypes.contains(PowerUpType.INVISIBILITY.firestoreValue))
@@ -788,8 +791,7 @@ class GameCreationViewModelTest {
         val vm = createViewModel()
         vm.onIntent(GameCreationIntent.GameModeChanged(GameMod.STAY_IN_THE_ZONE))
         // Available in stayInTheZone: ZONE_PREVIEW, RADAR_PING, ZONE_FREEZE.
-        // Seed RADAR_PING ON so we start with all 3 available enabled.
-        vm.onIntent(GameCreationIntent.PowerUpTypeToggled(PowerUpType.RADAR_PING))
+        // Defaults ship all 6 enabled, so all 3 available start ON.
         // Remove 2 of the 3 available → 1 available left.
         vm.onIntent(GameCreationIntent.PowerUpTypeToggled(PowerUpType.ZONE_PREVIEW))
         vm.onIntent(GameCreationIntent.PowerUpTypeToggled(PowerUpType.RADAR_PING))
@@ -851,8 +853,8 @@ class GameCreationViewModelTest {
         vm.onIntent(GameCreationIntent.InitialRadiusChanged(500.0))
         advanceUntilIdle()
         assertEquals(500.0, vm.uiState.value.game.zone.radius, 0.0)
-        // 90 min / 5 = 18 shrinks → (500-100)/18 ≈ 22.22
-        assertEquals(22.22, vm.uiState.value.game.zone.shrinkMetersPerUpdate, 0.1)
+        // (90 - 2 headStart) / 5 = 17.6 shrinks → (500-100)/17.6 ≈ 22.73
+        assertEquals(22.73, vm.uiState.value.game.zone.shrinkMetersPerUpdate, 0.1)
     }
 
     @Test
@@ -877,8 +879,8 @@ class GameCreationViewModelTest {
         val vm = createViewModel()
         vm.onIntent(GameCreationIntent.InitialRadiusChanged(50000.0))
         advanceUntilIdle()
-        // 90/5 = 18 shrinks → (50000-100)/18 ≈ 2772.22
-        assertEquals(2772.22, vm.uiState.value.game.zone.shrinkMetersPerUpdate, 0.1)
+        // (90 - 2 headStart) / 5 = 17.6 shrinks → (50000-100)/17.6 ≈ 2835.23
+        assertEquals(2835.23, vm.uiState.value.game.zone.shrinkMetersPerUpdate, 0.1)
     }
 
     // ── Start game edge cases ──

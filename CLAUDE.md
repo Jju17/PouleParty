@@ -68,11 +68,40 @@ For real-world events where players pay to participate (D-Day 06/06/2026 being t
 ### Admin mode
 
 All in-app games are **Free**. The wizard caps `maxPlayers` at 5 by default; the
-admin entry point on Home (gated by the hardcoded `AdminCode.value =
-"jujurahier"` constant — obfuscation only, no real auth) lifts the cap to 500
-via `state.isAdminCreation = true`. The same flag is written to the Game doc
-and enforced server-side by the `firestore.rules` `allow create` clause:
-`maxPlayers <= 5 || isAdminCreation == true && maxPlayers <= 500`. See PP-45.
+admin entry point on Home (gated by the admin code, obfuscation only, no real
+auth) lifts the cap to 500 via `state.isAdminCreation = true`. The same flag is
+written to the Game doc and enforced server-side by the `firestore.rules` `allow
+create` clause: `maxPlayers <= 5 || isAdminCreation == true && maxPlayers <=
+500`. See PP-45. The admin code itself is now tunable via Remote Config (key
+`admin_code`, see below); `AdminCode.value` / `AdminCode.VALUE` (`"jujurahier"`)
+remains as the compiled fallback.
+
+### Remote Config (runtime-tunable constants)
+
+A small set of client-only constants is overridable at runtime via Firebase
+Remote Config, so they can be changed without shipping a new build. The
+compiled values stay in the code (`AppConstants` / `AdminCode`) as the default,
+and Remote Config only ever overrides them, so the app behaves correctly
+offline and before the first fetch. Migrated keys (identical on both platforms):
+
+| Remote Config key | Default | Used by |
+|---|---|---|
+| `admin_code` | `jujurahier` | admin-mode gate on Home |
+| `found_code_max_wrong_attempts` | `3` | hunter found-code cooldown trigger |
+| `found_code_cooldown_seconds` | `10` | hunter found-code cooldown duration |
+| `default_initial_radius_meters` | `1500` | wizard's starting zone radius |
+
+iOS: `Clients/RemoteConfigClient.swift` (TCA `@Dependency(\.remoteConfigClient)`),
+defaults registered + `fetchAndActivate` fired in `App/AppDelegate.swift`.
+Android: `config/RemoteConfigProvider.kt` (Hilt `@Singleton`, defaults +
+`fetchAndActivate` in its `init`).
+
+**Deliberately NOT in Remote Config**: anything server-authoritative
+(power-up batch sizes / collection radius live in `functions/`) or
+determinism-critical (`normalMode*`, `JAMMER_NOISE_DEGREES`,
+`outOfZonePenaltyInterval`, zone-calculation mirrors). A client Remote Config
+that delivered different values to iOS vs Android mid-rollout would desync
+players. Tune those server-side or not at all.
 
 ## Build & run
 

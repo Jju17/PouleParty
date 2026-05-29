@@ -51,7 +51,6 @@ import dev.rahier.pouleparty.ui.components.GameLeaderboardSheet
 import dev.rahier.pouleparty.ui.components.HapticManager
 import dev.rahier.pouleparty.ui.components.MapHapticsEffect
 import dev.rahier.pouleparty.ui.components.KeepScreenOn
-import dev.rahier.pouleparty.ui.components.GameOverAlertDialog
 import dev.rahier.pouleparty.powerups.model.PowerUpType
 import dev.rahier.pouleparty.powerups.ui.ActivePowerUpBadge
 import dev.rahier.pouleparty.ui.components.GameStartCountdownOverlay
@@ -103,8 +102,8 @@ fun HunterMapScreen(
 
     // Shared haptics (countdown / zone warning / power-up / winners)
     MapHapticsEffect(state, view)
-    LaunchedEffect(state.showGameOverAlert) {
-        if (state.showGameOverAlert) HapticManager.warning(view)
+    LaunchedEffect(state.isGameOver) {
+        if (state.isGameOver) HapticManager.warning(view)
     }
     LaunchedEffect(state.showWrongCodeAlert) {
         if (state.showWrongCodeAlert) HapticManager.error(view)
@@ -535,16 +534,6 @@ fun HunterMapScreen(
                 TextButton(onClick = { viewModel.onIntent(HunterMapIntent.DismissLeaveAlert) }) {
                     Text(stringResource(R.string.never_mind))
                 }
-            }
-        )
-    }
-
-    // Game over alert — dismiss navigates to leaderboard (Victory)
-    if (state.showGameOverAlert) {
-        GameOverAlertDialog(
-            message = state.gameOverMessage,
-            onConfirm = {
-                viewModel.onIntent(HunterMapIntent.ConfirmGameOver)
             }
         )
     }

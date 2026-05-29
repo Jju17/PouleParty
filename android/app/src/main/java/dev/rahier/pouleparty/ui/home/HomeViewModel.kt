@@ -72,6 +72,7 @@ class HomeViewModel @Inject constructor(
     // singleton so it's process-scoped — no Activity leak risk.
     @dagger.hilt.android.qualifiers.ApplicationContext
     private val appContext: android.content.Context,
+    private val remoteConfig: dev.rahier.pouleparty.config.RemoteConfigProvider,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -217,7 +218,7 @@ class HomeViewModel @Inject constructor(
      */
     fun validateAdminCode(): Boolean {
         val entered = _uiState.value.adminCodeInput.trim()
-        return if (entered == dev.rahier.pouleparty.model.AdminCode.VALUE) {
+        return if (entered == remoteConfig.adminCode) {
             _uiState.update { it.copy(isShowingAdminCodeDialog = false, adminCodeInput = "") }
             true
         } else {

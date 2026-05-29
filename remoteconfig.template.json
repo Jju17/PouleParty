@@ -1,0 +1,29 @@
+{
+  "conditions": [],
+  "parameters": {
+    "admin_code": {
+      "defaultValue": { "value": "jujurahier" },
+      "description": "Admin-mode gate code on Home. Lifts the maxPlayers cap from 5 to 500. Obfuscation only, no real auth. Compiled fallback: AdminCode.value / AdminCode.VALUE.",
+      "valueType": "STRING"
+    },
+    "found_code_max_wrong_attempts": {
+      "defaultValue": { "value": "3" },
+      "description": "Number of wrong found-code entries a hunter may make before a cooldown kicks in. Compiled fallback: AppConstants.codeMaxWrongAttempts / CODE_MAX_WRONG_ATTEMPTS.",
+      "valueType": "NUMBER"
+    },
+    "found_code_cooldown_seconds": {
+      "defaultValue": { "value": "10" },
+      "description": "Cooldown duration in seconds after a hunter hits the wrong-attempts limit. Stored in seconds for cross-platform parity. Compiled fallback: AppConstants.codeCooldownSeconds (iOS) / CODE_COOLDOWN_MS / 1000 (Android).",
+      "valueType": "NUMBER"
+    },
+    "default_initial_radius_meters": {
+      "defaultValue": { "value": "1500" },
+      "description": "Starting zone radius the creation wizard seeds. Overwritten by the size picker (followTheChicken) or recomputed from pins (stayInTheZone). Compiled fallback: AppConstants.defaultInitialRadiusMeters (iOS) / DEFAULT_INITIAL_RADIUS (Android).",
+      "valueType": "NUMBER"
+    }
+  },
+  "parameterGroups": {},
+  "version": {
+    "description": "PouleParty runtime-tunable game constants (admin code, found-code cooldown, default zone radius)."
+  }
+}

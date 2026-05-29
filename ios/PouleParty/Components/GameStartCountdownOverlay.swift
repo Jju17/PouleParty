@@ -182,14 +182,8 @@ struct PreGameOverlay: View {
                     .padding(.top, 8)
 
                     if isManualStart {
-                        // Push the manual-launch CTA + Cancel button
-                        // toward the lower portion of the screen
-                        // (~3/4 height) so the launcher's thumb has a
-                        // natural reach and the info up top reads as
-                        // a header rather than a centered card.
-                        Spacer(minLength: 24)
-                            .frame(maxHeight: .infinity)
                         manualStartSection
+                            .padding(.top, 16)
 
                         if let onCancelGame {
                             Button {
@@ -199,9 +193,8 @@ struct PreGameOverlay: View {
                                     .font(.system(size: 16, weight: .medium))
                                     .foregroundStyle(Color.danger)
                             }
-                            .padding(.top, 4)
+                            .padding(.top, 8)
                         }
-                        Spacer().frame(height: 60)
                     } else {
                         VStack(spacing: 8) {
                             Text("Game starts in")
@@ -228,7 +221,7 @@ struct PreGameOverlay: View {
                         }
                     }
                 }
-                .frame(maxWidth: .infinity, maxHeight: isManualStart ? .infinity : nil)
+                .frame(maxWidth: .infinity)
                 .padding(32)
             }
         }

@@ -155,6 +155,7 @@ class GameCreationViewModel @Inject constructor(
     private val locationRepository: LocationRepository,
     private val analyticsRepository: dev.rahier.pouleparty.data.AnalyticsRepository,
     private val auth: FirebaseAuth,
+    private val remoteConfig: dev.rahier.pouleparty.config.RemoteConfigProvider,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -169,13 +170,10 @@ class GameCreationViewModel @Inject constructor(
                 name = "",
                 maxPlayers = 5,
                 zone = Zone(
-                    radius = 1500.0,
+                    radius = remoteConfig.defaultInitialRadius,
                     shrinkIntervalMinutes = 5.0,
                     shrinkMetersPerUpdate = 100.0,
                     driftSeed = (1..999_999).random()
-                ),
-                timing = Timing(
-                    headStartMinutes = 0.0
                 ),
                 gameMode = GameMod.STAY_IN_THE_ZONE.firestoreValue,
                 foundCode = Game.generateFoundCode(),
