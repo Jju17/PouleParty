@@ -16,7 +16,6 @@
 		6464E5262BA5C3ED0039C387 /* FirebaseFirestoreCombine-Community in Frameworks */ = {isa = PBXBuildFile; productRef = 6464E5252BA5C3ED0039C387 /* FirebaseFirestoreCombine-Community */; };
 		6464E52A2BA5C3ED0039C387 /* FirebaseFunctions in Frameworks */ = {isa = PBXBuildFile; productRef = 6464E5292BA5C3ED0039C387 /* FirebaseFunctions */; };
 		6464E52C2BA5C3ED0039C387 /* FirebaseFunctionsCombine-Community in Frameworks */ = {isa = PBXBuildFile; productRef = 6464E52B2BA5C3ED0039C387 /* FirebaseFunctionsCombine-Community */; };
-		6464E52E2BA5C3ED0039C387 /* FirebaseInAppMessaging-Beta in Frameworks */ = {isa = PBXBuildFile; productRef = 6464E52D2BA5C3ED0039C387 /* FirebaseInAppMessaging-Beta */; };
 		648F56402CF3DC4900B1BC28 /* ComposableArchitecture in Frameworks */ = {isa = PBXBuildFile; productRef = 648F563F2CF3DC4900B1BC28 /* ComposableArchitecture */; };
 		64CE0F842CEE8E8200762232 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 64CE0F832CEE8E8200762232 /* Localizable.xcstrings */; };
 		BB0000012F47000100000001 /* Sharing in Frameworks */ = {isa = PBXBuildFile; productRef = BB0000022F47000100000001 /* Sharing */; };
@@ -210,7 +209,6 @@
 				6464E52C2BA5C3ED0039C387 /* FirebaseFunctionsCombine-Community in Frameworks */,
 				F9B5A2222F53A73B004EBFD7 /* MapboxMaps in Frameworks */,
 				6464E52A2BA5C3ED0039C387 /* FirebaseFunctions in Frameworks */,
-				6464E52E2BA5C3ED0039C387 /* FirebaseInAppMessaging-Beta in Frameworks */,
 				6464E5202BA5C3ED0039C387 /* FirebaseAuth in Frameworks */,
 				6464E5242BA5C3ED0039C387 /* FirebaseFirestore in Frameworks */,
 				6464E5262BA5C3ED0039C387 /* FirebaseFirestoreCombine-Community in Frameworks */,
@@ -347,7 +345,6 @@
 				6464E5252BA5C3ED0039C387 /* FirebaseFirestoreCombine-Community */,
 				6464E5292BA5C3ED0039C387 /* FirebaseFunctions */,
 				6464E52B2BA5C3ED0039C387 /* FirebaseFunctionsCombine-Community */,
-				6464E52D2BA5C3ED0039C387 /* FirebaseInAppMessaging-Beta */,
 				648F563F2CF3DC4900B1BC28 /* ComposableArchitecture */,
 				BB0000022F47000100000001 /* Sharing */,
 				BB0000042F47000100000001 /* Clocks */,
@@ -1070,11 +1067,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 6464E51A2BA5C3ED0039C387 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = "FirebaseFunctionsCombine-Community";
-		};
-		6464E52D2BA5C3ED0039C387 /* FirebaseInAppMessaging-Beta */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 6464E51A2BA5C3ED0039C387 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = "FirebaseInAppMessaging-Beta";
 		};
 		648F563F2CF3DC4900B1BC28 /* ComposableArchitecture */ = {
 			isa = XCSwiftPackageProductDependency;

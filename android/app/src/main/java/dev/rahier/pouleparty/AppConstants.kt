@@ -46,14 +46,9 @@ object AppConstants {
     const val CONFETTI_DURATION_MS = 10_000L
 
     // Game Defaults
-    const val DEFAULT_START_DELAY_MS = 300_000L       // 5 minutes
-    const val DEFAULT_GAME_DURATION_MS = 3_900_000L   // 65 minutes
     const val DEFAULT_LATITUDE = 50.8466
     const val DEFAULT_LONGITUDE = 4.3528
     const val DEFAULT_INITIAL_RADIUS = 1500.0
-    const val DEFAULT_RADIUS_DECLINE = 100.0
-    const val DEFAULT_RADIUS_INTERVAL = 5.0   // in minutes
-    const val DEFAULT_NUMBER_OF_PLAYERS = 10
 
     // Location
     const val LOCATION_MIN_DISTANCE_METERS = 10f

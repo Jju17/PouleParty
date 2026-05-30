@@ -198,6 +198,7 @@ struct HunterMapFeature {
 
     enum CancelID {
         case powerUpNotificationDismiss
+        case timer
     }
 
     @Dependency(\.apiClient) var apiClient
@@ -617,7 +618,8 @@ struct HunterMapFeature {
                         for await _ in self.clock.timer(interval: .seconds(1)) {
                             await send(.internal(.timerTicked))
                         }
-                    },
+                    }
+                    .cancellable(id: CancelID.timer),
                     .run { send in
                         guard powerUpsEnabled else { return }
                         for await powerUps in apiClient.powerUpsStream(gameId) {
@@ -890,6 +892,10 @@ struct HunterMapFeature {
 
                 return effects.isEmpty ? .none : .merge(effects)
             case .internal(.timerTicked):
+                if state.isGameOver {
+                    state.isOutsideZone = false
+                    return .cancel(id: CancelID.timer)
+                }
                 state.nowDate = .now
 
                 // Countdown phases (hunter perspective). Same gate as

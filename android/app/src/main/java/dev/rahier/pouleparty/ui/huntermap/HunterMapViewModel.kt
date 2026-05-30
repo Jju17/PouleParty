@@ -251,6 +251,12 @@ class HunterMapViewModel @Inject constructor(
         return viewModelScope.launch {
             while (isActive) {
                 delay(1000)
+                if (_uiState.value.isGameOver) {
+                    if (_uiState.value.isOutsideZone) {
+                        _uiState.update { it.copy(isOutsideZone = false) }
+                    }
+                    break
+                }
                 val state = _uiState.value
                 val now = Date()
                 val gameStarted = now.after(state.game.hunterStartDate) || now == state.game.hunterStartDate
@@ -291,7 +297,6 @@ class HunterMapViewModel @Inject constructor(
                     }
                 }
 
-                if (_uiState.value.isGameOver) continue
                 if (!gameStarted) continue
 
                 // Game over by time
