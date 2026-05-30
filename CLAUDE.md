@@ -99,12 +99,23 @@ A debug game gets **compressed timing** (`applyDebugTiming` in iOS
 `GameCreationFeature` / Android `GameCreationViewModel`): start ≈ now+60s, head
 start 0, duration 5 min, shrink interval 1 min, manual launch ON. Both maps
 (chicken + GameMaster) render a small **`DebugQAPanel`** (only when
-`game.isDebugGame`) with two buttons — **Spawn** (power-up batch now) and
-**End/Finir** (status → done) — wired to the `debugAdvanceGame` callable
-(`functions/src/debugAdvanceGame.ts`), which is gated server-side on
-`isDebugGame == true` + caller creator/GM, so it's inert on real games.
-`functions/src/qaBot.ts` is a ts-node script (not deployed) that simulates N
-hunters to test the maps without phones.
+`game.isDebugGame`) with two buttons — **Next** and **End** — wired to the
+`debugAdvanceGame` callable (`functions/src/debugAdvanceGame.ts`), gated
+server-side on `isDebugGame == true` + caller creator/GM, so it's inert on real
+games. **Next** (`advanceStep` action) is context-aware and walks the whole
+lifecycle one visible step per tap: `waiting → readyToLaunch` (LAUNCH overlay
+appears), `readyToLaunch → inProgress` (reuses `launchReadyGame` from
+`launchGame.ts`: stamps `actualStart`, enqueues every runtime task incl. the
+initial power-up batch), then each subsequent tap advances exactly one zone
+shrink — it rewinds the start anchor by one `shrinkIntervalMinutes` so every
+client re-derives one more shrink via `findLastUpdate`, and spawns a periodic
+power-up batch (idSalt-keyed so it doesn't merge onto the scheduled batch's
+docs), until the shrink would collapse the zone → `done`. **End** (`endNow`)
+jumps straight to `done`. Because the chicken/Android-GM map VMs derive the
+radius incrementally (not from the anchor), they re-derive radius + circle from
+the fresh timing **only when `isDebugGame`** on each config tick; real games are
+untouched. `functions/src/qaBot.ts` is a ts-node script (not deployed) that
+simulates N hunters to test the maps without phones.
 
 ### Remote Config (runtime-tunable constants)
 

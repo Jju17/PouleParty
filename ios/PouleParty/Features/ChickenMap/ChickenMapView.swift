@@ -165,11 +165,11 @@ struct ChickenMapView: View {
             .overlay(alignment: .bottomLeading) {
                 if store.game.isDebugGame {
                     DebugQAPanel(
-                        onSpawnPowerUps: { store.send(.view(.debugSpawnPowerUpsTapped)) },
+                        onNextStep: { store.send(.view(.debugAdvanceStepTapped)) },
                         onEndNow: { store.send(.view(.debugEndNowTapped)) }
                     )
                     .padding(.leading, 12)
-                    .padding(.bottom, 130)
+                    .padding(.bottom, 96)
                 }
             }
             .animation(.easeInOut(duration: 0.25), value: store.state.isGameOver)

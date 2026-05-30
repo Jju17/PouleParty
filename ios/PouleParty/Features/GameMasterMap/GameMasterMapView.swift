@@ -70,7 +70,7 @@ struct GameMasterMapView: View {
             .overlay(alignment: .bottomLeading) {
                 if store.game.isDebugGame {
                     DebugQAPanel(
-                        onSpawnPowerUps: { store.send(.view(.debugSpawnPowerUpsTapped)) },
+                        onNextStep: { store.send(.view(.debugAdvanceStepTapped)) },
                         onEndNow: { store.send(.view(.debugEndNowTapped)) }
                     )
                     .padding(.leading, 12)

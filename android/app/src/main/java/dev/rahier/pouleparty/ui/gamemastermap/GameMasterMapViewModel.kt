@@ -151,8 +151,8 @@ class GameMasterMapViewModel @Inject constructor(
             GameMasterMapIntent.DebugEndNowTapped -> viewModelScope.launch {
                 try { firestoreRepository.debugAdvanceGame(gameId, "endNow") } catch (_: Exception) {}
             }
-            GameMasterMapIntent.DebugSpawnPowerUpsTapped -> viewModelScope.launch {
-                try { firestoreRepository.debugAdvanceGame(gameId, "spawnPowerUp") } catch (_: Exception) {}
+            GameMasterMapIntent.DebugAdvanceStepTapped -> viewModelScope.launch {
+                try { firestoreRepository.debugAdvanceGame(gameId, "advanceStep") } catch (_: Exception) {}
             }
         }
     }
@@ -295,12 +295,35 @@ class GameMasterMapViewModel @Inject constructor(
             detectNewWinners(winners = game.winners, previousCount = previousCount)
         } else null
         _uiState.update {
-            it.copy(
-                game = game,
-                winnerNotification = notif ?: it.winnerNotification,
-                previousWinnersCount = game.winners.size,
-                isGameOver = isNowDone || it.isGameOver,
-            )
+            // QA debug games drive zone shrinks server-side (the `advanceStep`
+            // callable rewinds the start anchor), so re-derive the radius /
+            // next-update / circle from the fresh timing on every config tick.
+            // Real games keep the timer-tick path untouched.
+            if (game.isDebugGame) {
+                val (nextUpdate, lastRadius) = game.findLastUpdate()
+                val center = interpolateZoneCenter(
+                    initialCenter = game.initialLocation,
+                    finalCenter = game.finalLocation,
+                    initialRadius = game.zone.radius,
+                    currentRadius = lastRadius.toDouble(),
+                )
+                it.copy(
+                    game = game,
+                    winnerNotification = notif ?: it.winnerNotification,
+                    previousWinnersCount = game.winners.size,
+                    isGameOver = isNowDone || it.isGameOver,
+                    radius = lastRadius,
+                    nextRadiusUpdate = nextUpdate,
+                    circleCenter = center,
+                )
+            } else {
+                it.copy(
+                    game = game,
+                    winnerNotification = notif ?: it.winnerNotification,
+                    previousWinnersCount = game.winners.size,
+                    isGameOver = isNowDone || it.isGameOver,
+                )
+            }
         }
         if (notif != null) {
             winnerNotificationJob?.cancel()

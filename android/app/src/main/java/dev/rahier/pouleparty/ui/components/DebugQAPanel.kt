@@ -20,13 +20,14 @@ import androidx.compose.ui.unit.sp
 /**
  * QA-only floating panel, rendered only on debug games (`Game.isDebugGame`,
  * created via the `qa_debug_code` long-press). Mirrors the iOS `DebugQAPanel`:
- * spawn a power-up batch or end the game now, both routed through the
- * `debugAdvanceGame` callable (which itself refuses any game where
- * `isDebugGame != true`), so the panel can never affect a real game.
+ * "Next" advances one lifecycle step (ready-to-launch → launch → shrink +
+ * power-up spawn → … → game over) and "End" terminates immediately, both
+ * routed through the `debugAdvanceGame` callable (which itself refuses any
+ * game where `isDebugGame != true`), so the panel can never affect a real game.
  */
 @Composable
 fun DebugQAPanel(
-    onSpawnPowerUps: () -> Unit,
+    onNextStep: () -> Unit,
     onEndNow: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -41,10 +42,10 @@ fun DebugQAPanel(
         Text("QA DEBUG", color = Color.White, fontWeight = FontWeight.Black, fontSize = 11.sp)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(
-                onClick = onSpawnPowerUps,
+                onClick = onNextStep,
                 colors = ButtonDefaults.buttonColors(containerColor = purple),
             ) {
-                Text("Spawn", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text("Next", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
             Button(
                 onClick = onEndNow,

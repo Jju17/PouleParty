@@ -1,13 +1,15 @@
 import SwiftUI
 
 /// QA-only floating panel, rendered only on debug games (`Game.isDebugGame`,
-/// created via the `qa_debug_code` long-press). Lets the host force-advance
-/// phases without waiting on the clock: spawn a power-up batch, or end the
-/// game now. The two actions route through the `debugAdvanceGame` callable,
-/// which itself refuses any game where `isDebugGame != true`, so the panel
-/// can never affect a real game even if its visibility gate regressed.
+/// created via the `qa_debug_code` long-press). Drives the game through its
+/// whole lifecycle without waiting on the clock: "Next" advances one step
+/// (ready-to-launch → launch → shrink + power-up spawn → … → game over),
+/// "End" terminates immediately. Both route through the `debugAdvanceGame`
+/// callable, which itself refuses any game where `isDebugGame != true`, so
+/// the panel can never affect a real game even if its visibility gate
+/// regressed.
 struct DebugQAPanel: View {
-    let onSpawnPowerUps: () -> Void
+    let onNextStep: () -> Void
     let onEndNow: () -> Void
 
     var body: some View {
@@ -16,8 +18,8 @@ struct DebugQAPanel: View {
                 .font(.system(size: 11, weight: .heavy, design: .monospaced))
                 .foregroundStyle(.white)
             HStack(spacing: 8) {
-                Button(action: onSpawnPowerUps) {
-                    Label("Spawn", systemImage: "bolt.fill")
+                Button(action: onNextStep) {
+                    Label("Next", systemImage: "forward.fill")
                         .font(.system(size: 12, weight: .bold))
                 }
                 Button(action: onEndNow) {

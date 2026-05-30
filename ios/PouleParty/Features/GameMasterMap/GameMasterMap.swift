@@ -93,8 +93,9 @@ struct GameMasterMapFeature {
             case viewLeaderboardTapped
             /// QA panel (debug games only): force the game to end now.
             case debugEndNowTapped
-            /// QA panel (debug games only): spawn a power-up batch now.
-            case debugSpawnPowerUpsTapped
+            /// QA panel (debug games only): advance one lifecycle step
+            /// (launch / shrink+spawn / collapse) without waiting on the clock.
+            case debugAdvanceStepTapped
             // PP-86
             case designateHunterTapped(Registration)
             case designateConfirmTapped
@@ -295,10 +296,10 @@ struct GameMasterMapFeature {
                 return .run { _ in
                     try? await apiClient.debugAdvanceGame(gameId, "endNow")
                 }
-            case .view(.debugSpawnPowerUpsTapped):
+            case .view(.debugAdvanceStepTapped):
                 let gameId = state.game.id
                 return .run { _ in
-                    try? await apiClient.debugAdvanceGame(gameId, "spawnPowerUp")
+                    try? await apiClient.debugAdvanceGame(gameId, "advanceStep")
                 }
 
             case .view(.launchTapped):

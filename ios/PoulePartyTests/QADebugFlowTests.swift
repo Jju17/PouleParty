@@ -28,7 +28,7 @@ struct QADebugFlowTests {
         #expect(captured.value == "endNow")
     }
 
-    @Test func chickenDebugSpawnCallsCallable() async {
+    @Test func chickenDebugAdvanceStepCallsCallable() async {
         let captured = LockIsolated<String?>(nil)
         let store = TestStore(initialState: ChickenMapFeature.State(game: .mock)) {
             ChickenMapFeature()
@@ -37,10 +37,10 @@ struct QADebugFlowTests {
         }
         store.exhaustivity = .off
 
-        await store.send(.view(.debugSpawnPowerUpsTapped))
+        await store.send(.view(.debugAdvanceStepTapped))
         await store.finish()
 
-        #expect(captured.value == "spawnPowerUp")
+        #expect(captured.value == "advanceStep")
     }
 
     // MARK: - Debug panel actions (GameMaster)
@@ -60,7 +60,7 @@ struct QADebugFlowTests {
         #expect(captured.value == "endNow")
     }
 
-    @Test func gameMasterDebugSpawnCallsCallable() async {
+    @Test func gameMasterDebugAdvanceStepCallsCallable() async {
         let captured = LockIsolated<String?>(nil)
         let store = TestStore(initialState: GameMasterMapFeature.State(game: .mock)) {
             GameMasterMapFeature()
@@ -69,10 +69,10 @@ struct QADebugFlowTests {
         }
         store.exhaustivity = .off
 
-        await store.send(.view(.debugSpawnPowerUpsTapped))
+        await store.send(.view(.debugAdvanceStepTapped))
         await store.finish()
 
-        #expect(captured.value == "spawnPowerUp")
+        #expect(captured.value == "advanceStep")
     }
 
     // MARK: - Debug game creation compresses the timing
@@ -163,7 +163,7 @@ struct QADebugFlowTests {
         }
         store.exhaustivity = .off
 
-        await store.send(.view(.debugSpawnPowerUpsTapped))
+        await store.send(.view(.debugAdvanceStepTapped))
         await store.finish()
     }
 }

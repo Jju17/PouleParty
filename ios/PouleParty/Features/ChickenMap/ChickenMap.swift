@@ -136,8 +136,9 @@ struct ChickenMapFeature {
             case viewLeaderboardTapped
             /// QA panel (debug games only): force the game to end now.
             case debugEndNowTapped
-            /// QA panel (debug games only): spawn a power-up batch now.
-            case debugSpawnPowerUpsTapped
+            /// QA panel (debug games only): advance one lifecycle step
+            /// (launch / shrink+spawn / collapse) without waiting on the clock.
+            case debugAdvanceStepTapped
         }
 
         @CasePathable
@@ -336,6 +337,27 @@ struct ChickenMapFeature {
                 let wasDone = state.game.status == .done
                 state.game = game
 
+                // QA debug games drive zone shrinks server-side (the
+                // `advanceStep` callable rewinds the start anchor), so re-derive
+                // the radius / next-update / circle from the fresh timing on
+                // every config tick. Real games keep the incremental timer path
+                // (which handles the zone-freeze window) untouched.
+                if game.isDebugGame {
+                    let (lastUpdate, lastRadius) = game.findLastUpdate()
+                    state.radius = lastRadius
+                    state.nextRadiusUpdate = lastUpdate
+                    let circleCenter = interpolateZoneCenter(
+                        initialCenter: game.zone.center.toCLCoordinates,
+                        finalCenter: game.finalLocation,
+                        initialRadius: game.zone.radius,
+                        currentRadius: Double(lastRadius)
+                    )
+                    state.mapCircle = CircleOverlay(
+                        center: circleCenter,
+                        radius: CLLocationDistance(lastRadius)
+                    )
+                }
+
                 // Update Live Activity with new game state
                 var effects: [Effect<Action>] = []
                 if let laUpdate = checkLiveActivityUpdate(
@@ -513,10 +535,10 @@ struct ChickenMapFeature {
                 return .run { _ in
                     try? await apiClient.debugAdvanceGame(gameId, "endNow")
                 }
-            case .view(.debugSpawnPowerUpsTapped):
+            case .view(.debugAdvanceStepTapped):
                 let gameId = state.game.id
                 return .run { _ in
-                    try? await apiClient.debugAdvanceGame(gameId, "spawnPowerUp")
+                    try? await apiClient.debugAdvanceGame(gameId, "advanceStep")
                 }
             case .validationQueue:
                 return .none

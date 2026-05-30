@@ -26,6 +26,9 @@ sealed class GameMasterMapIntent {
     data object CodeCopied : GameMasterMapIntent()
     /** QA panel (debug games only): force the game to end now. */
     data object DebugEndNowTapped : GameMasterMapIntent()
-    /** QA panel (debug games only): spawn a power-up batch now. */
-    data object DebugSpawnPowerUpsTapped : GameMasterMapIntent()
+    /**
+     * QA panel (debug games only): advance one lifecycle step
+     * (launch / shrink+spawn / collapse) without waiting on the clock.
+     */
+    data object DebugAdvanceStepTapped : GameMasterMapIntent()
 }

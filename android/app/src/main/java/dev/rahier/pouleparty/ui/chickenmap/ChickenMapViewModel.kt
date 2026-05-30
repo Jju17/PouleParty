@@ -144,8 +144,8 @@ class ChickenMapViewModel @Inject constructor(
             ChickenMapIntent.DebugEndNowTapped -> viewModelScope.launch {
                 try { firestoreRepository.debugAdvanceGame(gameId, "endNow") } catch (_: Exception) {}
             }
-            ChickenMapIntent.DebugSpawnPowerUpsTapped -> viewModelScope.launch {
-                try { firestoreRepository.debugAdvanceGame(gameId, "spawnPowerUp") } catch (_: Exception) {}
+            ChickenMapIntent.DebugAdvanceStepTapped -> viewModelScope.launch {
+                try { firestoreRepository.debugAdvanceGame(gameId, "advanceStep") } catch (_: Exception) {}
             }
         }
     }
@@ -523,10 +523,32 @@ class ChickenMapViewModel @Inject constructor(
                 val previousCount = _uiState.value.previousWinnersCount
                 val oldGame = _uiState.value.game
                 _uiState.update {
-                    it.copy(
-                        game = updatedGame,
-                        previousWinnersCount = updatedGame.winners.size
-                    )
+                    // QA debug games drive zone shrinks server-side (the
+                    // `advanceStep` callable rewinds the start anchor), so
+                    // re-derive the radius / next-update / circle from the
+                    // fresh timing on every config tick. Real games keep the
+                    // incremental timer path (zone-freeze aware) untouched.
+                    if (updatedGame.isDebugGame) {
+                        val (lastUpdate, lastRadius) = updatedGame.findLastUpdate()
+                        val center = interpolateZoneCenter(
+                            initialCenter = updatedGame.initialLocation,
+                            finalCenter = updatedGame.finalLocation,
+                            initialRadius = updatedGame.zone.radius,
+                            currentRadius = lastRadius.toDouble(),
+                        )
+                        it.copy(
+                            game = updatedGame,
+                            previousWinnersCount = updatedGame.winners.size,
+                            radius = lastRadius,
+                            nextRadiusUpdate = lastUpdate,
+                            circleCenter = center,
+                        )
+                    } else {
+                        it.copy(
+                            game = updatedGame,
+                            previousWinnersCount = updatedGame.winners.size
+                        )
+                    }
                 }
 
                 // Detect cross-player power-up activations

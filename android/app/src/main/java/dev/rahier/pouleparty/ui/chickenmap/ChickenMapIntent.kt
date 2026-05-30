@@ -24,6 +24,9 @@ sealed interface ChickenMapIntent {
     object ViewLeaderboardTapped : ChickenMapIntent
     /** QA panel (debug games only): force the game to end now. */
     object DebugEndNowTapped : ChickenMapIntent
-    /** QA panel (debug games only): spawn a power-up batch now. */
-    object DebugSpawnPowerUpsTapped : ChickenMapIntent
+    /**
+     * QA panel (debug games only): advance one lifecycle step
+     * (launch / shrink+spawn / collapse) without waiting on the clock.
+     */
+    object DebugAdvanceStepTapped : ChickenMapIntent
 }

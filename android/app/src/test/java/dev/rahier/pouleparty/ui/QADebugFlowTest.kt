@@ -133,11 +133,11 @@ class QADebugFlowTest {
     }
 
     @Test
-    fun `chicken onDebugSpawnPowerUps calls callable with spawnPowerUp`() {
+    fun `chicken onDebugAdvanceStep calls callable with advanceStep`() {
         val vm = chickenVm()
-        vm.onIntent(ChickenMapIntent.DebugSpawnPowerUpsTapped)
+        vm.onIntent(ChickenMapIntent.DebugAdvanceStepTapped)
         testDispatcher.scheduler.advanceUntilIdle()
-        coVerify(exactly = 1) { firestoreRepository.debugAdvanceGame("test-id", "spawnPowerUp") }
+        coVerify(exactly = 1) { firestoreRepository.debugAdvanceGame("test-id", "advanceStep") }
     }
 
     @Test
@@ -161,11 +161,11 @@ class QADebugFlowTest {
     }
 
     @Test
-    fun `gameMaster onDebugSpawnPowerUps calls callable with spawnPowerUp`() {
+    fun `gameMaster onDebugAdvanceStep calls callable with advanceStep`() {
         val vm = gameMasterVm()
-        vm.onIntent(GameMasterMapIntent.DebugSpawnPowerUpsTapped)
+        vm.onIntent(GameMasterMapIntent.DebugAdvanceStepTapped)
         testDispatcher.scheduler.advanceUntilIdle()
-        coVerify(exactly = 1) { firestoreRepository.debugAdvanceGame("test-id", "spawnPowerUp") }
+        coVerify(exactly = 1) { firestoreRepository.debugAdvanceGame("test-id", "advanceStep") }
     }
 
     // ── Debug game creation compresses the timing ──────────

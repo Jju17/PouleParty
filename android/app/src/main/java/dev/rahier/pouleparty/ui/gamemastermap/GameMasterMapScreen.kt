@@ -297,7 +297,7 @@ fun GameMasterMapScreen(
 
             if (state.game.isDebugGame) {
                 dev.rahier.pouleparty.ui.components.DebugQAPanel(
-                    onSpawnPowerUps = { viewModel.onIntent(GameMasterMapIntent.DebugSpawnPowerUpsTapped) },
+                    onNextStep = { viewModel.onIntent(GameMasterMapIntent.DebugAdvanceStepTapped) },
                     onEndNow = { viewModel.onIntent(GameMasterMapIntent.DebugEndNowTapped) },
                     modifier = Modifier
                         .align(Alignment.BottomStart)

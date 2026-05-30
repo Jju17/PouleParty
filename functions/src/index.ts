@@ -412,7 +412,8 @@ async function spawnBatchForGame(
   gameId: string,
   batchIndex: number,
   count: number,
-  mapboxToken: string
+  mapboxToken: string,
+  idSalt?: number
 ): Promise<void> {
   const gameRef = db.collection("games").doc(gameId);
   const snap = await gameRef.get();
@@ -533,6 +534,17 @@ async function spawnBatchForGame(
     enabledTypes
   );
 
+  // QA debug spawns (`idSalt` set) reuse the real `batchIndex` for the
+  // radius/center math but must NOT collide with the scheduled batch's
+  // deterministic doc IDs (`pu-<batchIndex>-…`), or `{ merge: true }` would
+  // overwrite already-collected docs. Re-key them under a unique salt so each
+  // QA tap adds a fresh, collectable batch.
+  if (idSalt !== undefined) {
+    generated.forEach((pu, i) => {
+      pu.id = `pu-debug-${idSalt}-${i}`;
+    });
+  }
+
   // HIGH-1 (audit 2026-05-17): per-point fallback instead of fail-the-batch.
   // The previous Promise.all rejected the whole batch on the first
   // Mapbox failure; during a 5 min Mapbox outage that meant 45 retries
@@ -572,12 +584,13 @@ export const spawnPowerUpBatch = onTaskDispatched(
     secrets: [MAPBOX_ACCESS_TOKEN],
   },
   async (req) => {
-    const { gameId, batchIndex, count } = req.data as {
+    const { gameId, batchIndex, count, idSalt } = req.data as {
       gameId: string;
       batchIndex: number;
       count: number;
+      idSalt?: number;
     };
-    await spawnBatchForGame(gameId, batchIndex, count, MAPBOX_ACCESS_TOKEN.value());
+    await spawnBatchForGame(gameId, batchIndex, count, MAPBOX_ACCESS_TOKEN.value(), idSalt);
   }
 );
 

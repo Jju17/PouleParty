@@ -314,7 +314,7 @@ fun ChickenMapScreen(
 
         if (state.game.isDebugGame) {
             dev.rahier.pouleparty.ui.components.DebugQAPanel(
-                onSpawnPowerUps = { viewModel.onIntent(ChickenMapIntent.DebugSpawnPowerUpsTapped) },
+                onNextStep = { viewModel.onIntent(ChickenMapIntent.DebugAdvanceStepTapped) },
                 onEndNow = { viewModel.onIntent(ChickenMapIntent.DebugEndNowTapped) },
                 modifier = Modifier
                     .align(Alignment.BottomStart)
