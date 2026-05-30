@@ -83,11 +83,17 @@ minimum. Entered at the **same long-press of "Create Party"** as admin mode:
 typing the QA code (Remote Config key `qa_debug_code`, compiled fallback
 `DebugCode.value` / `DebugCode.VALUE` = `"qadebug"`) creates a game with
 `Game.isDebugGame = true` plus the lifted player cap. An **empty Remote Config
-value disables the mode** (the getter returns the raw value, no fallback; the
-match requires a non-empty code) — clear `qa_debug_code` before D-Day so the
-panel can't be activated during the event. (The D-Day game is
-`isAdminCreation == true`, so gating on that alone would have exposed it — hence
-the dedicated `isDebugGame` flag.)
+value disables debug-game creation** (the getter returns the raw value, no
+fallback; the match requires a non-empty code).
+
+Clearing `qa_debug_code` is optional hygiene, not a security requirement: the
+mode is safe by construction. The `DebugQAPanel` renders only when
+`game.isDebugGame == true` (a normal game, including the D-Day admin game, has
+it `false`), and `debugAdvanceGame` refuses any non-debug game server-side and
+requires the caller be that game's creator/GM. Worst case if the code leaks:
+someone creates their own separate debug game — harmless to real events. The
+dedicated `isDebugGame` flag (vs reusing `isAdminCreation`, which the D-Day game
+also sets) is exactly what makes this safe.
 
 A debug game gets **compressed timing** (`applyDebugTiming` in iOS
 `GameCreationFeature` / Android `GameCreationViewModel`): start ≈ now+60s, head
