@@ -74,7 +74,13 @@ struct ApiClient {
     /// snapshot.
     var registrationsStream: (String) -> AsyncStream<[Registration]>
     var challengesStream: (_ gameId: String) -> AsyncStream<[Challenge]>
-    var challengeCompletionsStream: (String) -> AsyncStream<[ChallengeCompletion]>
+    /// Live challenge leaderboard, read from the single `aggregates/leaderboard`
+    /// doc (PP-103) instead of streaming the whole challengeCompletions
+    /// collection. Entries carry only `hunterId` / `teamName` / `totalPoints`.
+    var leaderboardStream: (String) -> AsyncStream<[ChallengeCompletion]>
+    /// The current hunter's OWN completion doc (validatedChallengeIds etc.),
+    /// a single-doc listener for their live "validated" checkmarks (PP-103).
+    var myCompletionStream: (_ gameId: String, _ hunterId: String) -> AsyncStream<ChallengeCompletion?>
     var hunterSubmissionsStream: (_ gameId: String, _ hunterId: String) -> AsyncStream<[ChallengeSubmission]>
     var pendingSubmissionsStream: (_ gameId: String) -> AsyncStream<[ChallengeSubmission]>
     var submitChallenge: (_ gameId: String, _ challengeId: String, _ hunterId: String, _ type: Challenge.ChallengeType, _ mediaData: Data, _ mediaType: ChallengeSubmission.MediaType) async throws -> ChallengeSubmission
@@ -279,7 +285,8 @@ extension ApiClient: TestDependencyKey {
         fetchAllRegistrations: { _ in [] },
         registrationsStream: { _ in AsyncStream { _ in } },
         challengesStream: { _ in AsyncStream { _ in } },
-        challengeCompletionsStream: { _ in AsyncStream { _ in } },
+        leaderboardStream: { _ in AsyncStream { _ in } },
+        myCompletionStream: { _, _ in AsyncStream { _ in } },
         hunterSubmissionsStream: { _, _ in AsyncStream { _ in } },
         pendingSubmissionsStream: { _ in AsyncStream { _ in } },
         submitChallenge: { _, _, _, _, _, _ in ChallengeSubmission() },
@@ -825,27 +832,52 @@ extension ApiClient: DependencyKey {
                 }
             }
         },
-        challengeCompletionsStream: { gameId in
+        leaderboardStream: { gameId in
             AsyncStream { continuation in
                 let listener = Firestore.firestore()
                     .collection(gamesCollection).document(gameId)
-                    .collection(challengeCompletionsSubcollection)
+                    .collection("aggregates").document("leaderboard")
                     .addSnapshotListener { snapshot, error in
                         if let error {
-                            logListenerError("Challenge completions (game \(gameId))", error)
+                            logListenerError("Leaderboard (game \(gameId))", error)
                         }
-                        guard let documents = snapshot?.documents else {
-                            continuation.yield([])
-                            return
-                        }
-                        let completions = documents.compactMap { doc -> ChallengeCompletion? in
-                            do { return try doc.data(as: ChallengeCompletion.self) }
-                            catch {
-                                logger.error("Failed to decode ChallengeCompletion \(doc.documentID): \(error.localizedDescription)")
-                                return nil
-                            }
+                        let entries = snapshot?.data()?["entries"] as? [String: [String: Any]] ?? [:]
+                        let completions = entries.map { hunterId, entry -> ChallengeCompletion in
+                            var completion = ChallengeCompletion()
+                            completion.hunterId = hunterId
+                            completion.totalPoints = (entry["totalPoints"] as? Int) ?? 0
+                            completion.teamName = (entry["teamName"] as? String) ?? ""
+                            return completion
                         }
                         continuation.yield(completions)
+                    }
+
+                continuation.onTermination = { _ in
+                    listener.remove()
+                }
+            }
+        },
+        myCompletionStream: { gameId, hunterId in
+            AsyncStream { continuation in
+                let listener = Firestore.firestore()
+                    .collection(gamesCollection).document(gameId)
+                    .collection(challengeCompletionsSubcollection).document(hunterId)
+                    .addSnapshotListener { snapshot, error in
+                        if let error {
+                            logListenerError("My completion (game \(gameId))", error)
+                        }
+                        guard let snapshot, snapshot.exists else {
+                            continuation.yield(nil)
+                            return
+                        }
+                        let completion: ChallengeCompletion? = {
+                            do { return try snapshot.data(as: ChallengeCompletion.self) }
+                            catch {
+                                logger.error("Failed to decode my ChallengeCompletion: \(String(describing: error))")
+                                return nil
+                            }
+                        }()
+                        continuation.yield(completion)
                     }
 
                 continuation.onTermination = { _ in

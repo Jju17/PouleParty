@@ -61,9 +61,14 @@ extension ApiClient {
                     continuation.yield([])
                 }
             },
-            challengeCompletionsStream: { _ in
+            leaderboardStream: { _ in
                 demoStream { continuation in
                     continuation.yield([])
+                }
+            },
+            myCompletionStream: { _, _ in
+                demoStream { continuation in
+                    continuation.yield(nil)
                 }
             },
             hunterSubmissionsStream: { _, _ in

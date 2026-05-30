@@ -58,6 +58,10 @@ struct ChallengesFeature {
         var selectedTab: ChallengesTab = .challenges
         var challenges: [Challenge] = []
         var completions: [ChallengeCompletion] = []
+        /// The current hunter's own completion doc (PP-103), streamed as a
+        /// single doc. Source for `myCompletedIds`; the leaderboard uses
+        /// `completions` (the aggregate read-model) instead.
+        var myCompletion: ChallengeCompletion?
         /// Hunter UID → teamName, streamed from `/games/{gameId}/registrations`.
         /// Used as the display-name source for the leaderboard. Hunters
         /// without a registration doc fall back to a generic "Hunter".
@@ -71,7 +75,7 @@ struct ChallengesFeature {
         var uploadError: String?
 
         var myCompletedIds: Set<String> {
-            guard let mine = completions.first(where: { $0.hunterId == hunterId }) else { return [] }
+            guard let mine = myCompletion else { return [] }
             return Set(mine.validatedChallengeIds)
         }
 
@@ -187,6 +191,7 @@ struct ChallengesFeature {
         enum Internal {
             case challengesUpdated([Challenge])
             case completionsUpdated([ChallengeCompletion])
+            case myCompletionUpdated(ChallengeCompletion?)
             case submissionsUpdated([ChallengeSubmission])
             case registrationsUpdated([Registration])
             case submissionWriteSucceeded(challengeId: String)
@@ -238,8 +243,13 @@ struct ChallengesFeature {
                         }
                     },
                     .run { send in
-                        for await completions in apiClient.challengeCompletionsStream(gameId) {
+                        for await completions in apiClient.leaderboardStream(gameId) {
                             await send(.internal(.completionsUpdated(completions)))
+                        }
+                    },
+                    .run { send in
+                        for await mine in apiClient.myCompletionStream(gameId, hunterId) {
+                            await send(.internal(.myCompletionUpdated(mine)))
                         }
                     },
                     .run { send in
@@ -295,6 +305,10 @@ struct ChallengesFeature {
 
             case let .internal(.completionsUpdated(completions)):
                 state.completions = completions
+                return .none
+
+            case let .internal(.myCompletionUpdated(mine)):
+                state.myCompletion = mine
                 return .none
 
             case let .internal(.submissionsUpdated(submissions)):

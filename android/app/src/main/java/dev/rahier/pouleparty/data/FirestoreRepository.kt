@@ -695,28 +695,58 @@ class FirestoreRepository @Inject constructor(
     }
 
     /** Live stream of `/games/{gameId}/challengeCompletions` — one doc per hunter. */
-    fun challengeCompletionsStream(gameId: String): Flow<List<ChallengeCompletion>> = callbackFlow {
+    /** PP-103: live challenge leaderboard, read from the single
+     *  `aggregates/leaderboard` doc instead of streaming the whole
+     *  challengeCompletions collection. Entries carry only hunterId /
+     *  teamName / totalPoints. */
+    fun leaderboardFlow(gameId: String): Flow<List<ChallengeCompletion>> = callbackFlow {
         if (gameId.isEmpty()) {
             trySend(emptyList())
             awaitClose { }
             return@callbackFlow
         }
         val listener = firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
-            .collection(AppConstants.SUBCOLLECTION_CHALLENGE_COMPLETIONS)
+            .collection("aggregates").document("leaderboard")
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    logListenerError("Challenge completions (game $gameId)", error)
+                    logListenerError("Leaderboard (game $gameId)", error)
                     trySend(emptyList())
                     return@addSnapshotListener
                 }
-                if (snapshot == null) {
-                    trySend(emptyList())
-                    return@addSnapshotListener
-                }
-                val completions = snapshot.documents.mapNotNull { doc ->
-                    safeToObject<ChallengeCompletion>(doc, "Challenge completions (game $gameId)")?.copy(hunterId = doc.id)
+                @Suppress("UNCHECKED_CAST")
+                val entries = snapshot?.get("entries") as? Map<String, Map<String, Any?>> ?: emptyMap()
+                val completions = entries.map { (hunterId, entry) ->
+                    ChallengeCompletion(
+                        hunterId = hunterId,
+                        totalPoints = (entry["totalPoints"] as? Number)?.toInt() ?: 0,
+                        teamName = (entry["teamName"] as? String) ?: "",
+                    )
                 }
                 trySend(completions)
+            }
+        awaitClose { listener.remove() }
+    }
+
+    /** PP-103: the current hunter's OWN completion doc (validatedChallengeIds
+     *  etc.), a single-doc listener for their live "validated" checkmarks. */
+    fun myCompletionFlow(gameId: String, hunterId: String): Flow<ChallengeCompletion?> = callbackFlow {
+        if (gameId.isEmpty() || hunterId.isEmpty()) {
+            trySend(null)
+            awaitClose { }
+            return@callbackFlow
+        }
+        val listener = firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
+            .collection(AppConstants.SUBCOLLECTION_CHALLENGE_COMPLETIONS).document(hunterId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    logListenerError("My completion (game $gameId)", error)
+                    trySend(null)
+                    return@addSnapshotListener
+                }
+                val completion = if (snapshot != null && snapshot.exists()) {
+                    safeToObject<ChallengeCompletion>(snapshot, "My completion (game $gameId)")?.copy(hunterId = snapshot.id)
+                } else null
+                trySend(completion)
             }
         awaitClose { listener.remove() }
     }

@@ -131,7 +131,7 @@ struct ChallengesFeatureTests {
                 hunterId: "me",
                 hunterIds: ["me"],
                 challenges: [challenge],
-                completions: [completion]
+                myCompletion: completion
             )
         ) {
             ChallengesFeature()
@@ -320,15 +320,11 @@ struct ChallengesFeatureTests {
     // MARK: - Current hunter highlight helper
 
     @Test func myCompletedIdsReflectsCurrentHunterOnly() async {
-        let completions = [
-            makeCompletion(hunterId: "me", ids: ["c1", "c2"], total: 20, teamName: "Me"),
-            makeCompletion(hunterId: "h2", ids: ["c3"], total: 10, teamName: "Other")
-        ]
         let state = ChallengesFeature.State(
             gameId: "g",
             hunterId: "me",
             hunterIds: ["me", "h2"],
-            completions: completions
+            myCompletion: makeCompletion(hunterId: "me", ids: ["c1", "c2"], total: 20, teamName: "Me")
         )
 
         #expect(state.myCompletedIds == ["c1", "c2"])

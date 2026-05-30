@@ -43,7 +43,8 @@ class ChallengesViewModelTest {
         repo = mockk(relaxed = true)
         auth = mockk(relaxed = true)
         every { repo.challengesStream(any()) } returns emptyFlow()
-        every { repo.challengeCompletionsStream(any()) } returns emptyFlow()
+        every { repo.leaderboardFlow(any()) } returns emptyFlow()
+        every { repo.myCompletionFlow(any(), any()) } returns emptyFlow()
         coEvery { repo.getConfig(any()) } returns null
         coEvery { repo.fetchAllRegistrations(any()) } returns emptyList()
     }
@@ -96,7 +97,7 @@ class ChallengesViewModelTest {
                 teamName = "Team Alpha"
             )
         )
-        every { repo.challengeCompletionsStream("game-1") } returns flowOf(completions)
+        every { repo.leaderboardFlow("game-1") } returns flowOf(completions)
         val vm = create()
         testDispatcher.scheduler.advanceUntilIdle()
         assertEquals(1, vm.uiState.value.completions.size)
@@ -136,14 +137,12 @@ class ChallengesViewModelTest {
     fun `DoingIt on an already-completed challenge is a no-op`() {
         val challenge = Challenge(id = "c1", points = 5, titleByLocale = mapOf("fr" to "Hello"))
         every { repo.challengesStream(any()) } returns flowOf(listOf(challenge))
-        every { repo.challengeCompletionsStream("game-1") } returns flowOf(
-            listOf(
-                ChallengeCompletion(
-                    hunterId = "hunter-1",
-                    validatedChallengeIds = listOf("c1"),
-                    totalPoints = 5,
-                    teamName = "Team"
-                )
+        every { repo.myCompletionFlow("game-1", "hunter-1") } returns flowOf(
+            ChallengeCompletion(
+                hunterId = "hunter-1",
+                validatedChallengeIds = listOf("c1"),
+                totalPoints = 5,
+                teamName = "Team"
             )
         )
         val vm = create(hunterId = "hunter-1")
@@ -261,22 +260,13 @@ class ChallengesViewModelTest {
 
     @Test
     fun `completedIdsForCurrentHunter returns the current hunter's completions only`() {
-        val completions = listOf(
-            ChallengeCompletion(
+        val state = ChallengesUiState(
+            myCompletion = ChallengeCompletion(
                 hunterId = "h1",
                 validatedChallengeIds = listOf("a", "b"),
                 totalPoints = 15,
                 teamName = "Team"
             ),
-            ChallengeCompletion(
-                hunterId = "h2",
-                validatedChallengeIds = listOf("c"),
-                totalPoints = 5,
-                teamName = "Other"
-            )
-        )
-        val state = ChallengesUiState(
-            completions = completions,
             currentHunterId = "h1"
         )
         assertEquals(setOf("a", "b"), state.completedIdsForCurrentHunter)

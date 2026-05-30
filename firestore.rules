@@ -168,6 +168,19 @@ service cloud.firestore {
         allow create, update, delete: if false;
       }
 
+      // PP-103: denormalized leaderboard read-model (`aggregates/leaderboard`).
+      // Written exclusively by `validateChallengeSubmission` /
+      // `applyOutOfZonePenalty` (admin SDK); read by everyone with a role on
+      // the game so clients read one doc instead of the whole
+      // challengeCompletions collection.
+      match /aggregates/{docId} {
+        allow read: if request.auth != null
+                    && (request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.hunterIds
+                        || request.auth.uid == get(/databases/$(database)/documents/games/$(gameId)).data.creatorId
+                        || request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.get('gameMasterIds', []));
+        allow write: if false;
+      }
+
       // Per-game snapshot of the challenges catalog. Written exclusively
       // by `onGameCreated` (admin SDK); read by everyone with a role on
       // the game.

@@ -136,6 +136,15 @@ export const validateChallengeSubmission = onCall<
     }
 
     tx.set(completionRef, payload, { merge: true });
+    // PP-103: denormalized leaderboard read-model. One entry per hunter,
+    // updated in the same transaction so it never drifts from the
+    // authoritative completion doc. Clients read this single doc instead of
+    // streaming the whole challengeCompletions collection.
+    tx.set(
+      gameRef.collection("aggregates").doc("leaderboard"),
+      { entries: { [hunterId]: { teamName, totalPoints: newTotal } } },
+      { merge: true }
+    );
     tx.update(submissionRef, {
       status: "validated",
       validatedBy: uid,
@@ -180,14 +189,22 @@ export const applyOutOfZonePenalty = onCall<
     const existing = completionSnap.exists ? completionSnap.data() ?? {} : {};
     const existingTotal = typeof existing.totalPoints === "number" ? existing.totalPoints : 0;
     const next = existingTotal - 1;
+    const teamName = (existing.teamName as string | undefined)
+      ?? (await resolveTeamName(db, gameId, uid));
     const payload: Record<string, unknown> = {
       hunterId: uid,
       totalPoints: next,
       validatedChallengeIds: existing.validatedChallengeIds ?? [],
       repeatableCounts: existing.repeatableCounts ?? {},
-      teamName: existing.teamName ?? (await resolveTeamName(db, gameId, uid)),
+      teamName,
     };
     tx.set(completionRef, payload, { merge: true });
+    // PP-103: keep the denormalized leaderboard in sync with the penalty.
+    tx.set(
+      gameRef.collection("aggregates").doc("leaderboard"),
+      { entries: { [uid]: { teamName, totalPoints: next } } },
+      { merge: true }
+    );
     return next;
   });
 

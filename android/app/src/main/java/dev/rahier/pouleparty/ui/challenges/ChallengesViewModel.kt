@@ -30,6 +30,10 @@ data class ChallengesUiState(
     val selectedTab: ChallengesTab = ChallengesTab.CHALLENGES,
     val challenges: List<Challenge> = emptyList(),
     val completions: List<ChallengeCompletion> = emptyList(),
+    /** PP-103: current hunter's own completion (single-doc). Source for
+     *  [completedIdsForCurrentHunter]; the leaderboard uses [completions]
+     *  (the aggregate read-model). */
+    val myCompletion: ChallengeCompletion? = null,
     val mySubmissions: List<ChallengeSubmission> = emptyList(),
     val hunterIds: List<String> = emptyList(),
     val registrations: Map<String, String> = emptyMap(),
@@ -42,10 +46,7 @@ data class ChallengesUiState(
     val isClosedForSubmissions: Boolean = false,
 ) {
     val completedIdsForCurrentHunter: Set<String>
-        get() = completions.firstOrNull { it.hunterId == currentHunterId }
-            ?.validatedChallengeIds
-            ?.toSet()
-            ?: emptySet()
+        get() = myCompletion?.validatedChallengeIds?.toSet() ?: emptySet()
 
     val awaitingValidationIds: Set<String>
         get() = mySubmissions.filter { it.statusEnum == SubmissionStatus.PENDING }
@@ -140,7 +141,8 @@ class ChallengesViewModel @Inject constructor(
 
     init {
         streamChallenges()
-        streamCompletions()
+        streamLeaderboard()
+        streamMyCompletion()
         streamSubmissions()
         loadGameContext()
     }
@@ -213,11 +215,20 @@ class ChallengesViewModel @Inject constructor(
         }
     }
 
-    private fun streamCompletions() {
+    private fun streamLeaderboard() {
         if (gameId.isEmpty()) return
         viewModelScope.launch {
-            firestoreRepository.challengeCompletionsStream(gameId).collect { completions ->
+            firestoreRepository.leaderboardFlow(gameId).collect { completions ->
                 _uiState.update { it.copy(completions = completions) }
+            }
+        }
+    }
+
+    private fun streamMyCompletion() {
+        if (gameId.isEmpty() || hunterId.isEmpty()) return
+        viewModelScope.launch {
+            firestoreRepository.myCompletionFlow(gameId, hunterId).collect { mine ->
+                _uiState.update { it.copy(myCompletion = mine) }
             }
         }
     }
