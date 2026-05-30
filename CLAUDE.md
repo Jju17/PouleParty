@@ -185,12 +185,11 @@ cd web && npm run dev
 /games/{gameId}
   ├── id, name, maxPlayers, gameMode, chickenCanSeeHunters, isAdminCreation, manualStartEnabled (PP-71), isDebugGame (PP-104, QA debug mode)
   ├── registrationBatchId (PP-52, optional — links the game to a batch of pre-paid web registrations in `/eventRegistrations`; when set, JoinFlow gates the join on a validation code)
-  ├── foundCode, hunterIds, gameMasterIds, status (one of `waiting` / `readyToLaunch` (PP-71) / `inProgress` / `done`), winners, creatorId, chickenId, lastHeartbeat
+  ├── foundCode, hunterIds, gameMasterIds, status (one of `waiting` / `readyToLaunch` (PP-71) / `inProgress` / `done`), winners, creatorId, chickenId  (the chicken `lastHeartbeat` ping moved to RTDB presence, PP-102)
   ├── timing: { start, end, headStartMinutes, actualStart (PP-71, server-stamped at LAUNCH when `manualStartEnabled == true`) }
   ├── zone: { center, finalCenter, radius, shrinkIntervalMinutes, shrinkMetersPerUpdate, driftSeed }
   ├── powerUps: { enabled, enabledTypes, activeEffects: { invisibility, zoneFreeze, radarPing, decoy, jammer } }
-  ├── /chickenLocations/latest     → Single doc, overwritten each position update
-  ├── /hunterLocations/{hunterId}  → One doc per hunter, overwritten
+  ├── (chickenLocations/latest + hunterLocations/{hunterId} moved to Realtime Database — PP-102, see "Location tracking")
   ├── /powerUps/{powerUpId}        → One doc per spawned power-up (collected/activated state)
   ├── /registrations/{userId}      → One doc per in-app hunter (teamName, joinedAt). PP-90 dropped the registration-required gate — anyone can join at any time, but the subcollection is still written so the GameMaster can pick a chicken from the team-name list (PP-86). Deliberately distinct from the top-level `/eventRegistrations` collection (PP-52, paying web registrations) — names overlap but namespaces and ownership are different.
   ├── /challengeCompletions/{hunterId} → One doc per hunter who has completed at least one challenge (completedChallengeIds, totalPoints, teamName)
@@ -224,11 +223,18 @@ Anonymous Firebase Auth. Users don't create accounts — a UID is generated on f
 
 ## Location tracking
 
-- 10m minimum distance filter, 5s write throttle to Firestore
-- Chicken writes to `chickenLocations/latest` (simple overwrite, not a growing collection). The doc carries an `invisible: Bool` flag (PP-87): the chicken keeps writing during Invisibility with the flag set; hunters filter the marker out client-side; the GameMaster (PP-24) ignores the flag.
-- Hunter writes when `chickenCanSeeHunters` is enabled OR when a GameMaster has joined (`game.gameMasterIds.isNotEmpty()`, PP-24 Phase B).
-- Location tracking is gated behind game start times (no early position leaking)
+Player positions and chicken presence live in **Firebase Realtime Database** (PP-102), not Firestore: high-frequency ephemeral data that RTDB bills by volume rather than per-operation. RTDB subtree, per game (schema identical across iOS / Android):
+
+- `/games/{gameId}/chickenLocations/latest` → `{ lat, lng, ts (server ms), invisible }`. The chicken keeps writing during Invisibility with `invisible: true` (PP-87); hunters filter the marker out client-side, the GameMaster (PP-24) ignores the flag.
+- `/games/{gameId}/hunterLocations/{hunterId}` → `{ lat, lng, ts }` (the `hunterId` is the RTDB key, not in the payload). Written when `chickenCanSeeHunters` is enabled OR a GameMaster has joined (`game.gameMasterIds.isNotEmpty()`, PP-24 Phase B).
+- `/games/{gameId}/presence/chicken` → `{ online, ts }` set with an RTDB `onDisconnect`, so a dropped chicken flips offline server-side immediately (replaces the old 30s `lastHeartbeat` write to the game doc).
+- `/games/{gameId}/meta` → `{ creatorId, chickenId, gameMode, status, hunterIds: {uid:true}, gameMasterIds: {uid:true} }`. Membership mirror written by the `mirrorGameMetaToRtdb` Cloud Function so the RTDB rules (`database.rules.json`) can authorize (RTDB rules can't read Firestore; `hunterIds`/`gameMasterIds` are maps, not arrays, so a rule can membership-test a key). The same function removes the whole `/games/{gameId}` RTDB subtree on `status == done` / deletion (cleanup).
+
+Client behaviour (unchanged from the Firestore era):
+- 10m minimum distance filter, 5s write throttle (client-side).
+- Location tracking is gated behind game start times (no early position leaking).
 - Power-ups affect location: Jammer adds ~200m noise, Radar Ping reveals the chicken in `stayInTheZone` (client-side gating), Invisibility flips the `invisible` flag on writes (PP-87, replaces the pre-PP-87 "stop writing" gate).
+- iOS reads/writes via `ApiClient` (FirebaseDatabase `observe` / `setValue`); Android via `FirestoreRepository` (RTDB `ValueEventListener` / `setValue`).
 
 ## Security rules
 

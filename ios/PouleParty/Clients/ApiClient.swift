@@ -8,6 +8,7 @@
 import ComposableArchitecture
 import CoreLocation
 import FirebaseAuth
+import FirebaseDatabase
 import FirebaseFirestore
 import FirebaseStorage
 import FirebaseFunctions
@@ -491,37 +492,21 @@ extension ApiClient: DependencyKey {
         },
         chickenLocationStream: { gameId in
             AsyncStream { continuation in
-                let listener = Firestore.firestore()
-                    .collection(gamesCollection).document(gameId).collection(chickenLocationsSubcollection)
-                    .order(by: "timestamp", descending: true)
-                    .limit(to: 1)
-                    .addSnapshotListener { snapshot, error in
-                        if let error {
-                            logListenerError("Chicken location (game \(gameId))", error)
-                        }
-                        guard let document = snapshot?.documents.first else {
-                            continuation.yield(nil)
-                            return
-                        }
-                        guard let chickenLocation: ChickenLocation = {
-                            do { return try document.data(as: ChickenLocation.self) }
-                            catch {
-                                // localizedDescription collapses DecodingError into a useless
-                                // "data couldn't be read" string. Dump the full error so we
-                                // can see the missing key / bad type / coding path when a
-                                // schema drift happens.
-                                logger.error("Failed to decode ChickenLocation: \(String(describing: error))")
-                                return nil
-                            }
-                        }() else {
-                            continuation.yield(nil)
-                            return
-                        }
-                        continuation.yield(chickenLocation)
+                let ref = Database.database()
+                    .reference(withPath: "\(gamesCollection)/\(gameId)/\(chickenLocationsSubcollection)/latest")
+                let handle = ref.observe(.value) { snapshot in
+                    guard snapshot.exists(), let chickenLocation = ChickenLocation(rtdb: snapshot.value) else {
+                        continuation.yield(nil)
+                        return
                     }
+                    continuation.yield(chickenLocation)
+                } withCancel: { error in
+                    logListenerError("Chicken location (game \(gameId))", error)
+                    continuation.yield(nil)
+                }
 
                 continuation.onTermination = { _ in
-                    listener.remove()
+                    ref.removeObserver(withHandle: handle)
                 }
             }
         },
@@ -564,41 +549,37 @@ extension ApiClient: DependencyKey {
         },
         hunterLocationsStream: { gameId in
             AsyncStream { continuation in
-                let listener = Firestore.firestore()
-                    .collection(gamesCollection).document(gameId).collection(hunterLocationsSubcollection)
-                    .addSnapshotListener { snapshot, error in
-                        if let error {
-                            logListenerError("Hunter locations (game \(gameId))", error)
+                let ref = Database.database()
+                    .reference(withPath: "\(gamesCollection)/\(gameId)/\(hunterLocationsSubcollection)")
+                let handle = ref.observe(.value) { snapshot in
+                    var hunters: [HunterLocation] = []
+                    for case let child as DataSnapshot in snapshot.children {
+                        if let hunter = HunterLocation(hunterId: child.key, rtdb: child.value) {
+                            hunters.append(hunter)
                         }
-                        guard let documents = snapshot?.documents else {
-                            continuation.yield([])
-                            return
-                        }
-                        let hunters = documents.compactMap { doc -> HunterLocation? in
-                            do { return try doc.data(as: HunterLocation.self) }
-                            catch {
-                                logger.error("Failed to decode HunterLocation \(doc.documentID): \(String(describing: error))")
-                                return nil
-                            }
-                        }
-                        continuation.yield(hunters)
                     }
+                    continuation.yield(hunters)
+                } withCancel: { error in
+                    logListenerError("Hunter locations (game \(gameId))", error)
+                    continuation.yield([])
+                }
 
                 continuation.onTermination = { _ in
-                    listener.remove()
+                    ref.removeObserver(withHandle: handle)
                 }
             }
         },
         setChickenLocation: { gameId, coordinate, invisible in
-            let chickenLocation = ChickenLocation(
-                location: GeoPoint(latitude: coordinate.latitude, longitude: coordinate.longitude),
-                timestamp: Timestamp(date: .now),
-                invisible: invisible
-            )
-
-            let ref = Firestore.firestore()
-                .collection(gamesCollection).document(gameId).collection(chickenLocationsSubcollection).document("latest")
-            try ref.setData(from: chickenLocation)
+            // PP-102: fire-and-forget RTDB write. `ts` is a server timestamp;
+            // the `invisible` flag (PP-87) rides along and gates hunter reads.
+            Database.database()
+                .reference(withPath: "\(gamesCollection)/\(gameId)/\(chickenLocationsSubcollection)/latest")
+                .setValue([
+                    "lat": coordinate.latitude,
+                    "lng": coordinate.longitude,
+                    "ts": ServerValue.timestamp(),
+                    "invisible": invisible,
+                ])
         },
         setConfig: { newGame in
             try await withRetry("setConfig(\(newGame.id))") {
@@ -613,16 +594,14 @@ extension ApiClient: DependencyKey {
                 logger.warning("setHunterLocation skipped — gameId: '\(gameId)', hunterId: '\(hunterId)'")
                 return
             }
-
-            let hunterLocation = HunterLocation(
-                hunterId: hunterId,
-                location: GeoPoint(latitude: coordinate.latitude, longitude: coordinate.longitude),
-                timestamp: Timestamp(date: .now)
-            )
-
-            let ref = Firestore.firestore()
-                .collection(gamesCollection).document(gameId).collection(hunterLocationsSubcollection).document(hunterId)
-            try ref.setData(from: hunterLocation, merge: true)
+            // PP-102: fire-and-forget RTDB write. The hunterId is the RTDB key.
+            Database.database()
+                .reference(withPath: "\(gamesCollection)/\(gameId)/\(hunterLocationsSubcollection)/\(hunterId)")
+                .setValue([
+                    "lat": coordinate.latitude,
+                    "lng": coordinate.longitude,
+                    "ts": ServerValue.timestamp(),
+                ])
         },
         collectPowerUp: { gameId, powerUpId, userId in
             try await withRetry("collectPowerUp(\(gameId), \(powerUpId))") {
@@ -694,15 +673,21 @@ extension ApiClient: DependencyKey {
             }
         },
         updateHeartbeat: { gameId in
-            // Retry matters here: heartbeat drives hunter-side disconnect
-            // detection, so a single transient write failure must not make
-            // the chicken look offline. A lost heartbeat used to silently
-            // swallow its error and the next tick would happen 30s later,
-            // long enough for hunters to see the "chicken disconnected"
-            // warning even though the chicken was fine.
+            // PP-102: presence moved to RTDB. Mark the chicken online and arm
+            // an onDisconnect so a dropped connection flips it offline
+            // server-side immediately, instead of waiting on a stale timeout.
+            // Re-armed each tick for resilience; retry keeps a transient
+            // failure from making the chicken look offline.
             try await withRetry("updateHeartbeat(\(gameId))") {
-                try await Firestore.firestore().collection(gamesCollection).document(gameId).updateData([
-                    "lastHeartbeat": Timestamp(date: .now)
+                let ref = Database.database()
+                    .reference(withPath: "\(gamesCollection)/\(gameId)/presence/chicken")
+                try await ref.onDisconnectSetValue([
+                    "online": false,
+                    "ts": ServerValue.timestamp(),
+                ])
+                try await ref.setValue([
+                    "online": true,
+                    "ts": ServerValue.timestamp(),
                 ])
             }
         },

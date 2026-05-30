@@ -37,6 +37,11 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideFirebaseDatabase(): com.google.firebase.database.FirebaseDatabase =
+        com.google.firebase.database.FirebaseDatabase.getInstance()
+
+    @Provides
+    @Singleton
     fun provideFirebaseStorage(): com.google.firebase.storage.FirebaseStorage =
         com.google.firebase.storage.FirebaseStorage.getInstance()
 

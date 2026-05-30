@@ -84,13 +84,6 @@ service cloud.firestore {
                     && resource.data.status in ['waiting', 'readyToLaunch', 'inProgress']
                     && request.resource.data.status == 'done';
 
-      // Heartbeat ping: any participant can keep the doc fresh.
-      allow update: if request.auth != null
-                    && (request.auth.uid == resource.data.creatorId
-                        || request.auth.uid in resource.data.hunterIds)
-                    && request.resource.data.diff(resource.data).affectedKeys()
-                        .hasOnly(['lastHeartbeat']);
-
       // GameMaster (or the creator as a fallback when no GM has joined
       // yet) re-designates the chicken before the game starts. Single
       // field, `status == waiting` only — once the game is `inProgress`
@@ -130,43 +123,10 @@ service cloud.firestore {
         allow read, write: if false;
       }
 
-      // Hunter reads are gated by `gameMode` and the `invisible` flag —
-      // a modified client must NOT see the chicken's GPS in stayInTheZone
-      // or during invisibility. Creator (the chicken) and GameMasters
-      // keep unconditional access.
-      match /chickenLocations/{docId} {
-        allow read: if request.auth != null
-                    && (request.auth.uid == get(/databases/$(database)/documents/games/$(gameId)).data.creatorId
-                        || request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.get('gameMasterIds', [])
-                        || (request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.hunterIds
-                            && get(/databases/$(database)/documents/games/$(gameId)).data.gameMode == 'followTheChicken'
-                            && resource.data.get('invisible', false) == false));
-        allow create, update: if request.auth != null
-                      && request.auth.uid == get(/databases/$(database)/documents/games/$(gameId)).data.chickenId
-                      && request.resource.data.keys().hasAll(['location', 'timestamp']);
-        allow delete: if false;
-      }
-
-      // Hunter locations subcollection. GameMasters read every hunter's
-      // location for the validator carte; only the hunter themselves can
-      // write their own doc.
-      match /hunterLocations/{visitorId} {
-        allow read: if request.auth != null
-                    && (request.auth.uid == get(/databases/$(database)/documents/games/$(gameId)).data.creatorId
-                        || request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.hunterIds
-                        || request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.get('gameMasterIds', []));
-        allow create: if request.auth != null
-                      && visitorId == request.auth.uid
-                      && request.resource.data.hunterId == request.auth.uid
-                      && request.resource.data.keys().hasAll(['hunterId', 'location', 'timestamp'])
-                      && request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.hunterIds;
-        allow update: if request.auth != null
-                      && visitorId == request.auth.uid
-                      && request.resource.data.hunterId == request.auth.uid
-                      && request.resource.data.keys().hasAll(['hunterId', 'location', 'timestamp'])
-                      && request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.hunterIds;
-        allow delete: if false;
-      }
+      // Player positions (chickenLocations / hunterLocations) and chicken
+      // presence moved to Realtime Database (PP-102). Their access control
+      // lives in `database.rules.json`, gated by the `/games/{gameId}/meta`
+      // membership mirror written by the `mirrorGameMetaToRtdb` function.
 
       // Registrations subcollection. PP-90 dropped the in-app
       // registration-required gate, but the subcollection is still

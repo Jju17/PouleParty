@@ -1,5 +1,6 @@
 import { initializeApp } from "firebase-admin/app";
 import { getFirestore, FieldValue, GeoPoint, Timestamp } from "firebase-admin/firestore";
+import { getDatabase } from "firebase-admin/database";
 import { getFunctions } from "firebase-admin/functions";
 import { getMessaging } from "firebase-admin/messaging";
 import { onDocumentCreated, onDocumentDeleted, onDocumentUpdated } from "firebase-functions/v2/firestore";
@@ -63,6 +64,10 @@ export { renderChallengesSheet } from "./challengesSheet";
 // and enqueues the runtime Cloud Tasks deferred at creation time.
 export { launchGame } from "./launchGame";
 export { debugAdvanceGame } from "./debugAdvanceGame";
+
+// PP-102: mirrors game membership into RTDB (so the realtime-position rules
+// can authorize) and tears the RTDB subtree down when a game ends/deletes.
+export { mirrorGameMetaToRtdb } from "./rtdbMirror";
 
 // Use Application Default Credentials so each deployed function
 // writes to the project it was deployed to. The previous hardcoded
@@ -506,17 +511,14 @@ async function spawnBatchForGame(
     );
   } else {
     // followTheChicken: the zone tracks the chicken's live GPS. Read the
-    // latest chickenLocation doc — fall back to initial center if missing.
-    const locSnap = await db
-      .collection("games").doc(gameId)
-      .collection("chickenLocations").doc("latest")
+    // latest chicken position from RTDB (PP-102) — fall back to initial
+    // center if missing.
+    const locSnap = await getDatabase()
+      .ref(`/games/${gameId}/chickenLocations/latest`)
       .get();
-    const locData = locSnap.data() as { location?: GeoPoint } | undefined;
-    if (locData?.location) {
-      spawnCenter = {
-        latitude: locData.location.latitude,
-        longitude: locData.location.longitude,
-      };
+    const locData = locSnap.val() as { lat?: number; lng?: number } | null;
+    if (locData && typeof locData.lat === "number" && typeof locData.lng === "number") {
+      spawnCenter = { latitude: locData.lat, longitude: locData.lng };
     } else {
       spawnCenter = { latitude: initialCenter.latitude, longitude: initialCenter.longitude };
     }

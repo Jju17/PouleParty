@@ -144,6 +144,7 @@ dependencies {
     implementation("com.google.firebase:firebase-crashlytics-ktx")
     implementation("com.google.firebase:firebase-functions-ktx")
     implementation("com.google.firebase:firebase-config-ktx")
+    implementation("com.google.firebase:firebase-database-ktx")
     // CRIT-4 (audit 2026-05-17): App Check. Play Integrity for release
     // builds (verifies the binary is the Play-Store-distributed APK on a
     // genuine device); Debug Provider for debug builds (devs register a

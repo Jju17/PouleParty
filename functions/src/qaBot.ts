@@ -21,6 +21,13 @@ import * as admin from "firebase-admin";
 import * as fs from "fs";
 import * as path from "path";
 
+function rtdbUrl(projectId: string): string {
+  return (
+    process.env.FIREBASE_DATABASE_URL ??
+    `https://${projectId}-default-rtdb.europe-west1.firebasedatabase.app`
+  );
+}
+
 function resolveProjectAndInitAdmin(): string {
   const explicitSaPath = process.env.FIREBASE_SERVICE_ACCOUNT;
   const envProjectId = process.env.FIREBASE_PROJECT_ID;
@@ -37,6 +44,7 @@ function resolveProjectAndInitAdmin(): string {
     admin.initializeApp({
       credential: admin.credential.cert(sa),
       projectId: sa.project_id,
+      databaseURL: rtdbUrl(sa.project_id),
     });
     return sa.project_id;
   }
@@ -44,6 +52,7 @@ function resolveProjectAndInitAdmin(): string {
     admin.initializeApp({
       credential: admin.credential.applicationDefault(),
       projectId: envProjectId,
+      databaseURL: rtdbUrl(envProjectId),
     });
     return envProjectId;
   }
@@ -52,6 +61,7 @@ function resolveProjectAndInitAdmin(): string {
     admin.initializeApp({
       credential: admin.credential.cert(sa),
       projectId: sa.project_id,
+      databaseURL: rtdbUrl(sa.project_id),
     });
     return sa.project_id;
   }
@@ -80,6 +90,7 @@ async function main() {
 
   const projectId = resolveProjectAndInitAdmin();
   const db = admin.firestore();
+  const rtdb = admin.database();
 
   // gameCode = first 6 chars of the doc id, uppercased.
   const snap = await db.collection("games").get();
@@ -141,10 +152,9 @@ async function main() {
       await gameRef
         .update({ hunterIds: admin.firestore.FieldValue.arrayRemove(uid) })
         .catch(() => undefined);
-      await gameRef
-        .collection("hunterLocations")
-        .doc(uid)
-        .delete()
+      await rtdb
+        .ref(`/games/${gameId}/hunterLocations/${uid}`)
+        .remove()
         .catch(() => undefined);
       await gameRef
         .collection("registrations")
@@ -164,20 +174,13 @@ async function main() {
       // ~10 m random step per tick.
       positions[i].lat += metresToLat((Math.random() - 0.5) * 20);
       positions[i].lng += metresToLng((Math.random() - 0.5) * 20, positions[i].lat);
-      await gameRef
-        .collection("hunterLocations")
-        .doc(botIds[i])
-        .set(
-          {
-            hunterId: botIds[i],
-            location: new admin.firestore.GeoPoint(
-              positions[i].lat,
-              positions[i].lng
-            ),
-            timestamp: admin.firestore.Timestamp.now(),
-          },
-          { merge: true }
-        );
+      await rtdb
+        .ref(`/games/${gameId}/hunterLocations/${botIds[i]}`)
+        .set({
+          lat: positions[i].lat,
+          lng: positions[i].lng,
+          ts: admin.database.ServerValue.TIMESTAMP,
+        });
     }
     console.log(
       `Updated ${botCount} bot position(s) @ ${new Date().toISOString()}`

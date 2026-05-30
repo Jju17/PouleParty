@@ -18,3 +18,16 @@ struct ChickenLocation: Codable {
     /// pre-PP-87 docs without the field decode to `false`.
     let invisible: Bool?
 }
+
+extension ChickenLocation {
+    /// Decodes from a Realtime Database snapshot value (PP-102).
+    /// Schema: `{ lat: Double, lng: Double, ts: <epoch ms>, invisible: Bool? }`.
+    init?(rtdb value: Any?) {
+        guard let dict = value as? [String: Any],
+              let lat = rtdbDouble(dict["lat"]),
+              let lng = rtdbDouble(dict["lng"]) else { return nil }
+        self.location = GeoPoint(latitude: lat, longitude: lng)
+        self.timestamp = Timestamp(date: Date(timeIntervalSince1970: (rtdbDouble(dict["ts"]) ?? 0) / 1000))
+        self.invisible = dict["invisible"] as? Bool
+    }
+}

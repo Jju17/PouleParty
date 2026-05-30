@@ -8,6 +8,11 @@ import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.GeoPoint
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.FieldValue
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ServerValue
+import com.google.firebase.database.ValueEventListener
 import java.util.Date
 import dev.rahier.pouleparty.AppConstants
 import dev.rahier.pouleparty.model.Challenge
@@ -38,6 +43,7 @@ class FirestoreRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
     private val functions: com.google.firebase.functions.FirebaseFunctions,
     private val storage: com.google.firebase.storage.FirebaseStorage,
+    private val database: FirebaseDatabase,
 ) {
 
     companion object {
@@ -422,9 +428,18 @@ class FirestoreRepository @Inject constructor(
      *  flip to "disconnected" after 60s of stale heartbeat and the loop only
      *  fires every 30s, so one lost write is enough to trip the UI. */
     suspend fun updateHeartbeat(gameId: String) {
+        // PP-102: presence moved to RTDB. Mark the chicken online and arm an
+        // onDisconnect so a dropped connection flips it offline server-side
+        // immediately. Re-armed each tick; retry keeps a transient failure
+        // from making the chicken look offline.
         withRetry("updateHeartbeat($gameId)") {
-            firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
-                .update("lastHeartbeat", Timestamp.now())
+            val ref = database.getReference(
+                "${AppConstants.COLLECTION_GAMES}/$gameId/presence/chicken"
+            )
+            ref.onDisconnect()
+                .setValue(mapOf("online" to false, "ts" to ServerValue.TIMESTAMP))
+                .await()
+            ref.setValue(mapOf("online" to true, "ts" to ServerValue.TIMESTAMP))
                 .await()
         }
     }
@@ -432,41 +447,36 @@ class FirestoreRepository @Inject constructor(
     // ── Chicken location ──────────────────────────────────
 
     fun setChickenLocation(gameId: String, point: Point, invisible: Boolean = false) {
-        val data = ChickenLocation(
-            location = GeoPoint(point.latitude(), point.longitude()),
-            timestamp = Timestamp.now(),
-            invisible = invisible
-        )
-        firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
-            .collection(AppConstants.SUBCOLLECTION_CHICKEN_LOCATIONS)
-            .document("latest")
-            .set(data)
-            .addOnFailureListener { e -> Log.e(TAG, "Failed to set chicken location for game $gameId", e) }
+        // PP-102: fire-and-forget RTDB write. `ts` is a server timestamp; the
+        // `invisible` flag (PP-87) rides along and gates hunter reads.
+        database.getReference(
+            "${AppConstants.COLLECTION_GAMES}/$gameId/${AppConstants.SUBCOLLECTION_CHICKEN_LOCATIONS}/latest"
+        ).setValue(
+            mapOf(
+                "lat" to point.latitude(),
+                "lng" to point.longitude(),
+                "ts" to ServerValue.TIMESTAMP,
+                "invisible" to invisible,
+            )
+        ).addOnFailureListener { e -> Log.e(TAG, "Failed to set chicken location for game $gameId", e) }
     }
 
     fun chickenLocationFlow(gameId: String): Flow<ChickenLocation?> = callbackFlow {
-        val listener = firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
-            .collection(AppConstants.SUBCOLLECTION_CHICKEN_LOCATIONS)
-            .orderBy("timestamp", Query.Direction.DESCENDING)
-            .limit(1)
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    logListenerError("Chicken location (game $gameId)", error)
-                    trySend(null)
-                    return@addSnapshotListener
-                }
-                if (snapshot == null) {
-                    trySend(null)
-                    return@addSnapshotListener
-                }
-                val doc = snapshot.documents.firstOrNull()
-                val chickenLocation = doc?.let {
-                    safeToObject<ChickenLocation>(it, "Chicken location (game $gameId)")
-                }
-                trySend(chickenLocation)
+        val ref = database.getReference(
+            "${AppConstants.COLLECTION_GAMES}/$gameId/${AppConstants.SUBCOLLECTION_CHICKEN_LOCATIONS}/latest"
+        )
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                trySend(if (snapshot.exists()) ChickenLocation.fromRtdb(snapshot) else null)
             }
 
-        awaitClose { listener.remove() }
+            override fun onCancelled(error: DatabaseError) {
+                logListenerError("Chicken location (game $gameId)", error.toException())
+                trySend(null)
+            }
+        }
+        ref.addValueEventListener(listener)
+        awaitClose { ref.removeEventListener(listener) }
     }
 
     // ── Game config stream ────────────────────────────────
@@ -514,16 +524,16 @@ class FirestoreRepository @Inject constructor(
             Log.w(TAG, "setHunterLocation skipped — gameId: '$gameId', hunterId: '$hunterId'")
             return
         }
-        val data = HunterLocation(
-            hunterId = hunterId,
-            location = GeoPoint(point.latitude(), point.longitude()),
-            timestamp = Timestamp.now()
-        )
-        firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
-            .collection(AppConstants.SUBCOLLECTION_HUNTER_LOCATIONS)
-            .document(hunterId)
-            .set(data)
-            .addOnFailureListener { e -> Log.e(TAG, "Failed to set hunter location $hunterId in game $gameId", e) }
+        // PP-102: fire-and-forget RTDB write. The hunterId is the RTDB key.
+        database.getReference(
+            "${AppConstants.COLLECTION_GAMES}/$gameId/${AppConstants.SUBCOLLECTION_HUNTER_LOCATIONS}/$hunterId"
+        ).setValue(
+            mapOf(
+                "lat" to point.latitude(),
+                "lng" to point.longitude(),
+                "ts" to ServerValue.TIMESTAMP,
+            )
+        ).addOnFailureListener { e -> Log.e(TAG, "Failed to set hunter location $hunterId in game $gameId", e) }
     }
 
     // ── Power-ups ──────────────────────────────────────
@@ -593,25 +603,25 @@ class FirestoreRepository @Inject constructor(
     // ── Hunter locations ──────────────────────────────────
 
     fun hunterLocationsFlow(gameId: String): Flow<List<HunterLocation>> = callbackFlow {
-        val listener = firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
-            .collection(AppConstants.SUBCOLLECTION_HUNTER_LOCATIONS)
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    logListenerError("Hunter locations (game $gameId)", error)
-                    trySend(emptyList())
-                    return@addSnapshotListener
-                }
-                if (snapshot == null) {
-                    trySend(emptyList())
-                    return@addSnapshotListener
-                }
-                val hunters = snapshot.documents.mapNotNull { doc ->
-                    safeToObject<HunterLocation>(doc, "Hunter locations (game $gameId)")
+        val ref = database.getReference(
+            "${AppConstants.COLLECTION_GAMES}/$gameId/${AppConstants.SUBCOLLECTION_HUNTER_LOCATIONS}"
+        )
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val hunters = snapshot.children.mapNotNull { child ->
+                    val key = child.key ?: return@mapNotNull null
+                    HunterLocation.fromRtdb(key, child)
                 }
                 trySend(hunters)
             }
 
-        awaitClose { listener.remove() }
+            override fun onCancelled(error: DatabaseError) {
+                logListenerError("Hunter locations (game $gameId)", error.toException())
+                trySend(emptyList())
+            }
+        }
+        ref.addValueEventListener(listener)
+        awaitClose { ref.removeEventListener(listener) }
     }
 
     /**

@@ -1,0 +1,32 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "games": {
+      "$gameId": {
+        "meta": {
+          ".read": false,
+          ".write": false
+        },
+        "chickenLocations": {
+          "latest": {
+            ".read": "auth != null && (root.child('games').child($gameId).child('meta').child('creatorId').val() === auth.uid || root.child('games').child($gameId).child('meta').child('gameMasterIds').child(auth.uid).val() === true || (root.child('games').child($gameId).child('meta').child('hunterIds').child(auth.uid).val() === true && root.child('games').child($gameId).child('meta').child('gameMode').val() === 'followTheChicken' && data.child('invisible').val() !== true))",
+            ".write": "auth != null && root.child('games').child($gameId).child('meta').child('chickenId').val() === auth.uid && newData.hasChildren(['lat', 'lng', 'ts'])"
+          }
+        },
+        "hunterLocations": {
+          "$hunterId": {
+            ".read": "auth != null && (root.child('games').child($gameId).child('meta').child('creatorId').val() === auth.uid || root.child('games').child($gameId).child('meta').child('hunterIds').child(auth.uid).val() === true || root.child('games').child($gameId).child('meta').child('gameMasterIds').child(auth.uid).val() === true)",
+            ".write": "auth != null && $hunterId === auth.uid && root.child('games').child($gameId).child('meta').child('hunterIds').child(auth.uid).val() === true && newData.hasChildren(['lat', 'lng', 'ts'])"
+          }
+        },
+        "presence": {
+          "chicken": {
+            ".read": "auth != null && (root.child('games').child($gameId).child('meta').child('creatorId').val() === auth.uid || root.child('games').child($gameId).child('meta').child('hunterIds').child(auth.uid).val() === true || root.child('games').child($gameId).child('meta').child('gameMasterIds').child(auth.uid).val() === true)",
+            ".write": "auth != null && root.child('games').child($gameId).child('meta').child('chickenId').val() === auth.uid"
+          }
+        }
+      }
+    }
+  }
+}
