@@ -1086,4 +1086,16 @@ class FirestoreRepository @Inject constructor(
             .call(hashMapOf("gameId" to gameId))
             .await()
     }
+
+    /**
+     * QA-only (debug games): force-advance a phase via the `debugAdvanceGame`
+     * callable. `action` is `"endNow"` or `"spawnPowerUp"`. The callable
+     * refuses any game where `isDebugGame != true` server-side.
+     */
+    suspend fun debugAdvanceGame(gameId: String, action: String) {
+        functions
+            .getHttpsCallable("debugAdvanceGame")
+            .call(hashMapOf("gameId" to gameId, "action" to action))
+            .await()
+    }
 }

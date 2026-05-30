@@ -162,6 +162,16 @@ struct ChickenMapView: View {
                     .transition(.move(edge: .top).combined(with: .opacity))
                 }
             }
+            .overlay(alignment: .bottomLeading) {
+                if store.game.isDebugGame {
+                    DebugQAPanel(
+                        onSpawnPowerUps: { store.send(.view(.debugSpawnPowerUpsTapped)) },
+                        onEndNow: { store.send(.view(.debugEndNowTapped)) }
+                    )
+                    .padding(.leading, 12)
+                    .padding(.bottom, 130)
+                }
+            }
             .animation(.easeInOut(duration: 0.25), value: store.state.isGameOver)
     }
 }

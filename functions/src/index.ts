@@ -62,6 +62,7 @@ export { renderChallengesSheet } from "./challengesSheet";
 // `inProgress`, stamps `timing.actualStart`, recomputes `timing.end`,
 // and enqueues the runtime Cloud Tasks deferred at creation time.
 export { launchGame } from "./launchGame";
+export { debugAdvanceGame } from "./debugAdvanceGame";
 
 // Use Application Default Credentials so each deployed function
 // writes to the project it was deployed to. The previous hardcoded

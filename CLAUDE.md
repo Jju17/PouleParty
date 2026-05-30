@@ -76,6 +76,30 @@ create` clause: `maxPlayers <= 5 || isAdminCreation == true && maxPlayers <=
 `admin_code`, see below); `AdminCode.value` / `AdminCode.VALUE` (`"jujurahier"`)
 remains as the compiled fallback.
 
+### QA debug mode (PP-104)
+
+A testing mode to run a full game lifecycle in minutes instead of the 1h
+minimum. Entered at the **same long-press of "Create Party"** as admin mode:
+typing the QA code (Remote Config key `qa_debug_code`, compiled fallback
+`DebugCode.value` / `DebugCode.VALUE` = `"qadebug"`) creates a game with
+`Game.isDebugGame = true` plus the lifted player cap. An **empty Remote Config
+value disables the mode** (the getter returns the raw value, no fallback; the
+match requires a non-empty code) — clear `qa_debug_code` before D-Day so the
+panel can't be activated during the event. (The D-Day game is
+`isAdminCreation == true`, so gating on that alone would have exposed it — hence
+the dedicated `isDebugGame` flag.)
+
+A debug game gets **compressed timing** (`applyDebugTiming` in iOS
+`GameCreationFeature` / Android `GameCreationViewModel`): start ≈ now+60s, head
+start 0, duration 5 min, shrink interval 1 min, manual launch ON. Both maps
+(chicken + GameMaster) render a small **`DebugQAPanel`** (only when
+`game.isDebugGame`) with two buttons — **Spawn** (power-up batch now) and
+**End/Finir** (status → done) — wired to the `debugAdvanceGame` callable
+(`functions/src/debugAdvanceGame.ts`), which is gated server-side on
+`isDebugGame == true` + caller creator/GM, so it's inert on real games.
+`functions/src/qaBot.ts` is a ts-node script (not deployed) that simulates N
+hunters to test the maps without phones.
+
 ### Remote Config (runtime-tunable constants)
 
 A small set of client-only constants is overridable at runtime via Firebase
@@ -87,6 +111,7 @@ offline and before the first fetch. Migrated keys (identical on both platforms):
 | Remote Config key | Default | Used by |
 |---|---|---|
 | `admin_code` | `jujurahier` | admin-mode gate on Home |
+| `qa_debug_code` | `qadebug` | QA debug-game gate on Home (empty = disabled, PP-104) |
 | `found_code_max_wrong_attempts` | `3` | hunter found-code cooldown trigger |
 | `found_code_cooldown_seconds` | `10` | hunter found-code cooldown duration |
 | `default_initial_radius_meters` | `1500` | wizard's starting zone radius |
@@ -152,7 +177,7 @@ cd web && npm run dev
 
 ```
 /games/{gameId}
-  ├── id, name, maxPlayers, gameMode, chickenCanSeeHunters, isAdminCreation, manualStartEnabled (PP-71)
+  ├── id, name, maxPlayers, gameMode, chickenCanSeeHunters, isAdminCreation, manualStartEnabled (PP-71), isDebugGame (PP-104, QA debug mode)
   ├── registrationBatchId (PP-52, optional — links the game to a batch of pre-paid web registrations in `/eventRegistrations`; when set, JoinFlow gates the join on a validation code)
   ├── foundCode, hunterIds, gameMasterIds, status (one of `waiting` / `readyToLaunch` (PP-71) / `inProgress` / `done`), winners, creatorId, chickenId, lastHeartbeat
   ├── timing: { start, end, headStartMinutes, actualStart (PP-71, server-stamped at LAUNCH when `manualStartEnabled == true`) }

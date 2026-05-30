@@ -39,7 +39,7 @@ import dev.rahier.pouleparty.ui.theme.*
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
-    onNavigateToCreateParty: (gameId: String, isAdminCreation: Boolean) -> Unit,
+    onNavigateToCreateParty: (gameId: String, isAdminCreation: Boolean, isDebugGame: Boolean) -> Unit,
     onNavigateToChickenMap: (String) -> Unit,
     onNavigateToHunterMap: (String, String) -> Unit,
     onNavigateToGameMasterMap: (String) -> Unit = {},
@@ -105,12 +105,12 @@ fun HomeScreen(
     // PP-42: Forms a fresh Firestore-style auto-ID, then navigates straight
     // into the Free wizard. PlanSelection is gone; the cap (5) lives in the
     // wizard's Stepper. The admin entry point (PP-45) will pass `true` here.
-    fun launchCreateParty(isAdminCreation: Boolean) {
+    fun launchCreateParty(isAdminCreation: Boolean, isDebugGame: Boolean = false) {
         val gameId = com.google.firebase.firestore.FirebaseFirestore.getInstance()
             .collection("games")
             .document()
             .id
-        onNavigateToCreateParty(gameId, isAdminCreation)
+        onNavigateToCreateParty(gameId, isAdminCreation, isDebugGame)
     }
 
     // Mute button bounce animation
@@ -435,8 +435,12 @@ fun HomeScreen(
             },
             confirmButton = {
                 TextButton(onClick = {
-                    if (viewModel.validateAdminCode()) {
-                        launchCreateParty(isAdminCreation = true)
+                    when (viewModel.validateAdminCode()) {
+                        AdminCodeResult.ADMIN ->
+                            launchCreateParty(isAdminCreation = true, isDebugGame = false)
+                        AdminCodeResult.DEBUG ->
+                            launchCreateParty(isAdminCreation = true, isDebugGame = true)
+                        AdminCodeResult.INVALID -> {}
                     }
                 }) { Text(stringResource(R.string.validate)) }
             },

@@ -60,6 +60,9 @@ data class HomeUiState(
         get() = teamName.trim().isNotEmpty()
 }
 
+/** Result of [HomeViewModel.validateAdminCode]: which Create Party wizard to open. */
+enum class AdminCodeResult { ADMIN, DEBUG, INVALID }
+
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val firestoreRepository: FirestoreRepository,
@@ -210,26 +213,37 @@ class HomeViewModel @Inject constructor(
     }
 
     /**
-     * Validates the entered admin code against [AdminCode.VALUE]. Returns
-     * true if the user should be navigated to the GameCreation wizard with
-     * `isAdminCreation = true`. On false, surfaces the wrong-code alert via
-     * `isShowingAdminCodeError`. The screen calls this directly (rather than
-     * through [onIntent]) because nav has to react to the boolean result.
+     * Validates the entered code against the admin code ([AdminCode.VALUE] /
+     * Remote Config `admin_code`) and the QA debug code (Remote Config
+     * `qa_debug_code`, empty = disabled). Returns which wizard to open:
+     * - [AdminCodeResult.ADMIN] → admin party (lifted player cap).
+     * - [AdminCodeResult.DEBUG] → QA debug party (lifted cap + `isDebugGame`).
+     * - [AdminCodeResult.INVALID] → surfaces the wrong-code alert.
+     * The screen calls this directly (rather than through [onIntent])
+     * because nav has to react to the result.
      */
-    fun validateAdminCode(): Boolean {
+    fun validateAdminCode(): AdminCodeResult {
         val entered = _uiState.value.adminCodeInput.trim()
-        return if (entered == remoteConfig.adminCode) {
-            _uiState.update { it.copy(isShowingAdminCodeDialog = false, adminCodeInput = "") }
-            true
-        } else {
-            _uiState.update {
-                it.copy(
-                    isShowingAdminCodeDialog = false,
-                    adminCodeInput = "",
-                    isShowingAdminCodeError = true,
-                )
+        val debugCode = remoteConfig.qaDebugCode
+        return when {
+            entered == remoteConfig.adminCode -> {
+                _uiState.update { it.copy(isShowingAdminCodeDialog = false, adminCodeInput = "") }
+                AdminCodeResult.ADMIN
             }
-            false
+            debugCode.isNotEmpty() && entered == debugCode -> {
+                _uiState.update { it.copy(isShowingAdminCodeDialog = false, adminCodeInput = "") }
+                AdminCodeResult.DEBUG
+            }
+            else -> {
+                _uiState.update {
+                    it.copy(
+                        isShowingAdminCodeDialog = false,
+                        adminCodeInput = "",
+                        isShowingAdminCodeError = true,
+                    )
+                }
+                AdminCodeResult.INVALID
+            }
         }
     }
 

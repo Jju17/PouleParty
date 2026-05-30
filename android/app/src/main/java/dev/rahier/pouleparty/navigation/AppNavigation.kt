@@ -38,7 +38,7 @@ import dev.rahier.pouleparty.util.getTrimmedString
 object Routes {
     const val ONBOARDING = "onboarding"
     const val HOME = "home"
-    const val GAME_CREATION = "game_creation/{gameId}?isAdminCreation={isAdminCreation}"
+    const val GAME_CREATION = "game_creation/{gameId}?isAdminCreation={isAdminCreation}&isDebugGame={isDebugGame}"
     const val CHICKEN_MAP = "chicken_map/{gameId}"
     const val HUNTER_MAP = "hunter_map/{gameId}/{hunterName}"
     const val GAME_MASTER_MAP = "game_master_map/{gameId}"
@@ -46,8 +46,8 @@ object Routes {
     const val SETTINGS = "settings"
     const val VALIDATION_QUEUE = "validation_queue/{gameId}"
     const val DEMO = "demo"
-    fun gameCreation(gameId: String, isAdminCreation: Boolean = false) =
-        "game_creation/$gameId?isAdminCreation=$isAdminCreation"
+    fun gameCreation(gameId: String, isAdminCreation: Boolean = false, isDebugGame: Boolean = false) =
+        "game_creation/$gameId?isAdminCreation=$isAdminCreation&isDebugGame=$isDebugGame"
     fun chickenMap(gameId: String) = "chicken_map/$gameId"
     fun hunterMap(gameId: String, hunterName: String) = "hunter_map/$gameId/${Uri.encode(hunterName)}"
     fun gameMasterMap(gameId: String) = "game_master_map/$gameId"
@@ -144,8 +144,8 @@ fun AppNavigation() {
 
         composable(Routes.HOME) {
             HomeScreen(
-                onNavigateToCreateParty = { gameId, isAdminCreation ->
-                    navController.navigate(Routes.gameCreation(gameId, isAdminCreation)) {
+                onNavigateToCreateParty = { gameId, isAdminCreation, isDebugGame ->
+                    navController.navigate(Routes.gameCreation(gameId, isAdminCreation, isDebugGame)) {
                         popUpTo(Routes.HOME) { inclusive = false }
                     }
                 },
@@ -194,7 +194,8 @@ fun AppNavigation() {
             route = Routes.GAME_CREATION,
             arguments = listOf(
                 navArgument("gameId") { type = NavType.StringType },
-                navArgument("isAdminCreation") { type = NavType.BoolType; defaultValue = false }
+                navArgument("isAdminCreation") { type = NavType.BoolType; defaultValue = false },
+                navArgument("isDebugGame") { type = NavType.BoolType; defaultValue = false }
             )
         ) {
             GameCreationScreen(

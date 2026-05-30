@@ -121,6 +121,12 @@ struct ApiClient {
     /// Returns the actual start timestamp so the caller can advance
     /// its local countdown without waiting for the Firestore stream.
     var launchGame: (_ gameId: String) async throws -> Date
+    /// QA-only (debug games): force-advance a phase via the
+    /// `debugAdvanceGame` callable. `action` is `"endNow"` or
+    /// `"spawnPowerUp"`. The callable refuses non-debug games server-side.
+    /// Defaulted to a no-op so existing literal `ApiClient(...)`
+    /// constructions (demo mode, previews) don't have to list it.
+    var debugAdvanceGame: (_ gameId: String, _ action: String) async throws -> Void = { _, _ in }
 }
 
 /// CRIT-3 (audit 2026-05-17): rejection reason from the `submitFoundCode`
@@ -296,7 +302,8 @@ extension ApiClient: TestDependencyKey {
                 circles: []
             )
         },
-        launchGame: { _ in Date() }
+        launchGame: { _ in Date() },
+        debugAdvanceGame: { _, _ in }
     )
 }
 
@@ -1179,6 +1186,12 @@ extension ApiClient: DependencyKey {
                 ?? (dict["actualStartMillis"] as? Int64).map { Int($0) }
                 ?? Int(Date().timeIntervalSince1970 * 1000)
             return Date(timeIntervalSince1970: TimeInterval(millis) / 1000)
+        },
+        debugAdvanceGame: { gameId, action in
+            let functions = Functions.functions(region: "europe-west1")
+            _ = try await functions
+                .httpsCallable("debugAdvanceGame")
+                .call(["gameId": gameId, "action": action])
         }
     )
 }

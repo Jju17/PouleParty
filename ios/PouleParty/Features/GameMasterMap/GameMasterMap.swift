@@ -91,6 +91,10 @@ struct GameMasterMapFeature {
             /// Banner tap at game-end → navigate to the Victory /
             /// leaderboard page (parent handles via `gameEnded` delegate).
             case viewLeaderboardTapped
+            /// QA panel (debug games only): force the game to end now.
+            case debugEndNowTapped
+            /// QA panel (debug games only): spawn a power-up batch now.
+            case debugSpawnPowerUpsTapped
             // PP-86
             case designateHunterTapped(Registration)
             case designateConfirmTapped
@@ -285,6 +289,17 @@ struct GameMasterMapFeature {
 
             case .view(.viewLeaderboardTapped):
                 return .send(.delegate(.gameEnded(state.game)))
+
+            case .view(.debugEndNowTapped):
+                let gameId = state.game.id
+                return .run { _ in
+                    try? await apiClient.debugAdvanceGame(gameId, "endNow")
+                }
+            case .view(.debugSpawnPowerUpsTapped):
+                let gameId = state.game.id
+                return .run { _ in
+                    try? await apiClient.debugAdvanceGame(gameId, "spawnPowerUp")
+                }
 
             case .view(.launchTapped):
                 return handleLaunchTapped(&state)

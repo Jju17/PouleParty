@@ -24,4 +24,8 @@ sealed class GameMasterMapIntent {
     data object ViewLeaderboardTapped : GameMasterMapIntent()
     /** Game code "copy to clipboard" tap inside the info dialog. */
     data object CodeCopied : GameMasterMapIntent()
+    /** QA panel (debug games only): force the game to end now. */
+    data object DebugEndNowTapped : GameMasterMapIntent()
+    /** QA panel (debug games only): spawn a power-up batch now. */
+    data object DebugSpawnPowerUpsTapped : GameMasterMapIntent()
 }

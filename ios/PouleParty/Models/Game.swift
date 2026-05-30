@@ -46,6 +46,12 @@ struct Game: Codable, Equatable, Identifiable {
     /// automatically. Lets the host absorb logistical delays without
     /// burning the planned countdown.
     var manualStartEnabled: Bool = false
+    /// QA only: when true the game was created via the `qa_debug_code`
+    /// long-press entry. Surfaces the on-map QA debug panel (force end /
+    /// spawn power-ups) and pairs with a compressed timing setup. Gated
+    /// server-side by the `debugAdvanceGame` callable, which refuses to act
+    /// on any game where this is false.
+    var isDebugGame: Bool = false
 
     // MARK: - Nested Types
 

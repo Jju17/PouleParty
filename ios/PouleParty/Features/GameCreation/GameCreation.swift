@@ -61,6 +61,11 @@ struct GameCreationFeature {
         /// to `2...500`. Always `false` in PP-42; PP-45 will flip it via the
         /// `jujurahier` admin code modal.
         var isAdminCreation: Bool = false
+        /// QA debug game (entered via the `qa_debug_code` long-press). At
+        /// finalize the wizard compresses the timing (near-now start, 0
+        /// head start, short duration, 1-min shrink interval) and flags the
+        /// doc so the map shows the QA panel.
+        var isDebugGame: Bool = false
         /// PP-88: toggle on the gameMasterPassword step. Default ON for
         /// D-Day so every Free game ships with a GameMaster slot
         /// available; the chicken can flip it off.
@@ -210,6 +215,7 @@ struct GameCreationFeature {
             mapConfigState: ChickenMapConfigFeature.State,
             goingForward: Bool = true,
             isAdminCreation: Bool = false,
+            isDebugGame: Bool = false,
             isGameMasterEnabled: Bool = true,
             gameMasterPassword: String = ""
         ) {
@@ -222,6 +228,7 @@ struct GameCreationFeature {
             self.mapConfigState = mapConfigState
             self.goingForward = goingForward
             self.isAdminCreation = isAdminCreation
+            self.isDebugGame = isDebugGame
             self.isGameMasterEnabled = isGameMasterEnabled
             self.gameMasterPassword = gameMasterPassword
             self.steps = Self.recomputedSteps(
@@ -301,6 +308,28 @@ struct GameCreationFeature {
         state.$game.withLock { game in
             game.zone.shrinkIntervalMinutes = interval
             game.zone.shrinkMetersPerUpdate = decline
+        }
+    }
+
+    /// Compresses a QA debug game's timing so every phase is reachable in
+    /// minutes: near-now start, no head start, short total duration and the
+    /// minimum 1-min shrink interval (the floor enforced by
+    /// firestore.rules). Manual launch stays on so the host triggers the
+    /// start on demand. Called at finalize, after `recalculateNormalMode`,
+    /// so it overrides the standard zone math.
+    private func applyDebugTiming(state: inout State) {
+        let durationMinutes = 5.0
+        let shrinkIntervalMinutes = 1.0
+        let start = state.minimumStartDate
+        state.$game.withLock { game in
+            game.isDebugGame = true
+            game.manualStartEnabled = true
+            game.startDate = start
+            game.timing.headStartMinutes = 0
+            game.endDate = start.addingTimeInterval(durationMinutes * 60)
+            let shrinks = max(1.0, durationMinutes / shrinkIntervalMinutes)
+            game.zone.shrinkIntervalMinutes = shrinkIntervalMinutes
+            game.zone.shrinkMetersPerUpdate = max(0, (game.zone.radius - 100) / shrinks)
         }
     }
 
@@ -530,6 +559,9 @@ struct GameCreationFeature {
                     game.endDate = game.startDate.addingTimeInterval(state.gameDurationMinutes * 60)
                 }
                 recalculateNormalMode(state: &state)
+                if state.isDebugGame {
+                    applyDebugTiming(state: &state)
+                }
                 let enableGameMaster = state.isGameMasterEnabled
                     && state.gameMasterPassword.count == 4
                 let gameMasterPassword = state.gameMasterPassword

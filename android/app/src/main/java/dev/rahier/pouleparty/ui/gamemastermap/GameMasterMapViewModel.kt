@@ -148,6 +148,12 @@ class GameMasterMapViewModel @Inject constructor(
                     _uiState.update { it.copy(codeCopied = false) }
                 }
             }
+            GameMasterMapIntent.DebugEndNowTapped -> viewModelScope.launch {
+                try { firestoreRepository.debugAdvanceGame(gameId, "endNow") } catch (_: Exception) {}
+            }
+            GameMasterMapIntent.DebugSpawnPowerUpsTapped -> viewModelScope.launch {
+                try { firestoreRepository.debugAdvanceGame(gameId, "spawnPowerUp") } catch (_: Exception) {}
+            }
         }
     }
 

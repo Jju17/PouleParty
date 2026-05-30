@@ -141,6 +141,12 @@ class ChickenMapViewModel @Inject constructor(
             ChickenMapIntent.ViewLeaderboardTapped -> viewModelScope.launch {
                 _effects.send(ChickenMapEffect.NavigateToVictory)
             }
+            ChickenMapIntent.DebugEndNowTapped -> viewModelScope.launch {
+                try { firestoreRepository.debugAdvanceGame(gameId, "endNow") } catch (_: Exception) {}
+            }
+            ChickenMapIntent.DebugSpawnPowerUpsTapped -> viewModelScope.launch {
+                try { firestoreRepository.debugAdvanceGame(gameId, "spawnPowerUp") } catch (_: Exception) {}
+            }
         }
     }
 

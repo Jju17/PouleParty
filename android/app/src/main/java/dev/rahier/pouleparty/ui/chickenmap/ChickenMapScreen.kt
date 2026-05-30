@@ -312,6 +312,16 @@ fun ChickenMapScreen(
             }
         }
 
+        if (state.game.isDebugGame) {
+            dev.rahier.pouleparty.ui.components.DebugQAPanel(
+                onSpawnPowerUps = { viewModel.onIntent(ChickenMapIntent.DebugSpawnPowerUpsTapped) },
+                onEndNow = { viewModel.onIntent(ChickenMapIntent.DebugEndNowTapped) },
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = 12.dp, bottom = 130.dp)
+            )
+        }
+
         // Bottom bar
         Row(
             modifier = Modifier

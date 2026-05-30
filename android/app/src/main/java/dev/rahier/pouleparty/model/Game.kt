@@ -104,6 +104,14 @@ data class Game(
      * automatically.
      */
     val manualStartEnabled: Boolean = false,
+    /**
+     * QA only: when true the game was created via the `qa_debug_code`
+     * long-press entry. Surfaces the on-map QA debug panel (force end /
+     * spawn power-ups) and pairs with a compressed timing setup. Gated
+     * server-side by the `debugAdvanceGame` callable, which refuses to act
+     * on any game where this is false.
+     */
+    val isDebugGame: Boolean = false,
 ) {
     // ── Chicken Role (PP-26) ───────────────────────────
 

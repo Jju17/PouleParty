@@ -161,6 +161,7 @@ class GameCreationViewModel @Inject constructor(
 
     private val gameId: String = savedStateHandle["gameId"] ?: ""
     private val isAdminCreation: Boolean = savedStateHandle["isAdminCreation"] ?: false
+    private val isDebugGame: Boolean = savedStateHandle["isDebugGame"] ?: false
 
     private val _uiState = MutableStateFlow(
         GameCreationUiState(
@@ -179,7 +180,8 @@ class GameCreationViewModel @Inject constructor(
                 foundCode = Game.generateFoundCode(),
                 creatorId = auth.currentUser?.uid ?: "",
                 chickenId = auth.currentUser?.uid ?: "",
-                isAdminCreation = isAdminCreation
+                isAdminCreation = isAdminCreation,
+                isDebugGame = isDebugGame
             )
         )
     )
@@ -537,12 +539,43 @@ class GameCreationViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Compresses a QA debug game's timing so every phase is reachable in
+     * minutes: near-now start, no head start, short duration and the minimum
+     * 1-min shrink interval (the floor enforced by firestore.rules). Manual
+     * launch stays on so the host triggers the start on demand. Mirrors iOS
+     * `GameCreationFeature.applyDebugTiming`.
+     */
+    private fun applyDebugTiming(game: Game): Game {
+        val durationMinutes = 5.0
+        val shrinkIntervalMinutes = 1.0
+        val start = _uiState.value.minimumStartDate
+        val end = Date(start.time + (durationMinutes * 60 * 1000).toLong())
+        val shrinks = maxOf(1.0, durationMinutes / shrinkIntervalMinutes)
+        val decline = maxOf(0.0, (game.zone.radius - 100.0) / shrinks)
+        return game.copy(
+            manualStartEnabled = true,
+            timing = game.timing.copy(
+                start = com.google.firebase.Timestamp(start),
+                end = com.google.firebase.Timestamp(end),
+                headStartMinutes = 0.0,
+            ),
+            zone = game.zone.copy(
+                shrinkIntervalMinutes = shrinkIntervalMinutes,
+                shrinkMetersPerUpdate = decline,
+            ),
+        )
+    }
+
     private fun startGame() {
         clampStartDateToMinimum()
         val game = _uiState.value.game
         val state = _uiState.value
         val endDate = Date(game.startDate.time + (state.gameDurationMinutes * 60 * 1000).toLong())
-        val finalGame = game.withEndDate(endDate)
+        val baseGame = game.withEndDate(endDate)
+        // Debug games override the timing so every phase is reachable in
+        // minutes (near-now start, 0 head start, 5-min duration, 1-min shrink).
+        val finalGame = if (isDebugGame) applyDebugTiming(baseGame) else baseGame
         val enableGameMaster = state.isGameMasterEnabled && state.gameMasterPassword.length == 4
         val gmPassword = state.gameMasterPassword
 

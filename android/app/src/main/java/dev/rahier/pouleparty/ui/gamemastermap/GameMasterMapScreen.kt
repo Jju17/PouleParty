@@ -295,6 +295,16 @@ fun GameMasterMapScreen(
                 }
             }
 
+            if (state.game.isDebugGame) {
+                dev.rahier.pouleparty.ui.components.DebugQAPanel(
+                    onSpawnPowerUps = { viewModel.onIntent(GameMasterMapIntent.DebugSpawnPowerUpsTapped) },
+                    onEndNow = { viewModel.onIntent(GameMasterMapIntent.DebugEndNowTapped) },
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(start = 12.dp, bottom = 130.dp)
+                )
+            }
+
             if (state.showGameInfo) {
                 GameInfoDialog(
                     game = state.game,

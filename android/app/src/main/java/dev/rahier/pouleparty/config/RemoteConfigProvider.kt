@@ -6,6 +6,7 @@ import com.google.firebase.remoteconfig.ktx.remoteConfig
 import com.google.firebase.remoteconfig.ktx.remoteConfigSettings
 import dev.rahier.pouleparty.AppConstants
 import dev.rahier.pouleparty.model.AdminCode
+import dev.rahier.pouleparty.model.DebugCode
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -30,6 +31,7 @@ class RemoteConfigProvider @Inject constructor() {
         remoteConfig.setDefaultsAsync(
             mapOf(
                 KEY_ADMIN_CODE to AdminCode.VALUE,
+                KEY_QA_DEBUG_CODE to DebugCode.VALUE,
                 KEY_CODE_MAX_WRONG_ATTEMPTS to AppConstants.CODE_MAX_WRONG_ATTEMPTS.toLong(),
                 // Stored in seconds for cross-platform parity with iOS.
                 KEY_CODE_COOLDOWN_SECONDS to (AppConstants.CODE_COOLDOWN_MS / 1000L),
@@ -42,6 +44,14 @@ class RemoteConfigProvider @Inject constructor() {
     val adminCode: String
         get() = remoteConfig.getString(KEY_ADMIN_CODE).ifEmpty { AdminCode.VALUE }
 
+    /**
+     * QA-debug code. Unlike [adminCode], an empty value is returned as-is
+     * (no fallback to the compiled default) so the code can be disabled
+     * remotely by clearing the Remote Config value.
+     */
+    val qaDebugCode: String
+        get() = remoteConfig.getString(KEY_QA_DEBUG_CODE)
+
     val codeMaxWrongAttempts: Int
         get() = remoteConfig.getLong(KEY_CODE_MAX_WRONG_ATTEMPTS).toInt()
 
@@ -53,6 +63,7 @@ class RemoteConfigProvider @Inject constructor() {
 
     companion object {
         private const val KEY_ADMIN_CODE = "admin_code"
+        private const val KEY_QA_DEBUG_CODE = "qa_debug_code"
         private const val KEY_CODE_MAX_WRONG_ATTEMPTS = "found_code_max_wrong_attempts"
         private const val KEY_CODE_COOLDOWN_SECONDS = "found_code_cooldown_seconds"
         private const val KEY_DEFAULT_INITIAL_RADIUS = "default_initial_radius_meters"

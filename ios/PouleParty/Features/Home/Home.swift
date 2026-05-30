@@ -58,6 +58,10 @@ struct HomeFeature {
         /// `.initialLocationResolved`, so the seeded Game gets
         /// `isAdminCreation = true`.
         var pendingIsAdminCreation: Bool = false
+        /// Same window as `pendingIsAdminCreation`, set when the entered
+        /// code matched the QA debug code: the seeded Game gets
+        /// `isDebugGame = true` (and admin privileges) + compressed timing.
+        var pendingIsDebugCreation: Bool = false
         var isShowingDemoCodeAlert: Bool = false
         var demoCodeInput: String = ""
         /// SwiftUI Button's tap fires alongside `.simultaneousGesture(LongPressGesture)`
@@ -178,19 +182,30 @@ struct HomeFeature {
                 let entered = state.adminCodeInput.trimmingCharacters(in: .whitespaces)
                 state.isShowingAdminCodeAlert = false
                 state.adminCodeInput = ""
-                guard entered == remoteConfigClient.adminCode() else {
-                    state.destination = .alert(
-                        AlertState {
-                            TextState("Wrong code")
-                        } actions: {
-                            ButtonState(role: .cancel) { TextState("OK") }
-                        }
-                    )
-                    return .none
+                let debugCode = remoteConfigClient.qaDebugCode()
+                if entered == remoteConfigClient.adminCode() {
+                    state.pendingIsAdminCreation = true
+                    MapWarmUp.warmUpIfNeeded()
+                    return .send(.chickenConfigLocationRequested)
                 }
-                state.pendingIsAdminCreation = true
-                MapWarmUp.warmUpIfNeeded()
-                return .send(.chickenConfigLocationRequested)
+                // QA debug game: lifts the player cap like admin AND flips
+                // `isDebugGame` so the wizard compresses the timing and the
+                // map shows the QA panel. An empty `qaDebugCode` (Remote
+                // Config cleared) disables this branch entirely.
+                if !debugCode.isEmpty, entered == debugCode {
+                    state.pendingIsAdminCreation = true
+                    state.pendingIsDebugCreation = true
+                    MapWarmUp.warmUpIfNeeded()
+                    return .send(.chickenConfigLocationRequested)
+                }
+                state.destination = .alert(
+                    AlertState {
+                        TextState("Wrong code")
+                    } actions: {
+                        ButtonState(role: .cancel) { TextState("OK") }
+                    }
+                )
+                return .none
             case .createPartyLongPressed:
                 state.suppressNextTap = true
                 return .merge(
@@ -345,7 +360,9 @@ struct HomeFeature {
                 // default seeds the wizard's stepper at the Free cap; the user
                 // can dial it down to 2 from there.
                 let isAdmin = state.pendingIsAdminCreation
+                let isDebug = state.pendingIsDebugCreation
                 state.pendingIsAdminCreation = false
+                state.pendingIsDebugCreation = false
                 var game = Game(id: apiClient.newGameId())
                 game.foundCode = Game.generateFoundCode()
                 game.timing.headStartMinutes = 5
@@ -353,6 +370,7 @@ struct HomeFeature {
                 game.chickenId = creatorId
                 game.maxPlayers = 5
                 game.isAdminCreation = isAdmin
+                game.isDebugGame = isDebug
                 game.zone.radius = remoteConfigClient.defaultInitialRadius()
                 game.zone.driftSeed = withRandomNumberGenerator { generator in
                     Int.random(in: 1...999_999, using: &generator)
@@ -364,6 +382,7 @@ struct HomeFeature {
                 let mapConfig = ChickenMapConfigFeature.State(game: sharedGame)
                 var creationState = GameCreationFeature.State(game: sharedGame, mapConfigState: mapConfig)
                 creationState.isAdminCreation = isAdmin
+                creationState.isDebugGame = isDebug
                 state.destination = .gameCreation(creationState)
                 return .none
             case .joinGameButtonTapped:
