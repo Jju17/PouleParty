@@ -52,6 +52,11 @@ struct Game: Codable, Equatable, Identifiable {
     /// server-side by the `debugAdvanceGame` callable, which refuses to act
     /// on any game where this is false.
     var isDebugGame: Bool = false
+    /// PP-52: when set, this game is linked to a batch of pre-paid web
+    /// registrations. The JoinFlow then requires the unique registration code
+    /// (validated + single-use-claimed server-side via `validateRegistrationCode`)
+    /// before a hunter can join. `nil` for every normal free game.
+    var registrationBatchId: String?
 
     // MARK: - Nested Types
 

@@ -1,6 +1,6 @@
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 import { getAppCheck } from "firebase-admin/app-check";
-import { onRequest } from "firebase-functions/v2/https";
+import { onRequest, onCall, HttpsError } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/v2";
 import { defineSecret } from "firebase-functions/params";
 import { randomInt } from "crypto";
@@ -111,6 +111,11 @@ interface RegistrationDoc {
    *  client-side consent checkbox (CRD Art. 8(2) audit trail). The
    *  validator rejects the submit if missing. */
   consentAcknowledgedAt: Timestamp;
+  /** PP-52 single-use join gate: the first device to validate this code at
+   *  join time claims it. Any later attempt with a different UID is rejected
+   *  (`alreadyUsed`), so one paid registration grants exactly one in-app join. */
+  claimedAt?: Timestamp;
+  claimedBy?: string;
 }
 
 function db() {
@@ -651,3 +656,151 @@ export const confirmRegistrationPayment = onRequest(
     res.status(200).json({ received: true });
   }
 );
+
+// ---------------------------------------------------------------------------
+// PP-52 — server-side validation + single-use claim of a registration code.
+//
+// Called by the mobile JoinFlow when a hunter resolves a gameCode whose Game
+// carries a `registrationBatchId`. The client never reads `/eventRegistrations`
+// (rules lock it to `if false`); this callable returns only a discriminated
+// status, never PII. The code is a single-use join token: the first device to
+// validate it claims it, and any later attempt with a different UID is rejected.
+// Manual entry only (no deeplink). Requires an authenticated caller (anonymous
+// Auth is enough — the gate is to prevent unauth curl scraping).
+// ---------------------------------------------------------------------------
+
+// Per-UID rate limit. Threat model: brute-forcing a 6-char alphanum code
+// (32^6 ~ 1B combinations, ~50 valid codes per batch). The legitimate JoinFlow
+// makes 1 call per submit, so 10 attempts inside a 10 min sliding window covers
+// typo retries while keeping a 60 min lockout in reserve. Anonymous Auth UIDs
+// are device-bound, so this is effectively per-device. Doc lives in
+// `/validationRateLimits/{uid}`, admin-SDK-only by firestore.rules.
+const VALIDATION_RATE_LIMIT_MAX = 10;
+const VALIDATION_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+const VALIDATION_RATE_LIMIT_LOCK_MS = 60 * 60 * 1000;
+
+interface ValidationRateLimit {
+  attempts: number;
+  firstAttemptAt: Timestamp;
+  lockedUntil: Timestamp | null;
+}
+
+function validationRateLimitRef(uid: string) {
+  return db().collection("validationRateLimits").doc(uid);
+}
+
+// Single-transaction bump-and-check. Throws `resource-exhausted` BEFORE the
+// lookup runs so brute-force attempts can't reach the Firestore query. Both
+// successes and failures count against the budget.
+async function bumpValidationRateLimit(uid: string): Promise<void> {
+  await db().runTransaction(async (tx) => {
+    const ref = validationRateLimitRef(uid);
+    const snap = await tx.get(ref);
+    const now = Timestamp.now();
+    let rl: ValidationRateLimit = (snap.data() as ValidationRateLimit) ?? {
+      attempts: 0,
+      firstAttemptAt: now,
+      lockedUntil: null,
+    };
+
+    if (rl.lockedUntil && rl.lockedUntil.toMillis() <= now.toMillis()) {
+      rl = { attempts: 0, firstAttemptAt: now, lockedUntil: null };
+    }
+    if (rl.lockedUntil) {
+      throw new HttpsError("resource-exhausted", "Too many validation attempts", {
+        lockedUntil: rl.lockedUntil.toMillis(),
+      });
+    }
+
+    if (
+      now.toMillis() - rl.firstAttemptAt.toMillis() >
+      VALIDATION_RATE_LIMIT_WINDOW_MS
+    ) {
+      rl = { attempts: 0, firstAttemptAt: now, lockedUntil: null };
+    }
+
+    const attempts = rl.attempts + 1;
+    const reachedLock = attempts >= VALIDATION_RATE_LIMIT_MAX;
+    const lockedUntil = reachedLock
+      ? Timestamp.fromMillis(now.toMillis() + VALIDATION_RATE_LIMIT_LOCK_MS)
+      : null;
+    tx.set(ref, {
+      attempts,
+      firstAttemptAt: rl.firstAttemptAt,
+      lockedUntil,
+    } satisfies ValidationRateLimit);
+
+    if (reachedLock) {
+      throw new HttpsError("resource-exhausted", "Too many validation attempts", {
+        lockedUntil: lockedUntil!.toMillis(),
+      });
+    }
+  });
+}
+
+interface ValidateRegistrationCodeInput {
+  batchId?: string;
+  code?: string;
+}
+
+type ValidateRegistrationCodeResult =
+  | { status: "valid" }
+  | { status: "invalid" }
+  | { status: "alreadyUsed" };
+
+function normalizeBatchId(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizeJoinCode(value: unknown): string {
+  return typeof value === "string" ? value.trim().toUpperCase() : "";
+}
+
+/**
+ * `validateRegistrationCode(batchId, code) -> { status }`.
+ *   - `invalid`     — no paid eventRegistration matches the (batchId, code) pair
+ *   - `alreadyUsed` — the code was already claimed by a different device
+ *   - `valid`       — match found and now claimed by this caller (idempotent if
+ *                     this caller already owns the claim)
+ * The lookup + claim run in one transaction so two simultaneous submits can't
+ * both win the same code.
+ */
+export const validateRegistrationCode = onCall<
+  ValidateRegistrationCodeInput,
+  Promise<ValidateRegistrationCodeResult>
+>({ region: REGION }, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Sign in required");
+  }
+  const uid = request.auth.uid;
+  const batchId = normalizeBatchId(request.data?.batchId);
+  const code = normalizeJoinCode(request.data?.code);
+  if (!batchId || !code) return { status: "invalid" };
+
+  // Throws `resource-exhausted` if this UID is over budget, before any lookup.
+  await bumpValidationRateLimit(uid);
+
+  return await db().runTransaction(async (tx) => {
+    const query = db()
+      .collection(COLLECTION)
+      .where("batchId", "==", batchId)
+      .where("code", "==", code)
+      .where("paid", "==", true)
+      .limit(1);
+    const snap = await tx.get(query);
+    const doc = snap.docs[0];
+    if (!doc) return { status: "invalid" } as const;
+
+    const data = doc.data() as RegistrationDoc;
+    if (data.claimedBy && data.claimedBy !== uid) {
+      return { status: "alreadyUsed" } as const;
+    }
+    if (data.claimedBy !== uid) {
+      tx.update(doc.ref, {
+        claimedBy: uid,
+        claimedAt: Timestamp.now(),
+      });
+    }
+    return { status: "valid" } as const;
+  });
+});

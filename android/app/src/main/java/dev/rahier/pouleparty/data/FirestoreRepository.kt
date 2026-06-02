@@ -944,6 +944,39 @@ class FirestoreRepository @Inject constructor(
         val lockedUntilMs: Long?
     )
 
+    /** PP-52: outcome of [validateRegistrationCode]. Mirrors the server-side
+     *  `{ status }` discriminated result and the iOS `ValidationCodeResult`. */
+    enum class ValidationCodeResult { VALID, INVALID, ALREADY_USED, ERROR }
+
+    /**
+     * PP-52: validates the unique registration code for a paid-event game and
+     * single-use-claims it server-side. Called from the JoinFlow only when the
+     * resolved game has a `registrationBatchId`. Never reads `/eventRegistrations`
+     * directly (rules lock it); the callable returns only a status, never PII.
+     * Any thrown error (network, rate-limit lockout) maps to [ValidationCodeResult.ERROR].
+     */
+    suspend fun validateRegistrationCode(batchId: String, code: String): ValidationCodeResult {
+        return withTimeoutOrNull(READ_TIMEOUT_MS) {
+            try {
+                val result = functions
+                    .getHttpsCallable("validateRegistrationCode")
+                    .call(mapOf("batchId" to batchId, "code" to code))
+                    .await()
+                @Suppress("UNCHECKED_CAST")
+                val data = result.getData() as? Map<String, Any?> ?: emptyMap()
+                when (data["status"] as? String) {
+                    "valid" -> ValidationCodeResult.VALID
+                    "alreadyUsed" -> ValidationCodeResult.ALREADY_USED
+                    "invalid" -> ValidationCodeResult.INVALID
+                    else -> ValidationCodeResult.ERROR
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "validateRegistrationCode failed", e)
+                ValidationCodeResult.ERROR
+            }
+        } ?: ValidationCodeResult.ERROR
+    }
+
     /**
      * Calls the `setGameMasterPassword` Cloud Function. Only the
      * game's creator may call this; the CF writes the password to the

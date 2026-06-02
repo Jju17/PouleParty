@@ -92,6 +92,7 @@ extension ApiClient {
                 JoinAsGameMasterResult(success: true, attemptsRemaining: 5, lockedUntilMs: nil)
             },
             designateChicken: { _, _ in },
+            validateRegistrationCode: { _, _ in .valid },
             computeZoneConfiguration: { _ in
                 ComputeZoneConfigurationOutput(
                     initialRadius: MockDemoData.liveGame.zone.radius,

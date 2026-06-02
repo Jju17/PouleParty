@@ -47,6 +47,8 @@ fun JoinFlowBottomSheet(
     onJoinAsGameMasterTapped: () -> Unit = {},
     onGameMasterPasswordChanged: (String) -> Unit = {},
     onSubmitGameMasterPasswordTapped: () -> Unit = {},
+    onValidationCodeChanged: (String) -> Unit = {},
+    onSubmitValidationCodeTapped: () -> Unit = {},
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(
@@ -55,6 +57,15 @@ fun JoinFlowBottomSheet(
         containerColor = MaterialTheme.colorScheme.background
     ) {
         when (val step = state.joinStep) {
+            is JoinFlowStep.ValidationCodeEntry, is JoinFlowStep.SubmittingValidationCode -> {
+                ValidationCodeContent(
+                    code = state.validationCodeInput,
+                    error = state.validationCodeError,
+                    isSubmitting = step is JoinFlowStep.SubmittingValidationCode,
+                    onCodeChanged = onValidationCodeChanged,
+                    onSubmit = onSubmitValidationCodeTapped,
+                )
+            }
             is JoinFlowStep.JoiningWithTeamName, is JoinFlowStep.SubmittingJoin -> {
                 val game = (step as? JoinFlowStep.JoiningWithTeamName)?.game
                     ?: (step as JoinFlowStep.SubmittingJoin).game
@@ -174,6 +185,76 @@ private fun CodeEntryContent(
             ) {
                 Text(
                     stringResource(R.string.join_as_game_master),
+                    fontFamily = GameBoyFont,
+                    fontSize = 18.sp,
+                    color = Color.White,
+                )
+            }
+        }
+        Spacer(Modifier.height(20.dp))
+    }
+}
+
+@Composable
+private fun ValidationCodeContent(
+    code: String,
+    error: String?,
+    isSubmitting: Boolean,
+    onCodeChanged: (String) -> Unit,
+    onSubmit: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text(
+            stringResource(R.string.validation_code_title),
+            fontFamily = GameBoyFont,
+            fontSize = 22.sp,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        Text(
+            stringResource(R.string.validation_code_hint),
+            fontFamily = GameBoyFont,
+            fontSize = 10.sp,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+        )
+        OutlinedTextField(
+            value = code,
+            onValueChange = onCodeChanged,
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
+            modifier = Modifier.fillMaxWidth(0.7f),
+            placeholder = { Text(stringResource(R.string.validation_code_label)) },
+            enabled = !isSubmitting,
+        )
+        if (error != null) {
+            Text(
+                error,
+                fontFamily = GameBoyFont,
+                fontSize = 9.sp,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(horizontal = 8.dp),
+            )
+        }
+        TextButton(
+            onClick = onSubmit,
+            enabled = code.trim().isNotEmpty() && !isSubmitting,
+            modifier = Modifier
+                .background(
+                    if (code.trim().isNotEmpty() && !isSubmitting) GradientFire else SolidColor(Color.Gray.copy(alpha = 0.3f)),
+                    RoundedCornerShape(50)
+                )
+                .padding(horizontal = 24.dp, vertical = 4.dp)
+        ) {
+            if (isSubmitting) {
+                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp))
+            } else {
+                Text(
+                    stringResource(R.string.validation_code_submit),
                     fontFamily = GameBoyFont,
                     fontSize = 18.sp,
                     color = Color.White,

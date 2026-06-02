@@ -13,6 +13,8 @@ struct JoinFlowFeature {
         case enteringCode
         case validating
         case codeValidated(Game)
+        case validationCodeEntry(Game)
+        case submittingValidationCode(Game)
         case joiningWithTeamName(Game)
         case submittingJoin(Game)
         case codeNotFound
@@ -29,6 +31,9 @@ struct JoinFlowFeature {
         var step: Step = .enteringCode
         var gameMasterPassword: String = ""
         var gameMasterError: String?
+        /// PP-52: registration-code buffer + last error for the paid-event join gate.
+        var validationCode: String = ""
+        var validationCodeError: String?
 
         var isCodeValid: Bool {
             let trimmed = code.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
@@ -56,6 +61,10 @@ struct JoinFlowFeature {
         case joinSucceeded(Game, teamName: String)
         case joinFailed(String)
         case networkErrorOccurred
+        case submitValidationCodeTapped
+        case validationCodeAccepted(Game)
+        case validationCodeRejected(ValidationCodeResult)
+        case validationCodeErrored
         case joinAsGameMasterTapped
         case submitGameMasterPasswordTapped
         case gameMasterJoinSucceeded(Game)
@@ -94,6 +103,7 @@ struct JoinFlowFeature {
                 case .enteringCode, .validating, .codeNotFound, .networkError, .codeValidated:
                     break
                 case .joiningWithTeamName, .submittingJoin,
+                     .validationCodeEntry, .submittingValidationCode,
                      .gameMasterPasswordEntry, .submittingGameMasterPassword:
                     return .none
                 }
@@ -142,7 +152,55 @@ struct JoinFlowFeature {
 
             case .joinAsHunterTapped:
                 guard case let .codeValidated(game) = state.step else { return .none }
+                // PP-52: a game linked to a paid registration batch requires the
+                // unique registration code (validated server-side) before the
+                // teamName step. Free games go straight to teamName.
+                if game.registrationBatchId != nil {
+                    state.validationCode = ""
+                    state.validationCodeError = nil
+                    state.step = .validationCodeEntry(game)
+                } else {
+                    state.step = .joiningWithTeamName(game)
+                }
+                return .none
+
+            case .submitValidationCodeTapped:
+                guard case let .validationCodeEntry(game) = state.step,
+                      let batchId = game.registrationBatchId
+                else { return .none }
+                let code = state.validationCode.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !code.isEmpty else { return .none }
+                state.step = .submittingValidationCode(game)
+                state.validationCodeError = nil
+                return .run { send in
+                    do {
+                        let result = try await apiClient.validateRegistrationCode(batchId, code)
+                        switch result {
+                        case .valid:
+                            await send(.validationCodeAccepted(game))
+                        case .invalid, .alreadyUsed:
+                            await send(.validationCodeRejected(result))
+                        }
+                    } catch {
+                        await send(.validationCodeErrored)
+                    }
+                }
+
+            case let .validationCodeAccepted(game):
                 state.step = .joiningWithTeamName(game)
+                return .none
+
+            case let .validationCodeRejected(result):
+                if case let .submittingValidationCode(game) = state.step {
+                    state.step = .validationCodeEntry(game)
+                }
+                state.validationCodeError = result == .alreadyUsed
+                    ? String(localized: "This code has already been used to join.")
+                    : String(localized: "We couldn't find a registration for this code. Check the email we sent you.")
+                return .none
+
+            case .validationCodeErrored:
+                state.step = .networkError
                 return .none
 
             case .submitJoinTapped:
@@ -279,6 +337,8 @@ struct JoinFlowView: View {
             return "code"
         case .joiningWithTeamName, .submittingJoin:
             return "teamName"
+        case .validationCodeEntry, .submittingValidationCode:
+            return "validationCode"
         case .gameMasterPasswordEntry, .submittingGameMasterPassword:
             return "gmPassword"
         }
@@ -289,6 +349,10 @@ struct JoinFlowView: View {
         switch step {
         case .enteringCode, .validating, .codeNotFound, .networkError, .codeValidated:
             codeEntry(step: step)
+        case let .validationCodeEntry(game):
+            validationCodeForm(game: game, isSubmitting: false)
+        case let .submittingValidationCode(game):
+            validationCodeForm(game: game, isSubmitting: true)
         case let .joiningWithTeamName(game):
             teamNameForm(game: game, isSubmitting: false)
         case let .submittingJoin(game):
@@ -472,6 +536,72 @@ struct JoinFlowView: View {
                 .clipShape(Capsule())
             }
             .disabled(!store.isGameMasterPasswordValid || isSubmitting)
+
+            Spacer()
+        }
+    }
+
+    // MARK: - Validation Code Form (PP-52 paid-event gate)
+
+    private func validationCodeForm(game: Game, isSubmitting: Bool) -> some View {
+        let canSubmit = !store.validationCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        return VStack(spacing: 20) {
+            Spacer().frame(height: 8)
+            BangerText(String(localized: "Validate your ticket"), size: 28)
+                .foregroundStyle(Color.onBackground)
+
+            Text("This party is part of a registered event. Enter the code from your registration email to confirm your spot.")
+                .font(.gameboy(size: 10))
+                .foregroundStyle(Color.onBackground.opacity(0.6))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
+
+            TextField("ABC123", text: $store.validationCode)
+                .font(.gameboy(size: 22))
+                .multilineTextAlignment(.center)
+                .textInputAutocapitalization(.characters)
+                .autocorrectionDisabled()
+                .padding(.vertical, 14)
+                .padding(.horizontal, 24)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color.surface)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.onBackground.opacity(0.2), lineWidth: 1)
+                )
+                .padding(.horizontal, 40)
+
+            if let error = store.validationCodeError {
+                Text(error)
+                    .font(.gameboy(size: 9))
+                    .foregroundStyle(Color.CROrange)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
+            }
+
+            Button {
+                store.send(.submitValidationCodeTapped)
+            } label: {
+                Group {
+                    if isSubmitting {
+                        ProgressView().tint(.white)
+                    } else {
+                        BangerText(String(localized: "Confirm"), size: 22)
+                            .foregroundStyle(.white)
+                    }
+                }
+                .padding(.horizontal, 28)
+                .padding(.vertical, 14)
+                .background(
+                    (canSubmit && !isSubmitting)
+                        ? AnyShapeStyle(Color.gradientFire)
+                        : AnyShapeStyle(Color.gray.opacity(0.3))
+                )
+                .clipShape(Capsule())
+            }
+            .disabled(!canSubmit || isSubmitting)
 
             Spacer()
         }

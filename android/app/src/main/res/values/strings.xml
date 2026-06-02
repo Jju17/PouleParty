@@ -338,6 +338,13 @@
     <string name="join_as_hunter">Join as Hunter</string>
     <string name="join_as_game_master">Join as GameMaster 🦅</string>
     <string name="gamemaster_join_title">GameMaster 🦅</string>
+    <!-- PP-52: paid-event registration code gate -->
+    <string name="validation_code_title">Validate your ticket</string>
+    <string name="validation_code_hint">This party is part of a registered event. Enter the code from your registration email to confirm your spot.</string>
+    <string name="validation_code_label">Registration code</string>
+    <string name="validation_code_submit">Confirm</string>
+    <string name="validation_code_invalid">We couldn\'t find a registration for this code. Check the email we sent you.</string>
+    <string name="validation_code_already_used">This code has already been used to join.</string>
     <string name="gamemaster_password_hint">4-digit code</string>
 
     <!-- CRIT-8 (audit 2026-05-17): JoinFlow error strings, previously

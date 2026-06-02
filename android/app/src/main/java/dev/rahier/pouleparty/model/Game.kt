@@ -112,6 +112,14 @@ data class Game(
      * on any game where this is false.
      */
     val isDebugGame: Boolean = false,
+    /**
+     * PP-52: when set, this game is linked to a batch of pre-paid web
+     * registrations (`/eventRegistrations`). The JoinFlow then requires the
+     * unique registration code (validated + single-use-claimed server-side via
+     * `validateRegistrationCode`) before a hunter can join. Null for every
+     * normal free game, which join with the gameCode alone.
+     */
+    val registrationBatchId: String? = null,
 ) {
     // ── Chicken Role (PP-26) ───────────────────────────
 

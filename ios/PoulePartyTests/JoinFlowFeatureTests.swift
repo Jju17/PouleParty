@@ -127,4 +127,68 @@ struct JoinFlowFeatureTests {
         await store.send(.joinAsHunterTapped)
         // No action received — silent no-op.
     }
+
+    // MARK: - PP-52 paid-event registration-code gate
+
+    @Test func paidEventGameRoutesToValidationCode() async {
+        var game = Game.mock
+        game.registrationBatchId = "game-06-06-2026"
+        var state = JoinFlowFeature.State()
+        state.step = .codeValidated(game)
+        let store = TestStore(initialState: state) { JoinFlowFeature() }
+        store.exhaustivity = .off
+        await store.send(.joinAsHunterTapped) {
+            $0.step = .validationCodeEntry(game)
+        }
+    }
+
+    @Test func freeGameRoutesStraightToTeamName() async {
+        var game = Game.mock
+        game.registrationBatchId = nil
+        var state = JoinFlowFeature.State()
+        state.step = .codeValidated(game)
+        let store = TestStore(initialState: state) { JoinFlowFeature() }
+        store.exhaustivity = .off
+        await store.send(.joinAsHunterTapped) {
+            $0.step = .joiningWithTeamName(game)
+        }
+    }
+
+    @Test func validRegistrationCodeAdvancesToTeamName() async {
+        var game = Game.mock
+        game.registrationBatchId = "batch-1"
+        var state = JoinFlowFeature.State()
+        state.step = .validationCodeEntry(game)
+        state.validationCode = "ZZZ999"
+        let store = TestStore(initialState: state) {
+            JoinFlowFeature()
+        } withDependencies: {
+            $0.apiClient.validateRegistrationCode = { _, _ in .valid }
+        }
+        store.exhaustivity = .off
+        await store.send(.submitValidationCodeTapped)
+        await store.receive(\.validationCodeAccepted) {
+            $0.step = .joiningWithTeamName(game)
+        }
+    }
+
+    @Test func alreadyUsedRegistrationCodeStaysOnEntryWithError() async {
+        var game = Game.mock
+        game.registrationBatchId = "batch-1"
+        var state = JoinFlowFeature.State()
+        state.step = .validationCodeEntry(game)
+        state.validationCode = "ZZZ999"
+        let store = TestStore(initialState: state) {
+            JoinFlowFeature()
+        } withDependencies: {
+            $0.apiClient.validateRegistrationCode = { _, _ in .alreadyUsed }
+        }
+        store.exhaustivity = .off
+        await store.send(.submitValidationCodeTapped)
+        await store.receive(\.validationCodeRejected)
+        if case .validationCodeEntry = store.state.step {} else {
+            Issue.record("expected to stay on validationCodeEntry")
+        }
+        #expect(store.state.validationCodeError != nil)
+    }
 }

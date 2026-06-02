@@ -367,4 +367,57 @@ class HomeViewModelBehaviorTest {
         assertEquals("", vm.uiState.value.demoCodeInput)
     }
 
+    // ── PP-52: paid-event registration-code gate ──
+
+    private fun driveToCodeValidated(game: Game): HomeViewModel {
+        mockAuthUser("user-123")
+        coEvery { firestoreRepository.findGameByCode(any()) } returns game
+        val vm = createViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+        vm.onIntent(HomeIntent.GameCodeChanged(game.gameCode))
+        testDispatcher.scheduler.advanceUntilIdle()
+        return vm
+    }
+
+    @Test
+    fun `paid-event game routes JoinAsHunter to ValidationCodeEntry`() {
+        val vm = driveToCodeValidated(Game(id = "abcdef", registrationBatchId = "game-06-06-2026"))
+        vm.onIntent(HomeIntent.JoinAsHunterTapped)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertTrue(vm.uiState.value.joinStep is dev.rahier.pouleparty.ui.home.JoinFlowStep.ValidationCodeEntry)
+    }
+
+    @Test
+    fun `free game routes JoinAsHunter straight to teamName`() {
+        val vm = driveToCodeValidated(Game(id = "abcdef", registrationBatchId = null))
+        vm.onIntent(HomeIntent.JoinAsHunterTapped)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertTrue(vm.uiState.value.joinStep is dev.rahier.pouleparty.ui.home.JoinFlowStep.JoiningWithTeamName)
+    }
+
+    @Test
+    fun `valid registration code advances to teamName`() {
+        val vm = driveToCodeValidated(Game(id = "abcdef", registrationBatchId = "batch-1"))
+        vm.onIntent(HomeIntent.JoinAsHunterTapped)
+        testDispatcher.scheduler.advanceUntilIdle()
+        coEvery { firestoreRepository.validateRegistrationCode(any(), any()) } returns
+            FirestoreRepository.ValidationCodeResult.VALID
+        vm.onIntent(HomeIntent.ValidationCodeChanged("ZZZ999"))
+        vm.onIntent(HomeIntent.SubmitValidationCodeTapped)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertTrue(vm.uiState.value.joinStep is dev.rahier.pouleparty.ui.home.JoinFlowStep.JoiningWithTeamName)
+    }
+
+    @Test
+    fun `already-used registration code stays on ValidationCodeEntry`() {
+        val vm = driveToCodeValidated(Game(id = "abcdef", registrationBatchId = "batch-1"))
+        vm.onIntent(HomeIntent.JoinAsHunterTapped)
+        testDispatcher.scheduler.advanceUntilIdle()
+        coEvery { firestoreRepository.validateRegistrationCode(any(), any()) } returns
+            FirestoreRepository.ValidationCodeResult.ALREADY_USED
+        vm.onIntent(HomeIntent.ValidationCodeChanged("ZZZ999"))
+        vm.onIntent(HomeIntent.SubmitValidationCodeTapped)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertTrue(vm.uiState.value.joinStep is dev.rahier.pouleparty.ui.home.JoinFlowStep.ValidationCodeEntry)
+    }
 }

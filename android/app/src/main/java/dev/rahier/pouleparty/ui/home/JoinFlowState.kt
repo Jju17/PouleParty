@@ -8,6 +8,11 @@ sealed class JoinFlowStep {
     data class CodeValidated(val game: Game) : JoinFlowStep()
     object CodeNotFound : JoinFlowStep()
     object NetworkError : JoinFlowStep()
+    /** PP-52: paid-event game (registrationBatchId set) — the hunter must enter
+     *  the unique registration code from their confirmation email before joining. */
+    data class ValidationCodeEntry(val game: Game) : JoinFlowStep()
+    /** PP-52: validateRegistrationCode CF in flight. */
+    data class SubmittingValidationCode(val game: Game) : JoinFlowStep()
     /** PP-90: collect teamName before joining; required for every hunter. */
     data class JoiningWithTeamName(val game: Game) : JoinFlowStep()
     /** PP-90: registration doc + join in flight. */

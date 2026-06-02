@@ -54,7 +54,7 @@ const STRINGS: Record<Locale, EmailStrings> = {
       `Ton paiement est passé, ton équipe <strong>« ${escapeHtml(teamName)} »</strong> (${teamSize} joueur·euse·s) est officiellement inscrite pour le ${dDay}. Rendez-vous au bar de départ à Ixelles à 20h30. Préparez vos baskets 🏃`,
     codeLabel: "TON CODE D'ENTRÉE",
     codeInstructions:
-      "Présente ce code au bar de départ pour récupérer ton bracelet, ton verre de bienvenue, et le code de la partie qui sera annoncé sur place. Garde ce mail (ou note le code), c'est ton seul justificatif d'inscription.",
+      "Présente ce code au bar de départ pour récupérer ton bracelet et ton verre de bienvenue. C'est aussi ton code pour rejoindre la partie dans l'app : ouvre PouleParty, entre le code de la partie annoncé sur place, puis ce code. Garde ce mail (ou note le code), c'est ton seul justificatif d'inscription.",
     support: "Une question&nbsp;? Écris à",
     reference: "Référence inscription",
     footer: "PouleParty — Bruxelles 🇧🇪",
@@ -68,7 +68,7 @@ const STRINGS: Record<Locale, EmailStrings> = {
       `Payment confirmed. Your team <strong>"${escapeHtml(teamName)}"</strong> (${teamSize} players) is officially signed up for ${dDay}. See you at the start bar in Ixelles at 8:30 PM. Get those sneakers ready 🏃`,
     codeLabel: "YOUR ENTRY CODE",
     codeInstructions:
-      "Show this code at the start bar to pick up your wristband, welcome drink, and the game code that will be announced on site. Keep this email (or note the code down). It is your only proof of registration.",
+      "Show this code at the start bar to pick up your wristband and welcome drink. It is also your code to join the game in the app: open PouleParty, enter the game code announced on site, then this code. Keep this email (or note the code down). It is your only proof of registration.",
     support: "Anything wrong? Email",
     reference: "Registration reference",
     footer: "PouleParty — Brussels 🇧🇪",
@@ -82,7 +82,7 @@ const STRINGS: Record<Locale, EmailStrings> = {
       `Betaling bevestigd. Je team <strong>"${escapeHtml(teamName)}"</strong> (${teamSize} spelers) staat officieel ingeschreven voor ${dDay}. Afspraak aan de startbar in Elsene om 20u30. Haal die loopschoenen maar boven 🏃`,
     codeLabel: "JE TOEGANGSCODE",
     codeInstructions:
-      "Toon deze code aan de startbar om je polsbandje, welkomstdrankje en de spelcode op te halen die ter plaatse wordt aangekondigd. Bewaar deze e-mail (of noteer de code). Het is je enige bewijs van inschrijving.",
+      "Toon deze code aan de startbar om je polsbandje en welkomstdrankje op te halen. Het is ook je code om mee te doen in de app: open PouleParty, voer de spelcode in die ter plaatse wordt aangekondigd, en dan deze code. Bewaar deze e-mail (of noteer de code). Het is je enige bewijs van inschrijving.",
     support: "Een probleem? Mail naar",
     reference: "Inschrijvingsreferentie",
     footer: "PouleParty — Brussel 🇧🇪",

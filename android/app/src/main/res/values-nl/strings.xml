@@ -327,6 +327,13 @@
     <string name="join_as_hunter">Word een Jager</string>
     <string name="join_as_game_master">Word GameMaster 🦅</string>
     <string name="gamemaster_join_title">GameMaster 🦅</string>
+    <!-- PP-52: inschrijvingscode betaald evenement -->
+    <string name="validation_code_title">Valideer je ticket</string>
+    <string name="validation_code_hint">Dit spel maakt deel uit van een evenement met inschrijving. Voer de code uit je inschrijvingsmail in om je plek te bevestigen.</string>
+    <string name="validation_code_label">Inschrijvingscode</string>
+    <string name="validation_code_submit">Bevestigen</string>
+    <string name="validation_code_invalid">We vonden geen inschrijving voor deze code. Controleer de e-mail die we je stuurden.</string>
+    <string name="validation_code_already_used">Deze code is al gebruikt om mee te doen.</string>
     <string name="gamemaster_password_hint">Code van 4 cijfers</string>
 
     <!-- CRIT-8 (audit 2026-05-17) -->

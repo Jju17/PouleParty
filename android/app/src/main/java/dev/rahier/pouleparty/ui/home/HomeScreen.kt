@@ -370,6 +370,8 @@ fun HomeScreen(
             onJoinAsGameMasterTapped = { viewModel.onIntent(HomeIntent.JoinAsGameMasterTapped) },
             onGameMasterPasswordChanged = { viewModel.onIntent(HomeIntent.GameMasterPasswordChanged(it)) },
             onSubmitGameMasterPasswordTapped = { viewModel.onIntent(HomeIntent.SubmitGameMasterPasswordTapped) },
+            onValidationCodeChanged = { viewModel.onIntent(HomeIntent.ValidationCodeChanged(it)) },
+            onSubmitValidationCodeTapped = { viewModel.onIntent(HomeIntent.SubmitValidationCodeTapped) },
         )
     }
 

@@ -112,6 +112,9 @@ struct ApiClient {
     /// caller-is-creator-or-GM guard server-side; the client also
     /// pre-checks for fast feedback.
     var designateChicken: (_ gameId: String, _ newChickenUid: String) async throws -> Void
+    /// PP-52: validates + single-use-claims a paid-event registration code.
+    /// Called from JoinFlow only when the resolved game has a `registrationBatchId`.
+    var validateRegistrationCode: (_ batchId: String, _ code: String) async throws -> ValidationCodeResult
     // MARK: - Zone configuration (PP-69)
     /// Fetches the server-computed zone configuration for the wizard
     /// recap step (PP-13 / PP-14 Phase 2). The Cloud Function is the
@@ -150,6 +153,14 @@ struct JoinAsGameMasterResult: Equatable {
     let success: Bool
     let attemptsRemaining: Int
     let lockedUntilMs: Int?
+}
+
+/// PP-52: outcome of `validateRegistrationCode`. Mirrors the server-side
+/// `{ status }` discriminated result and the Android `ValidationCodeResult`.
+enum ValidationCodeResult: Equatable {
+    case valid
+    case invalid
+    case alreadyUsed
 }
 
 // MARK: - PP-69 Zone configuration callable types
@@ -298,6 +309,7 @@ extension ApiClient: TestDependencyKey {
         clearGameMasterPassword: { _ in },
         joinAsGameMaster: { _, _ in JoinAsGameMasterResult(success: true, attemptsRemaining: 5, lockedUntilMs: nil) },
         designateChicken: { _, _ in },
+        validateRegistrationCode: { _, _ in .valid },
         computeZoneConfiguration: { _ in
             ComputeZoneConfigurationOutput(
                 initialRadius: 1000,
@@ -1107,6 +1119,18 @@ extension ApiClient: DependencyKey {
                     "hunterIds": hunterIds,
                 ], forDocument: ref)
                 return nil
+            }
+        },
+        validateRegistrationCode: { batchId, code in
+            let functions = Functions.functions(region: "europe-west1")
+            let result = try await functions
+                .httpsCallable("validateRegistrationCode")
+                .call(["batchId": batchId, "code": code])
+            let dict = result.data as? [String: Any] ?? [:]
+            switch dict["status"] as? String {
+            case "valid": return .valid
+            case "alreadyUsed": return .alreadyUsed
+            default: return .invalid
             }
         },
         computeZoneConfiguration: { input in

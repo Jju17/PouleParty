@@ -331,6 +331,13 @@
     <string name="join_as_hunter">Rejoindre comme Chasseur</string>
     <string name="join_as_game_master">Rejoindre comme GameMaster 🦅</string>
     <string name="gamemaster_join_title">GameMaster 🦅</string>
+    <!-- PP-52: code d\'inscription événement payant -->
+    <string name="validation_code_title">Valide ton billet</string>
+    <string name="validation_code_hint">Cette partie fait partie d\'un événement sur inscription. Entre le code reçu dans ton email d\'inscription pour confirmer ta place.</string>
+    <string name="validation_code_label">Code d\'inscription</string>
+    <string name="validation_code_submit">Confirmer</string>
+    <string name="validation_code_invalid">Aucune inscription ne correspond à ce code. Vérifie l\'email qu\'on t\'a envoyé.</string>
+    <string name="validation_code_already_used">Ce code a déjà été utilisé pour rejoindre.</string>
     <string name="gamemaster_password_hint">Code à 4 chiffres</string>
 
     <!-- CRIT-8 (audit 2026-05-17) -->

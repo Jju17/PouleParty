@@ -28,15 +28,17 @@ export {
 // it client-side.
 export { computeZoneConfiguration } from "./zoneCalculation";
 
-// Re-export the PP-52 event registration handlers (Stripe-backed web
-// inscription flow). The form posts to `createPendingRegistration`;
-// Stripe pings `confirmRegistrationPayment` once the checkout
-// session completes. The handlers are entirely web-facing: the
-// mobile binaries no longer call any registration callable
-// (compliance with Apple 3.1.1 — see RELEASE_NOTES 1.13.1).
+// Re-export the PP-52 event registration handlers. `createPendingRegistration`
+// + `confirmRegistrationPayment` are the web-facing Stripe pipeline (the form
+// posts to the first, Stripe pings the second on checkout completion).
+// `validateRegistrationCode` is the mobile JoinFlow gate: when a hunter joins a
+// game whose `registrationBatchId` is set, the client submits the unique code
+// from the registration email and this callable validates + single-use-claims
+// it server-side (manual entry, no deeplink).
 export {
   createPendingRegistration,
   confirmRegistrationPayment,
+  validateRegistrationCode,
 } from "./registrations";
 
 // AND-H6 (store-audit 2026-05-18): self-service account-deletion request

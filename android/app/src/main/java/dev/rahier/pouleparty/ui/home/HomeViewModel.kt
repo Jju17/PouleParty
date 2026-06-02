@@ -48,6 +48,9 @@ data class HomeUiState(
     /** PP-88: 4-digit buffer + last error from joinAsGameMaster. */
     val gameMasterPasswordInput: String = "",
     val gameMasterPasswordError: String? = null,
+    /** PP-52: registration-code buffer + last error for paid-event join gate. */
+    val validationCodeInput: String = "",
+    val validationCodeError: String? = null,
 ) {
     val isCodeValid: Boolean
         get() {
@@ -100,6 +103,8 @@ class HomeViewModel @Inject constructor(
             HomeIntent.ActiveGameDismissed -> dismissActiveGame()
             HomeIntent.RejoinActiveGameTapped -> rejoinActiveGame()
             HomeIntent.JoinAsHunterTapped -> onJoinAsHunterTapped()
+            is HomeIntent.ValidationCodeChanged -> onValidationCodeChanged(intent.code)
+            HomeIntent.SubmitValidationCodeTapped -> onSubmitValidationCodeTapped()
             HomeIntent.SubmitJoinTapped -> onSubmitJoinTapped()
             HomeIntent.RefreshActiveGame -> checkForActiveGame()
             HomeIntent.AdminCodeDismissed -> _uiState.update { it.copy(isShowingAdminCodeDialog = false, adminCodeInput = "") }
@@ -478,7 +483,72 @@ class HomeViewModel @Inject constructor(
     private fun onJoinAsHunterTapped() {
         val step = _uiState.value.joinStep
         if (step !is JoinFlowStep.CodeValidated) return
-        _uiState.update { it.copy(joinStep = JoinFlowStep.JoiningWithTeamName(step.game)) }
+        // PP-52: a game linked to a paid registration batch requires the unique
+        // registration code (validated server-side) before the teamName step.
+        // Free games (registrationBatchId == null) go straight to teamName.
+        val next = if (step.game.registrationBatchId != null) {
+            JoinFlowStep.ValidationCodeEntry(step.game)
+        } else {
+            JoinFlowStep.JoiningWithTeamName(step.game)
+        }
+        _uiState.update {
+            it.copy(joinStep = next, validationCodeInput = "", validationCodeError = null)
+        }
+    }
+
+    private fun onValidationCodeChanged(code: String) {
+        // Same alphabet as the email code (alphanum, no O/0/1/I). Uppercase to
+        // match the server-side normalization; clear any prior error on edit.
+        _uiState.update {
+            it.copy(validationCodeInput = code.trim().uppercase(), validationCodeError = null)
+        }
+    }
+
+    /**
+     * PP-52: validates the registration code server-side and single-use-claims
+     * it. `valid` → advance to the teamName step; `invalid` / `alreadyUsed` →
+     * inline error, stay on the step. Network failure → NetworkError.
+     */
+    private fun onSubmitValidationCodeTapped() {
+        val step = _uiState.value.joinStep
+        if (step !is JoinFlowStep.ValidationCodeEntry) return
+        val batchId = step.game.registrationBatchId ?: return
+        val code = _uiState.value.validationCodeInput.trim()
+        if (code.isEmpty()) return
+        _uiState.update {
+            it.copy(
+                joinStep = JoinFlowStep.SubmittingValidationCode(step.game),
+                validationCodeError = null,
+            )
+        }
+        viewModelScope.launch {
+            when (firestoreRepository.validateRegistrationCode(batchId, code)) {
+                FirestoreRepository.ValidationCodeResult.VALID -> {
+                    _uiState.update {
+                        it.copy(joinStep = JoinFlowStep.JoiningWithTeamName(step.game))
+                    }
+                }
+                FirestoreRepository.ValidationCodeResult.INVALID -> {
+                    _uiState.update {
+                        it.copy(
+                            joinStep = JoinFlowStep.ValidationCodeEntry(step.game),
+                            validationCodeError = appContext.getString(dev.rahier.pouleparty.R.string.validation_code_invalid),
+                        )
+                    }
+                }
+                FirestoreRepository.ValidationCodeResult.ALREADY_USED -> {
+                    _uiState.update {
+                        it.copy(
+                            joinStep = JoinFlowStep.ValidationCodeEntry(step.game),
+                            validationCodeError = appContext.getString(dev.rahier.pouleparty.R.string.validation_code_already_used),
+                        )
+                    }
+                }
+                FirestoreRepository.ValidationCodeResult.ERROR -> {
+                    _uiState.update { it.copy(joinStep = JoinFlowStep.NetworkError) }
+                }
+            }
+        }
     }
 
     /**
@@ -507,7 +577,9 @@ class HomeViewModel @Inject constructor(
                         isShowingJoinSheet = false,
                         gameCode = "",
                         teamName = "",
-                        joinStep = JoinFlowStep.EnteringCode
+                        joinStep = JoinFlowStep.EnteringCode,
+                        validationCodeInput = "",
+                        validationCodeError = null,
                     )
                 }
                 val effect = when (game.gameStatusEnum) {

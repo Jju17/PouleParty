@@ -26,6 +26,10 @@ sealed interface HomeIntent {
     object RejoinActiveGameTapped : HomeIntent
     /** PP-90: on the CodeValidated step, user taps "Rejoindre la partie". */
     object JoinAsHunterTapped : HomeIntent
+    /** PP-52: user typed into the registration-code field (paid-event games). */
+    data class ValidationCodeChanged(val code: String) : HomeIntent
+    /** PP-52: user taps Submit on the registration-code entry step. */
+    object SubmitValidationCodeTapped : HomeIntent
     /** PP-90: user taps Submit on the teamName entry step. */
     object SubmitJoinTapped : HomeIntent
     object RefreshActiveGame : HomeIntent
