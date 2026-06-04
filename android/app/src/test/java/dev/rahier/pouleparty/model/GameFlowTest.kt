@@ -29,7 +29,7 @@ class GameFlowTest {
         assertEquals(GameStatus.IN_PROGRESS, startedGame.gameStatusEnum)
 
         // 3. Hunter joins
-        val withHunter = startedGame.copy(hunterIds = listOf("hunter-1"))
+        val withHunter = startedGame.copy(roles = startedGame.roles + ("hunter-1" to "hunter"))
         assertEquals(1, withHunter.hunterIds.size)
 
         // 4. Hunter finds chicken, adds winner

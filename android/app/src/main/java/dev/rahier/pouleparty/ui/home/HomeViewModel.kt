@@ -10,7 +10,6 @@ import dev.rahier.pouleparty.data.FirestoreRepository
 import dev.rahier.pouleparty.data.LocationRepository
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameStatus
-import dev.rahier.pouleparty.model.Registration
 import dev.rahier.pouleparty.ui.gamelogic.PlayerRole
 import dev.rahier.pouleparty.util.getTrimmedString
 import kotlinx.coroutines.channels.Channel
@@ -569,8 +568,10 @@ class HomeViewModel @Inject constructor(
         _uiState.update { it.copy(joinStep = JoinFlowStep.SubmittingJoin(game)) }
         viewModelScope.launch {
             try {
-                val registration = Registration(userId = userId, teamName = teamName)
-                firestoreRepository.createRegistration(game.id, registration)
+                // PP-107: `joinGame` writes the hunter role + the
+                // `/players/{uid}` team-name doc + the membership index
+                // server-side, in one atomic call.
+                firestoreRepository.joinGame(game.id, teamName)
                 analyticsRepository.registrationCompleted()
                 _uiState.update {
                     it.copy(

@@ -78,8 +78,7 @@ async function main() {
   console.log(`status: ${data.status}`);
   console.log(`manualStartEnabled: ${data.manualStartEnabled}`);
   console.log(`creatorId: ${data.creatorId}`);
-  console.log(`gameMasterIds: ${JSON.stringify(data.gameMasterIds)}`);
-  console.log(`hunterIds.length: ${(data.hunterIds || []).length}`);
+  console.log(`roles: ${JSON.stringify(data.roles)}`);
   console.log(`timing.start: ${data.timing?.start?.toDate?.()?.toISOString() ?? "?"}`);
   console.log(`timing.end: ${data.timing?.end?.toDate?.()?.toISOString() ?? "?"}`);
   console.log(`timing.actualStart: ${data.timing?.actualStart?.toDate?.()?.toISOString() ?? "(null)"}`);

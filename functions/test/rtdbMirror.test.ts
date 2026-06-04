@@ -2,41 +2,45 @@ import { describe, it, expect } from "vitest";
 import { extractGameMeta } from "../src/rtdbMirror";
 
 describe("extractGameMeta", () => {
-  it("converts hunterIds / gameMasterIds arrays to {uid:true} maps", () => {
+  it("copies the roles map verbatim", () => {
     const meta = extractGameMeta({
       creatorId: "c1",
-      chickenId: "ch1",
       gameMode: "followTheChicken",
       status: "inProgress",
-      hunterIds: ["h1", "h2"],
-      gameMasterIds: ["g1"],
+      roles: { ch1: "chicken", h1: "hunter", h2: "hunter", g1: "gameMaster" },
     });
     expect(meta).toEqual({
       creatorId: "c1",
-      chickenId: "ch1",
       gameMode: "followTheChicken",
       status: "inProgress",
-      hunterIds: { h1: true, h2: true },
-      gameMasterIds: { g1: true },
+      roles: { ch1: "chicken", h1: "hunter", h2: "hunter", g1: "gameMaster" },
     });
   });
 
   it("defaults missing/invalid fields safely", () => {
     expect(extractGameMeta(undefined)).toEqual({
       creatorId: "",
-      chickenId: "",
       gameMode: "",
       status: "",
-      hunterIds: {},
-      gameMasterIds: {},
+      roles: {},
     });
   });
 
-  it("ignores non-string and empty ids in the arrays", () => {
+  it("drops invalid role values and non-string/empty keys", () => {
     const meta = extractGameMeta({
-      hunterIds: ["h1", 42, "", null, "h2"],
+      roles: {
+        h1: "hunter",
+        bad: "spectator",
+        "": "hunter",
+        h2: 42,
+        h3: "gameMaster",
+      },
     });
-    expect(meta.hunterIds).toEqual({ h1: true, h2: true });
-    expect(meta.gameMasterIds).toEqual({});
+    expect(meta.roles).toEqual({ h1: "hunter", h3: "gameMaster" });
+  });
+
+  it("ignores a roles value that is an array", () => {
+    const meta = extractGameMeta({ roles: ["h1", "h2"] });
+    expect(meta.roles).toEqual({});
   });
 });

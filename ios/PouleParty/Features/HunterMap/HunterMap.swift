@@ -179,6 +179,10 @@ struct HunterMapFeature {
             /// expired, all hunters found). Parent navigates to the
             /// Victory / leaderboard screen.
             case gameEnded(Game)
+            /// PP-107: a GameMaster re-designated this hunter as the chicken
+            /// mid-`waiting`. Parent swaps the root to the chicken map so the
+            /// player isn't stranded on the wrong screen.
+            case becameChicken(Game)
         }
     }
 
@@ -480,6 +484,8 @@ struct HunterMapFeature {
                 return .none
             case .delegate(.gameEnded):
                 return .none
+            case .delegate(.becameChicken):
+                return .none
             case .internal(.winnerRegistered):
                 state.isSubmittingWinner = false
                 let endState = PoulePartyAttributes.ContentState(
@@ -585,21 +591,16 @@ struct HunterMapFeature {
                     .run { _ in
                         await liveActivityClient.start(attributes, initialLAState)
                     },
-                    .run { [analyticsClient, hunterName = state.hunterName] send in
+                    .run { [analyticsClient, hunterName = state.hunterName] _ in
+                        // PP-107: `joinGame` writes the hunter role + the
+                        // `/players/{uid}` team-name doc + the membership index
+                        // server-side, in one idempotent call. Re-running it on
+                        // "Reprendre la partie" (or an old pre-PP-90 game) is the
+                        // safety net that keeps the GameMaster marker labeled.
+                        let teamName = hunterName.trimmingCharacters(in: .whitespacesAndNewlines)
                         do {
-                            try await apiClient.registerHunter(gameId, hunterId)
+                            try await apiClient.joinGame(gameId, teamName)
                             analyticsClient.gameJoined(gameMode: gameMode, gameCode: gameCode)
-                            // Backfill the `registrations` doc so the GameMaster
-                            // map can label the marker with the team name even
-                            // when the hunter came in via "Reprendre la partie"
-                            // or rejoined an old game that pre-dates PP-90.
-                            // The JoinFlow already creates this doc on first
-                            // join — this is the idempotent safety net.
-                            let teamName = hunterName.trimmingCharacters(in: .whitespacesAndNewlines)
-                            if !teamName.isEmpty {
-                                let registration = Registration(userId: hunterId, teamName: teamName)
-                                try? await apiClient.createRegistration(gameId, registration)
-                            }
                         } catch {
                             logger.error("Failed to register hunter: \(error.localizedDescription)")
                         }
@@ -751,6 +752,13 @@ struct HunterMapFeature {
                 state.hasChallenges = hasChallenges
                 return .none
             case let .internal(.gameConfigUpdated(game)):
+                // PP-107: a GameMaster may have re-designated this hunter as
+                // the chicken while the game is `waiting`. Re-route to the
+                // chicken map so the player isn't stranded on the hunter map.
+                if game.isChicken(state.hunterId) {
+                    return .send(.delegate(.becameChicken(game)))
+                }
+
                 // React to game cancelled/ended by chicken or Cloud Function.
                 // The hunter stays on the map with `isGameOver = true` so
                 // the "Game ended" banner appears; tapping the banner

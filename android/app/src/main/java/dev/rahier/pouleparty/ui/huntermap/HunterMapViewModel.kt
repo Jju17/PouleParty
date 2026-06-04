@@ -240,23 +240,13 @@ class HunterMapViewModel @Inject constructor(
             }
 
             try {
-                firestoreRepository.registerHunter(gameId, hunterId)
+                // PP-107: `joinGame` writes the hunter role + the
+                // `/players/{uid}` team-name doc + the membership index
+                // server-side, in one idempotent call. Re-running it on
+                // "Reprendre la partie" (or an old game) is the safety net
+                // that keeps the GameMaster marker labeled.
+                firestoreRepository.joinGame(gameId, hunterName.trim())
                 analyticsRepository.gameJoined(gameMode = game.gameMode, gameCode = game.gameCode)
-                // Backfill the `registrations` doc so the GameMaster map
-                // can label the marker with the team name even when the
-                // hunter came in via "Reprendre la partie" or rejoined an
-                // old game that pre-dates PP-90. The JoinFlow already
-                // creates this doc on first join — this is the
-                // idempotent safety net.
-                val teamName = hunterName.trim()
-                if (teamName.isNotEmpty()) {
-                    runCatching {
-                        firestoreRepository.createRegistration(
-                            gameId,
-                            dev.rahier.pouleparty.model.Registration(userId = hunterId, teamName = teamName),
-                        )
-                    }
-                }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to register hunter $hunterId for game $gameId", e)
                 return@launch
@@ -393,6 +383,17 @@ class HunterMapViewModel @Inject constructor(
     private suspend fun streamGameConfig(game: Game) {
         firestoreRepository.gameConfigFlow(gameId).collect { updatedGame ->
             if (updatedGame != null) {
+                // PP-107: a GameMaster may have re-designated this hunter as
+                // the chicken while the game is `waiting`. Re-route to the
+                // chicken map so the player isn't stranded on the hunter map.
+                if (hunterId.isNotEmpty() && updatedGame.isChicken(hunterId)) {
+                    cancelStreams()
+                    viewModelScope.launch {
+                        _effects.send(HunterMapEffect.NavigateToChickenMap(gameId))
+                    }
+                    return@collect
+                }
+
                 // React to game cancelled/ended by chicken or Cloud Function.
                 // The hunter stays on the map with `isGameOver = true` so
                 // the "Game ended" banner appears; tapping the banner

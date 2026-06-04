@@ -2,6 +2,7 @@ import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/v2";
 import { timingSafeEqual } from "crypto";
+import { isChicken, isHunter } from "./roles";
 
 const REGION = "europe-west1";
 
@@ -14,7 +15,7 @@ const REGION = "europe-west1";
 // chicken. We now:
 //   1) Lock the `winners` field — clients can no longer write it directly.
 //   2) Require every winner submission to flow through this callable, which
-//      verifies the caller is in hunterIds AND that the foundCode they
+//      verifies the caller is a hunter AND that the foundCode they
 //      provided matches the game's foundCode (constant-time compare).
 //   3) Use a Firestore transaction so the read/compare/append is atomic
 //      and idempotent — re-submitting the same hunterId twice is a no-op.
@@ -83,8 +84,7 @@ export const submitFoundCode = onCall<
     if (status !== "inProgress") {
       return { success: false, reason: "gameNotInProgress" };
     }
-    const hunterIds = (data.hunterIds as string[] | undefined) ?? [];
-    if (!hunterIds.includes(uid)) {
+    if (!isHunter(data, uid)) {
       return { success: false, reason: "notAHunter" };
     }
     // CRIT-2 (audit 2026-05-17): read foundCode from the admin-only
@@ -118,7 +118,7 @@ export const submitFoundCode = onCall<
 
 // CRIT-2 (audit 2026-05-17) — chicken fetches the foundCode via this
 // callable instead of reading it off the public Game doc. The CF
-// returns the code only if the caller is the game's chickenId; the
+// returns the code only if the caller is the game's chicken; the
 // foundCode itself lives in /private/security (admin-SDK only).
 interface GetFoundCodeInput {
   gameId?: string;
@@ -136,7 +136,7 @@ export const getFoundCode = onCall<
   const snap = await ref.get();
   if (!snap.exists) throw new HttpsError("not-found", "Game not found");
   const data = snap.data() ?? {};
-  if (data.chickenId !== uid) {
+  if (!isChicken(data, uid)) {
     throw new HttpsError(
       "permission-denied",
       "Only the chicken can read the found code"

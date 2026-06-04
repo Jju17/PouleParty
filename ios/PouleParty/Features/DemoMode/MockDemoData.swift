@@ -21,11 +21,12 @@ enum MockDemoData {
         game.gameMode = .followTheChicken
         game.chickenCanSeeHunters = true
         game.foundCode = "0000"
-        game.hunterIds = hunterIds
-        game.gameMasterIds = [gameMasterUid]
+        // PP-107: membership is the `roles` map (chicken + hunters + GM).
+        var roles: [String: String] = [chickenUid: "chicken", gameMasterUid: "gameMaster"]
+        for hid in hunterIds { roles[hid] = "hunter" }
+        game.roles = roles
         game.status = .inProgress
         game.creatorId = chickenUid
-        game.chickenId = chickenUid
         game.winners = []
         game.timing = Game.Timing(
             start: Timestamp(date: .now.addingTimeInterval(-300)),

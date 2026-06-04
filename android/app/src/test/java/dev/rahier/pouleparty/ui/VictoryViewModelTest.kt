@@ -156,7 +156,7 @@ class VictoryViewModelTest {
         val winner = Winner(hunterId = "h1", hunterName = "Alice", timestamp = Timestamp.now())
         val game = Game(
             id = "test",
-            hunterIds = listOf("h1", "h2", "h3"),
+            roles = mapOf("h1" to "hunter", "h2" to "hunter", "h3" to "hunter"),
             winners = listOf(winner)
         )
         val state = VictoryUiState(game = game)
@@ -173,7 +173,7 @@ class VictoryViewModelTest {
         )
         val game = Game(
             id = "test",
-            hunterIds = listOf("h1", "h2"),
+            roles = mapOf("h1" to "hunter", "h2" to "hunter"),
             winners = winners
         )
         val state = VictoryUiState(game = game)

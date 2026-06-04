@@ -6,6 +6,7 @@ import com.google.firebase.auth.FirebaseUser
 import dev.rahier.pouleparty.AppConstants
 import dev.rahier.pouleparty.data.FirestoreRepository
 import dev.rahier.pouleparty.data.LocationRepository
+import dev.rahier.pouleparty.ui.huntermap.HunterMapEffect
 import dev.rahier.pouleparty.ui.huntermap.HunterMapIntent
 import dev.rahier.pouleparty.ui.huntermap.HunterMapViewModel
 import io.mockk.every
@@ -769,7 +770,7 @@ class HunterMapViewModelBehaviorTest {
             id = "test-id",
             gameMode = dev.rahier.pouleparty.model.GameMod.FOLLOW_THE_CHICKEN.firestoreValue,
             status = dev.rahier.pouleparty.model.GameStatus.IN_PROGRESS.firestoreValue,
-            hunterIds = listOf("hunter-123", "other-hunter"),
+            roles = mapOf("hunter-123" to "hunter", "other-hunter" to "hunter"),
             winners = winners,
             timing = dev.rahier.pouleparty.model.Timing(
                 start = com.google.firebase.Timestamp(java.util.Date(now - 3_600_000)),
@@ -800,6 +801,48 @@ class HunterMapViewModelBehaviorTest {
         vm.onIntent(HunterMapIntent.SubmitFoundCode)
         testDispatcher.scheduler.advanceUntilIdle()
         assertTrue("Personal win still navigates to Victory", vm.uiState.value.shouldNavigateToVictory)
+    }
+
+    /** PP-107: when a GameMaster re-designates this hunter as the chicken
+     *  mid-`waiting`, the live game-config emission must re-route to the
+     *  chicken map (mirrors iOS `becameChicken` delegate). */
+    @Test
+    fun `pp107 hunter whose uid becomes chicken re-routes to chicken map`() = kotlinx.coroutines.test.runTest(testDispatcher) {
+        val now = System.currentTimeMillis()
+        val baseGame = dev.rahier.pouleparty.model.Game(
+            id = "test-id",
+            gameMode = dev.rahier.pouleparty.model.GameMod.FOLLOW_THE_CHICKEN.firestoreValue,
+            status = dev.rahier.pouleparty.model.GameStatus.WAITING.firestoreValue,
+            creatorId = "creator-uid",
+            roles = mapOf(
+                "creator-uid" to "chicken",
+                "hunter-123" to "hunter",
+                "other-hunter" to "hunter",
+            ),
+            timing = dev.rahier.pouleparty.model.Timing(
+                start = com.google.firebase.Timestamp(java.util.Date(now + 3_600_000)),
+                end = com.google.firebase.Timestamp(java.util.Date(now + 7_200_000))
+            )
+        )
+        // GameMaster swap: this hunter (hunter-123) is now the chicken.
+        val swapped = baseGame.copy(
+            roles = mapOf(
+                "hunter-123" to "chicken",
+                "creator-uid" to "hunter",
+                "other-hunter" to "hunter",
+            )
+        )
+        io.mockk.coEvery { firestoreRepository.getConfig(any()) } returns baseGame
+        io.mockk.every { firestoreRepository.gameConfigFlow(any()) } returns
+            kotlinx.coroutines.flow.flowOf(swapped)
+
+        val vm = createViewModel(hunterId = "hunter-123")
+        val effect = vm.effects.first()
+        assertTrue(
+            "expected NavigateToChickenMap, got $effect",
+            effect is HunterMapEffect.NavigateToChickenMap &&
+                (effect as HunterMapEffect.NavigateToChickenMap).gameId == "test-id"
+        )
     }
 
     /** Scenario 6 (PP-2): the FOUND code stays active for the hunter

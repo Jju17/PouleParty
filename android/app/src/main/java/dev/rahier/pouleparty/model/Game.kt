@@ -88,18 +88,20 @@ data class Game(
     val gameMode: String = GameMod.STAY_IN_THE_ZONE.firestoreValue,
     val chickenCanSeeHunters: Boolean = true,
     val foundCode: String = "",
-    val hunterIds: List<String> = emptyList(),
-    val gameMasterIds: List<String> = emptyList(),
     val status: String = GameStatus.WAITING.firestoreValue,
     val winners: List<Winner> = emptyList(),
     val creatorId: String = "",
     /**
-     * The player who runs and hides. Set to `creatorId` at game creation,
-     * can be re-designated to any registered hunter by a GameMaster while
-     * `status == waiting` (PP-26). Distinct from `creatorId`, which stays
-     * the game's admin owner.
+     * PP-107: single source of truth for membership. Maps each
+     * participant's uid to their role (`"chicken"` | `"hunter"` |
+     * `"gameMaster"`). A uid has exactly one role, so a "ghost" (no role)
+     * or a double-role is impossible by construction. Written server-side
+     * only (the role callables via admin SDK); `creatorId` stays as
+     * ownership and also appears here with a role. Read through the
+     * derived `chickenId` / `hunterIds` / `gameMasterIds` accessors below
+     * — never mutate `roles` from a client.
      */
-    val chickenId: String = "",
+    val roles: Map<String, String> = emptyMap(),
     /**
      * True when the creator has enabled the GameMaster role and set a
      * password. The actual password lives in
@@ -141,16 +143,44 @@ data class Game(
      */
     val registrationBatchId: String? = null,
 ) {
-    // ── Chicken Role (PP-26) ───────────────────────────
+    // ── Roles (PP-107) ─────────────────────────────────
+    // `roles` is the stored single source of truth (uid -> role string).
+    // These derived accessors keep every read site working unchanged while
+    // the doc holds one clean map instead of three sprawled id fields.
+
+    /** The single chicken's uid, or "" when none is set yet. */
+    @get:Exclude
+    val chickenId: String
+        get() = roles.entries.firstOrNull { it.value == "chicken" }?.key ?: ""
+
+    /** All hunter uids. Order is not significant (derived from a map). */
+    @get:Exclude
+    val hunterIds: List<String>
+        get() = roles.filterValues { it == "hunter" }.keys.toList()
+
+    /** All GameMaster uids. */
+    @get:Exclude
+    val gameMasterIds: List<String>
+        get() = roles.filterValues { it == "gameMaster" }.keys.toList()
+
+    /** This user's role on the game, or null if they have none. */
+    @Exclude
+    fun role(userId: String): String? =
+        if (userId.isEmpty()) null else roles[userId]
 
     /**
      * True when [userId] is the player designated as the chicken
-     * (PP-26). Use this instead of `creatorId == userId` everywhere
-     * the question is "who runs and hides".
+     * (PP-26 / PP-107). Use this instead of `creatorId == userId`
+     * everywhere the question is "who runs and hides".
      */
     @Exclude
-    fun isChicken(userId: String): Boolean =
-        userId.isNotEmpty() && chickenId == userId
+    fun isChicken(userId: String): Boolean = role(userId) == "chicken"
+
+    @Exclude
+    fun isHunter(userId: String): Boolean = role(userId) == "hunter"
+
+    @Exclude
+    fun isGameMaster(userId: String): Boolean = role(userId) == "gameMaster"
 
     // ── Power-Up Active Effects ────────────────────────
 

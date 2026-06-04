@@ -2,6 +2,7 @@ import { getFirestore, Timestamp } from "firebase-admin/firestore";
 import { getFunctions } from "firebase-admin/functions";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/v2";
+import { isGameMaster } from "./roles";
 
 const REGION = "europe-west1";
 
@@ -269,8 +270,7 @@ export const launchGame = onCall<LaunchGameInput, Promise<LaunchGameResult>>(
     }
     const preData = preSnap.data() ?? {};
     const creatorId = (preData.creatorId as string | undefined) ?? "";
-    const gameMasterIds = (preData.gameMasterIds as string[] | undefined) ?? [];
-    if (uid !== creatorId && !gameMasterIds.includes(uid)) {
+    if (uid !== creatorId && !isGameMaster(preData, uid)) {
       throw new HttpsError(
         "permission-denied",
         "Only the chicken or a GameMaster can launch this game"

@@ -24,7 +24,7 @@ class AllHuntersFoundTest {
     fun `all hunters found when winners equals hunterIds`() {
         val game = Game(
             id = "test",
-            hunterIds = listOf("h1", "h2"),
+            roles = mapOf("h1" to "hunter", "h2" to "hunter"),
             winners = listOf(makeWinner("h1", "Alice"), makeWinner("h2", "Bob"))
         )
         assertTrue(game.hunterIds.isNotEmpty())
@@ -35,7 +35,7 @@ class AllHuntersFoundTest {
     fun `not all hunters found when winners less than hunterIds`() {
         val game = Game(
             id = "test",
-            hunterIds = listOf("h1", "h2", "h3"),
+            roles = mapOf("h1" to "hunter", "h2" to "hunter", "h3" to "hunter"),
             winners = listOf(makeWinner("h1", "Alice"))
         )
         assertFalse(game.winners.size >= game.hunterIds.size)
@@ -45,7 +45,7 @@ class AllHuntersFoundTest {
     fun `empty hunterIds prevents all-found detection`() {
         val game = Game(
             id = "test",
-            hunterIds = emptyList(),
+            roles = emptyMap(),
             winners = emptyList()
         )
         // Guard: hunterIds must not be empty
@@ -56,7 +56,7 @@ class AllHuntersFoundTest {
     fun `empty hunterIds with winners does not trigger all-found`() {
         val game = Game(
             id = "test",
-            hunterIds = emptyList(),
+            roles = emptyMap(),
             winners = listOf(makeWinner("h1", "Alice"))
         )
         // Guard prevents triggering when there are no registered hunters
@@ -68,7 +68,7 @@ class AllHuntersFoundTest {
         // Edge case: somehow more winners than hunters (e.g. data inconsistency)
         val game = Game(
             id = "test",
-            hunterIds = listOf("h1"),
+            roles = mapOf("h1" to "hunter"),
             winners = listOf(makeWinner("h1", "Alice"), makeWinner("h2", "Bob"))
         )
         assertTrue(game.winners.size >= game.hunterIds.size)
@@ -78,7 +78,7 @@ class AllHuntersFoundTest {
     fun `single hunter single winner triggers all-found`() {
         val game = Game(
             id = "test",
-            hunterIds = listOf("h1"),
+            roles = mapOf("h1" to "hunter"),
             winners = listOf(makeWinner("h1", "Alice"))
         )
         assertTrue(game.hunterIds.isNotEmpty() && game.winners.size >= game.hunterIds.size)
@@ -102,7 +102,7 @@ class AllHuntersFoundTest {
     fun `chicken state transitions to victory on all hunters found`() {
         val game = Game(
             id = "game-1",
-            hunterIds = listOf("h1", "h2"),
+            roles = mapOf("h1" to "hunter", "h2" to "hunter"),
             winners = listOf(makeWinner("h1", "Alice"), makeWinner("h2", "Bob"))
         )
         var state = ChickenMapUiState(game = game)
@@ -120,7 +120,7 @@ class AllHuntersFoundTest {
     fun `chicken does not navigate to victory when not all found`() {
         val game = Game(
             id = "game-1",
-            hunterIds = listOf("h1", "h2", "h3"),
+            roles = mapOf("h1" to "hunter", "h2" to "hunter", "h3" to "hunter"),
             winners = listOf(makeWinner("h1", "Alice"))
         )
         var state = ChickenMapUiState(game = game)
@@ -136,7 +136,7 @@ class AllHuntersFoundTest {
     fun `chicken guard prevents double navigation`() {
         val game = Game(
             id = "game-1",
-            hunterIds = listOf("h1"),
+            roles = mapOf("h1" to "hunter"),
             winners = listOf(makeWinner("h1", "Alice"))
         )
         val state = ChickenMapUiState(game = game, shouldNavigateToVictory = true)
@@ -160,7 +160,7 @@ class AllHuntersFoundTest {
     fun `hunter state transitions to victory on all hunters found`() {
         val game = Game(
             id = "game-1",
-            hunterIds = listOf("h1", "h2"),
+            roles = mapOf("h1" to "hunter", "h2" to "hunter"),
             winners = listOf(makeWinner("h1", "Alice"), makeWinner("h2", "Bob"))
         )
         var state = HunterMapUiState(game = game)
@@ -178,7 +178,7 @@ class AllHuntersFoundTest {
     fun `hunter guard prevents double navigation`() {
         val game = Game(
             id = "game-1",
-            hunterIds = listOf("h1"),
+            roles = mapOf("h1" to "hunter"),
             winners = listOf(makeWinner("h1", "Alice"))
         )
         val state = HunterMapUiState(game = game, shouldNavigateToVictory = true)
@@ -196,7 +196,7 @@ class AllHuntersFoundTest {
         var game = Game(
             id = "test",
             status = GameStatus.IN_PROGRESS.firestoreValue,
-            hunterIds = listOf("h1", "h2")
+            roles = mapOf("h1" to "hunter", "h2" to "hunter")
         )
         assertEquals(GameStatus.IN_PROGRESS, game.gameStatusEnum)
 
@@ -213,7 +213,7 @@ class AllHuntersFoundTest {
     fun `large game with many hunters all finding chicken`() {
         val hunterIds = (1..20).map { "h$it" }
         val winners = hunterIds.mapIndexed { i, id -> makeWinner(id, "Hunter $i") }
-        val game = Game(id = "test", hunterIds = hunterIds, winners = winners)
+        val game = Game(id = "test", roles = hunterIds.associateWith { "hunter" }, winners = winners)
 
         assertTrue(game.hunterIds.isNotEmpty())
         assertTrue(game.winners.size >= game.hunterIds.size)

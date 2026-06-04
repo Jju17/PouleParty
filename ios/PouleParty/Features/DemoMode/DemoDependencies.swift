@@ -17,7 +17,8 @@ extension ApiClient {
             getConfig: { _ in MockDemoData.liveGame },
             fetchZoneSchedule: { _ in [] },
             findGameByCode: { _ in MockDemoData.liveGame },
-            registerHunter: { _, _ in },
+            joinGame: { _, _ in },
+            leaveGame: { _ in },
             updateGameStatus: { _, _ in },
             chickenLocationStream: { _ in
                 demoStream { continuation in
@@ -50,7 +51,6 @@ extension ApiClient {
             findRegistration: { _, userId in
                 MockDemoData.registrations.first { $0.userId == userId }
             },
-            createRegistration: { _, _ in },
             fetchAllRegistrations: { _ in MockDemoData.registrations },
             registrationsStream: { _ in
                 demoStream { continuation in

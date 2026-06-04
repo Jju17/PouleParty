@@ -69,6 +69,7 @@ import dev.rahier.pouleparty.ui.theme.*
 fun HunterMapScreen(
     onGoToMenu: () -> Unit,
     onVictory: (gameId: String, hunterName: String, hunterId: String) -> Unit = { _, _, _ -> },
+    onBecameChicken: (gameId: String) -> Unit = {},
     viewModel: HunterMapViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -88,6 +89,8 @@ fun HunterMapScreen(
                     viewModel.onIntent(HunterMapIntent.VictoryNavigated)
                     onVictory(viewModel.gameId, viewModel.hunterName, viewModel.hunterId)
                 }
+                is HunterMapEffect.NavigateToChickenMap ->
+                    onBecameChicken(effect.gameId)
             }
         }
     }

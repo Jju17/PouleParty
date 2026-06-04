@@ -77,6 +77,10 @@ export { debugAdvanceGame } from "./debugAdvanceGame";
 // can authorize) and tears the RTDB subtree down when a game ends/deletes.
 export { mirrorGameMetaToRtdb } from "./rtdbMirror";
 
+// Roles model: server-authoritative game membership callables.
+export { joinGame, designateChicken, leaveGame } from "./roles";
+import { chickenIdOf, huntersOf } from "./roles";
+
 // Use Application Default Credentials so each deployed function
 // writes to the project it was deployed to. The previous hardcoded
 // `service-account.json` was always pointing at prod, which made
@@ -268,20 +272,21 @@ export const sendGameNotification = onTaskDispatched(
     let userIds: string[];
 
     switch (notificationType) {
-      case "chicken_start":
+      case "chicken_start": {
         // Notifies the player currently designated as the chicken
         // (PP-26 — may be a hunter the GM picked, not the creator).
-        userIds = game.chickenId ? [game.chickenId as string] : [];
+        const c = chickenIdOf(game);
+        userIds = c ? [c] : [];
         break;
+      }
       case "hunter_start":
-        userIds = (game.hunterIds as string[]) ?? [];
+        userIds = huntersOf(game);
         break;
-      case "zone_shrink":
-        userIds = [
-          ...(game.chickenId ? [game.chickenId as string] : []),
-          ...((game.hunterIds as string[]) ?? []),
-        ];
+      case "zone_shrink": {
+        const c = chickenIdOf(game);
+        userIds = [...(c ? [c] : []), ...huntersOf(game)];
         break;
+      }
     }
 
     console.log(
@@ -1079,7 +1084,7 @@ export const onGameUpdated = onDocumentUpdated(
     // ── Dedup by hunterId ──────────────────────────────────────────
     // Firestore's `arrayUnion` does NOT dedupe objects — two writes
     // from the same hunter with different `timestamp` values produce
-    // two entries. That inflates `winners.length` past `hunterIds.length`
+    // two entries. That inflates `winners.length` past the hunter count
     // and would end the game early. The clients already debounce at
     // the UI layer; this is the server-side safety net.
     const seenHunterIds = new Set<string>();
@@ -1122,14 +1127,15 @@ export const onGameUpdated = onDocumentUpdated(
 
     const newWinner = newWinners[newWinners.length - 1];
     const hunterName = (newWinner.hunterName ?? "A hunter").slice(0, 50);
-    const totalHunters = ((after.hunterIds as string[]) ?? []).length;
+    const totalHunters = huntersOf(after).length;
     const remainingCount = Math.max(0, totalHunters - winnersAfter.length);
 
     // Notify the chicken + all hunters when a hunter finds the chicken
     // (PP-26: the chicken may be any designated player, not the creator).
+    const afterChicken = chickenIdOf(after);
     const allUserIds = [
-      ...(after.chickenId ? [after.chickenId as string] : []),
-      ...((after.hunterIds as string[]) ?? []),
+      ...(afterChicken ? [afterChicken] : []),
+      ...huntersOf(after),
     ];
     const tokens = await getTokensForUserIds(allUserIds);
 

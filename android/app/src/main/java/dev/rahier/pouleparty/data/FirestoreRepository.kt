@@ -7,7 +7,6 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.GeoPoint
 import com.google.firebase.firestore.Query
-import com.google.firebase.firestore.FieldValue
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
@@ -29,7 +28,10 @@ import dev.rahier.pouleparty.powerups.model.PowerUp
 import dev.rahier.pouleparty.model.Registration
 import dev.rahier.pouleparty.model.Winner
 import dev.rahier.pouleparty.ui.gamelogic.PlayerRole
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -178,49 +180,46 @@ class FirestoreRepository @Inject constructor(
 
     suspend fun findActiveGame(userId: String): ActiveGameResult? {
         if (userId.isEmpty()) return null
-        val activeStatuses = listOf(
-            GameStatus.WAITING.firestoreValue,
-            GameStatus.IN_PROGRESS.firestoreValue
-        )
         try {
             val candidates = mutableListOf<Pair<Game, dev.rahier.pouleparty.ui.gamelogic.PlayerRole>>()
 
-            // Check if user is a hunter in active games
-            val hunterSnapshot = firestore.collection(AppConstants.COLLECTION_GAMES)
-                .whereArrayContains("hunterIds", userId)
-                .whereIn("status", activeStatuses)
+            // PP-107: membership now lives in `/users/{uid}/memberships`
+            // (one doc per game the user belongs to, `{ gameId, role }`),
+            // written server-side by the role callables. The old three
+            // parallel array-contains queries on `hunterIds` / `chickenId` /
+            // `gameMasterIds` are gone — those fields no longer exist on the
+            // game doc.
+            val membershipSnapshot = firestore.collection(AppConstants.COLLECTION_USERS)
+                .document(userId)
+                .collection(AppConstants.SUBCOLLECTION_MEMBERSHIPS)
                 .get()
                 .await()
-            hunterSnapshot.documents.forEach { doc ->
-                val game = safeToObject<Game>(doc, "findActiveGame hunter")?.copy(id = doc.id)
-                if (game != null) candidates.add(Pair(game, dev.rahier.pouleparty.ui.gamelogic.PlayerRole.HUNTER))
-            }
 
-            // Check if user is the chicken of active games (PP-26: query
-            // `chickenId` instead of `creatorId` so a GM-designated chicken
-            // resumes correctly).
-            val chickenSnapshot = firestore.collection(AppConstants.COLLECTION_GAMES)
-                .whereEqualTo("chickenId", userId)
-                .whereIn("status", activeStatuses)
-                .get()
-                .await()
-            chickenSnapshot.documents.forEach { doc ->
-                val game = safeToObject<Game>(doc, "findActiveGame chicken")?.copy(id = doc.id)
-                if (game != null) candidates.add(Pair(game, dev.rahier.pouleparty.ui.gamelogic.PlayerRole.CHICKEN))
-            }
+            val gameIds = membershipSnapshot.documents.mapNotNull { doc ->
+                (doc.getString("gameId")) ?: doc.id.ifEmpty { null }
+            }.toSet()
 
-            // Check if user is a GameMaster of active games (PP-24).
-            // The chicken / hunter buckets take priority if the same UID
-            // ends up in multiple lists (defense in depth — the create
-            // rule + the GM join CF already prevent that, see PP-23).
-            val gmSnapshot = firestore.collection(AppConstants.COLLECTION_GAMES)
-                .whereArrayContains("gameMasterIds", userId)
-                .whereIn("status", activeStatuses)
-                .get()
-                .await()
-            gmSnapshot.documents.forEach { doc ->
-                val game = safeToObject<Game>(doc, "findActiveGame gm")?.copy(id = doc.id)
-                if (game != null) candidates.add(Pair(game, dev.rahier.pouleparty.ui.gamelogic.PlayerRole.GAME_MASTER))
+            coroutineScope {
+                gameIds.map { gameId ->
+                    async {
+                        val snap = runCatching {
+                            firestore.collection(AppConstants.COLLECTION_GAMES)
+                                .document(gameId).get().await()
+                        }.getOrNull() ?: return@async null
+                        safeToObject<Game>(snap, "findActiveGame membership")?.copy(id = snap.id)
+                    }
+                }.awaitAll()
+            }.filterNotNull().forEach { game ->
+                // Resolve the role from the authoritative `roles` map. A
+                // membership with no matching role (stale doc, game left) is
+                // dropped.
+                val role = when {
+                    game.isChicken(userId) -> dev.rahier.pouleparty.ui.gamelogic.PlayerRole.CHICKEN
+                    game.isGameMaster(userId) -> dev.rahier.pouleparty.ui.gamelogic.PlayerRole.GAME_MASTER
+                    game.isHunter(userId) -> dev.rahier.pouleparty.ui.gamelogic.PlayerRole.HUNTER
+                    else -> return@forEach
+                }
+                candidates.add(Pair(game, role))
             }
 
             val now = Date()
@@ -362,7 +361,7 @@ class FirestoreRepository @Inject constructor(
         return try {
             val doc = withTimeoutOrNull(READ_TIMEOUT_MS) {
                 firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
-                    .collection(AppConstants.SUBCOLLECTION_REGISTRATIONS).document(userId)
+                    .collection(AppConstants.SUBCOLLECTION_PLAYERS).document(userId)
                     .get()
                     .await()
             } ?: run {
@@ -370,7 +369,9 @@ class FirestoreRepository @Inject constructor(
                 return null
             }
             if (!doc.exists()) return null
-            safeToObject<Registration>(doc, "findRegistration($gameId/$userId)")
+            // PP-107: `/players` docs carry only `{ teamName, joinedAt }`;
+            // the uid is the doc id, so backfill it after decoding.
+            safeToObject<Registration>(doc, "findRegistration($gameId/$userId)")?.copy(userId = doc.id)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to find registration $gameId/$userId", e)
             null
@@ -381,11 +382,11 @@ class FirestoreRepository @Inject constructor(
         if (gameId.isEmpty()) return emptyList()
         return try {
             val snapshot = firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
-                .collection(AppConstants.SUBCOLLECTION_REGISTRATIONS)
+                .collection(AppConstants.SUBCOLLECTION_PLAYERS)
                 .get()
                 .await()
             snapshot.documents.mapNotNull {
-                safeToObject<Registration>(it, "fetchAllRegistrations($gameId)")
+                safeToObject<Registration>(it, "fetchAllRegistrations($gameId)")?.copy(userId = it.id)
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to fetch registrations for game $gameId", e)
@@ -394,14 +395,15 @@ class FirestoreRepository @Inject constructor(
     }
 
     /**
-     * Live stream of every doc under `/games/{gameId}/registrations`. Used by
-     * the GameMaster map (PP-86) so the hunter counter + drawer team-name
-     * list refresh the moment a new hunter joins, instead of staying frozen
-     * on the snapshot loaded once at screen entry.
+     * Live stream of every doc under `/games/{gameId}/players` (PP-107
+     * rename from `registrations`). Used by the GameMaster map (PP-86) so
+     * the hunter counter + drawer team-name list refresh the moment a new
+     * hunter joins, instead of staying frozen on the snapshot loaded once
+     * at screen entry.
      */
     fun registrationsFlow(gameId: String): Flow<List<Registration>> = callbackFlow {
         val listener = firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
-            .collection(AppConstants.SUBCOLLECTION_REGISTRATIONS)
+            .collection(AppConstants.SUBCOLLECTION_PLAYERS)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     logListenerError("Registrations (game $gameId)", error)
@@ -413,7 +415,7 @@ class FirestoreRepository @Inject constructor(
                     return@addSnapshotListener
                 }
                 val regs = snapshot.documents.mapNotNull { doc ->
-                    safeToObject<Registration>(doc, "Registrations (game $gameId)")
+                    safeToObject<Registration>(doc, "Registrations (game $gameId)")?.copy(userId = doc.id)
                 }
                 trySend(regs)
             }
@@ -421,29 +423,39 @@ class FirestoreRepository @Inject constructor(
         awaitClose { listener.remove() }
     }
 
-    suspend fun createRegistration(gameId: String, registration: Registration) {
-        if (gameId.isEmpty() || registration.userId.isEmpty()) {
-            Log.w(TAG, "createRegistration skipped — gameId: '$gameId', userId: '${registration.userId}'")
+    /**
+     * PP-107: joins the caller as a hunter. Replaces the old client-side
+     * `hunterIds` arrayUnion + `/registrations` doc write. The `joinGame`
+     * callable writes the hunter role into the `roles` map, the
+     * `/players/{uid}` team-name doc, and the `/users/{uid}/memberships`
+     * index in one atomic, idempotent server step. Re-running it on
+     * "Reprendre la partie" (or an old game) is the safety net that keeps
+     * the GameMaster marker labeled.
+     */
+    suspend fun joinGame(gameId: String, teamName: String) {
+        if (gameId.isEmpty()) {
+            Log.w(TAG, "joinGame skipped — empty gameId")
             return
         }
-        withRetry("createRegistration($gameId, ${registration.userId})") {
-            firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
-                .collection(AppConstants.SUBCOLLECTION_REGISTRATIONS).document(registration.userId)
-                .set(registration)
-                .await()
-        }
+        functions
+            .getHttpsCallable("joinGame")
+            .call(mapOf("gameId" to gameId, "teamName" to teamName))
+            .await()
     }
 
-    suspend fun registerHunter(gameId: String, hunterId: String) {
-        if (gameId.isEmpty() || hunterId.isEmpty()) {
-            Log.w(TAG, "registerHunter skipped — gameId: '$gameId', hunterId: '$hunterId'")
+    /**
+     * PP-107: leaves the game — removes the caller's role from `roles`,
+     * their `/players/{uid}` doc, and their membership index, server-side.
+     */
+    suspend fun leaveGame(gameId: String) {
+        if (gameId.isEmpty()) {
+            Log.w(TAG, "leaveGame skipped — empty gameId")
             return
         }
-        withRetry("registerHunter($gameId, $hunterId)") {
-            firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
-                .update("hunterIds", FieldValue.arrayUnion(hunterId))
-                .await()
-        }
+        functions
+            .getHttpsCallable("leaveGame")
+            .call(mapOf("gameId" to gameId))
+            .await()
     }
 
     suspend fun updateGameStatus(gameId: String, status: GameStatus) {
@@ -657,9 +669,11 @@ class FirestoreRepository @Inject constructor(
     }
 
     /**
-     * Fetches the user's games: games they created AND games they joined as a hunter.
-     * We run two separate queries (no orderBy to avoid needing composite indexes) and sort
-     * client-side by start date descending. Limit to 20 after merging.
+     * Fetches the user's games: games they created (still a top-level
+     * `creatorId` field) AND games they belong to via the PP-107
+     * `/users/{uid}/memberships` index. The old `hunterIds` array query is
+     * gone — that field no longer exists. Creator takes precedence on
+     * dedupe. Sorted by start date descending, limited to 20.
      */
     suspend fun fetchMyGames(userId: String): List<dev.rahier.pouleparty.model.MyGame> {
         val createdTask = firestore.collection(AppConstants.COLLECTION_GAMES)
@@ -667,13 +681,14 @@ class FirestoreRepository @Inject constructor(
             .limit(30)
             .get()
 
-        val joinedTask = firestore.collection(AppConstants.COLLECTION_GAMES)
-            .whereArrayContains("hunterIds", userId)
+        val membershipTask = firestore.collection(AppConstants.COLLECTION_USERS)
+            .document(userId)
+            .collection(AppConstants.SUBCOLLECTION_MEMBERSHIPS)
             .limit(30)
             .get()
 
         val createdSnap = createdTask.await()
-        val joinedSnap = joinedTask.await()
+        val membershipSnap = membershipTask.await()
 
         val result = mutableListOf<dev.rahier.pouleparty.model.MyGame>()
         val seenIds = mutableSetOf<String>()
@@ -685,9 +700,23 @@ class FirestoreRepository @Inject constructor(
             }
         }
 
-        for (doc in joinedSnap.documents) {
-            val game = safeToObject<Game>(doc, "fetchMyGames joined")?.copy(id = doc.id) ?: continue
-            // Creator takes precedence if the user is both creator and hunter on the same game.
+        // Fetch each membership's game doc (skipping ones already added as
+        // creator). Creator takes precedence if the same user appears twice.
+        val membershipGameIds = membershipSnap.documents.mapNotNull { doc ->
+            (doc.getString("gameId")) ?: doc.id.ifEmpty { null }
+        }.toSet().filter { it !in seenIds }
+
+        coroutineScope {
+            membershipGameIds.map { gameId ->
+                async {
+                    val snap = runCatching {
+                        firestore.collection(AppConstants.COLLECTION_GAMES)
+                            .document(gameId).get().await()
+                    }.getOrNull() ?: return@async null
+                    safeToObject<Game>(snap, "fetchMyGames joined")?.copy(id = snap.id)
+                }
+            }.awaitAll()
+        }.filterNotNull().forEach { game ->
             if (seenIds.add(game.id)) {
                 result.add(dev.rahier.pouleparty.model.MyGame(game, dev.rahier.pouleparty.model.MyGameRole.HUNTER))
             }
@@ -1040,31 +1069,17 @@ class FirestoreRepository @Inject constructor(
      * and the lock expiry timestamp when the lock kicked in.
      */
     /**
-     * PP-86: GameMaster (or creator as fallback) designates a hunter as
-     * the new chicken. Atomic Firestore transaction: sets
-     * `chickenId = newUid` and pulls `newUid` out of `hunterIds`.
-     * The PP-26 firestore.rule enforces `status == waiting` and the
-     * caller-is-creator-or-GM guard server-side; we pre-check
-     * `status == waiting` client-side for fast feedback.
+     * PP-86 / PP-107: GameMaster (or creator as fallback) designates a
+     * hunter as the new chicken. Roles are server-owned now — the
+     * `designateChicken` callable atomically moves the old chicken to
+     * `hunter` and `newChickenUid` to `chicken` in the `roles` map (and
+     * enforces `status == waiting` + caller-is-creator-or-GM server-side).
      */
     suspend fun designateChicken(gameId: String, newChickenUid: String) {
-        firestore.runTransaction { tx ->
-            val ref = firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
-            val snap = tx.get(ref)
-            val data = snap.data ?: throw IllegalStateException("Game not found")
-            val status = data["status"] as? String
-            if (status != GameStatus.WAITING.firestoreValue) {
-                throw IllegalStateException("Chicken can only be re-designated while the game is waiting")
-            }
-            @Suppress("UNCHECKED_CAST")
-            val hunterIds = (data["hunterIds"] as? List<String>).orEmpty().toMutableList()
-            hunterIds.remove(newChickenUid)
-            tx.update(ref, mapOf(
-                "chickenId" to newChickenUid,
-                "hunterIds" to hunterIds,
-            ))
-            null
-        }.await()
+        functions
+            .getHttpsCallable("designateChicken")
+            .call(mapOf("gameId" to gameId, "newChickenUid" to newChickenUid))
+            .await()
     }
 
     suspend fun joinAsGameMaster(gameId: String, password: String): JoinAsGameMasterResult {

@@ -54,6 +54,7 @@ class ChickenMapViewModelBehaviorTest {
             locationRepository = locationRepository,
             analyticsRepository = mockk<dev.rahier.pouleparty.data.AnalyticsRepository>(relaxed = true),
             auth = mockk<FirebaseAuth>(relaxed = true),
+            prefs = mockk<android.content.SharedPreferences>(relaxed = true),
             savedStateHandle = SavedStateHandle(mapOf("gameId" to gameId))
         )
     }

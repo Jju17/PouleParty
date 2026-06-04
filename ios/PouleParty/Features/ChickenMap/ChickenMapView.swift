@@ -62,6 +62,7 @@ struct ChickenMapView: View {
                     action: \.destination.alert
                 )
             )
+            .alert($store.scope(state: \.newChickenAlert, action: \.newChickenAlert))
             .sheet(
                 isPresented: Binding(
                     get: { store.destination.flatMap { if case .endGameCode = $0 { true } else { nil } } ?? false },

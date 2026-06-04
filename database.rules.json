@@ -10,20 +10,20 @@
         },
         "chickenLocations": {
           "latest": {
-            ".read": "auth != null && (root.child('games').child($gameId).child('meta').child('creatorId').val() === auth.uid || root.child('games').child($gameId).child('meta').child('gameMasterIds').child(auth.uid).val() === true || (root.child('games').child($gameId).child('meta').child('hunterIds').child(auth.uid).val() === true && root.child('games').child($gameId).child('meta').child('gameMode').val() === 'followTheChicken' && data.child('invisible').val() !== true))",
-            ".write": "auth != null && root.child('games').child($gameId).child('meta').child('chickenId').val() === auth.uid && newData.hasChildren(['lat', 'lng', 'ts'])"
+            ".read": "auth != null && (root.child('games').child($gameId).child('meta').child('creatorId').val() === auth.uid || root.child('games').child($gameId).child('meta').child('roles').child(auth.uid).val() === 'gameMaster' || (root.child('games').child($gameId).child('meta').child('roles').child(auth.uid).val() === 'hunter' && root.child('games').child($gameId).child('meta').child('gameMode').val() === 'followTheChicken' && data.child('invisible').val() !== true))",
+            ".write": "auth != null && root.child('games').child($gameId).child('meta').child('roles').child(auth.uid).val() === 'chicken' && newData.hasChildren(['lat', 'lng', 'ts'])"
           }
         },
         "hunterLocations": {
           "$hunterId": {
-            ".read": "auth != null && (root.child('games').child($gameId).child('meta').child('creatorId').val() === auth.uid || root.child('games').child($gameId).child('meta').child('hunterIds').child(auth.uid).val() === true || root.child('games').child($gameId).child('meta').child('gameMasterIds').child(auth.uid).val() === true)",
-            ".write": "auth != null && $hunterId === auth.uid && root.child('games').child($gameId).child('meta').child('hunterIds').child(auth.uid).val() === true && newData.hasChildren(['lat', 'lng', 'ts'])"
+            ".read": "auth != null && (root.child('games').child($gameId).child('meta').child('creatorId').val() === auth.uid || root.child('games').child($gameId).child('meta').child('roles').child(auth.uid).val() === 'hunter' || root.child('games').child($gameId).child('meta').child('roles').child(auth.uid).val() === 'gameMaster')",
+            ".write": "auth != null && $hunterId === auth.uid && root.child('games').child($gameId).child('meta').child('roles').child(auth.uid).val() === 'hunter' && newData.hasChildren(['lat', 'lng', 'ts'])"
           }
         },
         "presence": {
           "chicken": {
-            ".read": "auth != null && (root.child('games').child($gameId).child('meta').child('creatorId').val() === auth.uid || root.child('games').child($gameId).child('meta').child('hunterIds').child(auth.uid).val() === true || root.child('games').child($gameId).child('meta').child('gameMasterIds').child(auth.uid).val() === true)",
-            ".write": "auth != null && root.child('games').child($gameId).child('meta').child('chickenId').val() === auth.uid"
+            ".read": "auth != null && (root.child('games').child($gameId).child('meta').child('creatorId').val() === auth.uid || root.child('games').child($gameId).child('meta').child('roles').child(auth.uid).val() === 'hunter' || root.child('games').child($gameId).child('meta').child('roles').child(auth.uid).val() === 'gameMaster')",
+            ".write": "auth != null && root.child('games').child($gameId).child('meta').child('roles').child(auth.uid).val() === 'chicken'"
           }
         }
       }

@@ -2,6 +2,26 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // ---- Role helpers (PP-107) -------------------------------------------
+    // `game.roles` is the single source of truth: a map `{ <uid>: role }`
+    // where role is one of 'chicken' | 'hunter' | 'gameMaster'. It is
+    // written ONLY at creation (locked to `{ creatorId: 'chicken' }`) and
+    // thereafter exclusively by the role callables via admin SDK — clients
+    // can never update it. `creatorId` stays as ownership (the creator also
+    // carries a role in the map).
+    function gameData(gameId) {
+      return get(/databases/$(database)/documents/games/$(gameId)).data;
+    }
+    function myRole(gameId) {
+      return gameData(gameId).roles.get(request.auth.uid, '');
+    }
+    function isParticipant(gameId) {
+      return request.auth != null && myRole(gameId) != '';
+    }
+    function isHunterOnGame(gameId) {
+      return request.auth != null && myRole(gameId) == 'hunter';
+    }
+
     // Games collection
     match /games/{gameId} {
       // Any authenticated user can read a game (needed to join via game code)
@@ -12,6 +32,11 @@ service cloud.firestore {
       // admin-mode wizard (gated by the `jujurahier` code) flips
       // `isAdminCreation = true` to lift the cap up to 500. The flag itself
       // is client-trusted (obfuscation, not real auth — see PP-9).
+      //
+      // PP-107: the create payload's `roles` map is locked to exactly
+      // `{ <creatorId>: 'chicken' }` so a malicious client can't pre-seed
+      // hunters / GMs / a foreign chicken. Every later membership change
+      // goes through a callable (admin SDK), never a client write.
       allow create: if request.auth != null
                     && request.resource.data.creatorId == request.auth.uid
                     && request.resource.data.status == 'waiting'
@@ -26,41 +51,15 @@ service cloud.firestore {
                     && request.resource.data.timing.start < request.resource.data.timing.end
                     && request.resource.data.timing.headStartMinutes >= 0
                     && request.resource.data.zone.shrinkIntervalMinutes >= 1
-                    // GameMasters are only added by `joinAsGameMaster` (PP-70).
-                    // Force the create payload's `gameMasterIds` to be empty so
-                    // a malicious client can't pre-populate it.
-                    && request.resource.data.get('gameMasterIds', []).size() == 0
-                    // At creation the chicken must be the creator. The GM
-                    // can re-designate from the "Désigner la poule" screen
-                    // once hunters have registered (PP-26).
-                    && request.resource.data.chickenId == request.resource.data.creatorId;
+                    && request.resource.data.roles.keys().hasOnly([request.resource.data.creatorId])
+                    && request.resource.data.roles.get(request.resource.data.creatorId, '') == 'chicken';
 
-      // hunterIds-only update (join / leave a game). PP-90 dropped the
-      // in-app "registration required + deadline" gate — any
-      // authenticated user can join, even mid-game. The chicken is
-      // still never in `hunterIds`: at creation `chickenId == creatorId`
-      // (PP-26); a GM-led re-designation runs through the dedicated
-      // update rule below and pulls the newly-designated hunter out
-      // of `hunterIds` atomically.
-      //
-      // CRIT-3 (audit 2026-05-17): tightened so a caller can only
-      // add/remove their OWN UID. Previously any auth user could
-      // impersonate someone else into hunterIds, or saturate the
-      // array up to maxPlayers and lock real players out.
-      // `removeAll(other).hasOnly([uid])` enforces caller-only on
-      // both directions: additions = hunterIds_new \ hunterIds_old,
-      // removals = hunterIds_old \ hunterIds_new.
-      allow update: if request.auth != null
-                    && request.resource.data.diff(resource.data).affectedKeys()
-                        .hasOnly(['hunterIds'])
-                    && request.resource.data.hunterIds.size() <= resource.data.maxPlayers
-                    && !request.resource.data.hunterIds.hasAny([resource.data.chickenId])
-                    && request.resource.data.hunterIds
-                        .removeAll(resource.data.hunterIds)
-                        .hasOnly([request.auth.uid])
-                    && resource.data.hunterIds
-                        .removeAll(request.resource.data.hunterIds)
-                        .hasOnly([request.auth.uid]);
+      // PP-107: there is no longer a client-side join / leave / chicken
+      // re-designation update rule. Membership (`roles`) is server-only:
+      // joins go through the `joinGame` callable, GM joins through
+      // `joinAsGameMaster`, chicken swaps through `designateChicken`,
+      // leaves through `leaveGame` — all admin-SDK, all bypassing rules.
+      // A direct client write to `roles` is denied by default.
 
       // `winners` writes are CF-only since CRIT-3 (audit 2026-05-17).
       // The `submitFoundCode` callable verifies caller-is-hunter +
@@ -84,32 +83,16 @@ service cloud.firestore {
                     && resource.data.status in ['waiting', 'readyToLaunch', 'inProgress']
                     && request.resource.data.status == 'done';
 
-      // GameMaster (or the creator as a fallback when no GM has joined
-      // yet) re-designates the chicken before the game starts. Single
-      // field, `status == waiting` only — once the game is `inProgress`
-      // or `done`, the role is frozen. Used by the "Désigner la poule"
-      // screen (PP-26). hunterIds may be edited in the same write so the
-      // newly-designated hunter can be removed from the hunter pool.
-      allow update: if request.auth != null
-                    && resource.data.status == 'waiting'
-                    && (request.auth.uid == resource.data.creatorId
-                        || request.auth.uid in resource.data.get('gameMasterIds', []))
-                    && request.resource.data.diff(resource.data).affectedKeys()
-                        .hasOnly(['chickenId', 'hunterIds'])
-                    && request.resource.data.chickenId is string
-                    && request.resource.data.chickenId.size() > 0
-                    && !request.resource.data.hunterIds.hasAny([request.resource.data.chickenId]);
-
       // Creator-only settings edit, frozen once the game starts.
-      // `gameMasterIds` mutates only via `joinAsGameMaster`; `chickenId`
-      // goes through the dedicated rule above; `winners` is callable-only;
-      // `status` goes through the cancel-only rule above (every other
-      // transition is server-scheduled).
+      // `roles` mutates only via the role callables; `winners` is
+      // callable-only; `status` goes through the cancel-only rule above
+      // (every other transition is server-scheduled). `creatorId` is
+      // immutable.
       allow update: if request.auth != null
                     && resource.data.creatorId == request.auth.uid
                     && resource.data.status in ['waiting', 'readyToLaunch']
                     && !request.resource.data.diff(resource.data).affectedKeys()
-                        .hasAny(['gameMasterIds', 'chickenId', 'winners', 'status']);
+                        .hasAny(['roles', 'creatorId', 'winners', 'status']);
 
       // Only the creator can delete, and only while still in `waiting`.
       allow delete: if request.auth != null
@@ -128,56 +111,30 @@ service cloud.firestore {
       // lives in `database.rules.json`, gated by the `/games/{gameId}/meta`
       // membership mirror written by the `mirrorGameMetaToRtdb` function.
 
-      // Registrations subcollection. PP-90 dropped the in-app
-      // registration-required gate, but the subcollection is still
-      // written: each in-app hunter creates a doc keyed by their UID
-      // so the GameMaster can pick a chicken from the team-name list
-      // (PP-86). PP-52 will reuse this subcollection for external
-      // Typeform/Stripe registrations using a random `registrationId`
-      // instead of `userId`.
-      match /registrations/{visitorId} {
-        // Readable by the registration owner, the chicken creator,
-        // any GameMaster on the game, and any hunter in the game. The
-        // GM needs every doc so the validator carte can label markers
-        // + the "Désigner la poule" drawer (PP-86) can list candidates.
-        // Hunters need every doc so the challenges leaderboard can show
-        // team names for everyone (replacing the old `/users` nickname
-        // fetch, which was a permissions hole for cross-hunter reads).
-        allow read: if request.auth != null
-                    && (visitorId == request.auth.uid
-                        || get(/databases/$(database)/documents/games/$(gameId)).data.creatorId == request.auth.uid
-                        || request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.hunterIds
-                        || request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.get('gameMasterIds', []));
-        allow create: if request.auth != null
-                      && visitorId == request.auth.uid
-                      && request.resource.data.userId == request.auth.uid
-                      && request.resource.data.keys().hasAll(['userId', 'teamName', 'joinedAt'])
-                      && request.resource.data.teamName is string
-                      && request.resource.data.teamName.size() > 0;
-        allow update: if request.auth != null
-                      && visitorId == request.auth.uid
-                      && request.resource.data.userId == request.auth.uid;
-        allow delete: if false;
+      // Per-hunter team name (PP-107, renamed from `/registrations`).
+      // Written exclusively by the role callables (`joinGame` upserts the
+      // joining hunter, `designateChicken` moves the demoted chicken in),
+      // so clients can only READ it. Any participant can read every doc:
+      // the GM needs them for the validator carte + the designation drawer,
+      // and hunters need them so the challenges leaderboard can show team
+      // names for everyone.
+      match /players/{playerId} {
+        allow read: if isParticipant(gameId);
+        allow write: if false;
       }
 
       match /challengeCompletions/{hunterId} {
-        allow read: if request.auth != null
-                    && (request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.hunterIds
-                        || request.auth.uid == get(/databases/$(database)/documents/games/$(gameId)).data.creatorId
-                        || request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.get('gameMasterIds', []));
+        allow read: if isParticipant(gameId);
         allow create, update, delete: if false;
       }
 
       // PP-103: denormalized leaderboard read-model (`aggregates/leaderboard`).
       // Written exclusively by `validateChallengeSubmission` /
-      // `applyOutOfZonePenalty` (admin SDK); read by everyone with a role on
-      // the game so clients read one doc instead of the whole
-      // challengeCompletions collection.
+      // `applyOutOfZonePenalty` (admin SDK); read by every participant so
+      // clients read one doc instead of the whole challengeCompletions
+      // collection.
       match /aggregates/{docId} {
-        allow read: if request.auth != null
-                    && (request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.hunterIds
-                        || request.auth.uid == get(/databases/$(database)/documents/games/$(gameId)).data.creatorId
-                        || request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.get('gameMasterIds', []));
+        allow read: if isParticipant(gameId);
         allow write: if false;
       }
 
@@ -192,26 +149,19 @@ service cloud.firestore {
       }
 
       // Per-game snapshot of the challenges catalog. Written exclusively
-      // by `onGameCreated` (admin SDK); read by everyone with a role on
-      // the game.
+      // by `onGameCreated` (admin SDK); read by every participant.
       match /challenges/{challengeId} {
-        allow read: if request.auth != null
-                    && (request.auth.uid == get(/databases/$(database)/documents/games/$(gameId)).data.creatorId
-                        || request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.hunterIds
-                        || request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.get('gameMasterIds', []));
+        allow read: if isParticipant(gameId);
         allow write: if false;
       }
 
       match /challengeSubmissions/{submissionId} {
-        allow read: if request.auth != null
-                    && (request.auth.uid == get(/databases/$(database)/documents/games/$(gameId)).data.creatorId
-                        || request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.hunterIds
-                        || request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.get('gameMasterIds', []));
+        allow read: if isParticipant(gameId);
         allow create: if request.auth != null
                       && request.auth.uid == request.resource.data.hunterId
-                      && request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.hunterIds
+                      && isHunterOnGame(gameId)
                       && request.time.toMillis()
-                           < get(/databases/$(database)/documents/games/$(gameId)).data.timing.end.toMillis()
+                           < gameData(gameId).timing.end.toMillis()
                       && request.resource.data.keys().hasAll(['challengeId', 'hunterId', 'type', 'submittedAt', 'mediaUrl', 'mediaType', 'status'])
                       && request.resource.data.status == 'pending'
                       && request.resource.data.type in ['oneShot', 'repeatable']
@@ -225,10 +175,7 @@ service cloud.firestore {
 
       // Power-ups subcollection
       match /powerUps/{powerUpId} {
-        allow read: if request.auth != null
-                    && (request.auth.uid == get(/databases/$(database)/documents/games/$(gameId)).data.creatorId
-                        || request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.hunterIds
-                        || request.auth.uid in get(/databases/$(database)/documents/games/$(gameId)).data.get('gameMasterIds', []));
+        allow read: if isParticipant(gameId);
         // Power-ups are spawned exclusively by the `spawnPowerUpBatch` /
         // `onGameCreated` Cloud Functions (admin SDK bypasses rules). Clients
         // never create power-ups — prevents anti-cheat gaps and drift between
@@ -249,6 +196,16 @@ service cloud.firestore {
     // User profiles (nickname, FCM token, platform) — each user can only read/write their own document.
     match /users/{userId} {
       allow read, create, update, delete: if request.auth != null && request.auth.uid == userId;
+
+      // PP-107: reverse membership index — `{ gameId, role, status }` per
+      // game the user belongs to. Powers "find my active game" with a single
+      // self-readable query (replaces the three `whereArrayContains` scans on
+      // the games collection). Written exclusively by the role callables
+      // (admin SDK); the user can only READ their own.
+      match /memberships/{gameId} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow write: if false;
+      }
     }
 
     // Admin-only template. Cloud Functions read it via admin SDK and
@@ -268,9 +225,9 @@ service cloud.firestore {
     }
 
     // Validation-code rate-limit counters (XPLAT-M6, store-audit 2026-05-18).
-    // One doc per UID, written exclusively by `validateRegistrationCode` /
-    // `lookupGameByValidationCode` (admin SDK). Same lock-down as
-    // `gmRateLimits` — clients can't probe the lock or reset their counter.
+    // One doc per UID, written exclusively by `validateRegistrationCode`
+    // (admin SDK). Same lock-down as `gmRateLimits` — clients can't probe
+    // the lock or reset their counter.
     match /validationRateLimits/{uid} {
       allow read, write: if false;
     }
@@ -287,24 +244,18 @@ service cloud.firestore {
 
     // Event registrations (PP-52) — pre-paid registrations created from the
     // public web form before any in-app Game exists. Top-level collection
-    // (deliberately separate from the per-game `/games/{gameId}/registrations`
-    // subcollection used by PP-90/PP-86 for in-app teamName + chicken
-    // designation). Each doc carries a `batchId` field; the admin-mode wizard
-    // sets `Game.registrationBatchId` to the same value to link a game to
-    // its batch.
+    // (deliberately separate from the per-game `/games/{gameId}/players`
+    // subcollection used for in-app teamName + chicken designation). Each
+    // doc carries a `batchId` field; the admin-mode wizard sets
+    // `Game.registrationBatchId` to the same value to link a game to its batch.
     //
     // Writes are admin-SDK only: `createPendingRegistration` writes the doc
     // with `paid: false`, the Stripe webhook `confirmRegistrationPayment`
     // flips `paid: true` (both bypass these rules via admin SDK).
     //
-    // CRIT-1 (audit 2026-05-17): reads are now FULLY locked. Previously
-    // `allow read: if request.auth != null` relied on the 36^6 entropy of
-    // the 6-char code as the only gate, but the rule allowed enumerating
-    // the entire collection — leaking email / phone / playerName / teamName
-    // for every paying user (GDPR breach). Client lookups now go through
-    // the `validateRegistrationCode` + `lookupGameByValidationCode`
-    // callable Cloud Functions, which return only the minimum the JoinFlow
-    // needs (a boolean or `{type, gameId, batchId}`) — never PII.
+    // CRIT-1 (audit 2026-05-17): reads are FULLY locked. Client lookups go
+    // through the `validateRegistrationCode` callable, which returns only the
+    // minimum the JoinFlow needs (a discriminated status) — never PII.
     match /eventRegistrations/{registrationId} {
       allow read, create, update, delete: if false;
     }

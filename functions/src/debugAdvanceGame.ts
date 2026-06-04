@@ -3,6 +3,7 @@ import { getFunctions } from "firebase-admin/functions";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/v2";
 import { launchReadyGame } from "./launchGame";
+import { isGameMaster } from "./roles";
 
 const REGION = "europe-west1";
 // Power-ups spawned on each debug shrink step — mirrors the real periodic
@@ -108,8 +109,7 @@ export const debugAdvanceGame = onCall<
     );
   }
   const creatorId = (data.creatorId as string | undefined) ?? "";
-  const gameMasterIds = (data.gameMasterIds as string[] | undefined) ?? [];
-  if (uid !== creatorId && !gameMasterIds.includes(uid)) {
+  if (uid !== creatorId && !isGameMaster(data, uid)) {
     throw new HttpsError(
       "permission-denied",
       "Only the chicken or a GameMaster can drive the QA panel"

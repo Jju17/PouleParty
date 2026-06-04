@@ -179,7 +179,10 @@ class GameCreationViewModel @Inject constructor(
                 gameMode = GameMod.STAY_IN_THE_ZONE.firestoreValue,
                 foundCode = Game.generateFoundCode(),
                 creatorId = auth.currentUser?.uid ?: "",
-                chickenId = auth.currentUser?.uid ?: "",
+                // PP-107: membership is the single `roles` map. The creator
+                // starts as the chicken. firestore.rules requires the create
+                // payload's `roles` to be exactly `{ <creatorId>: "chicken" }`.
+                roles = (auth.currentUser?.uid ?: "").let { uid -> mapOf(uid to "chicken") },
                 isAdminCreation = isAdminCreation,
                 isDebugGame = isDebugGame
             )

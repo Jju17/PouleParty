@@ -478,7 +478,7 @@ struct ChickenMapFeatureTests {
     /// `isGameOver` and calls `stopTracking()`; no auto-transition.
     @Test func pp19_allHuntersFoundFlipsIsGameOverWithoutTransition() async {
         var game = Game.mock
-        game.hunterIds = ["h1", "h2"]
+        game.setHunterIds(["h1", "h2"])
         var state = ChickenMapFeature.State(game: game)
         state.previousWinnersCount = 0
 

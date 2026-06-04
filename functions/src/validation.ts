@@ -1,6 +1,7 @@
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/v2";
+import { isChicken, isGameMaster, isHunter } from "./roles";
 
 const REGION = "europe-west1";
 
@@ -46,9 +47,7 @@ export const validateChallengeSubmission = onCall<
       throw new HttpsError("not-found", "Game not found");
     }
     const gameData = gameSnap.data() ?? {};
-    const chickenId = (gameData.chickenId as string | undefined) ?? "";
-    const gameMasterIds = (gameData.gameMasterIds as string[] | undefined) ?? [];
-    const isAuthorized = uid === chickenId || gameMasterIds.includes(uid);
+    const isAuthorized = isChicken(gameData, uid) || isGameMaster(gameData, uid);
     if (!isAuthorized) {
       throw new HttpsError(
         "permission-denied",
@@ -181,8 +180,7 @@ export const applyOutOfZonePenalty = onCall<
     const gameSnap = await tx.get(gameRef);
     if (!gameSnap.exists) throw new HttpsError("not-found", "Game not found");
     const gameData = gameSnap.data() ?? {};
-    const hunterIds = (gameData.hunterIds as string[] | undefined) ?? [];
-    if (!hunterIds.includes(uid)) {
+    if (!isHunter(gameData, uid)) {
       throw new HttpsError("permission-denied", "Not a hunter on this game");
     }
     const completionSnap = await tx.get(completionRef);
@@ -216,14 +214,14 @@ async function resolveTeamName(
   gameId: string,
   hunterId: string
 ): Promise<string> {
-  const regSnap = await db
+  const playerSnap = await db
     .collection("games")
     .doc(gameId)
-    .collection("registrations")
+    .collection("players")
     .doc(hunterId)
     .get();
-  const fromRegistration = regSnap.data()?.teamName as string | undefined;
-  if (fromRegistration && fromRegistration.length > 0) return fromRegistration;
+  const fromPlayer = playerSnap.data()?.teamName as string | undefined;
+  if (fromPlayer && fromPlayer.length > 0) return fromPlayer;
   const userSnap = await db.collection("users").doc(hunterId).get();
   const nickname = userSnap.data()?.nickname as string | undefined;
   return nickname && nickname.length > 0 ? nickname : "Hunter";

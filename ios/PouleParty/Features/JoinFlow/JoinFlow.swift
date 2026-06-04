@@ -212,10 +212,11 @@ struct JoinFlowFeature {
                 guard !userId.isEmpty else { return .none }
 
                 state.step = .submittingJoin(game)
-                let registration = Registration(userId: userId, teamName: teamName)
                 return .run { send in
                     do {
-                        try await apiClient.createRegistration(game.id, registration)
+                        // PP-107: the server writes the role + the
+                        // `/players/{uid}` team-name doc + membership index.
+                        try await apiClient.joinGame(game.id, teamName)
                         await send(.joinSucceeded(game, teamName: teamName))
                     } catch {
                         await send(.joinFailed(error.localizedDescription))

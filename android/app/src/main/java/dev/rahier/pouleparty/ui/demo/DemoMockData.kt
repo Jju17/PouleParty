@@ -44,12 +44,17 @@ object DemoMockData {
         gameMode = GameMod.FOLLOW_THE_CHICKEN.firestoreValue,
         chickenCanSeeHunters = true,
         foundCode = "0000",
-        hunterIds = listOf(HUNTER_1_ID, HUNTER_2_ID, HUNTER_3_ID, CHICKEN_ID),
-        gameMasterIds = listOf(GAME_MASTER_ID),
+        // PP-107: membership is the single `roles` map (chicken + hunters + GM).
+        roles = mapOf(
+            CHICKEN_ID to "chicken",
+            HUNTER_1_ID to "hunter",
+            HUNTER_2_ID to "hunter",
+            HUNTER_3_ID to "hunter",
+            GAME_MASTER_ID to "gameMaster",
+        ),
         status = GameStatus.IN_PROGRESS.firestoreValue,
         winners = emptyList(),
         creatorId = CHICKEN_ID,
-        chickenId = CHICKEN_ID,
         hasGameMasterPassword = true,
         timing = Timing(
             start = fiveMinutesAgo(),

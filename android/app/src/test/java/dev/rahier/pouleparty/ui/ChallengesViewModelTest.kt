@@ -156,7 +156,7 @@ class ChallengesViewModelTest {
     fun `MediaCaptured uploads + clears captureTarget`() {
         val challenge = Challenge(id = "c1", points = 7, titleByLocale = mapOf("fr" to "Hello"))
         every { repo.challengesStream(any()) } returns flowOf(listOf(challenge))
-        coEvery { repo.getConfig("game-1") } returns Game(id = "game-1", hunterIds = listOf("hunter-1"))
+        coEvery { repo.getConfig("game-1") } returns Game(id = "game-1", roles = mapOf("hunter-1" to "hunter"))
         coEvery { repo.fetchAllRegistrations("game-1") } returns listOf(
             Registration(userId = "hunter-1", teamName = "Dream Team")
         )

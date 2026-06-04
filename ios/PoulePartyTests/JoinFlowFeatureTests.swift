@@ -26,7 +26,7 @@ struct JoinFlowFeatureTests {
         let myUid = "user-abc"
         var ownGame = Game.mock
         ownGame.creatorId = myUid
-        ownGame.chickenId = myUid
+        ownGame.setChickenId(myUid)
         ownGame.status = .waiting
 
         let store = TestStore(initialState: JoinFlowFeature.State()) {
@@ -46,7 +46,7 @@ struct JoinFlowFeatureTests {
     @Test func hunterTypingOtherCreatorCodeIsAccepted() async {
         var game = Game.mock
         game.creatorId = "other-creator"
-        game.chickenId = "other-creator"
+        game.setChickenId("other-creator")
         game.status = .waiting
 
         let store = TestStore(initialState: JoinFlowFeature.State()) {
@@ -66,7 +66,7 @@ struct JoinFlowFeatureTests {
     @Test func codeChangeUppercasesAndValidates() async {
         var game = Game.mock
         game.creatorId = "someone-else"
-        game.chickenId = "someone-else"
+        game.setChickenId("someone-else")
         game.status = .waiting
 
         let seenCodes = LockIsolated<[String]>([])
@@ -94,7 +94,7 @@ struct JoinFlowFeatureTests {
         var game = Game.mock
         game.id = "abc123xyz9999999999"  // gameCode = "ABC123"
         game.creatorId = "someone-else"
-        game.chickenId = "someone-else"
+        game.setChickenId("someone-else")
         game.status = .waiting
 
         let callCount = LockIsolated(0)

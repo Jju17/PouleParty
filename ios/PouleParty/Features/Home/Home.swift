@@ -367,7 +367,10 @@ struct HomeFeature {
                 game.foundCode = Game.generateFoundCode()
                 game.timing.headStartMinutes = 5
                 game.creatorId = creatorId
-                game.chickenId = creatorId
+                // PP-107: the creator starts as the chicken. `roles` is the
+                // single source of truth; the firestore.rules create clause
+                // requires exactly `{ <creatorId>: "chicken" }`.
+                game.roles = [creatorId: "chicken"]
                 game.maxPlayers = 5
                 game.isAdminCreation = isAdmin
                 game.isDebugGame = isDebug

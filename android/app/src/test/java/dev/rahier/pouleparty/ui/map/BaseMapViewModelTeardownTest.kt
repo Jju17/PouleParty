@@ -84,6 +84,7 @@ class BaseMapViewModelTeardownTest {
         locationRepository = locationRepository,
         analyticsRepository = analyticsRepository,
         auth = auth,
+        prefs = mockk(relaxed = true),
         savedStateHandle = SavedStateHandle(mapOf("gameId" to "test-game")),
     )
 

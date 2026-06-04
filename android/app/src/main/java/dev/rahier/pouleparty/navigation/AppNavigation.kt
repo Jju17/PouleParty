@@ -39,7 +39,7 @@ object Routes {
     const val ONBOARDING = "onboarding"
     const val HOME = "home"
     const val GAME_CREATION = "game_creation/{gameId}?isAdminCreation={isAdminCreation}&isDebugGame={isDebugGame}"
-    const val CHICKEN_MAP = "chicken_map/{gameId}"
+    const val CHICKEN_MAP = "chicken_map/{gameId}?becameChicken={becameChicken}"
     const val HUNTER_MAP = "hunter_map/{gameId}/{hunterName}"
     const val GAME_MASTER_MAP = "game_master_map/{gameId}"
     const val VICTORY = "victory/{gameId}/{hunterName}/{hunterId}/{isChicken}"
@@ -48,7 +48,8 @@ object Routes {
     const val DEMO = "demo"
     fun gameCreation(gameId: String, isAdminCreation: Boolean = false, isDebugGame: Boolean = false) =
         "game_creation/$gameId?isAdminCreation=$isAdminCreation&isDebugGame=$isDebugGame"
-    fun chickenMap(gameId: String) = "chicken_map/$gameId"
+    fun chickenMap(gameId: String, becameChicken: Boolean = false) =
+        "chicken_map/$gameId?becameChicken=$becameChicken"
     fun hunterMap(gameId: String, hunterName: String) = "hunter_map/$gameId/${Uri.encode(hunterName)}"
     fun gameMasterMap(gameId: String) = "game_master_map/$gameId"
     fun victory(gameId: String, hunterName: String, hunterId: String, isChicken: Boolean = false) =
@@ -213,7 +214,11 @@ fun AppNavigation() {
         composable(
             route = Routes.CHICKEN_MAP,
             arguments = listOf(
-                navArgument("gameId") { type = NavType.StringType }
+                navArgument("gameId") { type = NavType.StringType },
+                navArgument("becameChicken") {
+                    type = NavType.BoolType
+                    defaultValue = false
+                }
             )
         ) {
             val gameId = it.arguments?.getString("gameId") ?: ""
@@ -230,6 +235,12 @@ fun AppNavigation() {
                 },
                 onOpenValidationQueue = {
                     navController.navigate(Routes.validationQueue(gameId))
+                },
+                // PP-107: chicken was swapped to a plain hunter mid-`waiting`.
+                onBecameHunter = { gid, teamName ->
+                    navController.navigate(Routes.hunterMap(gid, teamName)) {
+                        popUpTo(Routes.chickenMap(gameId)) { inclusive = true }
+                    }
                 }
             )
         }
@@ -241,15 +252,23 @@ fun AppNavigation() {
                 navArgument("hunterName") { type = NavType.StringType }
             )
         ) {
+            val gameId = it.arguments?.getString("gameId") ?: ""
+            val hunterName = it.arguments?.getString("hunterName") ?: ""
             HunterMapScreen(
                 onGoToMenu = {
                     navController.navigate(Routes.HOME) {
                         popUpTo(Routes.HOME) { inclusive = true }
                     }
                 },
-                onVictory = { gameId, hunterName, hunterId ->
-                    navController.navigate(Routes.victory(gameId, hunterName, hunterId, isChicken = false)) {
+                onVictory = { gid, name, hunterId ->
+                    navController.navigate(Routes.victory(gid, name, hunterId, isChicken = false)) {
                         popUpTo(Routes.HOME) { inclusive = false }
+                    }
+                },
+                // PP-107: this hunter was re-designated chicken mid-`waiting`.
+                onBecameChicken = { gid ->
+                    navController.navigate(Routes.chickenMap(gid, becameChicken = true)) {
+                        popUpTo(Routes.hunterMap(gameId, hunterName)) { inclusive = true }
                     }
                 }
             )

@@ -20,6 +20,12 @@ struct ChickenMapFeature {
     struct State: Equatable {
         @Presents var destination: Destination.State?
         @Presents var validationQueue: ValidationQueueFeature.State?
+        /// PP-107: one-time "you are the new chicken" alert, shown right after
+        /// a GameMaster re-designation routes this player onto the chicken map.
+        @Presents var newChickenAlert: AlertState<Action.NewChickenAlert>?
+        /// PP-107: saved team-name / nickname, used as the team label if a
+        /// GameMaster demotes this player back to a hunter (`becameHunter`).
+        @Shared(.appStorage(AppConstants.prefUserNickname)) var savedNickname = ""
         var game: Game
         var hunterAnnotations: [HunterAnnotation] = []
         var nextRadiusUpdate: Date?
@@ -109,9 +115,12 @@ struct ChickenMapFeature {
         case delegate(Delegate)
         case destination(PresentationAction<Destination.Action>)
         case `internal`(Internal)
+        case newChickenAlert(PresentationAction<NewChickenAlert>)
         case powerUps(MapPowerUpsFeature.Action)
         case validationQueue(PresentationAction<ValidationQueueFeature.Action>)
         case view(View)
+
+        enum NewChickenAlert: Equatable {}
 
         @CasePathable
         enum View {
@@ -169,6 +178,11 @@ struct ChickenMapFeature {
             /// all hunters found, server task fired). Parent navigates to
             /// the Victory / leaderboard screen.
             case gameEnded(Game)
+            /// PP-107: a GameMaster swapped the chicken to someone else
+            /// mid-`waiting`. This player is now a plain hunter. Parent
+            /// swaps the root to the hunter map. `teamName` carries the
+            /// player's team label for the new hunter-map state.
+            case becameHunter(Game, teamName: String)
         }
     }
 
@@ -229,6 +243,8 @@ struct ChickenMapFeature {
                     await send(.delegate(.returnedToMenu))
                 }
             case .destination:
+                return .none
+            case .newChickenAlert:
                 return .none
             case .internal(.countdownDismissed):
                 state.countdownNumber = nil
@@ -335,6 +351,18 @@ struct ChickenMapFeature {
             case .powerUps:
                 return .none
             case let .internal(.gameUpdated(game)):
+                // PP-107: a GameMaster may have swapped the chicken to someone
+                // else while the game is `waiting`. If this player is no longer
+                // the chicken but still has a role, re-route to the hunter map.
+                let myUserId = userClient.currentUserId() ?? ""
+                if !myUserId.isEmpty,
+                   !game.isChicken(myUserId),
+                   game.role(of: myUserId) != nil {
+                    let teamName = state.savedNickname.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let resolvedName = teamName.isEmpty ? "Hunter" : teamName
+                    return .send(.delegate(.becameHunter(game, teamName: resolvedName)))
+                }
+
                 // Detect newly activated power-ups (compare old vs new)
                 let activatedPowerUp = detectActivatedPowerUp(oldGame: state.game, newGame: game)
 
@@ -982,6 +1010,23 @@ struct ChickenMapFeature {
         }
         .ifLet(\.$validationQueue, action: \.validationQueue) {
           ValidationQueueFeature()
+        }
+        .ifLet(\.$newChickenAlert, action: \.newChickenAlert)
+    }
+}
+
+extension AlertState where Action == ChickenMapFeature.Action.NewChickenAlert {
+    /// PP-107: "you are the new chicken" announcement, shown once after a
+    /// GameMaster re-designation routes the player onto the chicken map.
+    static var becameChicken: Self {
+        AlertState {
+            TextState("You are the new chicken! 🐔")
+        } actions: {
+            ButtonState {
+                TextState("OK")
+            }
+        } message: {
+            TextState("A GameMaster made you the chicken. Get ready to run and hide!")
         }
     }
 }

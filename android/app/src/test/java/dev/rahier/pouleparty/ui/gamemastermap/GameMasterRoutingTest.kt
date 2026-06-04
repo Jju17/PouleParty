@@ -7,35 +7,33 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * PP-66 — Role routing tests for the GameMaster.
+ * PP-66 / PP-107 — Role routing tests for the GameMaster.
  *
  * The actual `findActiveGame` query lives in `FirestoreRepository`
- * and queries three buckets (hunter, chicken, GameMaster) in that
- * order. The decision that lands a user on `GameMasterMapScreen`
- * (rather than `ChickenMapScreen` / `HunterMapScreen`) boils down
- * to the pure `Game.isChicken(userId)` predicate and the
- * `hunterIds` / `gameMasterIds` membership checks. We pin those
- * predicates here so any drift between iOS and Android shows up at
- * unit-test time.
+ * and resolves each membership's role from the authoritative `roles`
+ * map (PP-107). The decision that lands a user on `GameMasterMapScreen`
+ * (rather than `ChickenMapScreen` / `HunterMapScreen`) boils down to
+ * the pure `Game.isChicken` / `isHunter` / `isGameMaster` predicates
+ * derived from `roles`. We pin those predicates here so any drift
+ * between iOS and Android shows up at unit-test time.
  *
- * If a UID ends up in both `creatorId` AND `gameMasterIds` (defense
- * in depth — the GM join CF and firestore.rules already prevent
- * that), priority is `creatorId` per PP-24. The current routing
- * surface implements this implicitly: `isChicken(userId)` returns
- * true for that UID, and `findActiveGame` adds chicken candidates
- * before GameMaster candidates.
+ * Since `roles` maps each uid to exactly one role, the old
+ * "same uid in two buckets" ambiguity is now impossible by
+ * construction — a uid is chicken XOR hunter XOR gameMaster.
  */
 class GameMasterRoutingTest {
 
     // ── isChicken predicate ─────────────────────────────
 
     @Test
-    fun `isChicken returns true only for the designated chickenId`() {
+    fun `isChicken returns true only for the designated chicken uid`() {
         val game = Game.mock.copy(
             creatorId = "creator-uid",
-            chickenId = "designated-uid",      // PP-26: GM-re-designated chicken
-            gameMasterIds = listOf("gm-uid"),
-            hunterIds = listOf("hunter-uid"),
+            roles = mapOf(
+                "designated-uid" to "chicken",   // PP-26: GM-re-designated chicken
+                "gm-uid" to "gameMaster",
+                "hunter-uid" to "hunter",
+            ),
         )
 
         assertTrue(game.isChicken("designated-uid"))
@@ -47,24 +45,24 @@ class GameMasterRoutingTest {
     }
 
     @Test
-    fun `isChicken empty uid never matches even when chickenId is also empty`() {
+    fun `isChicken empty uid never matches even when roles is empty`() {
         // Guards against the both-empty-strings ambiguity that would
         // otherwise route un-authenticated users to the chicken map.
-        val game = Game.mock.copy(chickenId = "")
+        val game = Game.mock.copy(roles = emptyMap())
         assertFalse(game.isChicken(""))
         assertFalse(game.isChicken("anyone"))
     }
 
-    // ── Role buckets are mutually exclusive by design ───
+    // ── Roles are mutually exclusive by design ──────────
 
     @Test
     fun `creator who is also chicken is identified as chicken not as a hunter`() {
-        // At creation `chickenId == creatorId` by the firestore.rules
-        // `allow create` clause. The creator cannot self-join as a
-        // hunter (rule denies it), so this is the canonical case.
+        // At creation `roles == { creatorId: "chicken" }` by the
+        // firestore.rules `allow create` clause. The creator cannot
+        // self-join as a hunter (rule denies it).
         val game = Game.mock.copy(
             creatorId = "creator-uid",
-            chickenId = "creator-uid",
+            roles = mapOf("creator-uid" to "chicken"),
         )
         assertTrue(game.isChicken("creator-uid"))
         assertFalse(game.hunterIds.contains("creator-uid"))
@@ -72,65 +70,48 @@ class GameMasterRoutingTest {
     }
 
     @Test
-    fun `gameMasterIds membership identifies the GameMaster role`() {
+    fun `gameMaster role identifies the GameMaster`() {
         val game = Game.mock.copy(
             creatorId = "creator-uid",
-            chickenId = "creator-uid",
-            gameMasterIds = listOf("gm-uid"),
+            roles = mapOf("creator-uid" to "chicken", "gm-uid" to "gameMaster"),
         )
         assertTrue(game.gameMasterIds.contains("gm-uid"))
+        assertTrue(game.isGameMaster("gm-uid"))
         // The GM is not the chicken and not a hunter.
         assertFalse(game.isChicken("gm-uid"))
         assertFalse(game.hunterIds.contains("gm-uid"))
-    }
-
-    // ── Edge case: same UID in creatorId AND gameMasterIds ────────
-
-    @Test
-    fun `chicken priority over gameMaster when a UID ends up in both buckets`() {
-        // Defense-in-depth scenario flagged by PP-66 spec: if a UID
-        // somehow ends up in both `creatorId` (with chickenId=that uid)
-        // AND `gameMasterIds`, `isChicken(uid)` returning true is the
-        // tie-breaker that puts the user on the chicken map.
-        val uid = "ambiguous-uid"
-        val game = Game.mock.copy(
-            creatorId = uid,
-            chickenId = uid,
-            gameMasterIds = listOf(uid),
-        )
-        assertTrue(game.isChicken(uid))
-        // The GM list also contains the uid, but the chicken check
-        // takes priority — both findActiveGame (iOS + Android) and
-        // the AppFeature / HomeViewModel reducers honour this by
-        // adding chicken candidates before GameMaster candidates.
-        assertTrue(game.gameMasterIds.contains(uid))
     }
 
     // ── teamName-everywhere (PP-90 / 2026-05-08) ────────
 
     @Test
     fun `chicken cannot appear in hunterIds`() {
-        // The firestore.rules `allow update` clauses on `hunterIds`
-        // explicitly check `!hasAny([chickenId])`. We pin the model
-        // expectation so the GameMaster drawer / validation queue
-        // never accidentally lists the chicken as a hunter.
+        // A uid has exactly one role in `roles`, so the chicken can
+        // never also be a hunter. We pin the model expectation so the
+        // GameMaster drawer / validation queue never accidentally lists
+        // the chicken as a hunter.
         val game = Game.mock.copy(
-            chickenId = "the-chicken-uid",
-            hunterIds = listOf("hunter-a", "hunter-b"),
+            roles = mapOf(
+                "the-chicken-uid" to "chicken",
+                "hunter-a" to "hunter",
+                "hunter-b" to "hunter",
+            ),
         )
         assertFalse(game.hunterIds.contains(game.chickenId))
     }
 
     @Test
-    fun `gameMaster cannot appear in hunterIds or be the chicken`() {
-        // The `joinAsGameMaster` CF rejects a UID that is already in
-        // `hunterIds` or that equals `chickenId`. We test the model
-        // contract — the constraint surfaces as "these three sets are
-        // disjoint" everywhere in the GameMaster routing decision.
+    fun `chicken hunter and gameMaster sets are disjoint`() {
+        // The `roles` map guarantees one role per uid; the derived
+        // chicken / hunter / GM sets are disjoint by construction.
         val game = Game.mock.copy(
-            chickenId = "the-chicken",
-            hunterIds = listOf("h1", "h2"),
-            gameMasterIds = listOf("gm-1", "gm-2"),
+            roles = mapOf(
+                "the-chicken" to "chicken",
+                "h1" to "hunter",
+                "h2" to "hunter",
+                "gm-1" to "gameMaster",
+                "gm-2" to "gameMaster",
+            ),
         )
         val chickenSet = setOf(game.chickenId)
         val hunterSet = game.hunterIds.toSet()

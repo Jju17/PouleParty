@@ -31,8 +31,8 @@ struct GameMasterMapFeatureTests {
         var game = Game.mock
         game.id = "gm-routing-1"
         game.creatorId = "creator-uid"
-        game.chickenId = "creator-uid"
-        game.gameMasterIds = ["gm-uid"]
+        game.setChickenId("creator-uid")
+        game.setGameMasterIds(["gm-uid"])
 
         let store = TestStore(initialState: AppFeature.State.home(HomeFeature.State())) {
             AppFeature()
@@ -58,10 +58,7 @@ struct GameMasterMapFeatureTests {
         var game = Game.mock
         game.id = "chicken-routing-1"
         game.creatorId = "creator-uid"
-        game.chickenId = "creator-uid"
-        // Same UID also listed as a GameMaster — should NOT change the
-        // routing because Home already picked `.chickenGameStarted`.
-        game.gameMasterIds = ["creator-uid"]
+        game.setChickenId("creator-uid")
 
         let store = TestStore(initialState: AppFeature.State.home(HomeFeature.State())) {
             AppFeature()
@@ -106,9 +103,9 @@ struct GameMasterMapFeatureTests {
         // surfaces at unit-test time.
         var game = Game.mock
         game.creatorId = "creator-uid"
-        game.chickenId = "designated-uid"   // PP-26: GM-re-designated chicken
-        game.gameMasterIds = ["gm-uid"]
-        game.hunterIds = ["hunter-uid"]
+        game.setChickenId("designated-uid")   // PP-26: GM-re-designated chicken
+        game.setGameMasterIds(["gm-uid"])
+        game.setHunterIds(["hunter-uid"])
 
         #expect(game.isChicken("designated-uid"))
         #expect(!game.isChicken("creator-uid"))   // Creator stays admin; the chicken is the designated UID.
@@ -122,7 +119,7 @@ struct GameMasterMapFeatureTests {
         // (guards against the both-empty-strings ambiguity that would
         // otherwise route un-authenticated users to the chicken map).
         var game = Game.mock
-        game.chickenId = ""
+        game.setChickenId("")
         #expect(!game.isChicken(""))
         #expect(!game.isChicken("anyone"))
     }

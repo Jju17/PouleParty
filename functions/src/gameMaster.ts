@@ -1,6 +1,7 @@
 import { getFirestore, Timestamp } from "firebase-admin/firestore";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/v2";
+import { isChicken, isGameMaster, isHunter } from "./roles";
 
 const REGION = "europe-west1";
 const RATE_LIMIT_MAX_ATTEMPTS = 5;
@@ -90,9 +91,9 @@ export const setGameMasterPassword = onCall(
 );
 
 /**
- * Clears the GameMaster password. Existing GameMasters in
- * `gameMasterIds` are kept — clearing just stops new joins (PP-70
- * decision). Only the creator can call this.
+ * Clears the GameMaster password. Existing GameMasters keep their
+ * role — clearing just stops new joins (PP-70 decision). Only the
+ * creator can call this.
  */
 export const clearGameMasterPassword = onCall(
   { region: REGION },
@@ -119,13 +120,13 @@ export const clearGameMasterPassword = onCall(
 );
 
 /**
- * Adds the caller to `Game.gameMasterIds` if they provide the right
- * password. Rate-limited via `gmRateLimits/{userId}_{gameId}`:
- * 5 attempts per user per game; on the 5th failure the user is
- * locked for 5 minutes (auto-reset after the lock expires). The
- * whole flow runs inside a Firestore transaction so two concurrent
- * tries from the same UID can't bypass the limit or double-add the
- * UID to `gameMasterIds`.
+ * Sets the caller's role to `gameMaster` (`roles.<uid>`) if they
+ * provide the right password. Rate-limited via
+ * `gmRateLimits/{userId}_{gameId}`: 5 attempts per user per game; on
+ * the 5th failure the user is locked for 5 minutes (auto-reset after
+ * the lock expires). The whole flow runs inside a Firestore
+ * transaction so two concurrent tries from the same UID can't bypass
+ * the limit.
  */
 export const joinAsGameMaster = onCall(
   { region: REGION },
@@ -142,19 +143,32 @@ export const joinAsGameMaster = onCall(
       if (!game) {
         throw new HttpsError("not-found", "Game not found");
       }
+      const status = typeof game.status === "string" ? game.status : "";
+      if (status === "done") {
+        throw new HttpsError(
+          "failed-precondition",
+          "The game is over"
+        );
+      }
       if (game.creatorId === uid) {
         throw new HttpsError(
           "failed-precondition",
           "The creator cannot also be a GameMaster"
         );
       }
-      if ((game.hunterIds ?? []).includes(uid)) {
+      if (isChicken(game, uid)) {
+        throw new HttpsError(
+          "failed-precondition",
+          "The chicken cannot also be a GameMaster"
+        );
+      }
+      if (isHunter(game, uid)) {
         throw new HttpsError(
           "failed-precondition",
           "A hunter cannot also be a GameMaster"
         );
       }
-      if ((game.gameMasterIds ?? []).includes(uid)) {
+      if (isGameMaster(game, uid)) {
         // Idempotent re-join: already a GM, no change, no rate-limit
         // consumption.
         return { success: true, attemptsRemaining: RATE_LIMIT_MAX_ATTEMPTS };
@@ -210,15 +224,22 @@ export const joinAsGameMaster = onCall(
         };
       }
 
-      // Success: append the UID to gameMasterIds AND delete the
-      // rate-limit doc in the same transaction.
+      // Success: set the caller's role to gameMaster, mirror the
+      // membership reverse-index, AND delete the rate-limit doc in the
+      // same transaction.
       // HIGH-6 (audit 2026-05-17): switched from `tx.set(..., {attempts:0})`
       // to `tx.delete(...)` so successful joins don't leave growing
       // dead docs in `/gmRateLimits` — the collection was unbounded
       // before this fix.
-      tx.update(gameRef(gameId), {
-        gameMasterIds: [...(game.gameMasterIds ?? []), uid],
-      });
+      tx.update(gameRef(gameId), { [`roles.${uid}`]: "gameMaster" });
+      tx.set(
+        getFirestore()
+          .collection("users")
+          .doc(uid)
+          .collection("memberships")
+          .doc(gameId),
+        { gameId, role: "gameMaster" }
+      );
       tx.delete(rateLimitRef(uid, gameId));
 
       return { success: true, attemptsRemaining: RATE_LIMIT_MAX_ATTEMPTS };

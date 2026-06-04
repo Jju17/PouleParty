@@ -19,7 +19,7 @@ struct AllHuntersFoundTests {
 
     @Test func allHuntersFoundWhenWinnersEqualsHunterIds() {
         var game = Game.mock
-        game.hunterIds = ["h1", "h2"]
+        game.setHunterIds(["h1", "h2"])
         game.winners = [
             Winner(hunterId: "h1", hunterName: "Alice", timestamp: Timestamp(date: .now)),
             Winner(hunterId: "h2", hunterName: "Bob", timestamp: Timestamp(date: .now))
@@ -31,7 +31,7 @@ struct AllHuntersFoundTests {
 
     @Test func notAllHuntersFoundWhenWinnersLessThanHunterIds() {
         var game = Game.mock
-        game.hunterIds = ["h1", "h2", "h3"]
+        game.setHunterIds(["h1", "h2", "h3"])
         game.winners = [
             Winner(hunterId: "h1", hunterName: "Alice", timestamp: Timestamp(date: .now))
         ]
@@ -41,7 +41,7 @@ struct AllHuntersFoundTests {
 
     @Test func emptyHunterIdsPreventsAllFoundDetection() {
         var game = Game.mock
-        game.hunterIds = []
+        game.setHunterIds([])
         game.winners = []
 
         // Guard: hunterIds must not be empty
@@ -50,7 +50,7 @@ struct AllHuntersFoundTests {
 
     @Test func emptyHunterIdsWithWinnersDoesNotTrigger() {
         var game = Game.mock
-        game.hunterIds = []
+        game.setHunterIds([])
         game.winners = [
             Winner(hunterId: "h1", hunterName: "Alice", timestamp: Timestamp(date: .now))
         ]
@@ -60,7 +60,7 @@ struct AllHuntersFoundTests {
 
     @Test func moreWinnersThanHuntersStillTriggers() {
         var game = Game.mock
-        game.hunterIds = ["h1"]
+        game.setHunterIds(["h1"])
         game.winners = [
             Winner(hunterId: "h1", hunterName: "Alice", timestamp: Timestamp(date: .now)),
             Winner(hunterId: "h2", hunterName: "Bob", timestamp: Timestamp(date: .now))
@@ -71,7 +71,7 @@ struct AllHuntersFoundTests {
 
     @Test func singleHunterSingleWinnerTriggers() {
         var game = Game.mock
-        game.hunterIds = ["h1"]
+        game.setHunterIds(["h1"])
         game.winners = [
             Winner(hunterId: "h1", hunterName: "Alice", timestamp: Timestamp(date: .now))
         ]
@@ -84,7 +84,7 @@ struct AllHuntersFoundTests {
     @Test func gameLifecycleWithAllHuntersFound() {
         var game = Game.mock
         game.status = .inProgress
-        game.hunterIds = ["h1", "h2"]
+        game.setHunterIds(["h1", "h2"])
         #expect(game.status == .inProgress)
 
         // All hunters find chicken
@@ -103,7 +103,7 @@ struct AllHuntersFoundTests {
         let winners = hunterIds.enumerated().map { (i, id) in
             Winner(hunterId: id, hunterName: "Hunter \(i)", timestamp: Timestamp(date: .now))
         }
-        game.hunterIds = hunterIds
+        game.setHunterIds(hunterIds)
         game.winners = winners
 
         #expect(!game.hunterIds.isEmpty)
@@ -120,7 +120,7 @@ struct AllHuntersFoundTests {
         // NO `.delegate.allHuntersFound` fires. PP-18's manual
         // leaderboard CTA is the only path off the map.
         var game = Game.mock
-        game.hunterIds = ["h1"]
+        game.setHunterIds(["h1"])
         game.startDate = .now.addingTimeInterval(-600)
         game.endDate = .now.addingTimeInterval(3000)
 

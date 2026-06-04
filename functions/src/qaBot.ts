@@ -3,7 +3,7 @@
  * GameMaster map can be tested without several phones. NOT a Cloud Function —
  * run via ts-node. Staging only.
  *
- * It adds bot UIDs to `hunterIds`, writes a `registrations` doc per bot (so the
+ * It sets `roles.<uid> = "hunter"`, writes a `players` doc per bot (so the
  * GameMaster drawer shows a team name, PP-86), then random-walks each bot's
  * `hunterLocations/{uid}` doc around the zone centre every few seconds. On
  * Ctrl+C it removes the bots and their location docs so they vanish from the
@@ -117,14 +117,12 @@ async function main() {
   const botIds = Array.from({ length: botCount }, (_, i) => `qa-bot-${i + 1}`);
   const gameRef = db.collection("games").doc(gameId);
 
-  // Register bots: hunterIds + a registration doc (team name for the GM drawer).
+  // Register bots: roles.<uid> = "hunter" + a players doc (team name for the
+  // GM drawer).
   for (let i = 0; i < botIds.length; i++) {
     const uid = botIds[i];
-    await gameRef.update({
-      hunterIds: admin.firestore.FieldValue.arrayUnion(uid),
-    });
-    await gameRef.collection("registrations").doc(uid).set({
-      userId: uid,
+    await gameRef.update({ [`roles.${uid}`]: "hunter" });
+    await gameRef.collection("players").doc(uid).set({
       teamName: `QA Bot ${i + 1}`,
       joinedAt: admin.firestore.Timestamp.now(),
     });
@@ -150,14 +148,14 @@ async function main() {
     console.log("\nCleaning up bots...");
     for (const uid of botIds) {
       await gameRef
-        .update({ hunterIds: admin.firestore.FieldValue.arrayRemove(uid) })
+        .update({ [`roles.${uid}`]: admin.firestore.FieldValue.delete() })
         .catch(() => undefined);
       await rtdb
         .ref(`/games/${gameId}/hunterLocations/${uid}`)
         .remove()
         .catch(() => undefined);
       await gameRef
-        .collection("registrations")
+        .collection("players")
         .doc(uid)
         .delete()
         .catch(() => undefined);

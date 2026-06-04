@@ -73,6 +73,8 @@
     <string name="cancel_game">Annuler la partie</string>
     <string name="cancel_game_message">Es-tu sûr de vouloir annuler la partie maintenant ?</string>
     <string name="never_mind">Laisse tomber</string>
+    <string name="new_chicken_alert_title">Tu es la nouvelle poule ! 🐔</string>
+    <string name="new_chicken_alert_message">Un GameMaster t\'a désigné comme la poule. Prépare-toi à courir et à te cacher !</string>
     <string name="game_info">Infos de la partie</string>
 
     <!-- Hunter Map -->

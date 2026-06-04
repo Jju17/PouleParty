@@ -80,6 +80,7 @@ class QADebugFlowTest {
         locationRepository = locationRepository,
         analyticsRepository = analyticsRepository,
         auth = auth,
+        prefs = mockk(relaxed = true),
         savedStateHandle = SavedStateHandle(mapOf("gameId" to gameId)),
     )
 

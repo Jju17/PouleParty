@@ -17,10 +17,18 @@ object AppConstants {
     const val SUBCOLLECTION_CHICKEN_LOCATIONS = "chickenLocations"
     const val SUBCOLLECTION_HUNTER_LOCATIONS = "hunterLocations"
     const val SUBCOLLECTION_POWER_UPS = "powerUps"
-    const val SUBCOLLECTION_REGISTRATIONS = "registrations"
+    // PP-107: the per-game team-name subcollection was renamed `players`
+    // server-side. Writes happen via the `joinGame` callable now; clients
+    // only read. Doc shape `{ teamName, joinedAt }` — the uid is the doc id.
+    const val SUBCOLLECTION_PLAYERS = "players"
     const val SUBCOLLECTION_CHALLENGE_COMPLETIONS = "challengeCompletions"
     const val SUBCOLLECTION_CHALLENGE_SUBMISSIONS = "challengeSubmissions"
     const val COLLECTION_USERS = "users"
+    // PP-107: `/users/{uid}/memberships/{gameId}` (`{ gameId, role }`) is the
+    // per-user membership index written server-side by the role callables.
+    // Read by `findActiveGame` / `fetchMyGames` instead of array-contains
+    // queries on the game doc.
+    const val SUBCOLLECTION_MEMBERSHIPS = "memberships"
     const val COLLECTION_CHALLENGES = "challenges"
 
     /** Last game id the user explicitly dismissed from the "active game" Home

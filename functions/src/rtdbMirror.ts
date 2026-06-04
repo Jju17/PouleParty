@@ -1,43 +1,49 @@
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import { getDatabase } from "firebase-admin/database";
 import * as logger from "firebase-functions/logger";
+import { RolesMap } from "./roles";
 
 const REGION = "europe-west1";
 
 export interface GameMeta {
   creatorId: string;
-  chickenId: string;
   gameMode: string;
   status: string;
-  hunterIds: Record<string, true>;
-  gameMasterIds: Record<string, true>;
+  roles: RolesMap;
 }
+
+const VALID_ROLES = ["chicken", "hunter", "gameMaster"];
 
 /**
  * Projects the auth-relevant fields of a game doc into the shape the RTDB
- * security rules consume. `hunterIds` / `gameMasterIds` become `{uid: true}`
- * maps because RTDB rules can membership-test a map key in O(1) but cannot
- * search an array.
+ * security rules consume. The `roles` map `{uid: role}` is copied verbatim so
+ * RTDB rules can read `meta.roles.<uid>` to authorize the realtime-position
+ * reads/writes (RTDB rules cannot read Firestore).
  */
 export function extractGameMeta(
   data: Record<string, unknown> | undefined
 ): GameMeta {
-  const toIdMap = (v: unknown): Record<string, true> => {
-    const out: Record<string, true> = {};
-    if (Array.isArray(v)) {
-      for (const id of v) {
-        if (typeof id === "string" && id.length > 0) out[id] = true;
+  const toRolesMap = (v: unknown): RolesMap => {
+    const out: RolesMap = {};
+    if (v && typeof v === "object" && !Array.isArray(v)) {
+      for (const [uid, role] of Object.entries(v as Record<string, unknown>)) {
+        if (
+          typeof uid === "string" &&
+          uid.length > 0 &&
+          typeof role === "string" &&
+          VALID_ROLES.includes(role)
+        ) {
+          out[uid] = role as RolesMap[string];
+        }
       }
     }
     return out;
   };
   return {
     creatorId: typeof data?.creatorId === "string" ? data.creatorId : "",
-    chickenId: typeof data?.chickenId === "string" ? data.chickenId : "",
     gameMode: typeof data?.gameMode === "string" ? data.gameMode : "",
     status: typeof data?.status === "string" ? data.status : "",
-    hunterIds: toIdMap(data?.hunterIds),
-    gameMasterIds: toIdMap(data?.gameMasterIds),
+    roles: toRolesMap(data?.roles),
   };
 }
 

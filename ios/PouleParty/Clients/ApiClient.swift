@@ -51,7 +51,14 @@ struct ApiClient {
     /// Read once when the map mounts — the doc never changes. Empty on miss.
     var fetchZoneSchedule: (_ gameId: String) async throws -> [ZoneCircle]
     var findGameByCode: (String) async throws -> Game?
-    var registerHunter: (String, String) async throws -> Void
+    /// PP-107: joins the caller as a hunter. The `joinGame` callable writes
+    /// the role + the `/games/{id}/players/{uid}` team-name doc + the
+    /// membership index server-side (admin SDK). Replaces the old client-side
+    /// `hunterIds` arrayUnion + `/registrations` write — clients never write
+    /// membership directly anymore.
+    var joinGame: (_ gameId: String, _ teamName: String) async throws -> Void
+    /// PP-107: removes the caller (hunter / GameMaster) from the game.
+    var leaveGame: (_ gameId: String) async throws -> Void
     var updateGameStatus: (String, Game.GameStatus) async throws -> Void
     var chickenLocationStream: (String) -> AsyncStream<ChickenLocation?>
     var gameConfigStream: (String) -> AsyncStream<Game?>
@@ -70,12 +77,11 @@ struct ApiClient {
     var updateHeartbeat: (String) async throws -> Void
     var fetchMyGames: (String) async throws -> [MyGame]
     var findRegistration: (String, String) async throws -> Registration?
-    var createRegistration: (String, Registration) async throws -> Void
     var fetchAllRegistrations: (String) async throws -> [Registration]
-    /// Live stream of every `/games/{gameId}/registrations/*` doc. Used by the
-    /// GameMaster map so the hunter count + drawer team names refresh the
-    /// instant a new hunter joins, instead of staying frozen on the load-time
-    /// snapshot.
+    /// Live stream of every `/games/{gameId}/players/*` doc (PP-107, renamed
+    /// from `/registrations`). Used by the GameMaster map so the hunter count +
+    /// drawer team names refresh the instant a new hunter joins, instead of
+    /// staying frozen on the load-time snapshot.
     var registrationsStream: (String) -> AsyncStream<[Registration]>
     var challengesStream: (_ gameId: String) -> AsyncStream<[Challenge]>
     /// Live challenge leaderboard, read from the single `aggregates/leaderboard`
@@ -109,12 +115,10 @@ struct ApiClient {
     /// lock). Returns `attemptsRemaining` for wrong passwords and a
     /// `lockedUntilMs` when the lock kicked in.
     var joinAsGameMaster: (_ gameId: String, _ password: String) async throws -> JoinAsGameMasterResult
-    /// PP-86: GameMaster (or creator as fallback) designates a hunter
-    /// as the new chicken. Atomic Firestore transaction sets
-    /// `chickenId = newUid` and removes `newUid` from `hunterIds`.
-    /// firestore.rules enforces `status == waiting` and the
-    /// caller-is-creator-or-GM guard server-side; the client also
-    /// pre-checks for fast feedback.
+    /// PP-86 / PP-107: GameMaster (or creator as fallback) designates a hunter
+    /// as the new chicken. Routed through the `designateChicken` callable,
+    /// which atomically moves the old chicken to `hunter` and the new uid to
+    /// `chicken` in the server-owned `roles` map (clients never write roles).
     var designateChicken: (_ gameId: String, _ newChickenUid: String) async throws -> Void
     /// PP-52: validates + single-use-claims a paid-event registration code.
     /// Called from JoinFlow only when the resolved game has a `registrationBatchId`.
@@ -246,7 +250,14 @@ private let gamesCollection = "games"
 private let chickenLocationsSubcollection = "chickenLocations"
 private let hunterLocationsSubcollection = "hunterLocations"
 private let powerUpsSubcollection = "powerUps"
-private let registrationsSubcollection = "registrations"
+// PP-107: the per-game team-name subcollection was renamed `players`
+// server-side. Writes happen via the `joinGame` callable now; clients only read.
+private let playersSubcollection = "players"
+// PP-107: `/users/{uid}/memberships/{gameId}` (`{ gameId, role }`) is the
+// per-user membership index written server-side by the role callables. Read by
+// `findActiveGame` / `fetchMyGames` instead of array-contains game queries.
+private let usersCollection = "users"
+private let membershipsSubcollection = "memberships"
 private let challengesCollection = "challenges"
 private let challengeCompletionsSubcollection = "challengeCompletions"
 private let challengeSubmissionsSubcollection = "challengeSubmissions"
@@ -283,7 +294,8 @@ extension ApiClient: TestDependencyKey {
         getConfig: { _ in nil },
         fetchZoneSchedule: { _ in [] },
         findGameByCode: { _ in nil },
-        registerHunter: { _, _ in },
+        joinGame: { _, _ in },
+        leaveGame: { _ in },
         updateGameStatus: { _, _ in },
         chickenLocationStream: { _ in AsyncStream { _ in } },
         gameConfigStream: { _ in AsyncStream { _ in } },
@@ -297,7 +309,6 @@ extension ApiClient: TestDependencyKey {
         updateHeartbeat: { _ in },
         fetchMyGames: { _ in [] },
         findRegistration: { _, _ in nil },
-        createRegistration: { _, _ in },
         fetchAllRegistrations: { _ in [] },
         registrationsStream: { _ in AsyncStream { _ in } },
         challengesStream: { _ in AsyncStream { _ in } },
@@ -336,62 +347,51 @@ extension ApiClient: DependencyKey {
     static var liveValue = ApiClient(
         findActiveGame: { userId in
             let db = Firestore.firestore()
-            let activeStatuses = [Game.GameStatus.waiting.rawValue, Game.GameStatus.inProgress.rawValue]
             var candidates: [(Game, GameRole)] = []
 
-            // Query 1: Is the user a hunter in active games?
+            // PP-107: membership now lives in `/users/{uid}/memberships`
+            // (one doc per game the user belongs to, `{ gameId, role }`),
+            // written server-side by the role callables. The old three
+            // parallel array-contains queries on `hunterIds` / `chickenId` /
+            // `gameMasterIds` are gone — those fields no longer exist on the
+            // game doc.
             do {
-                let hunterSnapshot = try await db.collection(gamesCollection)
-                    .whereField("hunterIds", arrayContains: userId)
-                    .whereField("status", in: activeStatuses)
+                let membershipSnapshot = try await db.collection(usersCollection)
+                    .document(userId)
+                    .collection(membershipsSubcollection)
                     .getDocuments()
 
-                for doc in hunterSnapshot.documents {
-                    if let game = try? doc.data(as: Game.self) {
-                        candidates.append((game, .hunter))
+                let gameIds: [String] = membershipSnapshot.documents.compactMap { doc in
+                    (doc.data()["gameId"] as? String) ?? (doc.documentID.isEmpty ? nil : doc.documentID)
+                }
+
+                try await withThrowingTaskGroup(of: Game?.self) { group in
+                    for gameId in Set(gameIds) {
+                        group.addTask {
+                            let snap = try? await db.collection(gamesCollection).document(gameId).getDocument()
+                            return try? snap?.data(as: Game.self)
+                        }
+                    }
+                    for try await game in group {
+                        guard let game else { continue }
+                        // Resolve the role from the authoritative `roles` map.
+                        // A membership with no matching role (stale doc, game
+                        // left) is dropped.
+                        let role: GameRole
+                        if game.isChicken(userId) {
+                            role = .chicken
+                        } else if game.isGameMaster(userId) {
+                            role = .gameMaster
+                        } else if game.isHunter(userId) {
+                            role = .hunter
+                        } else {
+                            continue
+                        }
+                        candidates.append((game, role))
                     }
                 }
             } catch {
-                logger.error("findActiveGame hunter query failed: \(error.localizedDescription)")
-            }
-
-            // Query 2: Is the user the chicken? Compares against
-            // `chickenId` since PP-26 — the chicken may be a hunter the
-            // GM re-designated, not necessarily the creator.
-            do {
-                let chickenSnapshot = try await db.collection(gamesCollection)
-                    .whereField("chickenId", isEqualTo: userId)
-                    .whereField("status", in: activeStatuses)
-                    .getDocuments()
-
-                for doc in chickenSnapshot.documents {
-                    if let game = try? doc.data(as: Game.self) {
-                        candidates.append((game, .chicken))
-                    }
-                }
-            } catch {
-                logger.error("findActiveGame chicken query failed: \(error.localizedDescription)")
-            }
-
-            // Query 3: Is the user a GameMaster (PP-24)? GMs join via
-            // PP-70's password flow which atomically appends their UID
-            // to `gameMasterIds`. The chicken/hunter queries above take
-            // priority if the same UID ends up in multiple buckets
-            // (defense in depth — the create rule + the GM join CF
-            // already prevent that, see PP-23).
-            do {
-                let gmSnapshot = try await db.collection(gamesCollection)
-                    .whereField("gameMasterIds", arrayContains: userId)
-                    .whereField("status", in: activeStatuses)
-                    .getDocuments()
-
-                for doc in gmSnapshot.documents {
-                    if let game = try? doc.data(as: Game.self) {
-                        candidates.append((game, .gameMaster))
-                    }
-                }
-            } catch {
-                logger.error("findActiveGame gameMaster query failed: \(error.localizedDescription)")
+                logger.error("findActiveGame memberships query failed: \(error.localizedDescription)")
             }
 
             // Filter out games whose end time has already passed (status may
@@ -515,17 +515,27 @@ extension ApiClient: DependencyKey {
                 return nil
             }
         },
-        registerHunter: { gameId, hunterId in
-            guard !gameId.isEmpty, !hunterId.isEmpty else {
-                logger.warning("registerHunter skipped — gameId: '\(gameId)', hunterId: '\(hunterId)'")
+        joinGame: { gameId, teamName in
+            guard !gameId.isEmpty else {
+                logger.warning("joinGame skipped — empty gameId")
                 return
             }
-            try await withRetry("registerHunter(\(gameId), \(hunterId))") {
-                let ref = Firestore.firestore().collection(gamesCollection).document(gameId)
-                try await ref.updateData([
-                    "hunterIds": FieldValue.arrayUnion([hunterId])
-                ])
+            // PP-107: the server writes the role + the `/players/{uid}`
+            // team-name doc + the membership index in one atomic step.
+            let functions = Functions.functions(region: "europe-west1")
+            _ = try await functions
+                .httpsCallable("joinGame")
+                .call(["gameId": gameId, "teamName": teamName])
+        },
+        leaveGame: { gameId in
+            guard !gameId.isEmpty else {
+                logger.warning("leaveGame skipped — empty gameId")
+                return
             }
+            let functions = Functions.functions(region: "europe-west1")
+            _ = try await functions
+                .httpsCallable("leaveGame")
+                .call(["gameId": gameId])
         },
         updateGameStatus: { gameId, status in
             try await withRetry("updateGameStatus(\(gameId), \(status))") {
@@ -736,21 +746,24 @@ extension ApiClient: DependencyKey {
             }
         },
         fetchMyGames: { userId in
-            // Run two queries in parallel: games I created + games I joined as a hunter.
-            // We don't use .order here to avoid needing a composite index — we sort client-side.
-            async let createdSnapshot = Firestore.firestore()
+            let db = Firestore.firestore()
+            // Games I created (still a top-level `creatorId` field) + games I
+            // belong to via the PP-107 `/users/{uid}/memberships` index. The
+            // `hunterIds` array query is gone — that field no longer exists.
+            async let createdSnapshot = db
                 .collection(gamesCollection)
                 .whereField("creatorId", isEqualTo: userId)
                 .limit(to: 30)
                 .getDocuments()
 
-            async let joinedSnapshot = Firestore.firestore()
-                .collection(gamesCollection)
-                .whereField("hunterIds", arrayContains: userId)
+            async let membershipSnapshot = db
+                .collection(usersCollection)
+                .document(userId)
+                .collection(membershipsSubcollection)
                 .limit(to: 30)
                 .getDocuments()
 
-            let (created, joined) = try await (createdSnapshot, joinedSnapshot)
+            let (created, memberships) = try await (createdSnapshot, membershipSnapshot)
 
             var result: [MyGame] = []
             var seenIds = Set<String>()
@@ -762,11 +775,31 @@ extension ApiClient: DependencyKey {
                 }
             }
 
-            for doc in joined.documents {
-                guard let game = try? doc.data(as: Game.self) else { continue }
-                // Creator takes precedence if the same user is both creator and hunter.
-                if seenIds.insert(game.id).inserted {
-                    result.append(MyGame(game: game, role: .hunter))
+            // Fetch each membership's game doc and tag it with the live role.
+            let membershipGameIds: [String] = memberships.documents.compactMap { doc in
+                (doc.data()["gameId"] as? String) ?? (doc.documentID.isEmpty ? nil : doc.documentID)
+            }
+            try await withThrowingTaskGroup(of: Game?.self) { group in
+                for gameId in Set(membershipGameIds) where !seenIds.contains(gameId) {
+                    group.addTask {
+                        let snap = try? await db.collection(gamesCollection).document(gameId).getDocument()
+                        return try? snap?.data(as: Game.self)
+                    }
+                }
+                for try await game in group {
+                    guard let game else { continue }
+                    let role: GameRole
+                    if game.isChicken(userId) {
+                        role = .chicken
+                    } else if game.isGameMaster(userId) {
+                        role = .gameMaster
+                    } else {
+                        role = .hunter
+                    }
+                    // Creator takes precedence if the same user appears twice.
+                    if seenIds.insert(game.id).inserted {
+                        result.append(MyGame(game: game, role: role))
+                    }
                 }
             }
 
@@ -778,7 +811,7 @@ extension ApiClient: DependencyKey {
             guard !gameId.isEmpty, !userId.isEmpty else { return nil }
             let snapshot = try await Firestore.firestore()
                 .collection(gamesCollection).document(gameId)
-                .collection(registrationsSubcollection).document(userId)
+                .collection(playersSubcollection).document(userId)
                 .getDocument()
             guard snapshot.exists else { return nil }
             do {
@@ -788,23 +821,11 @@ extension ApiClient: DependencyKey {
                 return nil
             }
         },
-        createRegistration: { gameId, registration in
-            guard !gameId.isEmpty, !registration.userId.isEmpty else {
-                logger.warning("createRegistration skipped — gameId: '\(gameId)', userId: '\(registration.userId)'")
-                return
-            }
-            try await withRetry("createRegistration(\(gameId), \(registration.userId))") {
-                let ref = Firestore.firestore()
-                    .collection(gamesCollection).document(gameId)
-                    .collection(registrationsSubcollection).document(registration.userId)
-                try ref.setData(from: registration)
-            }
-        },
         fetchAllRegistrations: { gameId in
             guard !gameId.isEmpty else { return [] }
             let snapshot = try await Firestore.firestore()
                 .collection(gamesCollection).document(gameId)
-                .collection(registrationsSubcollection)
+                .collection(playersSubcollection)
                 .getDocuments()
             return snapshot.documents.compactMap { doc in
                 try? doc.data(as: Registration.self)
@@ -814,7 +835,7 @@ extension ApiClient: DependencyKey {
             AsyncStream { continuation in
                 let listener = Firestore.firestore()
                     .collection(gamesCollection).document(gameId)
-                    .collection(registrationsSubcollection)
+                    .collection(playersSubcollection)
                     .addSnapshotListener { snapshot, error in
                         if let error {
                             logListenerError("Registrations (game \(gameId))", error)
@@ -1110,41 +1131,13 @@ extension ApiClient: DependencyKey {
             )
         },
         designateChicken: { gameId, newChickenUid in
-            let db = Firestore.firestore()
-            let ref = db.collection(gamesCollection).document(gameId)
-            _ = try await db.runTransaction { transaction, errorPointer in
-                let snap: DocumentSnapshot
-                do {
-                    snap = try transaction.getDocument(ref)
-                } catch let fetchError as NSError {
-                    errorPointer?.pointee = fetchError
-                    return nil
-                }
-                guard let data = snap.data() else {
-                    errorPointer?.pointee = NSError(
-                        domain: "ApiClient",
-                        code: 404,
-                        userInfo: [NSLocalizedDescriptionKey: "Game not found"]
-                    )
-                    return nil
-                }
-                let status = data["status"] as? String ?? ""
-                guard status == Game.GameStatus.waiting.rawValue else {
-                    errorPointer?.pointee = NSError(
-                        domain: "ApiClient",
-                        code: 409,
-                        userInfo: [NSLocalizedDescriptionKey: "Chicken can only be re-designated while the game is waiting"]
-                    )
-                    return nil
-                }
-                var hunterIds = data["hunterIds"] as? [String] ?? []
-                hunterIds.removeAll { $0 == newChickenUid }
-                transaction.updateData([
-                    "chickenId": newChickenUid,
-                    "hunterIds": hunterIds,
-                ], forDocument: ref)
-                return nil
-            }
+            // PP-107: roles are server-owned. The callable atomically moves the
+            // old chicken to `hunter` and `newChickenUid` to `chicken` in the
+            // `roles` map (and enforces `status == waiting` + caller-is-GM).
+            let functions = Functions.functions(region: "europe-west1")
+            _ = try await functions
+                .httpsCallable("designateChicken")
+                .call(["gameId": gameId, "newChickenUid": newChickenUid])
         },
         validateRegistrationCode: { batchId, code in
             let functions = Functions.functions(region: "europe-west1")

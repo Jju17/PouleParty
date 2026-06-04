@@ -4844,6 +4844,38 @@
           }
         }
       }
+    },
+    "You are the new chicken! 🐔": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu es la nouvelle poule ! 🐔"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jij bent de nieuwe kip! 🐔"
+          }
+        }
+      }
+    },
+    "A GameMaster made you the chicken. Get ready to run and hide!": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un GameMaster t’a désigné comme la poule. Prépare-toi à courir et à te cacher !"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Een GameMaster heeft jou tot kip gemaakt. Maak je klaar om te rennen en te verstoppen!"
+          }
+        }
+      }
     }
   },
   "version": "1.1"

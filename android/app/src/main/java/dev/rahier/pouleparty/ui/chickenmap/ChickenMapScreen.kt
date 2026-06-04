@@ -64,6 +64,7 @@ fun ChickenMapScreen(
     onGoToMenu: () -> Unit,
     onVictory: (gameId: String) -> Unit = {},
     onOpenValidationQueue: () -> Unit = {},
+    onBecameHunter: (gameId: String, teamName: String) -> Unit = { _, _ -> },
     viewModel: ChickenMapViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -82,6 +83,8 @@ fun ChickenMapScreen(
                     onVictory(state.game.id)
                 }
                 ChickenMapEffect.OpenValidationQueue -> onOpenValidationQueue()
+                is ChickenMapEffect.NavigateToHunterMap ->
+                    onBecameHunter(effect.gameId, effect.teamName)
             }
         }
     }
@@ -444,6 +447,21 @@ fun ChickenMapScreen(
             dismissButton = {
                 TextButton(onClick = { viewModel.onIntent(ChickenMapIntent.DismissCancelAlert) }) {
                     Text(stringResource(R.string.never_mind))
+                }
+            }
+        )
+    }
+
+    // PP-107: one-time "you are the new chicken" alert after a GameMaster
+    // re-designation routed this player onto the chicken map.
+    if (state.showNewChickenAlert) {
+        AlertDialog(
+            onDismissRequest = { viewModel.onIntent(ChickenMapIntent.DismissNewChickenAlert) },
+            title = { Text(stringResource(R.string.new_chicken_alert_title)) },
+            text = { Text(stringResource(R.string.new_chicken_alert_message)) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.onIntent(ChickenMapIntent.DismissNewChickenAlert) }) {
+                    Text(stringResource(R.string.ok))
                 }
             }
         )

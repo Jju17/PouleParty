@@ -106,6 +106,9 @@
     <string name="cancel_game">Cancel game</string>
     <string name="cancel_game_message">Are you sure you want to cancel and finish the game now?</string>
     <string name="never_mind">Never mind</string>
+    <!-- PP-107: one-time alert when a GameMaster swaps this player to chicken. -->
+    <string name="new_chicken_alert_title">You are the new chicken! 🐔</string>
+    <string name="new_chicken_alert_message">A GameMaster made you the chicken. Get ready to run and hide!</string>
     <string name="game_info">Game Info</string>
 
     <!-- Hunter Map -->

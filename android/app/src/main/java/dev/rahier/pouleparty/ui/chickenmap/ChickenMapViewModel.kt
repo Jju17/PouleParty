@@ -97,6 +97,9 @@ data class ChickenMapUiState(
     val isLaunching: Boolean = false,
     /** PP-71: last error from `launchGame`. Null clears the alert. */
     val launchError: String? = null,
+    /** PP-107: one-time "you are the new chicken! 🐔" alert, shown right
+     *  after a GameMaster re-designation routes the player onto this map. */
+    val showNewChickenAlert: Boolean = false,
 ) : dev.rahier.pouleparty.ui.map.MapUiState
 
 @HiltViewModel
@@ -105,6 +108,7 @@ class ChickenMapViewModel @Inject constructor(
     locationRepository: LocationRepository,
     analyticsRepository: dev.rahier.pouleparty.data.AnalyticsRepository,
     auth: FirebaseAuth,
+    private val prefs: android.content.SharedPreferences,
     savedStateHandle: SavedStateHandle
 ) : BaseMapViewModel(firestoreRepository, locationRepository, analyticsRepository, auth) {
 
@@ -116,7 +120,10 @@ class ChickenMapViewModel @Inject constructor(
     override val analyticsRole: String = "chicken"
     override val logTag: String = "ChickenMapVM"
 
-    private val _uiState = MutableStateFlow(ChickenMapUiState())
+    /** PP-107: set when the player landed here via a GameMaster re-designation. */
+    private val becameChicken: Boolean = savedStateHandle["becameChicken"] ?: false
+
+    private val _uiState = MutableStateFlow(ChickenMapUiState(showNewChickenAlert = becameChicken))
     val uiState: StateFlow<ChickenMapUiState> = _uiState.asStateFlow()
 
     private val _effects = Channel<ChickenMapEffect>(Channel.BUFFERED)
@@ -139,6 +146,8 @@ class ChickenMapViewModel @Inject constructor(
             ChickenMapIntent.ValidationQueueTapped -> viewModelScope.launch {
                 _effects.send(ChickenMapEffect.OpenValidationQueue)
             }
+            ChickenMapIntent.DismissNewChickenAlert ->
+                _uiState.update { it.copy(showNewChickenAlert = false) }
             ChickenMapIntent.LaunchTapped -> onLaunchTapped()
             ChickenMapIntent.LaunchErrorDismissed -> _uiState.update { it.copy(launchError = null) }
             ChickenMapIntent.ViewLeaderboardTapped -> viewModelScope.launch {
@@ -500,6 +509,23 @@ class ChickenMapViewModel @Inject constructor(
     private suspend fun streamGameConfig() {
         firestoreRepository.gameConfigFlow(gameId).collect { updatedGame ->
             if (updatedGame != null) {
+                // PP-107: a GameMaster may have swapped the chicken to someone
+                // else while the game is `waiting`. If this player is no longer
+                // the chicken but still has a role, re-route to the hunter map
+                // so they aren't stranded on the chicken map.
+                if (playerId.isNotEmpty()
+                    && !updatedGame.isChicken(playerId)
+                    && updatedGame.role(playerId) != null) {
+                    val savedNickname = prefs
+                        .getString(AppConstants.PREF_USER_NICKNAME, "").orEmpty().trim()
+                    val teamName = savedNickname.ifEmpty { "Hunter" }
+                    cancelStreams()
+                    viewModelScope.launch {
+                        _effects.send(ChickenMapEffect.NavigateToHunterMap(gameId, teamName))
+                    }
+                    return@collect
+                }
+
                 // Natural game end: server-confirmed status flipped to
                 // DONE and the chicken didn't cancel it themselves
                 // (`confirmCancelGame` sets `isCancelling` and navigates

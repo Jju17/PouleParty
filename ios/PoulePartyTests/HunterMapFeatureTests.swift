@@ -367,7 +367,7 @@ struct HunterMapFeatureTests {
 
     @Test func gameConfigUpdatedOwnWinDoesNotShowNotification() async {
         var game = Game.mock
-        game.hunterIds = ["my-hunter-id", "other-hunter"]
+        game.setHunterIds(["my-hunter-id", "other-hunter"])
         var state = HunterMapFeature.State(game: game)
         state.hunterId = "my-hunter-id"
         state.previousWinnersCount = 0
@@ -597,7 +597,7 @@ struct HunterMapFeatureTests {
     @Test func gameConfigUpdatedWithNewWinnerSchedulesAutoDismiss() async {
         let clock = TestClock()
         var game = Game.mock
-        game.hunterIds = ["my-hunter-id", "other-hunter", "third-hunter"]
+        game.setHunterIds(["my-hunter-id", "other-hunter", "third-hunter"])
         var state = HunterMapFeature.State(game: game)
         state.hunterId = "my-hunter-id"
         state.previousWinnersCount = 0
@@ -788,7 +788,7 @@ struct HunterMapFeatureTests {
     /// surface must also recognise gameOver locally and stop GPS.
     @Test func pp19_allHuntersFoundFlipsIsGameOverHunterSide() async {
         var game = Game.mock
-        game.hunterIds = ["my-hunter-id", "other-hunter"]
+        game.setHunterIds(["my-hunter-id", "other-hunter"])
         var state = HunterMapFeature.State(game: game)
         state.hunterId = "my-hunter-id"
         state.previousWinnersCount = 0

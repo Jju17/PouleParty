@@ -100,6 +100,8 @@
     <string name="cancel_game">Spel annuleren</string>
     <string name="cancel_game_message">Weet je zeker dat je het spel nu wilt annuleren?</string>
     <string name="never_mind">Laat maar</string>
+    <string name="new_chicken_alert_title">Jij bent de nieuwe kip! 🐔</string>
+    <string name="new_chicken_alert_message">Een GameMaster heeft jou tot kip gemaakt. Maak je klaar om te rennen en te verstoppen!</string>
     <string name="game_info">Spelinfo</string>
 
     <!-- Hunter Map -->

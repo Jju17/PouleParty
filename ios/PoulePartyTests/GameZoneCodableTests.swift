@@ -77,12 +77,11 @@ struct GameZoneCodableTests {
             "gameMode": "stayInTheZone",
             "chickenCanSeeHunters": false,
             "foundCode": "1234",
-            "hunterIds": [],
-            "gameMasterIds": [],
+            // PP-107: membership is the server-owned `roles` map now.
+            "roles": ["user-1": "chicken"],
             "status": "waiting",
             "winners": [],
             "creatorId": "user-1",
-            "chickenId": "user-1",
             "hasGameMasterPassword": false,
             "timing": [
                 "start": Timestamp(seconds: 1_700_000_000, nanoseconds: 0),

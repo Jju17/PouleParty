@@ -3,16 +3,18 @@ service firebase.storage {
   match /b/{bucket}/o {
 
     match /gameSubmissions/{gameId}/{file} {
+      // PP-107: any participant (has a role on the game, incl. the chicken
+      // and GameMasters who validate the media) can read; only a hunter can
+      // upload. `game.roles` is the single membership source of truth.
       allow read: if request.auth != null
                   && (request.auth.uid == firestore.get(/databases/(default)/documents/games/$(gameId)).data.creatorId
-                      || request.auth.uid in firestore.get(/databases/(default)/documents/games/$(gameId)).data.hunterIds
-                      || request.auth.uid in firestore.get(/databases/(default)/documents/games/$(gameId)).data.get('gameMasterIds', []));
+                      || firestore.get(/databases/(default)/documents/games/$(gameId)).data.roles.get(request.auth.uid, '') != '');
       // Hunters upload either a still image (proof of presence) or a
       // short video (≤ 10 s on iOS at medium quality). 25 MB ceiling
       // covers the worst-case 10 s clip at ~12 Mbps; photos are well
       // below this after the client-side resize.
       allow write: if request.auth != null
-                   && request.auth.uid in firestore.get(/databases/(default)/documents/games/$(gameId)).data.hunterIds
+                   && firestore.get(/databases/(default)/documents/games/$(gameId)).data.roles.get(request.auth.uid, '') == 'hunter'
                    && request.resource.size < 25 * 1024 * 1024
                    && (request.resource.contentType.matches('image/.*')
                        || request.resource.contentType.matches('video/.*'));

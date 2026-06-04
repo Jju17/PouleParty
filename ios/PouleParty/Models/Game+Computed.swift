@@ -10,12 +10,35 @@ import FirebaseFirestore
 // MARK: - Coordinate & Date Accessors
 
 extension Game {
-    /// True when [userId] is the player designated as the chicken
-    /// (PP-26). Use this instead of `creatorId == userId` everywhere
-    /// the question is "who runs and hides".
-    func isChicken(_ userId: String) -> Bool {
-        !userId.isEmpty && chickenId == userId
+    // MARK: - Roles (PP-107)
+    // `roles` is the stored single source of truth (uid -> role string).
+    // These derived accessors keep every read site working unchanged while
+    // the doc holds one clean map instead of three sprawled id fields.
+
+    /// The single chicken's uid, or "" when none is set yet.
+    var chickenId: String {
+        roles.first(where: { $0.value == "chicken" })?.key ?? ""
     }
+    /// All hunter uids. Order is not significant (derived from a map).
+    var hunterIds: [String] {
+        roles.compactMap { $0.value == "hunter" ? $0.key : nil }
+    }
+    /// All GameMaster uids.
+    var gameMasterIds: [String] {
+        roles.compactMap { $0.value == "gameMaster" ? $0.key : nil }
+    }
+    /// This user's role on the game, or nil if they have none.
+    func role(of userId: String) -> String? {
+        userId.isEmpty ? nil : roles[userId]
+    }
+    /// True when [userId] is the player designated as the chicken
+    /// (PP-26 / PP-107). Use this instead of `creatorId == userId`
+    /// everywhere the question is "who runs and hides".
+    func isChicken(_ userId: String) -> Bool {
+        role(of: userId) == "chicken"
+    }
+    func isHunter(_ userId: String) -> Bool { role(of: userId) == "hunter" }
+    func isGameMaster(_ userId: String) -> Bool { role(of: userId) == "gameMaster" }
 
     var initialLocation: CLLocationCoordinate2D {
         get {

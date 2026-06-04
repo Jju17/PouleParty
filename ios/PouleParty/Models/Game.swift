@@ -34,16 +34,18 @@ struct Game: Codable, Equatable, Identifiable {
     var gameMode: GameMode = .stayInTheZone
     var chickenCanSeeHunters: Bool = true
     var foundCode: String = ""
-    var hunterIds: [String] = []
-    var gameMasterIds: [String] = []
     var status: GameStatus = .waiting
     var winners: [Winner] = []
     var creatorId: String = ""
-    /// The player who runs and hides. Set to `creatorId` at game creation,
-    /// can be re-designated to any registered hunter by a GameMaster while
-    /// `status == waiting` (PP-26). Distinct from `creatorId`, which stays
-    /// the game's admin owner.
-    var chickenId: String = ""
+    /// PP-107: single source of truth for membership. Maps each
+    /// participant's uid to their role (`"chicken"` | `"hunter"` |
+    /// `"gameMaster"`). A uid has exactly one role, so a "ghost" (no role)
+    /// or a double-role is impossible by construction. Written server-side
+    /// only (the role callables via admin SDK); `creatorId` stays as
+    /// ownership and also appears here with a role. Read through the
+    /// computed `chickenId` / `hunterIds` / `gameMasterIds` accessors in
+    /// `Game+Computed.swift` — never mutate `roles` from a client.
+    var roles: [String: String] = [:]
     /// True when the creator has enabled the GameMaster role and set a
     /// password. The actual password lives in
     /// `/games/{gameId}/private/security` (admin-SDK only, PP-23) — this
