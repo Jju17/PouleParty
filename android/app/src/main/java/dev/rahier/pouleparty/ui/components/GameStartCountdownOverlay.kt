@@ -245,7 +245,7 @@ fun PreGameOverlay(
                 if (isManualStart) {
                     if (isLauncherRole && onLaunchTapped != null) {
                         Text(
-                            text = "Ready when you are",
+                            text = stringResource(R.string.launch_overlay_ready),
                             fontSize = 14.sp,
                             color = Color.White.copy(alpha = 0.6f),
                             modifier = Modifier.padding(top = 16.dp)
@@ -278,7 +278,7 @@ fun PreGameOverlay(
                                     )
                                 }
                                 Text(
-                                    text = if (isLaunching) "Launching…" else "LAUNCH GAME",
+                                    text = if (isLaunching) stringResource(R.string.launching) else stringResource(R.string.launch_game_button),
                                     color = Color.White,
                                     fontSize = 22.sp,
                                     fontWeight = FontWeight.Bold,
@@ -287,7 +287,7 @@ fun PreGameOverlay(
                         }
                     } else {
                         Text(
-                            text = "Waiting for the chicken to launch",
+                            text = stringResource(R.string.launch_overlay_waiting),
                             fontSize = 14.sp,
                             color = Color.White.copy(alpha = 0.7f),
                             textAlign = TextAlign.Center,
@@ -337,10 +337,10 @@ fun PreGameOverlay(
     if (launchErrorMessage != null) {
         AlertDialog(
             onDismissRequest = { onLaunchErrorDismissed?.invoke() },
-            title = { Text("Launch failed") },
+            title = { Text(stringResource(R.string.launch_failed)) },
             text = { Text(launchErrorMessage) },
             confirmButton = {
-                TextButton(onClick = { onLaunchErrorDismissed?.invoke() }) { Text("OK") }
+                TextButton(onClick = { onLaunchErrorDismissed?.invoke() }) { Text(stringResource(R.string.ok)) }
             },
         )
     }

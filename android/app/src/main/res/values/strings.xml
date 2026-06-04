@@ -114,6 +114,25 @@
     <!-- Hunter Map -->
     <string name="you_are_hunter">You are the Hunter</string>
     <string name="you_are_gamemaster">GameMaster 🦅</string>
+
+    <!-- Launch overlay -->
+    <string name="launch_overlay_ready">Ready when you are</string>
+    <string name="launch_game_button">LAUNCH GAME</string>
+    <string name="launching">Launching…</string>
+    <string name="launch_overlay_waiting">Waiting for the chicken to launch</string>
+    <string name="launch_failed">Launch failed</string>
+
+    <!-- GameMaster screen -->
+    <string name="gm_hunters_count">Hunters (%1$d)</string>
+    <string name="gm_hunters_title">Hunters</string>
+    <string name="gm_subtitle">Referee · %1$d hunters</string>
+    <string name="hunter_fallback_name">Hunter</string>
+    <string name="gm_connected_count">Connected: %1$d / %2$d</string>
+    <string name="designate_chicken_title">Designate the chicken</string>
+    <string name="designate_chicken_message">%1$s will become the chicken. The current chicken will lose this role.</string>
+    <string name="designate_chicken_confirm">Designate %1$s</string>
+    <string name="designate_chicken_drawer_desc">The designated hunter becomes the chicken; they leave the hunters list. Only possible before the game starts.</string>
+
     <string name="quit">Quit</string>
     <string name="quit_game">Quit game</string>
     <string name="quit_game_message">Are you sure you want to quit the game?</string>

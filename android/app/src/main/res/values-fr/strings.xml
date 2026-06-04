@@ -80,6 +80,25 @@
     <!-- Hunter Map -->
     <string name="you_are_hunter">Tu es le Chasseur</string>
     <string name="you_are_gamemaster">GameMaster 🦅</string>
+
+    <!-- Launch overlay -->
+    <string name="launch_overlay_ready">Quand tu veux</string>
+    <string name="launch_game_button">LANCER LA PARTIE</string>
+    <string name="launching">Lancement…</string>
+    <string name="launch_overlay_waiting">En attente du lancement par la poule</string>
+    <string name="launch_failed">Échec du lancement</string>
+
+    <!-- GameMaster screen -->
+    <string name="gm_hunters_count">Chasseurs (%1$d)</string>
+    <string name="gm_hunters_title">Chasseurs</string>
+    <string name="gm_subtitle">Arbitre · %1$d chasseurs</string>
+    <string name="hunter_fallback_name">Chasseur</string>
+    <string name="gm_connected_count">Connectés : %1$d / %2$d</string>
+    <string name="designate_chicken_title">Désigner la poule</string>
+    <string name="designate_chicken_message">%1$s deviendra la poule. La poule actuelle perdra ce rôle.</string>
+    <string name="designate_chicken_confirm">Désigner %1$s</string>
+    <string name="designate_chicken_drawer_desc">Le chasseur désigné devient la poule ; il quitte la liste des chasseurs. Possible uniquement avant le début de la partie.</string>
+
     <string name="quit">Quitter</string>
     <string name="quit_game">Quitter la partie</string>
     <string name="quit_game_message">Es-tu sûr de vouloir quitter la partie ?</string>

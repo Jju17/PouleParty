@@ -107,6 +107,25 @@
     <!-- Hunter Map -->
     <string name="you_are_hunter">Jij bent de Jager</string>
     <string name="you_are_gamemaster">GameMaster 🦅</string>
+
+    <!-- Launch overlay -->
+    <string name="launch_overlay_ready">Wanneer je klaar bent</string>
+    <string name="launch_game_button">PARTIJ STARTEN</string>
+    <string name="launching">Starten…</string>
+    <string name="launch_overlay_waiting">Wachten tot de kip start</string>
+    <string name="launch_failed">Starten mislukt</string>
+
+    <!-- GameMaster screen -->
+    <string name="gm_hunters_count">Jagers (%1$d)</string>
+    <string name="gm_hunters_title">Jagers</string>
+    <string name="gm_subtitle">Scheidsrechter · %1$d jagers</string>
+    <string name="hunter_fallback_name">Jager</string>
+    <string name="gm_connected_count">Verbonden: %1$d / %2$d</string>
+    <string name="designate_chicken_title">De kip aanwijzen</string>
+    <string name="designate_chicken_message">%1$s wordt de kip. De huidige kip verliest deze rol.</string>
+    <string name="designate_chicken_confirm">%1$s aanwijzen</string>
+    <string name="designate_chicken_drawer_desc">De aangewezen jager wordt de kip; hij verlaat de jagerslijst. Alleen mogelijk vóór het begin van het spel.</string>
+
     <string name="quit">Verlaten</string>
     <string name="quit_game">Spel verlaten</string>
     <string name="quit_game_message">Weet je zeker dat je het spel wilt verlaten?</string>

@@ -145,7 +145,7 @@ fun GameMasterMapScreen(
             Box(modifier = Modifier.align(Alignment.TopCenter)) {
                 MapTopBar(
                     titleRes = R.string.you_are_gamemaster,
-                    subtitle = "Arbitre · ${state.hunterAnnotations.size} hunters",
+                    subtitle = stringResource(R.string.gm_subtitle, state.hunterAnnotations.size),
                     gradientColors = listOf(CRPink, CROrange),
                     onInfoTapped = { viewModel.onIntent(GameMasterMapIntent.InfoTapped) },
                 )
@@ -169,7 +169,7 @@ fun GameMasterMapScreen(
                 ) {
                     Icon(Icons.Default.Group, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Hunters (${state.hunterAnnotations.size})")
+                    Text(stringResource(R.string.gm_hunters_count, state.hunterAnnotations.size))
                 }
                 Box {
                     Button(
@@ -219,16 +219,16 @@ fun GameMasterMapScreen(
             if (pending != null) {
                 AlertDialog(
                     onDismissRequest = { viewModel.onIntent(GameMasterMapIntent.DesignateCancelTapped) },
-                    title = { Text("Désigner la poule") },
-                    text = { Text("${pending.teamName} deviendra la poule. La poule actuelle perdra ce rôle.") },
+                    title = { Text(stringResource(R.string.designate_chicken_title)) },
+                    text = { Text(stringResource(R.string.designate_chicken_message, pending.teamName)) },
                     confirmButton = {
                         TextButton(onClick = { viewModel.onIntent(GameMasterMapIntent.DesignateConfirmTapped) }) {
-                            Text("Désigner ${pending.teamName}")
+                            Text(stringResource(R.string.designate_chicken_confirm, pending.teamName))
                         }
                     },
                     dismissButton = {
                         TextButton(onClick = { viewModel.onIntent(GameMasterMapIntent.DesignateCancelTapped) }) {
-                            Text("Annuler")
+                            Text(stringResource(R.string.cancel))
                         }
                     },
                 )
@@ -239,11 +239,11 @@ fun GameMasterMapScreen(
             if (designationError != null) {
                 AlertDialog(
                     onDismissRequest = { viewModel.onIntent(GameMasterMapIntent.DesignationErrorDismissed) },
-                    title = { Text("Erreur") },
+                    title = { Text(stringResource(R.string.error)) },
                     text = { Text(designationError) },
                     confirmButton = {
                         TextButton(onClick = { viewModel.onIntent(GameMasterMapIntent.DesignationErrorDismissed) }) {
-                            Text("OK")
+                            Text(stringResource(R.string.ok))
                         }
                     },
                 )
@@ -328,14 +328,15 @@ private fun HuntersList(
     canDesignate: Boolean = false,
     onDesignateTapped: (dev.rahier.pouleparty.model.Registration) -> Unit = {},
 ) {
+    val hunterFallback = stringResource(R.string.hunter_fallback_name)
     fun displayName(uid: String): String =
-        registrations.firstOrNull { it.userId == uid }?.teamName ?: "Hunter"
+        registrations.firstOrNull { it.userId == uid }?.teamName ?: hunterFallback
 
     Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
-        Text("Hunters", style = MaterialTheme.typography.titleLarge)
+        Text(stringResource(R.string.gm_hunters_title), style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.height(8.dp))
         Text(
-            "Connected: ${connectedAnnotations.size} / ${allHunterIds.size}",
+            stringResource(R.string.gm_connected_count, connectedAnnotations.size, allHunterIds.size),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -368,12 +369,12 @@ private fun HuntersList(
                 item {
                     Spacer(Modifier.height(12.dp))
                     Text(
-                        "Désigner la poule",
+                        stringResource(R.string.designate_chicken_title),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
-                        "Le hunter désigné devient la poule ; il quitte la liste des chasseurs. Possible uniquement avant le début de la partie.",
+                        stringResource(R.string.designate_chicken_drawer_desc),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
