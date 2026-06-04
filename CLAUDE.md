@@ -21,7 +21,13 @@ There's also a **web** landing page (React/Vite) and **Cloud Functions** backend
 - **Stay in the Zone** (`stayInTheZone`): Fixed zone that shrinks and drifts deterministically. No position sharing at all (except via Radar Ping power-up).
 
 ### Zone Mechanics
-The zone is a circle that shrinks periodically. The shrink interval and amount are configurable. In "Stay in the Zone" mode, the center drifts deterministically using a seed stored in the game document — every client computes the same drift. There's also a "final zone" point: as the radius shrinks, the center interpolates linearly from start to final position.
+The zone is a circle that shrinks periodically. The shrink interval and amount are configurable. In "Stay in the Zone" mode the center drifts; there's a "final zone" point and the center interpolates from start to final as the radius shrinks.
+
+**Stored-circle schedule (PP-zone-stored, June 2026)**: the full ordered list of zone circles is computed **once, server-side** at game creation and persisted to the immutable sub-doc `/games/{gameId}/zone/schedule` (`{ circles: [{order, radiusMeters, lat, lng}], gameMode, createdAt }`). `onGameCreated` calls `computeShrinkSchedule` (`functions/src/zoneCalculation.ts`) and writes it; `firestore.rules` makes it `read`-only to clients (`write: if false`). Clients **download the list and render `circles[activeIndex]`** — they never recompute drift / radius per device. This eliminated the cross-platform parity break where `Int`-truncated radii and floating-point drift diverged between iPhones and between Androids. The active index is resolved purely from timing via `selectActiveCircle` (freeze-aware, mirrors the old `findLastUpdate` index walk) in iOS `GameTimerLogic.swift` / Android `GameTimerHelper.kt`; the shared `zoneRenderState` / `zoneRenderStateFromCircles` selector then looks up `circles[index]`. In `stayInTheZone` the circle's stored center is used; in `followTheChicken` the center is the chicken's live GPS and only the radius comes from the schedule. The `spawnPowerUpBatch` Cloud Function reads the same stored schedule for each batch's center + radius.
+
+**Game-over semantics**: the schedule's last circle is the 50 m final zone; once reached the zone **stays there** (it does not collapse to 0). A game ends only by **time** (`timing.end`), **all hunters found**, or **cancel** — never by "zone collapsed". The runtime maps (chicken / hunter / GameMaster) flip `isGameOver` on those conditions only.
+
+The client-side mirrors (`deterministicDriftCenter`, `interpolateZoneCenter`, `pickInitialZoneCenter`, `computeDebugShiftedCircles` in `Models/GameSettings.swift` + `GameTimerLogic.swift` / Android equivalents) **remain** but are now used only by the **wizard recap preview** (PP-13 / PP-14) and the cross-platform parity tests — not by the runtime gameplay path. `Game.findLastUpdate()` / `processRadiusUpdate()` are likewise kept as parity references (like `generatePowerUps`), no longer called at runtime.
 
 ### Zone Setup Wizard (PP-11 / PP-12)
 The game-creation wizard splits zone setup into two dedicated sub-steps:
@@ -43,7 +49,7 @@ The game-creation wizard splits zone setup into two dedicated sub-steps:
 3. Hunters get a head start delay (`timing.headStartMinutes`) before the hunt begins
 4. Zone shrinks periodically until collapse or `timing.end`
 5. Hunters who find the chicken enter the found code → added to `winners` array
-6. Game ends when time runs out, zone collapses, chicken cancels, or all hunters find the chicken
+6. Game ends when time runs out, all hunters find the chicken, or the chicken cancels. The zone no longer "collapses" to end the game — it settles on the 50 m final circle and stays (PP-zone-stored, see "Zone Mechanics").
 
 ### Manual launch (PP-71)
 When the chicken toggles **manual launch** on the `startTime` wizard step, the wizard sets `Game.manualStartEnabled: true`. At `timing.start` the Cloud Task flips `status` to **`readyToLaunch`** instead of `inProgress`. The chicken + every GameMaster see a full-screen LAUNCH overlay (`Features/Map/ReadyToLaunchOverlay.swift` / `ui/map/ReadyToLaunchOverlay.kt`); hunters see a passive waiting overlay. Tapping LAUNCH calls the `launchGame` callable, which atomically flips `status → inProgress`, stamps `timing.actualStart` server-side, recomputes `timing.end = actualStart + (planned end − planned start)`, and enqueues the runtime Cloud Tasks (status→done, hunter_start notif, zone_shrink notifs, power-up batches) deferred at creation. `Game.hunterStartDate` is computed from `effectiveStartDate = actualStart ?? start + headStartMinutes`, so every downstream timer stays anchored on the real start. Two simultaneous LAUNCH taps end up with a single `actualStart` thanks to the Firestore transaction. `chicken_start` notif still fires at the planned `timing.start` in both modes (the manual-mode "gather now" reminder). `firestore.rules` blocks every client-side status write to `inProgress` / `readyToLaunch` — only `creator → 'done'` from `waiting` / `readyToLaunch` is allowed (cancel game).
@@ -195,6 +201,7 @@ cd web && npm run dev
   ├── zone: { center, finalCenter, radius, shrinkIntervalMinutes, shrinkMetersPerUpdate, driftSeed }
   ├── powerUps: { enabled, enabledTypes, activeEffects: { invisibility, zoneFreeze, radarPing, decoy, jammer } }
   ├── (chickenLocations/latest + hunterLocations/{hunterId} moved to Realtime Database — PP-102, see "Location tracking")
+  ├── /zone/schedule               → PP-zone-stored immutable circle schedule: `{ circles: [{order, radiusMeters, lat, lng}], gameMode, createdAt }`. Written once by `onGameCreated` (admin SDK, via `computeShrinkSchedule`); clients download it and render `circles[activeIndex]` instead of recomputing drift/radius per device. Rules: read for authed users, `write: if false`. See "Zone Mechanics".
   ├── /powerUps/{powerUpId}        → One doc per spawned power-up (collected/activated state)
   ├── /registrations/{userId}      → One doc per in-app hunter (teamName, joinedAt). PP-90 dropped the registration-required gate — anyone can join at any time, but the subcollection is still written so the GameMaster can pick a chicken from the team-name list (PP-86). Deliberately distinct from the top-level `/eventRegistrations` collection (PP-52, paying web registrations) — names overlap but namespaces and ownership are different.
   ├── /challengeCompletions/{hunterId} → One doc per hunter who has completed at least one challenge (completedChallengeIds, totalPoints, teamName). Authoritative per-hunter record; clients read only their OWN doc for live "validated" checkmarks (PP-103).
@@ -214,7 +221,8 @@ The `gameCode` is derived from the document ID (first 6 chars, uppercased).
 
 **This is critical**: iOS and Android must produce identical results for all game logic. Several pure functions are duplicated across platforms and must stay in sync:
 
-- **Zone computation**: `findLastUpdate()`, `deterministicDriftCenter()`, `interpolateZoneCenter()`, `processRadiusUpdate()`
+- **Active-circle selection**: `selectActiveCircle()` + `zoneRenderState()` / `zoneRenderStateFromCircles()` (iOS `GameTimerLogic.swift`, Android `GameTimerHelper.kt`) — the **runtime** zone path. Resolves the active index from timing (freeze-aware) and looks up the stored `circles[index]`; the `Int(radiusMeters)` floors the SAME stored `Double` on every device, so parity holds by construction. Pinned by the map feature tests on both platforms.
+- **Zone computation (reference mirrors, NOT runtime)**: `findLastUpdate()`, `deterministicDriftCenter()`, `interpolateZoneCenter()`, `processRadiusUpdate()`. Since PP-zone-stored the runtime reads the server-generated `/games/{id}/zone/schedule` instead of recomputing per device, so these are no longer on the gameplay path — they survive only for the **wizard recap preview** and the cross-platform parity tests (same status as `generatePowerUps`). Keep them in sync anyway: the wizard preview must match what the backend will generate.
 - **Seeded random**: Uses splitmix64-style PRNG with unsigned shifts (used at runtime for jammer noise)
 - **Game timer logic**: Countdown, zone check, winner detection, power-up activation detection
 - **Normal mode settings**: `calculateNormalModeSettings()` — auto-computes shrink params from duration

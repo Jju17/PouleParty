@@ -46,6 +46,10 @@ struct ApiClient {
     var getFoundCode: (_ gameId: String) async throws -> String
     var deleteConfig: (String) async throws -> Void
     var getConfig: (String) async throws -> Game?
+    /// PP-zone-stored: fetch the immutable ordered circle schedule from
+    /// `/games/{id}/zone/schedule` (written server-side by `onGameCreated`).
+    /// Read once when the map mounts — the doc never changes. Empty on miss.
+    var fetchZoneSchedule: (_ gameId: String) async throws -> [ZoneCircle]
     var findGameByCode: (String) async throws -> Game?
     var registerHunter: (String, String) async throws -> Void
     var updateGameStatus: (String, Game.GameStatus) async throws -> Void
@@ -277,6 +281,7 @@ extension ApiClient: TestDependencyKey {
         getFoundCode: { _ in "" },
         deleteConfig: { _ in },
         getConfig: { _ in nil },
+        fetchZoneSchedule: { _ in [] },
         findGameByCode: { _ in nil },
         registerHunter: { _, _ in },
         updateGameStatus: { _, _ in },
@@ -472,6 +477,26 @@ extension ApiClient: DependencyKey {
             } catch {
                 logger.error("Failed to get game config \(gameId): \(error.localizedDescription)")
                 return nil
+            }
+        },
+        fetchZoneSchedule: { gameId in
+            do {
+                let doc = try await Firestore.firestore()
+                    .collection(gamesCollection).document(gameId)
+                    .collection("zone").document("schedule")
+                    .getDocument()
+                guard let raw = doc.data()?["circles"] as? [[String: Any]] else { return [] }
+                return raw.compactMap { m -> ZoneCircle? in
+                    guard let radius = (m["radiusMeters"] as? NSNumber)?.doubleValue,
+                          let lat = (m["lat"] as? NSNumber)?.doubleValue,
+                          let lng = (m["lng"] as? NSNumber)?.doubleValue
+                    else { return nil }
+                    let order = (m["order"] as? NSNumber)?.intValue ?? 0
+                    return ZoneCircle(order: order, radiusMeters: radius, lat: lat, lng: lng)
+                }.sorted { $0.order < $1.order }
+            } catch {
+                logger.error("Failed to fetch zone schedule \(gameId): \(error.localizedDescription)")
+                return []
             }
         },
         findGameByCode: { code in

@@ -30,6 +30,9 @@ struct HunterMapFeature {
         var previousWinnersCount: Int = -1
         var radius: Int = 1500
         var mapCircle: CircleOverlay?
+        /// PP-zone-stored: ordered circle schedule read once from
+        /// `/games/{id}/zone/schedule`; runtime renders `circles[activeIndex]`.
+        var circles: [ZoneCircle] = []
         var showGameInfo: Bool = false
         var winnerNotification: String? = nil
         var countdownNumber: Int? = nil
@@ -156,6 +159,7 @@ struct HunterMapFeature {
             case chickenLocationMasked
             case powerUpCollected(PowerUp)
             case powerUpsUpdated([PowerUp])
+            case scheduleLoaded([ZoneCircle])
             case timerTicked
             case userLocationUpdated(CLLocationCoordinate2D)
             case winnerNotificationDismissed
@@ -356,39 +360,30 @@ struct HunterMapFeature {
                 let duration = powerUp.type.durationSeconds ?? 0
                 let expiresAt = Timestamp(date: .now.addingTimeInterval(duration))
 
-                // Zone Preview: compute the NEXT zone boundary client-side.
-                // In followTheChicken the zone tracks the Chicken's live GPS,
-                // so the next zone will recentre on wherever the Chicken is at
-                // shrink time — the best approximation we have right now is
-                // the current centre. In stayInTheZone the zone drifts
-                // deterministically from `driftSeed`, so we MUST apply the
-                // same drift + interpolation that `processRadiusUpdate`
-                // applies on the next tick — otherwise the preview shows a
-                // circle concentric with the current one, which is exactly
-                // the bug the live-test caught ("preview doesn't move").
+                // PP-zone-stored: the NEXT zone boundary is just the next entry
+                // in the stored schedule — no client recompute. In
+                // followTheChicken the next circle recentres on the Chicken's
+                // live GPS, so keep the current center and preview only the
+                // next radius.
                 if powerUp.type == .zonePreview {
-                    let nextRadius = state.radius - Int(state.game.zone.shrinkMetersPerUpdate)
-                    if nextRadius > 0, let currentCenter = state.mapCircle?.center {
+                    let active = selectActiveCircle(
+                        hunterStartDate: state.game.hunterStartDate,
+                        shrinkIntervalMinutes: state.game.zone.shrinkIntervalMinutes,
+                        circleCount: state.circles.count,
+                        freezeEnd: state.game.powerUps.activeEffects.zoneFreeze?.dateValue(),
+                        freezeDuration: PowerUp.PowerUpType.zoneFreeze.durationSeconds ?? 0
+                    )
+                    if state.circles.indices.contains(active.circleIndex + 1) {
+                        let nextCircle = state.circles[active.circleIndex + 1]
                         let previewCenter: CLLocationCoordinate2D
                         if state.game.gameMode == .stayInTheZone {
-                            let interpolated = interpolateZoneCenter(
-                                initialCenter: state.game.zone.center.toCLCoordinates,
-                                finalCenter: state.game.finalLocation,
-                                initialRadius: state.game.zone.radius,
-                                currentRadius: Double(nextRadius)
-                            )
-                            previewCenter = deterministicDriftCenter(
-                                basePoint: interpolated,
-                                oldRadius: Double(state.radius),
-                                newRadius: Double(nextRadius),
-                                driftSeed: state.game.zone.driftSeed
-                            )
+                            previewCenter = nextCircle.center
                         } else {
-                            previewCenter = currentCenter
+                            previewCenter = state.mapCircle?.center ?? nextCircle.center
                         }
                         state.previewCircle = CircleOverlay(
                             center: previewCenter,
-                            radius: CLLocationDistance(nextRadius)
+                            radius: CLLocationDistance(nextCircle.radiusMeters)
                         )
                     }
                 }
@@ -565,9 +560,11 @@ struct HunterMapFeature {
                 }
                 let powerUpsEnabled = state.game.powerUps.enabled
                 let hunterStartDate = state.game.hunterStartDate
-                let (lastUpdate, lastRadius) = state.game.findLastUpdate()
-                state.radius = lastRadius
-                state.nextRadiusUpdate = lastUpdate
+                // PP-zone-stored: seed from the zone center; real geometry
+                // arrives in `.scheduleLoaded` (fetch appended below).
+                state.radius = Int(state.game.zone.radius)
+                state.nextRadiusUpdate = state.game.hunterStartDate
+                let scheduleGameId = state.game.id
 
                 // Start Live Activity
                 let attributes = PoulePartyAttributes(
@@ -625,6 +622,11 @@ struct HunterMapFeature {
                         for await powerUps in apiClient.powerUpsStream(gameId) {
                             await send(.internal(.powerUpsUpdated(powerUps)))
                         }
+                    },
+                    // PP-zone-stored: load the immutable circle schedule once.
+                    .run { send in
+                        let circles = (try? await apiClient.fetchZoneSchedule(scheduleGameId)) ?? []
+                        await send(.internal(.scheduleLoaded(circles)))
                     }
                 ]
 
@@ -771,13 +773,9 @@ struct HunterMapFeature {
                     }
                 }
 
-                let (lastUpdate, lastRadius) = game.findLastUpdate()
-
                 let activatedPowerUp = detectActivatedPowerUp(oldGame: state.game, newGame: game)
 
                 state.game = game
-                state.radius = lastRadius
-                state.nextRadiusUpdate = lastUpdate
                 // Safety net: if `status == .done` arrived while another
                 // modal was up (sheet, alert), the early branch above didn't
                 // get to flip `isGameOver`. Catch it here so the bottom-bar
@@ -787,25 +785,24 @@ struct HunterMapFeature {
                     locationClient.stopTracking()
                 }
 
-                if game.gameMode != .stayInTheZone {
-                    if let currentCircle = state.mapCircle {
-                        state.mapCircle = CircleOverlay(
-                            center: currentCircle.center,
-                            radius: CLLocationDistance(state.radius)
-                        )
-                    }
-                    // else: no chicken location yet, leave mapCircle nil
-                } else {
-                    let interpolatedCenter = interpolateZoneCenter(
-                        initialCenter: game.zone.center.toCLCoordinates,
-                        finalCenter: game.finalLocation,
-                        initialRadius: game.zone.radius,
-                        currentRadius: Double(lastRadius)
-                    )
-                    state.mapCircle = CircleOverlay(
-                        center: interpolatedCenter,
-                        radius: CLLocationDistance(state.radius)
-                    )
+                // PP-zone-stored: re-resolve the active circle from the stored
+                // schedule on every config tick (covers QA debug anchor-rewind).
+                let zCfg = zoneRenderState(
+                    gameMode: game.gameMode,
+                    hunterStartDate: game.hunterStartDate,
+                    shrinkIntervalMinutes: game.zone.shrinkIntervalMinutes,
+                    fallbackRadius: game.zone.radius,
+                    circles: state.circles,
+                    freezeEnd: game.powerUps.activeEffects.zoneFreeze?.dateValue(),
+                    freezeDuration: PowerUp.PowerUpType.zoneFreeze.durationSeconds ?? 0
+                )
+                state.radius = zCfg.radius
+                if let next = zCfg.nextUpdate { state.nextRadiusUpdate = next }
+                if let center = zCfg.center {
+                    state.mapCircle = CircleOverlay(center: center, radius: CLLocationDistance(zCfg.radius))
+                } else if let currentCircle = state.mapCircle {
+                    // followTheChicken: keep the live chicken center, refresh radius.
+                    state.mapCircle = CircleOverlay(center: currentCircle.center, radius: CLLocationDistance(zCfg.radius))
                 }
 
                 // Decoy: show a fake chicken marker when decoy is active
@@ -891,6 +888,29 @@ struct HunterMapFeature {
                 }
 
                 return effects.isEmpty ? .none : .merge(effects)
+
+            case let .internal(.scheduleLoaded(circles)):
+                state.circles = circles
+                let z = zoneRenderState(
+                    gameMode: state.game.gameMode,
+                    hunterStartDate: state.game.hunterStartDate,
+                    shrinkIntervalMinutes: state.game.zone.shrinkIntervalMinutes,
+                    fallbackRadius: state.game.zone.radius,
+                    circles: circles,
+                    freezeEnd: state.game.powerUps.activeEffects.zoneFreeze?.dateValue(),
+                    freezeDuration: PowerUp.PowerUpType.zoneFreeze.durationSeconds ?? 0
+                )
+                state.radius = z.radius
+                if let next = z.nextUpdate { state.nextRadiusUpdate = next }
+                // stayInTheZone: use the stored center. followTheChicken: keep
+                // the live chicken center if we already have one, else nil.
+                if let center = z.center {
+                    state.mapCircle = CircleOverlay(center: center, radius: CLLocationDistance(z.radius))
+                } else if let existing = state.mapCircle {
+                    state.mapCircle = CircleOverlay(center: existing.center, radius: CLLocationDistance(z.radius))
+                }
+                return .none
+
             case .internal(.timerTicked):
                 if state.isGameOver {
                     state.isOutsideZone = false
@@ -957,43 +977,28 @@ struct HunterMapFeature {
                     }
                 }
 
-                // Radius update
-                if let result = processRadiusUpdate(
-                    nextRadiusUpdate: state.nextRadiusUpdate,
-                    currentRadius: state.radius,
-                    radiusDeclinePerUpdate: state.game.zone.shrinkMetersPerUpdate,
-                    radiusIntervalUpdate: state.game.zone.shrinkIntervalMinutes,
-                    gameMod: state.game.gameMode,
-                    initialCoordinates: state.game.zone.center.toCLCoordinates,
-                    currentCircle: state.mapCircle,
-                    driftSeed: state.game.zone.driftSeed,
-                    isZoneFrozen: state.game.isZoneFrozen,
-                    finalCoordinates: state.game.finalLocation,
-                    initialRadius: state.game.zone.radius
-                ) {
-                    if result.isGameOver, !state.isGameOver {
-                        HapticManager.notification(.warning)
-                        state.isGameOver = true
-                        locationClient.stopTracking()
-                        let endState = PoulePartyAttributes.ContentState(
-                            radiusMeters: 0,
-                            nextShrinkDate: nil,
-                            activeHunters: max(0, state.game.hunterIds.count - state.game.winners.count),
-                            winnersCount: state.game.winners.count,
-                            isOutsideZone: false,
-                            gamePhase: .gameOver
-                        )
-                        state.previewCircle = nil
-                        return .run { _ in
-                            await liveActivityClient.end(endState)
-                        }
-                    }
-                    state.radius = result.newRadius
-                    state.nextRadiusUpdate = result.newNextUpdate
-                    state.mapCircle = result.newCircle
-                    // Clear zone preview on actual zone shrink
-                    state.previewCircle = nil
+                // PP-zone-stored: resolve the active circle from the stored
+                // schedule. Zone shrinks to the 50m final circle and stays;
+                // game ends by time / all-found / cancel, not "collapsed".
+                // followTheChicken keeps the live chicken GPS center.
+                let prevRadiusHM = state.radius
+                let zTick = zoneRenderState(
+                    gameMode: state.game.gameMode,
+                    hunterStartDate: state.game.hunterStartDate,
+                    shrinkIntervalMinutes: state.game.zone.shrinkIntervalMinutes,
+                    fallbackRadius: state.game.zone.radius,
+                    circles: state.circles,
+                    freezeEnd: state.game.powerUps.activeEffects.zoneFreeze?.dateValue(),
+                    freezeDuration: PowerUp.PowerUpType.zoneFreeze.durationSeconds ?? 0
+                )
+                state.radius = zTick.radius
+                if let next = zTick.nextUpdate { state.nextRadiusUpdate = next }
+                let tickCenterHM = zTick.center ?? state.mapCircle?.center
+                if let tickCenterHM {
+                    state.mapCircle = CircleOverlay(center: tickCenterHM, radius: CLLocationDistance(zTick.radius))
                 }
+                // Clear zone preview once the zone actually shrinks past it.
+                if zTick.radius != prevRadiusHM { state.previewCircle = nil }
 
                 // Power-up proximity check — collect all nearby power-ups
                 let nearbyPowerUps = findNearbyPowerUps(

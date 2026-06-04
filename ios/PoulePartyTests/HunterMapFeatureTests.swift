@@ -89,26 +89,33 @@ struct HunterMapFeatureTests {
             )
         )
 
+        // PP-zone-stored: with no stored circles yet (default empty), the
+        // config tick falls back to the zone radius and leaves the (nil)
+        // mapCircle / nextRadiusUpdate untouched.
         await store.send(.internal(.gameConfigUpdated( newGame))) {
-            let (lastUpdate, lastRadius) = newGame.findLastUpdate()
             $0.game = newGame
-            $0.radius = lastRadius
-            $0.nextRadiusUpdate = lastUpdate
-            $0.mapCircle = CircleOverlay(
-                center: newGame.zone.center.toCLCoordinates,
-                radius: CLLocationDistance(newGame.zone.radius)
-            )
+            $0.radius = Int(newGame.zone.radius)
             $0.previousWinnersCount = newGame.winners.count
             $0.lastLiveActivityState = $0.liveActivityState
         }
     }
 
-    @Test func timerTickedDoesNotShrinkBelowZero() async {
+    /// PP-zone-stored: the zone no longer collapses to 0 / ends the game.
+    /// The schedule stops at the 50m final circle and stays; the game ends
+    /// only by time / all-found / cancel. So even with every shrink elapsed
+    /// the radius settles on the last stored circle and `isGameOver` stays
+    /// false while the endDate is still in the future.
+    @Test func timerTickedSettlesOnFinalCircleWithoutGameOver() async {
         var game = startedGameMock
-        game.zone.shrinkMetersPerUpdate = 100
+        game.timing.headStartMinutes = 0
+        game.zone.shrinkIntervalMinutes = 1.0
         var state = HunterMapFeature.State(game: game)
-        state.radius = 50
+        state.radius = 100
         state.nextRadiusUpdate = .now.addingTimeInterval(-1)
+        state.circles = [
+            ZoneCircle(order: 0, radiusMeters: 100, lat: 50.8466, lng: 4.3528),
+            ZoneCircle(order: 1, radiusMeters: 50, lat: 50.8466, lng: 4.3528),
+        ]
 
         let store = TestStore(initialState: state) {
             HunterMapFeature()
@@ -116,51 +123,61 @@ struct HunterMapFeatureTests {
         store.exhaustivity = .off
 
         await store.send(.internal(.timerTicked)) {
-            $0.isGameOver = true
-            $0.previewCircle = nil
+            $0.radius = 50
         }
+        #expect(store.state.isGameOver == false, "game must NOT end on zone shrink (ends by time now)")
     }
 
     // MARK: - stayInTheZone mode
 
     @Test func timerTickedUpdatesCircleInStayInTheZone() async {
+        // PP-zone-stored: stayInTheZone takes the center from the stored
+        // circle. With the head start in the past and a 1-min interval every
+        // shrink has elapsed, so the active index clamps to the final circle.
         var game = startedGameMock
         game.gameMode = .stayInTheZone
+        game.timing.headStartMinutes = 0
+        game.zone.shrinkIntervalMinutes = 1.0
         var state = HunterMapFeature.State(game: game)
-        state.radius = 500
+        state.radius = 1500
         state.nextRadiusUpdate = .now.addingTimeInterval(-1)
+        let finalCircle = ZoneCircle(order: 1, radiusMeters: 400, lat: 50.8500, lng: 4.3450)
+        state.circles = [
+            ZoneCircle(order: 0, radiusMeters: 1500, lat: 50.8466, lng: 4.3528),
+            finalCircle,
+        ]
 
         let store = TestStore(initialState: state) {
             HunterMapFeature()
         }
         store.exhaustivity = .off
 
-        let newRadius = 500 - Int(game.zone.shrinkMetersPerUpdate)
-        // After the per-shrink independent sampling rewrite,
-        // `processRadiusUpdate` passes (initialCenter, initialRadius)
-        // as the drift base, not (currentCenter, currentRadius).
-        let expectedCenter = deterministicDriftCenter(
-            basePoint: game.zone.center.toCLCoordinates,
-            oldRadius: game.zone.radius,
-            newRadius: Double(newRadius),
-            driftSeed: game.zone.driftSeed,
-            finalCenter: game.finalLocation
-        )
         await store.send(.internal(.timerTicked)) {
-            $0.radius = newRadius
+            $0.radius = 400
             $0.mapCircle = CircleOverlay(
-                center: expectedCenter,
-                radius: CLLocationDistance(newRadius)
+                center: finalCircle.center,
+                radius: CLLocationDistance(400)
             )
         }
     }
 
     @Test func timerTickedDoesNotUpdateCircleInFollowTheChicken() async {
+        // PP-zone-stored: followTheChicken keeps the live chicken GPS center;
+        // only the radius comes from the stored schedule. The circle center
+        // must stay put as the radius shrinks to the final stored circle.
         var game = startedGameMock
         game.gameMode = .followTheChicken
+        game.timing.headStartMinutes = 0
+        game.zone.shrinkIntervalMinutes = 1.0
         var state = HunterMapFeature.State(game: game)
-        state.radius = 500
+        state.radius = 1500
         state.nextRadiusUpdate = .now.addingTimeInterval(-1)
+        let liveCenter = CLLocationCoordinate2D(latitude: 50.0, longitude: 4.0)
+        state.mapCircle = CircleOverlay(center: liveCenter, radius: 1500)
+        state.circles = [
+            ZoneCircle(order: 0, radiusMeters: 1500, lat: 50.8466, lng: 4.3528),
+            ZoneCircle(order: 1, radiusMeters: 400, lat: 50.8500, lng: 4.3450),
+        ]
 
         let store = TestStore(initialState: state) {
             HunterMapFeature()
@@ -168,7 +185,9 @@ struct HunterMapFeatureTests {
         store.exhaustivity = .off
 
         await store.send(.internal(.timerTicked)) {
-            $0.radius = 500 - Int(game.zone.shrinkMetersPerUpdate)
+            $0.radius = 400
+            // center unchanged (live chicken position), radius refreshed.
+            $0.mapCircle = CircleOverlay(center: liveCenter, radius: CLLocationDistance(400))
         }
     }
 
@@ -595,11 +614,10 @@ struct HunterMapFeatureTests {
         ]
 
         await store.send(.internal(.gameConfigUpdated( updatedGame))) {
-            let (lastUpdate, lastRadius) = updatedGame.findLastUpdate()
+            // PP-zone-stored: empty stored circles → fall back to zone radius;
+            // mapCircle stays nil (no chicken location received yet).
             $0.game = updatedGame
-            $0.radius = lastRadius
-            $0.nextRadiusUpdate = lastUpdate
-            // followTheChicken mode: mapCircle stays nil when no chicken location received yet
+            $0.radius = Int(updatedGame.zone.radius)
             $0.lastLiveActivityState = $0.liveActivityState
             $0.winnerNotification = "Alice found the chicken! 🐔"
             $0.previousWinnersCount = 1
@@ -731,15 +749,21 @@ struct HunterMapFeatureTests {
         #expect(stopCalls.value == 1, "Hunter must call stopTracking when game times out")
     }
 
-    /// Scenario 2 (hunter): zone collapse flips `isGameOver` and
-    /// invokes `stopTracking()`. No GPS writes can survive past this
-    /// point because the streaming coroutine is cancelled.
-    @Test func pp19_zoneCollapseFlipsIsGameOverAndStopsGPS() async {
+    /// Scenario 2 (hunter, PP-zone-stored): the zone no longer collapses to
+    /// end the game. It settles on the 50m final stored circle; `isGameOver`
+    /// stays false (endDate in the future) and GPS keeps running — the game
+    /// only ends by time / all-found / cancel.
+    @Test func pp_zoneStored_hunterZoneShrinksToFinalCircleWithoutGameOver() async {
         var game = startedGameMock
-        game.zone.shrinkMetersPerUpdate = 100
+        game.timing.headStartMinutes = 0
+        game.zone.shrinkIntervalMinutes = 1.0
         var state = HunterMapFeature.State(game: game)
-        state.radius = 50
+        state.radius = 100
         state.nextRadiusUpdate = .now.addingTimeInterval(-1)
+        state.circles = [
+            ZoneCircle(order: 0, radiusMeters: 100, lat: 50.8466, lng: 4.3528),
+            ZoneCircle(order: 1, radiusMeters: 50, lat: 50.8466, lng: 4.3528),
+        ]
 
         let stopCalls = LockIsolated(0)
         let store = TestStore(initialState: state) {
@@ -752,9 +776,10 @@ struct HunterMapFeatureTests {
         store.exhaustivity = .off
 
         await store.send(.internal(.timerTicked)) {
-            $0.isGameOver = true
+            $0.radius = 50
         }
-        #expect(stopCalls.value == 1, "Hunter must call stopTracking on zone collapse")
+        #expect(store.state.isGameOver == false, "game must NOT end on zone shrink")
+        #expect(stopCalls.value == 0, "GPS keeps running while the game is live")
     }
 
     /// Scenario 3 (hunter side): when all hunters are in `winners`,

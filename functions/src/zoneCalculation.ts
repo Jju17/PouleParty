@@ -263,7 +263,7 @@ function freshRandomSeed(): number {
  *     candidateRadius)` so the recap always renders a non-degenerate
  *     final circle.
  */
-function computeShrinkSchedule(
+export function computeShrinkSchedule(
   gameMode: "stayInTheZone" | "followTheChicken",
   start: LatLng,
   finalPoint: LatLng | null,

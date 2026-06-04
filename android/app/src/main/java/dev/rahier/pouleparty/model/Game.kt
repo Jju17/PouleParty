@@ -8,6 +8,26 @@ import dev.rahier.pouleparty.AppConstants
 import dev.rahier.pouleparty.powerups.model.PowerUpType
 import java.util.Date
 
+/**
+ * PP-zone-stored: one pre-generated zone circle, read from
+ * `/games/{id}/zone/schedule` (written server-side by `onGameCreated`).
+ * Clients render `circles[shrinkIndex]` read-only instead of recomputing
+ * the drift on-device — this is what guarantees every device shows the
+ * exact same circle. `radiusMeters` is an exact Double (no Int truncation).
+ * In `followTheChicken`, `lat`/`lng` hold the start pin but the runtime
+ * uses the live chicken GPS for the center and only takes `radiusMeters`.
+ */
+data class ZoneCircle(
+    val order: Int = 0,
+    val radiusMeters: Double = 0.0,
+    val lat: Double = 0.0,
+    val lng: Double = 0.0,
+) {
+    @get:Exclude
+    val center: Point
+        get() = Point.fromLngLat(lng, lat)
+}
+
 data class Timing(
     val start: Timestamp = Timestamp(Date(
         ((System.currentTimeMillis() + 7_200_000) / 60_000) * 60_000

@@ -9,6 +9,24 @@ import CoreLocation
 import Foundation
 import FirebaseFirestore
 
+/// PP-zone-stored: one pre-generated zone circle, read from
+/// `/games/{id}/zone/schedule` (written server-side by `onGameCreated`).
+/// Clients render `circles[shrinkIndex]` read-only instead of recomputing
+/// the drift on-device — this is what guarantees every device shows the
+/// exact same circle. `radiusMeters` is an exact Double (no Int truncation).
+/// In `followTheChicken`, `lat`/`lng` hold the start pin but the runtime
+/// uses the live chicken GPS for the center and only takes `radiusMeters`.
+struct ZoneCircle: Codable, Equatable {
+    var order: Int = 0
+    var radiusMeters: Double = 0
+    var lat: Double = 0
+    var lng: Double = 0
+
+    var center: CLLocationCoordinate2D {
+        CLLocationCoordinate2D(latitude: lat, longitude: lng)
+    }
+}
+
 struct Game: Codable, Equatable, Identifiable {
     var id: String
     var name: String = ""

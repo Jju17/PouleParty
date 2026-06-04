@@ -135,6 +135,90 @@ func interpolateZoneCenter(
     return CLLocationCoordinate2D(latitude: lat, longitude: lng)
 }
 
+// MARK: - Stored-circles selection (PP-zone-stored)
+
+/// Which stored circle is active now + when the next shrink is due.
+struct ActiveCircleResult: Equatable {
+    let circleIndex: Int
+    let nextUpdate: Date
+}
+
+/// Resolved render state for the active circle: the Int radius and (for
+/// stayInTheZone) the stored center, plus the next shrink time. In
+/// followTheChicken `center` is nil (caller keeps the live chicken GPS).
+struct ZoneRenderState: Equatable {
+    let radius: Int
+    let center: CLLocationCoordinate2D?
+    let nextUpdate: Date?
+}
+
+/// PP-zone-stored: pick the active shrink index at `now` from the timing
+/// alone (freeze-aware); the caller looks up `circles[circleIndex]`.
+/// Mirrors the freeze-skip logic of the former `findLastUpdate`. Index 0 =
+/// the initial circle; each elapsed non-frozen interval advances by one,
+/// clamped to the last (50 m) circle. Mirrors Android `selectActiveCircle`.
+func selectActiveCircle(
+    hunterStartDate: Date,
+    shrinkIntervalMinutes: Double,
+    circleCount: Int,
+    freezeEnd: Date?,
+    freezeDuration: TimeInterval,
+    now: Date = .now
+) -> ActiveCircleResult {
+    let lastIndex = max(0, circleCount - 1)
+    guard shrinkIntervalMinutes > 0, circleCount > 1 else {
+        return ActiveCircleResult(circleIndex: 0, nextUpdate: .distantFuture)
+    }
+    let interval = TimeInterval(shrinkIntervalMinutes * 60)
+    let freezeStart = freezeEnd?.addingTimeInterval(-freezeDuration)
+    var index = 0
+    var lastUpdate = hunterStartDate
+    var iterations = 0
+    while lastUpdate.addingTimeInterval(interval) < now && index < lastIndex && iterations < 10_000 {
+        lastUpdate.addTimeInterval(interval)
+        let isFrozen: Bool
+        if let fs = freezeStart, let fe = freezeEnd {
+            isFrozen = lastUpdate >= fs && lastUpdate < fe
+        } else {
+            isFrozen = false
+        }
+        if !isFrozen { index += 1 }
+        iterations += 1
+    }
+    let nextUpdate = lastUpdate.addingTimeInterval(interval)
+    return ActiveCircleResult(circleIndex: min(index, lastIndex), nextUpdate: nextUpdate)
+}
+
+/// PP-zone-stored: the single shared selector used by every map feature so
+/// geometry is resolved identically. Picks `circles[selectActiveCircle(...)]`;
+/// the Int radius floors the SAME stored Double on every device, so parity
+/// holds by construction. Mirrors Android `zoneRenderStateFromCircles`.
+func zoneRenderState(
+    gameMode: Game.GameMode,
+    hunterStartDate: Date,
+    shrinkIntervalMinutes: Double,
+    fallbackRadius: Double,
+    circles: [ZoneCircle],
+    freezeEnd: Date?,
+    freezeDuration: TimeInterval,
+    now: Date = .now
+) -> ZoneRenderState {
+    guard !circles.isEmpty else {
+        return ZoneRenderState(radius: Int(fallbackRadius), center: nil, nextUpdate: nil)
+    }
+    let active = selectActiveCircle(
+        hunterStartDate: hunterStartDate,
+        shrinkIntervalMinutes: shrinkIntervalMinutes,
+        circleCount: circles.count,
+        freezeEnd: freezeEnd,
+        freezeDuration: freezeDuration,
+        now: now
+    )
+    let circle = circles[active.circleIndex]
+    let center = gameMode == .stayInTheZone ? circle.center : nil
+    return ZoneRenderState(radius: Int(circle.radiusMeters), center: center, nextUpdate: active.nextUpdate)
+}
+
 // MARK: - Deterministic Drift
 
 /// Extra meters carved out of the drift budget so floating-point error

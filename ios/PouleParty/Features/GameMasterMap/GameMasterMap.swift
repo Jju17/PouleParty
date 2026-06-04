@@ -36,6 +36,9 @@ struct GameMasterMapFeature {
         var nowDate: Date = .now
         var radius: Int = 1500
         var mapCircle: CircleOverlay?
+        /// PP-zone-stored: immutable circle schedule fetched once from
+        /// `/games/{id}/zone/schedule`; runtime renders `circles[activeIndex]`.
+        var circles: [ZoneCircle] = []
         var showGameInfo: Bool = false
         var showHuntersDrawer: Bool = false
         var pendingSubmissionsCount: Int = 0
@@ -105,6 +108,7 @@ struct GameMasterMapFeature {
 
         @CasePathable
         enum Internal {
+            case scheduleLoaded([ZoneCircle])
             case gameUpdated(Game)
             case chickenLocationUpdated(CLLocationCoordinate2D?, isInvisible: Bool)
             case hunterLocationsUpdated([HunterLocation])
@@ -190,23 +194,54 @@ struct GameMasterMapFeature {
                         for await subs in apiClient.pendingSubmissionsStream(gameId) {
                             await send(.internal(.pendingSubmissionsUpdated(subs.count)))
                         }
+                    },
+                    // PP-zone-stored: load the immutable circle schedule once.
+                    .run { send in
+                        let circles = (try? await apiClient.fetchZoneSchedule(gameId)) ?? []
+                        await send(.internal(.scheduleLoaded(circles)))
                     }
                 )
+            case let .internal(.scheduleLoaded(circles)):
+                state.circles = circles
+                let z = zoneRenderState(
+                    gameMode: state.game.gameMode,
+                    hunterStartDate: state.game.hunterStartDate,
+                    shrinkIntervalMinutes: state.game.zone.shrinkIntervalMinutes,
+                    fallbackRadius: state.game.zone.radius,
+                    circles: circles,
+                    freezeEnd: state.game.powerUps.activeEffects.zoneFreeze?.dateValue(),
+                    freezeDuration: PowerUp.PowerUpType.zoneFreeze.durationSeconds ?? 0
+                )
+                state.radius = z.radius
+                if let next = z.nextUpdate { state.nextRadiusUpdate = next }
+                let center = z.center ?? state.mapCircle?.center
+                if let center {
+                    state.mapCircle = CircleOverlay(center: center, radius: CLLocationDistance(z.radius))
+                }
+                return .none
             case let .internal(.gameUpdated(game)):
                 state.game = game
-                let (lastUpdate, lastRadius) = game.findLastUpdate()
-                state.radius = lastRadius
-                state.nextRadiusUpdate = lastUpdate
-                let circleCenter = interpolateZoneCenter(
-                    initialCenter: game.zone.center.toCLCoordinates,
-                    finalCenter: game.finalLocation,
-                    initialRadius: game.zone.radius,
-                    currentRadius: Double(lastRadius)
-                )
-                state.mapCircle = CircleOverlay(
-                    center: circleCenter,
-                    radius: CLLocationDistance(lastRadius)
-                )
+                // QA debug games drive zone shrinks server-side (the
+                // `advanceStep` callable rewinds the start anchor), so re-derive
+                // radius / next-update / circle from the fresh timing on every
+                // config tick. Real games keep the timer-tick path untouched.
+                if game.isDebugGame {
+                    let zDebug = zoneRenderState(
+                        gameMode: game.gameMode,
+                        hunterStartDate: game.hunterStartDate,
+                        shrinkIntervalMinutes: game.zone.shrinkIntervalMinutes,
+                        fallbackRadius: game.zone.radius,
+                        circles: state.circles,
+                        freezeEnd: game.powerUps.activeEffects.zoneFreeze?.dateValue(),
+                        freezeDuration: PowerUp.PowerUpType.zoneFreeze.durationSeconds ?? 0
+                    )
+                    state.radius = zDebug.radius
+                    if let next = zDebug.nextUpdate { state.nextRadiusUpdate = next }
+                    let dbgCenter = zDebug.center ?? state.mapCircle?.center
+                    if let dbgCenter {
+                        state.mapCircle = CircleOverlay(center: dbgCenter, radius: CLLocationDistance(zDebug.radius))
+                    }
+                }
                 // Game ended (status flipped to `.done`). The GM stays
                 // on the map with `isGameOver` (computed from
                 // `game.status`) so the "Game ended" banner appears;
@@ -244,19 +279,21 @@ struct GameMasterMapFeature {
                 let now: Date = .now
                 state.nowDate = now
                 if let next = state.nextRadiusUpdate, now >= next {
-                    let (newNext, newRadius) = state.game.findLastUpdate()
-                    state.radius = newRadius
-                    state.nextRadiusUpdate = newNext
-                    let circleCenter = interpolateZoneCenter(
-                        initialCenter: state.game.zone.center.toCLCoordinates,
-                        finalCenter: state.game.finalLocation,
-                        initialRadius: state.game.zone.radius,
-                        currentRadius: Double(newRadius)
+                    let zTick = zoneRenderState(
+                        gameMode: state.game.gameMode,
+                        hunterStartDate: state.game.hunterStartDate,
+                        shrinkIntervalMinutes: state.game.zone.shrinkIntervalMinutes,
+                        fallbackRadius: state.game.zone.radius,
+                        circles: state.circles,
+                        freezeEnd: state.game.powerUps.activeEffects.zoneFreeze?.dateValue(),
+                        freezeDuration: PowerUp.PowerUpType.zoneFreeze.durationSeconds ?? 0
                     )
-                    state.mapCircle = CircleOverlay(
-                        center: circleCenter,
-                        radius: CLLocationDistance(newRadius)
-                    )
+                    state.radius = zTick.radius
+                    if let nextUpdate = zTick.nextUpdate { state.nextRadiusUpdate = nextUpdate }
+                    let tickCenter = zTick.center ?? state.mapCircle?.center
+                    if let tickCenter {
+                        state.mapCircle = CircleOverlay(center: tickCenter, radius: CLLocationDistance(zTick.radius))
+                    }
                 }
                 return .none
             case .internal(.winnerNotificationDismissed):

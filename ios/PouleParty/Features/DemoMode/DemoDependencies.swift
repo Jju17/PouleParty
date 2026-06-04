@@ -15,6 +15,7 @@ extension ApiClient {
             getFoundCode: { _ in MockDemoData.liveGame.foundCode },
             deleteConfig: { _ in },
             getConfig: { _ in MockDemoData.liveGame },
+            fetchZoneSchedule: { _ in [] },
             findGameByCode: { _ in MockDemoData.liveGame },
             registerHunter: { _, _ in },
             updateGameStatus: { _, _ in },

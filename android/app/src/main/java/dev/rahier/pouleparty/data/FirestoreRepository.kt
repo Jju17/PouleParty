@@ -138,6 +138,38 @@ class FirestoreRepository @Inject constructor(
         }
     }
 
+    /**
+     * PP-zone-stored: fetch the immutable ordered circle schedule from
+     * `/games/{id}/zone/schedule` (written server-side by `onGameCreated`).
+     * Read once when the map mounts — the doc never changes after creation,
+     * so no stream is needed. Returns empty on miss/timeout; callers treat
+     * an empty list as "no zone to render" (no legacy fallback compute).
+     */
+    suspend fun fetchZoneSchedule(gameId: String): List<dev.rahier.pouleparty.model.ZoneCircle> {
+        if (gameId.isEmpty()) return emptyList()
+        return try {
+            val doc = withTimeoutOrNull(READ_TIMEOUT_MS) {
+                firestore.collection(AppConstants.COLLECTION_GAMES).document(gameId)
+                    .collection("zone").document("schedule").get().await()
+            } ?: run {
+                Log.w(TAG, "fetchZoneSchedule($gameId) timed out after ${READ_TIMEOUT_MS}ms")
+                return emptyList()
+            }
+            @Suppress("UNCHECKED_CAST")
+            val raw = doc.get("circles") as? List<Map<String, Any?>> ?: return emptyList()
+            raw.mapNotNull { m ->
+                val radius = (m["radiusMeters"] as? Number)?.toDouble() ?: return@mapNotNull null
+                val lat = (m["lat"] as? Number)?.toDouble() ?: return@mapNotNull null
+                val lng = (m["lng"] as? Number)?.toDouble() ?: return@mapNotNull null
+                val order = (m["order"] as? Number)?.toInt() ?: 0
+                dev.rahier.pouleparty.model.ZoneCircle(order = order, radiusMeters = radius, lat = lat, lng = lng)
+            }.sortedBy { it.order }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to fetch zone schedule $gameId", e)
+            emptyList()
+        }
+    }
+
     data class ActiveGameResult(
         val game: Game,
         val role: dev.rahier.pouleparty.ui.gamelogic.PlayerRole,

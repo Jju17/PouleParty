@@ -297,13 +297,14 @@ class ChickenMapViewModelBehaviorTest {
         // post-condition is `isGameOver = true`, screen stays put).
     }
 
-    /** Scenario 2 (chicken): zone collapse → `isGameOver` flips. No
-     *  auto-transition. */
+    /** PP-zone-stored: the zone no longer "collapses" to 0 / ends the
+     *  game. With stored circles the schedule stops at the 50m final
+     *  circle and stays there; the game ends only by time / all-found /
+     *  cancel. So even with every shrink elapsed, isGameOver stays false
+     *  (until endDate) and the radius settles on the last stored circle. */
     @Test
-    fun `pp19 zone collapse flips isGameOver and stops streams`() {
+    fun `pp-zone-stored zone shrinks to final circle without game over`() {
         val now = System.currentTimeMillis()
-        // Radius is small enough that the very first shrink reaches 0,
-        // tripping `processRadiusUpdate.isGameOver`.
         val game = dev.rahier.pouleparty.model.Game(
             id = "test-id",
             gameMode = dev.rahier.pouleparty.model.GameMod.FOLLOW_THE_CHICKEN.firestoreValue,
@@ -315,17 +316,23 @@ class ChickenMapViewModelBehaviorTest {
             zone = dev.rahier.pouleparty.model.Zone(
                 center = com.google.firebase.firestore.GeoPoint(50.8466, 4.3528),
                 radius = 100.0,
-                shrinkIntervalMinutes = 0.0,           // shrink is overdue immediately
+                shrinkIntervalMinutes = 1.0,
                 shrinkMetersPerUpdate = 100.0
             )
         )
         io.mockk.coEvery { firestoreRepository.getConfig(any()) } returns game
+        // Stored schedule: initial 100m circle, final 50m circle.
+        io.mockk.coEvery { firestoreRepository.fetchZoneSchedule(any()) } returns listOf(
+            dev.rahier.pouleparty.model.ZoneCircle(order = 0, radiusMeters = 100.0, lat = 50.8466, lng = 4.3528),
+            dev.rahier.pouleparty.model.ZoneCircle(order = 1, radiusMeters = 50.0, lat = 50.8466, lng = 4.3528),
+        )
 
         val vm = createViewModel()
         testDispatcher.scheduler.advanceTimeBy(1_500)
         testDispatcher.scheduler.runCurrent()
 
-        assertTrue("isGameOver must flip true on zone collapse", vm.uiState.value.isGameOver)
+        assertFalse("game must NOT end on zone shrink (ends by time now)", vm.uiState.value.isGameOver)
+        assertTrue("radius settles on the final stored circle (50m)", vm.uiState.value.radius == 50)
     }
 
     /** Scenario 5 (chicken): once `isGameOver` is set, no further

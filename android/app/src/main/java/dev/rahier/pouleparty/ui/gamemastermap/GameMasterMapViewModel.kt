@@ -13,7 +13,7 @@ import dev.rahier.pouleparty.powerups.model.PowerUp
 import dev.rahier.pouleparty.powerups.model.PowerUpType
 import dev.rahier.pouleparty.ui.chickenmap.HunterAnnotation
 import dev.rahier.pouleparty.ui.gamelogic.detectNewWinners
-import dev.rahier.pouleparty.ui.gamelogic.interpolateZoneCenter
+import dev.rahier.pouleparty.ui.gamelogic.zoneRenderStateFromCircles
 import dev.rahier.pouleparty.ui.map.MapUiState
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -56,6 +56,8 @@ data class GameMasterMapUiState(
     override val nowDate: Date = Date(),
     override val radius: Int = 1500,
     override val circleCenter: Point? = null,
+    /** PP-zone-stored: ordered circle schedule read once at map load. */
+    val circles: List<dev.rahier.pouleparty.model.ZoneCircle> = emptyList(),
     override val showGameInfo: Boolean = false,
     val showHuntersDrawer: Boolean = false,
     override val winnerNotification: String? = null,
@@ -173,6 +175,22 @@ class GameMasterMapViewModel @Inject constructor(
         }
     }
 
+    /** PP-zone-stored: thin wrapper over the shared selector. */
+    private fun zoneStateFromCircles(
+        game: Game,
+        circles: List<dev.rahier.pouleparty.model.ZoneCircle>,
+        now: Date,
+    ) = zoneRenderStateFromCircles(
+        gameMode = game.gameModEnum,
+        hunterStartDate = game.hunterStartDate,
+        shrinkIntervalMinutes = game.zone.shrinkIntervalMinutes,
+        fallbackRadius = game.zone.radius,
+        circles = circles,
+        freezeEnd = game.powerUps.activeEffects.zoneFreeze?.toDate(),
+        freezeDurationMs = (PowerUpType.ZONE_FREEZE.durationSeconds ?: 0) * 1000L,
+        now = now,
+    )
+
     private fun loadGame() {
         viewModelScope.launch {
             val game = firestoreRepository.getConfig(gameId)
@@ -180,19 +198,15 @@ class GameMasterMapViewModel @Inject constructor(
                 Log.w("GameMasterMapVM", "Game $gameId not found")
                 return@launch
             }
-            val (nextUpdate, lastRadius) = game.findLastUpdate()
-            val center = interpolateZoneCenter(
-                initialCenter = game.initialLocation,
-                finalCenter = game.finalLocation,
-                initialRadius = game.zone.radius,
-                currentRadius = lastRadius.toDouble(),
-            )
+            val circles = firestoreRepository.fetchZoneSchedule(gameId)
+            val z = zoneStateFromCircles(game, circles, Date())
             _uiState.update {
                 it.copy(
                     game = game,
-                    nextRadiusUpdate = nextUpdate,
-                    radius = lastRadius,
-                    circleCenter = center,
+                    circles = circles,
+                    nextRadiusUpdate = z.nextUpdate,
+                    radius = z.radius,
+                    circleCenter = z.center ?: it.circleCenter,
                     hasGameStarted = Date().after(game.startDate),
                     previousWinnersCount = game.winners.size,
                 )
@@ -267,18 +281,12 @@ class GameMasterMapViewModel @Inject constructor(
                 val state = _uiState.value
                 val next = state.nextRadiusUpdate
                 if (next != null && state.nowDate.after(next)) {
-                    val (newNext, newRadius) = state.game.findLastUpdate()
-                    val newCenter = interpolateZoneCenter(
-                        initialCenter = state.game.initialLocation,
-                        finalCenter = state.game.finalLocation,
-                        initialRadius = state.game.zone.radius,
-                        currentRadius = newRadius.toDouble(),
-                    )
+                    val z = zoneStateFromCircles(state.game, state.circles, Date())
                     _uiState.update {
                         it.copy(
-                            nextRadiusUpdate = newNext,
-                            radius = newRadius,
-                            circleCenter = newCenter,
+                            nextRadiusUpdate = z.nextUpdate,
+                            radius = z.radius,
+                            circleCenter = z.center ?: it.circleCenter,
                         )
                     }
                 }
@@ -300,21 +308,15 @@ class GameMasterMapViewModel @Inject constructor(
             // next-update / circle from the fresh timing on every config tick.
             // Real games keep the timer-tick path untouched.
             if (game.isDebugGame) {
-                val (nextUpdate, lastRadius) = game.findLastUpdate()
-                val center = interpolateZoneCenter(
-                    initialCenter = game.initialLocation,
-                    finalCenter = game.finalLocation,
-                    initialRadius = game.zone.radius,
-                    currentRadius = lastRadius.toDouble(),
-                )
+                val z = zoneStateFromCircles(game, it.circles, Date())
                 it.copy(
                     game = game,
                     winnerNotification = notif ?: it.winnerNotification,
                     previousWinnersCount = game.winners.size,
                     isGameOver = isNowDone || it.isGameOver,
-                    radius = lastRadius,
-                    nextRadiusUpdate = nextUpdate,
-                    circleCenter = center,
+                    radius = z.radius,
+                    nextRadiusUpdate = z.nextUpdate,
+                    circleCenter = z.center ?: it.circleCenter,
                 )
             } else {
                 it.copy(

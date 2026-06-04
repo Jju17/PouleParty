@@ -181,6 +181,16 @@ service cloud.firestore {
         allow write: if false;
       }
 
+      // PP-zone-stored: the ordered zone-circle schedule (`zone/schedule`).
+      // Written exclusively by `onGameCreated` (admin SDK) so a client can't
+      // forge the circles; read by any authenticated user (same visibility as
+      // the parent game doc, which any auth user can read to join by code).
+      // Geometry only — no PII.
+      match /zone/{docId} {
+        allow read: if request.auth != null;
+        allow write: if false;
+      }
+
       // Per-game snapshot of the challenges catalog. Written exclusively
       // by `onGameCreated` (admin SDK); read by everyone with a role on
       // the game.

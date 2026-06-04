@@ -24,9 +24,8 @@ import dev.rahier.pouleparty.ui.gamelogic.evaluateCountdown
 import dev.rahier.pouleparty.ui.gamelogic.evaluateOutOfZonePenalty
 import dev.rahier.pouleparty.ui.map.BaseMapViewModel
 import kotlinx.coroutines.flow.catch
-import dev.rahier.pouleparty.ui.gamelogic.deterministicDriftCenter
-import dev.rahier.pouleparty.ui.gamelogic.interpolateZoneCenter
-import dev.rahier.pouleparty.ui.gamelogic.processRadiusUpdate
+import dev.rahier.pouleparty.ui.gamelogic.selectActiveCircle
+import dev.rahier.pouleparty.ui.gamelogic.zoneRenderStateFromCircles
 import dev.rahier.pouleparty.ui.gamelogic.seededRandom
 import dev.rahier.pouleparty.ui.gamelogic.shouldCheckZone
 import kotlin.coroutines.coroutineContext
@@ -51,6 +50,9 @@ data class HunterMapUiState(
     override val nowDate: Date = Date(),
     override val radius: Int = 1500,
     override val circleCenter: Point? = null,
+    /** PP-zone-stored: ordered circle schedule read once from
+     *  `/games/{id}/zone/schedule`; runtime renders `circles[activeIndex]`. */
+    val circles: List<dev.rahier.pouleparty.model.ZoneCircle> = emptyList(),
     val showLeaveAlert: Boolean = false,
     val isEnteringFoundCode: Boolean = false,
     val enteredCode: String = "",
@@ -199,6 +201,22 @@ class HunterMapViewModel @Inject constructor(
         }
     }
 
+    /** PP-zone-stored: thin wrapper over the shared selector. */
+    private fun zoneStateFromCircles(
+        game: Game,
+        circles: List<dev.rahier.pouleparty.model.ZoneCircle>,
+        now: Date,
+    ) = zoneRenderStateFromCircles(
+        gameMode = game.gameModEnum,
+        hunterStartDate = game.hunterStartDate,
+        shrinkIntervalMinutes = game.zone.shrinkIntervalMinutes,
+        fallbackRadius = game.zone.radius,
+        circles = circles,
+        freezeEnd = game.powerUps.activeEffects.zoneFreeze?.toDate(),
+        freezeDurationMs = (PowerUpType.ZONE_FREEZE.durationSeconds ?: 0) * 1000L,
+        now = now,
+    )
+
     private fun loadGame() {
         viewModelScope.launch {
             if (hunterId.isEmpty()) {
@@ -207,13 +225,17 @@ class HunterMapViewModel @Inject constructor(
             }
             val game = firestoreRepository.getConfig(gameId) ?: return@launch
 
-            val (lastUpdate, lastRadius) = game.findLastUpdate()
+            // PP-zone-stored: read the immutable circle schedule once.
+            val circles = firestoreRepository.fetchZoneSchedule(gameId)
+            val z = zoneStateFromCircles(game, circles, Date())
 
             _uiState.update {
                 it.copy(
                     game = game,
-                    radius = lastRadius,
-                    nextRadiusUpdate = lastUpdate
+                    circles = circles,
+                    radius = z.radius,
+                    nextRadiusUpdate = z.nextUpdate,
+                    circleCenter = z.center ?: it.circleCenter,
                 )
             }
 
@@ -308,36 +330,18 @@ class HunterMapViewModel @Inject constructor(
                     continue
                 }
 
-                // Radius update
-                val radiusResult = processRadiusUpdate(
-                    nextRadiusUpdate = state.nextRadiusUpdate,
-                    currentRadius = state.radius,
-                    radiusDeclinePerUpdate = state.game.zone.shrinkMetersPerUpdate,
-                    radiusIntervalUpdate = state.game.zone.shrinkIntervalMinutes,
-                    gameMod = state.game.gameModEnum,
-                    initialLocation = state.game.initialLocation,
-                    currentCircleCenter = state.circleCenter,
-                    driftSeed = state.game.zone.driftSeed,
-                    isZoneFrozen = state.game.isZoneFrozen,
-                    finalLocation = state.game.finalLocation,
-                    initialRadius = state.game.zone.radius
-                )
-                if (radiusResult != null) {
-                    if (radiusResult.isGameOver) {
-                        // Fallback: also update status from hunter side in case chicken didn't
-                        try { firestoreRepository.updateGameStatus(gameId, GameStatus.DONE) } catch (_: Exception) {}
-                        cancelStreams()
-                        _uiState.update { it.copy(isGameOver = true, previewCircle = null) }
-                    } else {
-                        _uiState.update {
-                            it.copy(
-                                radius = radiusResult.newRadius,
-                                nextRadiusUpdate = radiusResult.newNextUpdate,
-                                circleCenter = radiusResult.newCircleCenter ?: it.circleCenter,
-                                previewCircle = null
-                            )
-                        }
-                    }
+                // PP-zone-stored: resolve the active circle from the stored
+                // schedule (no on-device recompute). Zone shrinks to the 50m
+                // final circle and stays; game ends by time, not "collapsed".
+                // followTheChicken keeps the live chicken GPS center.
+                val z = zoneStateFromCircles(state.game, state.circles, now)
+                _uiState.update {
+                    it.copy(
+                        radius = z.radius,
+                        nextRadiusUpdate = z.nextUpdate,
+                        circleCenter = z.center ?: it.circleCenter,
+                        previewCircle = null,
+                    )
                 }
 
                 // Power-up proximity check
@@ -402,33 +406,25 @@ class HunterMapViewModel @Inject constructor(
                     return@collect
                 }
 
-                val (lastUpdate, lastRadius) = updatedGame.findLastUpdate()
                 val previousCount = _uiState.value.previousWinnersCount
                 val oldGame = _uiState.value.game
 
+                // PP-zone-stored: re-resolve the active circle from the stored
+                // schedule on every config tick (covers QA debug anchor-rewind
+                // too). Geometry is read, never recomputed on-device.
+                val z = zoneStateFromCircles(updatedGame, _uiState.value.circles, Date())
                 _uiState.update {
                     it.copy(
                         game = updatedGame,
-                        radius = lastRadius,
-                        nextRadiusUpdate = lastUpdate,
+                        radius = z.radius,
+                        nextRadiusUpdate = z.nextUpdate,
+                        circleCenter = z.center ?: it.circleCenter,
                         previousWinnersCount = updatedGame.winners.size
                     )
                 }
 
                 // Detect cross-player power-up activations
                 detectCrossPlayerPowerUp(oldGame, updatedGame) { msg, type -> showNotification(msg, type) }
-
-                // For stayInTheZone, only set initial circle if none exists yet
-                // (drift center is computed by processRadiusUpdate, don't overwrite it)
-                if (updatedGame.gameModEnum == GameMod.STAY_IN_THE_ZONE && _uiState.value.circleCenter == null) {
-                    val interpolatedCenter = interpolateZoneCenter(
-                        initialCenter = updatedGame.initialLocation,
-                        finalCenter = updatedGame.finalLocation,
-                        initialRadius = updatedGame.zone.radius,
-                        currentRadius = lastRadius.toDouble()
-                    )
-                    _uiState.update { it.copy(circleCenter = interpolatedCenter) }
-                }
 
                 // Decoy: show a fake chicken marker when decoy is active
                 if (updatedGame.isDecoyActive) {
@@ -678,38 +674,28 @@ class HunterMapViewModel @Inject constructor(
                 analyticsRepository.powerUpActivated(type = powerUp.type, role = "hunter")
 
                 if (powerUp.typeEnum == PowerUpType.ZONE_PREVIEW) {
-                    // Compute NEXT zone boundary client-side. In
-                    // followTheChicken the zone recentres on the Chicken's
-                    // live GPS at each shrink, so the current centre is the
-                    // best approximation available right now. In
-                    // stayInTheZone the zone drifts deterministically — we
-                    // mirror exactly what `processRadiusUpdate` will apply
-                    // on the next tick (interpolate + drift), otherwise
-                    // the preview is concentric with the current circle
-                    // and misses the "where it moves to" information that
-                    // is the whole point of the power-up.
+                    // PP-zone-stored: the NEXT zone boundary is just the next
+                    // entry in the stored schedule — no client recompute. In
+                    // followTheChicken the next circle recentres on the
+                    // Chicken's live GPS, so we keep the current center and
+                    // only preview the next radius.
                     val state = _uiState.value
-                    val nextRadius = state.radius - state.game.zone.shrinkMetersPerUpdate.toInt()
-                    if (nextRadius > 0) {
-                        val currentCenter = state.circleCenter ?: state.game.initialLocation
+                    val active = selectActiveCircle(
+                        hunterStartDate = state.game.hunterStartDate,
+                        shrinkIntervalMinutes = state.game.zone.shrinkIntervalMinutes,
+                        circleCount = state.circles.size,
+                        freezeEnd = state.game.powerUps.activeEffects.zoneFreeze?.toDate(),
+                        freezeDurationMs = (PowerUpType.ZONE_FREEZE.durationSeconds ?: 0) * 1000L,
+                    )
+                    val nextCircle = state.circles.getOrNull(active.circleIndex + 1)
+                    if (nextCircle != null) {
                         val previewCenter = if (state.game.gameModEnum == GameMod.STAY_IN_THE_ZONE) {
-                            val interpolated = interpolateZoneCenter(
-                                initialCenter = state.game.initialLocation,
-                                finalCenter = state.game.finalLocation,
-                                initialRadius = state.game.zone.radius,
-                                currentRadius = nextRadius.toDouble()
-                            )
-                            deterministicDriftCenter(
-                                basePoint = interpolated,
-                                oldRadius = state.radius.toDouble(),
-                                newRadius = nextRadius.toDouble(),
-                                driftSeed = state.game.zone.driftSeed
-                            )
+                            nextCircle.center
                         } else {
-                            currentCenter
+                            state.circleCenter ?: state.game.initialLocation
                         }
                         _uiState.update {
-                            it.copy(previewCircle = Pair(previewCenter, nextRadius.toDouble()))
+                            it.copy(previewCircle = Pair(previewCenter, nextCircle.radiusMeters))
                         }
                     }
                 }

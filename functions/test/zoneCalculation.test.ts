@@ -3,6 +3,7 @@ import { HttpsError } from "firebase-functions/v2/https";
 import {
   computeZoneConfigurationCore,
   calculateNormalModeSettingsServer,
+  computeShrinkSchedule,
 } from "../src/zoneCalculation";
 import { haversineDistance } from "../src/powerUpSpawn";
 
@@ -520,5 +521,71 @@ describe("computeZoneConfigurationCore — pinned constants", () => {
     });
     expect(out.finalZoneRadius).toBe(50);
     expect(out.interiorMargin).toBe(200);
+  });
+});
+
+// PP-zone-stored: the persisted schedule is what spawnBatchForGame now
+// indexes into (circles[batchIndex] = the active circle for batch N) and
+// what every client renders read-only. Pin the indexing contract.
+describe("computeShrinkSchedule — stored-circles indexing contract", () => {
+  const start = { lat: 50.85, lng: 4.35 };
+  const final = { lat: 50.86, lng: 4.36 };
+
+  test("circles[0] is the initial circle at start, full radius", () => {
+    const circles = computeShrinkSchedule("stayInTheZone", start, final, 1500, 100, 12345);
+    expect(circles[0].radiusMeters).toBe(1500);
+    expect(circles[0].center.lat).toBe(start.lat);
+    expect(circles[0].center.lng).toBe(start.lng);
+  });
+
+  test("radius is strictly decreasing by step until the 50m final clamp", () => {
+    const circles = computeShrinkSchedule("stayInTheZone", start, final, 1500, 100, 12345);
+    for (let i = 1; i < circles.length; i++) {
+      expect(circles[i].radiusMeters).toBeLessThan(circles[i - 1].radiusMeters);
+    }
+    expect(circles[circles.length - 1].radiusMeters).toBe(50);
+  });
+
+  test("radii are exact doubles (no Int truncation): 1500,1400,1300,…", () => {
+    const circles = computeShrinkSchedule("stayInTheZone", start, final, 1500, 100, 12345);
+    expect(circles[1].radiusMeters).toBe(1400);
+    expect(circles[2].radiusMeters).toBe(1300);
+  });
+
+  test("deterministic: same inputs → identical circles", () => {
+    const a = computeShrinkSchedule("stayInTheZone", start, final, 1500, 100, 777);
+    const b = computeShrinkSchedule("stayInTheZone", start, final, 1500, 100, 777);
+    expect(a).toEqual(b);
+  });
+
+  test("followTheChicken circles are all centered on the start pin", () => {
+    const circles = computeShrinkSchedule("followTheChicken", start, null, 1000, 100, 999);
+    for (const c of circles) {
+      expect(c.center.lat).toBe(start.lat);
+      expect(c.center.lng).toBe(start.lng);
+    }
+  });
+
+  test("no shrink (decline <= 0) → single initial circle", () => {
+    const circles = computeShrinkSchedule("stayInTheZone", start, final, 1500, 0, 12345);
+    expect(circles).toHaveLength(1);
+    expect(circles[0].radiusMeters).toBe(1500);
+  });
+
+  test("the schedule the wizard previews equals what onGameCreated would persist", () => {
+    // computeZoneConfigurationCore.circles must match a direct
+    // computeShrinkSchedule call on the same derived params — i.e. the
+    // recap preview and the stored doc are byte-identical.
+    const out = computeZoneConfigurationCore({
+      startPoint: start,
+      finalPoint: final,
+      gameMode: "stayInTheZone",
+      gameDurationMinutes: 60,
+      existingSeed: 12345,
+    });
+    const direct = computeShrinkSchedule(
+      "stayInTheZone", start, final, out.initialRadius, out.shrinkMetersPerUpdate, out.driftSeed
+    );
+    expect(out.circles).toEqual(direct);
   });
 });

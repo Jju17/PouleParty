@@ -595,9 +595,12 @@ class HunterMapViewModelBehaviorTest {
             )
         )
         io.mockk.coEvery { firestoreRepository.getConfig(any()) } returns game
-        // Emit the game via gameConfigFlow so streamGameConfig seeds the
-        // drifted initial circleCenter — otherwise circleCenter stays
-        // null forever in stayInTheZone and the assertion is meaningless.
+        // PP-zone-stored: the circleCenter is now seeded from the stored
+        // schedule (read at load), not recomputed. Provide a single 1500m
+        // circle centered on the zone center so circleCenter is non-null.
+        io.mockk.coEvery { firestoreRepository.fetchZoneSchedule(any()) } returns listOf(
+            dev.rahier.pouleparty.model.ZoneCircle(order = 0, radiusMeters = 1500.0, lat = 50.8500, lng = 4.3500),
+        )
         io.mockk.every { firestoreRepository.gameConfigFlow(any()) } returns
             kotlinx.coroutines.flow.flowOf(game)
 
@@ -708,10 +711,11 @@ class HunterMapViewModelBehaviorTest {
         assertFalse("must NOT auto-transition to Victory", vm.uiState.value.shouldNavigateToVictory)
     }
 
-    /** Scenario 2 (hunter): zone collapse flips `isGameOver`. No
-     *  auto-transition. */
+    /** PP-zone-stored: the zone no longer collapses to a game-over. With
+     *  stored circles it settles on the 50m final circle and the game ends
+     *  only by time / all-found / cancel. isGameOver stays false on shrink. */
     @Test
-    fun `pp19 zone collapse flips isGameOver and stops streams`() {
+    fun `pp-zone-stored hunter zone shrinks to final circle without game over`() {
         val now = System.currentTimeMillis()
         val game = dev.rahier.pouleparty.model.Game(
             id = "test-id",
@@ -724,17 +728,21 @@ class HunterMapViewModelBehaviorTest {
             zone = dev.rahier.pouleparty.model.Zone(
                 center = com.google.firebase.firestore.GeoPoint(50.8466, 4.3528),
                 radius = 100.0,
-                shrinkIntervalMinutes = 0.0,
+                shrinkIntervalMinutes = 1.0,
                 shrinkMetersPerUpdate = 100.0
             )
         )
         io.mockk.coEvery { firestoreRepository.getConfig(any()) } returns game
+        io.mockk.coEvery { firestoreRepository.fetchZoneSchedule(any()) } returns listOf(
+            dev.rahier.pouleparty.model.ZoneCircle(order = 0, radiusMeters = 100.0, lat = 50.8466, lng = 4.3528),
+            dev.rahier.pouleparty.model.ZoneCircle(order = 1, radiusMeters = 50.0, lat = 50.8466, lng = 4.3528),
+        )
 
         val vm = createViewModel()
         testDispatcher.scheduler.advanceTimeBy(1_500)
         testDispatcher.scheduler.runCurrent()
 
-        assertTrue("isGameOver must flip true on zone collapse", vm.uiState.value.isGameOver)
+        assertFalse("game must NOT end on zone shrink (ends by time now)", vm.uiState.value.isGameOver)
         assertFalse("must NOT auto-transition to Victory", vm.uiState.value.shouldNavigateToVictory)
     }
 

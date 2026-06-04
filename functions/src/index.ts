@@ -8,7 +8,6 @@ import { onTaskDispatched } from "firebase-functions/v2/tasks";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
 import {
-  deterministicDriftCenterServer,
   filterEnabledTypesServer,
   generatePowerUpsServer,
   SpawnedPowerUp,
@@ -27,6 +26,13 @@ export {
 // recap step can fetch a server-computed zone instead of recomputing
 // it client-side.
 export { computeZoneConfiguration } from "./zoneCalculation";
+
+// `computeShrinkSchedule` (PP-zone-stored): pure builder of the ordered
+// circle list. Used by `onGameCreated` to persist the schedule to
+// `/games/{id}/zone/schedule` so every client renders the SAME circles
+// (read-only) instead of recomputing the drift on-device (the source of
+// the cross-device parity drift).
+import { computeShrinkSchedule } from "./zoneCalculation";
 
 // Re-export the PP-52 event registration handlers. `createPendingRegistration`
 // + `confirmRegistrationPayment` are the web-facing Stripe pipeline (the form
@@ -458,7 +464,6 @@ async function spawnBatchForGame(
   const initialRadius = zone?.radius;
   const shrinkMetersPerUpdate = zone?.shrinkMetersPerUpdate;
   const driftSeed = zone?.driftSeed;
-  const finalCenter = zone?.finalCenter ?? undefined;
   if (
     !initialCenter ||
     typeof initialRadius !== "number" ||
@@ -483,39 +488,38 @@ async function spawnBatchForGame(
   const zoneFreezeExpiresAt = activeEffects?.zoneFreeze?.toDate();
   const isZoneFrozen = zoneFreezeExpiresAt !== undefined && zoneFreezeExpiresAt > new Date();
   const effectiveBatchIndex = isZoneFrozen && batchIndex > 0 ? batchIndex - 1 : batchIndex;
-  const currentRadius = Math.max(
-    0,
-    initialRadius - effectiveBatchIndex * shrinkMetersPerUpdate
-  );
+
+  // PP-zone-stored: read the persisted circle schedule so power-ups spawn
+  // in the SAME circle every client renders (no independent recompute, no
+  // drift). `circles[effectiveBatchIndex]` is the active circle for this
+  // batch; the last circle is reused once the schedule is exhausted.
+  const scheduleSnap = await getFirestore()
+    .collection("games").doc(gameId)
+    .collection("zone").doc("schedule")
+    .get();
+  const scheduleData = scheduleSnap.data() as
+    | { circles?: { order: number; radiusMeters: number; lat: number; lng: number }[] }
+    | undefined;
+  const circles = scheduleData?.circles;
+  if (!circles || circles.length === 0) {
+    console.error(`[spawn] game ${gameId} has no stored zone schedule — skipping batch ${batchIndex}`);
+    return;
+  }
+  const circle = circles[Math.min(effectiveBatchIndex, circles.length - 1)];
+  const currentRadius = circle.radiusMeters;
   if (currentRadius <= 0) {
     console.log(`[spawn] zone has collapsed for game ${gameId} — skipping batch ${batchIndex}`);
     return;
   }
 
   let spawnCenter: { latitude: number; longitude: number };
-  if (effectiveBatchIndex === 0) {
-    // Initial batch (or first batch frozen): use the raw zone.center
-    // (no drift, no chicken location yet).
-    spawnCenter = { latitude: initialCenter.latitude, longitude: initialCenter.longitude };
-  } else if (gameMode === "stayInTheZone") {
-    // Drift is now independent per shrink: the center for batch N is
-    // sampled directly from `disk(initial, R₀ − r_N) ∩ disk(final,
-    // r_N − FINAL − safety)` using only (seed, newRadius). No chain
-    // walk needed — callers don't know previous steps' centers either,
-    // because the algo no longer depends on them.
-    spawnCenter = deterministicDriftCenterServer(
-      { latitude: initialCenter.latitude, longitude: initialCenter.longitude },
-      initialRadius,
-      currentRadius,
-      driftSeed,
-      finalCenter
-        ? { latitude: finalCenter.latitude, longitude: finalCenter.longitude }
-        : undefined
-    );
+  if (gameMode === "stayInTheZone") {
+    // Center comes straight from the stored circle (same one clients draw).
+    spawnCenter = { latitude: circle.lat, longitude: circle.lng };
   } else {
     // followTheChicken: the zone tracks the chicken's live GPS. Read the
-    // latest chicken position from RTDB (PP-102) — fall back to initial
-    // center if missing.
+    // latest chicken position from RTDB (PP-102) — fall back to the stored
+    // circle center if missing. Radius still comes from the schedule.
     const locSnap = await getDatabase()
       .ref(`/games/${gameId}/chickenLocations/latest`)
       .get();
@@ -523,7 +527,7 @@ async function spawnBatchForGame(
     if (locData && typeof locData.lat === "number" && typeof locData.lng === "number") {
       spawnCenter = { latitude: locData.lat, longitude: locData.lng };
     } else {
-      spawnCenter = { latitude: initialCenter.latitude, longitude: initialCenter.longitude };
+      spawnCenter = { latitude: circle.lat, longitude: circle.lng };
     }
   }
 
@@ -890,6 +894,72 @@ export const onGameDeleted = onDocumentDeleted(
   }
 );
 
+/**
+ * PP-zone-stored: build the ordered zone-circle schedule from the game
+ * doc's zone fields and persist it to `/games/{gameId}/zone/schedule`
+ * (admin SDK, infalsifiable). Every client then renders `circles[order]`
+ * read-only instead of recomputing the drift on-device — killing the
+ * cross-device parity drift. Idempotent: re-running overwrites the same
+ * deterministic list. `stayInTheZone` stores center+radius per circle;
+ * `followTheChicken` stores the start-pin center by convention (clients
+ * use the live chicken GPS for the center and take only the radius).
+ */
+async function writeZoneScheduleForGame(
+  gameId: string,
+  data: FirebaseFirestore.DocumentData
+): Promise<void> {
+  const gameMode = (data.gameMode as string) === "stayInTheZone"
+    ? "stayInTheZone"
+    : "followTheChicken";
+  const zone = data.zone as {
+    center?: GeoPoint;
+    finalCenter?: GeoPoint | null;
+    radius?: number;
+    shrinkMetersPerUpdate?: number;
+    driftSeed?: number;
+  } | undefined;
+  const center = zone?.center;
+  const initialRadius = zone?.radius;
+  const shrinkMetersPerUpdate = zone?.shrinkMetersPerUpdate;
+  const driftSeed = zone?.driftSeed;
+  if (
+    !center ||
+    typeof initialRadius !== "number" ||
+    typeof shrinkMetersPerUpdate !== "number" ||
+    typeof driftSeed !== "number"
+  ) {
+    logger.error(`[zoneSchedule] game ${gameId} missing zone data — skipping`);
+    return;
+  }
+  const finalCenter = zone?.finalCenter ?? null;
+  const circles = computeShrinkSchedule(
+    gameMode,
+    { lat: center.latitude, lng: center.longitude },
+    finalCenter ? { lat: finalCenter.latitude, lng: finalCenter.longitude } : null,
+    initialRadius,
+    shrinkMetersPerUpdate,
+    driftSeed
+  );
+  // Flat lat/lng per circle for simple cross-platform decoding; `order`
+  // is the shrink index (0 = initial circle active at hunterStartDate).
+  const persisted = circles.map((c, i) => ({
+    order: i,
+    radiusMeters: c.radiusMeters,
+    lat: c.center.lat,
+    lng: c.center.lng,
+  }));
+  await getFirestore()
+    .collection("games")
+    .doc(gameId)
+    .collection("zone")
+    .doc("schedule")
+    .set({
+      circles: persisted,
+      gameMode,
+      createdAt: Timestamp.now(),
+    });
+}
+
 export const onGameCreated = onDocumentCreated(
   {
     document: "games/{gameId}",
@@ -923,6 +993,18 @@ export const onGameCreated = onDocumentCreated(
         console.error(`Failed to relocate foundCode for game ${gameId}:`, err);
         throw err;
       }
+    }
+
+    // PP-zone-stored: persist the ordered circle schedule BEFORE scheduling
+    // lifecycle tasks, so the first power-up spawn (and every client read)
+    // finds it. Best-effort: a failure here is logged but must not block the
+    // game from starting — the spawn path falls back to skipping the batch.
+    try {
+      await writeZoneScheduleForGame(gameId, data);
+    } catch (error) {
+      logger.error(
+        `[onGameCreated] writeZoneScheduleForGame failed for ${gameId}: ${(error as Error).message}`
+      );
     }
 
     try {

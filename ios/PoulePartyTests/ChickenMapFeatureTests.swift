@@ -13,21 +13,26 @@ import Testing
 struct ChickenMapFeatureTests {
 
     @Test func gameInitializedCalculatesRadius() async {
+        // PP-zone-stored: gameInitialized seeds the circle from the zone
+        // center + radius and fires a one-shot schedule fetch. The default
+        // testValue `fetchZoneSchedule` returns [], so `.scheduleLoaded([])`
+        // arrives but produces no net state change (empty circles fall back
+        // to the same radius / center).
         let game = Game.mock
         let store = TestStore(initialState: ChickenMapFeature.State(game: game)) {
             ChickenMapFeature()
         }
 
         await store.send(.view(.gameInitialized)) {
-            let (lastUpdate, lastRadius) = game.findLastUpdate()
-            $0.radius = lastRadius
-            $0.nextRadiusUpdate = lastUpdate
+            $0.radius = Int(game.zone.radius)
+            $0.nextRadiusUpdate = game.hunterStartDate
             $0.mapCircle = CircleOverlay(
                 center: game.zone.center.toCLCoordinates,
                 radius: CLLocationDistance(game.zone.radius)
             )
             $0.lastLiveActivityState = $0.liveActivityState
         }
+        await store.receive(\.internal.scheduleLoaded)
     }
 
     @Test func beenFoundButtonShowsEndGameCode() async {
@@ -275,35 +280,36 @@ struct ChickenMapFeatureTests {
     // MARK: - Timer + stayInTheZone
 
     @Test func timerTickedUpdatesCircleInStayInTheZone() async {
+        // PP-zone-stored: the timer resolves the active circle from the
+        // stored schedule (no on-device recompute). In stayInTheZone the
+        // center comes from the stored circle. With the head start in the
+        // past and a 1-min shrink interval, every shrink has elapsed so the
+        // active index clamps to the final stored circle.
         var game = Game.mock
         game.gameMode = .stayInTheZone
         game.startDate = .now.addingTimeInterval(-600)   // started 10 min ago
         game.endDate = .now.addingTimeInterval(3000)      // ends in 50 min
+        game.timing.headStartMinutes = 0
+        game.zone.shrinkIntervalMinutes = 1.0
         var state = ChickenMapFeature.State(game: game)
-        state.radius = 500
+        state.radius = 1500
         state.nextRadiusUpdate = .now.addingTimeInterval(-1)
+        let finalCircle = ZoneCircle(order: 1, radiusMeters: 400, lat: 50.8500, lng: 4.3450)
+        state.circles = [
+            ZoneCircle(order: 0, radiusMeters: 1500, lat: 50.8466, lng: 4.3528),
+            finalCircle,
+        ]
 
         let store = TestStore(initialState: state) {
             ChickenMapFeature()
         }
         store.exhaustivity = .off
 
-        let newRadius = 500 - Int(game.zone.shrinkMetersPerUpdate)
-        // After the per-shrink independent sampling rewrite,
-        // `processRadiusUpdate` passes (initialCenter, initialRadius)
-        // as the drift base, not (currentCenter, currentRadius).
-        let expectedCenter = deterministicDriftCenter(
-            basePoint: game.zone.center.toCLCoordinates,
-            oldRadius: game.zone.radius,
-            newRadius: Double(newRadius),
-            driftSeed: game.zone.driftSeed,
-            finalCenter: game.finalLocation
-        )
         await store.send(.internal(.timerTicked)) {
-            $0.radius = newRadius
+            $0.radius = 400
             $0.mapCircle = CircleOverlay(
-                center: expectedCenter,
-                radius: CLLocationDistance(newRadius)
+                center: finalCircle.center,
+                radius: CLLocationDistance(400)
             )
         }
     }
@@ -430,18 +436,25 @@ struct ChickenMapFeatureTests {
         // emits the delegate when the user taps OK.
     }
 
-    /// Scenario 2: zone collapse — radius reaches 0 flips `isGameOver`
-    /// without auto-transition. `locationClient.stopTracking()` is
-    /// invoked so the GPS coroutine (no further `setChickenLocation`
-    /// writes) is terminated.
-    @Test func pp19_zoneCollapseFlipsIsGameOverAndStopsGPS() async {
+    /// Scenario 2 (PP-zone-stored): the zone no longer "collapses" to 0 /
+    /// ends the game. The stored schedule stops at the 50m final circle and
+    /// stays there; the game ends only by time / all-found / cancel. So even
+    /// with every shrink elapsed, `isGameOver` stays false (endDate is in the
+    /// future) and the radius settles on the last stored circle.
+    @Test func pp_zoneStored_zoneShrinksToFinalCircleWithoutGameOver() async {
         var game = Game.mock
         game.gameMode = .followTheChicken
         game.startDate = .now.addingTimeInterval(-3600)
         game.endDate = .now.addingTimeInterval(3600)
+        game.timing.headStartMinutes = 0
+        game.zone.shrinkIntervalMinutes = 1.0
         var state = ChickenMapFeature.State(game: game)
-        state.radius = 50
+        state.radius = 100
         state.nextRadiusUpdate = .now.addingTimeInterval(-1)
+        state.circles = [
+            ZoneCircle(order: 0, radiusMeters: 100, lat: 50.8466, lng: 4.3528),
+            ZoneCircle(order: 1, radiusMeters: 50, lat: 50.8466, lng: 4.3528),
+        ]
 
         let stopCalls = LockIsolated(0)
         let store = TestStore(initialState: state) {
@@ -455,9 +468,9 @@ struct ChickenMapFeatureTests {
         store.exhaustivity = .off
 
         await store.send(.internal(.timerTicked)) {
-            $0.isGameOver = true
+            $0.radius = 50
         }
-        #expect(stopCalls.value == 1, "locationClient.stopTracking must be called on zone collapse")
+        #expect(store.state.isGameOver == false, "game must NOT end on zone shrink (ends by time now)")
     }
 
     /// Scenario 3: all hunters found — chicken side. When

@@ -370,6 +370,101 @@ fun processRadiusUpdate(
     )
 }
 
+// ── Stored-circles selection (PP-zone-stored) ────────
+
+/**
+ * Result of [selectActiveCircle]: which stored circle is active now and
+ * when the next shrink is due (for the "Map update in" countdown).
+ */
+data class ActiveCircleResult(
+    val circleIndex: Int,
+    val nextUpdate: Date,
+)
+
+/**
+ * PP-zone-stored: pick the active shrink index at `now` from the timing
+ * alone (freeze-aware), then the caller looks up `circles[circleIndex]`.
+ * Replaces the on-device radius/center recomputation — geometry now comes
+ * from the stored schedule, so every device renders the same circle.
+ *
+ * Index 0 = the initial circle (active from `hunterStartDate`). Each
+ * elapsed, non-frozen shrink interval advances the index by one, clamped
+ * to `circleCount - 1` (the 50m final circle, which then stays put until
+ * the game ends by time). Mirrors the freeze-skip logic of the former
+ * `Game.findLastUpdate`.
+ */
+fun selectActiveCircle(
+    hunterStartDate: Date,
+    shrinkIntervalMinutes: Double,
+    circleCount: Int,
+    freezeEnd: Date?,
+    freezeDurationMs: Long,
+    now: Date = Date(),
+): ActiveCircleResult {
+    val lastIndex = maxOf(0, circleCount - 1)
+    if (shrinkIntervalMinutes <= 0 || circleCount <= 1) {
+        return ActiveCircleResult(circleIndex = 0, nextUpdate = Date(Long.MAX_VALUE))
+    }
+    val intervalMs = (shrinkIntervalMinutes * 60 * 1000).toLong()
+    val freezeStart = freezeEnd?.let { Date(it.time - freezeDurationMs) }
+
+    var index = 0
+    var lastUpdate = hunterStartDate
+    while (Date(lastUpdate.time + intervalMs).before(now) && index < lastIndex) {
+        lastUpdate = Date(lastUpdate.time + intervalMs)
+        val isFrozen = freezeStart != null
+            && !lastUpdate.before(freezeStart) && lastUpdate.before(freezeEnd)
+        if (!isFrozen) {
+            index += 1
+        }
+    }
+    val nextUpdate = Date(lastUpdate.time + intervalMs)
+    return ActiveCircleResult(circleIndex = minOf(index, lastIndex), nextUpdate = nextUpdate)
+}
+
+/**
+ * PP-zone-stored: resolved render state for the active circle — the Int
+ * radius and (for stayInTheZone) the stored center, plus the next shrink
+ * time for the "Map update in" countdown. In followTheChicken `center` is
+ * null (the caller keeps the live chicken GPS).
+ */
+data class ZoneRenderState(
+    val radius: Int,
+    val center: Point?,
+    val nextUpdate: Date?,
+)
+
+/**
+ * PP-zone-stored: the single shared selector used by every map ViewModel
+ * (chicken / hunter / GameMaster, both platforms mirror this) so geometry
+ * is resolved identically. Picks `circles[selectActiveCircle(...)]`; the
+ * Int radius floors the SAME stored Double on every device, so the parity
+ * that on-device recompute couldn't guarantee now holds by construction.
+ */
+fun zoneRenderStateFromCircles(
+    gameMode: GameMod,
+    hunterStartDate: Date,
+    shrinkIntervalMinutes: Double,
+    fallbackRadius: Double,
+    circles: List<dev.rahier.pouleparty.model.ZoneCircle>,
+    freezeEnd: Date?,
+    freezeDurationMs: Long,
+    now: Date = Date(),
+): ZoneRenderState {
+    if (circles.isEmpty()) return ZoneRenderState(fallbackRadius.toInt(), null, null)
+    val active = selectActiveCircle(
+        hunterStartDate = hunterStartDate,
+        shrinkIntervalMinutes = shrinkIntervalMinutes,
+        circleCount = circles.size,
+        freezeEnd = freezeEnd,
+        freezeDurationMs = freezeDurationMs,
+        now = now,
+    )
+    val circle = circles[active.circleIndex]
+    val center = if (gameMode == GameMod.STAY_IN_THE_ZONE) circle.center else null
+    return ZoneRenderState(circle.radiusMeters.toInt(), center, active.nextUpdate)
+}
+
 // ── Debug Preview (all shifted circles at once) ──────
 
 /**
