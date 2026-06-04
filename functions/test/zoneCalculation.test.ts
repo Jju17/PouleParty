@@ -4,6 +4,7 @@ import {
   computeZoneConfigurationCore,
   calculateNormalModeSettingsServer,
   computeShrinkSchedule,
+  selectActiveCircleIndex,
 } from "../src/zoneCalculation";
 import { haversineDistance } from "../src/powerUpSpawn";
 
@@ -587,5 +588,42 @@ describe("computeShrinkSchedule — stored-circles indexing contract", () => {
       "stayInTheZone", start, final, out.initialRadius, out.shrinkMetersPerUpdate, out.driftSeed
     );
     expect(out.circles).toEqual(direct);
+  });
+});
+
+// ─── selectActiveCircleIndex (freeze-aware, server == client) ─
+describe("selectActiveCircleIndex — freeze-aware active circle", () => {
+  const MIN = 60_000;
+  const FREEZE = 120; // seconds, lockstep with zoneFreeze duration
+
+  test("no freeze: index == elapsed non-frozen shrink ticks", () => {
+    // hunterStart=0, 1-min interval, 10 circles, now=3.5 min => 3 shrinks
+    expect(selectActiveCircleIndex(0, 1, 10, null, FREEZE, 3.5 * MIN)).toBe(3);
+  });
+
+  test("freeze spanning ONE boundary (long interval) lags by 1", () => {
+    // 5-min interval, freeze window [4 min, 6 min) covers the tick at 5 min.
+    // now=12 min => 2 ticks elapsed (5 min frozen, 10 min not) => index 1.
+    expect(
+      selectActiveCircleIndex(0, 5, 10, 6 * MIN, FREEZE, 12 * MIN)
+    ).toBe(1);
+  });
+
+  test("freeze spanning TWO boundaries (1-min interval) lags by 2 — the bug the old -1 missed", () => {
+    // 1-min interval, freeze window [2 min, 4 min) covers ticks at 2 min AND
+    // 3 min. now=3.5 min => 3 nominal shrinks, 2 frozen => index 1.
+    // The old fixed `batchIndex - 1` would have returned 2 (wrong circle).
+    expect(
+      selectActiveCircleIndex(0, 1, 10, 4 * MIN, FREEZE, 3.5 * MIN)
+    ).toBe(1);
+  });
+
+  test("clamps to the last circle index", () => {
+    expect(selectActiveCircleIndex(0, 1, 3, null, FREEZE, 100 * MIN)).toBe(2);
+  });
+
+  test("degenerate inputs return 0", () => {
+    expect(selectActiveCircleIndex(0, 0, 10, null, FREEZE, 100 * MIN)).toBe(0);
+    expect(selectActiveCircleIndex(0, 1, 1, null, FREEZE, 100 * MIN)).toBe(0);
   });
 });

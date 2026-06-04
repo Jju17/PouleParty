@@ -326,6 +326,49 @@ export function computeShrinkSchedule(
 }
 
 /**
+ * Resolve the active shrink-circle INDEX at `nowMs` from timing alone,
+ * freeze-aware. Char-for-char port of the client
+ * `selectActiveCircle` index walk (iOS `GameTimerLogic.swift`, Android
+ * `GameTimerHelper.kt`) so the power-up spawner picks the SAME circle every
+ * client renders — including when a single `zoneFreeze` (120 s) spans MORE
+ * than one shrink boundary (short intervals, e.g. the QA-debug 1 min one),
+ * which the old fixed `batchIndex - 1` only ever compensated by one. Each
+ * shrink tick that falls inside `[freezeEnd - freezeDuration, freezeEnd)` is
+ * skipped (the zone is held), so the index lags by the number of frozen ticks.
+ */
+export function selectActiveCircleIndex(
+  hunterStartMs: number,
+  shrinkIntervalMinutes: number,
+  circleCount: number,
+  freezeEndMs: number | null,
+  freezeDurationSeconds: number,
+  nowMs: number
+): number {
+  const lastIndex = Math.max(0, circleCount - 1);
+  if (shrinkIntervalMinutes <= 0 || circleCount <= 1) return 0;
+  const intervalMs = shrinkIntervalMinutes * 60 * 1000;
+  const freezeStartMs =
+    freezeEndMs !== null ? freezeEndMs - freezeDurationSeconds * 1000 : null;
+  let index = 0;
+  let lastUpdateMs = hunterStartMs;
+  let iterations = 0;
+  while (
+    lastUpdateMs + intervalMs < nowMs &&
+    index < lastIndex &&
+    iterations < 10000
+  ) {
+    lastUpdateMs += intervalMs;
+    const isFrozen =
+      freezeStartMs !== null && freezeEndMs !== null
+        ? lastUpdateMs >= freezeStartMs && lastUpdateMs < freezeEndMs
+        : false;
+    if (!isFrozen) index += 1;
+    iterations += 1;
+  }
+  return Math.min(index, lastIndex);
+}
+
+/**
  * Pure-function core of `computeZoneConfiguration`. Exposed so unit
  * tests can exercise every validation branch and the formula directly,
  * without spinning up the `onCall` HTTP wrapper.

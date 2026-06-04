@@ -32,7 +32,7 @@ export { computeZoneConfiguration } from "./zoneCalculation";
 // `/games/{id}/zone/schedule` so every client renders the SAME circles
 // (read-only) instead of recomputing the drift on-device (the source of
 // the cross-device parity drift).
-import { computeShrinkSchedule } from "./zoneCalculation";
+import { computeShrinkSchedule, selectActiveCircleIndex } from "./zoneCalculation";
 
 // Re-export the PP-52 event registration handlers. `createPendingRegistration`
 // + `confirmRegistrationPayment` are the web-facing Stripe pipeline (the form
@@ -481,23 +481,14 @@ async function spawnBatchForGame(
 
   // Compute the center + radius that match the zone at the time this batch
   // should fire. `batchIndex = 0` = initial spawn (no shrink), N > 0 = after
-  // N shrinks.
-  //
-  // zoneFreeze adjustment: if a freeze is active at fire time, the zone
-  // hasn't actually shrunk for this batch yet — treat the zone as one
-  // shrink behind schedule. Doesn't handle multiple historical freezes
-  // perfectly but covers the common case (freeze active when spawn fires).
-  // The NOMINAL `batchIndex` is still used for deterministic IDs / PRNG
-  // so different tasks never collide on the same ID.
+  // N shrinks. The NOMINAL `batchIndex` is still used for deterministic IDs /
+  // PRNG so different tasks never collide on the same ID.
   const activeEffects = (data.powerUps as { activeEffects?: Record<string, FirebaseFirestore.Timestamp> } | undefined)?.activeEffects;
   const zoneFreezeExpiresAt = activeEffects?.zoneFreeze?.toDate();
-  const isZoneFrozen = zoneFreezeExpiresAt !== undefined && zoneFreezeExpiresAt > new Date();
-  const effectiveBatchIndex = isZoneFrozen && batchIndex > 0 ? batchIndex - 1 : batchIndex;
 
   // PP-zone-stored: read the persisted circle schedule so power-ups spawn
   // in the SAME circle every client renders (no independent recompute, no
-  // drift). `circles[effectiveBatchIndex]` is the active circle for this
-  // batch; the last circle is reused once the schedule is exhausted.
+  // drift). The last circle is reused once the schedule is exhausted.
   const scheduleSnap = await getFirestore()
     .collection("games").doc(gameId)
     .collection("zone").doc("schedule")
@@ -510,6 +501,26 @@ async function spawnBatchForGame(
     console.error(`[spawn] game ${gameId} has no stored zone schedule — skipping batch ${batchIndex}`);
     return;
   }
+
+  // Resolve the active circle index with the SAME freeze-aware walk the
+  // clients use (`selectActiveCircleIndex`), so a single zoneFreeze that spans
+  // more than one shrink boundary (short intervals) still lands the batch in
+  // the exact circle every client renders.
+  const zoneFreezeDurationSeconds = 120; // lockstep with powerUps.ts EFFECT_DURATION_SECONDS.zoneFreeze
+  const spawnTiming = data.timing as { start?: FirebaseFirestore.Timestamp; actualStart?: FirebaseFirestore.Timestamp; headStartMinutes?: number } | undefined;
+  const spawnStartMs = (spawnTiming?.actualStart ?? spawnTiming?.start)?.toMillis();
+  const spawnHeadStartMinutes = spawnTiming?.headStartMinutes ?? 0;
+  const spawnShrinkIntervalMinutes = (data.zone as { shrinkIntervalMinutes?: number } | undefined)?.shrinkIntervalMinutes ?? 5;
+  const effectiveBatchIndex = spawnStartMs !== undefined
+    ? selectActiveCircleIndex(
+        spawnStartMs + spawnHeadStartMinutes * 60 * 1000,
+        spawnShrinkIntervalMinutes,
+        circles.length,
+        zoneFreezeExpiresAt ? zoneFreezeExpiresAt.getTime() : null,
+        zoneFreezeDurationSeconds,
+        Date.now()
+      )
+    : Math.min(batchIndex, circles.length - 1);
   const circle = circles[Math.min(effectiveBatchIndex, circles.length - 1)];
   const currentRadius = circle.radiusMeters;
   if (currentRadius <= 0) {
