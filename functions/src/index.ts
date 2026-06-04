@@ -250,9 +250,10 @@ export const sendGameNotification = onTaskDispatched(
     rateLimits: { maxConcurrentDispatches: 100 },
   },
   async (req) => {
-    const { gameId, notificationType } = req.data as {
+    const { gameId, notificationType, notifId } = req.data as {
       gameId: string;
       notificationType: "chicken_start" | "hunter_start" | "zone_shrink";
+      notifId?: string;
     };
 
     const ref = db.collection("games").doc(gameId);
@@ -268,6 +269,23 @@ export const sendGameNotification = onTaskDispatched(
     // milliseconds after the user already saw "Game Over".
     const endTimestamp = (game.timing as { end?: Timestamp } | undefined)?.end?.toDate();
     if (endTimestamp && endTimestamp.getTime() <= Date.now()) return;
+
+    // At-least-once dedup: Cloud Tasks can redeliver a task, double-sending a
+    // push. Claim a sent-marker doc in a transaction keyed on the stable
+    // notifId (type + index) and skip if it already exists.
+    if (notifId) {
+      const sentRef = ref.collection("lifecycle").doc("sent").collection("notifs").doc(notifId);
+      const alreadySent = await db.runTransaction(async (tx) => {
+        const sentSnap = await tx.get(sentRef);
+        if (sentSnap.exists) return true;
+        tx.set(sentRef, { sentAt: Timestamp.now(), notificationType });
+        return false;
+      });
+      if (alreadySent) {
+        console.log(`[Notif] Game ${gameId}: notif ${notifId} already sent, skipping`);
+        return;
+      }
+    }
 
     let userIds: string[];
 
@@ -734,7 +752,7 @@ async function scheduleGameLifecycleTasks(
     // they should gather; the chicken/GM still has to tap LAUNCH.
     const chickenStartId = `notif-chickenstart-${gameId}`;
     await notifQueue.enqueue(
-      { gameId, notificationType: "chicken_start" },
+      { gameId, notificationType: "chicken_start", notifId: chickenStartId },
       { scheduleTime: startTimestamp, id: chickenStartId }
     );
     enqueuedTasksByQueue.sendGameNotification.push(chickenStartId);
@@ -779,7 +797,7 @@ async function scheduleGameLifecycleTasks(
     // Schedule hunter_start notification
     const hunterStartId = `notif-hunterstart-${gameId}`;
     await notifQueue.enqueue(
-      { gameId, notificationType: "hunter_start" },
+      { gameId, notificationType: "hunter_start", notifId: hunterStartId },
       { scheduleTime: hunterStartDate, id: hunterStartId }
     );
     enqueuedTasksByQueue.sendGameNotification.push(hunterStartId);
@@ -794,7 +812,7 @@ async function scheduleGameLifecycleTasks(
     while (shrinkTime < endTimestamp && shrinkCount < MAX_SHRINK_NOTIFICATIONS) {
       const id = `notif-shrink-${gameId}-${shrinkCount}`;
       await notifQueue.enqueue(
-        { gameId, notificationType: "zone_shrink" },
+        { gameId, notificationType: "zone_shrink", notifId: id },
         { scheduleTime: shrinkTime, id }
       );
       enqueuedTasksByQueue.sendGameNotification.push(id);
@@ -907,6 +925,16 @@ export const onGameDeleted = onDocumentDeleted(
     console.info(
       `onGameDeleted ${gameId}: deleted ${deletedCount} tasks, failed ${failedCount}`
     );
+
+    // Firestore doesn't cascade deletes — recursively remove every
+    // subcollection (private foundCode/gameMasterPassword, powerUps,
+    // challenges, players, lifecycle, etc.) so nothing is orphaned.
+    // RTDB cleanup is handled separately by the mirror trigger.
+    try {
+      await db.recursiveDelete(event.data!.ref);
+    } catch (err) {
+      console.warn(`onGameDeleted: recursiveDelete failed for game ${gameId}:`, err);
+    }
   }
 );
 
@@ -989,26 +1017,23 @@ export const onGameCreated = onDocumentCreated(
     const data = snap.data();
     const gameId = event.params.gameId;
 
-    // CRIT-2 (audit 2026-05-17): move foundCode off the public Game
-    // doc so hunters can't read it and self-declare victory. The
-    // chicken fetches it via the `getFoundCode` callable. We merge
-    // into /private/security (which also holds gameMasterPassword
-    // from PP-70) and null out the public field.
-    const foundCodeRaw = data.foundCode;
-    const foundCode = typeof foundCodeRaw === "string" ? foundCodeRaw : "";
-    if (foundCode.length > 0) {
-      try {
-        await snap.ref
-          .collection("private")
-          .doc("security")
-          .set({ foundCode }, { merge: true });
-        await snap.ref.update({ foundCode: "" });
-      } catch (err) {
-        // Failure here is bad — the public foundCode would stay
-        // readable. Re-throw so Firebase retries the trigger.
-        console.error(`Failed to relocate foundCode for game ${gameId}:`, err);
-        throw err;
-      }
+    // The 4-digit foundCode is the win secret: the chicken shows it to a
+    // hunter who physically finds them. It is GENERATED SERVER-SIDE here and
+    // written only to /games/{id}/private/security (admin-SDK-only). The client
+    // never puts it on the public Game doc (firestore.rules rejects a non-empty
+    // public foundCode at create), so it can never leak from the
+    // all-signed-in-readable game doc. The chicken reads it via getFoundCode.
+    // Re-throw on failure so the at-least-once trigger retries (set is
+    // idempotent under merge).
+    const foundCode = String(Math.floor(Math.random() * 10000)).padStart(4, "0");
+    try {
+      await snap.ref
+        .collection("private")
+        .doc("security")
+        .set({ foundCode }, { merge: true });
+    } catch (err) {
+      console.error(`Failed to write foundCode for game ${gameId}:`, err);
+      throw err;
     }
 
     // PP-zone-stored: persist the ordered circle schedule BEFORE scheduling
@@ -1036,6 +1061,10 @@ export const onGameCreated = onDocumentCreated(
       logger.error(
         `[onGameCreated] snapshotChallengesIntoGame failed for ${gameId}: ${(error as Error).message}`
       );
+      // Re-throw so the at-least-once trigger retries — a transient
+      // template-read/commit failure must not leave a game with zero
+      // challenges. The `>= 1 doc` early-return makes re-runs safe.
+      throw error;
     }
   }
 );

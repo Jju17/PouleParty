@@ -29,10 +29,12 @@
     <!-- Join / Register flow -->
     <string name="enter_the_game_code">Enter the game code</string>
     <string name="no_game_found_with_this_code">No game found with this code.</string>
+    <string name="party_full">This party is full.</string>
     <string name="network_error_please_try_again">Network error. Please try again.</string>
     <string name="register">Register</string>
     <string name="sign_up">Sign up</string>
     <string name="team_name">Team name</string>
+    <string name="team_name_profane">Please choose a different team name.</string>
     <string name="registered_to_game">Registered to game</string>
     <string name="collapse">Collapse</string>
     <string name="expand_registered_game_banner">Expand registered game banner</string>
@@ -143,7 +145,7 @@
     <string name="wrong_code">Wrong code</string>
     <string name="wrong_code_message">That code is incorrect. Try again!</string>
     <string name="winner_registration_failed_title">Connection error</string>
-    <string name="winner_registration_failed_message">Couldn\'t register your win. Check your connection and retry — your code was correct.</string>
+    <string name="winner_registration_failed_message">Couldn\'t register your win. Check your connection and retry, your code was correct.</string>
 
     <!-- Game Info Dialog -->
     <string name="mode">Mode</string>
@@ -195,7 +197,7 @@
     <string name="report_player_title">Report this player?</string>
     <string name="report_player_message">Report %1$s for an offensive nickname or inappropriate behaviour. We review every report; abusive reporters may be banned.</string>
     <string name="report_player_submit">Report</string>
-    <string name="report_player_success">Thanks — report submitted</string>
+    <string name="report_player_success">Thanks, report submitted</string>
     <string name="report_player_error">Couldn\'t submit the report. Try again in a moment.</string>
     <string name="always_allowed">Always allowed!</string>
     <!-- Button labels intentionally neutral ("Set up location") instead of
@@ -240,7 +242,7 @@
     <string name="rule_circular_zone">The game takes place in a circular zone on the map.</string>
     <string name="rule_zone_shrinks">The zone shrinks over time based on game settings.</string>
     <string name="rule_win_condition">Hunters win by finding the Chicken. The Chicken wins by surviving until the end!</string>
-    <string name="mode_follow_desc">The zone shrinks periodically toward the Chicken\'s position. Hunters don\'t see the Chicken\'s exact location — only the zone moving!</string>
+    <string name="mode_follow_desc">The zone shrinks periodically toward the Chicken\'s position. Hunters don\'t see the Chicken\'s exact location, only the zone moving!</string>
     <string name="mode_follow_detail1">The zone center follows the Chicken\'s live position</string>
     <string name="mode_follow_detail2">Hunters see the zone move but not where the Chicken is</string>
     <string name="mode_follow_detail3">The Chicken must stay inside the zone to survive</string>
@@ -292,7 +294,7 @@
          is the Apple-mandated wording for Guideline 5.1.1(v). Play Console's
          account-deletion policy uses the same term. -->
     <string name="delete_my_data">Delete Account</string>
-    <string name="delete_data_footer">This deletes your anonymous Firebase Auth account and the profile data associated with it (nickname, push token). Past games keep the team name you used for them — they\'re visible only to participants of those sessions. You can continue using the app — a new anonymous account will be created automatically.</string>
+    <string name="delete_data_footer">This deletes your anonymous Firebase Auth account and the profile data associated with it (nickname, push token). Past games keep the team name you used for them: they\'re visible only to participants of those sessions. You can continue using the app, a new anonymous account will be created automatically.</string>
     <string name="delete_data_title">Delete Account</string>
     <string name="delete_data_message">This will permanently delete your anonymous account. Any active games will be abandoned. Are you sure?</string>
     <string name="delete">Delete</string>
@@ -344,7 +346,7 @@
     <string name="reject">Reject</string>
     <string name="challenges_pending_banner_one">1 challenge to submit</string>
     <string name="challenges_pending_banner_other">%1$d challenges to submit</string>
-    <string name="challenges_closed_banner">Time\'s up — challenges are closed.</string>
+    <string name="challenges_closed_banner">Time\'s up, challenges are closed.</string>
     <string name="challenge_points_format">%d pts</string>
     <string name="challenges_empty">No challenges yet. Check back later!</string>
     <string name="challenge_level_header">Level %1$d</string>

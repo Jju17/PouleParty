@@ -237,7 +237,7 @@ struct VictoryView: View {
             Text("Report \(target.displayName) for an offensive nickname or inappropriate behaviour. We review every report; abusive reporters may be banned.")
         }
         .alert(
-            "Thanks — report submitted",
+            "Thanks, report submitted",
             isPresented: Binding(
                 get: { store.reportResult == .success },
                 set: { if !$0 { store.send(.reportResultDismissed) } }

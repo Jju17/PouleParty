@@ -23,10 +23,12 @@
     <!-- Join / Register flow -->
     <string name="enter_the_game_code">Voer de spelcode in</string>
     <string name="no_game_found_with_this_code">Geen spel gevonden met deze code.</string>
+    <string name="party_full">Deze partij is vol.</string>
     <string name="network_error_please_try_again">Netwerkfout. Probeer opnieuw.</string>
     <string name="register">Inschrijven</string>
     <string name="sign_up">Aanmelden</string>
     <string name="team_name">Teamnaam</string>
+    <string name="team_name_profane">Kies een andere teamnaam.</string>
     <string name="registered_to_game">Ingeschreven voor het spel</string>
     <string name="collapse">Inklappen</string>
     <string name="expand_registered_game_banner">Toon registratiebanner</string>
@@ -136,7 +138,7 @@
     <string name="wrong_code">Verkeerde code</string>
     <string name="wrong_code_message">Die code is onjuist. Probeer opnieuw!</string>
     <string name="winner_registration_failed_title">Verbindingsfout</string>
-    <string name="winner_registration_failed_message">Kon je overwinning niet registreren. Controleer je verbinding en probeer opnieuw — je code was juist.</string>
+    <string name="winner_registration_failed_message">Kon je overwinning niet registreren. Controleer je verbinding en probeer opnieuw, je code was correct.</string>
 
     <!-- Game Info Dialog -->
     <string name="mode">Modus</string>
@@ -210,7 +212,7 @@
     <string name="rule_circular_zone">Het spel speelt zich af in een cirkelvormige zone op de kaart.</string>
     <string name="rule_zone_shrinks">De zone krimpt na verloop van tijd op basis van de spelinstellingen.</string>
     <string name="rule_win_condition">Jagers winnen door de Kip te vinden. De Kip wint door te overleven tot het einde!</string>
-    <string name="mode_follow_desc">De zone krimpt periodiek richting de positie van de Kip. Jagers zien de exacte locatie van de Kip niet — alleen de zone die beweegt!</string>
+    <string name="mode_follow_desc">De zone krimpt periodiek richting de positie van de Kip. Jagers zien de exacte locatie van de Kip niet, alleen de zone die beweegt!</string>
     <string name="mode_follow_detail1">Het zonecentrum volgt de live positie van de Kip</string>
     <string name="mode_follow_detail2">Jagers zien de zone bewegen maar niet waar de Kip is</string>
     <string name="mode_follow_detail3">De Kip moet in de zone blijven om te overleven</string>
@@ -260,7 +262,7 @@
     <string name="contact_support">Contact opnemen met support</string>
     <!-- iOS-H6 / store-audit 2026-05-18 -->
     <string name="delete_my_data">Account verwijderen</string>
-    <string name="delete_data_footer">Dit verwijdert je anonieme Firebase Auth-account en de bijbehorende profielgegevens (gebruikersnaam, push-token). Voorgaande spellen behouden de teamnaam die je gebruikte — die is alleen zichtbaar voor de deelnemers van die sessies. Je kunt de app gewoon blijven gebruiken: er wordt automatisch een nieuw anoniem account aangemaakt.</string>
+    <string name="delete_data_footer">Dit verwijdert je anonieme Firebase Auth-account en de bijbehorende profielgegevens (gebruikersnaam, push-token). Voorgaande spellen behouden de teamnaam die je gebruikte: die is alleen zichtbaar voor de deelnemers van die sessies. Je kunt de app gewoon blijven gebruiken: er wordt automatisch een nieuw anoniem account aangemaakt.</string>
     <string name="delete_data_title">Account verwijderen</string>
     <string name="delete_data_message">Dit verwijdert je anonieme account permanent. Actieve spellen worden verlaten. Weet je het zeker?</string>
     <string name="delete">Verwijderen</string>
@@ -307,7 +309,7 @@
     <string name="reject">Weigeren</string>
     <string name="challenges_pending_banner_one">1 uitdaging in te dienen</string>
     <string name="challenges_pending_banner_other">%1$d uitdagingen in te dienen</string>
-    <string name="challenges_closed_banner">Tijd is om — de uitdagingen zijn gesloten.</string>
+    <string name="challenges_closed_banner">Tijd is om, de uitdagingen zijn gesloten.</string>
     <string name="challenge_points_format">%d pnt</string>
     <string name="challenges_empty">Nog geen uitdagingen. Kom later terug!</string>
     <string name="challenge_level_header">Niveau %1$d</string>
@@ -342,7 +344,7 @@
     <string name="report_player_title">Deze speler rapporteren?</string>
     <string name="report_player_message">Rapporteer %1$s voor een aanstootgevende nickname of ongepast gedrag. We bekijken elk rapport; wie misbruik maakt kan geband worden.</string>
     <string name="report_player_submit">Rapporteer</string>
-    <string name="report_player_success">Bedankt — rapport verzonden</string>
+    <string name="report_player_success">Bedankt, rapport verzonden</string>
     <string name="report_player_error">Rapport kon niet verzonden worden. Probeer straks opnieuw.</string>
     <!-- PP-88 GameMaster join flow -->
     <string name="join_as_hunter">Word een Jager</string>

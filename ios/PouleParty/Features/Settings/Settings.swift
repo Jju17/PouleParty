@@ -528,7 +528,7 @@ struct GameLeaderboardSheet: View {
             } message: { target in
                 Text("Report \(target.displayName) for an offensive nickname or inappropriate behaviour. We review every report; abusive reporters may be banned.")
             }
-            .alert("Thanks — report submitted", isPresented: $reportSuccess) {
+            .alert("Thanks, report submitted", isPresented: $reportSuccess) {
                 Button("OK") { reportSuccess = false }
             }
             .alert("Error", isPresented: $reportFailure) {

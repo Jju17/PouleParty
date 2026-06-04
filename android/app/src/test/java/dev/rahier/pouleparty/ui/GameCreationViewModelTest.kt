@@ -1017,11 +1017,9 @@ class GameCreationViewModelTest {
     }
 
     @Test
-    fun `foundCode is 4 digit string`() {
+    fun `foundCode is empty client-side and generated server-side`() {
         val vm = createViewModel()
-        val foundCode = vm.uiState.value.game.foundCode
-        assertEquals(4, foundCode.length)
-        assertNotNull(foundCode.toIntOrNull())
+        assertEquals("", vm.uiState.value.game.foundCode)
     }
 
     // ── Concurrent navigation ──

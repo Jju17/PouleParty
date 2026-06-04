@@ -8,6 +8,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.rahier.pouleparty.AppConstants
 import dev.rahier.pouleparty.data.FirestoreRepository
 import dev.rahier.pouleparty.data.LocationRepository
+import dev.rahier.pouleparty.util.ProfanityFilter
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameStatus
 import dev.rahier.pouleparty.ui.gamelogic.PlayerRole
@@ -59,7 +60,15 @@ data class HomeUiState(
         }
 
     val isTeamNameValid: Boolean
-        get() = teamName.trim().isNotEmpty()
+        get() = teamName.trim().isNotEmpty() &&
+            !ProfanityFilter.containsProfanity(teamName.trim())
+
+    /** True when a non-empty team name trips the profanity filter, so the form
+     *  can show an inline hint. [isTeamNameValid] already excludes profane
+     *  names, so the join is never submitted with one. */
+    val isTeamNameProfane: Boolean
+        get() = teamName.trim().isNotEmpty() &&
+            ProfanityFilter.containsProfanity(teamName.trim())
 }
 
 /** Result of [HomeViewModel.validateAdminCode]: which Create Party wizard to open. */
@@ -412,6 +421,7 @@ class HomeViewModel @Inject constructor(
             is JoinFlowStep.Validating,
             is JoinFlowStep.CodeValidated,
             is JoinFlowStep.CodeNotFound,
+            is JoinFlowStep.GameFull,
             is JoinFlowStep.NetworkError -> Unit
             else -> return
         }
@@ -450,6 +460,13 @@ class HomeViewModel @Inject constructor(
                 // user, not just the creator).
                 if (game.isChicken(userId)) {
                     _uiState.update { it.copy(joinStep = JoinFlowStep.CodeNotFound) }
+                    return@launch
+                }
+                // Surface a dedicated "party full" terminal state when the game
+                // is at capacity and the user isn't already a member.
+                val isMember = game.role(userId) != null
+                if (!isMember && game.hunterIds.size >= game.maxPlayers) {
+                    _uiState.update { it.copy(joinStep = JoinFlowStep.GameFull) }
                     return@launch
                 }
                 // PP-90: pre-fill teamName from the saved nickname so the
@@ -590,7 +607,10 @@ class HomeViewModel @Inject constructor(
                 }
                 _effects.send(effect)
             } catch (e: Exception) {
-                _uiState.update { it.copy(joinStep = JoinFlowStep.NetworkError) }
+                // Recover to the team-name form (not NetworkError) so the typed
+                // team name is preserved and the hunter can retry the join in
+                // place. Parity with iOS. NetworkError stays for code-validation.
+                _uiState.update { it.copy(joinStep = JoinFlowStep.JoiningWithTeamName(game)) }
             }
         }
     }

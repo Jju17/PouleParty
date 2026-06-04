@@ -24,7 +24,7 @@ class ChallengeModelTest {
         val challenge = Challenge()
         assertEquals("", challenge.id)
         assertEquals(0, challenge.points)
-        assertNotNull(challenge.lastUpdated)
+        assertNull(challenge.lastUpdated)
     }
 
     @Test

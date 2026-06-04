@@ -7,6 +7,9 @@ sealed class JoinFlowStep {
     object Validating : JoinFlowStep()
     data class CodeValidated(val game: Game) : JoinFlowStep()
     object CodeNotFound : JoinFlowStep()
+    /** The resolved game already has `hunterIds.size >= maxPlayers` and the
+     *  user isn't a member — terminal "party full" state. */
+    object GameFull : JoinFlowStep()
     object NetworkError : JoinFlowStep()
     /** PP-52: paid-event game (registrationBatchId set) — the hunter must enter
      *  the unique registration code from their confirmation email before joining. */

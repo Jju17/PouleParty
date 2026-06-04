@@ -78,7 +78,6 @@ object DemoMockData {
             ),
             activeEffects = ActiveEffects(),
         ),
-        lastHeartbeat = Timestamp.now(),
     )
 
     fun victoryGame(): Game = activeGame().copy(

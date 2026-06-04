@@ -1,6 +1,7 @@
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/v2";
+import { mirrorGameMetaInline } from "./rtdbMirror";
 
 const REGION = "europe-west1";
 
@@ -168,6 +169,7 @@ export const joinGame = onCall({ region: REGION }, async (request) => {
     });
   });
 
+  await mirrorGameMetaInline(gameId, (await gameRef(gameId).get()).data());
   logger.info(`joinGame: ${uid} joined ${gameId} as hunter`);
   return { success: true };
 });
@@ -252,6 +254,7 @@ export const designateChicken = onCall({ region: REGION }, async (request) => {
     }
   });
 
+  await mirrorGameMetaInline(gameId, (await gameRef(gameId).get()).data());
   logger.info(`designateChicken: ${gameId} -> ${newChickenUid} (by ${uid})`);
   return { success: true };
 });
@@ -285,6 +288,7 @@ export const leaveGame = onCall({ region: REGION }, async (request) => {
     tx.delete(membershipRef(uid, gameId));
   });
 
+  await mirrorGameMetaInline(gameId, (await gameRef(gameId).get()).data());
   logger.info(`leaveGame: ${uid} left ${gameId}`);
   return { success: true };
 });

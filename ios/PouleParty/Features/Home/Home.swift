@@ -364,7 +364,10 @@ struct HomeFeature {
                 state.pendingIsAdminCreation = false
                 state.pendingIsDebugCreation = false
                 var game = Game(id: apiClient.newGameId())
-                game.foundCode = Game.generateFoundCode()
+                // The win secret `foundCode` is generated SERVER-SIDE in
+                // onGameCreated and written only to /private/security, so the
+                // client never puts it on the public doc. The chicken reads it
+                // via getFoundCode.
                 game.timing.headStartMinutes = 5
                 game.creatorId = creatorId
                 // PP-107: the creator starts as the chicken. `roles` is the

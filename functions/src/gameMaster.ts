@@ -1,6 +1,7 @@
 import { getFirestore, Timestamp } from "firebase-admin/firestore";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/v2";
+import { mirrorGameMetaInline } from "./rtdbMirror";
 import { isChicken, isGameMaster, isHunter } from "./roles";
 
 const REGION = "europe-west1";
@@ -245,6 +246,9 @@ export const joinAsGameMaster = onCall(
       return { success: true, attemptsRemaining: RATE_LIMIT_MAX_ATTEMPTS };
     });
 
+    if (result.success) {
+      await mirrorGameMetaInline(gameId, (await gameRef(gameId).get()).data());
+    }
     if (!result.success) {
       logger.info(
         `joinAsGameMaster failed for ${uid} on game ${gameId} (${result.attemptsRemaining} attempts left)`

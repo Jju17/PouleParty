@@ -52,7 +52,8 @@ service cloud.firestore {
                     && request.resource.data.timing.headStartMinutes >= 0
                     && request.resource.data.zone.shrinkIntervalMinutes >= 1
                     && request.resource.data.roles.keys().hasOnly([request.resource.data.creatorId])
-                    && request.resource.data.roles.get(request.resource.data.creatorId, '') == 'chicken';
+                    && request.resource.data.roles.get(request.resource.data.creatorId, '') == 'chicken'
+                    && request.resource.data.get('foundCode', '') == '';
 
       // PP-107: there is no longer a client-side join / leave / chicken
       // re-designation update rule. Membership (`roles`) is server-only:
@@ -160,8 +161,9 @@ service cloud.firestore {
         allow create: if request.auth != null
                       && request.auth.uid == request.resource.data.hunterId
                       && isHunterOnGame(gameId)
-                      && request.time.toMillis()
-                           < gameData(gameId).timing.end.toMillis()
+                      && (gameData(gameId).timing.get('end', null) == null
+                          || request.time.toMillis()
+                               < gameData(gameId).timing.end.toMillis())
                       && request.resource.data.keys().hasAll(['challengeId', 'hunterId', 'type', 'submittedAt', 'mediaUrl', 'mediaType', 'status'])
                       && request.resource.data.status == 'pending'
                       && request.resource.data.type in ['oneShot', 'repeatable']
@@ -229,6 +231,14 @@ service cloud.firestore {
     // (admin SDK). Same lock-down as `gmRateLimits` — clients can't probe
     // the lock or reset their counter.
     match /validationRateLimits/{uid} {
+      allow read, write: if false;
+    }
+
+    // Found-code rate-limit counters. One doc per `{uid}_{gameId}` key,
+    // written exclusively by `submitFoundCode` (admin SDK) to enforce a
+    // server-side cooldown after repeated wrong found-code attempts.
+    // Clients can neither read (no probing the lock) nor write.
+    match /foundCodeRateLimits/{docId} {
       allow read, write: if false;
     }
 

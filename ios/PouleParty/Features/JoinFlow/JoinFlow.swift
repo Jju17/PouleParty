@@ -18,6 +18,8 @@ struct JoinFlowFeature {
         case joiningWithTeamName(Game)
         case submittingJoin(Game)
         case codeNotFound
+        case gameOver
+        case gameFull
         case networkError
         case gameMasterPasswordEntry(Game)
         case submittingGameMasterPassword(Game)
@@ -42,7 +44,16 @@ struct JoinFlowFeature {
         }
 
         var isTeamNameValid: Bool {
-            !teamName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            let trimmed = teamName.trimmingCharacters(in: .whitespacesAndNewlines)
+            return !trimmed.isEmpty && !ProfanityFilter.containsProfanity(trimmed)
+        }
+        /// True when a non-empty team name trips the profanity filter, so the
+        /// form can show an inline hint. The Join button is gated on
+        /// `isTeamNameValid`, which already excludes profane names, so the
+        /// join is never submitted with one.
+        var isTeamNameProfane: Bool {
+            let trimmed = teamName.trimmingCharacters(in: .whitespacesAndNewlines)
+            return !trimmed.isEmpty && ProfanityFilter.containsProfanity(trimmed)
         }
 
         var isGameMasterPasswordValid: Bool {
@@ -100,7 +111,7 @@ struct JoinFlowFeature {
                 // `state.code` falls through to the "kick off validation" path
                 // below and yanks the user back to `.codeValidated`.
                 switch state.step {
-                case .enteringCode, .validating, .codeNotFound, .networkError, .codeValidated:
+                case .enteringCode, .validating, .codeNotFound, .gameOver, .gameFull, .networkError, .codeValidated:
                     break
                 case .joiningWithTeamName, .submittingJoin,
                      .validationCodeEntry, .submittingValidationCode,
@@ -141,6 +152,22 @@ struct JoinFlowFeature {
                 return .none
 
             case let .codeValidationSucceeded(game):
+                // A finished game can't be joined (the server rejects it too),
+                // so route to a terminal "party over" message instead of
+                // looping the hunter through the join form. Parity with Android.
+                if game.status == .done {
+                    state.step = .gameOver
+                    return .none
+                }
+                // Pre-check capacity so an over-capacity join surfaces a
+                // dedicated message instead of failing the rule generically.
+                // A user already in the game (rejoin) is never blocked.
+                let userId = userClient.currentUserId() ?? ""
+                let isAlreadyMember = game.role(of: userId) != nil
+                if !isAlreadyMember, game.hunterIds.count >= game.maxPlayers {
+                    state.step = .gameFull
+                    return .none
+                }
                 state.step = .codeValidated(game)
                 if state.teamName.isEmpty {
                     state.teamName = state.savedNickname.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -227,8 +254,11 @@ struct JoinFlowFeature {
                 return .send(.delegate(.joinGame(game, hunterName: teamName)))
 
             case .joinFailed:
+                // Recover to the team-name form (not codeValidated) so the
+                // typed team name is preserved and the hunter can retry the
+                // join in place. Parity with Android.
                 if case let .submittingJoin(game) = state.step {
-                    state.step = .codeValidated(game)
+                    state.step = .joiningWithTeamName(game)
                 }
                 return .none
 
@@ -334,7 +364,7 @@ struct JoinFlowView: View {
 
     private func stepId(_ step: JoinFlowFeature.Step) -> String {
         switch step {
-        case .enteringCode, .validating, .codeNotFound, .networkError, .codeValidated:
+        case .enteringCode, .validating, .codeNotFound, .gameOver, .gameFull, .networkError, .codeValidated:
             return "code"
         case .joiningWithTeamName, .submittingJoin:
             return "teamName"
@@ -348,7 +378,7 @@ struct JoinFlowView: View {
     @ViewBuilder
     private func content(for step: JoinFlowFeature.Step) -> some View {
         switch step {
-        case .enteringCode, .validating, .codeNotFound, .networkError, .codeValidated:
+        case .enteringCode, .validating, .codeNotFound, .gameOver, .gameFull, .networkError, .codeValidated:
             codeEntry(step: step)
         case let .validationCodeEntry(game):
             validationCodeForm(game: game, isSubmitting: false)
@@ -411,6 +441,18 @@ struct JoinFlowView: View {
                 .tint(Color.CROrange)
         case .codeNotFound:
             Text("No game found with this code.")
+                .font(.gameboy(size: 9))
+                .foregroundStyle(Color.CROrange)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
+        case .gameOver:
+            Text("This party is already over.")
+                .font(.gameboy(size: 9))
+                .foregroundStyle(Color.CROrange)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
+        case .gameFull:
+            Text("This party is full.")
                 .font(.gameboy(size: 9))
                 .foregroundStyle(Color.CROrange)
                 .multilineTextAlignment(.center)
@@ -636,6 +678,11 @@ struct JoinFlowView: View {
                         RoundedRectangle(cornerRadius: 12)
                             .stroke(Color.onBackground.opacity(0.2), lineWidth: 1)
                     )
+                if store.isTeamNameProfane {
+                    Text("Please choose a different team name.")
+                        .font(.gameboy(size: 9))
+                        .foregroundStyle(Color.CROrange)
+                }
             }
             .padding(.horizontal, 24)
 

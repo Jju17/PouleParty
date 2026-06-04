@@ -1,3 +1,5 @@
+import type en from "./en";
+
 export default {
   nav: {
     privacy: "Confidentialité",
@@ -39,7 +41,7 @@ export default {
       "Nous utilisons Firebase Analytics pour collecter des données d'utilisation anonymes (ouvertures de l'app, vues d'écran) et Firebase Crashlytics pour les rapports de crash, afin d'améliorer l'application. Aucune information personnelle identifiable n'est collectée via ces services.",
     paidEventData: "Inscription à un événement payant :",
     paidEventDataText:
-      "Lorsque tu t'inscris à un événement PouleParty payant via le formulaire web (pouleparty.be/fr/inscription), nous collectons : le nom complet du capitaine, le nom d'équipe, l'adresse email, le numéro de téléphone, la taille de l'équipe, ton adresse IP et ta langue, l'identifiant de session Stripe Checkout, ainsi qu'un code de validation à 6 caractères que nous générons pour l'événement. Ces données sont stockées dans notre collection Firestore `/eventRegistrations` et transmises aux services tiers listés ci-dessous pour le paiement, l'envoi de l'email de confirmation et la logistique sur place. Les données de carte bancaire ne sont jamais collectées par nous — elles sont saisies directement sur la page Checkout hébergée par Stripe.",
+      "Lorsque tu t'inscris à un événement PouleParty payant via le formulaire web (pouleparty.be/fr/inscription), nous collectons : le nom complet du capitaine, le nom d'équipe, l'adresse email, le numéro de téléphone, la taille de l'équipe, ton adresse IP et ta langue, l'identifiant de session Stripe Checkout, ainsi qu'un code de validation à 6 caractères que nous générons pour l'événement. Ces données sont stockées dans notre collection Firestore `/eventRegistrations` et transmises aux services tiers listés ci-dessous pour le paiement, l'envoi de l'email de confirmation et la logistique sur place. Les données de carte bancaire ne sont jamais collectées par nous. Elles sont saisies directement sur la page Checkout hébergée par Stripe.",
     legalBasis: "Base légale du traitement",
     legalBasisIntro: "Conformément au RGPD (Art. 6), nous traitons vos données sur les bases légales suivantes :",
     legalBasisConsent: "Consentement (Art. 6(1)(a)) :",
@@ -61,11 +63,11 @@ export default {
     thirdPartyCrashlyticsUrl: "https://firebase.google.com/support/privacy/",
     thirdPartyMapbox: "Mapbox",
     thirdPartyMapboxUrl: "https://www.mapbox.com/legal/privacy",
-    thirdPartyStripe: "Stripe (traitement des paiements pour les événements payants — Stripe Technology Europe Ltd en Irlande, avec transfert ultérieur vers Stripe Inc. aux États-Unis sous Clauses contractuelles types)",
+    thirdPartyStripe: "Stripe (traitement des paiements pour les événements payants : Stripe Technology Europe Ltd en Irlande, avec transfert ultérieur vers Stripe Inc. aux États-Unis sous Clauses contractuelles types)",
     thirdPartyStripeUrl: "https://stripe.com/privacy",
-    thirdPartyResend: "Resend (emails de confirmation transactionnels pour les événements payants — Resend Inc. aux États-Unis sous Clauses contractuelles types)",
+    thirdPartyResend: "Resend (emails de confirmation transactionnels pour les événements payants : Resend Inc. aux États-Unis sous Clauses contractuelles types)",
     thirdPartyResendUrl: "https://resend.com/legal/privacy-policy",
-    thirdPartyGoogleSheets: "Google Sheets (liste opérationnelle pour le check-in sur place le jour J — Google LLC dans le cadre du EU-US Data Privacy Framework)",
+    thirdPartyGoogleSheets: "Google Sheets (liste opérationnelle pour le check-in sur place le jour J : Google LLC dans le cadre du EU-US Data Privacy Framework)",
     thirdPartyGoogleSheetsUrl: "https://policies.google.com/privacy",
     dataSharing: "Partage des données",
     dataSharingText:
@@ -89,7 +91,7 @@ export default {
     rightRectification: "Droit de rectification (Art. 16) :",
     rightRectificationText: "Vous pouvez demander la correction de données inexactes.",
     rightErasure: "Droit à l'effacement (Art. 17) :",
-    rightErasureText: "Tu peux demander la suppression de tes données. Le bouton Paramètres > Supprimer mon compte dans l'app supprime immédiatement ton compte Firebase Auth anonyme et le document de profil `/users/{uid}`. Les parties auxquelles tu as participé (et le nom d'équipe que tu y as utilisé) sont conservées indéfiniment pour l'intégrité de l'historique des parties — elles ne sont visibles que par les participants de la même session et par le créateur de la partie. Pour un effacement complet des données de parties passées (y compris ton nom d'équipe dans les listes de gagnants), contacte-nous à julien@rahier.dev et nous traiterons l'effacement manuel sous 30 jours. Les inscriptions aux événements payants sont supprimées sur demande (sous réserve de la période de conservation comptable de 12 mois mentionnée ci-dessus).",
+    rightErasureText: "Tu peux demander la suppression de tes données. Le bouton Paramètres > Supprimer mon compte dans l'app supprime immédiatement ton compte Firebase Auth anonyme et le document de profil `/users/{uid}`. Les parties auxquelles tu as participé (et le nom d'équipe que tu y as utilisé) sont conservées indéfiniment pour l'intégrité de l'historique des parties. Elles ne sont visibles que par les participants de la même session et par le créateur de la partie. Pour un effacement complet des données de parties passées (y compris ton nom d'équipe dans les listes de gagnants), contacte-nous à julien@rahier.dev et nous traiterons l'effacement manuel sous 30 jours. Les inscriptions aux événements payants sont supprimées sur demande (sous réserve de la période de conservation comptable de 12 mois mentionnée ci-dessus).",
     rightRestriction: "Droit à la limitation (Art. 18) :",
     rightRestrictionText: "Vous pouvez demander que nous limitions le traitement de vos données.",
     rightPortability: "Droit à la portabilité (Art. 20) :",
@@ -146,11 +148,11 @@ export default {
     paidEventsWhatsIncluded:
       "Chaque billet comprend : une entrée pour l'événement à la date indiquée (par exemple PouleParty D-Day le samedi 6 juin 2026 à partir de 20h30 à Bruxelles/Ixelles), un verre de bienvenue au bar de départ, et un bracelet remis au lieu final. La nourriture, les boissons supplémentaires, les transports et toute dépense annexe ne sont pas inclus.",
     paidEventsWithdrawal:
-      "Les événements PouleParty étant des activités de loisir programmées à une date précise, le droit de rétractation de 14 jours prévu par l'article 9 de la directive européenne 2011/83/UE relative aux droits des consommateurs NE s'applique PAS — cette exception est prévue par l'article 16(l) de cette même directive. En finalisant ton achat, tu reconnais explicitement cette exception et renonces au délai de rétractation. Les billets ne sont pas remboursables sauf dans les cas listés ci-dessous.",
+      "Les événements PouleParty étant des activités de loisir programmées à une date précise, le droit de rétractation de 14 jours prévu par l'article 9 de la directive européenne 2011/83/UE relative aux droits des consommateurs NE s'applique PAS : cette exception est prévue par l'article 16(l) de cette même directive. En finalisant ton achat, tu reconnais explicitement cette exception et renonces au délai de rétractation. Les billets ne sont pas remboursables sauf dans les cas listés ci-dessous.",
     paidEventsRefund:
-      "Règles de remboursement : (a) si NOUS annulons ou reportons l'événement pour quelque raison que ce soit (météo, force majeure, inscriptions insuffisantes, décision de l'organisateur), tu reçois un remboursement intégral du prix du billet ou, à ton choix, un transfert vers la date reportée ; (b) si TU ne peux pas venir, le billet n'est pas remboursable — mais les compositions d'équipe sont librement interchangeables, donc tu peux céder ta place à un autre participant jusqu'au jour de l'événement en envoyant un email à julien@rahier.dev avec les détails de la substitution ; (c) si un participant se voit refuser l'accès au lieu pour des raisons qui lui sont imputables (ivresse, refus de suivre les consignes de sécurité, âge inférieur à 18 ans), aucun remboursement n'est accordé.",
+      "Règles de remboursement : (a) si NOUS annulons ou reportons l'événement pour quelque raison que ce soit (météo, force majeure, inscriptions insuffisantes, décision de l'organisateur), tu reçois un remboursement intégral du prix du billet ou, à ton choix, un transfert vers la date reportée ; (b) si TU ne peux pas venir, le billet n'est pas remboursable, mais les compositions d'équipe sont librement interchangeables, donc tu peux céder ta place à un autre participant jusqu'au jour de l'événement en envoyant un email à julien@rahier.dev avec les détails de la substitution ; (c) si un participant se voit refuser l'accès au lieu pour des raisons qui lui sont imputables (ivresse, refus de suivre les consignes de sécurité, âge inférieur à 18 ans), aucun remboursement n'est accordé.",
     paidEventsForceMajeure:
-      "En cas de force majeure (par exemple décret sanitaire de pandémie, alerte météo grave, menace terroriste, fermeture du lieu indépendante de notre volonté), nous reportons l'événement à une date ultérieure — tous les billets étant automatiquement transférés — ou, si le report n'est pas possible dans un délai de 6 mois, nous remboursons intégralement tous les détenteurs de billets.",
+      "En cas de force majeure (par exemple décret sanitaire de pandémie, alerte météo grave, menace terroriste, fermeture du lieu indépendante de notre volonté), nous reportons l'événement à une date ultérieure (tous les billets étant automatiquement transférés) ou, si le report n'est pas possible dans un délai de 6 mois, nous remboursons intégralement tous les détenteurs de billets.",
     userConduct: "Comportement des utilisateurs",
     conduct1: "Utilisez l'application uniquement dans le cadre prévu (jouer au jeu).",
     conduct2: "Ne tentez pas de tricher, pirater ou rétro-ingéniérer l'application.",
@@ -189,7 +191,7 @@ export default {
   },
   createParty: {
     title: "Envie de créer une partie ?",
-    body: "PouleParty est en version beta. Pour organiser ou créer une partie, contacte Julien — on met ça en place ensemble.",
+    body: "PouleParty est en version beta. Pour organiser ou créer une partie, contacte Julien. On met ça en place ensemble.",
     contactEmailLabel: "Email :",
     contactWhatsAppLabel: "WhatsApp :",
   },
@@ -269,7 +271,7 @@ export default {
   deleteAccount: {
     title: "Supprimer ton compte Poule Party",
     intro:
-      "Tu peux supprimer ton compte Poule Party et toutes les données qui y sont rattachées. Cette page est le point de suppression accessible sur le web exigé par Google Play — la même action est aussi disponible dans l'app via Paramètres → Supprimer mon compte.",
+      "Tu peux supprimer ton compte Poule Party et toutes les données qui y sont rattachées. Cette page est le point de suppression accessible sur le web exigé par Google Play. La même action est aussi disponible dans l'app via Paramètres → Supprimer mon compte.",
     dataDeletedTitle: "Ce qui est supprimé immédiatement",
     dataDeleted: [
       "Ton compte utilisateur anonyme Firebase Auth",
@@ -304,7 +306,7 @@ export default {
     formSubmit: "ENVOYER LA DEMANDE",
     formSubmitting: "ENVOI EN COURS…",
     formSuccess:
-      "C'est noté — on a bien reçu ta demande et on la traitera sous 30 jours. Une copie a été envoyée à {email}.",
+      "C'est noté. On a bien reçu ta demande et on la traitera sous 30 jours. Une copie a été envoyée à {email}.",
     formErrorGeneric:
       "Quelque chose a planté. Réessaie ou écris-nous à julien@rahier.dev.",
     formErrorInvalidEmail: "Merci de saisir une adresse email valide.",
@@ -316,4 +318,4 @@ export default {
     body: "La Poule a dû picorer le lien. Reviens à l'accueil et reprends la chasse.",
     cta: "RETOUR À L'ACCUEIL",
   },
-};
+} satisfies typeof en;

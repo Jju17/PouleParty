@@ -18,7 +18,7 @@ import com.google.firebase.firestore.GeoPoint
 data class Challenge(
     val id: String = "",
     val points: Int = 0,
-    val lastUpdated: Timestamp = Timestamp.now(),
+    val lastUpdated: Timestamp? = null,
     val type: String = ChallengeType.ONE_SHOT.firestoreValue,
     val location: GeoPoint? = null,
     val proximityRadiusMeters: Int? = null,

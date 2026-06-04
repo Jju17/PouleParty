@@ -56,7 +56,6 @@ struct Game: Codable, Equatable, Identifiable {
     var timing: Timing = Timing()
     var zone: Zone = Zone()
     var powerUps: GamePowerUps = GamePowerUps()
-    var lastHeartbeat: Timestamp?
     /// Lifts the `maxPlayers` cap from 5 to 500 for parties created via the
     /// admin code (`jujurahier`). Garde-fou client only — see PP-45 and the
     /// firestore.rules `allow create` clause.

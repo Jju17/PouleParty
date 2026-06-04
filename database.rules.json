@@ -11,19 +11,34 @@
         "chickenLocations": {
           "latest": {
             ".read": "auth != null && (root.child('games').child($gameId).child('meta').child('creatorId').val() === auth.uid || root.child('games').child($gameId).child('meta').child('roles').child(auth.uid).val() === 'gameMaster' || (root.child('games').child($gameId).child('meta').child('roles').child(auth.uid).val() === 'hunter' && root.child('games').child($gameId).child('meta').child('gameMode').val() === 'followTheChicken' && data.child('invisible').val() !== true))",
-            ".write": "auth != null && root.child('games').child($gameId).child('meta').child('roles').child(auth.uid).val() === 'chicken' && newData.hasChildren(['lat', 'lng', 'ts'])"
+            ".write": "auth != null && root.child('games').child($gameId).child('meta').child('roles').child(auth.uid).val() === 'chicken' && (root.child('games').child($gameId).child('meta').child('status').val() === 'inProgress' || root.child('games').child($gameId).child('meta').child('status').val() === 'readyToLaunch')",
+            ".validate": "newData.hasChildren(['lat', 'lng', 'ts'])",
+            "lat": { ".validate": "newData.isNumber() && newData.val() >= -90 && newData.val() <= 90" },
+            "lng": { ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180" },
+            "ts": { ".validate": "newData.isNumber()" },
+            "invisible": { ".validate": "newData.isBoolean()" },
+            "$other": { ".validate": false }
           }
         },
         "hunterLocations": {
           "$hunterId": {
-            ".read": "auth != null && (root.child('games').child($gameId).child('meta').child('creatorId').val() === auth.uid || root.child('games').child($gameId).child('meta').child('roles').child(auth.uid).val() === 'hunter' || root.child('games').child($gameId).child('meta').child('roles').child(auth.uid).val() === 'gameMaster')",
-            ".write": "auth != null && $hunterId === auth.uid && root.child('games').child($gameId).child('meta').child('roles').child(auth.uid).val() === 'hunter' && newData.hasChildren(['lat', 'lng', 'ts'])"
+            ".read": "auth != null && (root.child('games').child($gameId).child('meta').child('roles').child(auth.uid).val() === 'gameMaster' || root.child('games').child($gameId).child('meta').child('roles').child(auth.uid).val() === 'hunter' || (root.child('games').child($gameId).child('meta').child('creatorId').val() === auth.uid && root.child('games').child($gameId).child('meta').child('chickenCanSeeHunters').val() === true))",
+            ".write": "auth != null && $hunterId === auth.uid && root.child('games').child($gameId).child('meta').child('roles').child(auth.uid).val() === 'hunter' && root.child('games').child($gameId).child('meta').child('shareHunterLocations').val() === true && (root.child('games').child($gameId).child('meta').child('status').val() === 'inProgress' || root.child('games').child($gameId).child('meta').child('status').val() === 'readyToLaunch')",
+            ".validate": "newData.hasChildren(['lat', 'lng', 'ts'])",
+            "lat": { ".validate": "newData.isNumber() && newData.val() >= -90 && newData.val() <= 90" },
+            "lng": { ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180" },
+            "ts": { ".validate": "newData.isNumber()" },
+            "$other": { ".validate": false }
           }
         },
         "presence": {
           "chicken": {
             ".read": "auth != null && (root.child('games').child($gameId).child('meta').child('creatorId').val() === auth.uid || root.child('games').child($gameId).child('meta').child('roles').child(auth.uid).val() === 'hunter' || root.child('games').child($gameId).child('meta').child('roles').child(auth.uid).val() === 'gameMaster')",
-            ".write": "auth != null && root.child('games').child($gameId).child('meta').child('roles').child(auth.uid).val() === 'chicken'"
+            ".write": "auth != null && root.child('games').child($gameId).child('meta').child('roles').child(auth.uid).val() === 'chicken' && (root.child('games').child($gameId).child('meta').child('status').val() === 'inProgress' || root.child('games').child($gameId).child('meta').child('status').val() === 'readyToLaunch')",
+            ".validate": "newData.hasChildren(['online', 'ts'])",
+            "online": { ".validate": "newData.isBoolean()" },
+            "ts": { ".validate": "newData.isNumber()" },
+            "$other": { ".validate": false }
           }
         }
       }

@@ -276,7 +276,7 @@ class GameMasterMapViewModel @Inject constructor(
             }
         }
         streamJobs += viewModelScope.launch {
-            while (true) {
+            while (!_uiState.value.isGameOver) {
                 _uiState.update { it.copy(nowDate = Date()) }
                 val state = _uiState.value
                 val next = state.nextRadiusUpdate

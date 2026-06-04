@@ -6,6 +6,35 @@ Format: [Keep a Changelog](https://keepachangelog.com/). Versions follow [Semant
 
 ---
 
+## [1.14.1], 2026-06-04
+
+**iOS**: 1.14.1 (1) · **Android**: 1.14.1 (43) · **Functions**: deployed staging + prod · **Firestore + RTDB rules**: deployed staging + prod · **Web**: copy unchanged, locale key-parity locked
+
+> Large release: everything since 1.13.1 (PP-68, PP-71, PP-98 through PP-107) plus the full pre-launch security and quality audit (AUDIT-2026-05-30). The server side is already live on staging and prod; this build ships the matching client changes.
+
+### Added
+
+- **Manual launch (PP-71).** The chicken can toggle "Manual launch" at game creation. At the planned start the game waits on a full-screen LAUNCH overlay (chicken + every GameMaster see it); tapping LAUNCH starts the game for real and re-anchors every timer on the actual start.
+- **Hand off the chicken role (PP-26 / PP-86 / PP-107).** A GameMaster (or the creator) can designate any current hunter as the new chicken before the game starts. The swapped players are now re-routed to the correct map automatically and the new chicken sees a one-time "You are the new chicken!" alert (previously both were stranded on the wrong screen).
+- **Special edition entry in-app (PP-105).**
+
+### Changed
+
+- **Server-authoritative role model (PP-107).** Game membership is now one `roles` map (chicken / hunter / gameMaster) instead of three sprawled id fields. Joins, GameMaster joins, chicken designation and leaving all go through server callables, so a player always has exactly one role and the roster can never half-update.
+- **Zone generation moved server-side (PP-106).** The full shrinking-zone schedule is computed once on the backend at game creation and every device renders the identical circles, fixing the drift that made the zone differ slightly between phones.
+- **Real-time positions on Realtime Database (PP-102).** Player positions and chicken presence moved to RTDB for snappier, cheaper live updates.
+- **Faster leaderboard (PP-103)** via a denormalized read-model, and **per-game challenge snapshots (PP-98)** so a game's challenge list is frozen at creation.
+- **Localized URL slugs on the website (PP-99).**
+- **Localization.** The GameMaster screen and the launch overlay are now fully translated in French and Dutch (some strings were previously hardcoded).
+
+### Fixed
+
+- **Pre-launch security / integrity hardening (AUDIT-2026-05-30).** The 4-digit found code is now generated server-side and never written to the public game doc; real-time location/presence writes are type- and range-validated and gated by game status + broadcast permission; the out-of-zone penalty is idempotent (a retry can't double-penalize); power-up activation is rejected on a finished game; the chicken-designation rule was tightened and a GameMaster can no longer also be the chicken; paid-registration side-effect failures are recorded and alerted; Stripe refunds cross-check amount and currency; deleting a game now cleans up its sub-data.
+- **Team names are now run through the profanity filter** before joining.
+- **Clearer join flow.** Joining a game that is already finished or full now shows a clear message instead of a confusing retry loop or generic error, and a failed join keeps your team-name form so you can retry in place.
+- **Game timer reliably stops at the end of the game (PP-101).**
+- **Stability / parity fixes:** deterministic leaderboard ordering across platforms, zone-freeze power-up spawn alignment, removal of dead presence code, and assorted backend race-condition and edge-case fixes.
+
 ## [1.13.1], 2026-05-25 (approved by Apple App Review)
 
 **iOS**: 1.13.1 (8) · **Android**: 1.13.1 (42) · **Functions**: unchanged from (5) deploy · **Firestore rules**: unchanged · **Web**: unchanged

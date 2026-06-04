@@ -235,22 +235,4 @@ class LocationTrackingEffectsTest {
         assertFalse(gameWithoutHunterTracking.chickenCanSeeHunters)
     }
 
-    // ── Heartbeat ───────────────────────────────────────
-
-    @Test
-    fun `isChickenDisconnected false when no heartbeat`() {
-        assertFalse(Game.mock.isChickenDisconnected)
-    }
-
-    @Test
-    fun `isChickenDisconnected false when recent heartbeat`() {
-        val game = Game.mock.copy(lastHeartbeat = Timestamp(Date(System.currentTimeMillis() - 10_000)))
-        assertFalse(game.isChickenDisconnected)
-    }
-
-    @Test
-    fun `isChickenDisconnected true when stale heartbeat`() {
-        val game = Game.mock.copy(lastHeartbeat = Timestamp(Date(System.currentTimeMillis() - 90_000)))
-        assertTrue(game.isChickenDisconnected)
-    }
 }

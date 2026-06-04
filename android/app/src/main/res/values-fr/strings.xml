@@ -23,10 +23,12 @@
     <!-- Join / Register flow -->
     <string name="enter_the_game_code">Entre le code de la partie</string>
     <string name="no_game_found_with_this_code">Aucune partie trouvée avec ce code.</string>
+    <string name="party_full">Cette partie est complète.</string>
     <string name="network_error_please_try_again">Erreur réseau. Réessaie.</string>
     <string name="register">S\'inscrire</string>
     <string name="sign_up">S\'inscrire</string>
     <string name="team_name">Nom d\'équipe</string>
+    <string name="team_name_profane">Choisis un autre nom d\'équipe.</string>
     <string name="registered_to_game">Inscrit à la partie</string>
     <string name="collapse">Réduire</string>
     <string name="expand_registered_game_banner">Afficher la bannière d\'inscription</string>
@@ -109,7 +111,7 @@
     <string name="wrong_code">Mauvais code</string>
     <string name="wrong_code_message">Ce code est incorrect. Réessaie !</string>
     <string name="winner_registration_failed_title">Erreur de connexion</string>
-    <string name="winner_registration_failed_message">Impossible d\'enregistrer ta victoire. Vérifie ta connexion et réessaie — ton code était bon.</string>
+    <string name="winner_registration_failed_message">Impossible d\'enregistrer ta victoire. Vérifie ta connexion et réessaie, ton code était bon.</string>
 
     <!-- Game Info Dialog -->
     <string name="mode">Mode</string>
@@ -183,7 +185,7 @@
     <string name="rule_circular_zone">Le jeu se déroule dans une zone circulaire sur la carte.</string>
     <string name="rule_zone_shrinks">La zone rétrécit avec le temps selon les paramètres.</string>
     <string name="rule_win_condition">Les Chasseurs gagnent en trouvant la Poule. La Poule gagne en survivant jusqu\'à la fin !</string>
-    <string name="mode_follow_desc">La zone rétrécit périodiquement vers la position de la Poule. Les Chasseurs ne voient pas sa position exacte — juste la zone qui bouge !</string>
+    <string name="mode_follow_desc">La zone rétrécit périodiquement vers la position de la Poule. Les Chasseurs ne voient pas sa position exacte, juste la zone qui bouge !</string>
     <string name="mode_follow_detail1">Le centre de la zone suit la position en direct de la Poule</string>
     <string name="mode_follow_detail2">Les Chasseurs voient la zone bouger mais pas où se trouve la Poule</string>
     <string name="mode_follow_detail3">La Poule doit rester dans la zone pour survivre</string>
@@ -217,7 +219,7 @@
     <string name="contact_support">Contacter le support</string>
     <!-- iOS-H6 / store-audit 2026-05-18 -->
     <string name="delete_my_data">Supprimer mon compte</string>
-    <string name="delete_data_footer">Cela supprime ton compte anonyme Firebase Auth et les données de profil associées (pseudo, token de notification). Les parties passées gardent le nom d\'équipe que tu as utilisé — il n\'est visible que par les participants de ces sessions. Tu peux continuer à utiliser l\'appli : un nouveau compte anonyme sera créé automatiquement.</string>
+    <string name="delete_data_footer">Cela supprime ton compte anonyme Firebase Auth et les données de profil associées (pseudo, token de notification). Les parties passées gardent le nom d\'équipe que tu as utilisé : il n\'est visible que par les participants de ces sessions. Tu peux continuer à utiliser l\'appli : un nouveau compte anonyme sera créé automatiquement.</string>
     <string name="delete_data_title">Supprimer mon compte</string>
     <string name="delete_data_message">Cela supprimera définitivement ton compte anonyme. Les parties en cours seront abandonnées. Es-tu sûr ?</string>
     <string name="delete">Supprimer</string>
@@ -311,7 +313,7 @@
     <string name="reject">Refuser</string>
     <string name="challenges_pending_banner_one">1 défi à soumettre</string>
     <string name="challenges_pending_banner_other">%1$d défis à soumettre</string>
-    <string name="challenges_closed_banner">Temps écoulé — les défis sont fermés.</string>
+    <string name="challenges_closed_banner">Temps écoulé, les défis sont fermés.</string>
     <string name="challenge_points_format">%d pts</string>
     <string name="challenges_empty">Aucun défi pour l\'instant. Reviens plus tard !</string>
     <string name="challenge_level_header">Niveau %1$d</string>
@@ -346,7 +348,7 @@
     <string name="report_player_title">Signaler ce joueur ?</string>
     <string name="report_player_message">Signaler %1$s pour un pseudo offensant ou un comportement inapproprié. Nous examinons chaque signalement ; les utilisateurs qui en abusent peuvent être bannis.</string>
     <string name="report_player_submit">Signaler</string>
-    <string name="report_player_success">Merci — signalement envoyé</string>
+    <string name="report_player_success">Merci, signalement envoyé</string>
     <string name="report_player_error">Impossible d\'envoyer le signalement. Réessaie dans un instant.</string>
     <!-- PP-88 GameMaster join flow -->
     <string name="join_as_hunter">Rejoindre comme Chasseur</string>

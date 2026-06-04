@@ -782,7 +782,11 @@ class FirestoreRepository @Inject constructor(
                         totalPoints = (entry["totalPoints"] as? Number)?.toInt() ?: 0,
                         teamName = (entry["teamName"] as? String) ?: "",
                     )
-                }
+                }.sortedWith(
+                    compareByDescending<ChallengeCompletion> { it.totalPoints }
+                        .thenBy(String.CASE_INSENSITIVE_ORDER) { it.teamName }
+                        .thenBy { it.hunterId }
+                )
                 trySend(completions)
             }
         awaitClose { listener.remove() }

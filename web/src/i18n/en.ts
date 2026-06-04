@@ -39,7 +39,7 @@ export default {
       "We use Firebase Analytics to collect anonymous usage data (app opens, screen views) and Firebase Crashlytics for crash reports, to improve the app. No personally identifiable information is collected through these services.",
     paidEventData: "Paid event registration:",
     paidEventDataText:
-      "When you register for a paid PouleParty event on the web form (pouleparty.be/en/registration), we collect: the captain's full name, team name, email address, phone number, team size, your IP address and locale, the Stripe Checkout session ID, and a 6-character validation code we generate for the event. This data is stored in our `/eventRegistrations` Firestore collection and transmitted to the third-party services listed below for payment, confirmation email delivery, and on-site logistics. Payment card details are never collected by us — they are entered directly on Stripe's hosted Checkout page.",
+      "When you register for a paid PouleParty event on the web form (pouleparty.be/en/registration), we collect: the captain's full name, team name, email address, phone number, team size, your IP address and locale, the Stripe Checkout session ID, and a 6-character validation code we generate for the event. This data is stored in our `/eventRegistrations` Firestore collection and transmitted to the third-party services listed below for payment, confirmation email delivery, and on-site logistics. Payment card details are never collected by us. They are entered directly on Stripe's hosted Checkout page.",
     legalBasis: "Legal Basis for Processing",
     legalBasisIntro: "Under the GDPR (Art. 6), we process your data based on the following legal grounds:",
     legalBasisConsent: "Consent (Art. 6(1)(a)):",
@@ -61,11 +61,11 @@ export default {
     thirdPartyCrashlyticsUrl: "https://firebase.google.com/support/privacy/",
     thirdPartyMapbox: "Mapbox",
     thirdPartyMapboxUrl: "https://www.mapbox.com/legal/privacy",
-    thirdPartyStripe: "Stripe (payment processing for paid events — Stripe Technology Europe Ltd in Ireland, with onward transfer to Stripe Inc. in the US under Standard Contractual Clauses)",
+    thirdPartyStripe: "Stripe (payment processing for paid events: Stripe Technology Europe Ltd in Ireland, with onward transfer to Stripe Inc. in the US under Standard Contractual Clauses)",
     thirdPartyStripeUrl: "https://stripe.com/privacy",
-    thirdPartyResend: "Resend (transactional confirmation emails for paid events — Resend Inc. in the US under Standard Contractual Clauses)",
+    thirdPartyResend: "Resend (transactional confirmation emails for paid events: Resend Inc. in the US under Standard Contractual Clauses)",
     thirdPartyResendUrl: "https://resend.com/legal/privacy-policy",
-    thirdPartyGoogleSheets: "Google Sheets (operational roster for on-site D-Day check-in — Google LLC under the EU-US Data Privacy Framework)",
+    thirdPartyGoogleSheets: "Google Sheets (operational roster for on-site D-Day check-in: Google LLC under the EU-US Data Privacy Framework)",
     thirdPartyGoogleSheetsUrl: "https://policies.google.com/privacy",
     dataSharing: "Data Sharing",
     dataSharingText:
@@ -89,7 +89,7 @@ export default {
     rightRectification: "Right to rectification (Art. 16):",
     rightRectificationText: "You can request correction of inaccurate data.",
     rightErasure: "Right to erasure (Art. 17):",
-    rightErasureText: "You can request deletion of your data. The in-app Settings > Delete Account button deletes your anonymous Firebase Auth account and the `/users/{uid}` profile document immediately. Games you participated in (and the team name you used for them) are kept indefinitely for game-history integrity — they are visible only to participants of the same session and the game creator. For full scrubbing of past game data (including your team name in winners arrays), contact us at julien@rahier.dev and we will process the manual scrub within 30 days. Paid event registrations are deleted on request (subject to the 12-month accounting retention period mentioned above).",
+    rightErasureText: "You can request deletion of your data. The in-app Settings > Delete Account button deletes your anonymous Firebase Auth account and the `/users/{uid}` profile document immediately. Games you participated in (and the team name you used for them) are kept indefinitely for game-history integrity. They are visible only to participants of the same session and the game creator. For full scrubbing of past game data (including your team name in winners arrays), contact us at julien@rahier.dev and we will process the manual scrub within 30 days. Paid event registrations are deleted on request (subject to the 12-month accounting retention period mentioned above).",
     rightRestriction: "Right to restriction (Art. 18):",
     rightRestrictionText: "You can request that we limit the processing of your data.",
     rightPortability: "Right to data portability (Art. 20):",
@@ -146,11 +146,11 @@ export default {
     paidEventsWhatsIncluded:
       "Each ticket includes: one entry to the dated event (e.g. PouleParty D-Day on Saturday, June 6, 2026 from 8:30 PM in Brussels/Ixelles), one welcome drink at the starting bar, and a wristband collected at the final location. Food, additional drinks, transportation and any incidental expenses are not included.",
     paidEventsWithdrawal:
-      "Because PouleParty events are leisure activities scheduled for a specific date, the 14-day right of withdrawal granted by Article 9 of the EU Consumer Rights Directive (2011/83/EU) does NOT apply — this exemption is provided by Article 16(l) of that Directive. By completing your purchase, you explicitly acknowledge this and waive the cooling-off period. Tickets are non-refundable except in the cases listed below.",
+      "Because PouleParty events are leisure activities scheduled for a specific date, the 14-day right of withdrawal granted by Article 9 of the EU Consumer Rights Directive (2011/83/EU) does NOT apply. This exemption is provided by Article 16(l) of that Directive. By completing your purchase, you explicitly acknowledge this and waive the cooling-off period. Tickets are non-refundable except in the cases listed below.",
     paidEventsRefund:
-      "Refund rules: (a) if WE cancel or postpone the event for any reason (including weather, force majeure, insufficient registrations, or operator decision), you receive a full refund of the ticket price or, at your option, a transfer to the rescheduled date; (b) if YOU cannot attend, the ticket is non-refundable — but team rosters are freely interchangeable, so you may transfer your spot to another participant up until the day of the event by emailing julien@rahier.dev with the substitution details; (c) if a participant is denied entry to the venue for reasons attributable to them (intoxication, refusal to follow safety instructions, age below 18), no refund is issued.",
+      "Refund rules: (a) if WE cancel or postpone the event for any reason (including weather, force majeure, insufficient registrations, or operator decision), you receive a full refund of the ticket price or, at your option, a transfer to the rescheduled date; (b) if YOU cannot attend, the ticket is non-refundable, but team rosters are freely interchangeable, so you may transfer your spot to another participant up until the day of the event by emailing julien@rahier.dev with the substitution details; (c) if a participant is denied entry to the venue for reasons attributable to them (intoxication, refusal to follow safety instructions, age below 18), no refund is issued.",
     paidEventsForceMajeure:
-      "In case of force majeure (e.g. pandemic public-health order, severe weather warning, terror threat, venue closure beyond our control), we will either reschedule the event to a future date — with all tickets transferring automatically — or, if rescheduling is not feasible within 6 months, refund all ticket holders in full.",
+      "In case of force majeure (e.g. pandemic public-health order, severe weather warning, terror threat, venue closure beyond our control), we will either reschedule the event to a future date (with all tickets transferring automatically) or, if rescheduling is not feasible within 6 months, refund all ticket holders in full.",
     userConduct: "User Conduct",
     conduct1: "Use the app only for its intended purpose (playing the game).",
     conduct2: "Do not attempt to cheat, hack, or reverse-engineer the app.",
@@ -189,7 +189,7 @@ export default {
   },
   createParty: {
     title: "Want to create a party?",
-    body: "PouleParty is in beta. To organize or create a party, contact Julien — we'll set it up together.",
+    body: "PouleParty is in beta. To organize or create a party, contact Julien. We'll set it up together.",
     contactEmailLabel: "Email:",
     contactWhatsAppLabel: "WhatsApp:",
   },
@@ -244,9 +244,9 @@ export default {
       consentTermsLink: "Terms of Use",
       consentJoin: " and the ",
       consentPrivacyLink: "Privacy Policy",
-      consentSuffix: ". Dated leisure event — the 14-day right of withdrawal does not apply (CRD Art. 16(l)).",
+      consentSuffix: ". Dated leisure event: the 14-day right of withdrawal does not apply (CRD Art. 16(l)).",
       back: "← EDIT",
-      // Template: replace {total} with the number — e.g. "PAY 36 € 🔒".
+      // Template: replace {total} with the number, e.g. "PAY 36 € 🔒".
       payButtonTemplate: "PAY {total} € 🔒",
       redirecting: "REDIRECTING…",
       defaultError: "Couldn't start the payment. Try again or write to julien@rahier.dev.",
@@ -274,7 +274,7 @@ export default {
   deleteAccount: {
     title: "Delete your Poule Party account",
     intro:
-      "You can delete your Poule Party account and all the data tied to it. This page is the web-accessible deletion endpoint required by Google Play — the same action is also available inside the app under Settings → Delete Account.",
+      "You can delete your Poule Party account and all the data tied to it. This page is the web-accessible deletion endpoint required by Google Play. The same action is also available inside the app under Settings → Delete Account.",
     dataDeletedTitle: "What is deleted immediately",
     dataDeleted: [
       "Your anonymous Firebase Auth user account",
@@ -309,7 +309,7 @@ export default {
     formSubmit: "SUBMIT REQUEST",
     formSubmitting: "SUBMITTING…",
     formSuccess:
-      "Got it — we received your request and will process it within 30 days. A copy was emailed to {email}.",
+      "Got it. We received your request and will process it within 30 days. A copy was emailed to {email}.",
     formErrorGeneric:
       "Something went wrong. Try again or email us at julien@rahier.dev.",
     formErrorInvalidEmail: "Please enter a valid email address.",

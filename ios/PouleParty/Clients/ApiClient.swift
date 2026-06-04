@@ -14,6 +14,22 @@ import FirebaseStorage
 import FirebaseFunctions
 import os
 
+/// Deterministic, total ordering for leaderboard rows. Parity with
+/// Android: sort by `totalPoints` descending, then `teamName`
+/// case-insensitive ascending, then `hunterId` ascending. Total so equal
+/// teams never render in platform-dependent order.
+func leaderboardOrdersBefore(_ lhs: ChallengeCompletion, _ rhs: ChallengeCompletion) -> Bool {
+    if lhs.totalPoints != rhs.totalPoints {
+        return lhs.totalPoints > rhs.totalPoints
+    }
+    let lName = lhs.teamName.lowercased()
+    let rName = rhs.teamName.lowercased()
+    if lName != rName {
+        return lName < rName
+    }
+    return (lhs.hunterId ?? "") < (rhs.hunterId ?? "")
+}
+
 /// Phase of an active game, used by the Home banner to pick the right
 /// copy + CTA. Games in both phases can legitimately coexist for a single
 /// user (e.g. a hunter currently playing game A and registered to game B
@@ -900,13 +916,15 @@ extension ApiClient: DependencyKey {
                             logListenerError("Leaderboard (game \(gameId))", error)
                         }
                         let entries = snapshot?.data()?["entries"] as? [String: [String: Any]] ?? [:]
-                        let completions = entries.map { hunterId, entry -> ChallengeCompletion in
-                            var completion = ChallengeCompletion()
-                            completion.hunterId = hunterId
-                            completion.totalPoints = (entry["totalPoints"] as? Int) ?? 0
-                            completion.teamName = (entry["teamName"] as? String) ?? ""
-                            return completion
-                        }
+                        let completions = entries
+                            .map { hunterId, entry -> ChallengeCompletion in
+                                var completion = ChallengeCompletion()
+                                completion.hunterId = hunterId
+                                completion.totalPoints = (entry["totalPoints"] as? Int) ?? 0
+                                completion.teamName = (entry["teamName"] as? String) ?? ""
+                                return completion
+                            }
+                            .sorted(by: leaderboardOrdersBefore)
                         continuation.yield(completions)
                     }
 

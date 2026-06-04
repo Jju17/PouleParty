@@ -64,6 +64,28 @@ export const activatePowerUp = onCall<
   const puRef = gameRef.collection("powerUps").doc(powerUpId);
 
   const result = await db.runTransaction<ActivatePowerUpResult>(async (tx) => {
+    // All reads before any write. The game doc gates activation on a live,
+    // non-ended game so effects can't be applied after the game is over.
+    const gameSnap = await tx.get(gameRef);
+    if (!gameSnap.exists) {
+      throw new HttpsError("not-found", "Game not found");
+    }
+    const gameData = gameSnap.data() ?? {};
+    const status = typeof gameData.status === "string" ? gameData.status : "";
+    if (status !== "inProgress") {
+      throw new HttpsError(
+        "failed-precondition",
+        "Game is not in progress"
+      );
+    }
+    const end = (gameData.timing as { end?: Timestamp } | undefined)?.end;
+    if (end && end.toMillis() <= Timestamp.now().toMillis()) {
+      throw new HttpsError(
+        "failed-precondition",
+        "Game has already ended"
+      );
+    }
+
     const puSnap = await tx.get(puRef);
     if (!puSnap.exists) {
       throw new HttpsError("not-found", "Power-up not found");

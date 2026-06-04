@@ -113,7 +113,6 @@ data class Game(
     val timing: Timing = Timing(),
     val zone: Zone = Zone(),
     val powerUps: GamePowerUps = GamePowerUps(),
-    val lastHeartbeat: Timestamp? = null,
     /**
      * Lifts the `maxPlayers` cap from 5 to 500 for parties created via the
      * admin code (`jujurahier`). Garde-fou client only — see PP-45 and the
@@ -223,14 +222,6 @@ data class Game(
         PowerUpType.JAMMER -> isJammerActive
         PowerUpType.ZONE_PREVIEW -> false // instant, no timed window
     }
-
-    /** Returns true if the chicken's heartbeat is stale (>60s old), indicating disconnect. */
-    @get:Exclude
-    val isChickenDisconnected: Boolean
-        get() {
-            val heartbeat = lastHeartbeat ?: return false
-            return Date().time - heartbeat.toDate().time > 60_000
-        }
 
     // ── Computed Properties ────────────────────────────
 

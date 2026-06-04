@@ -4,6 +4,8 @@ import { logger } from "firebase-functions/v2";
 import { isChicken, isGameMaster, isHunter } from "./roles";
 
 const REGION = "europe-west1";
+// Lockstep with the client AppConstants.outOfZonePenaltyIntervalSeconds.
+const OUT_OF_ZONE_PENALTY_INTERVAL_SECONDS = 5;
 
 interface ValidateChallengeSubmissionInput {
   gameId?: string;
@@ -102,11 +104,10 @@ export const validateChallengeSubmission = onCall<
       : 0;
     const existingValidated = (existingCompletion.validatedChallengeIds as string[] | undefined) ?? [];
     const existingCounts = (existingCompletion.repeatableCounts as Record<string, number> | undefined) ?? {};
-    const existingTeamName = (existingCompletion.teamName as string | undefined) ?? "";
 
-    const teamName = existingTeamName.length > 0
-      ? existingTeamName
-      : await resolveTeamName(db, gameId, hunterId);
+    // Re-resolve the team name on every call so a rename propagates to the
+    // completion + leaderboard, instead of freezing the first-seen value.
+    const teamName = await resolveTeamName(db, gameId, hunterId);
 
     if (submissionType === "oneShot" && existingValidated.includes(challengeId)) {
       tx.update(submissionRef, {
@@ -186,15 +187,29 @@ export const applyOutOfZonePenalty = onCall<
     const completionSnap = await tx.get(completionRef);
     const existing = completionSnap.exists ? completionSnap.data() ?? {} : {};
     const existingTotal = typeof existing.totalPoints === "number" ? existing.totalPoints : 0;
+
+    // Idempotency / rate guard: at most one out-of-zone penalty per interval
+    // per hunter, so a withRetry re-delivery (or a tampered client) can't
+    // double-penalize. The legit client calls once per interval; a retry lands
+    // within ~1-2 s and is absorbed (returns the unchanged total).
+    const now = Timestamp.now();
+    const lastPenaltyAt = existing.lastPenaltyAt as Timestamp | undefined;
+    const guardMs = (OUT_OF_ZONE_PENALTY_INTERVAL_SECONDS - 1) * 1000;
+    if (lastPenaltyAt && now.toMillis() - lastPenaltyAt.toMillis() < guardMs) {
+      return existingTotal;
+    }
+
     const next = existingTotal - 1;
-    const teamName = (existing.teamName as string | undefined)
-      ?? (await resolveTeamName(db, gameId, uid));
+    // Re-resolve on every call so a rename propagates (don't freeze the
+    // first-seen team name).
+    const teamName = await resolveTeamName(db, gameId, uid);
     const payload: Record<string, unknown> = {
       hunterId: uid,
       totalPoints: next,
       validatedChallengeIds: existing.validatedChallengeIds ?? [],
       repeatableCounts: existing.repeatableCounts ?? {},
       teamName,
+      lastPenaltyAt: now,
     };
     tx.set(completionRef, payload, { merge: true });
     // PP-103: keep the denormalized leaderboard in sync with the penalty.

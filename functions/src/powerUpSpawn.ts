@@ -55,10 +55,19 @@ export function interpolateZoneCenterServer(
   currentRadius: number
 ): { latitude: number; longitude: number } {
   if (!finalCenter || initialRadius <= 0) return initialCenter;
+  if (
+    !Number.isFinite(initialRadius) ||
+    !Number.isFinite(currentRadius) ||
+    !Number.isFinite(finalCenter.latitude) ||
+    !Number.isFinite(finalCenter.longitude)
+  ) {
+    return initialCenter;
+  }
   const progress = Math.min(
     Math.max((initialRadius - currentRadius) / initialRadius, 0),
     1
   );
+  if (!Number.isFinite(progress)) return initialCenter;
   return {
     latitude:
       initialCenter.latitude +

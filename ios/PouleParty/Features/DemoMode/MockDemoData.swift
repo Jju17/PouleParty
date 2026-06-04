@@ -50,7 +50,6 @@ enum MockDemoData {
             ],
             activeEffects: Game.ActiveEffects()
         )
-        game.lastHeartbeat = Timestamp(date: .now)
         return game
     }
 

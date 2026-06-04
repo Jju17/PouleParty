@@ -177,7 +177,8 @@ class GameCreationViewModel @Inject constructor(
                     driftSeed = (1..999_999).random()
                 ),
                 gameMode = GameMod.STAY_IN_THE_ZONE.firestoreValue,
-                foundCode = Game.generateFoundCode(),
+                // foundCode is generated SERVER-SIDE in onGameCreated and stored
+                // only in /private/security (never on the public doc).
                 creatorId = auth.currentUser?.uid ?: "",
                 // PP-107: membership is the single `roles` map. The creator
                 // starts as the chicken. firestore.rules requires the create

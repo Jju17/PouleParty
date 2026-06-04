@@ -134,7 +134,12 @@ export const debugAdvanceGame = onCall<
         return { success: true, message: "Game already finished" };
       }
       if (status === "waiting") {
-        await gameRef.update({ status: "readyToLaunch" });
+        await db.runTransaction(async (tx) => {
+          const fresh = await tx.get(gameRef);
+          if (!fresh.exists) return;
+          if (fresh.data()?.status !== "waiting") return;
+          tx.update(gameRef, { status: "readyToLaunch" });
+        });
         logger.info(`debugAdvanceGame: ${gameId} → readyToLaunch (by ${uid})`);
         return { success: true, message: "Ready to launch" };
       }
@@ -190,14 +195,16 @@ export const debugAdvanceGame = onCall<
       // Spawn a periodic batch at the new shrink index, just like reality.
       // `idSalt` keeps the generated doc IDs unique so this batch coexists
       // with the scheduled one instead of merging onto its docs — and so the
-      // shrink index (which drives the radius/center) is NOT inflated.
-      const idSalt = Date.now() % 100000;
+      // shrink index (which drives the radius/center) is NOT inflated. Keyed
+      // on the monotonic `spawnIndex` so two same-millisecond taps can't
+      // collide on the task id and drop a batch.
+      const idSalt = step.spawnIndex;
       const spawnQueue = getFunctions().taskQueue(
         `locations/${REGION}/functions/spawnPowerUpBatch`
       );
       await spawnQueue.enqueue(
         { gameId, batchIndex: step.spawnIndex, count: DEBUG_SHRINK_SPAWN_SIZE, idSalt },
-        { scheduleTime: new Date(), id: `debug-spawn-${gameId}-${idSalt}` }
+        { scheduleTime: new Date(), id: `debug-spawn-${gameId}-${step.spawnIndex}` }
       );
       logger.info(
         `debugAdvanceGame: shrink → index ${step.spawnIndex} for ${gameId} (by ${uid})`

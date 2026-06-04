@@ -327,6 +327,9 @@ export const createPendingRegistration = onRequest(
       return;
     }
 
+    // Tracks the reserved doc so the catch can clean it up if Stripe
+    // fails — otherwise a `paid:false` orphan would consume a code.
+    let reservedDocRef: FirebaseFirestore.DocumentReference | null = null;
     try {
       const origin = originFor(req);
       // CRIT-5 (audit 2026-05-17): reserve the registration doc + the
@@ -347,6 +350,7 @@ export const createPendingRegistration = onRequest(
       });
       const registrationId = reservation.registrationId;
       const docRef = db().collection(COLLECTION).doc(registrationId);
+      reservedDocRef = docRef;
 
       const stripe = new Stripe(STRIPE_SECRET_KEY.value());
       // HIGH-4 (audit 2026-05-17): pass an idempotency key so a network
@@ -392,6 +396,14 @@ export const createPendingRegistration = onRequest(
       });
     } catch (err) {
       logger.error("createPendingRegistration failed", err);
+      // Delete the reserved doc so a Stripe failure doesn't leave an
+      // orphan `paid:false` registration consuming a code. Safe: it has
+      // no `stripeSessionId` yet, so it can't be a paid registration.
+      if (reservedDocRef) {
+        await reservedDocRef.delete().catch((delErr) => {
+          logger.error("createPendingRegistration: orphan cleanup failed", delErr);
+        });
+      }
       res.status(500).json({ error: "Internal error creating registration" });
     }
   }
@@ -483,12 +495,27 @@ export const confirmRegistrationPayment = onRequest(
 
       const refundDocRef = db().collection(COLLECTION).doc(registrationId);
       const refundResult = await db().runTransaction<
-        { kind: "notFound" } | { kind: "alreadyRefunded" } | { kind: "flipped" }
+        | { kind: "notFound" }
+        | { kind: "alreadyRefunded" }
+        | { kind: "flipped" }
+        | { kind: "amountMismatch"; expected: number; got: number }
+        | { kind: "currencyMismatch"; got: string }
       >(async (tx) => {
         const snap = await tx.get(refundDocRef);
         if (!snap.exists) return { kind: "notFound" };
         const data = snap.data() as RegistrationDoc;
         if (data.refunded === true) return { kind: "alreadyRefunded" };
+        // Defense-in-depth, mirroring the completed-session path: only flip
+        // when the charge currency + amount match what this registration was
+        // billed (teamSize × UNIT_PRICE_CENTS). A forged refund event with a
+        // mismatched amount/currency can't strip a code.
+        if (charge.currency !== CURRENCY) {
+          return { kind: "currencyMismatch", got: charge.currency };
+        }
+        const expected = data.teamSize * UNIT_PRICE_CENTS;
+        if (charge.amount !== expected) {
+          return { kind: "amountMismatch", expected, got: charge.amount };
+        }
         tx.update(refundDocRef, {
           paid: false,
           refunded: true,
@@ -497,6 +524,20 @@ export const confirmRegistrationPayment = onRequest(
         return { kind: "flipped" };
       });
 
+      if (refundResult.kind === "currencyMismatch") {
+        logger.warn(
+          `charge.refunded ${charge.id}: currency=${refundResult.got}, expected ${CURRENCY}; refusing flip`
+        );
+        res.status(200).json({ received: true, ignored: "currency-mismatch" });
+        return;
+      }
+      if (refundResult.kind === "amountMismatch") {
+        logger.warn(
+          `charge.refunded ${charge.id}: amount=${refundResult.got}, expected ${refundResult.expected}; refusing flip`
+        );
+        res.status(200).json({ received: true, ignored: "amount-mismatch" });
+        return;
+      }
       if (refundResult.kind === "notFound") {
         logger.error(
           `charge.refunded ${charge.id}: registration ${registrationId} doesn't exist`
@@ -645,17 +686,78 @@ export const confirmRegistrationPayment = onRequest(
       await sendRegistrationConfirmationEmail(snapshot, RESEND_API_KEY.value());
     } catch (err) {
       logger.error(`Resend email failed for ${registrationId}`, err);
+      await recordFailedSideEffect(registrationId, snapshot, "email", err, RESEND_API_KEY.value());
     }
     try {
       await appendRegistrationRow(snapshot, GOOGLE_SHEET_ID.value());
     } catch (err) {
       logger.error(`Google Sheet append failed for ${registrationId}`, err);
+      await recordFailedSideEffect(registrationId, snapshot, "sheet", err, RESEND_API_KEY.value());
     }
 
     logger.info(`Registration ${registrationId} marked paid (Stripe session ${session.id})`);
     res.status(200).json({ received: true });
   }
 );
+
+/**
+ * Records a paid-registration side-effect failure durably and pings ops.
+ * The marker doc at `/failedSideEffects/{registrationId}` is the safety net
+ * (queryable, survives even if the alert below also fails), and the Sheet
+ * append is idempotent so a manual re-run from it is safe. The alert is
+ * best-effort: it may itself fail when Resend is the outage, which is exactly
+ * why the marker doc is written first.
+ */
+async function recordFailedSideEffect(
+  registrationId: string,
+  snapshot: { email: string },
+  effect: "email" | "sheet",
+  err: unknown,
+  resendApiKey: string
+): Promise<void> {
+  await getFirestore()
+    .collection("failedSideEffects")
+    .doc(registrationId)
+    .set(
+      {
+        registrationId,
+        email: snapshot.email,
+        [`${effect}Error`]: String(err),
+        [`${effect}FailedAt`]: FieldValue.serverTimestamp(),
+        resolved: false,
+      },
+      { merge: true }
+    )
+    .catch((e) =>
+      logger.error(`failedSideEffects marker write failed for ${registrationId}`, e)
+    );
+
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${resendApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: "PouleParty <noreply@pouleparty.be>",
+        to: "julien@rahier.dev",
+        subject: `[PouleParty] paid-registration ${effect} side-effect failed (${registrationId})`,
+        text:
+          `The "${effect}" side effect failed for PAID registration ${registrationId} ` +
+          `(${snapshot.email || "no email on doc"}).\n\nError: ${String(err)}\n\n` +
+          `The registration is marked paid (source of truth). A marker was written to ` +
+          `/failedSideEffects/${registrationId}. The Google Sheet append is idempotent, so ` +
+          `re-running the side effect from the marker is safe.`,
+      }),
+    });
+    if (!response.ok) {
+      logger.error(`ops alert returned ${response.status} for ${registrationId}`);
+    }
+  } catch (e) {
+    logger.error(`ops alert send failed for ${registrationId}`, e);
+  }
+}
 
 // ---------------------------------------------------------------------------
 // PP-52 — server-side validation + single-use claim of a registration code.

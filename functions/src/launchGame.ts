@@ -3,6 +3,7 @@ import { getFunctions } from "firebase-admin/functions";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/v2";
 import { isGameMaster } from "./roles";
+import { mirrorGameMetaInline } from "./rtdbMirror";
 
 const REGION = "europe-west1";
 
@@ -62,7 +63,7 @@ async function enqueueRuntimeTasksFromActualStart(
   };
 
   // Initial power-up batch fires immediately (the launch *is* the start).
-  const initialSpawnId = `spawn-${gameId}-0`;
+  const initialSpawnId = `spawn-${gameId}-launch-0`;
   await spawnQueue.enqueue(
     { gameId, batchIndex: 0, count: POWER_UP_INITIAL_BATCH_SIZE },
     { scheduleTime: actualStart, id: initialSpawnId }
@@ -70,7 +71,7 @@ async function enqueueRuntimeTasksFromActualStart(
   enqueued.spawnPowerUpBatch.push(initialSpawnId);
 
   // inProgress → done at endTimestamp
-  const endStatusId = `status-end-${gameId}`;
+  const endStatusId = `status-end-${gameId}-launch`;
   await statusQueue.enqueue(
     {
       gameId,
@@ -86,9 +87,9 @@ async function enqueueRuntimeTasksFromActualStart(
   );
 
   // hunter_start notification
-  const hunterStartId = `notif-hunterstart-${gameId}`;
+  const hunterStartId = `notif-hunterstart-${gameId}-launch`;
   await notifQueue.enqueue(
-    { gameId, notificationType: "hunter_start" },
+    { gameId, notificationType: "hunter_start", notifId: hunterStartId },
     { scheduleTime: hunterStartDate, id: hunterStartId }
   );
   enqueued.sendGameNotification.push(hunterStartId);
@@ -98,9 +99,9 @@ async function enqueueRuntimeTasksFromActualStart(
   let shrinkTime = new Date(hunterStartDate.getTime() + intervalMs);
   let shrinkCount = 0;
   while (shrinkTime < endTimestamp && shrinkCount < MAX_SHRINK_NOTIFICATIONS) {
-    const id = `notif-shrink-${gameId}-${shrinkCount}`;
+    const id = `notif-shrink-${gameId}-launch-${shrinkCount}`;
     await notifQueue.enqueue(
-      { gameId, notificationType: "zone_shrink" },
+      { gameId, notificationType: "zone_shrink", notifId: id },
       { scheduleTime: shrinkTime, id }
     );
     enqueued.sendGameNotification.push(id);
@@ -111,7 +112,7 @@ async function enqueueRuntimeTasksFromActualStart(
   const spawnBatchCount = Math.min(shrinkCount, MAX_POWER_UP_SHRINK_BATCHES);
   let spawnTime = new Date(hunterStartDate.getTime() + intervalMs);
   for (let batchIndex = 1; batchIndex <= spawnBatchCount; batchIndex++) {
-    const id = `spawn-${gameId}-${batchIndex}`;
+    const id = `spawn-${gameId}-launch-${batchIndex}`;
     await spawnQueue.enqueue(
       { gameId, batchIndex, count: POWER_UP_PERIODIC_BATCH_SIZE },
       { scheduleTime: spawnTime, id }
@@ -240,6 +241,10 @@ export async function launchReadyGame(gameId: string): Promise<LaunchGameResult>
     shrinkIntervalMinutes
   );
   await mergeIntoTaskManifest(gameId, enqueued);
+
+  // Push the new `status: inProgress` into the RTDB meta immediately so the
+  // location/presence write gate opens without waiting for the async trigger.
+  await mirrorGameMetaInline(gameId, (await gameRef.get()).data());
 
   logger.info(
     `launchReadyGame: game ${gameId} launched ` +

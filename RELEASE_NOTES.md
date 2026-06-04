@@ -157,6 +157,92 @@ Gemaakt in Brussel met veel te veel kip-thema energie.
 
 ---
 
+# Release 1.14.1
+
+> ⚠️ **Do not paste any "Summary" paragraph into any store field.** Only the blocks explicitly labelled **App Store Connect**, **Google Play Console**, or **App Review Notes** below are store-safe.
+
+---
+
+## Build (1) — prepared 2026-06-04
+
+**iOS**: 1.14.1 (1) · **Android**: 1.14.1 (43)
+
+**Summary (internal, do not paste):** large release bundling everything since 1.13.1 (PP-68, PP-71 manual launch, PP-98 per-game challenges, PP-99 web i18n slugs, PP-101 timer fix, PP-102 RTDB locations, PP-103 standalone leaderboard, PP-104 QA debug, PP-105 special edition, PP-106 server-side zones, PP-107 server-authoritative role model) plus the full pre-launch security/quality audit (AUDIT-2026-05-30). The server side (functions + firestore + RTDB rules) is already deployed to staging and prod; this build ships the matching client changes. No new permissions or permission-string changes. See `CHANGELOG.md` for the full breakdown.
+
+### 📱 App Store Connect — field "What's New in This Version"
+
+**English (U.S.)**
+
+```
+New this version:
+
+Manual launch. The Chicken can now wait and tap a LAUNCH button to start the game once everyone is actually there.
+
+Hand off the Chicken. A GameMaster can pick a new Chicken before the game starts, and the new Chicken is taken straight to their map.
+
+Smoother and faster. The shrinking zone and the leaderboard now stay perfectly in sync on every phone, and live positions update more quickly.
+
+Cleaner join flow. Clear messages when a game is full or already over, a team-name filter, and a failed join keeps what you typed.
+
+Plus better French and Dutch translations and a long list of stability and security fixes under the hood.
+```
+
+**French**
+
+```
+Nouveautés de cette version :
+
+Lancement manuel. La Poule peut maintenant attendre et appuyer sur un bouton LANCER pour démarrer la partie quand tout le monde est vraiment là.
+
+Passer le rôle de Poule. Un GameMaster peut désigner une nouvelle Poule avant le début de la partie, et elle arrive directement sur sa carte.
+
+Plus fluide et plus rapide. La zone qui rétrécit et le classement restent parfaitement synchronisés sur tous les téléphones, et les positions en direct se mettent à jour plus vite.
+
+Un parcours plus clair pour rejoindre. Des messages clairs quand une partie est complète ou déjà terminée, un filtre sur les noms d'équipe, et un échec ne te fait plus perdre ce que tu as tapé.
+
+En prime, de meilleures traductions françaises et néerlandaises et une longue liste de correctifs de stabilité et de sécurité.
+```
+
+**Dutch**
+
+```
+Nieuw in deze versie:
+
+Handmatige start. De Kip kan nu wachten en op een START-knop tikken om het spel te beginnen wanneer iedereen er echt is.
+
+Geef de Kip door. Een GameMaster kan voor de start een nieuwe Kip aanwijzen, en die wordt meteen naar zijn kaart gebracht.
+
+Vloeiender en sneller. De krimpende zone en de ranglijst blijven nu perfect synchroon op elke telefoon, en live-posities worden sneller bijgewerkt.
+
+Helderder meedoen. Duidelijke meldingen wanneer een spel vol of al voorbij is, een filter op teamnamen, en een mislukte poging behoudt wat je typte.
+
+Plus betere Franse en Nederlandse vertalingen en een lange lijst stabiliteits- en beveiligingsverbeteringen.
+```
+
+### 🤖 Google Play Console — field "Release notes"
+
+```
+<en-US>
+New: Manual launch, tap LAUNCH when everyone is ready, and hand off the Chicken role before the game starts. The zone and leaderboard now stay in sync on every phone, with faster live positions. Clearer join flow with full and finished-game messages and a team-name filter. Plus better FR/NL translations and many stability and security fixes.
+</en-US>
+<fr-FR>
+Nouveau : lancement manuel, appuie sur LANCER quand tout le monde est prêt, et passage du rôle de Poule avant le début. La zone et le classement restent synchronisés sur tous les téléphones, positions en direct plus rapides. Parcours plus clair pour rejoindre (parties complètes ou terminées) et filtre sur les noms d'équipe. Plus de meilleures traductions FR/NL et de nombreux correctifs.
+</fr-FR>
+<nl-NL>
+Nieuw: handmatige start, tik op START wanneer iedereen klaar is, en geef de Kip-rol door voor de start. De zone en ranglijst blijven synchroon op elke telefoon, met snellere live-posities. Helderder meedoen met meldingen voor volle en afgelopen spellen en een teamnaamfilter. Plus betere FR/NL-vertalingen en veel stabiliteits- en beveiligingsfixes.
+</nl-NL>
+```
+
+### 📝 App Store Connect — field "App Review Information → Notes"
+
+```
+No new permissions or permission-string changes in this version. Location usage is unchanged: precise GPS is used only during an active game, and tracking stops automatically when the game ends.
+
+To review the app's features without a real multiplayer game or GPS hardware, use the built-in Demo Mode: on the Home screen, long-press the START button (about 1.5 seconds), then enter the code: appreview. This opens a tabbed demo (Chicken map / Hunter map / GameMaster map / Victory) that renders the real UI with mocked data. Tap "Quit Demo" to exit.
+```
+
+---
+
 # Release 1.13.1
 
 > ⚠️ **Do not paste any "Summary" paragraph into any store field.** Only the blocks explicitly labelled **App Store Connect**, **Google Play Console**, or **App Review Notes** below are store-safe.

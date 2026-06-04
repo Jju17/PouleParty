@@ -258,23 +258,4 @@ struct LocationTrackingEffectsTests {
         let gameWithout = gameWithEffect(chickenCanSeeHunters: false)
         #expect(gameWithout.chickenCanSeeHunters == false)
     }
-
-    // MARK: - Heartbeat
-
-    @Test func isChickenDisconnectedFalseWhenNoHeartbeat() {
-        let game = Game.mock
-        #expect(game.isChickenDisconnected == false)
-    }
-
-    @Test func isChickenDisconnectedFalseWhenRecentHeartbeat() {
-        var game = Game.mock
-        game.lastHeartbeat = Timestamp(date: Date.now.addingTimeInterval(-10))
-        #expect(game.isChickenDisconnected == false)
-    }
-
-    @Test func isChickenDisconnectedTrueWhenStaleHeartbeat() {
-        var game = Game.mock
-        game.lastHeartbeat = Timestamp(date: Date.now.addingTimeInterval(-90))
-        #expect(game.isChickenDisconnected == true)
-    }
 }

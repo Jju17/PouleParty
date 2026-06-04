@@ -6,6 +6,20 @@ import { isChicken, isHunter } from "./roles";
 
 const REGION = "europe-west1";
 
+// Server-side rate limit on wrong found-code attempts. The client cooldown is
+// advisory only (reset by an app restart), so the server enforces its own:
+// after N wrong codes within the window, the hunter is locked out for a short
+// cooldown. Mirrors the gmRateLimits / validationRateLimits pattern. Doc lives
+// in `/foundCodeRateLimits/{uid}_{gameId}`, admin-SDK-only.
+const FOUND_CODE_MAX_WRONG_ATTEMPTS = 3;
+const FOUND_CODE_COOLDOWN_MS = 10 * 1000;
+
+interface FoundCodeRateLimit {
+  attempts: number;
+  firstAttemptAt: Timestamp;
+  lockedUntil: Timestamp | null;
+}
+
 // CRIT-3 (audit 2026-05-17) — server-authoritative winner submission.
 //
 // Before this CF, `firestore.rules` allowed any authenticated user to write
@@ -29,7 +43,9 @@ interface SubmitFoundCodeInput {
 interface SubmitFoundCodeResult {
   success: boolean;
   /** When false, what went wrong — drives the UI error copy. */
-  reason?: "invalidCode" | "notAHunter" | "alreadyWinner" | "gameNotInProgress";
+  reason?: "invalidCode" | "notAHunter" | "alreadyWinner" | "gameNotInProgress" | "cooldown";
+  /** Epoch ms the cooldown ends at, when `reason === "cooldown"`. */
+  lockedUntil?: number;
 }
 
 function ensureNonEmptyString(value: unknown, field: string): string {
@@ -74,11 +90,16 @@ export const submitFoundCode = onCall<
   const ref = getFirestore().collection("games").doc(gameId);
 
   const privateRef = ref.collection("private").doc("security");
+  const rateLimitRef = getFirestore()
+    .collection("foundCodeRateLimits")
+    .doc(`${uid}_${gameId}`);
   const result = await getFirestore().runTransaction<SubmitFoundCodeResult>(async (tx) => {
+    // All reads up front (transaction contract: reads before writes).
     const snap = await tx.get(ref);
     if (!snap.exists) {
       throw new HttpsError("not-found", "Game not found");
     }
+    const rateLimitSnap = await tx.get(rateLimitRef);
     const data = snap.data() ?? {};
     const status = (data.status as string | undefined) ?? "waiting";
     if (status !== "inProgress") {
@@ -87,12 +108,42 @@ export const submitFoundCode = onCall<
     if (!isHunter(data, uid)) {
       return { success: false, reason: "notAHunter" };
     }
+
+    const now = Timestamp.now();
+    let rateLimit: FoundCodeRateLimit = (rateLimitSnap.data() as FoundCodeRateLimit) ?? {
+      attempts: 0,
+      firstAttemptAt: now,
+      lockedUntil: null,
+    };
+    // Auto-reset an expired cooldown so the hunter can retry.
+    if (rateLimit.lockedUntil && rateLimit.lockedUntil.toMillis() <= now.toMillis()) {
+      rateLimit = { attempts: 0, firstAttemptAt: now, lockedUntil: null };
+    }
+    if (rateLimit.lockedUntil) {
+      throw new HttpsError("resource-exhausted", "Too many wrong attempts", {
+        lockedUntil: rateLimit.lockedUntil.toMillis(),
+      });
+    }
+
     // CRIT-2 (audit 2026-05-17): read foundCode from the admin-only
     // /private/security subcollection. The public Game doc's
     // `foundCode` field is "" after onGameCreated relocates it.
     const privSnap = await tx.get(privateRef);
     const foundCode = (privSnap.data()?.foundCode as string | undefined) ?? "";
     if (!constantTimeEquals(submittedCode, foundCode)) {
+      const attempts = rateLimit.attempts + 1;
+      const reachedLock = attempts >= FOUND_CODE_MAX_WRONG_ATTEMPTS;
+      const lockedUntil = reachedLock
+        ? Timestamp.fromMillis(now.toMillis() + FOUND_CODE_COOLDOWN_MS)
+        : null;
+      tx.set(rateLimitRef, {
+        attempts,
+        firstAttemptAt: rateLimit.firstAttemptAt,
+        lockedUntil,
+      } satisfies FoundCodeRateLimit);
+      if (reachedLock) {
+        return { success: false, reason: "cooldown", lockedUntil: lockedUntil!.toMillis() };
+      }
       return { success: false, reason: "invalidCode" };
     }
     const existingWinners = (data.winners as Array<{ hunterId?: string }> | undefined) ?? [];
@@ -102,9 +153,11 @@ export const submitFoundCode = onCall<
     const winner = {
       hunterId: uid,
       hunterName,
-      timestamp: Timestamp.now(),
+      timestamp: now,
     };
     tx.update(ref, { winners: FieldValue.arrayUnion(winner) });
+    // Reset the wrong-attempt counter on success.
+    tx.delete(rateLimitRef);
     return { success: true };
   });
 

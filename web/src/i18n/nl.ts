@@ -1,3 +1,5 @@
+import type en from "./en";
+
 export default {
   nav: {
     privacy: "Privacy",
@@ -40,7 +42,7 @@ export default {
       "We gebruiken Firebase Analytics om anonieme gebruiksgegevens te verzamelen (app-openingen, schermweergaves) en Firebase Crashlytics voor crashrapporten, om de app te verbeteren. Er worden via deze diensten geen persoonlijk identificeerbare gegevens verzameld.",
     paidEventData: "Inschrijving voor een betaald evenement:",
     paidEventDataText:
-      "Wanneer je je inschrijft voor een betaald PouleParty-evenement via het webformulier (pouleparty.be/nl/inschrijving), verzamelen we: de volledige naam van de kapitein, de teamnaam, het e-mailadres, het telefoonnummer, de teamgrootte, je IP-adres en taal, het Stripe Checkout-sessie-ID, en een validatiecode van 6 tekens die we voor het evenement genereren. Deze gegevens worden opgeslagen in onze Firestore-collectie `/eventRegistrations` en doorgegeven aan de hieronder vermelde derde partijen voor de betaling, het versturen van de bevestigingsmail en de logistiek ter plaatse. Betaalkaartgegevens worden nooit door ons verzameld — ze worden rechtstreeks ingevoerd op de door Stripe gehoste Checkout-pagina.",
+      "Wanneer je je inschrijft voor een betaald PouleParty-evenement via het webformulier (pouleparty.be/nl/inschrijving), verzamelen we: de volledige naam van de kapitein, de teamnaam, het e-mailadres, het telefoonnummer, de teamgrootte, je IP-adres en taal, het Stripe Checkout-sessie-ID, en een validatiecode van 6 tekens die we voor het evenement genereren. Deze gegevens worden opgeslagen in onze Firestore-collectie `/eventRegistrations` en doorgegeven aan de hieronder vermelde derde partijen voor de betaling, het versturen van de bevestigingsmail en de logistiek ter plaatse. Betaalkaartgegevens worden nooit door ons verzameld. Ze worden rechtstreeks ingevoerd op de door Stripe gehoste Checkout-pagina.",
     legalBasis: "Rechtsgrondslag voor de verwerking",
     legalBasisIntro:
       "Op grond van de AVG (art. 6) verwerken we uw gegevens op basis van de volgende rechtsgrondslagen:",
@@ -66,11 +68,11 @@ export default {
     thirdPartyCrashlyticsUrl: "https://firebase.google.com/support/privacy/",
     thirdPartyMapbox: "Mapbox",
     thirdPartyMapboxUrl: "https://www.mapbox.com/legal/privacy",
-    thirdPartyStripe: "Stripe (betalingsverwerking voor betaalde evenementen — Stripe Technology Europe Ltd in Ierland, met verdere doorgifte aan Stripe Inc. in de VS onder Standard Contractual Clauses)",
+    thirdPartyStripe: "Stripe (betalingsverwerking voor betaalde evenementen: Stripe Technology Europe Ltd in Ierland, met verdere doorgifte aan Stripe Inc. in de VS onder Standard Contractual Clauses)",
     thirdPartyStripeUrl: "https://stripe.com/privacy",
-    thirdPartyResend: "Resend (transactionele bevestigingsmails voor betaalde evenementen — Resend Inc. in de VS onder Standard Contractual Clauses)",
+    thirdPartyResend: "Resend (transactionele bevestigingsmails voor betaalde evenementen: Resend Inc. in de VS onder Standard Contractual Clauses)",
     thirdPartyResendUrl: "https://resend.com/legal/privacy-policy",
-    thirdPartyGoogleSheets: "Google Sheets (operationele deelnemerslijst voor on-site check-in op D-Day — Google LLC onder het EU-US Data Privacy Framework)",
+    thirdPartyGoogleSheets: "Google Sheets (operationele deelnemerslijst voor on-site check-in op D-Day: Google LLC onder het EU-US Data Privacy Framework)",
     thirdPartyGoogleSheetsUrl: "https://policies.google.com/privacy",
     dataSharing: "Delen van gegevens",
     dataSharingText:
@@ -97,13 +99,13 @@ export default {
     rightRectificationText: "U kunt verzoeken om correctie van onjuiste gegevens.",
     rightErasure: "Recht op gegevenswissing (art. 17):",
     rightErasureText:
-      "Je kan verzoeken om verwijdering van je gegevens. De knop Instellingen > Verwijder mijn account in de app verwijdert onmiddellijk je anonieme Firebase Auth-account en je profieldocument `/users/{uid}`. Spellen waaraan je hebt deelgenomen (en de teamnaam die je daarvoor hebt gebruikt) worden onbeperkt bewaard omwille van de integriteit van de spelgeschiedenis — ze zijn enkel zichtbaar voor de deelnemers van dezelfde sessie en voor de spelmaker. Voor het volledig wissen van gegevens uit eerdere spellen (inclusief je teamnaam in winnaarslijsten) neem je contact op via julien@rahier.dev en handelen we de manuele wissing af binnen 30 dagen. Inschrijvingen voor betaalde evenementen worden op verzoek verwijderd (onder voorbehoud van de hierboven vermelde boekhoudkundige bewaartermijn van 12 maanden).",
+      "Je kan verzoeken om verwijdering van je gegevens. De knop Instellingen > Verwijder mijn account in de app verwijdert onmiddellijk je anonieme Firebase Auth-account en je profieldocument `/users/{uid}`. Spellen waaraan je hebt deelgenomen (en de teamnaam die je daarvoor hebt gebruikt) worden onbeperkt bewaard omwille van de integriteit van de spelgeschiedenis. Ze zijn enkel zichtbaar voor de deelnemers van dezelfde sessie en voor de spelmaker. Voor het volledig wissen van gegevens uit eerdere spellen (inclusief je teamnaam in winnaarslijsten) neem je contact op via julien@rahier.dev en handelen we de manuele wissing af binnen 30 dagen. Inschrijvingen voor betaalde evenementen worden op verzoek verwijderd (onder voorbehoud van de hierboven vermelde boekhoudkundige bewaartermijn van 12 maanden).",
     rightRestriction: "Recht op beperking (art. 18):",
     rightRestrictionText:
       "U kunt verzoeken dat we de verwerking van uw gegevens beperken.",
     rightPortability: "Recht op dataportabiliteit (art. 20):",
     rightPortabilityText:
-      "Je kan je gegevens opvragen in een gestructureerd, machineleesbaar formaat. Stuur een verzoek naar julien@rahier.dev en we antwoorden binnen 30 dagen met een JSON-export die je profieldocument `/users/{uid}` bevat, de teamnamen en winnaarsrecords gekoppeld aan je anonieme gebruikers-ID over eerdere spellen, en — indien van toepassing — elke inschrijving voor een betaald evenement gekoppeld aan je e-mailadres.",
+      "Je kan je gegevens opvragen in een gestructureerd, machineleesbaar formaat. Stuur een verzoek naar julien@rahier.dev en we antwoorden binnen 30 dagen met een JSON-export die je profieldocument `/users/{uid}` bevat, de teamnamen en winnaarsrecords gekoppeld aan je anonieme gebruikers-ID over eerdere spellen, en (indien van toepassing) elke inschrijving voor een betaald evenement gekoppeld aan je e-mailadres.",
     rightObject: "Recht van bezwaar (art. 21):",
     rightObjectText:
       "U kunt bezwaar maken tegen de verwerking van uw gegevens op basis van gerechtvaardigd belang.",
@@ -160,11 +162,11 @@ export default {
     paidEventsWhatsIncluded:
       "Elk ticket omvat: één toegang tot het gedateerde evenement (bv. PouleParty D-Day op zaterdag 6 juni 2026 vanaf 20u30 in Brussel/Elsene), één welkomstdrankje aan de startbar, en een polsbandje dat je op de eindlocatie ontvangt. Eten, extra drankjes, vervoer en eventuele bijkomende kosten zijn niet inbegrepen.",
     paidEventsWithdrawal:
-      "Omdat PouleParty-evenementen vrijetijdsactiviteiten zijn die op een specifieke datum gepland zijn, is het 14-daagse herroepingsrecht uit artikel 9 van de Europese richtlijn consumentenrechten (2011/83/EU) NIET van toepassing — deze uitzondering is voorzien in artikel 16(l) van diezelfde richtlijn. Door je aankoop af te ronden erken je deze uitzondering uitdrukkelijk en doe je afstand van de bedenktermijn. Tickets zijn niet terugbetaalbaar, behalve in de hieronder vermelde gevallen.",
+      "Omdat PouleParty-evenementen vrijetijdsactiviteiten zijn die op een specifieke datum gepland zijn, is het 14-daagse herroepingsrecht uit artikel 9 van de Europese richtlijn consumentenrechten (2011/83/EU) NIET van toepassing: deze uitzondering is voorzien in artikel 16(l) van diezelfde richtlijn. Door je aankoop af te ronden erken je deze uitzondering uitdrukkelijk en doe je afstand van de bedenktermijn. Tickets zijn niet terugbetaalbaar, behalve in de hieronder vermelde gevallen.",
     paidEventsRefund:
-      "Terugbetalingsregels: (a) als WIJ het evenement annuleren of verplaatsen om welke reden dan ook (weersomstandigheden, overmacht, onvoldoende inschrijvingen, beslissing van de organisator), ontvang je een volledige terugbetaling van de ticketprijs of, naar keuze, een overdracht naar de nieuwe datum; (b) als JIJ niet kan komen, is het ticket niet terugbetaalbaar — maar teams zijn vrij uitwisselbaar, dus je kan je plaats overdragen aan een andere deelnemer tot op de dag van het evenement door een e-mail te sturen naar julien@rahier.dev met de details van de vervanging; (c) als een deelnemer de toegang tot de locatie wordt geweigerd om redenen die hem toerekenbaar zijn (dronkenschap, weigering om veiligheidsinstructies te volgen, jonger dan 18), wordt geen terugbetaling gedaan.",
+      "Terugbetalingsregels: (a) als WIJ het evenement annuleren of verplaatsen om welke reden dan ook (weersomstandigheden, overmacht, onvoldoende inschrijvingen, beslissing van de organisator), ontvang je een volledige terugbetaling van de ticketprijs of, naar keuze, een overdracht naar de nieuwe datum; (b) als JIJ niet kan komen, is het ticket niet terugbetaalbaar, maar teams zijn vrij uitwisselbaar, dus je kan je plaats overdragen aan een andere deelnemer tot op de dag van het evenement door een e-mail te sturen naar julien@rahier.dev met de details van de vervanging; (c) als een deelnemer de toegang tot de locatie wordt geweigerd om redenen die hem toerekenbaar zijn (dronkenschap, weigering om veiligheidsinstructies te volgen, jonger dan 18), wordt geen terugbetaling gedaan.",
     paidEventsForceMajeure:
-      "In geval van overmacht (bijvoorbeeld een pandemische volksgezondheidsmaatregel, ernstige weerswaarschuwing, terreurdreiging, sluiting van de locatie buiten onze wil) verplaatsen we het evenement naar een latere datum — waarbij alle tickets automatisch overgaan — of, als verplaatsing niet haalbaar is binnen 6 maanden, betalen we alle ticketbezitters volledig terug.",
+      "In geval van overmacht (bijvoorbeeld een pandemische volksgezondheidsmaatregel, ernstige weerswaarschuwing, terreurdreiging, sluiting van de locatie buiten onze wil) verplaatsen we het evenement naar een latere datum (waarbij alle tickets automatisch overgaan) of, als verplaatsing niet haalbaar is binnen 6 maanden, betalen we alle ticketbezitters volledig terug.",
     userConduct: "Gedrag van gebruikers",
     conduct1: "Gebruik de app uitsluitend voor het beoogde doel (het spelen van de game).",
     conduct2: "Probeer niet te valsspelen, te hacken of de app te reverse-engineeren.",
@@ -204,7 +206,7 @@ export default {
   },
   createParty: {
     title: "Een feestje organiseren?",
-    body: "PouleParty zit nog in beta. Wil je een spel organiseren of aanmaken? Contacteer Julien — we zetten het samen op poten.",
+    body: "PouleParty zit nog in beta. Wil je een spel organiseren of aanmaken? Contacteer Julien, we zetten het samen op poten.",
     contactEmailLabel: "E-mail:",
     contactWhatsAppLabel: "WhatsApp:",
   },
@@ -284,7 +286,7 @@ export default {
   deleteAccount: {
     title: "Je Poule Party-account verwijderen",
     intro:
-      "Je kan je Poule Party-account en alle gegevens die eraan gekoppeld zijn verwijderen. Deze pagina is het webtoegankelijke verwijderingsendpoint dat Google Play vereist — dezelfde actie is ook beschikbaar in de app via Instellingen → Verwijder mijn account.",
+      "Je kan je Poule Party-account en alle gegevens die eraan gekoppeld zijn verwijderen. Deze pagina is het webtoegankelijke verwijderingsendpoint dat Google Play vereist. Dezelfde actie is ook beschikbaar in de app via Instellingen → Verwijder mijn account.",
     dataDeletedTitle: "Wat onmiddellijk wordt verwijderd",
     dataDeleted: [
       "Je anonieme Firebase Auth-gebruikersaccount",
@@ -319,7 +321,7 @@ export default {
     formSubmit: "VERZOEK VERSTUREN",
     formSubmitting: "VERSTUREN…",
     formSuccess:
-      "Goed ontvangen — we hebben je verzoek genoteerd en behandelen het binnen 30 dagen. Een kopie werd naar {email} gestuurd.",
+      "Goed ontvangen. We hebben je verzoek genoteerd en behandelen het binnen 30 dagen. Een kopie werd naar {email} gestuurd.",
     formErrorGeneric:
       "Er is iets misgelopen. Probeer opnieuw of mail ons op julien@rahier.dev.",
     formErrorInvalidEmail: "Geef een geldig e-mailadres in.",
@@ -331,4 +333,4 @@ export default {
     body: "De Kip heeft vast de link opgepikt. Ga terug naar de startpagina en pak de jacht opnieuw op.",
     cta: "TERUG NAAR HOME",
   },
-};
+} satisfies typeof en;

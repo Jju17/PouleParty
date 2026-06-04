@@ -74,6 +74,7 @@ fun JoinFlowBottomSheet(
                     game = game,
                     teamName = state.teamName,
                     isTeamNameValid = state.isTeamNameValid,
+                    isTeamNameProfane = state.isTeamNameProfane,
                     isSubmitting = isSubmitting,
                     onTeamNameChanged = onTeamNameChanged,
                     onSubmit = onSubmitJoinTapped
@@ -144,6 +145,12 @@ private fun CodeEntryContent(
             is JoinFlowStep.Validating -> CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             is JoinFlowStep.CodeNotFound -> Text(
                 stringResource(R.string.no_game_found_with_this_code),
+                fontFamily = GameBoyFont,
+                fontSize = 9.sp,
+                color = MaterialTheme.colorScheme.error
+            )
+            is JoinFlowStep.GameFull -> Text(
+                stringResource(R.string.party_full),
                 fontFamily = GameBoyFont,
                 fontSize = 9.sp,
                 color = MaterialTheme.colorScheme.error
@@ -341,6 +348,7 @@ private fun TeamNameFormContent(
     game: Game,
     teamName: String,
     isTeamNameValid: Boolean,
+    isTeamNameProfane: Boolean,
     isSubmitting: Boolean,
     onTeamNameChanged: (String) -> Unit,
     onSubmit: () -> Unit
@@ -372,6 +380,14 @@ private fun TeamNameFormContent(
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
+        if (isTeamNameProfane) {
+            Text(
+                stringResource(R.string.team_name_profane),
+                fontFamily = GameBoyFont,
+                fontSize = 9.sp,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
         Spacer(Modifier.height(8.dp))
         TextButton(
             onClick = onSubmit,

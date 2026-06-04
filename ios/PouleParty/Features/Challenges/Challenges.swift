@@ -481,7 +481,7 @@ struct ChallengesView: View {
         HStack(spacing: 8) {
             Image(systemName: "clock.badge.exclamationmark.fill")
                 .foregroundStyle(.white)
-            Text("Time's up — challenges are closed.")
+            Text("Time's up. Challenges are closed.")
                 .font(.subheadline.bold())
                 .foregroundStyle(.white)
             Spacer()
