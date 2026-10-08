@@ -27,7 +27,7 @@ enum ChallengeStatus: Equatable {
     case rejected
 }
 
-/// A single row in the leaderboard — either a hunter who has completed challenges
+/// A single row in the leaderboard, either a hunter who has completed challenges
 /// or a hunter in `game.hunterIds` with no completion doc yet (displayed at 0 pts).
 struct ChallengeLeaderboardEntry: Equatable, Identifiable {
     let hunterId: String
@@ -58,9 +58,6 @@ struct ChallengesFeature {
         var selectedTab: ChallengesTab = .challenges
         var challenges: [Challenge] = []
         var completions: [ChallengeCompletion] = []
-        /// The current hunter's own completion doc (PP-103), streamed as a
-        /// single doc. Source for `myCompletedIds`; the leaderboard uses
-        /// `completions` (the aggregate read-model) instead.
         var myCompletion: ChallengeCompletion?
         /// Hunter UID → teamName, streamed from `/games/{gameId}/registrations`.
         /// Used as the display-name source for the leaderboard. Hunters
@@ -139,9 +136,6 @@ struct ChallengesFeature {
         /// completion doc appear with 0 pts. Sorted by points desc, then by
         /// team name for stable ordering on ties.
         var leaderboard: [ChallengeLeaderboardEntry] {
-            // CRIT-6 (audit 2026-05-17): uniquingKeysWith — defensive against a
-            // future bug that lets two completion docs share the same hunterId.
-            // Keeping the entry with the higher totalPoints loses the least info.
             let byHunter = Dictionary(
                 completions.compactMap { completion -> (String, ChallengeCompletion)? in
                     guard let hid = completion.hunterId else { return nil }
@@ -348,7 +342,7 @@ struct ChallengesView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Drag indicator — signals swipe-to-dismiss
+            // Drag indicator, signals swipe-to-dismiss
             Capsule()
                 .fill(Color.secondary.opacity(0.35))
                 .frame(width: 40, height: 5)
@@ -763,7 +757,7 @@ private struct CameraPicker: UIViewControllerRepresentable {
     }
     let onCaptured: (Result) -> Void
 
-    /// 10 s cap on video duration — keeps Firebase Storage uploads
+    /// 10 s cap on video duration, keeps Firebase Storage uploads
     /// snappy on cellular and validation queue clips quick to review.
     private static let maxVideoDurationSeconds: TimeInterval = 10
 
@@ -796,7 +790,7 @@ private struct CameraPicker: UIViewControllerRepresentable {
         // content of a SwiftUI `fullScreenCover`, so dismissal is driven
         // by the cover's `isPresented` binding flipping when the reducer
         // clears `captureTarget`. Calling `dismiss` on the picker itself
-        // races the cover and ends up swallowing `onCaptured` — exactly
+        // races the cover and ends up swallowing `onCaptured`, exactly
         // the "I sent my photo and nothing happens" bug.
         func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
             let mediaType = info[.mediaType] as? String ?? "public.image"

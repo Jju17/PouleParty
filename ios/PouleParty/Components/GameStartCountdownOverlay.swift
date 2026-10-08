@@ -60,9 +60,6 @@ struct PreGameOverlay: View {
     let nowDate: Date
     var connectedHunters: Int = 0
     var onCancelGame: (() -> Void)? = nil
-    /// PP-71: when true, the overlay shifts from "countdown to start"
-    /// into the manual-launch mode (LAUNCH button for chicken/GM,
-    /// passive waiter for hunters).
     var isManualStart: Bool = false
     var isLaunching: Bool = false
     var launchErrorMessage: String? = nil

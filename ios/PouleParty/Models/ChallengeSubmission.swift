@@ -81,7 +81,7 @@ struct ChallengeSubmission: Codable, Equatable, Identifiable {
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        // Do NOT decode `firestoreId` here — the Firestore SDK injects
+        // Do NOT decode `firestoreId` here, the Firestore SDK injects
         // it post-decode via `@DocumentID` reflection on the property
         // wrapper. Writing to it from a custom decoder would clobber
         // the SDK-injected doc id with `nil` (the data has no

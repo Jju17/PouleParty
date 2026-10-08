@@ -1,9 +1,3 @@
-//
-//  Selection.swift
-//  PouleParty
-//
-//  Created by Julien Rahier on 15/03/2024.
-//
 
 import AVFAudio
 import ComposableArchitecture
@@ -26,7 +20,6 @@ extension SharedKey where Self == FileStorageKey<Set<String>>.Default {
     }
 }
 
-
 private let logger = Logger(category: "Home")
 @Reducer
 struct HomeFeature {
@@ -39,7 +32,7 @@ struct HomeFeature {
         /// Set of game ids the user has dismissed from the Home banner. The
         /// banner skips these so it doesn't reappear on every resume for a
         /// game the user actively hid. Cleared individually when the same
-        /// game transitions phases (e.g. upcoming → inProgress — we want
+        /// game transitions phases (e.g. upcoming → inProgress, we want
         /// the "Reprendre" banner to surface again then).
         @Shared(.dismissedActiveGameIds) var dismissedActiveGameIds: Set<String> = []
         var gameCode: String = ""
@@ -51,10 +44,6 @@ struct HomeFeature {
         /// the game state. Nil when no active game.
         var activeGamePhase: GamePhase? = nil
         var activeGameLookupError: String?
-        /// PP-45 admin code modal state. The admin button on Home opens an
-        /// alert with a TextField; on Validate, `adminCodeInput` is checked
-        /// against `AdminCode.value` and either opens the wizard with
-        /// `isAdminCreation = true` or surfaces a `wrongCode` alert.
         var isShowingAdminCodeAlert: Bool = false
         var adminCodeInput: String = ""
         /// True between `.adminCodeValidateTapped` (correct code) and
@@ -86,9 +75,6 @@ struct HomeFeature {
         case gameMasterGameStarted(Game)
         case completedGameFound(Game)
         case createPartyTapped
-        /// Long-press easter egg on the Create Party button. Hidden entry
-        /// point to admin mode (PP-45): opens the admin code modal so the
-        /// password isn't advertised via a visible button on Home.
         case createPartyLongPressed
         case demoCodeAlertRequested
         case demoCodeDismissed
@@ -329,7 +315,7 @@ struct HomeFeature {
                             // fallback, the wizard never opens and the
                             // Create Party button looks dead. The wizard
                             // handles `nil` by falling back to the default
-                            // zone center (Brussels) — see App Review build
+                            // zone center (Brussels), see App Review build
                             // (5) rejection notes.
                             try? await clock.sleep(for: .seconds(3))
                             continuation.yield(nil)
@@ -363,10 +349,6 @@ struct HomeFeature {
                     Logger(category: "Home").error("Cannot create game: no current user id (auth not ready)")
                     return .none
                 }
-                // Free is the only client-creatable mode since PP-42 (the
-                // Forfait/Caution flows were retired with PP-9). The maxPlayers
-                // default seeds the wizard's stepper at the Free cap; the user
-                // can dial it down to 2 from there.
                 let isAdmin = state.pendingIsAdminCreation
                 let isDebug = state.pendingIsDebugCreation
                 state.pendingIsAdminCreation = false
@@ -378,9 +360,6 @@ struct HomeFeature {
                 // via getFoundCode.
                 game.timing.headStartMinutes = 5
                 game.creatorId = creatorId
-                // PP-107: the creator starts as the chicken. `roles` is the
-                // single source of truth; the firestore.rules create clause
-                // requires exactly `{ <creatorId>: "chicken" }`.
                 game.roles = [creatorId: "chicken"]
                 game.maxPlayers = 5
                 game.isAdminCreation = isAdmin
@@ -476,7 +455,7 @@ struct HomeFeature {
                 guard let game = state.activeGame, let role = state.activeGameRole else {
                     return .none
                 }
-                // Clear dismiss for this game — if the user explicitly taps
+                // Clear dismiss for this game, if the user explicitly taps
                 // the banner CTA, they no longer want it hidden.
                 _ = state.$dismissedActiveGameIds.withLock { ids in
                     ids.remove(game.id)
@@ -664,10 +643,6 @@ struct HomeView: View {
                             )
                     }
                     .accessibilityLabel("Create a party")
-                    // Hidden admin-mode entry: long-press the Create Party
-                    // button to open the admin code modal (PP-45). The
-                    // password is intentionally not advertised via a visible
-                    // button so Apple reviewers don't surface it.
                     .simultaneousGesture(
                         LongPressGesture(minimumDuration: 1.5)
                             .onEnded { _ in
@@ -797,7 +772,6 @@ struct HomeView: View {
         .navigationBarHidden(true)
         }
     }
-
 
     private func animateBlinking() async {
         while !Task.isCancelled {

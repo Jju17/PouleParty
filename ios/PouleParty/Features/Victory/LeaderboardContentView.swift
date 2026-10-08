@@ -9,7 +9,7 @@
 import SwiftUI
 
 /// Renders the podium + other finders + non-finders sections.
-/// Callers provide pre-built `LeaderboardEntry` values — this view is purely presentational.
+/// Callers provide pre-built `LeaderboardEntry` values, this view is purely presentational.
 /// If `onReport` is non-nil, a flag button is shown next to each non-self row so users can
 /// report offensive nicknames (UGC moderation requirement on Google Play / App Store).
 struct LeaderboardContentView: View {
@@ -76,7 +76,7 @@ struct LeaderboardRowView: View {
     var onReport: ((LeaderboardEntry) -> Void)? = nil
 
     private var rankLabel: String {
-        guard let rank else { return "—" }
+        guard let rank else { return "-" }
         switch rank {
         case 1: return "🥇"
         case 2: return "🥈"

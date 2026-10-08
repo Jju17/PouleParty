@@ -1,16 +1,3 @@
-//
-//  JoinFlowFeatureTests.swift
-//  PoulePartyTests
-//
-//  Pins the defensive behaviour of the post-PP-90 Join flow:
-//   - Self-join (hunter taps their own chicken code) is rejected
-//   - Code normalization (uppercase, length, allowed chars) and dedup
-//     (re-typing the same code doesn't re-query)
-//   - `joinAsHunterTapped` is a silent no-op outside of `codeValidated`
-//
-//  PP-64: re-enabled after PP-90 retired `Game.registration` and the
-//  registration-required gate. The reducer surface tested below is the
-//  one in `Features/JoinFlow/JoinFlow.swift` as of 2026-05-14.
 
 import ComposableArchitecture
 import Foundation
@@ -125,10 +112,8 @@ struct JoinFlowFeatureTests {
             JoinFlowFeature()
         }
         await store.send(.joinAsHunterTapped)
-        // No action received — silent no-op.
+        // No action received, silent no-op.
     }
-
-    // MARK: - PP-52 paid-event registration-code gate
 
     @Test func paidEventGameRoutesToValidationCode() async {
         var game = Game.mock

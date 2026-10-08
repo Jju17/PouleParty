@@ -46,7 +46,7 @@ struct ProfanityFilterTests {
 
     @Test func substringMatchIsAggressive() {
         // "ass" is in the blocked list, so "class" will match (substring match)
-        // This documents intended behavior — the filter is aggressive
+        // This documents intended behavior, the filter is aggressive
         #expect(ProfanityFilter.containsProfanity("class") == true)
     }
 

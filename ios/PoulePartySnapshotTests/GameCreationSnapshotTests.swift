@@ -25,7 +25,7 @@ struct GameCreationSnapshotTests {
         var game = Game(id: "snapshot-test")
         game.foundCode = "1234"
         // Fixed date to avoid snapshot diffs from time changes
-        game.timing.start = .init(date: Date(timeIntervalSince1970: 1_800_000_000)) // 2027-01-15 08:00 UTC
+        game.timing.start = .init(date: Date(timeIntervalSince1970: 1_800_000_000))
         game.gameMode = gameMod
         game.powerUps.enabled = powerUpsEnabled
         game.chickenCanSeeHunters = chickenCanSeeHunters

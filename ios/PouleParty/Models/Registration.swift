@@ -6,11 +6,6 @@
 import FirebaseFirestore
 import Foundation
 
-/// PP-107: per-game player team-name doc, read from `/games/{id}/players/{uid}`
-/// (renamed from `/registrations` server-side). The doc shape is now
-/// `{ teamName, joinedAt }` — `userId` no longer lives in the payload, it's the
-/// doc id, decoded via `@DocumentID`. Clients never write this doc anymore; the
-/// `joinGame` callable creates it server-side.
 struct Registration: Codable, Equatable, Identifiable {
     @DocumentID var docId: String?
     var teamName: String

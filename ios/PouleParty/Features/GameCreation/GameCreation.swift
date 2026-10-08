@@ -1,9 +1,3 @@
-//
-//  GameCreation.swift
-//  PouleParty
-//
-//  Created by Julien Rahier on 04/04/2026.
-//
 
 import ComposableArchitecture
 import os
@@ -17,23 +11,9 @@ enum GameCreationStep: Equatable {
     case chickenSelection
     case maxPlayers
     case gameMode
-    /// PP-70 / PP-88: chicken opts in to the GameMaster role and sets
-    /// a 4-digit password. Falls after `gameMode` per PP-70 spec.
     case gameMasterPassword
-    /// PP-11: pin de départ. In `stayInTheZone` mode the radius is left
-    /// at its default (recomputed at the recap step PP-13). In
-    /// `followTheChicken` mode a small / medium / large picker sets the
-    /// radius directly.
     case startZoneSetup
-    /// PP-12: pin d'arrivée. Skipped entirely in `followTheChicken`
-    /// (the zone follows the chicken's live position, no `finalCenter`).
     case finalZoneSetup
-    /// PP-13: zone recap. Computes the initial radius from the placed
-    /// pins (stayInTheZone) or echoes the picked size (followTheChicken),
-    /// then renders every future shrunk circle with a stable rainbow
-    /// palette so the chicken can preview where the game will run.
-    /// PP-14: a Shuffle button here regenerates `driftSeed` for a fresh
-    /// pattern. Hidden in followTheChicken (no drift in that mode).
     case zonesRecap
     case startTime
     case duration
@@ -44,7 +24,6 @@ enum GameCreationStep: Equatable {
 }
 
 // MARK: - Reducer
-
 
 private let logger = Logger(category: "GameCreation")
 @Reducer
@@ -60,23 +39,13 @@ struct GameCreationFeature {
         var showPowerUpSelection: Bool = false
         var mapConfigState: ChickenMapConfigFeature.State
         var goingForward: Bool = true
-        /// PP-42: lifts the maxPlayers stepper from `2...5` (Free standard)
-        /// to `2...500`. Always `false` in PP-42; PP-45 will flip it via the
-        /// `jujurahier` admin code modal.
         var isAdminCreation: Bool = false
         /// QA debug game (entered via the `qa_debug_code` long-press). At
         /// finalize the wizard compresses the timing (near-now start, 0
         /// head start, short duration, 1-min shrink interval) and flags the
         /// doc so the map shows the QA panel.
         var isDebugGame: Bool = false
-        /// PP-88: toggle on the gameMasterPassword step. Default ON for
-        /// D-Day so every Free game ships with a GameMaster slot
-        /// available; the chicken can flip it off.
         var isGameMasterEnabled: Bool = true
-        /// PP-88: 4-digit password collected on the gameMasterPassword
-        /// step. Empty until the user types. The CF
-        /// `setGameMasterPassword` is called after `setConfig` succeeds
-        /// when this is non-empty and `isGameMasterEnabled` is true.
         var gameMasterPassword: String = ""
 
         /// Cached wizard step sequence. Recomputed by the reducer
@@ -88,21 +57,13 @@ struct GameCreationFeature {
         /// per second.
         ///
         /// Compute via [`recomputedSteps(isParticipating:gameMode:)`]
-        /// — the static helper is the single source of truth for the
+        ///, the static helper is the single source of truth for the
         /// wizard order.
         var steps: [GameCreationStep] = State.recomputedSteps(
             isParticipating: true,
             gameMode: .stayInTheZone
         )
 
-        /// Wizard order: When → How long → Mode → Where → Rules.
-        /// The timing trio precedes the zone block so PP-13's recap
-        /// sees a valid duration window when it computes the shrink
-        /// schedule. `gameMode` sits right before `startZoneSetup`
-        /// because it decides the zone setup sub-steps themselves
-        /// (stayInTheZone has a final pin step, followTheChicken
-        /// doesn't) — keeping them adjacent makes the wizard read as
-        /// one coherent "configure the playing field" beat.
         static func recomputedSteps(
             isParticipating: Bool,
             gameMode: Game.GameMode
@@ -119,17 +80,10 @@ struct GameCreationFeature {
                 .gameMode,
                 .startZoneSetup,
             ])
-            // PP-12: `finalZoneSetup` only exists in stayInTheZone —
-            // followTheChicken's zone tracks the chicken's live
-            // position, no `finalCenter` to place.
             if gameMode == .stayInTheZone {
                 result.append(.finalZoneSetup)
             }
-            // PP-13: recap step lives right after the zone pins so
-            // the chicken can preview the trajectory.
             result.append(.zonesRecap)
-            // PP-70 / PP-88: GameMaster password parked with the
-            // other modifier toggles at the tail end of the wizard.
             result.append(.gameMasterPassword)
             result.append(.powerUps)
             result.append(.chickenSeesHunters)
@@ -137,8 +91,6 @@ struct GameCreationFeature {
             return result
         }
 
-        /// Closed range allowed by the current Stepper. PP-45 plumbs through
-        /// `isAdminCreation = true` to unlock the wider range.
         var maxPlayersRange: ClosedRange<Int> {
             isAdminCreation ? 2...500 : 2...5
         }
@@ -159,9 +111,6 @@ struct GameCreationFeature {
             currentStepIndex > 0
         }
 
-        /// PP-11: a hunter pin has been placed (i.e. the zone center is no
-        /// longer the Brussels default seeded at wizard creation). Used
-        /// to gate the Next button on `startZoneSetup`.
         var isStartZoneConfigured: Bool {
             let center = game.zone.center
             let isDefault = abs(center.latitude - AppConstants.defaultLatitude) < 0.001
@@ -169,9 +118,6 @@ struct GameCreationFeature {
             return !isDefault
         }
 
-        /// PP-12: a final pin has been placed AND is at least 100 m from
-        /// the start (haversine). Used to gate Next on `finalZoneSetup`
-        /// and on the recap fallback when stayInTheZone.
         var isFinalZoneConfigured: Bool {
             guard let finalCenter = game.zone.finalCenter else { return false }
             return distanceMeters(
@@ -180,8 +126,6 @@ struct GameCreationFeature {
             ) >= 100
         }
 
-        /// Combined gate kept for backwards compatibility with the recap
-        /// step (PP-13) and any caller that asked "is the zone ready?".
         var isZoneConfigured: Bool {
             guard isStartZoneConfigured else { return false }
             if game.gameMode == .stayInTheZone {
@@ -190,9 +134,6 @@ struct GameCreationFeature {
             return true
         }
 
-        /// Minimum start time : 1 min in the future. PP-90 dropped the
-        /// in-app registration deadline gating so we no longer need to
-        /// reserve buffer time for a sign-up window.
         var minimumStartDate: Date {
             Date.now.addingTimeInterval(60)
         }
@@ -257,14 +198,7 @@ struct GameCreationFeature {
         case powerUpTypeToggled(PowerUp.PowerUpType)
         case startDateChanged(Date)
         case startGameButtonTapped
-        /// PP-13 phase 1 — fired on entering `.zonesRecap`. Recomputes
-        /// `Game.zone.radius` from the placed start + final pins (and
-        /// the picked `radiusHint` in followTheChicken) via the
-        /// client-side `computeZoneRadius` helper, allocates a new
-        /// `driftSeed` if none is set, and refreshes the shrink params.
         case zonesRecapEntered
-        /// PP-14 phase 1 — Shuffle button on the recap step regenerates
-        /// the drift seed; the cached preview circles redraw.
         case shuffleDriftSeed
     }
 
@@ -410,13 +344,6 @@ struct GameCreationFeature {
 
             case let .gameDurationChanged(duration):
                 state.gameDurationMinutes = duration
-                // Keep `timing.end` in sync so any reader (notably
-                // PP-13's recap via `computeDebugShiftedCircles`)
-                // sees a valid duration window long before the
-                // wizard finishes. Without this, `endDate` stays at
-                // the Game model default (now + 65 min) which is
-                // earlier than the default `startDate` (now + 2 h)
-                // and the preview shrink loop runs zero iterations.
                 state.$game.withLock { game in
                     game.endDate = game.startDate.addingTimeInterval(duration * 60)
                 }
@@ -434,7 +361,7 @@ struct GameCreationFeature {
                     state.mapConfigState.pinMode = .start
                 }
                 // Mode toggles which sub-steps belong in the wizard
-                // (finalZoneSetup is stayInTheZone-only) — re-cache.
+                // (finalZoneSetup is stayInTheZone-only), re-cache.
                 state.steps = State.recomputedSteps(
                     isParticipating: state.isParticipating,
                     gameMode: mode
@@ -466,7 +393,7 @@ struct GameCreationFeature {
             case let .participationChanged(participating):
                 state.isParticipating = participating
                 // Toggles whether `chickenSelection` belongs in the
-                // wizard — re-cache.
+                // wizard, re-cache.
                 state.steps = State.recomputedSteps(
                     isParticipating: participating,
                     gameMode: state.game.gameMode
@@ -480,8 +407,6 @@ struct GameCreationFeature {
             case let .powerUpTypeToggled(type):
                 state.$game.withLock { game in
                     if let index = game.powerUps.enabledTypes.firstIndex(of: type.rawValue) {
-                        // PP-35: lean on the strict availability helper so
-                        // we don't drift from the UI's filter rules.
                         let availableRaw = Set(availablePowerUpTypes(for: game.gameMode).map(\.rawValue))
                         let availableEnabledCount = game.powerUps.enabledTypes.filter { availableRaw.contains($0) }.count
                         let isAvailable = availableRaw.contains(type.rawValue)
@@ -495,7 +420,7 @@ struct GameCreationFeature {
                 return .none
 
             case let .startDateChanged(date):
-                // Sync endDate too — see `gameDurationChanged`
+                // Sync endDate too, see `gameDurationChanged`
                 // comment.
                 state.$game.withLock { game in
                     game.startDate = date
@@ -504,11 +429,6 @@ struct GameCreationFeature {
                 return .none
 
             case .zonesRecapEntered:
-                // PP-13 phase 1: recompute the initial radius from the
-                // start + final pins via the client-side mirror of the
-                // PP-69 backend formula. In followTheChicken the
-                // picker already wrote `Game.zone.radius` on PP-11, but
-                // we still validate it against the allowed presets.
                 let radiusHint = state.game.gameMode == .followTheChicken
                     ? state.game.zone.radius
                     : nil
@@ -526,21 +446,9 @@ struct GameCreationFeature {
                     // leave `endDate < startDate` and the preview
                     // shrink schedule comes out empty. Re-sync here.
                     game.endDate = game.startDate.addingTimeInterval(state.gameDurationMinutes * 60)
-                    // PP-14: only assign a drift seed on first visit so
-                    // back-navigating + revisiting the recap doesn't
-                    // re-shuffle the preview unintentionally. Shuffle
-                    // does it explicitly.
                     if game.zone.driftSeed == 0 {
                         game.zone.driftSeed = generateDriftSeed()
                     }
-                    // PP-13 bug fix: pick a non-centered initial disc
-                    // that still contains both pins. In
-                    // `followTheChicken` the disc stays anchored on
-                    // the chicken's start (it's a "follow me" mode);
-                    // in `stayInTheZone` we offset the geometric
-                    // center via the drift seed so the user-placed
-                    // pins live inside the disc as markers, not as
-                    // its center.
                     if game.gameMode == .stayInTheZone, let finalCenter = game.finalLocation {
                         game.initialLocation = pickInitialZoneCenter(
                             startPin: game.startPinLocation,
@@ -550,7 +458,7 @@ struct GameCreationFeature {
                         )
                     } else {
                         // followTheChicken: keep the disc on the
-                        // start pin — there's no second point to
+                        // start pin, there's no second point to
                         // contain.
                         game.initialLocation = game.startPinLocation
                     }
@@ -559,11 +467,6 @@ struct GameCreationFeature {
                 return .none
 
             case .shuffleDriftSeed:
-                // PP-14 phase 1: regenerate a fresh seed AND re-pick
-                // the initial disc center (stayInTheZone only). The
-                // radius stays — it's a function of the pin positions
-                // only. Preview circles re-derive deterministically
-                // from the new seed.
                 let newSeed = generateDriftSeed()
                 state.$game.withLock { game in
                     game.zone.driftSeed = newSeed
@@ -686,12 +589,6 @@ struct GameCreationView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Fixed header: progress bar + step counter + dismiss button
-            // PP-15: the `X / Y` counter sits on top of the bar; Y is
-            // the count of the currently-active step subset so steps
-            // that skip (e.g. `finalZoneSetup` in followTheChicken or
-            // `chickenSelection` when the chicken is participating)
-            // don't inflate the denominator.
             HStack(spacing: 12) {
                 VStack(spacing: 4) {
                     HStack {
@@ -721,9 +618,6 @@ struct GameCreationView: View {
             .padding(.top, 8)
             .padding(.bottom, 4)
 
-            // Step description bar (for map step). Copy is step-specific
-            // so the chicken knows whether they're placing the start or
-            // the final pin (PP-11 / PP-12).
             if isMapStep {
                 VStack(spacing: 2) {
                     BangerText(mapStepTitle, size: 20)

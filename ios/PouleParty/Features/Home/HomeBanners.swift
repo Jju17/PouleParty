@@ -1,11 +1,3 @@
-//
-//  HomeBanners.swift
-//  PouleParty
-//
-//  Single banner surfaced from `HomeView`: the rejoin-active-game
-//  banner. Pre-PP-90 also hosted PendingRegistration banners; those
-//  are gone now that registration is no longer a first-class step.
-//
 
 import SwiftUI
 

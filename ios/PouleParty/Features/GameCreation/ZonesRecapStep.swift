@@ -1,16 +1,3 @@
-//
-//  ZonesRecapStep.swift
-//  PouleParty
-//
-//  PP-13 phase 1 — third sub-step of the zone setup flow. Renders a
-//  read-only map preview of the initial circle + every future shrunk
-//  circle (rainbow palette, numbered) so the chicken can sanity-check
-//  the trajectory before locking in the timing. PP-14 phase 1 ships
-//  the Shuffle button inside the same view (stayInTheZone only).
-//
-//  Phase 2 (post-PP-69) will swap the client-side `computeZoneRadius`
-//  + `computeDebugShiftedCircles` calls for a CF response.
-//
 
 import ComposableArchitecture
 import CoreLocation
@@ -58,7 +45,7 @@ struct ZonesRecapStep: GameCreationStepView {
             // Defer focus to the next runloop tick so the
             // `zonesRecapEntered` mutation (radius + drift seed +
             // computed center) is propagated into our `initialCenter`
-            // / `initialRadius` reads before we recenter — otherwise
+            // / `initialRadius` reads before we recenter, otherwise
             // we'd fit on the stale defaults from the previous step.
             Task { @MainActor in
                 focusViewport()
@@ -106,7 +93,7 @@ struct ZonesRecapStep: GameCreationStepView {
         // Each badge lands on its circle's outline at a stable
         // pseudo-random angle in the NW quadrant (north → west) so
         // the chicken always knows where to look. Angle is a pure
-        // function of `displayIndex` — Shuffle doesn't move the
+        // function of `displayIndex`, Shuffle doesn't move the
         // badges, only the circles themselves.
         MapViewAnnotation(coordinate: badgeAnchor(
             center: initialCenter,
@@ -219,7 +206,7 @@ struct ZonesRecapStep: GameCreationStepView {
     private func focusViewport() {
         // Mapbox's `withViewportAnimation` sometimes swallows the
         // update when called from `onAppear` before the binding has
-        // committed — set the viewport directly first, then animate.
+        // committed, set the viewport directly first, then animate.
         let targetZoom = zoomForRadius(initialRadius * 1.15, latitude: initialCenter.latitude)
         let target = Viewport.camera(center: initialCenter, zoom: targetZoom)
         viewport = target
@@ -229,9 +216,6 @@ struct ZonesRecapStep: GameCreationStepView {
     }
 }
 
-/// PP-13 numbered badge attached to each shrink circle so the chicken
-/// reads the shrink order at a glance. The fill colour matches the
-/// circle's stroke palette so users can pair label and outline.
 private struct ShrinkOrderBadge: View {
     let index: Int
     let color: Color

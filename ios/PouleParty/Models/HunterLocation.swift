@@ -1,9 +1,3 @@
-//
-//  HunterLocation.swift
-//  PouleParty
-//
-//  Created by Julien Rahier on 17/02/2026.
-//
 
 import Foundation
 import FirebaseFirestore
@@ -15,8 +9,6 @@ struct HunterLocation: Codable, Equatable {
 }
 
 extension HunterLocation {
-    /// Decodes from a Realtime Database child snapshot (PP-102). The `hunterId`
-    /// is the RTDB key (not stored in the payload). Schema: `{ lat, lng, ts }`.
     init?(hunterId: String, rtdb value: Any?) {
         guard let dict = value as? [String: Any],
               let lat = rtdbDouble(dict["lat"]),

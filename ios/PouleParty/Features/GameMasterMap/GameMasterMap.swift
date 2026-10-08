@@ -1,12 +1,3 @@
-//
-//  GameMasterMap.swift
-//  PouleParty
-//
-//  GameMaster (PP-24) — pure observer view. Streams the chicken's and
-//  every hunter's live position, the spawned power-ups (read-only),
-//  and the game's shrinking zone. The GM never tracks their own GPS
-//  and cannot collect / activate power-ups.
-//
 
 import ComposableArchitecture
 import FirebaseFirestore
@@ -47,15 +38,10 @@ struct GameMasterMapFeature {
         var countdownNumber: Int? = nil
         var countdownText: String? = nil
         var previousWinnersCount: Int = -1
-        /// PP-86: hunter pending confirmation as the new chicken.
         var pendingChickenDesignation: Registration?
-        /// PP-86: last error from `designateChicken` (e.g. game already
-        /// started, network).
         var designationError: String?
 
-        /// PP-71: in flight while `launchGame` runs.
         var isLaunching: Bool = false
-        /// PP-71: last error from `launchGame`.
         var launchError: String?
         var isLeaving: Bool = false
         var leaveError: String?
@@ -66,7 +52,7 @@ struct GameMasterMapFeature {
         var showPowerUpInventory: Bool { false }
         var powerUpNotification: String? { nil }
         var lastActivatedPowerUpType: PowerUp.PowerUpType? { nil }
-        /// The GM has no per-player zone check — they are pure spectator.
+        /// The GM has no per-player zone check, they are pure spectator.
         var isOutsideZone: Bool { false }
         var hasGameStarted: Bool { nowDate >= game.startDate }
         /// Reflects `game.status == .done` so the GM gets the same
@@ -104,7 +90,6 @@ struct GameMasterMapFeature {
             /// QA panel (debug games only): advance one lifecycle step
             /// (launch / shrink+spawn / collapse) without waiting on the clock.
             case debugAdvanceStepTapped
-            // PP-86
             case designateHunterTapped(Registration)
             case designateConfirmTapped
             case designateCancelTapped
@@ -183,10 +168,6 @@ struct GameMasterMapFeature {
                     },
                     .run { send in
                         for await chickenLoc in apiClient.chickenLocationStream(gameId) {
-                            // PP-87: GM always renders the chicken's
-                            // position regardless of the `invisible` flag;
-                            // the flag is surfaced separately so the
-                            // marker can render in a distinct style.
                             let coordinate = chickenLoc.map { CLLocationCoordinate2D(latitude: $0.location.latitude, longitude: $0.location.longitude) }
                             let isInvisible = chickenLoc?.invisible ?? false
                             await send(.internal(.chickenLocationUpdated(coordinate, isInvisible: isInvisible)))
@@ -198,10 +179,6 @@ struct GameMasterMapFeature {
                         }
                     },
                     .run { send in
-                        // PP-86 + GM-live-fix: stream registrations so the
-                        // hunter counter + drawer team-name list update the
-                        // moment a hunter joins, instead of staying frozen
-                        // on a one-shot fetch at load.
                         for await regs in apiClient.registrationsStream(gameId) {
                             await send(.internal(.registrationsLoaded(regs)))
                         }
@@ -374,7 +351,6 @@ struct GameMasterMapFeature {
                 state.launchError = message
                 return .none
 
-            // PP-86 — Designate the chicken
             case let .view(.designateHunterTapped(reg)):
                 state.pendingChickenDesignation = reg
                 return .none

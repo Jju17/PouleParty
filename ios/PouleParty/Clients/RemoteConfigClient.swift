@@ -73,7 +73,7 @@ extension RemoteConfigClient: DependencyKey {
                 return value.isEmpty ? AdminCode.value : value
             },
             qaDebugCode: {
-                // Returned raw — an empty Remote Config value disables
+                // Returned raw, an empty Remote Config value disables
                 // debug-game creation (the match check requires non-empty).
                 remoteConfig.configValue(forKey: Key.qaDebugCode.rawValue).stringValue
             },

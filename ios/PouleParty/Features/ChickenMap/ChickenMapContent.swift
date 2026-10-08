@@ -2,7 +2,7 @@
 //  ChickenMapContent.swift
 //  PouleParty
 //
-//  The Mapbox map itself — zone overlay, power-up markers, hunter
+//  The Mapbox map itself, zone overlay, power-up markers, hunter
 //  annotations and the camera/compass widgets. All other chrome
 //  (bars, overlays, sheets) lives on the parent `ChickenMapView`.
 //

@@ -2,7 +2,7 @@
 //  PoulePartyLiveActivity.swift
 //  PoulePartyWidgets
 //
-//  The Widget entry point — routes views to Live Activity surfaces.
+//  The Widget entry point, routes views to Live Activity surfaces.
 //  Views are defined in LiveActivityViews.swift.
 //
 
@@ -18,7 +18,7 @@ struct PoulePartyLiveActivity: Widget {
         } dynamicIsland: { context in
             DynamicIsland {
                 // ── Expanded: Leading ─────────────────────────
-                // Emoji only — keeps it tight next to the camera
+                // Emoji only, keeps it tight next to the camera
                 DynamicIslandExpandedRegion(.leading) {
                     Text(roleEmoji(context))
                         .font(.title2)

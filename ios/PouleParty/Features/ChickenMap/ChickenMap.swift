@@ -1,9 +1,3 @@
-//
-//  ChickenMap.swift
-//  PouleParty
-//
-//  Created by Julien Rahier on 16/03/2024.
-//
 
 import ComposableArchitecture
 import FirebaseFirestore
@@ -20,11 +14,7 @@ struct ChickenMapFeature {
     struct State: Equatable {
         @Presents var destination: Destination.State?
         @Presents var validationQueue: ValidationQueueFeature.State?
-        /// PP-107: one-time "you are the new chicken" alert, shown right after
-        /// a GameMaster re-designation routes this player onto the chicken map.
         @Presents var newChickenAlert: AlertState<Action.NewChickenAlert>?
-        /// PP-107: saved team-name / nickname, used as the team label if a
-        /// GameMaster demotes this player back to a hunter (`becameHunter`).
         @Shared(.appStorage(AppConstants.prefUserNickname)) var savedNickname = ""
         var game: Game
         var hunterAnnotations: [HunterAnnotation] = []
@@ -46,11 +36,6 @@ struct ChickenMapFeature {
         var lastLiveActivityState: PoulePartyAttributes.ContentState?
         var powerUps: MapPowerUpsFeature.State = .init()
 
-        /// PP-16: flipped to `true` when the game ends (time-out,
-        /// zone collapse, all hunters found, or the chicken cancels).
-        /// `gamePhase` then reports `.gameOver`, the map stays
-        /// visible, gameplay controls are greyed, and the GPS
-        /// effect cancels (no more `chickenLocations` writes).
         var isGameOver: Bool = false
 
         /// Flipped to `true` when the chicken explicitly cancels the
@@ -62,16 +47,8 @@ struct ChickenMapFeature {
 
         var pendingSubmissionsCount: Int = 0
 
-        /// CRIT-2 (audit 2026-05-17): the 4-digit code the chicken
-        /// reads out to hunters who physically find them. Fetched
-        /// once on map load via `apiClient.getFoundCode` — the value
-        /// lives in `/games/{id}/private/security` (admin-SDK only),
-        /// so it's no longer leaked to hunters via the public Game
-        /// doc. Empty until the CF responds.
         var chickenFoundCode: String = ""
 
-        /// PP-71: in flight while the `launchGame` callable runs.
-        /// Drives the LAUNCH button's spinner + disabled state.
         var isLaunching: Bool = false
         /// Last error string returned by `launchGame`. Rendered as an
         /// alert on top of the LAUNCH overlay. Cleared by
@@ -88,10 +65,6 @@ struct ChickenMapFeature {
         var hasGameStarted: Bool { nowDate >= game.startDate }
         var hasHuntStarted: Bool { nowDate >= game.hunterStartDate }
 
-        /// Resolves the live game phase, factoring in PP-16's
-        /// post-game `isGameOver` flag. The LiveActivity reads this
-        /// to update the lock-screen widget; the view layer reads it
-        /// to grey out gameplay controls.
         var gamePhase: PoulePartyAttributes.ContentState.GamePhase {
             if isGameOver { return .gameOver }
             if !hasGameStarted { return .waitingToStart }
@@ -126,14 +99,6 @@ struct ChickenMapFeature {
         @CasePathable
         enum View {
             case retryScheduleTapped
-            /// HIGH-11 (audit 2026-05-17): mirror of HunterMap's
-            /// `.appBecameActive`. iOS can suspend the chicken's
-            /// `for await coordinate in locationClient.startTracking()`
-            /// writer loop while the app is in the background. In
-            /// `followTheChicken` mode there is no rebroadcast timer,
-            /// so a stationary chicken who backgrounds the app sees
-            /// their position go stale until they walk 10 m. Push one
-            /// fix on resume to close the gap.
             case appBecameActive
             case beenFoundButtonTapped
             case cancelGameButtonTapped
@@ -176,15 +141,11 @@ struct ChickenMapFeature {
         @CasePathable
         enum Delegate {
             case returnedToMenu
-            /// Natural game end — server-confirmed `status == .done` for any
+            /// Natural game end, server-confirmed `status == .done` for any
             /// reason other than the chicken's own cancel (timer expired,
             /// all hunters found, server task fired). Parent navigates to
             /// the Victory / leaderboard screen.
             case gameEnded(Game)
-            /// PP-107: a GameMaster swapped the chicken to someone else
-            /// mid-`waiting`. This player is now a plain hunter. Parent
-            /// swaps the root to the hunter map. `teamName` carries the
-            /// player's team label for the new hunter-map state.
             case becameHunter(Game, teamName: String)
         }
     }
@@ -291,7 +252,7 @@ struct ChickenMapFeature {
                     logger.error("Skipping powerUpCollected: no current user id")
                     return .none
                 }
-                // Atomic dedup — see HunterMap for the rationale. At 1 Hz
+                // Atomic dedup, see HunterMap for the rationale. At 1 Hz
                 // a stationary chicken would otherwise spam N duplicate
                 // transactions while the first is still in flight.
                 guard let location = state.userLocation,
@@ -313,18 +274,6 @@ struct ChickenMapFeature {
                 }
                 .cancellable(id: CancelID.powerUpNotificationDismiss, cancelInFlight: true)
             case let .powerUps(.delegate(.activated(powerUp))):
-                // Guard against double activation of the same timed effect.
-                // `activatePowerUp` writes `powerUps.activeEffects.<field>
-                // = now + duration`, overwriting any existing timestamp.
-                // A second zone-freeze while the first is still running
-                // shifts the freeze window start forward, which makes
-                // `findLastUpdate` skip a different set of shrinks on the
-                // Hunter vs the Chicken for the brief listener lag — a
-                // live-test report had a Hunter still "frozen" after the
-                // Chicken's game had ended. Reject the activation at the
-                // reducer layer; the inventory UI also disables the
-                // button based on the same `isActive(effectOf:)` check,
-                // this is belt-and-braces.
                 if state.game.isActive(effectOf: powerUp.type) {
                     state.powerUps.notification = String(localized: "\(powerUp.type.displayName) is already active")
                     state.powerUps.lastActivatedType = powerUp.type
@@ -353,9 +302,6 @@ struct ChickenMapFeature {
             case .powerUps:
                 return .none
             case let .internal(.gameUpdated(game)):
-                // PP-107: a GameMaster may have swapped the chicken to someone
-                // else while the game is `waiting`. If this player is no longer
-                // the chicken but still has a role, re-route to the hunter map.
                 let myUserId = userClient.currentUserId() ?? ""
                 if !myUserId.isEmpty,
                    !game.isChicken(myUserId),
@@ -421,12 +367,6 @@ struct ChickenMapFeature {
                     state.previousWinnersCount = game.winners.count
                 }
 
-                // End the game when all hunters have found the chicken.
-                // Chicken is authoritative: it sets game status to DONE
-                // and flips `gamePhase` to .gameOver so the map switches
-                // into its read-only end-state (controls greyed, GPS
-                // off — PP-16). No auto-nav to Victory; PP-18 wires the
-                // manual leaderboard CTA.
                 if !state.isGameOver &&
                    state.destination == nil &&
                    !game.hunterIds.isEmpty &&
@@ -494,9 +434,6 @@ struct ChickenMapFeature {
                 return .none
 
             case .view(.cancelGameButtonTapped):
-                // PP-16: cancelling a game that already ended is a
-                // no-op — the gameOver alert already updated the
-                // Firestore status to .done.
                 guard !state.isGameOver else { return .none }
                 state.destination = .alert(
                     AlertState {
@@ -514,11 +451,6 @@ struct ChickenMapFeature {
                 )
                 return .none
             case .view(.appBecameActive):
-                // HIGH-11 (audit 2026-05-17): force a single
-                // `chickenLocations/latest` write on resume so hunters
-                // see a fresh marker the moment they reopen the app.
-                // Guarded on `hasGameStarted` so we don't write before
-                // the game opens.
                 guard state.hasGameStarted, !state.isGameOver else { return .none }
                 let gameId = state.game.id
                 // Snapshot invisibility from the live game state at the
@@ -533,10 +465,6 @@ struct ChickenMapFeature {
                     }
                 }
             case .view(.beenFoundButtonTapped):
-                // CRIT-2 (audit 2026-05-17): read from `chickenFoundCode`,
-                // populated by the `getFoundCode` CF on map load. The
-                // public `game.foundCode` is now "" since V2.3 moves it
-                // to /private/security.
                 state.destination = .endGameCode(state.chickenFoundCode)
                 return .none
             case let .internal(.foundCodeFetched(code)):
@@ -613,12 +541,6 @@ struct ChickenMapFeature {
                 let jammerUntil = LockIsolated<Date?>(nil)
 
                 var effects: [Effect<Action>] = [
-                    // CRIT-2 (audit 2026-05-17): fetch the foundCode once
-                    // on map load. The chicken needs it to read out to
-                    // hunters who physically find them. The CF refuses
-                    // for non-chicken callers, so the result is empty
-                    // for any other UID — harmless if the view ever
-                    // mis-renders.
                     .run { send in
                         do {
                             let code = try await apiClient.getFoundCode(gameId)
@@ -787,7 +709,7 @@ struct ChickenMapFeature {
 
                 // Countdown phases (chicken perspective).
                 // In manual-start mode, the planned `startDate` is just
-                // "when status flips to readyToLaunch" — the real start is
+                // "when status flips to readyToLaunch", the real start is
                 // whenever the chicken/GM taps LAUNCH and the server
                 // stamps `actualStart`. Both phases gate on that so the
                 // 3-2-1 RUN doesn't fire before LAUNCH.
@@ -834,9 +756,9 @@ struct ChickenMapFeature {
                 let zTick = zoneRenderState(for: state.game, circles: state.circles, now: now.now)
                 state.applyZone(zTick)
                 // Periodic power-ups are spawned by the `spawnPowerUpBatch`
-                // Cloud Task scheduled at game creation — no client-side spawn.
+                // Cloud Task scheduled at game creation, no client-side spawn.
 
-                // Power-up proximity check — collect all nearby power-ups
+                // Power-up proximity check, collect all nearby power-ups
                 let nearbyPowerUps = findNearbyPowerUps(
                     userLocation: state.userLocation,
                     availablePowerUps: state.availablePowerUps
@@ -845,7 +767,7 @@ struct ChickenMapFeature {
                     return .merge(nearbyPowerUps.map { .send(.internal(.powerUpCollected($0))) })
                 }
 
-                // Zone check (visual warning only — no elimination)
+                // Zone check (visual warning only, no elimination)
                 if shouldCheckZone(role: .chicken, gameMod: state.game.gameMode),
                    let userLoc = state.userLocation,
                    let circle = state.mapCircle {
@@ -881,8 +803,6 @@ struct ChickenMapFeature {
 }
 
 extension AlertState where Action == ChickenMapFeature.Action.NewChickenAlert {
-    /// PP-107: "you are the new chicken" announcement, shown once after a
-    /// GameMaster re-designation routes the player onto the chicken map.
     static var becameChicken: Self {
         AlertState {
             TextState("You are the new chicken! 🐔")

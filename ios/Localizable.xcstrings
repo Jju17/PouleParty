@@ -6956,6 +6956,406 @@
           }
         }
       }
+    },
+    "One player is the Chicken, the others are Hunters.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un joueur est la Poule, les autres sont les Chasseurs."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eén speler is de Kip, de anderen zijn de Jagers."
+          }
+        }
+      }
+    },
+    "The game takes place in a circular zone on the map.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La partie se joue dans une zone circulaire sur la carte."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Het spel speelt zich af in een cirkelvormige zone op de kaart."
+          }
+        }
+      }
+    },
+    "The zone shrinks over time based on game settings.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La zone rétrécit avec le temps selon les réglages de la partie."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "De zone krimpt na verloop van tijd volgens de spelinstellingen."
+          }
+        }
+      }
+    },
+    "Hunters win by finding the Chicken. The Chicken wins by surviving until the end!": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les Chasseurs gagnent en trouvant la Poule. La Poule gagne en survivant jusqu'à la fin !"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "De Jagers winnen door de Kip te vinden. De Kip wint door tot het einde te overleven!"
+          }
+        }
+      }
+    },
+    "The zone shrinks periodically toward the Chicken's position. Hunters don't see the Chicken's exact location, only the zone moving!": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La zone rétrécit régulièrement vers la position de la Poule. Les Chasseurs ne voient pas sa position exacte, seulement la zone qui bouge !"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "De zone krimpt regelmatig richting de positie van de Kip. De Jagers zien niet waar de Kip precies is, alleen de zone die beweegt!"
+          }
+        }
+      }
+    },
+    "The zone center follows the Chicken's live position": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le centre de la zone suit la position de la Poule en direct"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Het midden van de zone volgt de live positie van de Kip"
+          }
+        }
+      }
+    },
+    "Hunters see the zone move but not where the Chicken is": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les Chasseurs voient la zone bouger, mais pas où est la Poule"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "De Jagers zien de zone bewegen, maar niet waar de Kip is"
+          }
+        }
+      }
+    },
+    "The Chicken must stay inside the zone to survive": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La Poule doit rester dans la zone pour survivre"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "De Kip moet in de zone blijven om te overleven"
+          }
+        }
+      }
+    },
+    "The zone shrinks and drifts randomly around the starting point. Hunters must find the Chicken with no position clues!": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La zone rétrécit et dérive au hasard autour du point de départ. Les Chasseurs doivent trouver la Poule sans aucun indice de position !"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "De zone krimpt en drijft willekeurig rond het startpunt. De Jagers moeten de Kip vinden zonder enige aanwijzing over haar positie!"
+          }
+        }
+      }
+    },
+    "No position sharing between players": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun partage de position entre les joueurs"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geen gedeelde posities tussen spelers"
+          }
+        }
+      }
+    },
+    "The zone drifts toward the final zone point set by the creator": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La zone dérive vers le point final choisi par le créateur"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "De zone drijft naar het eindpunt dat de maker koos"
+          }
+        }
+      }
+    },
+    "Strategy: search the moving zone to find the Chicken!": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stratégie : fouille la zone qui bouge pour trouver la Poule !"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Strategie: doorzoek de bewegende zone om de Kip te vinden!"
+          }
+        }
+      }
+    },
+    "Chicken can see hunters 👀": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La Poule voit les chasseurs 👀"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "De Kip ziet de jagers 👀"
+          }
+        }
+      }
+    },
+    "An option available in any game mode. The Chicken can see all Hunters on her map!": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une option disponible dans tous les modes. La Poule voit tous les Chasseurs sur sa carte !"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Een optie in elke spelmodus. De Kip ziet alle Jagers op haar kaart!"
+          }
+        }
+      }
+    },
+    "Hunters send their position to the Chicken": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les Chasseurs envoient leur position à la Poule"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "De Jagers sturen hun positie naar de Kip"
+          }
+        }
+      }
+    },
+    "The Chicken sees all Hunter positions in real time": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La Poule voit la position de tous les Chasseurs en temps réel"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "De Kip ziet de positie van alle Jagers in realtime"
+          }
+        }
+      }
+    },
+    "Choose this option when creating the game": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisis cette option en créant la partie"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kies deze optie wanneer je het spel aanmaakt"
+          }
+        }
+      }
+    },
+    "Start / End time": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heure de début / fin"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start- / eindtijd"
+          }
+        }
+      }
+    },
+    "When the game starts and ends. The Chicken wins if the time runs out!": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quand la partie commence et se termine. La Poule gagne si le temps est écoulé !"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wanneer het spel begint en eindigt. De Kip wint als de tijd om is!"
+          }
+        }
+      }
+    },
+    "Radius interval update": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Intervalle de rétrécissement"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interval van het krimpen"
+          }
+        }
+      }
+    },
+    "How often the zone shrinks (in minutes).": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "À quelle fréquence la zone rétrécit (en minutes)."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hoe vaak de zone krimpt (in minuten)."
+          }
+        }
+      }
+    },
+    "Radius decline": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réduction du rayon"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afname van de straal"
+          }
+        }
+      }
+    },
+    "How many metres the zone shrinks each update.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "De combien de mètres la zone rétrécit à chaque fois."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hoeveel meter de zone telkens krimpt."
+          }
+        }
+      }
+    },
+    "Map setup": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configuration de la carte"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kaart instellen"
+          }
+        }
+      }
+    },
+    "Choose the starting location and initial radius of the zone.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisis le point de départ et le rayon initial de la zone."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kies het startpunt en de beginstraal van de zone."
+          }
+        }
+      }
     }
   },
   "version": "1.1"

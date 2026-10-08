@@ -1,9 +1,3 @@
-//
-//  EndGameCode.swift
-//  PouleParty
-//
-//  Created by Julien Rahier on 19/03/2024.
-//
 
 import SwiftUI
 

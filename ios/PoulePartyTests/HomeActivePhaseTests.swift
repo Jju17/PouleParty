@@ -1,13 +1,3 @@
-//
-//  HomeActivePhaseTests.swift
-//  PoulePartyTests
-//
-//  Pins the phase-aware active-game banner behaviour introduced on
-//  2026-04-23: the Home banner must now distinguish an in-progress
-//  game (CTA "Rejoin") from an upcoming game (CTA "Open" for the
-//  chicken / "Join" for the hunter), and the dismissed-ids Set must
-//  be applied so a previously-hidden game doesn't resurface.
-//
 
 import ComposableArchitecture
 import Foundation

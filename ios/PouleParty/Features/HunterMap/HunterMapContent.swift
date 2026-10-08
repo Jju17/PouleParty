@@ -2,7 +2,7 @@
 //  HunterMapContent.swift
 //  PouleParty
 //
-//  The Mapbox map itself — zone overlay, zone-preview, power-up markers,
+//  The Mapbox map itself, zone overlay, zone-preview, power-up markers,
 //  decoy marker and compass. Chrome lives on the parent `HunterMapView`.
 //
 
@@ -70,7 +70,7 @@ struct HunterMapContent: View {
             // Radar Ping reveal: real Chicken marker, visible only while
             // `powerUps.activeEffects.radarPing` is active. The Chicken
             // broadcasts its position continuously so this marker shows
-            // the live point — the power-up is purely a visibility gate,
+            // the live point, the power-up is purely a visibility gate,
             // not a trigger for the broadcast itself (a 3 s Radar Ping
             // window is too short to rely on a fresh write landing
             // exactly within it).

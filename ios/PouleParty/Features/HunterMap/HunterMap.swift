@@ -1,9 +1,3 @@
-//
-//  HunterMap.swift
-//  PouleParty
-//
-//  Created by Julien Rahier on 14/03/2024.
-//
 
 import ComposableArchitecture
 import FirebaseFirestore
@@ -51,16 +45,10 @@ struct HunterMapFeature {
         // `chickenLocationsStream`. Tracked in every mode (not just
         // followTheChicken) so Radar Ping has a fresh point to reveal
         // the moment it's activated. Hunter-map rendering gates
-        // visibility on `game.isRadarPingActive` — without that gate
+        // visibility on `game.isRadarPingActive`, without that gate
         // this would be a free locator.
         var chickenLocation: CLLocationCoordinate2D? = nil
         var hasChallenges: Bool = false
-        // CRIT-3 (audit 2026-05-17): we now hold the typed-in code +
-        // attempt count between a failed `submitFoundCode` CF call and a
-        // user-triggered retry. The server stamps the winner's timestamp
-        // at success, so we no longer pre-build a Winner client-side
-        // (which previously caused arrayUnion to skip dedup when a retry
-        // landed with a different timestamp).
         var pendingFoundCode: String? = nil
         var pendingWinnerAttempts: Int = 0
         // Raised while a `submitFoundCode` CF call is in flight so a fast
@@ -70,20 +58,8 @@ struct HunterMapFeature {
         // the second call entirely.
         var isSubmittingWinner: Bool = false
 
-        /// PP-16: flipped to `true` when the game ends (time-out,
-        /// zone collapse, all hunters found). `gamePhase` then
-        /// reports `.gameOver`, the map stays visible, gameplay
-        /// controls grey out, and the GPS effect cancels (no more
-        /// `hunterLocations` writes).
         var isGameOver: Bool = false
 
-        /// PP-36: timestamp of the last out-of-zone penalty tick.
-        /// The 1 s timer fires the decrement only when the previous
-        /// tick was ≥ `outOfZonePenaltyIntervalSeconds` ago, so the
-        /// penalty is exactly -1 point per 5 s while the hunter
-        /// stays outside. Reset to `nil` whenever the hunter is
-        /// inside the zone, so re-exit starts a fresh 5 s window
-        /// rather than firing immediately on re-cross.
         var lastPenaltyAt: Date? = nil
 
         // MARK: - MapFeatureState passthroughs (child → parent surface)
@@ -97,8 +73,6 @@ struct HunterMapFeature {
         var hasGameStarted: Bool { nowDate >= game.hunterStartDate }
         var isCodeOnCooldown: Bool { codeCooldownUntil.map { nowDate < $0 } ?? false }
 
-        /// Resolves the live game phase, factoring in PP-16's
-        /// post-game `isGameOver` flag.
         var gamePhase: PoulePartyAttributes.ContentState.GamePhase {
             if isGameOver { return .gameOver }
             if !hasChickenStarted { return .waitingToStart }
@@ -156,9 +130,6 @@ struct HunterMapFeature {
             case countdownDismissed
             case gameConfigUpdated(Game)
             case newLocationFetched(CLLocationCoordinate2D)
-            /// PP-87: the chicken kept writing its position but with
-            /// `invisible: true`. Treat client-side as "no doc" so the
-            /// marker disappears for hunters.
             case chickenLocationMasked
             case powerUpCollected(PowerUp)
             case powerUpsUpdated([PowerUp])
@@ -169,10 +140,6 @@ struct HunterMapFeature {
             case winnerNotificationDismissed
             case winnerRegistered
             case winnerRegistrationFailed
-            /// CRIT-2 (audit 2026-05-17): the `submitFoundCode` CF
-            /// rejected the code as wrong. Routes back to the
-            /// "Wrong code" alert + cooldown logic that used to
-            /// fire on the client-side comparison.
             case wrongCodeRejected(lockedUntil: Date?)
             case leaveFailed(String)
             case teamNameResolved(String)
@@ -185,9 +152,6 @@ struct HunterMapFeature {
             /// expired, all hunters found). Parent navigates to the
             /// Victory / leaderboard screen.
             case gameEnded(Game)
-            /// PP-107: a GameMaster re-designated this hunter as the chicken
-            /// mid-`waiting`. Parent swaps the root to the chicken map so the
-            /// player isn't stranded on the wrong screen.
             case becameChicken(Game)
         }
     }
@@ -258,7 +222,7 @@ struct HunterMapFeature {
                 // map shows a stale marker until the first tick after
                 // resume. This catches that gap. Guarded on all three of
                 // "chicken can see hunters", "hunter phase started", and
-                // "we have a known uid + a cached fix" — any of these
+                // "we have a known uid + a cached fix", any of these
                 // failing is a silent no-op.
                 let gameId = state.game.id
                 let hunterId = state.hunterId
@@ -364,7 +328,7 @@ struct HunterMapFeature {
                 // Atomic dedup: at 1 Hz a stationary hunter would otherwise
                 // fire N duplicate transactions while the first one is still
                 // in flight. The reducer runs synchronously, so check-and-
-                // insert in the same pass is race-free — subsequent ticks
+                // insert in the same pass is race-free, subsequent ticks
                 // for the same id short-circuit until `collectSucceeded` /
                 // `collectFailed` clears the entry.
                 guard let location = state.userLocation,
@@ -389,7 +353,7 @@ struct HunterMapFeature {
                 .cancellable(id: CancelID.powerUpNotificationDismiss, cancelInFlight: true)
             case let .powerUps(.delegate(.activated(powerUp))):
                 // Block a second activation of the same timed effect while
-                // the first is still running — otherwise the write
+                // the first is still running, otherwise the write
                 // overwrites `powerUps.activeEffects.<field>` and shifts
                 // the effect window mid-flight. See detailed comment in
                 // `ChickenMap.swift`. Mirrored here for Hunter-side
@@ -406,7 +370,7 @@ struct HunterMapFeature {
                 let gameId = state.game.id
 
                 // PP-zone-stored: the NEXT zone boundary is just the next entry
-                // in the stored schedule — no client recompute. In
+                // in the stored schedule, no client recompute. In
                 // followTheChicken the next circle recentres on the Chicken's
                 // live GPS, so keep the current center and preview only the
                 // next radius.
@@ -466,13 +430,6 @@ struct HunterMapFeature {
                 state.enteredCode = ""
                 state.isEnteringFoundCode = false
 
-                // CRIT-2 (audit 2026-05-17): the client used to compare
-                // `code == state.game.foundCode` here, but foundCode is
-                // no longer on the public Game doc (V2.3 moves it to
-                // /private/security). The CF re-verifies the code
-                // server-side and returns `invalidCode` for misses —
-                // routed back to `.wrongCodeRejected` so the existing
-                // wrong-code alert + cooldown logic still fires.
                 let totalAttempts = state.wrongCodeAttempts + 1
                 let hunterName = state.hunterName
                 state.pendingFoundCode = code
@@ -571,7 +528,7 @@ struct HunterMapFeature {
                 state.challenges?.myTeamName = teamName
                 return .none
             case let .internal(.newLocationFetched(location)):
-                // `location` here is the chicken's broadcasted position —
+                // `location` here is the chicken's broadcasted position,
                 // `chickenLocationStream` is the only producer of this action.
                 // Always cache it in `state.chickenLocation` so Radar Ping
                 // has a fresh point to reveal; the UI gates rendering on
@@ -583,7 +540,7 @@ struct HunterMapFeature {
                 // computed in `.gameUpdated` / `processRadiusUpdate`. A stray
                 // chicken broadcast (radar-ping write, or a stale
                 // `chickenLocations/latest` doc the listener replays on
-                // connect) must not overwrite it — otherwise the hunter's
+                // connect) must not overwrite it, otherwise the hunter's
                 // zone check fires against the chicken's position rather
                 // than the real zone and flags the hunter as "outside"
                 // even when they're standing inside the visible circle.
@@ -606,7 +563,7 @@ struct HunterMapFeature {
                 }
                 let hunterId = state.hunterId
                 guard !hunterId.isEmpty else {
-                    logger.error("hunterId is empty — cannot register hunter or write location. rawUid was: \(rawUid ?? "nil")")
+                    logger.error("hunterId is empty: cannot register hunter or write location. rawUid was: \(rawUid ?? "nil")")
                     return .none
                 }
                 let powerUpsEnabled = state.game.powerUps.enabled
@@ -637,11 +594,6 @@ struct HunterMapFeature {
                         await liveActivityClient.start(attributes, initialLAState)
                     },
                     .run { [analyticsClient, hunterName = state.hunterName] _ in
-                        // PP-107: `joinGame` writes the hunter role + the
-                        // `/players/{uid}` team-name doc + the membership index
-                        // server-side, in one idempotent call. Re-running it on
-                        // "Reprendre la partie" (or an old pre-PP-90 game) is the
-                        // safety net that keeps the GameMaster marker labeled.
                         let teamName = hunterName.trimmingCharacters(in: .whitespacesAndNewlines)
                         do {
                             try await apiClient.joinGame(gameId, teamName)
@@ -691,42 +643,12 @@ struct HunterMapFeature {
                                 )
                                 await send(.internal(.newLocationFetched(coordinate)))
                             } else {
-                                // PP-87: doc missing OR `invisible: true`.
-                                // Mask the marker so the hunter sees no
-                                // chicken (preserves pre-PP-87 behavior).
                                 await send(.internal(.chickenLocationMasked))
                             }
                         }
                     }
                 )
 
-                // Hunter always tracks own location (for zone check).
-                // When chickenCanSeeHunters, also writes to Firestore.
-                // Gated behind hunterStartDate.
-                //
-                // Pre-1.11.2 we wrote only when CoreLocation emitted a new
-                // coord. With `distanceFilter = 10 m`, a stationary hunter
-                // produced zero fixes and therefore zero writes — the
-                // chicken saw a frozen marker for as long as the player
-                // sat still. 1.11.2 splits the work across two parallel
-                // effects:
-                //   1. Tracker — pushes each incoming GPS fix into both
-                //      reducer state (`userLocation`, for zone checks +
-                //      power-up proximity) and a shared `LockIsolated`
-                //      cache. No Firestore write happens here.
-                //   2. Writer — a `clock.timer` that fires every
-                //      `locationThrottleSeconds` and re-broadcasts the
-                //      latest cached coord so a stationary hunter still
-                //      refreshes on the chicken's map. Only started when
-                //      `chickenCanSeeHunters` is true.
-                // A separate `.view(.appBecameActive)` handler writes one
-                // immediate refresh on every foreground resume in case
-                // iOS suspended the writer during background.
-                // PP-24: hunters also write their position when at least
-                // one GameMaster has joined, so the GM observer map can
-                // render them even in `stayInTheZone`. Firestore rules
-                // restrict hunter location reads to creator + chicken +
-                // hunters + gameMasters, so privacy is preserved.
                 let shouldWriteLocation = state.game.chickenCanSeeHunters
                     || !state.game.gameMasterIds.isEmpty
                 let latestLocation = LockIsolated<CLLocationCoordinate2D?>(locationClient.lastLocation())
@@ -793,9 +715,6 @@ struct HunterMapFeature {
                 state.hasChallenges = hasChallenges
                 return .none
             case let .internal(.gameConfigUpdated(game)):
-                // PP-107: a GameMaster may have re-designated this hunter as
-                // the chicken while the game is `waiting`. Re-route to the
-                // chicken map so the player isn't stranded on the hunter map.
                 if game.isChicken(state.hunterId) {
                     return .send(.delegate(.becameChicken(game)))
                 }
@@ -899,11 +818,6 @@ struct HunterMapFeature {
                     state.previousWinnersCount = game.winners.count
                 }
 
-                // PP-16: end the game when all hunters have found the
-                // chicken. Stay on the map, grey controls via
-                // `isGameOver`. The chicken is authoritative for the
-                // `status = .done` Firestore write — the hunter just
-                // flips its local phase + cancels GPS.
                 if !state.isGameOver &&
                    state.destination == nil &&
                    !game.hunterIds.isEmpty &&
@@ -978,7 +892,7 @@ struct HunterMapFeature {
                 // Clear zone preview once the zone actually shrinks past it.
                 if zTick.radius != prevRadiusHM { state.previewCircle = nil }
 
-                // Power-up proximity check — collect all nearby power-ups
+                // Power-up proximity check, collect all nearby power-ups
                 let nearbyPowerUps = findNearbyPowerUps(
                     userLocation: state.userLocation,
                     availablePowerUps: state.availablePowerUps
@@ -987,7 +901,7 @@ struct HunterMapFeature {
                     return .merge(nearbyPowerUps.map { .send(.internal(.powerUpCollected($0))) })
                 }
 
-                // Zone check (visual warning only — no elimination)
+                // Zone check (visual warning only, no elimination)
                 if shouldCheckZone(role: .hunter, gameMod: state.game.gameMode),
                    let userLoc = state.userLocation,
                    let circle = state.mapCircle {
@@ -999,15 +913,6 @@ struct HunterMapFeature {
                     state.isOutsideZone = zoneResult.isOutsideZone
                 }
 
-                // PP-36: out-of-zone penalty (-1 point / 5 s).
-                // Phase gates: only while the hunt is actually running.
-                // `hasGameStarted` (hunter start passed) is already
-                // checked above; we additionally exclude `isGameOver`
-                // and the chicken's debug preview screen. The
-                // `lastPenaltyAt` guard is computed against `nowDate`
-                // so the very first out-of-zone tick fires after a
-                // full 5 s, not immediately on re-cross — matches the
-                // 4 s → 0 / 12 s → -2 acceptance criteria.
                 if state.isOutsideZone,
                    !state.isGameOver,
                    !state.hunterId.isEmpty {
@@ -1058,11 +963,6 @@ struct HunterMapFeature {
         }
     }
 
-    /// CRIT-3 (audit 2026-05-17): runs the `submitFoundCode` callable
-    /// CF and branches to either the "registered" or "failed" internal
-    /// action. `alreadyWinner` is treated as success — the server has
-    /// the winner recorded from an earlier attempt and the UX should
-    /// proceed to Victory.
     private func submitFoundCodeEffect(
         gameId: String,
         foundCode: String,

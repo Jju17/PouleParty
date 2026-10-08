@@ -2,7 +2,7 @@ import UIKit
 
 extension UIImage {
     /// Resize + compress a captured photo for upload. Defaults to 900 px
-    /// on the longest side at 0.6 quality — produces ~70-150 KB JPEGs
+    /// on the longest side at 0.6 quality, produces ~70-150 KB JPEGs
     /// instead of the 200-500 KB the old 1200 px / 0.8 settings emitted,
     /// which cuts validator-queue thumbnail load by 3-5×. Validators only
     /// need enough resolution to confirm "yes the challenge was done";
@@ -12,7 +12,7 @@ extension UIImage {
         let scale = largest > maxDimension ? maxDimension / largest : 1.0
         let target = CGSize(width: size.width * scale, height: size.height * scale)
         let format = UIGraphicsImageRendererFormat.default()
-        // Skip the 2-3× pixel scaling Apple does by default — we already
+        // Skip the 2-3× pixel scaling Apple does by default, we already
         // baked the target size into `target`, and a "Retina"-scaled
         // canvas just inflates the encoded bytes for the same visual.
         format.scale = 1

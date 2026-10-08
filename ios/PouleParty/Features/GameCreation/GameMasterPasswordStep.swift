@@ -1,13 +1,3 @@
-//
-//  GameMasterPasswordStep.swift
-//  PouleParty
-//
-//  PP-88: chicken opts in to the GameMaster role and sets a 4-digit
-//  password. Server side (PP-70) writes the password to
-//  `/games/{gameId}/private/security` and flips
-//  `Game.hasGameMasterPassword` to `true` so JoinFlow can show the
-//  "Join as GameMaster" CTA.
-//
 
 import ComposableArchitecture
 import SwiftUI

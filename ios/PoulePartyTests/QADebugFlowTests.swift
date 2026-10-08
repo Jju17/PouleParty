@@ -105,7 +105,7 @@ struct QADebugFlowTests {
         #expect(result?.zone.shrinkIntervalMinutes == 1)
         if let result {
             // ~5-minute compressed duration. The `startDate` setter snaps to
-            // the minute, so the exact span drifts up to a minute — assert the
+            // the minute, so the exact span drifts up to a minute, assert the
             // band rather than an exact 300 s.
             let duration = result.endDate.timeIntervalSince(result.startDate)
             #expect(duration > 240 && duration < 360)

@@ -1,9 +1,3 @@
-//
-//  Color+Utils.swift
-//  PouleParty
-//
-//  Created by Julien Rahier on 17/03/2024.
-//
 
 import SwiftUI
 

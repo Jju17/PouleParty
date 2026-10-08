@@ -11,7 +11,7 @@ struct HunterMapView: View {
     @State private var selectedPowerUp: PowerUp?
     /// Observes the app's scene phase so we can fire an immediate
     /// hunter-location refresh when the player re-opens the app.
-    /// See `.view(.appBecameActive)` in `HunterMapFeature` — iOS can
+    /// See `.view(.appBecameActive)` in `HunterMapFeature`, iOS can
     /// suspend the background writer coroutine, so we catch the gap
     /// between resume and the next periodic tick here.
     @Environment(\.scenePhase) private var scenePhase
@@ -97,10 +97,6 @@ struct HunterMapView: View {
             }
             .mapCommonOverlays(store.state)
             .overlay(alignment: .top) {
-                // PP-36: the "-1 point / 5 s" pill sits just below the
-                // red "Return to the zone!" banner. Phase gates mirror
-                // the reducer's penalty gate so the indicator and the
-                // actual writes can't disagree.
                 if store.isOutsideZone,
                    store.hasGameStarted,
                    !store.isGameOver {

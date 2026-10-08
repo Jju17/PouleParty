@@ -1,15 +1,3 @@
-//
-//  GameTimerLogic.swift
-//  PouleParty
-//
-//  Shared pure functions for timer, countdown, radius, and winner logic
-//  used by both ChickenMapFeature and HunterMapFeature.
-//
-//  Cross-platform parity: mirrors `android/.../ui/GameTimerHelper.kt`.
-//  Any change here must be reflected on the Android side (and vice versa) —
-//  both platforms must produce identical outputs for the same inputs.
-//  See `CLAUDE.md` → "Cross-platform parity".
-//
 
 import CoreLocation
 import FirebaseFirestore
@@ -28,8 +16,6 @@ struct ZoneCheckResult: Equatable {
     let distanceToCenter: CLLocationDistance
 }
 
-/// Whether this role should be zone-checked under the given game mode.
-/// GameMaster (PP-24) is a pure spectator and is never zone-checked.
 func shouldCheckZone(role: GameRole, gameMod: Game.GameMode) -> Bool {
     if role == .gameMaster { return false }
     switch gameMod {
@@ -241,7 +227,7 @@ func zoneRenderState(
 let finalCenterSafetyMeters: Double = 1.0
 
 /// Radius of the "final zone" the chicken sees as a green glow on the
-/// map — the whole disk, not just its center, must stay inside every
+/// map, the whole disk, not just its center, must stay inside every
 /// drifted circle. Matches the hardcoded 50 m used by
 /// `finalZoneGlowContent` in `MapOverlays.swift` and the Android
 /// equivalent in `ChickenMapScreen`. Kept alongside the other drift
@@ -251,7 +237,7 @@ let finalZoneRadiusMeters: Double = 50.0
 
 /// How many rejection-sampling attempts before falling back to the
 /// deterministic "pull toward finalCenter by `delta`" point. Each
-/// attempt costs one splitmix64 evaluation; 32 is plenty — the
+/// attempt costs one splitmix64 evaluation; 32 is plenty, the
 /// rejection rate only gets high near game end where
 /// `disk(C, delta)` sticks out past `disk(F, r)`, and even at 50 %
 /// rejection 32 attempts succeed with probability > 99.99 %.
@@ -267,7 +253,7 @@ private let maxDriftAttempts = 32
 ///     disk (50 m glow) fits entirely inside the drifted circle.
 ///
 /// Caller contract: `basePoint` is the **initial** zone center and
-/// `oldRadius` is the **initial** zone radius — NOT the previous
+/// `oldRadius` is the **initial** zone radius, NOT the previous
 /// drifted center. Every shrink's candidate is drawn independently
 /// from `disk(initial, R₀ − rᵢ) ∩ disk(final, rᵢ − FINAL −
 /// safety)`, so successive circles can overlap each other freely as
@@ -282,7 +268,7 @@ private let maxDriftAttempts = 32
 /// overlap, the lens/smaller-disk ratio is usually > 10 %, so 32
 /// splitmix64-seeded attempts succeed with overwhelming probability.
 /// When rejection exhausts, fall back to a deterministic point on
-/// the base→final line — always in the intersection whenever the
+/// the base→final line, always in the intersection whenever the
 /// disks overlap (caller invariant: final zone fits in start zone).
 func deterministicDriftCenter(
     basePoint: CLLocationCoordinate2D,
@@ -381,17 +367,6 @@ func processRadiusUpdate(
     now: Date = .now
 ) -> RadiusUpdateResult? {
     guard let nextUpdate = nextRadiusUpdate, now >= nextUpdate else { return nil }
-    // Zone Freeze: skip the radius reduction for THIS scheduled shrink but
-    // still advance `nextRadiusUpdate` to the following one. Previously we
-    // returned `nil` here, which left `state.nextRadiusUpdate` stuck on a
-    // past date — the "Map update in:" countdown then either showed `00:00`
-    // indefinitely or, after freeze expired and one tick processed, jumped
-    // to a date past `endDate` (one interval beyond the skipped shrink).
-    // On a hunter watching a game that was already over on the chicken side,
-    // this manifested as a countdown reading "Map update in: 3:00 / 4:59"
-    // even though the game had ended — which is exactly what the live-test
-    // caught. Advancing here keeps the countdown monotonic and in sync with
-    // `findLastUpdate`, which always returns `lastUpdate + interval`.
     if isZoneFrozen {
         return RadiusUpdateResult(
             newRadius: currentRadius,
@@ -420,8 +395,8 @@ func processRadiusUpdate(
     if gameMod == .stayInTheZone {
         // Drift is independent per shrink: candidate sampled from
         // `disk(initial, R₀ − rᵢ) ∩ disk(final, rᵢ − FINAL −
-        // safety)`. That enforces both product rules directly — new
-        // circle inside start zone, final zone inside new circle —
+        // safety)`. That enforces both product rules directly, new
+        // circle inside start zone, final zone inside new circle,
         // while leaving successive intermediate circles free to
         // overlap each other.
         let driftedCenter = deterministicDriftCenter(
@@ -450,7 +425,7 @@ func processRadiusUpdate(
 // MARK: - Debug Preview (all shifted circles at once)
 
 /// A single preview circle entry returned by
-/// [`computeDebugShiftedCircles`] — the center and radius the zone will
+/// [`computeDebugShiftedCircles`], the center and radius the zone will
 /// hold at each scheduled shrink, in order.
 struct DebugShrinkCircle: Equatable {
     let center: CLLocationCoordinate2D
@@ -463,7 +438,7 @@ struct DebugShrinkCircle: Equatable {
 /// per scheduled shrink, ordered from first to last, stopping early
 /// when the radius would collapse to zero.
 ///
-/// Pure function — only used by the long-press debug preview on the
+/// Pure function, only used by the long-press debug preview on the
 /// chicken map to render every future circle simultaneously. Mirrors
 /// the Android `computeDebugShiftedCircles` sibling.
 func computeDebugShiftedCircles(game: Game) -> [DebugShrinkCircle] {
@@ -482,7 +457,7 @@ func computeDebugShiftedCircles(game: Game) -> [DebugShrinkCircle] {
     let maxShrinks = Int(floor(duration / intervalSeconds))
     var result: [DebugShrinkCircle] = []
     var radius = initialRadius
-    // Drift is independent per shrink — every call uses the initial
+    // Drift is independent per shrink, every call uses the initial
     // center/radius, no state between iterations.
     for _ in 0..<maxShrinks {
         let newRadius = radius - declinePerUpdate
@@ -572,11 +547,11 @@ func checkLiveActivityUpdate(
 // MARK: - Radar Ping Broadcast
 
 /// Decides whether the chicken should force-broadcast its location while a
-/// Radar Ping is active in stayInTheZone mode. Pure function — all time-based
+/// Radar Ping is active in stayInTheZone mode. Pure function, all time-based
 /// inputs are explicit so the caller drives the clock in tests.
 ///
 /// Returns `true` only when radar ping is live **and** the chicken is not
-/// invisible (safety net — invisibility isn't spawned in stayInTheZone today,
+/// invisible (safety net, invisibility isn't spawned in stayInTheZone today,
 /// but if it ever leaks through, it wins over radar ping, matching the
 /// followTheChicken behavior).
 func shouldBroadcastDuringRadarPing(
@@ -604,7 +579,7 @@ func applyJammerNoise(
     now: Date = .now
 ) -> CLLocationCoordinate2D {
     // Explicit Int64 rather than relying on Swift's platform-dependent Int
-    // width. Android's bucket is `Long` — forcing Int64 here removes the
+    // width. Android's bucket is `Long`, forcing Int64 here removes the
     // remote chance of a mismatch on any hypothetical 32-bit build and
     // documents the intent.
     let bucket = Int64(now.timeIntervalSince1970)
@@ -619,7 +594,7 @@ func applyJammerNoise(
     )
 }
 
-// MARK: - Seeded Random (splitmix64 — unsigned shifts to match Android's `ushr`)
+// MARK: - Seeded Random (splitmix64, unsigned shifts to match Android's `ushr`)
 
 func seededRandom(seed: Int, index: Int) -> Double {
     var z = UInt64(bitPattern: Int64(seed)) &+ UInt64(bitPattern: Int64(index)) &* 0x9e3779b97f4a7c15
@@ -628,8 +603,6 @@ func seededRandom(seed: Int, index: Int) -> Double {
     z = z ^ (z >> 31)
     return Double(z >> 1) / Double(Int64.max)
 }
-
-// MARK: - PP-17 Overtime formatter
 
 /// Renders the `+MM:SS` (or `+HH:MM:SS` past one hour) overtime
 /// delta shown on the gameOver countdown bar. Negative deltas

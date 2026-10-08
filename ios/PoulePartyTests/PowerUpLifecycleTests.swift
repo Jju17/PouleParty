@@ -309,7 +309,7 @@ struct PowerUpLifecycleTests {
         // Returning nil left the countdown anchored on a past tick, which
         // overshot endDate after freeze expired. The new contract is to
         // keep `currentRadius` and roll `nextRadiusUpdate` forward by one
-        // interval so countdowns stay monotonic — see GameTimerLogic.swift.
+        // interval so countdowns stay monotonic, see GameTimerLogic.swift.
         #expect(result?.newRadius == 1000)
         #expect(result?.isGameOver == false)
         let expectedNext = nextUpdate.addingTimeInterval(5 * 60)

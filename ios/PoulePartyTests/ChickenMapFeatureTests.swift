@@ -36,10 +36,6 @@ struct ChickenMapFeatureTests {
     }
 
     @Test func beenFoundButtonShowsEndGameCode() async {
-        // CRIT-2 (audit 2026-05-17): destination uses
-        // `state.chickenFoundCode` (populated by getFoundCode CF on map
-        // load) instead of `state.game.foundCode`. Seed it directly so
-        // the assertion stays deterministic.
         var initial = ChickenMapFeature.State(game: .mock)
         initial.chickenFoundCode = "1234"
         let store = TestStore(initialState: initial) {
@@ -398,14 +394,7 @@ struct ChickenMapFeatureTests {
         }
     }
 
-    // MARK: - PP-19 end-game stays on map
-    //
-    // The map must stay mounted at gameOver — `isGameOver` flips to
-    // true, no auto-transition to Victory is dispatched. The chicken's
-    // GPS effect cancels (no more `setChickenLocation` writes). Mirrors
-    // `ChickenMapViewModelBehaviorTest` on Android.
-
-    /// Scenario 1: timeout — `nowDate >= endDate` flips `isGameOver`
+    /// Scenario 1: timeout, `nowDate >= endDate` flips `isGameOver`
     /// to true and the map stays mounted (no `.delegate.allHuntersFound`
     /// auto-fire, no transition to Victory). The GPS effect is killed
     /// synchronously via `locationClient.stopTracking()`.
@@ -473,7 +462,7 @@ struct ChickenMapFeatureTests {
         #expect(store.state.isGameOver == false, "game must NOT end on zone shrink (ends by time now)")
     }
 
-    /// Scenario 3: all hunters found — chicken side. When
+    /// Scenario 3: all hunters found, chicken side. When
     /// `winners.count >= hunterIds.count`, the chicken flips
     /// `isGameOver` and calls `stopTracking()`; no auto-transition.
     @Test func pp19_allHuntersFoundFlipsIsGameOverWithoutTransition() async {

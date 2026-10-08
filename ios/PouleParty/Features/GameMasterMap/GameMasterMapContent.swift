@@ -52,7 +52,7 @@ struct GameMasterMapContent: View {
                     powerUps: store.powerUpAnnotations,
                     pulseAlpha: powerUpPulseAlpha(at: powerUpPulseClock)
                 ) { _ in
-                    // GM cannot collect — tap is no-op.
+                    // GM cannot collect, tap is no-op.
                 }
             }
         }
@@ -76,11 +76,6 @@ struct GameMasterMapContent: View {
     }
 }
 
-/// GameMaster chicken marker. Matches the shared `HunterMapMarker`
-/// disc size (34 px / 18 pt glyph) so the chicken and hunters read
-/// as the same visual weight on the GM map. When the chicken is
-/// invisible the disc fades and a dashed white outline is drawn —
-/// the GM is the only role that ever sees this state (PP-87).
 private struct GMChickenMarker: View {
     let isInvisible: Bool
 

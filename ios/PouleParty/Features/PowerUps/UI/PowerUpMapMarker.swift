@@ -38,7 +38,7 @@ struct DecoyMapMarker: View {
 }
 
 /// Real-chicken marker rendered on the Hunter map while Radar Ping is active.
-/// Kept visually distinct from `DecoyMapMarker` with a pulsating radar halo —
+/// Kept visually distinct from `DecoyMapMarker` with a pulsating radar halo,
 /// otherwise a decoy and a real ping landing simultaneously would be
 /// indistinguishable to the Hunter.
 struct ChickenMapMarker: View {

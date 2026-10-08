@@ -11,7 +11,7 @@ enum MapWarmUp {
     private static var hasWarmedUp = false
 
     /// Pre-warms the Metal device and Mapbox TileStore on a background thread.
-    /// Safe to call multiple times — only runs once.
+    /// Safe to call multiple times, only runs once.
     static func warmUpIfNeeded() {
         guard !hasWarmedUp else { return }
         hasWarmedUp = true

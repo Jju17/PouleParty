@@ -49,7 +49,7 @@ struct MapFeatureStateTests {
         var game = Game.mock
         game.timing.start = .init(date: .now.addingTimeInterval(-3600))
         // headStartMinutes pushes hunterStartDate forward
-        game.timing.headStartMinutes = 90 // 90 min — hunter start is in the future
+        game.timing.headStartMinutes = 90 // 90 min, hunter start is in the future
         let state = HunterMapFeature.State(game: game)
         let surface: any MapFeatureState = state
         #expect(!surface.hasGameStarted)

@@ -318,7 +318,7 @@ struct ParityGoldenTests {
 
     @Test func driftMissingFinalLeavesExistingBehaviorUntouched() {
         // Explicitly passing `finalCenter: nil` must produce the exact same
-        // output as omitting it — both must match the legacy golden.
+        // output as omitting it, both must match the legacy golden.
         let explicitNil = deterministicDriftCenter(
             basePoint: CLLocationCoordinate2D(latitude: 50.85, longitude: 4.35),
             oldRadius: 1500,
@@ -373,7 +373,7 @@ struct ParityGoldenTests {
                 longitude: initialCenter.longitude
             )
             for seed in 1...100 {
-                // Drift is independent per shrink now — no state to
+                // Drift is independent per shrink now, no state to
                 // track between iterations, just exercise a range
                 // of newRadius values.
                 for step in 1...10 {

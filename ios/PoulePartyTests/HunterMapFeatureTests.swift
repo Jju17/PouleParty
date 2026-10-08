@@ -61,7 +61,7 @@ struct HunterMapFeatureTests {
             HunterMapFeature()
         }
 
-        // A chicken broadcast arrives 2 km away — this MUST NOT become
+        // A chicken broadcast arrives 2 km away, this MUST NOT become
         // the zone center in stayInTheZone, but it IS cached in
         // `chickenLocation` so Radar Ping has a fresh point to reveal.
         let farAwayChicken = CLLocationCoordinate2D(latitude: 50.87, longitude: 4.37)
@@ -241,8 +241,6 @@ struct HunterMapFeatureTests {
         await store.receive(\.internal.winnerRegistrationFailed)
         // The retry alert must surface so the hunter can try again.
         #expect(store.state.destination != nil)
-        // pendingFoundCode must be held in state for the retry path
-        // (CRIT-3 audit 2026-05-17).
         #expect(store.state.pendingFoundCode != nil)
     }
 
@@ -277,12 +275,6 @@ struct HunterMapFeatureTests {
     }
 
     @Test func retrySendsSameCodeAndNameAcrossAttempts() async {
-        // CRIT-3 (audit 2026-05-17): with the server-authoritative
-        // winner flow, the client retries the same (code, hunterName)
-        // pair on each attempt. The server stamps `timestamp` at
-        // success, so we don't preserve a Winner across retries
-        // anymore — but the user-typed code MUST be the same one each
-        // time (otherwise a retry could leak a different value).
         struct TestError: Error {}
         var state = HunterMapFeature.State(game: .mock)
         state.enteredCode = "1234"
@@ -315,11 +307,7 @@ struct HunterMapFeatureTests {
         #expect(all[0].1 == all[2].1)
     }
 
-
     @Test func submitCodeButtonTappedWithWrongCodeShowsAlert() async {
-        // CRIT-2 (audit 2026-05-17): wrong-code check is now server-side
-        // via `submitFoundCode`. Mock returns `.invalidCode`, which the
-        // reducer routes to `.internal(.wrongCodeRejected)` → same alert.
         var state = HunterMapFeature.State(game: .mock)
         state.enteredCode = "9999"
 
@@ -574,8 +562,6 @@ struct HunterMapFeatureTests {
     }
 
     @Test func submitCodeButtonTappedTriggersCooldownAfterMaxAttempts() async {
-        // CRIT-2 (audit 2026-05-17): wrong-code check + cooldown is now
-        // server-side; receive `.wrongCodeRejected` before asserting.
         var state = HunterMapFeature.State(game: .mock)
         state.enteredCode = "9999"
         state.wrongCodeAttempts = AppConstants.codeMaxWrongAttempts - 1
@@ -736,15 +722,6 @@ struct HunterMapFeatureTests {
         }
     }
 
-    // MARK: - PP-19 end-game stays on map
-    //
-    // Hunter mirror of `ChickenMapFeatureTests` PP-19 block. The map
-    // stays mounted at gameOver; `isGameOver` flips to true; no
-    // auto-transition to Victory (only `winnerRegistered` keeps that
-    // path per PP-16). The hunter's GPS effect cancels (no more
-    // `setHunterLocation` writes). Mirrors
-    // `HunterMapViewModelBehaviorTest` on Android.
-
     /// Scenario 1 (hunter): timeout flips `isGameOver` and the map
     /// stays mounted. `locationClient.stopTracking()` is invoked to
     /// kill the GPS coroutine (no further `setHunterLocation` writes).
@@ -772,7 +749,7 @@ struct HunterMapFeatureTests {
 
     /// Scenario 2 (hunter, PP-zone-stored): the zone no longer collapses to
     /// end the game. It settles on the 50m final stored circle; `isGameOver`
-    /// stays false (endDate in the future) and GPS keeps running — the game
+    /// stays false (endDate in the future) and GPS keeps running, the game
     /// only ends by time / all-found / cancel.
     @Test func pp_zoneStored_hunterZoneShrinksToFinalCircleWithoutGameOver() async {
         var game = startedGameMock
@@ -804,7 +781,7 @@ struct HunterMapFeatureTests {
     }
 
     /// Scenario 3 (hunter side): when all hunters are in `winners`,
-    /// the hunter VM flips `isGameOver` too — the chicken is
+    /// the hunter VM flips `isGameOver` too, the chicken is
     /// authoritative for the Firestore status update, but the hunter
     /// surface must also recognise gameOver locally and stop GPS.
     @Test func pp19_allHuntersFoundFlipsIsGameOverHunterSide() async {
@@ -837,9 +814,6 @@ struct HunterMapFeatureTests {
         #expect(stopCalls.value == 1, "Hunter must call stopTracking when all hunters found")
     }
 
-    /// Scenario 4 (PP-16 exception): an individual hunter entering the
-    /// correct found code → `winnerRegistered` still triggers the
-    /// transition to Victory (the personal win path is preserved).
     @Test func pp19_winnerRegisteredStillTransitionsToVictory() async {
         var state = HunterMapFeature.State(game: .mock)
         state.enteredCode = "1234"
@@ -854,16 +828,8 @@ struct HunterMapFeatureTests {
 
         await store.send(.view(.submitCodeButtonTapped))
         await store.receive(\.internal.winnerRegistered)
-        // `winnerRegistered` is the AppFeature pivot to Victory — the
-        // personal-win navigation is preserved per PP-16's exception.
-        // `isGameOver` is irrelevant for this branch: the hunter is
-        // leaving the map regardless.
     }
 
-    /// Scenario 6 (PP-2 exception): even after `isGameOver` is set,
-    /// the FOUND code stays active for the hunter — `submitCodeButtonTapped`
-    /// still triggers a winner registration. The "won late" path lets
-    /// stragglers close the loop.
     @Test func pp19_foundCodeStaysActiveAfterGameOver() async {
         var state = HunterMapFeature.State(game: .mock)
         state.isGameOver = true

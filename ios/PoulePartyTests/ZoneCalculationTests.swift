@@ -1,16 +1,3 @@
-//
-//  ZoneCalculationTests.swift
-//  PoulePartyTests
-//
-//  PP-64 — strict goldens for the PP-13 / PP-14 zone helpers
-//  (`Models/GameSettings.swift`). Mirrors the Kotlin sibling
-//  `ZoneCalculationTest.kt` byte-for-byte and the TS reference
-//  `functions/test/zoneCalculation.test.ts` formula tests. Any drift
-//  between iOS, Android, or the Cloud Function will fail one of these
-//  on every platform that's wrong — the cross-platform contract is
-//  that `computeZoneRadius` on the same inputs returns the same
-//  number to within 1 m (sub-millimetre after the haversine round).
-//
 
 import CoreLocation
 import Testing
@@ -22,12 +9,12 @@ struct ZoneCalculationTests {
     /// constructs pin offsets via the `1° latitude ≈ 111_111 m`
     /// approximation; CLLocation / Android `Location.distanceBetween`
     /// both use the WGS-84 ellipsoid which deviates by ~0.02 % at this
-    /// latitude. At D = 10 km that's still under 20 m — well below the
+    /// latitude. At D = 10 km that's still under 20 m, well below the
     /// `D × 1.5` interior margin so the test is in the noise. 25 m
     /// covers all distances up to 10 km.
     static let metresTolerance: Double = 25.0
 
-    // MARK: - computeZoneRadius (stayInTheZone) — golden distances
+    // MARK: - computeZoneRadius (stayInTheZone), golden distances
 
     @Test func radiusStayInTheZoneAtFiftyMeters() {
         // D = 50 m → max(75, 300, 800) = 800 (floor wins).
@@ -94,9 +81,6 @@ struct ZoneCalculationTests {
     }
 
     @Test func radiusStayInTheZoneInteriorMarginInvariant() {
-        // PP-69 / PP-13 contract: for every D ≤ 10 km, the interior
-        // margin (initialRadius − D) is ≥ 200 m so the zone never
-        // collapses early. Sweep at 100 m steps to lock it in.
         let start = CLLocationCoordinate2D(latitude: 50.85, longitude: 4.35)
         for d in stride(from: 100.0, through: 10_000.0, by: 100.0) {
             let finalCenter = CLLocationCoordinate2D(
@@ -168,14 +152,14 @@ struct ZoneCalculationTests {
 
     @Test func generateDriftSeedNeverReturnsZero() {
         // 0 is treated as "no drift" by the runtime PRNG. The helper
-        // re-rolls until it gets a positive value — sampling 1000 times
+        // re-rolls until it gets a positive value, sampling 1000 times
         // is statistically more than enough.
         for _ in 0..<1000 {
             #expect(generateDriftSeed() > 0)
         }
     }
 
-    // MARK: - interpolateZoneCenter — strict goldens (mirrors TS / Kotlin)
+    // MARK: - interpolateZoneCenter, strict goldens (mirrors TS / Kotlin)
 
     static let interpolateTolerance: Double = 1e-9
 
@@ -213,7 +197,7 @@ struct ZoneCalculationTests {
         #expect(abs(out.longitude - 4.37) < Self.interpolateTolerance)
     }
 
-    // MARK: - deterministicDriftCenter — strict goldens for the same
+    // MARK: - deterministicDriftCenter, strict goldens for the same
     // seed → same output contract (char-by-char with Kotlin / TS).
 
     @Test func driftDeterministicSameInputsSameOutput() {
@@ -239,7 +223,7 @@ struct ZoneCalculationTests {
         #expect(abs(out.longitude - 4.349340564597558) < Self.interpolateTolerance)
     }
 
-    // MARK: - pickInitialZoneCenter — same seed yields same center
+    // MARK: - pickInitialZoneCenter, same seed yields same center
 
     @Test func pickInitialZoneCenterIsDeterministicForSameSeed() {
         let start = CLLocationCoordinate2D(latitude: 50.85, longitude: 4.35)
@@ -249,7 +233,7 @@ struct ZoneCalculationTests {
         // CLLocation.distance(from:) has sub-millimetre non-determinism
         // on the simulator (a cached coordinate transform yields drifts
         // around 1e-8 degrees between identical calls). The useful contract
-        // is "same seed gets functionally the same centre" — bitwise
+        // is "same seed gets functionally the same centre", bitwise
         // equality is not achievable on iOS because the radius-budget
         // calculation uses CLLocation. Android + Cloud Function use
         // deterministic haversine and DO get bitwise equality
@@ -260,10 +244,6 @@ struct ZoneCalculationTests {
     }
 
     @Test func pickInitialZoneCenterRespectsContainmentLens() {
-        // For ANY seed in 1...32, the picked center must keep both pins
-        // inside the disc of `radius` around it. PP-13 / PP-69 contract:
-        // the user-placed pins live inside the disc as markers, not at
-        // its center, and never escape it.
         let start = CLLocationCoordinate2D(latitude: 50.85, longitude: 4.35)
         let finalCenter = CLLocationCoordinate2D(latitude: 50.86, longitude: 4.36)
         let radius: Double = 1668

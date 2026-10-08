@@ -1,9 +1,3 @@
-//
-//  GeoPoint+Utils.swift
-//  PouleParty
-//
-//  Created by Julien Rahier on 16/03/2024.
-//
 
 import FirebaseFirestore
 import CoreLocation

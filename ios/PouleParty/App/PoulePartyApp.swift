@@ -1,9 +1,3 @@
-//
-//  PoulePartyApp.swift
-//  PouleParty
-//
-//  Created by Julien Rahier on 14/03/2024.
-//
 
 import ComposableArchitecture
 import Sharing

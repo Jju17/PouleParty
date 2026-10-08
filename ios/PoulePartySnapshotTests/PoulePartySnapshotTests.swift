@@ -1,9 +1,3 @@
-//
-//  PoulePartySnapshotTests.swift
-//  PoulePartySnapshotTests
-//
-//  Created by Julien on 05/04/2026.
-//
 
 import Testing
 

@@ -174,7 +174,6 @@ struct ChallengeProgressTests {
         let level2 = (1...5).map { challenge(id: "l2-\($0)", level: 2) }
         let level3 = (1...2).map { challenge(id: "l3-\($0)", level: 3) }
         let all = level1 + level2 + level3
-        // Unlock level 3 → looks only at level 2. 4/5 oneShot at level 2 → unlock.
         let validated: Set<String> = ["l2-1", "l2-2", "l2-3", "l2-4"]
         let progress3 = ChallengeProgress.levelProgress(
             level: 3,
@@ -191,7 +190,6 @@ struct ChallengeProgressTests {
                 validatedChallengeIds: validated
             ) == true
         )
-        // Same data: level 2 looks at level 1, 0/3 validated → blocked.
         let progress2 = ChallengeProgress.levelProgress(
             level: 2,
             challenges: all,

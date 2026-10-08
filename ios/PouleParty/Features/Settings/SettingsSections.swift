@@ -167,14 +167,14 @@ struct SettingsVersionSection: View {
                 BangerText("Version", size: 16)
                     .foregroundStyle(Color.onBackground)
                 Spacer()
-                BangerText(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—", size: 16)
+                BangerText(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?", size: 16)
                     .foregroundStyle(Color.onBackground.opacity(0.4))
             }
             HStack {
                 BangerText("Build", size: 14)
                     .foregroundStyle(Color.onBackground.opacity(0.4))
                 Spacer()
-                BangerText(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "—", size: 14)
+                BangerText(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?", size: 14)
                     .foregroundStyle(Color.onBackground.opacity(0.4))
             }
         }

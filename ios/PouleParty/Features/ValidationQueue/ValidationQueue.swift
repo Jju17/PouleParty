@@ -142,11 +142,11 @@ struct ValidationQueueFeature {
 
     private func validate(state: inout State, submission: ChallengeSubmission, accept: Bool) -> Effect<Action> {
         guard let id = submission.firestoreId, !id.isEmpty else {
-            logger.warning("[ValidationQueue] validate tap dropped — submission.firestoreId is nil. challengeId=\(submission.challengeId, privacy: .public) hunterId=\(submission.hunterId, privacy: .public)")
+            logger.warning("[ValidationQueue] validate tap dropped: submission.firestoreId is nil. challengeId=\(submission.challengeId, privacy: .public) hunterId=\(submission.hunterId, privacy: .public)")
             return .none
         }
         if state.busyIds.contains(id) {
-            logger.info("[ValidationQueue] validate tap dropped — already busy on \(id, privacy: .public)")
+            logger.info("[ValidationQueue] validate tap dropped: already busy on \(id, privacy: .public)")
             return .none
         }
         state.busyIds.insert(id)

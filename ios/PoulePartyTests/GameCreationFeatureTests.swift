@@ -1,13 +1,3 @@
-//
-//  GameCreationFeatureTests.swift
-//  PoulePartyTests
-//
-//  Post-PP-11/12/13/14/90 wizard coverage. The pre-PP-90 file was
-//  gated under `#if false` because it referenced retired APIs
-//  (`Game.registration`, `requiresRegistrationChanged`, the legacy
-//  3-step zone block, etc.). PP-64 rewrites it against the current
-//  `GameCreationFeature` surface.
-//
 
 import ComposableArchitecture
 import CoreLocation
@@ -49,8 +39,6 @@ struct GameCreationFeatureTests {
         }
     }
 
-    // MARK: - Initial state (PP-11/12/13/90)
-
     @Test func initialStateHasDefaultValues() {
         let state = makeState()
         #expect(state.currentStepIndex == 0)
@@ -58,8 +46,6 @@ struct GameCreationFeatureTests {
         #expect(state.gameDurationMinutes == 90)
         #expect(state.goingForward == true)
     }
-
-    // MARK: - Step order (PP-11/12/13 + PP-88)
 
     @Test func stepsOrderInStayInTheZoneParticipating() {
         let state = makeState(gameMode: .stayInTheZone)
@@ -71,13 +57,9 @@ struct GameCreationFeatureTests {
         #expect(steps[3] == .duration)
         #expect(steps[4] == .headStart)
         #expect(steps[5] == .gameMode)
-        // PP-11 / PP-12 / PP-13: zone setup as three consecutive
-        // sub-steps in stayInTheZone (default mode).
         #expect(steps[6] == .startZoneSetup)
         #expect(steps[7] == .finalZoneSetup)
         #expect(steps[8] == .zonesRecap)
-        // PP-70 / PP-88: GameMaster password sits with the modifier
-        // toggles at the tail of the wizard.
         #expect(steps[9] == .gameMasterPassword)
         #expect(steps[10] == .powerUps)
         #expect(steps[11] == .chickenSeesHunters)
@@ -90,9 +72,6 @@ struct GameCreationFeatureTests {
         store.exhaustivity = .off
         await store.send(.gameModChanged(.followTheChicken))
         let steps = store.state.steps
-        // PP-12: no `finalCenter` in followTheChicken — the zone
-        // tracks the chicken's live position, so finalZoneSetup is
-        // dropped from the sequence (forward + back). zonesRecap stays.
         #expect(steps.contains(.startZoneSetup))
         #expect(!steps.contains(.finalZoneSetup))
         #expect(steps.contains(.zonesRecap))
@@ -124,8 +103,6 @@ struct GameCreationFeatureTests {
         #expect(store.state.steps.count == 14)
     }
 
-    // MARK: - PP-11 isStartZoneConfigured
-
     @Test func isStartZoneConfiguredFalseAtDefaultBrussels() {
         let state = makeState()
         // Brand-new wizard seeds zone.center on the Brussels default.
@@ -140,8 +117,6 @@ struct GameCreationFeatureTests {
         #expect(state.isStartZoneConfigured == true)
     }
 
-    // MARK: - PP-12 isFinalZoneConfigured (≥ 100 m haversine)
-
     @Test func isFinalZoneConfiguredFalseWithoutFinal() {
         let state = makeState()
         state.$game.withLock {
@@ -151,8 +126,6 @@ struct GameCreationFeatureTests {
     }
 
     @Test func isFinalZoneConfiguredFalseWhenWithin100m() {
-        // ~10 m offset: 0.00009° latitude near 51°N → ~10 m. Well below
-        // PP-12's 100 m threshold so Next stays gated.
         let state = makeState()
         state.$game.withLock {
             $0.zone.center = GeoPoint(latitude: 50.9, longitude: 4.4)
@@ -178,7 +151,7 @@ struct GameCreationFeatureTests {
         state.$game.withLock {
             $0.zone.center = GeoPoint(latitude: 50.9, longitude: 4.4)
         }
-        // followTheChicken: no final pin needed — the zone tracks the
+        // followTheChicken: no final pin needed, the zone tracks the
         // chicken's live position.
         #expect(state.isZoneConfigured == true)
     }
@@ -207,8 +180,6 @@ struct GameCreationFeatureTests {
         await store.send(.gameModChanged(.stayInTheZone))
         #expect(store.state.game.finalLocation != nil)
     }
-
-    // MARK: - PP-13 zonesRecapEntered computes radius + drift seed
 
     @Test func zonesRecapEnteredInStayInTheZoneComputesRadiusFromPins() async {
         let state = makeState()
@@ -239,8 +210,6 @@ struct GameCreationFeatureTests {
         let store = makeStore(state: state)
         store.exhaustivity = .off
         await store.send(.zonesRecapEntered)
-        // PP-14: keep the seed across back-navigations; only the
-        // Shuffle button generates a new one.
         #expect(store.state.game.zone.driftSeed == 42)
     }
 
@@ -256,8 +225,6 @@ struct GameCreationFeatureTests {
         await store.send(.zonesRecapEntered)
         #expect(store.state.game.zone.radius == 2000)
     }
-
-    // MARK: - PP-14 Shuffle button
 
     @Test func shuffleDriftSeedReplacesSeedAndKeepsPins() async {
         let state = makeState()
@@ -277,11 +244,9 @@ struct GameCreationFeatureTests {
         // Pins preserved.
         #expect(store.state.game.startPinLocation.latitude == 50.85)
         #expect(store.state.game.zone.finalCenter?.latitude == 50.86)
-        // Radius preserved — a function of the pins, not the seed.
+        // Radius preserved, a function of the pins, not the seed.
         #expect(store.state.game.zone.radius == 1668)
     }
-
-    // MARK: - Max players (PP-42 / PP-45)
 
     @Test func defaultMaxPlayersRangeIs2To5() {
         let state = makeState()
@@ -346,12 +311,8 @@ struct GameCreationFeatureTests {
         #expect(store.state.currentStepIndex == 0)
     }
 
-    // MARK: - Power-ups (PP-35 default + filter)
-
     @Test func powerUpTypeToggledCannotRemoveLastAvailableTypeInFollowTheChicken() async {
         let state = makeState(gameMode: .followTheChicken)
-        // PP-35 default ships only `zoneFreeze` + `zonePreview`. Seed
-        // every other type ON so the guard below trips on the LAST one.
         state.$game.withLock { game in
             for type in PowerUp.PowerUpType.allCases {
                 if !game.powerUps.enabledTypes.contains(type.rawValue) {
@@ -367,7 +328,7 @@ struct GameCreationFeatureTests {
             await store.send(.powerUpTypeToggled(type))
         }
         #expect(store.state.game.powerUps.enabledTypes.count == 1)
-        // Now try to remove the last one — guard blocks.
+        // Now try to remove the last one, guard blocks.
         if let last = allTypes.last {
             await store.send(.powerUpTypeToggled(last))
         }
@@ -377,7 +338,7 @@ struct GameCreationFeatureTests {
     @Test func powerUpTypeToggledCanRemoveUnavailableTypeInStayInTheZone() async {
         let state = makeState(gameMode: .stayInTheZone)
         // INVISIBILITY ships enabled by default. It's unavailable in
-        // stayInTheZone, so the guard does not apply — one toggle removes it.
+        // stayInTheZone, so the guard does not apply, one toggle removes it.
         #expect(state.game.powerUps.enabledTypes.contains(PowerUp.PowerUpType.invisibility.rawValue))
         let store = makeStore(state: state)
         store.exhaustivity = .off

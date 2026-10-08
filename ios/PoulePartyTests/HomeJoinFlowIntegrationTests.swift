@@ -1,14 +1,3 @@
-//
-//  HomeJoinFlowIntegrationTests.swift
-//  PoulePartyTests
-//
-//  End-to-end TCA tests for the Home ↔ JoinFlow flow.
-//
-//  PP-64: re-enabled after PP-90 retired the registration-required gate.
-//  The old `pendingRegistrationRejoinTapped` action + `PendingRegistration`
-//  type are gone, so the test now only covers the post-PP-90 surface:
-//  the JoinFlow delegate fires `joinGame(_, hunterName:)` and Home
-//  immediately bridges to `hunterGameJoined`.
 
 import ComposableArchitecture
 import FirebaseFirestore

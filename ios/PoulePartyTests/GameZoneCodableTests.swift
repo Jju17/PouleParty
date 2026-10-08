@@ -1,21 +1,3 @@
-//
-//  GameZoneCodableTests.swift
-//  PoulePartyTests
-//
-//  Proves the iOS decode side of the cross-platform `zone` contract enforced
-//  on the server in `functions/src/stripe.ts` + `functions/test/stripe-zone.test.ts`:
-//
-//    - `zone.center` must be a Firestore `GeoPoint` (native type). A plain
-//       `[String: Any]` map crashes Android's Kotlin decoder and fails iOS's
-//       Swift decoder — the 1.9.0 Android crash was exactly that.
-//    - `zone.finalCenter` is `GeoPoint?`. Missing key / explicit `NSNull`
-//       must decode to `nil`. Providing a plain map must fail the decode
-//       (regression guard for the server-side `HashMap-not-GeoPoint` bug).
-//
-//  Uses `Firestore.Decoder()` — the exact same decoder the Firebase SDK
-//  drives inside `DocumentSnapshot.data(as:)`. This is as close to the
-//  production decode path as we can get without spinning up an emulator.
-//
 
 import FirebaseFirestore
 import Testing
@@ -77,7 +59,6 @@ struct GameZoneCodableTests {
             "gameMode": "stayInTheZone",
             "chickenCanSeeHunters": false,
             "foundCode": "1234",
-            // PP-107: membership is the server-owned `roles` map now.
             "roles": ["user-1": "chicken"],
             "status": "waiting",
             "winners": [],
@@ -96,8 +77,6 @@ struct GameZoneCodableTests {
                 "shrinkMetersPerUpdate": 100.0,
                 "driftSeed": 42,
             ] as [String: Any],
-            // PP-90: the `registration` field was retired with PP-90.
-            // No corresponding key in the Game struct anymore.
             "powerUps": [
                 "enabled": true,
                 "enabledTypes": ["radarPing"],
@@ -113,29 +92,9 @@ struct GameZoneCodableTests {
         #expect(game.zone.finalCenter?.longitude == 4.36)
     }
 
-    // MARK: - iOS is permissive where Android is strict
-    //
-    // If the server ever writes `zone.center` as a plain map instead of a
-    // `GeoPoint` (the 1.9.0 regression), Android's Kotlin decoder throws a
-    // `RuntimeException` — iOS's Swift `Firestore.Decoder` silently coerces
-    // the map to a `GeoPoint` because `GeoPoint` itself is `Codable` with
-    // `latitude` + `longitude` Double keys that happen to line up.
-    //
-    // That's the asymmetry the 1.9.0 crash report exposed: same broken doc,
-    // Android crashed, iOS kept going (logged nothing on the happy-ish path,
-    // since the coerced GeoPoint would still deserialize even if imperfectly).
-    //
-    // We DOCUMENT this behaviour with the two tests below instead of asserting
-    // a hard rejection on iOS, because:
-    //   1. The real fix is on the server (already done + TS-tested).
-    //   2. Asserting a hard rejection on iOS would tie us to a Swift/Firebase
-    //      SDK implementation detail that could flip on minor version bumps.
-    //   3. Permissive behaviour here is actually desirable — iOS survived the
-    //      server bug in production.
-
     @Test func permissivelyAcceptsPlainMapForCenter() throws {
         // If some day the server writes this shape again, iOS will keep
-        // working. Android won't — that's why the server-side guarantee is
+        // working. Android won't, that's why the server-side guarantee is
         // the authoritative fix.
         let dict: [String: Any] = [
             "center": ["latitude": 50.85, "longitude": 4.35] as [String: Any],

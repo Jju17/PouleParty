@@ -86,7 +86,7 @@ struct HomeFeatureTests {
         #expect(store.state.isShowingAdminCodeAlert == false)
         #expect(store.state.pendingIsAdminCreation == false)
         if case .alert = store.state.destination {
-            // OK — the wrong-code alert is presented.
+            // OK, the wrong-code alert is presented.
         } else {
             Issue.record("Expected wrong-code alert destination")
         }

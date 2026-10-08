@@ -5,7 +5,7 @@
 //  Shared "Game ended → tap to see leaderboard" banner shown on top
 //  of every active map (chicken / hunter / GameMaster) once the game
 //  reaches `status == .done`. The map stays on screen; tapping the
-//  banner is the only path forward — it sends the parent reducer a
+//  banner is the only path forward, it sends the parent reducer a
 //  delegate that flips the AppFeature state to the Victory page
 //  (which has the canonical "Back to menu" CTA).
 //

@@ -70,7 +70,7 @@ struct MapOverlaysTests {
     }
 
     @Test func pulseAlphaHandlesVeryLargeTimeValues() {
-        // 10 years of seconds — should still be within bounds
+        // 10 years of seconds, should still be within bounds
         let tenYearsSeconds: TimeInterval = 10 * 365 * 24 * 3600
         let alpha = powerUpPulseAlpha(at: tenYearsSeconds, periodSeconds: 2.0, minAlpha: 0.08, maxAlpha: 0.18)
         #expect(alpha >= 0.08 - 0.001)
@@ -80,17 +80,17 @@ struct MapOverlaysTests {
     @Test func pulseAlphaIsContinuousAcrossPeriodBoundary() {
         let justBeforePeriod = powerUpPulseAlpha(at: 1.999, periodSeconds: 2.0)
         let justAfterPeriod = powerUpPulseAlpha(at: 2.001, periodSeconds: 2.0)
-        // Continuous function — no jump between 1.999s and 2.001s
+        // Continuous function, no jump between 1.999s and 2.001s
         #expect(abs(justBeforePeriod - justAfterPeriod) < 0.01)
     }
 
     @Test func pulseAlphaDefaultBoundsAreSaneForOverlayVisibility() {
         // Default min=0.08, max=0.18 means the disc is always visible
-        // but never fully opaque — validates the hardcoded defaults.
+        // but never fully opaque, validates the hardcoded defaults.
         let atMin = powerUpPulseAlpha(at: 1.5, periodSeconds: 2.0)
         let atMax = powerUpPulseAlpha(at: 0.5, periodSeconds: 2.0)
-        #expect(atMin >= 0.05, "Min alpha too low — disc would disappear")
-        #expect(atMax <= 0.25, "Max alpha too high — disc would obscure map")
+        #expect(atMin >= 0.05, "Min alpha too low: disc would disappear")
+        #expect(atMax <= 0.25, "Max alpha too high: disc would obscure map")
     }
 
     @Test func pulseAlphaNegativeTimeStaysWithinBounds() {

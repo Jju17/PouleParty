@@ -23,7 +23,7 @@ struct MaxPlayersStep: GameCreationStepView {
 
             VStack(spacing: 12) {
                 // Both views are always mounted so `@FocusState` can transfer
-                // focus onto the TextField — `if isFocused { TextField } else
+                // focus onto the TextField, `if isFocused { TextField } else
                 // { BangerText }` would unmount the field before focus can
                 // land. Opacity flips the visible one. The TextField uses the
                 // raw Bangers font (skipping BangerText's last-char kerning
@@ -109,7 +109,7 @@ struct MaxPlayersStep: GameCreationStepView {
     }
 
     /// Parse the live input and dispatch a clamped update. Empty / unparseable
-    /// input is treated as "user changed their mind" — we leave the existing
+    /// input is treated as "user changed their mind", we leave the existing
     /// value untouched.
     private func commit() {
         let trimmed = inputText.trimmingCharacters(in: .whitespaces)

@@ -21,7 +21,6 @@ enum MockDemoData {
         game.gameMode = .followTheChicken
         game.chickenCanSeeHunters = true
         game.foundCode = "0000"
-        // PP-107: membership is the `roles` map (chicken + hunters + GM).
         var roles: [String: String] = [chickenUid: "chicken", gameMasterUid: "gameMaster"]
         for hid in hunterIds { roles[hid] = "hunter" }
         game.roles = roles

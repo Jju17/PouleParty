@@ -1,9 +1,3 @@
-//
-//  App.swift
-//  PouleParty
-//
-//  Created by Julien Rahier on 15/03/2024.
-//
 
 import ComposableArchitecture
 import os
@@ -96,7 +90,7 @@ struct AppFeature {
                 state = AppFeature.State.home(HomeFeature.State())
                 return .none
             case let .gameMasterMap(.delegate(.gameEnded(game))):
-                // The GM is a spectator — empty `hunterId` so the
+                // The GM is a spectator, empty `hunterId` so the
                 // Victory leaderboard doesn't highlight any row.
                 state = .victory(VictoryFeature.State(
                     game: game,
@@ -105,16 +99,11 @@ struct AppFeature {
                 ))
                 return .none
             case let .hunterMap(.delegate(.becameChicken(game))):
-                // PP-107: a GameMaster re-designated this hunter as the
-                // chicken mid-`waiting`. Swap to the chicken map and surface
-                // the one-time "you are the new chicken" alert.
                 var chickenState = ChickenMapFeature.State(game: game)
                 chickenState.newChickenAlert = .becameChicken
                 state = AppFeature.State.chickenMap(chickenState)
                 return .none
             case let .chickenMap(.delegate(.becameHunter(game, teamName))):
-                // PP-107: a GameMaster swapped the chicken to someone else;
-                // this player is now a plain hunter. Swap to the hunter map.
                 state = AppFeature.State.hunterMap(
                     HunterMapFeature.State(game: game, hunterName: teamName)
                 )

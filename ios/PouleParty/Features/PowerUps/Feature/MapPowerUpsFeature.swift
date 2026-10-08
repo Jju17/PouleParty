@@ -5,7 +5,7 @@
 //  Child reducer scoped into ChickenMapFeature and HunterMapFeature.
 //  Owns the power-up UI surface (inventory sheet, notification banner,
 //  visible power-up lists). API side-effects (collect/activate writes)
-//  stay in the parent — the child emits a delegate action on activation
+//  stay in the parent, the child emits a delegate action on activation
 //  so the parent can perform the Firestore work.
 //
 
@@ -21,23 +21,17 @@ struct MapPowerUpsFeature {
         var lastActivatedType: PowerUp.PowerUpType? = nil
         var notification: String? = nil
         var showInventory: Bool = false
-        /// IDs of power-ups for which a collect transaction is currently
-        /// in flight. The parent reducer checks this before dispatching a
-        /// new attempt so a 1 Hz timer tick can't spam the server with
-        /// N duplicate transactions while the user stands inside the disc.
-        /// Android has carried the equivalent `collectingPowerUpIds` since
-        /// the power-up rollout; iOS picked up the same guard at 1.11.1.
         var collectingIds: Set<String> = []
     }
 
     enum Action {
         /// User tapped the Activate button in the inventory sheet.
         case activateTapped(PowerUp)
-        /// Transaction succeeded — removes the id from `collectingIds` and
+        /// Transaction succeeded, removes the id from `collectingIds` and
         /// shows a "Collected: <name>!" banner so the user has the same
         /// feedback Android already gives (`BaseMapViewModel.notifyPowerUp`).
         case collectSucceeded(PowerUp)
-        /// Transaction failed — removes the id from `collectingIds` and
+        /// Transaction failed, removes the id from `collectingIds` and
         /// shows a "Failed to collect power-up" banner. Matches the
         /// Android toast path so any future rule / network regression is
         /// visible to the player instead of being swallowed in logs.

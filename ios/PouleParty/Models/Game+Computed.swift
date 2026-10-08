@@ -10,10 +10,6 @@ import FirebaseFirestore
 // MARK: - Coordinate & Date Accessors
 
 extension Game {
-    // MARK: - Roles (PP-107)
-    // `roles` is the stored single source of truth (uid -> role string).
-    // These derived accessors keep every read site working unchanged while
-    // the doc holds one clean map instead of three sprawled id fields.
 
     /// The single chicken's uid, or "" when none is set yet.
     var chickenId: String {
@@ -31,9 +27,6 @@ extension Game {
     func role(of userId: String) -> String? {
         userId.isEmpty ? nil : roles[userId]
     }
-    /// True when [userId] is the player designated as the chicken
-    /// (PP-26 / PP-107). Use this instead of `creatorId == userId`
-    /// everywhere the question is "who runs and hides".
     func isChicken(_ userId: String) -> Bool {
         role(of: userId) == "chicken"
     }
@@ -50,10 +43,6 @@ extension Game {
         }
     }
 
-    /// PP-11 / PP-13 — user-placed start pin. Distinct from `zone.center`
-    /// (the geometric center of the shrinking disc, computed by PP-13).
-    /// Falls back to `zone.center` for legacy games written before the
-    /// `startPin` field existed, so existing readers keep working.
     var startPinLocation: CLLocationCoordinate2D {
         get {
             (self.zone.startPin ?? self.zone.center).toCLCoordinates
@@ -98,10 +87,6 @@ extension Game {
         }
     }
 
-    /// PP-71: post-launch this is the server-stamped real start; before
-    /// the launch (or in auto-start mode) it falls through to the
-    /// planned `start`. Every downstream timer must read this instead
-    /// of `startDate` to stay in sync with the recomputed `end`.
     var effectiveStartDate: Date {
         timing.actualStart?.dateValue() ?? startDate
     }
@@ -144,14 +129,6 @@ extension Game {
         powerUps.activeEffects.jammer.map { now < $0.dateValue() } ?? false
     }
 
-    /// Whether the timed effect associated with this power-up type is
-    /// currently active on the game doc. Used to gate activation — a
-    /// second activation overwrites `powerUps.activeEffects.<field>`,
-    /// shifting the freeze window and desyncing `findLastUpdate`
-    /// between Chicken + Hunter (a 1.11.2 live-test report: the Hunter
-    /// kept seeing the zone frozen after the Chicken's game already
-    /// ended). Blocking the second activation at the UI + reducer
-    /// layer prevents that entirely.
     func isActive(effectOf type: PowerUp.PowerUpType) -> Bool {
         switch type {
         case .invisibility: return isChickenInvisible
@@ -184,11 +161,6 @@ extension Game {
         let freezeDuration = PowerUp.PowerUpType.zoneFreeze.durationSeconds ?? 0
         let freezeStart = freezeEnd?.addingTimeInterval(-freezeDuration)
 
-        // HIGH-10 (audit 2026-05-17): bound the loop and exit early once
-        // the radius has collapsed. Without the cap, a stale game with
-        // an `hunterStartDate` far in the past (timeskew, test left
-        // running) iterates thousands of times per timer tick — the
-        // loop runs on every 1 s timer event on three feature stacks.
         let maxIterations = 10_000
         let interval = TimeInterval(self.zone.shrinkIntervalMinutes * 60)
         var iterations = 0
@@ -204,7 +176,7 @@ extension Game {
                 lastRadius -= Int(self.zone.shrinkMetersPerUpdate)
             }
             // Once the radius is at floor, every later iteration is a
-            // no-op — skip them.
+            // no-op, skip them.
             if lastRadius <= 0 { break }
             iterations += 1
         }

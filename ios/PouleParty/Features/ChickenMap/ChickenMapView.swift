@@ -9,10 +9,6 @@ import SwiftUI
 struct ChickenMapView: View {
     @Bindable var store: StoreOf<ChickenMapFeature>
     @State private var selectedPowerUp: PowerUp?
-    /// HIGH-11 (audit 2026-05-17): mirror of HunterMapView. iOS may
-    /// suspend the background writer loop; on resume we push one fresh
-    /// `chickenLocations/latest` write so hunters don't see a stale
-    /// chicken marker.
     @Environment(\.scenePhase) private var scenePhase
 
     private var subtitle: String {

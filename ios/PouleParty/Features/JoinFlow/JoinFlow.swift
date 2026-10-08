@@ -33,7 +33,6 @@ struct JoinFlowFeature {
         var step: Step = .enteringCode
         var gameMasterPassword: String = ""
         var gameMasterError: String?
-        /// PP-52: registration-code buffer + last error for the paid-event join gate.
         var validationCode: String = ""
         var validationCodeError: String?
 
@@ -180,9 +179,6 @@ struct JoinFlowFeature {
 
             case .joinAsHunterTapped:
                 guard case let .codeValidated(game) = state.step else { return .none }
-                // PP-52: a game linked to a paid registration batch requires the
-                // unique registration code (validated server-side) before the
-                // teamName step. Free games go straight to teamName.
                 if game.registrationBatchId != nil {
                     state.validationCode = ""
                     state.validationCodeError = nil
@@ -242,8 +238,6 @@ struct JoinFlowFeature {
                 state.step = .submittingJoin(game)
                 return .run { send in
                     do {
-                        // PP-107: the server writes the role + the
-                        // `/players/{uid}` team-name doc + membership index.
                         try await apiClient.joinGame(game.id, teamName)
                         await send(.joinSucceeded(game, teamName: teamName))
                     } catch {
@@ -515,8 +509,6 @@ struct JoinFlowView: View {
         }
     }
 
-    // MARK: - GameMaster password form (PP-88)
-
     private func gameMasterPasswordForm(game: Game, isSubmitting: Bool) -> some View {
         VStack(spacing: 20) {
             Spacer().frame(height: 8)
@@ -578,8 +570,6 @@ struct JoinFlowView: View {
             Spacer()
         }
     }
-
-    // MARK: - Validation Code Form (PP-52 paid-event gate)
 
     private func validationCodeForm(game: Game, isSubmitting: Bool) -> some View {
         let canSubmit = !store.validationCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -644,8 +634,6 @@ struct JoinFlowView: View {
             Spacer()
         }
     }
-
-    // MARK: - TeamName Form (PP-90)
 
     private func teamNameForm(game: Game, isSubmitting: Bool) -> some View {
         return VStack(spacing: 20) {

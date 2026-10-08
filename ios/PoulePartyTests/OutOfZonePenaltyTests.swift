@@ -1,24 +1,3 @@
-//
-//  OutOfZonePenaltyTests.swift
-//  PoulePartyTests
-//
-//  PP-37: parity tests for the PP-36 out-of-zone penalty (-1 point /
-//  5 s). Strict mirror of the Android `OutOfZonePenaltyTest` — same
-//  scenarios in the same order, same expected numeric outputs, so a
-//  one-platform drift fails on this side without the other.
-//
-//  Implementation notes:
-//  - The penalty path lives inside `.internal(.timerTicked)` on
-//    `HunterMapFeature`. The reducer overwrites `state.nowDate = .now`
-//    at the top of the tick, so we control timing by seeding
-//    `state.lastPenaltyAt` with a Date offset from `.now`. This avoids
-//    needing a fake clock and keeps the tests fast.
-//  - `state.userLocation` and `state.mapCircle` are left `nil` so the
-//    zone-check block is skipped and `isOutsideZone` keeps the value we
-//    seed.
-//  - `apiClient.applyOutOfZonePenalty` is mocked with a call counter so
-//    we assert "fires exactly N times" for each scenario.
-//
 
 import ComposableArchitecture
 import CoreLocation
@@ -64,7 +43,7 @@ struct OutOfZonePenaltyTests {
 
     /// Two complete 5 s windows fire exactly two penalty writes. TCA's
     /// `TestStore.state` is read-only between actions, so we model the
-    /// "12 s dwell" with two independent stores — one per 5 s window —
+    /// "12 s dwell" with two independent stores, one per 5 s window,
     /// sharing the same call counter. Together they prove the
     /// cumulative property: each elapsed window pays one point. The
     /// "within-the-same-window" half of the property is covered by
@@ -124,7 +103,7 @@ struct OutOfZonePenaltyTests {
     // MARK: - Scenario 3: re-enters just before a tick → no penalty
 
     /// Re-entry resets `lastPenaltyAt` to nil. The next tick checks
-    /// `isOutsideZone` again — if the hunter is back inside, no
+    /// `isOutsideZone` again, if the hunter is back inside, no
     /// penalty fires that tick.
     @Test func reEntersJustBeforeTickFiresNoPenalty() async {
         let calls = LockIsolated(0)
@@ -159,7 +138,7 @@ struct OutOfZonePenaltyTests {
 
     // MARK: - Scenario 4: exits just after a tick → first penalty 5s later
 
-    /// First out-of-zone tick MUST NOT fire immediately — it just
+    /// First out-of-zone tick MUST NOT fire immediately, it just
     /// starts the 5 s window. Mirrors the Android
     /// `firstTickOutOfZoneStartsWindowDoesNotFire` test.
     @Test func firstTickOutOfZoneStartsWindowAndDoesNotFire() async {
@@ -216,7 +195,7 @@ struct OutOfZonePenaltyTests {
     // MARK: - Scenario 6: head-start window → no penalty
 
     /// During the head-start window (chicken running, hunters locked
-    /// in place) the hunter cannot legally be hunting yet — the
+    /// in place) the hunter cannot legally be hunting yet, the
     /// reducer's `hasGameStarted` gate (which checks
     /// `nowDate >= hunterStartDate`) must short-circuit the penalty
     /// path.
@@ -277,7 +256,7 @@ struct OutOfZonePenaltyTests {
     // MARK: - Scenario 9: anti double-count within a 5s window
 
     /// Two ticks fired within the same 5 s window must fire exactly
-    /// one penalty — the `lastPenaltyAt` guard is the anti
+    /// one penalty, the `lastPenaltyAt` guard is the anti
     /// double-count. Models two ticks where the first fires
     /// (lastPenaltyAt was 5 s old, gets bumped to now), and the
     /// second fires immediately after (lastPenaltyAt is now ~0 s

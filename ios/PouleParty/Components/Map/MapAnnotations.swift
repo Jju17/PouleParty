@@ -23,7 +23,7 @@ struct HunterMapMarker: View {
         VStack(spacing: 1) {
             // White text with a 1-px black outline (4 directional
             // shadows) so the label stays readable on both light and
-            // dark map tiles — Mapbox switches palette with the system
+            // dark map tiles, Mapbox switches palette with the system
             // theme so any single colour would fail on one of the two.
             Text(displayName)
                 .font(.system(size: 9, weight: .bold))

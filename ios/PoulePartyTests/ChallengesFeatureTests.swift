@@ -302,9 +302,6 @@ struct ChallengesFeatureTests {
     }
 
     @Test func leaderboardPrefersRegistrationTeamNameOverCompletionTeamName() async {
-        // PP-90: registration teamName is the live source of truth. If the
-        // user edits it post-completion, the leaderboard reflects the new
-        // value rather than the snapshot baked into the completion doc.
         let completions = [makeCompletion(hunterId: "me", ids: ["c1"], total: 5, teamName: "Old Team")]
         let state = ChallengesFeature.State(
             gameId: "g",

@@ -1,13 +1,3 @@
-//
-//  GameRolesTestHelpers.swift
-//  PoulePartyTests
-//
-//  PP-107: `Game.roles` is server-owned and the production accessors
-//  (`chickenId` / `hunterIds` / `gameMasterIds`) are read-only by design.
-//  Tests still need to build fixtures with specific memberships, so these
-//  test-only mutating helpers assemble the `roles` map directly. They live in
-//  the test target only — production code never writes roles.
-//
 
 @testable import PouleParty
 

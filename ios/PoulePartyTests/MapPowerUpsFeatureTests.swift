@@ -168,7 +168,7 @@ struct MapPowerUpsFeatureTests {
         }
 
         await store.send(.delegate(.activated(makePowerUp(id: "whatever"))))
-        // State unchanged — TestStore's exhaustivity guarantees no mutation happened.
+        // State unchanged, TestStore's exhaustivity guarantees no mutation happened.
     }
 
     // MARK: - Sequence: notificationShown then cleared
@@ -230,7 +230,7 @@ struct MapPowerUpsFeatureTests {
         let store = TestStore(initialState: MapPowerUpsFeature.State()) {
             MapPowerUpsFeature()
         }
-        // No state change expected — TestStore exhaustivity guarantees this.
+        // No state change expected, TestStore exhaustivity guarantees this.
         await store.send(.notificationCleared)
     }
 
@@ -239,7 +239,7 @@ struct MapPowerUpsFeatureTests {
             MapPowerUpsFeature()
         }
         await store.send(.inventoryTapped) { $0.showInventory = true }
-        // Second tap does not toggle off — it just re-asserts the open state.
+        // Second tap does not toggle off, it just re-asserts the open state.
         await store.send(.inventoryTapped)
     }
 
@@ -310,7 +310,7 @@ struct MapPowerUpsFeatureTests {
         await store.send(.collectFailed(p, message: ApiErrorCode.powerUpTooFar.message)) {
             $0.collectingIds = []
             $0.notification = ApiErrorCode.powerUpTooFar.message
-            // lastActivatedType stays at its previous value — a failed
+            // lastActivatedType stays at its previous value, a failed
             // collect shouldn't retint the banner to the type that just
             // failed.
         }

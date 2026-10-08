@@ -17,13 +17,10 @@ struct GameFlowIntegrationTests {
     // MARK: - Full hunter found-chicken flow
 
     @Test func hunterFindsChickenEndToEnd() async {
-        // CRIT-2 (audit 2026-05-17): foundCode check is now server-side
-        // via `submitFoundCode`. The integration mock returns invalidCode
-        // for "0000" and success for "4321".
         var game = Game.mock
         game.startDate = .now.addingTimeInterval(-600)
         game.endDate = .now.addingTimeInterval(3000)
-        // game.foundCode no longer used client-side — CF reads from
+        // game.foundCode no longer used client-side, CF reads from
         // /private/security. Kept here for legacy game fixtures.
 
         var state = HunterMapFeature.State(game: game)

@@ -51,7 +51,7 @@ private let hunterActiveAttrs = PoulePartyAttributes(
     totalHunters: 8
 )
 
-// MARK: - Lock Screen — Chicken
+// MARK: - Lock Screen, Chicken
 
 #Preview("🔒 Chicken - Waiting", as: .content, using: chickenAttrs) {
     PoulePartyLiveActivity()
@@ -103,7 +103,7 @@ private let hunterActiveAttrs = PoulePartyAttributes(
     )
 }
 
-// MARK: - Lock Screen — Hunter
+// MARK: - Lock Screen, Hunter
 
 #Preview("🔒 Hunter - Waiting", as: .content, using: hunterAttrs) {
     PoulePartyLiveActivity()

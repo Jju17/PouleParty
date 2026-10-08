@@ -7,7 +7,7 @@
   Manifest enforcement validates each binary independently. The
   PoulePartyWidgets target hosts a Live Activity (lock screen +
   Dynamic Island) that renders `ActivityAttributes` content passed
-  in by the host app — it doesn't collect its own data, doesn't
+  in by the host app: it doesn't collect its own data, doesn't
   hit the network, doesn't read UserDefaults, doesn't touch the
   filesystem. Declared accordingly. Verified absence of Required
   Reason API calls with `grep -rE "UserDefaults|@AppStorage|FileManager"

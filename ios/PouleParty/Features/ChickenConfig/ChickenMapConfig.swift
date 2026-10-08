@@ -1,9 +1,3 @@
-//
-//  ChickenMapConfig.swift
-//  PouleParty
-//
-//  Created by Julien Rahier on 04/04/2024.
-//
 
 import ComposableArchitecture
 import CoreLocation
@@ -51,12 +45,6 @@ struct ChickenMapConfigFeature {
                 return .none
             case let .initialLocationReceived(coordinate):
                 state.cameraRegion = CameraRegion(center: coordinate)
-                // PP-11 / PP-13: seed both `startPin` (user-placed
-                // pin) and `zone.center` (initial disc center) from
-                // the same coordinate. PP-13's recap will later
-                // overwrite `zone.center` with the computed random
-                // center, but `startPin` stays at the user's
-                // placement.
                 state.$game.withLock {
                     $0.startPinLocation = coordinate
                     $0.initialLocation = coordinate
@@ -87,32 +75,17 @@ struct ChickenMapConfigFeature {
                     await send(.initialLocationReceived(firstLocation))
                 }
             case let .mapLocationTapped(coordinate):
-                // PP-11 / PP-12: each step owns one pinMode (forced by
-                // StartZoneSetupStep / FinalZoneSetupStep). The recap step
-                // (PP-13) recomputes the zone radius from the two pins, so
-                // we no longer constrain the final pin to fit inside an
-                // arbitrary slider-controlled radius — only the
-                // ≥ 100 m minimum distance, enforced when the user taps
-                // Next via `isFinalZoneConfigured`.
                 switch state.pinMode {
                 case .finalZone:
                     state.$game.withLock { $0.finalLocation = coordinate }
                     state.finalMarker = MarkerOverlay(title: "Final", coordinate: coordinate)
                 case .start:
-                    // PP-11 / PP-13: write both `startPin` (user's
-                    // placed pin) and `zone.center` (current disc
-                    // center) so the PP-11 preview circle re-centers
-                    // on the new pin until PP-13 picks a non-centered
-                    // computed center.
                     state.$game.withLock {
                         $0.startPinLocation = coordinate
                         $0.initialLocation = coordinate
                     }
                     state.cameraRegion = CameraRegion(center: coordinate)
                     self.updateMapComponents(state: &state)
-                    // If the user moves the start pin close enough that
-                    // the existing final pin falls below 100 m, clear it
-                    // so they're forced to re-place it on PP-12.
                     if let finalCoord = state.game.finalLocation {
                         if distanceMeters(coordinate, finalCoord) < 100 {
                             state.$game.withLock { $0.finalLocation = nil }
@@ -140,9 +113,6 @@ struct ChickenMapConfigFeature {
     }
 
     private func updateMapComponents(state: inout ChickenMapConfigFeature.State) {
-        // PP-11/PP-12 always display the start marker at the
-        // user-placed pin (`startPinLocation`), independently of where
-        // the PP-13 recap may have re-centered the disc.
         state.marker = MarkerOverlay(title: "Start", coordinate: state.game.startPinLocation)
         state.mapCircle = CircleOverlay(
             center: state.game.startPinLocation,
@@ -190,7 +160,6 @@ class AddressSearchHelper: NSObject, ObservableObject, MKLocalSearchCompleterDel
     }
 }
 
-
 struct ChickenMapConfigView: View {
     @Bindable var store: StoreOf<ChickenMapConfigFeature>
     @State private var viewport: Viewport
@@ -227,19 +196,11 @@ struct ChickenMapConfigView: View {
                 // Location button
                 locationButton
 
-                // Bottom bar driven by the current step (PP-11 / PP-12).
-                // The legacy combined `Start zone / Final zone` segmented
-                // picker is gone — each wizard step owns one pinMode,
-                // forced by `StartZoneSetupStep` / `FinalZoneSetupStep`.
                 VStack {
                     Spacer()
                     VStack(spacing: 10) {
                         if store.pinMode == .start
                             && store.currentGame.gameMode == .followTheChicken {
-                            // PP-11: 3-button size picker replaces the
-                            // 500…2000 slider in followTheChicken so the
-                            // chicken picks a familiar T-shirt size
-                            // instead of fiddling with a 14-step slider.
                             zoneSizePicker
                         }
                     }
@@ -257,11 +218,6 @@ struct ChickenMapConfigView: View {
         Map(viewport: $viewport) {
             Puck2D(bearing: .heading)
 
-            // PP-11: preview circle only when the radius is something the
-            // user controls — i.e. `followTheChicken` mode where the
-            // 3-button size picker drives the radius. In `stayInTheZone`
-            // the radius is recomputed at the recap step (PP-13) so
-            // showing a stale 1500m circle would be misleading.
             if let circle = self.store.mapCircle,
                store.currentGame.gameMode == .followTheChicken,
                store.pinMode == .start {
@@ -282,10 +238,6 @@ struct ChickenMapConfigView: View {
             }
 
             if let marker = self.store.marker {
-                // PP-12: on the final step the start pin is read-only —
-                // fade it so the user clearly sees they're now placing
-                // the final pin. Tap routing already gates this (taps in
-                // `.finalZone` mode never touch `initialLocation`).
                 let isStartReadOnly = store.pinMode == .finalZone
                 MapViewAnnotation(coordinate: marker.coordinate) {
                     VStack(spacing: 0) {
@@ -478,10 +430,6 @@ struct ChickenMapConfigView: View {
         .padding(.top, 56)
     }
 
-    /// PP-11 — 3-button size picker shown on the `startZoneSetup` step
-    /// in `followTheChicken` mode. Replaces the 14-step radius slider so
-    /// the chicken picks a familiar T-shirt size instead of fiddling
-    /// with a sub-100m slider increment.
     private var zoneSizePicker: some View {
         let sizes: [(label: String, meters: Double)] = [
             (String(localized: "Small"), 500),

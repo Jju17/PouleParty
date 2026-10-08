@@ -1,9 +1,3 @@
-//
-//  GameRules.swift
-//  PouleParty
-//
-//  Created by Julien Rahier on 17/02/2026.
-//
 
 import SwiftUI
 
@@ -51,7 +45,7 @@ struct GameRulesView: View {
 
             gameModeCard(
                 title: Game.GameMode.followTheChicken.title,
-                description: "The zone shrinks periodically toward the Chicken's position. Hunters don't see the Chicken's exact location — only the zone moving!",
+                description: "The zone shrinks periodically toward the Chicken's position. Hunters don't see the Chicken's exact location, only the zone moving!",
                 details: [
                     "The zone center follows the Chicken's live position",
                     "Hunters see the zone move but not where the Chicken is",
@@ -70,7 +64,7 @@ struct GameRulesView: View {
             )
 
             gameModeCard(
-                title: "Chicken can see hunters 👀",
+                title: String(localized: "Chicken can see hunters 👀"),
                 description: "An option available in any game mode. The Chicken can see all Hunters on her map!",
                 details: [
                     "Hunters send their position to the Chicken",
@@ -99,7 +93,7 @@ struct GameRulesView: View {
                 )
                 settingRow(
                     name: "Radius decline",
-                    explanation: "How many meters the zone shrinks each update."
+                    explanation: "How many metres the zone shrinks each update."
                 )
                 settingRow(
                     name: "Map setup",
@@ -111,7 +105,7 @@ struct GameRulesView: View {
 
     // MARK: - Components
 
-    private func ruleRow(icon: String, text: String) -> some View {
+    private func ruleRow(icon: String, text: LocalizedStringKey) -> some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: icon)
                 .foregroundStyle(Color.CROrange)
@@ -122,7 +116,7 @@ struct GameRulesView: View {
         }
     }
 
-    private func gameModeCard(title: String, description: String, details: [String]) -> some View {
+    private func gameModeCard(title: String, description: LocalizedStringKey, details: [LocalizedStringKey]) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             BangerText(title, size: 22)
                 .foregroundStyle(Color.onBackground)
@@ -131,7 +125,8 @@ struct GameRulesView: View {
                 .font(.system(size: 14))
                 .foregroundStyle(Color.onBackground.opacity(0.7))
 
-            ForEach(details, id: \.self) { detail in
+            ForEach(details.indices, id: \.self) { index in
+                let detail = details[index]
                 HStack(alignment: .top, spacing: 6) {
                     Text(">")
                         .font(.system(size: 14, weight: .bold))
@@ -154,7 +149,7 @@ struct GameRulesView: View {
         )
     }
 
-    private func settingRow(name: String, explanation: String) -> some View {
+    private func settingRow(name: LocalizedStringKey, explanation: LocalizedStringKey) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(name)
                 .font(.gameboy(size: 10))

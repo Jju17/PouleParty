@@ -40,8 +40,6 @@ struct PowerUpsStep: GameCreationStepView {
                 }
 
                 if store.currentGame.powerUps.enabled {
-                    // PP-35: strict filter. Only count and offer power-ups
-                    // that actually work in the current game mode.
                     let available = availablePowerUpTypes(for: store.currentGame.gameMode)
                     let availableRaw = Set(available.map(\.rawValue))
                     let enabledCount = store.currentGame.powerUps.enabledTypes.filter { availableRaw.contains($0) }.count

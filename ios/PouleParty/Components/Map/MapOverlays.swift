@@ -28,11 +28,6 @@ struct ZoneWarningOverlay: View {
     }
 }
 
-/// PP-36: small pill shown below the red zone-warning banner that
-/// surfaces the active -1 point / 5 s penalty so the hunter
-/// understands the cost of staying outside, not just that they
-/// should come back. Hunter-only — the chicken's out-of-zone state
-/// (stayInTheZone mode) has no penalty.
 struct OutOfZonePenaltyOverlay: View {
     var body: some View {
         Text("⚠️ Out of zone: losing points")
@@ -60,7 +55,7 @@ struct CircleOverlay: Equatable {
 ///
 /// Defensive defaults: a non-finite or non-positive radius (or polar latitude)
 /// would otherwise divide by zero / produce NaN and leave the camera blank.
-/// Falls back to zoom 15 in those cases — same as Android `zoomForRadius`.
+/// Falls back to zoom 15 in those cases, same as Android `zoomForRadius`.
 func zoomForRadius(_ radiusMeters: CLLocationDistance, latitude: CLLocationDegrees) -> CGFloat {
     guard radiusMeters.isFinite, radiusMeters > 0 else { return 15 }
     guard latitude.isFinite else { return 15 }
@@ -146,7 +141,7 @@ func zoneOverlayContent(circle: CircleOverlay, overlayColor: UIColor) -> some Ma
         .fillColor(StyleColor(overlayColor))
         .fillOpacity(1.0)
 
-    // Zone border circle — neon glow effect (layered polylines)
+    // Zone border circle, neon glow effect (layered polylines)
     PolylineAnnotation(lineCoordinates: circlePolygon.outerRing.coordinates)
         .lineColor(StyleColor(UIColor(Color.zoneGreen).withAlphaComponent(0.08)))
         .lineWidth(16)
@@ -169,7 +164,7 @@ func zoneOverlayContent(circle: CircleOverlay, overlayColor: UIColor) -> some Ma
 /// Wide HSV hue sweep so successive shrink circles are as distinct
 /// as possible visually while staying on a coherent monotonic curve.
 /// Goes orange (~28°) → yellow → green → cyan → blue → purple →
-/// magenta (~332°) — every neighbouring pair differs by enough hue
+/// magenta (~332°), every neighbouring pair differs by enough hue
 /// for the chicken to read the shrink order at a glance, no matter
 /// how many circles the schedule produces. Stable across iOS +
 /// Android by matching the Kotlin `zonePreviewColor` HSV formula.

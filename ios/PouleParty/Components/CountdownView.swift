@@ -1,9 +1,3 @@
-//
-//  CountdownView.swift
-//  PouleParty
-//
-//  Created by Julien Rahier on 15/03/2024.
-//
 
 import SwiftUI
 
@@ -12,9 +6,6 @@ struct CountdownView: View {
     @Binding var nextUpdateDate: Date?
     var chickenStartDate: Date? = nil
     var hunterStartDate: Date? = nil
-    /// PP-17 — when the game's `endDate` is reached the bar flips to
-    /// the `.ended` phase: red "Overtime:" label + `+MM:SS` delta.
-    /// Optional so legacy callsites (e.g. previews) keep working.
     var endDate: Date? = nil
     var isChicken: Bool = false
 
@@ -22,7 +13,6 @@ struct CountdownView: View {
         case preChickenStart
         case headStart
         case inGame
-        /// PP-17 — game timer has run out; show overtime delta.
         case ended
     }
 
@@ -81,9 +71,6 @@ struct CountdownView: View {
     var body: some View {
         switch phase {
         case .ended:
-            // PP-17: fixed red, no pulsation — phase can last
-            // arbitrarily long. Crossfade between phases is driven by
-            // the parent's `.animation` modifier.
             Text("\(label) \(formatOvertime(now: nowDate, endDate: endDate ?? nowDate))")
                 .foregroundStyle(Color.hunterRed)
                 .transition(.opacity)

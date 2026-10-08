@@ -199,7 +199,7 @@ struct GameTimerLogicTests {
         // `processRadiusUpdate` passes `initialCoordinates` +
         // `initialRadius` as the drift base (not previous center).
         // The resulting circle must fit entirely inside the start
-        // zone — `|C_i − I| + r_i ≤ R₀`.
+        // zone, `|C_i − I| + r_i ≤ R₀`.
         let initialCoords = CLLocationCoordinate2D(latitude: 50.0, longitude: 4.0)
         let result = processRadiusUpdate(
             nextRadiusUpdate: Date.now.addingTimeInterval(-1),
@@ -307,7 +307,7 @@ struct GameTimerLogicTests {
     // MARK: - Zone freeze
 
     @Test func processRadiusUpdateWhenFrozenKeepsRadiusAndAdvancesNextUpdate() {
-        // Regression for "zone freeze breaks hunter game timer" — the
+        // Regression for "zone freeze breaks hunter game timer", the
         // earlier implementation returned `nil` here, which left
         // `state.nextRadiusUpdate` stuck on a past date. The countdown
         // stayed at 00:00 during the freeze and then jumped to a future
@@ -423,7 +423,7 @@ struct GameTimerLogicTests {
     }
 
     /// Hard-coded expected values verified against Android output.
-    /// If these break, cross-platform parity is lost — fix both platforms.
+    /// If these break, cross-platform parity is lost, fix both platforms.
     @Test func seededRandomCrossPlatformParity() {
         #expect(abs(seededRandom(seed: 42, index: 0) - 0.6537157389870546) < 1e-15)
         #expect(abs(seededRandom(seed: 42, index: 1) - 0.7415648787718234) < 1e-15)
@@ -436,7 +436,7 @@ struct GameTimerLogicTests {
 
     @Test func driftCenterHandlesLargeSeed() {
         let base = CLLocationCoordinate2D(latitude: 50.0, longitude: 4.0)
-        // Large seed that could overflow Int32 — tests Int64 wrapping multiplication
+        // Large seed that could overflow Int32, tests Int64 wrapping multiplication
         let result = deterministicDriftCenter(
             basePoint: base,
             oldRadius: 1500,

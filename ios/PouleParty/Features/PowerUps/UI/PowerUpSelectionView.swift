@@ -17,9 +17,6 @@ struct PowerUpSelectionView: View {
         GridItem(.flexible(), spacing: 12),
     ]
 
-    /// PP-35: strict mode filter. Only power-ups that work in the current
-    /// game mode appear at all. No greyed-out "Not available in this mode"
-    /// cards.
     private var availableTypes: [PowerUp.PowerUpType] {
         availablePowerUpTypes(for: gameMode)
     }

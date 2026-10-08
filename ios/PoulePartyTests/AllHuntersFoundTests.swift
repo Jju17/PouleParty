@@ -114,11 +114,6 @@ struct AllHuntersFoundTests {
     // MARK: - Chicken gameUpdated detects all hunters found
 
     @Test func chickenGameUpdatedWithAllHuntersFoundFlipsToGameOver() async {
-        // PP-16: when all hunters find the chicken, the chicken stays
-        // on the map. The reducer flips `isGameOver = true`, pushes the
-        // status to .done server-side, and ends the Live Activity — but
-        // NO `.delegate.allHuntersFound` fires. PP-18's manual
-        // leaderboard CTA is the only path off the map.
         var game = Game.mock
         game.setHunterIds(["h1"])
         game.startDate = .now.addingTimeInterval(-600)

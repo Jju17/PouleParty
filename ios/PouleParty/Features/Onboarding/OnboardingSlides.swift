@@ -1,9 +1,3 @@
-//
-//  OnboardingSlides.swift
-//  PouleParty
-//
-//  Created by Julien Rahier on 14/02/2026.
-//
 
 import CoreLocation
 import SwiftUI
@@ -153,9 +147,6 @@ struct OnboardingLocationSlide: View {
                     Button {
                         onRequestAlways()
                     } label: {
-                        // "Allow" / "Autoriser" / "Toestaan" were rejected
-                        // in 1.11.1 under 5.1.1(iv) for pre-conditioning the
-                        // system prompt. Keep wording neutral.
                         BangerText("Background tracking", size: 18)
                             .foregroundStyle(.white)
                             .padding(.horizontal, 28)
@@ -204,7 +195,7 @@ struct OnboardingLocationSlide: View {
                     Button {
                         onRequestWhenInUse()
                     } label: {
-                        // See the comment on the "Always" button above —
+                        // See the comment on the "Always" button above,
                         // Apple 5.1.1(iv) forbids "Allow" on a custom
                         // button that precedes the system location prompt.
                         BangerText("Set up location", size: 20)

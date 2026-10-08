@@ -96,8 +96,6 @@ struct LocationTrackingEffectsTests {
 
     // MARK: - Radar Ping broadcast decision (regression for stationary-chicken fix)
 
-    /// Core regression guard: when radar ping is active and no invisibility, we
-    /// MUST broadcast — this is what the 1.6.3 timer loop in stayInTheZone relies on.
     @Test func broadcastsDuringRadarPingWhenNotInvisible() {
         let now = Date(timeIntervalSince1970: 1_800_000_000)
         let pingUntil = now.addingTimeInterval(30)
@@ -136,7 +134,7 @@ struct LocationTrackingEffectsTests {
         ) == false)
     }
 
-    /// Invisibility wins over radar ping — matches the followTheChicken
+    /// Invisibility wins over radar ping, matches the followTheChicken
     /// behavior and future-proofs stayInTheZone even though invisibility
     /// isn't spawned there today.
     @Test func invisibilityOverridesRadarPingBroadcast() {

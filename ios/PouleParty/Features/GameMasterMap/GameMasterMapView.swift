@@ -84,11 +84,6 @@ struct GameMasterMapView: View {
                 }
             }
             .animation(.easeInOut(duration: 0.25), value: store.isGameOver)
-            // PP-25: validation queue presents as a fullScreenCover to
-            // avoid sheet stacking conflicts with the hunters / info
-            // sheets attached to the same view (SwiftUI gets confused
-            // with >2 sheet modifiers and may freeze when a new sheet
-            // tries to present while others are pending).
             .fullScreenCover(item: $store.scope(state: \.validationQueue, action: \.validationQueue)) { vqStore in
                 ValidationQueueView(store: vqStore)
             }
@@ -218,9 +213,6 @@ private struct GameMasterHuntersListView: View {
     let canDesignate: Bool
     let onDesignateTapped: (Registration) -> Void
 
-    /// PP-86 — only registered hunters (in `registrations`) who are NOT
-    /// the current chicken can be re-designated. We surface the
-    /// `teamName` rather than the technical UID.
     private var designatableRegistrations: [Registration] {
         registrations.filter { $0.userId != currentChickenId }
     }

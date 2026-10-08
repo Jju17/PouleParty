@@ -1,14 +1,3 @@
-//
-//  RoleRerouteTests.swift
-//  PoulePartyTests
-//
-//  PP-107: when a GameMaster re-designates the chicken mid-`waiting`, both
-//  affected players must re-route from the live game-config stream:
-//  - the new chicken's hunter map emits `.delegate(.becameChicken)` and the
-//    AppFeature swaps the root to `.chickenMap` (with the one-time alert);
-//  - the demoted chicken's map emits `.delegate(.becameHunter)` and the
-//    AppFeature swaps to `.hunterMap`.
-//
 
 import ComposableArchitecture
 import Foundation

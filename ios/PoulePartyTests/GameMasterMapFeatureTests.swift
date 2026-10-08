@@ -1,15 +1,3 @@
-//
-//  GameMasterMapFeatureTests.swift
-//  PoulePartyTests
-//
-//  PP-66: Parity tests for the GameMaster role. Covers
-//  - routing into `GameMasterMap` from the AppFeature
-//  - the `Game.isChicken` model contract used to pick the right map
-//  - the teamName-everywhere rule (PP-90 / 2026-05-08): hunter markers
-//    on the GameMaster map render `teamName`, never `nickname`
-//  - the GameMasterMap reducer's read-only contract (info / drawer
-//    toggles, leave game, designate-chicken confirm/cancel/error)
-//
 
 import ComposableArchitecture
 import CoreLocation
@@ -26,7 +14,7 @@ struct GameMasterMapFeatureTests {
     @Test func gameMasterGameStartedRoutesToGameMasterMap() async {
         // When HomeFeature emits `.gameMasterGameStarted(game)`, the
         // AppFeature must transition the root state into
-        // `.gameMasterMap` — not chickenMap, not hunterMap. This is the
+        // `.gameMasterMap`, not chickenMap, not hunterMap. This is the
         // routing contract for any user landing in `gameMasterIds`.
         var game = Game.mock
         game.id = "gm-routing-1"
@@ -50,11 +38,6 @@ struct GameMasterMapFeatureTests {
     }
 
     @Test func chickenGameStartedRoutesToChickenMapNotGameMasterMap() async {
-        // Defensive: the chicken (creator) tapping their own banner
-        // must land on the chicken map even if they happen to be in
-        // `gameMasterIds` (priority rule per PP-24 / PP-66 spec). The
-        // routing decision happens upstream in `findActiveGame` /
-        // `JoinFlow`; AppFeature merely honours what Home decided.
         var game = Game.mock
         game.id = "chicken-routing-1"
         game.creatorId = "creator-uid"
@@ -103,7 +86,7 @@ struct GameMasterMapFeatureTests {
         // surfaces at unit-test time.
         var game = Game.mock
         game.creatorId = "creator-uid"
-        game.setChickenId("designated-uid")   // PP-26: GM-re-designated chicken
+        game.setChickenId("designated-uid")
         game.setGameMasterIds(["gm-uid"])
         game.setHunterIds(["hunter-uid"])
 
@@ -124,11 +107,9 @@ struct GameMasterMapFeatureTests {
         #expect(!game.isChicken("anyone"))
     }
 
-    // MARK: - teamName display (PP-90 / 2026-05-08)
-
     @Test func hunterAnnotationsUseTeamNameWhenRegistrationKnown() async {
         // Hunter markers on the GameMaster map MUST surface the
-        // registered `teamName` — never the underlying username /
+        // registered `teamName`, never the underlying username /
         // nickname. The reducer rebuilds annotations on every
         // `hunterLocationsUpdated`.
         var game = Game.mock
@@ -266,8 +247,6 @@ struct GameMasterMapFeatureTests {
         }
     }
 
-    // MARK: - Designate chicken (PP-86) — read-only API surface
-
     @Test func designateHunterTappedSetsPendingRegistration() async {
         let store = TestStore(initialState: GameMasterMapFeature.State(game: .mock)) {
             GameMasterMapFeature()
@@ -338,7 +317,7 @@ struct GameMasterMapFeatureTests {
     // MARK: - Read-only stream surface (no power-up tray)
 
     @Test func gameMasterStateExposesEmptyPowerUpTray() {
-        // The GM is a pure observer — every power-up surface in the
+        // The GM is a pure observer, every power-up surface in the
         // shared MapUiState protocol must read empty / no-op so any
         // composable that's reused from ChickenMap / HunterMap won't
         // accidentally render an inventory or trigger collection.

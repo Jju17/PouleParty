@@ -3,7 +3,7 @@
 //  PouleParty
 //
 //  A challenge hunters can complete during a game to score points.
-//  Managed from the Firebase Console — clients are read-only.
+//  Managed from the Firebase Console, clients are read-only.
 //
 
 import FirebaseFirestore
@@ -31,7 +31,7 @@ struct Challenge: Codable, Equatable, Identifiable {
     /// Locale → text with a 2-level cascade: requested locale, then
     /// `"fr"` (the D-Day FR-first audience). Empty strings count as
     /// missing so a partially-populated doc falls through cleanly.
-    /// Returns `""` when both are missing — that surfaces the bug
+    /// Returns `""` when both are missing, that surfaces the bug
     /// immediately in the UI so the admin populates the maps.
     func localizedTitle(_ locale: String) -> String {
         if let v = titleByLocale[locale], !v.isEmpty { return v }

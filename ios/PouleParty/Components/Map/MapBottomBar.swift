@@ -36,9 +36,6 @@ struct MapBottomBar<S: MapFeatureState>: View {
                     endDate: state.game.endDate,
                     isChicken: isChicken
                 )
-                // PP-17: crossfade between phases (inGame → ended,
-                // and the earlier preChickenStart → headStart →
-                // inGame transitions get it for free).
                 .animation(.easeInOut(duration: 0.25), value: state.nowDate >= state.game.endDate)
             }
             Spacer()

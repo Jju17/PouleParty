@@ -1,9 +1,3 @@
-//
-//  PoulePartyWidgetsBundle.swift
-//  PoulePartyWidgets
-//
-//  Created by Julien on 04/03/2026.
-//
 
 import WidgetKit
 import SwiftUI

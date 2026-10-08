@@ -30,7 +30,7 @@ extension NotificationClient: DependencyKey {
             do {
                 _ = try await center.requestAuthorization(options: [.alert, .sound, .badge])
             } catch {
-                // Silently handle — user denied or error
+                // Silently handle, user denied or error
             }
             let settings = await center.notificationSettings()
             // Register for remote notifications now that the user has had a chance to consent.

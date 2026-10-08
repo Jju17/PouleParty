@@ -1,9 +1,3 @@
-//
-//  Onboarding.swift
-//  PouleParty
-//
-//  Created by Julien Rahier on 14/02/2026.
-//
 
 import ComposableArchitecture
 import CoreLocation
@@ -65,7 +59,7 @@ struct OnboardingFeature {
                 }
             case .nextButtonTapped:
                 // Apple 5.1.5: every slide is skippable. Location and
-                // nickname are no longer gates — location is requested
+                // nickname are no longer gates, location is requested
                 // contextually at Create / Join / Start, and an empty
                 // nickname is auto-generated in `.onboardingCompleted`.
                 // The only remaining gate is profanity: if the user typed
@@ -215,7 +209,7 @@ struct OnboardingView: View {
             .animation(.easeInOut(duration: 0.3), value: store.currentPage)
             .ignoresSafeArea(.keyboard)
 
-            // Navigation overlay — pinned to bottom, ignores keyboard
+            // Navigation overlay, pinned to bottom, ignores keyboard
             VStack {
                 Spacer()
 

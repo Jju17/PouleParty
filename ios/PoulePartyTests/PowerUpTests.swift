@@ -108,7 +108,7 @@ struct PowerUpTests {
         #expect(powerUp.type == .radarPing)
     }
 
-    /// Legacy / pre-1.6.2 docs don't have an `id` field — the ApiClient
+    /// Legacy / pre-1.6.2 docs don't have an `id` field, the ApiClient
     /// injects `doc.documentID` before decoding. This test simulates that path.
     @Test func decodesDocWithoutIdAfterInjection() throws {
         var data: [String: Any] = [
@@ -178,7 +178,7 @@ struct PowerUpTests {
 
     /// Strict count parity: 6 types in followTheChicken vs 3 in stayInTheZone.
     /// Mirrors the Android `availablePowerUpTypes counts match parity matrix`
-    /// test — a silent enum addition that bypassed the positional filter
+    /// test, a silent enum addition that bypassed the positional filter
     /// would fail this on one platform without the other and surface the
     /// divergence loudly.
     @Test func availablePowerUpTypesCountsMatchParityMatrix() {
@@ -186,7 +186,7 @@ struct PowerUpTests {
         #expect(availablePowerUpTypes(for: .stayInTheZone).count == 3)
     }
 
-    /// `stayInTheZone` MUST NOT contain any positional power-up — the
+    /// `stayInTheZone` MUST NOT contain any positional power-up, the
     /// chicken does not broadcast its position in that mode so spawning
     /// invisibility / decoy / jammer is wasted. Mirrors the Android
     /// `STAY_IN_THE_ZONE excludes every positional power-up` test.
@@ -207,7 +207,7 @@ struct PowerUpTests {
         #expect(stay.contains(.zoneFreeze))
     }
 
-    /// `followTheChicken` is a passthrough — every enum case lands in the
+    /// `followTheChicken` is a passthrough, every enum case lands in the
     /// returned list. Mirrors the Android
     /// `FOLLOW_THE_CHICKEN is a passthrough of every enum case` test.
     @Test func availablePowerUpTypesFollowTheChickenIsPassthrough() {
@@ -219,7 +219,7 @@ struct PowerUpTests {
 
     /// The Firestore wire format for `enabledTypes` is a `[String]` of raw
     /// values. The strings used by iOS, Android and the TS server MUST
-    /// match exactly — a typo on one platform silently breaks the
+    /// match exactly, a typo on one platform silently breaks the
     /// `stayInTheZone` filter on the server. Locks the wire contract.
     @Test func powerUpTypeRawValuesMatchFirestoreWireContract() {
         let expected: [(PowerUp.PowerUpType, String)] = [
@@ -236,7 +236,7 @@ struct PowerUpTests {
     }
 
     /// The defaults shipped to players (`zoneFreeze` + `zonePreview`)
-    /// must be available in BOTH modes — a player who keeps the defaults
+    /// must be available in BOTH modes, a player who keeps the defaults
     /// in `stayInTheZone` should still see both power-up types spawn.
     /// Guards against a future filter change that would accidentally
     /// strip a default type.

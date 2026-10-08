@@ -338,7 +338,7 @@ struct GameTests {
         let duration = 60.0
         let (interval, decline) = calculateNormalModeSettings(initialRadius: radius, gameDurationMinutes: duration)
 
-        // Game started way longer ago than duration — all shrinks have happened
+        // Game started way longer ago than duration, all shrinks have happened
         let game = Game(
             id: "test",
             timing: .init(
@@ -494,7 +494,7 @@ struct GameTests {
         #expect(game.status == .waiting)
     }
 
-    // PP-90 retired `Game.registration` — registration-required no longer exists.
+    // PP-90 retired `Game.registration`, registration-required no longer exists.
 
     @Test func defaultPowerUpsDisabled() {
         let game = Game(id: "test")
@@ -624,7 +624,7 @@ struct GameTests {
         // 1 min / 5 min interval = 0.2 shrinks (fractional but > 0, passes guard)
         let (interval, decline) = calculateNormalModeSettings(initialRadius: 1500, gameDurationMinutes: 1)
         #expect(interval == 5)
-        // decline = (1500-100) / 0.2 = 7000 — very large but valid
+        // decline = (1500-100) / 0.2 = 7000, very large but valid
         #expect(decline > 0)
     }
 
