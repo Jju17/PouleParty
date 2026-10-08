@@ -4,13 +4,14 @@ import FirebaseFirestore
 import Testing
 @testable import PouleParty
 
+private let testNow = Date(timeIntervalSince1970: 1_790_000_000)
+
 /// A Game.mock with start dates moved into the past so
-/// `state.hasGameStarted == true` once the reducer sets
-/// `state.nowDate = .now`.
+/// `state.hasGameStarted == true` at the pinned `testNow`.
 private var startedGameMock: Game {
     var game = Game.mock
-    game.startDate = .now.addingTimeInterval(-600)   // started 10 min ago
-    game.endDate = .now.addingTimeInterval(3000)      // ends in 50 min
+    game.startDate = testNow.addingTimeInterval(-600)   // started 10 min ago
+    game.endDate = testNow.addingTimeInterval(3000)      // ends in 50 min
     return game
 }
 
@@ -50,10 +51,11 @@ struct OutOfZonePenaltyTests {
     @Test func twelveSecondsOutOfZoneFiresTwoPenalties() async {
         let calls = LockIsolated(0)
         // First 5 s window: lastPenaltyAt rewound 5 s → fires.
-        let firstState = penaltyReadyState(lastPenaltyAt: .now.addingTimeInterval(-5))
+        let firstState = penaltyReadyState(lastPenaltyAt: testNow.addingTimeInterval(-5))
         let firstStore = TestStore(initialState: firstState) {
             HunterMapFeature()
         } withDependencies: {
+            $0.now = .constant(testNow)
             $0.apiClient.applyOutOfZonePenalty = { _ in
                 calls.withValue { $0 += 1 }
             }
@@ -63,10 +65,11 @@ struct OutOfZonePenaltyTests {
         await firstStore.finish()
 
         // Second 5 s window: lastPenaltyAt rewound 5 s → fires again.
-        let secondState = penaltyReadyState(lastPenaltyAt: .now.addingTimeInterval(-5))
+        let secondState = penaltyReadyState(lastPenaltyAt: testNow.addingTimeInterval(-5))
         let secondStore = TestStore(initialState: secondState) {
             HunterMapFeature()
         } withDependencies: {
+            $0.now = .constant(testNow)
             $0.apiClient.applyOutOfZonePenalty = { _ in
                 calls.withValue { $0 += 1 }
             }
@@ -83,10 +86,11 @@ struct OutOfZonePenaltyTests {
     /// Less than a full 5 s window: no penalty fires.
     @Test func fourSecondsOutOfZoneFiresNoPenalty() async {
         let calls = LockIsolated(0)
-        let state = penaltyReadyState(lastPenaltyAt: .now.addingTimeInterval(-4))
+        let state = penaltyReadyState(lastPenaltyAt: testNow.addingTimeInterval(-4))
         let store = TestStore(initialState: state) {
             HunterMapFeature()
         } withDependencies: {
+            $0.now = .constant(testNow)
             $0.apiClient.applyOutOfZonePenalty = { _ in
                 calls.withValue { $0 += 1 }
             }
@@ -111,7 +115,7 @@ struct OutOfZonePenaltyTests {
         // `lastPenaltyAt`. The reducer's `else` branch must reset
         // `lastPenaltyAt` to nil and NOT fire a penalty.
         var state = penaltyReadyState(
-            lastPenaltyAt: .now.addingTimeInterval(-4),
+            lastPenaltyAt: testNow.addingTimeInterval(-4),
             isOutsideZone: false
         )
         // Make sure we don't accidentally enable the zone-check path
@@ -122,6 +126,7 @@ struct OutOfZonePenaltyTests {
         let store = TestStore(initialState: state) {
             HunterMapFeature()
         } withDependencies: {
+            $0.now = .constant(testNow)
             $0.apiClient.applyOutOfZonePenalty = { _ in
                 calls.withValue { $0 += 1 }
             }
@@ -146,6 +151,7 @@ struct OutOfZonePenaltyTests {
         let store = TestStore(initialState: state) {
             HunterMapFeature()
         } withDependencies: {
+            $0.now = .constant(testNow)
             $0.apiClient.applyOutOfZonePenalty = { _ in
                 calls.withValue { $0 += 1 }
             }
@@ -168,17 +174,18 @@ struct OutOfZonePenaltyTests {
         let calls = LockIsolated(0)
         // Pull the game start into the future so `hasGameStarted == false`.
         var game = Game.mock
-        game.startDate = .now.addingTimeInterval(600)  // starts in 10 min
-        game.endDate = .now.addingTimeInterval(4200)
+        game.startDate = testNow.addingTimeInterval(600)  // starts in 10 min
+        game.endDate = testNow.addingTimeInterval(4200)
         var state = HunterMapFeature.State(game: game)
         state.hunterId = "hunter-1"
         state.isOutsideZone = true
-        state.lastPenaltyAt = .now.addingTimeInterval(-10) // ages
+        state.lastPenaltyAt = testNow.addingTimeInterval(-10) // ages
         state.radius = 500
 
         let store = TestStore(initialState: state) {
             HunterMapFeature()
         } withDependencies: {
+            $0.now = .constant(testNow)
             $0.apiClient.applyOutOfZonePenalty = { _ in
                 calls.withValue { $0 += 1 }
             }
@@ -202,18 +209,19 @@ struct OutOfZonePenaltyTests {
         let calls = LockIsolated(0)
         // Chicken started, hunters haven't.
         var game = Game.mock
-        game.startDate = .now.addingTimeInterval(-60)  // 1 min ago
-        game.endDate = .now.addingTimeInterval(3600)
+        game.startDate = testNow.addingTimeInterval(-60)  // 1 min ago
+        game.endDate = testNow.addingTimeInterval(3600)
         game.timing.headStartMinutes = 10              // hunters wait 10 min
         var state = HunterMapFeature.State(game: game)
         state.hunterId = "hunter-1"
         state.isOutsideZone = true
-        state.lastPenaltyAt = .now.addingTimeInterval(-10) // ages
+        state.lastPenaltyAt = testNow.addingTimeInterval(-10) // ages
         state.radius = 500
 
         let store = TestStore(initialState: state) {
             HunterMapFeature()
         } withDependencies: {
+            $0.now = .constant(testNow)
             $0.apiClient.applyOutOfZonePenalty = { _ in
                 calls.withValue { $0 += 1 }
             }
@@ -234,12 +242,13 @@ struct OutOfZonePenaltyTests {
     @Test func isGameOverFiresNoPenalty() async {
         let calls = LockIsolated(0)
         let state = penaltyReadyState(
-            lastPenaltyAt: .now.addingTimeInterval(-10),
+            lastPenaltyAt: testNow.addingTimeInterval(-10),
             isGameOver: true
         )
         let store = TestStore(initialState: state) {
             HunterMapFeature()
         } withDependencies: {
+            $0.now = .constant(testNow)
             $0.apiClient.applyOutOfZonePenalty = { _ in
                 calls.withValue { $0 += 1 }
             }
@@ -262,10 +271,11 @@ struct OutOfZonePenaltyTests {
     /// old, no penalty).
     @Test func twoTicksWithinFiveSecondsFireOnlyOnePenalty() async {
         let calls = LockIsolated(0)
-        let state = penaltyReadyState(lastPenaltyAt: .now.addingTimeInterval(-5))
+        let state = penaltyReadyState(lastPenaltyAt: testNow.addingTimeInterval(-5))
         let store = TestStore(initialState: state) {
             HunterMapFeature()
         } withDependencies: {
+            $0.now = .constant(testNow)
             $0.apiClient.applyOutOfZonePenalty = { _ in
                 calls.withValue { $0 += 1 }
             }
@@ -274,7 +284,7 @@ struct OutOfZonePenaltyTests {
 
         await store.send(.internal(.timerTicked))
         // Don't rewind `lastPenaltyAt`: the reducer just bumped it to
-        // `.now` on the previous tick. A second tick fired
+        // the pinned `now` on the previous tick. A second tick fired
         // immediately must NOT fire another penalty.
         await store.send(.internal(.timerTicked))
 
