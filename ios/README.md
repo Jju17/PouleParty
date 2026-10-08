@@ -15,7 +15,7 @@ PouleParty iOS app built with SwiftUI and The Composable Architecture (TCA).
 ```bash
 xcodebuild -scheme PouleParty -configuration Debug build
 xcodebuild -scheme PoulePartyTests -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.4' test
-xcodebuild -scheme PoulePartySnapshotTests -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.2' test
+xcodebuild -scheme PoulePartySnapshotTests -destination 'platform=iOS Simulator,name=iPhone 16,OS=26.0' test   # SNAPSHOT_RECORD=1 (TEST_RUNNER_SNAPSHOT_RECORD=1) re-records
 ```
 
 Firebase config is copied at build time via a "Copy Firebase Config" build phase (Staging for Debug, Production for Release).

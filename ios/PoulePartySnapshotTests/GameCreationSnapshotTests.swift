@@ -1,8 +1,3 @@
-//
-//  GameCreationSnapshotTests.swift
-//  PoulePartySnapshotTests
-//
-
 import ComposableArchitecture
 import FirebaseFirestore
 import SnapshotTesting
@@ -11,7 +6,8 @@ import Testing
 @testable import PouleParty
 
 @MainActor
-@Suite(.snapshots(record: .missing))
+/// Fails on a missing or different image; run with SNAPSHOT_RECORD=1 to re-record on purpose.
+@Suite(.snapshots(record: ProcessInfo.processInfo.environment["SNAPSHOT_RECORD"] == "1" ? .all : .never))
 struct GameCreationSnapshotTests {
 
     private func makeStore(
