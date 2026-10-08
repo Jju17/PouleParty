@@ -126,10 +126,7 @@ fun HunterMapScreen(
     }
 
     // Shared haptics (countdown / zone warning / power-up / winners)
-    MapHapticsEffect(state, view)
-    LaunchedEffect(state.isGameOver) {
-        if (state.isGameOver) HapticManager.warning(view)
-    }
+    MapHapticsEffect(state, state.isGameOver, view)
     LaunchedEffect(state.showWrongCodeAlert) {
         if (state.showWrongCodeAlert) HapticManager.error(view)
     }

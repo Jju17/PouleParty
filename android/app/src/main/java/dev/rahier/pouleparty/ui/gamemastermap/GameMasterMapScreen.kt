@@ -1,5 +1,7 @@
 package dev.rahier.pouleparty.ui.gamemastermap
 
+import androidx.compose.ui.platform.LocalView
+import dev.rahier.pouleparty.ui.components.MapHapticsEffect
 import dev.rahier.pouleparty.ui.components.FinalZoneOutline
 import dev.rahier.pouleparty.ui.components.ZoneOverlay
 import androidx.compose.ui.res.pluralStringResource
@@ -65,6 +67,7 @@ fun GameMasterMapScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    MapHapticsEffect(state, state.isGameOver, LocalView.current)
 
     LaunchedEffect(viewModel) {
         viewModel.effects.collect { effect ->

@@ -51,7 +51,7 @@ fun FinalZoneSetupStep(
                     stringResource(R.string.final_zone_step_subtitle_done)
                 else
                     stringResource(R.string.final_zone_step_subtitle),
-                style = gameboyStyle(9),
+                style = gameboyStyle(10),
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                 textAlign = TextAlign.Center
             )
@@ -59,7 +59,7 @@ fun FinalZoneSetupStep(
                 Spacer(Modifier.height(4.dp))
                 Text(
                     text = stringResource(R.string.set_start_and_final_zone),
-                    style = gameboyStyle(8),
+                    style = gameboyStyle(10),
                     color = AccentText,
                     textAlign = TextAlign.Center
                 )

@@ -107,7 +107,7 @@ private fun OutlinedMapLabel(text: String) {
             Text(
                 text = text,
                 color = Color.Black,
-                fontSize = 9.sp,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.offset(dx.dp, dy.dp)
@@ -116,7 +116,7 @@ private fun OutlinedMapLabel(text: String) {
         Text(
             text = text,
             color = Color.White,
-            fontSize = 9.sp,
+            fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
         )

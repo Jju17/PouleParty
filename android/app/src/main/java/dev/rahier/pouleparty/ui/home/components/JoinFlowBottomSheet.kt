@@ -282,7 +282,7 @@ private fun TeamNameFormContent(
         Text(
             "Game ${game.gameCode}",
             fontFamily = GameBoyFont,
-            fontSize = 9.sp,
+            fontSize = 10.sp,
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
         )
         Spacer(Modifier.height(8.dp))

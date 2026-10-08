@@ -46,7 +46,7 @@ fun HeadStartStep(
                 stringResource(R.string.wizard_head_start_none)
             else
                 pluralStringResource(R.plurals.wizard_head_start_minutes, headStartMinutes.toInt(), headStartMinutes.toInt()),
-            style = gameboyStyle(9),
+            style = gameboyStyle(10),
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
             textAlign = TextAlign.Center
         )

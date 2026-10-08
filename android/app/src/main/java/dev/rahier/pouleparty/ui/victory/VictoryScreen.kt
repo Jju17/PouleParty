@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.victory
 
+import dev.rahier.pouleparty.ui.common.rememberReducedMotion
 import dev.rahier.pouleparty.ui.common.teamNameOrDefault
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.animation.core.LinearEasing
@@ -45,7 +46,7 @@ fun VictoryScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val isCurrentUserAWinner = state.game.winners.any { it.hunterId == state.hunterId }
-    val showConfetti = isCurrentUserAWinner && !state.isChicken
+    val showConfetti = isCurrentUserAWinner && !state.isChicken && !rememberReducedMotion()
 
     val entries = remember(state.game, state.registrations, state.hunterId, state.isChicken) {
         buildLeaderboardEntries(
@@ -110,7 +111,7 @@ fun VictoryScreen(
                     Spacer(Modifier.height(8.dp))
                     Text(
                         text = stringResource(R.string.this_game_ended_without_any_hunters_joining),
-                        style = gameboyStyle(9),
+                        style = gameboyStyle(10),
                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
                         textAlign = TextAlign.Center,
                         modifier = Modifier.padding(horizontal = 24.dp)

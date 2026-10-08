@@ -1,5 +1,7 @@
 package dev.rahier.pouleparty.ui.home
 
+import android.media.AudioManager
+import dev.rahier.pouleparty.ui.common.rememberReducedMotion
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Settings
 import com.google.firebase.firestore.FirebaseFirestore
@@ -80,14 +82,17 @@ fun HomeScreen(
         }.onFailure { Log.w("HomeScreen", "[music] player unavailable", it) }.getOrNull()
     }
 
+    val phoneIsSilent = remember {
+        context.getSystemService(AudioManager::class.java)?.ringerMode != AudioManager.RINGER_MODE_NORMAL
+    }
+
     DisposableEffect(Unit) {
-        if (!state.isMusicMuted) mediaPlayer?.start()
         onDispose { mediaPlayer?.release() }
     }
 
     LaunchedEffect(state.isMusicMuted) {
         val player = mediaPlayer ?: return@LaunchedEffect
-        if (state.isMusicMuted) {
+        if (state.isMusicMuted || phoneIsSilent) {
             if (player.isPlaying) player.pause()
         } else {
             if (!player.isPlaying) player.start()
@@ -131,7 +136,7 @@ fun HomeScreen(
         viewModel.onIntent(HomeIntent.RefreshActiveGame)
     }
 
-    // Blinking animation for START text
+    val reducedMotion = rememberReducedMotion()
     val infiniteTransition = rememberInfiniteTransition(label = "blink")
     val alpha by infiniteTransition.animateFloat(
         initialValue = 1f,
@@ -172,7 +177,7 @@ fun HomeScreen(
                 modifier = Modifier
                     .width(200.dp)
                     .height(50.dp)
-                    .alpha(alpha)
+                    .alpha(if (reducedMotion) 1f else alpha)
                     .border(4.dp, MaterialTheme.colorScheme.onBackground, RoundedCornerShape(12.dp))
                     .combinedClickable(
                         onClick = { viewModel.onIntent(HomeIntent.StartButtonTapped) },
@@ -326,7 +331,7 @@ fun HomeScreen(
                     Text(
                         stringResource(R.string.rules),
                         fontFamily = GameBoyFont,
-                        fontSize = 8.sp,
+                        fontSize = 10.sp,
                         color = MaterialTheme.colorScheme.onBackground
                     )
                 }
@@ -342,7 +347,7 @@ fun HomeScreen(
                     Text(
                         stringResource(R.string.create_party),
                         fontFamily = GameBoyFont,
-                        fontSize = 8.sp,
+                        fontSize = 10.sp,
                         color = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
                     )

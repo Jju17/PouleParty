@@ -1,5 +1,11 @@
 package dev.rahier.pouleparty.ui.settings
 
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import dev.rahier.pouleparty.ui.theme.AccentText
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.res.pluralStringResource
@@ -114,6 +120,12 @@ fun SettingsScreen(
                         value = state.nickname,
                         onValueChange = { viewModel.onIntent(SettingsIntent.NicknameChanged(it)) },
                         singleLine = true,
+                        isError = state.isShowingProfanityAlert,
+                        supportingText = if (state.isShowingProfanityAlert) {
+                            { Text(stringResource(R.string.inappropriate_nickname_message), color = MaterialTheme.colorScheme.error, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
+                        } else null,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = { viewModel.onIntent(SettingsIntent.SaveNickname) }),
                         textStyle = bangerStyle(22).copy(textAlign = TextAlign.Center),
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
@@ -130,11 +142,20 @@ fun SettingsScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            "${state.nickname.length}/${SettingsViewModel.NICKNAME_MAX_LENGTH}",
-                            style = bangerStyle(14),
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
-                        )
+                        if (state.isShowingNicknameSaved) {
+                            Text(
+                                "✓ " + stringResource(R.string.nickname_saved),
+                                style = bangerStyle(14),
+                                color = MaterialTheme.colorScheme.onBackground,
+                                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                            )
+                        } else {
+                            Text(
+                                "${state.nickname.length}/${SettingsViewModel.NICKNAME_MAX_LENGTH}",
+                                style = bangerStyle(14),
+                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                            )
+                        }
 
                         Button(
                             onClick = { viewModel.onIntent(SettingsIntent.SaveNickname) },
@@ -283,26 +304,6 @@ fun SettingsScreen(
     }
 
     // Dialogs
-    if (state.isShowingNicknameSaved) {
-        AlertDialog(
-            onDismissRequest = { viewModel.onIntent(SettingsIntent.DismissNicknameSaved) },
-            title = { Text(stringResource(R.string.nickname_saved)) },
-            confirmButton = {
-                TextButton(onClick = { viewModel.onIntent(SettingsIntent.DismissNicknameSaved) }) { Text(stringResource(R.string.ok)) }
-            }
-        )
-    }
-
-    if (state.isShowingProfanityAlert) {
-        AlertDialog(
-            onDismissRequest = { viewModel.onIntent(SettingsIntent.DismissProfanityAlert) },
-            title = { Text(stringResource(R.string.inappropriate_nickname)) },
-            text = { Text(stringResource(R.string.inappropriate_nickname_message)) },
-            confirmButton = {
-                TextButton(onClick = { viewModel.onIntent(SettingsIntent.DismissProfanityAlert) }) { Text(stringResource(R.string.ok)) }
-            }
-        )
-    }
 
     if (state.isShowingDeleteConfirmation) {
         AlertDialog(
@@ -440,7 +441,7 @@ private fun MyGamesSection(state: SettingsUiState, viewModel: SettingsViewModel)
                 state.myGames.isEmpty() -> {
                     Text(
                         stringResource(R.string.no_games_yet),
-                        style = gameboyStyle(8),
+                        style = gameboyStyle(10),
                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
                         modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
                         textAlign = TextAlign.Center
@@ -500,7 +501,7 @@ private fun RoleBadge(role: MyGameRole) {
     ) {
         Text(emoji, fontSize = 9.sp)
         Spacer(Modifier.width(3.dp))
-        Text(label, style = gameboyStyle(6), color = Color.White)
+        Text(label, style = gameboyStyle(10), color = Color.White)
     }
 }
 
@@ -548,7 +549,7 @@ private fun GameRow(
                 Spacer(Modifier.width(8.dp))
                 Text(
                     dateFormat(game.startDate),
-                    style = gameboyStyle(7),
+                    style = gameboyStyle(10),
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
                     maxLines = 1,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
@@ -575,7 +576,7 @@ private fun GameStatusBadge(status: GameStatus) {
     }
     Text(
         label,
-        style = gameboyStyle(6),
+        style = gameboyStyle(10),
         color = Color.White,
         modifier = Modifier
             .background(color, RoundedCornerShape(50))
@@ -671,7 +672,7 @@ private fun GameDetailDialog(
 @Composable
 private fun DetailRow(label: String, value: String) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label, style = gameboyStyle(8), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
+        Text(label, style = gameboyStyle(10), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
         Text(value, style = bangerStyle(16), color = MaterialTheme.colorScheme.onBackground)
     }
 }

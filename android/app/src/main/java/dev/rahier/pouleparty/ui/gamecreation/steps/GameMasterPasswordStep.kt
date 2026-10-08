@@ -61,7 +61,7 @@ fun GameMasterPasswordStep(
             )
             Text(
                 text = stringResource(R.string.wizard_gamemaster_secret_hint),
-                style = gameboyStyle(9),
+                style = gameboyStyle(10),
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
                 textAlign = TextAlign.Center,
             )

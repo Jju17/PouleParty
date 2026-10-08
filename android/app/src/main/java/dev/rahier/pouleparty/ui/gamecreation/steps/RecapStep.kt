@@ -134,7 +134,7 @@ fun RecapStep(
                             stringResource(R.string.set_start_and_final_zone)
                         else
                             stringResource(R.string.set_start_zone),
-                        style = gameboyStyle(8),
+                        style = gameboyStyle(10),
                         color = AccentText,
                         modifier = Modifier.fillMaxWidth(),
                         textAlign = TextAlign.Center

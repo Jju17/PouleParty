@@ -117,7 +117,7 @@ fun GameCreationScreen(
             ) {
                 Text(
                     text = "${state.currentStepIndex + 1} / ${state.steps.size}",
-                    style = gameboyStyle(8),
+                    style = gameboyStyle(10),
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                     modifier = Modifier
                         .fillMaxWidth()

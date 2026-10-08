@@ -54,7 +54,7 @@ fun StartZoneSetupStep(
                     stringResource(R.string.start_zone_step_subtitle_follow)
                 else
                     stringResource(R.string.start_zone_step_subtitle_stay),
-                style = gameboyStyle(9),
+                style = gameboyStyle(10),
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                 textAlign = TextAlign.Center
             )
@@ -62,7 +62,7 @@ fun StartZoneSetupStep(
                 Spacer(Modifier.height(4.dp))
                 Text(
                     text = stringResource(R.string.set_start_zone),
-                    style = gameboyStyle(8),
+                    style = gameboyStyle(10),
                     color = AccentText,
                     textAlign = TextAlign.Center
                 )

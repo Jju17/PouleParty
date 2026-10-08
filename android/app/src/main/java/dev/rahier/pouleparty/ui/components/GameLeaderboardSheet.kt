@@ -68,7 +68,7 @@ fun GameLeaderboardSheet(
                 )
                 Text(
                     "No hunter found the chicken in this game",
-                    style = gameboyStyle(9),
+                    style = gameboyStyle(10),
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
                     textAlign = TextAlign.Center
                 )

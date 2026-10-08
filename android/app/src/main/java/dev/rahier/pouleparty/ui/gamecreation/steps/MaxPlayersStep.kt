@@ -136,7 +136,7 @@ fun MaxPlayersStep(
 
         Text(
             text = pluralStringResource(R.plurals.between_x_and_y_hunters, range.last, range.first, range.last),
-            style = gameboyStyle(9),
+            style = gameboyStyle(10),
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(horizontal = 24.dp)

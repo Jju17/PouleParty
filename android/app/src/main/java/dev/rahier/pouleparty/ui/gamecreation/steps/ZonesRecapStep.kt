@@ -226,7 +226,7 @@ private fun ShrinkOrderBadge(index: Int, color: Color) {
             .size(22.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text("$index", style = gameboyStyle(9), color = Color.Black)
+        Text("$index", style = gameboyStyle(10), color = Color.Black)
     }
 }
 
@@ -238,7 +238,7 @@ private fun MapLabel(text: String, background: Color, textColor: Color) {
             .background(background)
             .padding(horizontal = 8.dp, vertical = 4.dp),
     ) {
-        Text(text, style = gameboyStyle(7), color = textColor)
+        Text(text, style = gameboyStyle(10), color = textColor)
     }
 }
 

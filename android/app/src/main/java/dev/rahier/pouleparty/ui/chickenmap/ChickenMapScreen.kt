@@ -121,10 +121,7 @@ fun ChickenMapScreen(
     }
 
     // Shared haptics (countdown / zone warning / power-up / winners)
-    MapHapticsEffect(state, view)
-    LaunchedEffect(state.isGameOver) {
-        if (state.isGameOver) HapticManager.warning(view)
-    }
+    MapHapticsEffect(state, state.isGameOver, view)
 
     var selectedPowerUpType by rememberSaveable { mutableStateOf<PowerUpType?>(null) }
 

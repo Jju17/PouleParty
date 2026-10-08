@@ -109,7 +109,7 @@ internal fun OptionCard(
                 if (subtitle != null) {
                     Text(
                         subtitle,
-                        style = gameboyStyle(7),
+                        style = gameboyStyle(10),
                         color = if (isSelected) Color.White.copy(alpha = 0.8f)
                         else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                     )
@@ -138,12 +138,12 @@ internal fun RecapRow(label: String, value: String) {
     ) {
         Text(
             text = label,
-            style = gameboyStyle(9),
+            style = gameboyStyle(10),
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
         )
         Text(
             text = value,
-            style = gameboyStyle(9),
+            style = gameboyStyle(10),
             color = MaterialTheme.colorScheme.onBackground
         )
     }

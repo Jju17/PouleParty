@@ -87,7 +87,7 @@ fun StartTimeStep(
 
         Text(
             text = stringResource(R.string.wizard_start_time_tap_to_change),
-            style = gameboyStyle(9),
+            style = gameboyStyle(10),
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
         )
 

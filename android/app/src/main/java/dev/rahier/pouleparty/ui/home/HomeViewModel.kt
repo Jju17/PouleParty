@@ -277,7 +277,7 @@ class HomeViewModel @Inject constructor(
 
     init {
         _uiState.update {
-            it.copy(isMusicMuted = prefs.getBoolean(AppConstants.PREF_IS_MUSIC_MUTED, false))
+            it.copy(isMusicMuted = prefs.getBoolean(AppConstants.PREF_IS_MUSIC_MUTED, true))
         }
         checkForActiveGame()
     }

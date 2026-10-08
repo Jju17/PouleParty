@@ -10,7 +10,10 @@ import dev.rahier.pouleparty.ui.map.MapUiState
  * Mirrors the iOS `MapHapticsModifier` view modifier.
  */
 @Composable
-fun MapHapticsEffect(state: MapUiState, view: View) {
+fun MapHapticsEffect(state: MapUiState, isGameOver: Boolean, view: View) {
+    LaunchedEffect(isGameOver) {
+        if (isGameOver) HapticManager.warning(view)
+    }
     LaunchedEffect(state.countdownNumber) {
         if (state.countdownNumber != null) HapticManager.heavyImpact(view)
     }

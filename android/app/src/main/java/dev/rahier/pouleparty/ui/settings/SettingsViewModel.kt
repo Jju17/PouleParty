@@ -148,7 +148,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     private fun onNicknameChanged(name: String) {
-        _uiState.update { it.copy(nickname = name.take(NICKNAME_MAX_LENGTH)) }
+        _uiState.update { it.copy(nickname = name.take(NICKNAME_MAX_LENGTH), isShowingNicknameSaved = false, isShowingProfanityAlert = false) }
     }
 
     private fun saveNickname() {

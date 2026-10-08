@@ -281,7 +281,7 @@ private fun ZoneSizePicker(
                     .padding(vertical = 10.dp),
             ) {
                 Text(label, style = gameboyStyle(10), color = if (isSelected) Color.Black else MaterialTheme.colorScheme.onBackground)
-                Text(subtitle, style = gameboyStyle(7), color = (if (isSelected) Color.Black else MaterialTheme.colorScheme.onBackground).copy(alpha = 0.7f))
+                Text(subtitle, style = gameboyStyle(10), color = (if (isSelected) Color.Black else MaterialTheme.colorScheme.onBackground).copy(alpha = 0.7f))
             }
         }
     }

@@ -222,7 +222,7 @@ private fun PowerUpCard(
                 )
                 Text(
                     stringResource(type.descriptionRes),
-                    fontSize = 9.sp,
+                    fontSize = 11.sp,
                     color = if (isEnabled) textColor.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                     textAlign = TextAlign.Center,
                     maxLines = 3
@@ -230,7 +230,7 @@ private fun PowerUpCard(
                 type.durationSeconds?.let { duration ->
                     Text(
                         "${duration}s",
-                        style = gameboyStyle(8),
+                        style = gameboyStyle(10),
                         color = if (isEnabled) textColor.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                     )
                 }
