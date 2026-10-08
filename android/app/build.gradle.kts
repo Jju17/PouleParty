@@ -5,6 +5,7 @@ plugins {
     id("com.google.gms.google-services")
     id("com.google.firebase.crashlytics")
     id("com.google.devtools.ksp")
+    id("org.jetbrains.kotlinx.kover")
 }
 
 import java.util.Properties
@@ -122,6 +123,7 @@ android {
 kotlin {
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        allWarningsAsErrors.set(true)
     }
 }
 
