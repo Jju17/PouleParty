@@ -116,7 +116,7 @@ fun PowerUpSelectionScreen(
                         textColor = Color.Black
                     )
                 }
-                items(chickenPowerUps) { type ->
+                items(chickenPowerUps, key = { it.name }) { type ->
                     val isEnabled = enabledTypes.contains(type.firestoreValue)
                     PowerUpCard(type = type, isEnabled = isEnabled, onClick = { onToggle(type) })
                 }
@@ -132,7 +132,7 @@ fun PowerUpSelectionScreen(
                         gradient = GradientHunter
                     )
                 }
-                items(hunterPowerUps) { type ->
+                items(hunterPowerUps, key = { it.name }) { type ->
                     val isEnabled = enabledTypes.contains(type.firestoreValue)
                     PowerUpCard(type = type, isEnabled = isEnabled, onClick = { onToggle(type) })
                 }

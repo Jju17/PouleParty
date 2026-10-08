@@ -1,5 +1,9 @@
 package dev.rahier.pouleparty.ui.common
 
+import android.content.res.Configuration
+import androidx.compose.material3.Surface
+import androidx.compose.ui.tooling.preview.Preview
+import dev.rahier.pouleparty.ui.theme.PoulePartyTheme
 import dev.rahier.pouleparty.data.ApiErrorCode
 import dev.rahier.pouleparty.data.ApiException
 import dev.rahier.pouleparty.data.GameRepository
@@ -83,4 +87,15 @@ suspend fun loadGameWithSchedule(
     throw e
 } catch (e: Exception) {
     Result.failure(e)
+}
+
+@Preview(name = "Load error, light")
+@Preview(name = "Load error, dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun LoadStateScreenPreview() {
+    PoulePartyTheme {
+        Surface {
+            LoadStateScreen(LoadState.Failed(R.string.api_error_network), onRetry = {}, onBack = {})
+        }
+    }
 }

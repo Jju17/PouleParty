@@ -1,5 +1,7 @@
 package dev.rahier.pouleparty.ui.chickenmap
 
+import dev.rahier.pouleparty.ui.theme.MapOverlayOffsets
+import androidx.compose.runtime.saveable.rememberSaveable
 import dev.rahier.pouleparty.ui.components.FinalZoneOutline
 import dev.rahier.pouleparty.ui.components.ZoneOverlay
 import androidx.compose.foundation.layout.padding
@@ -123,7 +125,7 @@ fun ChickenMapScreen(
         if (state.isGameOver) HapticManager.warning(view)
     }
 
-    var selectedPowerUpType by remember { mutableStateOf<PowerUpType?>(null) }
+    var selectedPowerUpType by rememberSaveable { mutableStateOf<PowerUpType?>(null) }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -198,7 +200,7 @@ fun ChickenMapScreen(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .statusBarsPadding()
-                .padding(top = 96.dp),
+                .padding(top = MapOverlayOffsets.belowTopBar),
             horizontalAlignment = Alignment.End
         ) {
             IconButton(
@@ -389,7 +391,7 @@ fun ChickenMapScreen(
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier
                     .align(Alignment.TopCenter)
-                    .padding(top = 140.dp)
+                    .padding(top = MapOverlayOffsets.firstBanner)
                     .neonGlow(ZoneDanger, NeonGlowIntensity.SUBTLE, cornerRadius = 12.dp)
                     .background(ZoneDanger.copy(alpha = 0.9f), RoundedCornerShape(12.dp))
                     .padding(horizontal = 24.dp, vertical = 12.dp)

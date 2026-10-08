@@ -63,3 +63,8 @@ val CRDarkSecondaryContainer = Color(0xFF2A3A5C)
 val CRDarkOutline = Color(0xFF3A4A6C)
 val CROrangeDark = Color(0xFFFF8C33)
 val CRPinkDark = Color(0xFFF54D9E)
+
+val PodiumGold = Color(0xFFFFD700)
+val PodiumSilver = Color(0xFFC0C0C0)
+val PodiumBronze = Color(0xFFCD7F32)
+val DebugPurple = Color(0xFF8A2BE2)

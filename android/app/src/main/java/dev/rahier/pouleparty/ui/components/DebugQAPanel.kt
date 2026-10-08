@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.components
 
+import dev.rahier.pouleparty.ui.theme.DebugPurple
 import dev.rahier.pouleparty.R
 import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
@@ -33,7 +34,7 @@ fun DebugQAPanel(
     onEndNow: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val purple = Color(0xFF8A2BE2)
+    val purple = DebugPurple
     Column(
         modifier = modifier
             .background(Color.Black.copy(alpha = 0.55f), RoundedCornerShape(12.dp))

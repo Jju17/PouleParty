@@ -200,7 +200,7 @@ fun ChickenMapConfigScreen(
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     LazyColumn {
-                        items(state.searchResults.take(5)) { result ->
+                        items(state.searchResults.take(5), key = { "${it.latitude},${it.longitude},${it.title}" }) { result ->
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()

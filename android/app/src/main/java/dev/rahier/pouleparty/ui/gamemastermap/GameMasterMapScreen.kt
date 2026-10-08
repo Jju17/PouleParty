@@ -353,7 +353,7 @@ private fun HuntersList(
         )
         Spacer(Modifier.height(16.dp))
         LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(connectedAnnotations) { hunter ->
+            items(connectedAnnotations, key = { it.id }) { hunter ->
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -363,7 +363,7 @@ private fun HuntersList(
             }
             val missing = allHunterIds.filterNot { hid -> connectedAnnotations.any { it.id == hid } }
             if (missing.isNotEmpty()) {
-                items(missing) { hid ->
+                items(missing, key = { it }) { hid ->
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -391,7 +391,7 @@ private fun HuntersList(
                     )
                     Spacer(Modifier.height(8.dp))
                 }
-                items(designatable) { reg ->
+                items(designatable, key = { it.userId }) { reg ->
                     TextButton(
                         onClick = { onDesignateTapped(reg) },
                         modifier = Modifier.fillMaxWidth(),

@@ -1,5 +1,9 @@
 package dev.rahier.pouleparty.ui.challenges
 
+import dev.rahier.pouleparty.ui.theme.PodiumBronze
+import dev.rahier.pouleparty.ui.theme.PodiumSilver
+import dev.rahier.pouleparty.ui.theme.PodiumGold
+import androidx.compose.runtime.saveable.rememberSaveable
 import dev.rahier.pouleparty.model.SubmissionMediaType
 import dev.rahier.pouleparty.ui.gamelogic.LevelProgress
 import androidx.compose.material3.TextButton
@@ -90,12 +94,12 @@ fun ChallengesSheet(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val context = LocalContext.current
-    var pendingCameraUri by remember { mutableStateOf<Uri?>(null) }
+    var pendingCameraUri by rememberSaveable { mutableStateOf<Uri?>(null) }
 
     LaunchedEffect(isClosedForSubmissions) {
         viewModel.setClosedForSubmissions(isClosedForSubmissions)
     }
-    var uploadErrorRes by remember { mutableStateOf<Int?>(null) }
+    var uploadErrorRes by rememberSaveable { mutableStateOf<Int?>(null) }
     LaunchedEffect(Unit) {
         viewModel.effects.collect { effect ->
             when (effect) {
@@ -540,9 +544,9 @@ private fun LeaderboardTabContent(
 @Composable
 private fun TopPlayerRow(rank: Int, entry: LeaderboardHunterEntry) {
     val rankColor = when (rank) {
-        1 -> Color(0xFFFFD700) // Gold
-        2 -> Color(0xFFC0C0C0) // Silver
-        3 -> Color(0xFFCD7F32) // Bronze
+        1 -> PodiumGold
+        2 -> PodiumSilver
+        3 -> PodiumBronze
         else -> Color.Gray
     }
     val rankEmoji = when (rank) {

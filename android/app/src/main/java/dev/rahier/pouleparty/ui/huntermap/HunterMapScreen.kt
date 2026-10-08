@@ -1,5 +1,7 @@
 package dev.rahier.pouleparty.ui.huntermap
 
+import dev.rahier.pouleparty.ui.theme.MapOverlayOffsets
+import androidx.compose.runtime.saveable.rememberSaveable
 import dev.rahier.pouleparty.ui.components.CircleOutline
 import dev.rahier.pouleparty.ui.components.ZoneOverlay
 import androidx.compose.foundation.layout.padding
@@ -141,8 +143,8 @@ fun HunterMapScreen(
         viewModel.onIntent(HunterMapIntent.AppResumed)
     }
 
-    var selectedPowerUpType by remember { mutableStateOf<PowerUpType?>(null) }
-    var isChallengesSheetVisible by remember { mutableStateOf(false) }
+    var selectedPowerUpType by rememberSaveable { mutableStateOf<PowerUpType?>(null) }
+    var isChallengesSheetVisible by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -235,7 +237,7 @@ fun HunterMapScreen(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .statusBarsPadding()
-                    .padding(top = 96.dp),
+                    .padding(top = MapOverlayOffsets.belowTopBar),
                 horizontalAlignment = Alignment.End
             ) {
                 IconButton(
@@ -407,7 +409,7 @@ fun HunterMapScreen(
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier
                         .align(Alignment.TopCenter)
-                        .padding(top = 140.dp)
+                        .padding(top = MapOverlayOffsets.firstBanner)
                         .neonGlow(ZoneDanger, NeonGlowIntensity.SUBTLE, cornerRadius = 12.dp)
                         .background(ZoneDanger.copy(alpha = 0.9f), RoundedCornerShape(12.dp))
                         .padding(horizontal = 24.dp, vertical = 12.dp)
@@ -425,7 +427,7 @@ fun HunterMapScreen(
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier
                         .align(Alignment.TopCenter)
-                        .padding(top = 192.dp)
+                        .padding(top = MapOverlayOffsets.secondBanner)
                         .background(ZoneDanger.copy(alpha = 0.75f), RoundedCornerShape(percent = 50))
                         .padding(horizontal = 14.dp, vertical = 8.dp)
                 )
