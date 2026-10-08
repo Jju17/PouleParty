@@ -442,7 +442,7 @@ struct HomeFeature {
                         logger.info("[home] active game lookup failed once, retrying: \(error.localizedDescription)")
                     }
                     // The first call can fail on a cold start while the auth token refreshes.
-                    try await clock.sleep(for: .seconds(2))
+                    try await clock.sleep(for: .seconds(AppConstants.powerUpNotificationSeconds))
                     do {
                         await emit(try await apiClient.findActiveGame(userId))
                     } catch {
@@ -562,7 +562,8 @@ struct HomeView: View {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) {
                             musicButtonScale = 1.3
                         }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        Task { @MainActor in
+                            do { try await Task.sleep(for: .milliseconds(150)) } catch { return }
                             withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) {
                                 musicButtonScale = 1.0
                             }

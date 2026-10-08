@@ -148,43 +148,6 @@ extension Game {
         String(format: "%04d", Int.random(in: 0...9999))
     }
 
-    func findLastUpdate(now: Date = .now) -> (Date, Int) {
-        var lastUpdate: Date = self.hunterStartDate
-        var lastRadius: Int = Int(self.zone.radius)
-
-        guard zone.shrinkIntervalMinutes > 0 else {
-            return (lastUpdate, lastRadius)
-        }
-
-        // Zone freeze window: skip radius reductions for shrinks inside [freezeStart, freezeEnd)
-        let freezeEnd = powerUps.activeEffects.zoneFreeze?.dateValue()
-        let freezeDuration = PowerUp.PowerUpType.zoneFreeze.durationSeconds ?? 0
-        let freezeStart = freezeEnd?.addingTimeInterval(-freezeDuration)
-
-        let maxIterations = 10_000
-        let interval = TimeInterval(self.zone.shrinkIntervalMinutes * 60)
-        var iterations = 0
-        while lastUpdate.addingTimeInterval(interval) < now && iterations < maxIterations {
-            lastUpdate.addTimeInterval(interval)
-            let isFrozen: Bool
-            if let fs = freezeStart, let fe = freezeEnd {
-                isFrozen = lastUpdate >= fs && lastUpdate < fe
-            } else {
-                isFrozen = false
-            }
-            if !isFrozen {
-                lastRadius -= Int(self.zone.shrinkMetersPerUpdate)
-            }
-            // Once the radius is at floor, every later iteration is a
-            // no-op, skip them.
-            if lastRadius <= 0 { break }
-            iterations += 1
-        }
-
-        lastRadius = max(0, lastRadius)
-        let nextUpdate = lastUpdate.addingTimeInterval(interval)
-        return (nextUpdate, lastRadius)
-    }
 }
 
 // MARK: - Mock

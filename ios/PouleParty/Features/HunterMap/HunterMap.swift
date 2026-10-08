@@ -347,7 +347,7 @@ struct HunterMapFeature {
                         logger.error("Failed to collect power-up id=\(powerUp.id) type=\(powerUp.type.rawValue): \(String(describing: error))")
                         await send(.powerUps(.collectFailed(powerUp, message: error.userMessage)))
                     }
-                    try await clock.sleep(for: .seconds(2))
+                    try await clock.sleep(for: .seconds(AppConstants.powerUpNotificationSeconds))
                     await send(.powerUps(.notificationCleared))
                 }
                 .cancellable(id: CancelID.powerUpNotificationDismiss, cancelInFlight: true)
@@ -362,7 +362,7 @@ struct HunterMapFeature {
                     state.powerUps.notification = String(localized: "\(powerUp.type.displayName) is already active")
                     state.powerUps.lastActivatedType = powerUp.type
                     return .run { send in
-                        try await clock.sleep(for: .seconds(2))
+                        try await clock.sleep(for: .seconds(AppConstants.powerUpNotificationSeconds))
                         await send(.powerUps(.notificationCleared))
                     }
                     .cancellable(id: CancelID.powerUpNotificationDismiss, cancelInFlight: true)
@@ -408,7 +408,7 @@ struct HunterMapFeature {
                         logger.error("Failed to activate power-up \(powerUp.type.rawValue): \(error.localizedDescription)")
                     }
                     analyticsClient.powerUpActivated(type: powerUp.type.rawValue, role: "hunter")
-                    try await clock.sleep(for: .seconds(2))
+                    try await clock.sleep(for: .seconds(AppConstants.powerUpNotificationSeconds))
                     await send(.powerUps(.notificationCleared))
                 }
                 .cancellable(id: CancelID.powerUpNotificationDismiss, cancelInFlight: true)
@@ -795,7 +795,7 @@ struct HunterMapFeature {
                     effects.append(.send(.powerUps(.notificationShown(text: activated.text, type: activated.type))))
                     effects.append(
                         .run { send in
-                            try await clock.sleep(for: .seconds(2))
+                            try await clock.sleep(for: .seconds(AppConstants.powerUpNotificationSeconds))
                             await send(.powerUps(.notificationCleared))
                         }
                         .cancellable(id: CancelID.powerUpNotificationDismiss, cancelInFlight: true)
@@ -904,7 +904,7 @@ struct HunterMapFeature {
                 }
 
                 // Zone check (visual warning only, no elimination)
-                if shouldCheckZone(role: .hunter, gameMod: state.game.gameMode),
+                if shouldCheckZone(role: .hunter, gameMode: state.game.gameMode),
                    let userLoc = state.userLocation,
                    let circle = state.mapCircle {
                     let zoneResult = checkZoneStatus(

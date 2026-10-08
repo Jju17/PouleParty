@@ -13,7 +13,7 @@ struct GameCreationSnapshotTests {
     private func makeStore(
         step: GameCreationStep = .participation,
         isParticipating: Bool = true,
-        gameMod: Game.GameMode = .stayInTheZone,
+        gameMode: Game.GameMode = .stayInTheZone,
         powerUpsEnabled: Bool = false,
         chickenCanSeeHunters: Bool = false,
         duration: Double = 120
@@ -22,7 +22,7 @@ struct GameCreationSnapshotTests {
         game.foundCode = "1234"
         // Fixed date to avoid snapshot diffs from time changes
         game.timing.start = .init(date: Date(timeIntervalSince1970: 1_800_000_000))
-        game.gameMode = gameMod
+        game.gameMode = gameMode
         game.powerUps.enabled = powerUpsEnabled
         game.chickenCanSeeHunters = chickenCanSeeHunters
         game.timing.headStartMinutes = 5
@@ -34,7 +34,7 @@ struct GameCreationSnapshotTests {
             game: shared,
             mapConfigState: mapConfig
         )
-        state.steps = GameCreationFeature.State.recomputedSteps(isParticipating: isParticipating, gameMode: gameMod)
+        state.steps = GameCreationFeature.State.recomputedSteps(isParticipating: isParticipating, gameMode: gameMode)
         state.currentStepIndex = state.steps.firstIndex(of: step) ?? 0
         state.isParticipating = isParticipating
         state.gameDurationMinutes = duration
@@ -94,6 +94,6 @@ struct GameCreationSnapshotTests {
     }
 
     @Test func recapStepFollowChicken() {
-        assertSnapshot(of: makeVC(store: makeStore(step: .recap, gameMod: .followTheChicken)), as: .image(size: size))
+        assertSnapshot(of: makeVC(store: makeStore(step: .recap, gameMode: .followTheChicken)), as: .image(size: size))
     }
 }

@@ -15,9 +15,9 @@ struct ZoneCheckResult: Equatable {
     let distanceToCenter: CLLocationDistance
 }
 
-func shouldCheckZone(role: GameRole, gameMod: Game.GameMode) -> Bool {
+func shouldCheckZone(role: GameRole, gameMode: Game.GameMode) -> Bool {
     if role == .gameMaster { return false }
-    switch gameMod {
+    switch gameMode {
     case .stayInTheZone:
         return true // both chicken and hunters are checked
     case .followTheChicken:
@@ -340,87 +340,6 @@ func deterministicDriftCenter(
     return basePoint
 }
 
-// MARK: - Radius Update
-
-struct RadiusUpdateResult: Equatable {
-    let newRadius: Int
-    let newNextUpdate: Date
-    let newCircle: CircleOverlay?
-    let isGameOver: Bool
-    let gameOverMessage: String?
-}
-
-/// Processes radius update logic. Returns nil if no update is due yet.
-func processRadiusUpdate(
-    nextRadiusUpdate: Date?,
-    currentRadius: Int,
-    radiusDeclinePerUpdate: Double,
-    radiusIntervalUpdate: Double,
-    gameMod: Game.GameMode,
-    initialCoordinates: CLLocationCoordinate2D,
-    currentCircle: CircleOverlay?,
-    driftSeed: Int = 0,
-    isZoneFrozen: Bool = false,
-    finalCoordinates: CLLocationCoordinate2D? = nil,
-    initialRadius: Double = 0,
-    now: Date = .now
-) -> RadiusUpdateResult? {
-    guard let nextUpdate = nextRadiusUpdate, now >= nextUpdate else { return nil }
-    if isZoneFrozen {
-        return RadiusUpdateResult(
-            newRadius: currentRadius,
-            newNextUpdate: nextUpdate.addingTimeInterval(TimeInterval(radiusIntervalUpdate * 60)),
-            newCircle: currentCircle,
-            isGameOver: false,
-            gameOverMessage: nil
-        )
-    }
-
-    let newRadius = currentRadius - Int(radiusDeclinePerUpdate)
-
-    guard newRadius > 0 else {
-        return RadiusUpdateResult(
-            newRadius: currentRadius,
-            newNextUpdate: nextUpdate,
-            newCircle: currentCircle,
-            isGameOver: true,
-            gameOverMessage: "The zone has collapsed!"
-        )
-    }
-
-    let newNextUpdate = nextUpdate.addingTimeInterval(TimeInterval(radiusIntervalUpdate * 60))
-
-    let newCircle: CircleOverlay?
-    if gameMod == .stayInTheZone {
-        // Drift is independent per shrink: candidate sampled from
-        // `disk(initial, R₀ − rᵢ) ∩ disk(final, rᵢ − FINAL −
-        // safety)`. That enforces both product rules directly, new
-        // circle inside start zone, final zone inside new circle,
-        // while leaving successive intermediate circles free to
-        // overlap each other.
-        let driftedCenter = deterministicDriftCenter(
-            basePoint: initialCoordinates,
-            oldRadius: initialRadius,
-            newRadius: Double(newRadius),
-            driftSeed: driftSeed,
-            finalCenter: finalCoordinates
-        )
-        newCircle = CircleOverlay(center: driftedCenter, radius: CLLocationDistance(newRadius))
-    } else if let currentCircle {
-        newCircle = CircleOverlay(center: currentCircle.center, radius: CLLocationDistance(newRadius))
-    } else {
-        newCircle = nil
-    }
-
-    return RadiusUpdateResult(
-        newRadius: newRadius,
-        newNextUpdate: newNextUpdate,
-        newCircle: newCircle,
-        isGameOver: false,
-        gameOverMessage: nil
-    )
-}
-
 // MARK: - Debug Preview (all shifted circles at once)
 
 /// A single preview circle entry returned by
@@ -541,27 +460,6 @@ func checkLiveActivityUpdate(
 ) -> LiveActivityUpdate? {
     guard currentState != lastState else { return nil }
     return LiveActivityUpdate(newState: currentState, didChange: true)
-}
-
-// MARK: - Radar Ping Broadcast
-
-/// Decides whether the chicken should force-broadcast its location while a
-/// Radar Ping is active in stayInTheZone mode. Pure function, all time-based
-/// inputs are explicit so the caller drives the clock in tests.
-///
-/// Returns `true` only when radar ping is live **and** the chicken is not
-/// invisible (safety net, invisibility isn't spawned in stayInTheZone today,
-/// but if it ever leaks through, it wins over radar ping, matching the
-/// followTheChicken behavior).
-func shouldBroadcastDuringRadarPing(
-    now: Date,
-    radarPingUntil: Date?,
-    invisibilityUntil: Date?
-) -> Bool {
-    let isRadarPinged = radarPingUntil.map { now < $0 } ?? false
-    guard isRadarPinged else { return false }
-    let isInvisible = invisibilityUntil.map { now < $0 } ?? false
-    return !isInvisible
 }
 
 // MARK: - Jammer Noise

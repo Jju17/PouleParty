@@ -181,7 +181,7 @@ struct GameMasterMapView: View {
                 if store.game.status == .readyToLaunch {
                     PreGameOverlay(
                         role: .gameMaster,
-                        gameModTitle: store.game.gameMode.title,
+                        gameModeTitle: store.game.gameMode.title,
                         gameCode: store.game.gameCode,
                         targetDate: store.game.startDate,
                         nowDate: store.nowDate,
@@ -195,7 +195,7 @@ struct GameMasterMapView: View {
                 } else if !store.hasGameStarted {
                     PreGameOverlay(
                         role: .gameMaster,
-                        gameModTitle: store.game.gameMode.title,
+                        gameModeTitle: store.game.gameMode.title,
                         gameCode: store.game.gameCode,
                         targetDate: store.game.startDate,
                         nowDate: store.nowDate,

@@ -15,10 +15,9 @@ struct GameCodeRow: View {
                 withAnimation {
                     codeCopied = true
                 }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-                    withAnimation {
-                        codeCopied = false
-                    }
+                Task { @MainActor in
+                    do { try await Task.sleep(for: .seconds(AppConstants.codeCopyFeedbackSeconds)) } catch { return }
+                    withAnimation { codeCopied = false }
                 }
             } label: {
                 Image(systemName: codeCopied ? "checkmark" : "doc.on.doc")

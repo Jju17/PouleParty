@@ -54,7 +54,7 @@ struct GameStartCountdownOverlay: View {
 ///   hunter): passive "Waiting for the chicken to launch" message.
 struct PreGameOverlay: View {
     let role: GameRole
-    let gameModTitle: String
+    let gameModeTitle: String
     let gameCode: String?
     let targetDate: Date
     let nowDate: Date
@@ -124,7 +124,7 @@ struct PreGameOverlay: View {
                     BangerText(headerTitle, size: 32)
                         .foregroundStyle(.white)
 
-                    Text(gameModTitle)
+                    Text(gameModeTitle)
                         .font(.system(.callout))
                         .foregroundStyle(.white.opacity(0.7))
 
@@ -132,7 +132,8 @@ struct PreGameOverlay: View {
                         Button {
                             UIPasteboard.general.string = code
                             withAnimation { codeCopied = true }
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                            Task { @MainActor in
+                                do { try await Task.sleep(for: .seconds(AppConstants.codeCopyFeedbackSeconds)) } catch { return }
                                 withAnimation { codeCopied = false }
                             }
                         } label: {

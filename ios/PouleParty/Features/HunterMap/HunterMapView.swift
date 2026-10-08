@@ -107,7 +107,7 @@ struct HunterMapView: View {
                 if store.game.status == .readyToLaunch {
                     PreGameOverlay(
                         role: .hunter,
-                        gameModTitle: store.game.gameMode.title,
+                        gameModeTitle: store.game.gameMode.title,
                         gameCode: nil,
                         targetDate: store.game.hunterStartDate,
                         nowDate: store.nowDate,
@@ -117,7 +117,7 @@ struct HunterMapView: View {
                 } else if !store.hasGameStarted {
                     PreGameOverlay(
                         role: .hunter,
-                        gameModTitle: store.game.gameMode.title,
+                        gameModeTitle: store.game.gameMode.title,
                         gameCode: nil,
                         targetDate: store.game.hunterStartDate,
                         nowDate: store.nowDate,

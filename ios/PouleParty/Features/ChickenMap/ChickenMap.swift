@@ -268,7 +268,7 @@ struct ChickenMapFeature {
                         logger.error("Failed to collect power-up id=\(powerUp.id) type=\(powerUp.type.rawValue): \(String(describing: error))")
                         await send(.powerUps(.collectFailed(powerUp, message: error.userMessage)))
                     }
-                    try await clock.sleep(for: .seconds(2))
+                    try await clock.sleep(for: .seconds(AppConstants.powerUpNotificationSeconds))
                     await send(.powerUps(.notificationCleared))
                 }
                 .cancellable(id: CancelID.powerUpNotificationDismiss, cancelInFlight: true)
@@ -277,7 +277,7 @@ struct ChickenMapFeature {
                     state.powerUps.notification = String(localized: "\(powerUp.type.displayName) is already active")
                     state.powerUps.lastActivatedType = powerUp.type
                     return .run { send in
-                        try await clock.sleep(for: .seconds(2))
+                        try await clock.sleep(for: .seconds(AppConstants.powerUpNotificationSeconds))
                         await send(.powerUps(.notificationCleared))
                     }
                     .cancellable(id: CancelID.powerUpNotificationDismiss, cancelInFlight: true)
@@ -294,7 +294,7 @@ struct ChickenMapFeature {
                         logger.error("Failed to activate power-up \(powerUp.type.rawValue): \(error.localizedDescription)")
                     }
                     analyticsClient.powerUpActivated(type: powerUp.type.rawValue, role: "chicken")
-                    try await clock.sleep(for: .seconds(2))
+                    try await clock.sleep(for: .seconds(AppConstants.powerUpNotificationSeconds))
                     await send(.powerUps(.notificationCleared))
                 }
                 .cancellable(id: CancelID.powerUpNotificationDismiss, cancelInFlight: true)
@@ -343,7 +343,7 @@ struct ChickenMapFeature {
                     effects.append(.send(.powerUps(.notificationShown(text: activated.text, type: activated.type))))
                     effects.append(
                         .run { send in
-                            try await clock.sleep(for: .seconds(2))
+                            try await clock.sleep(for: .seconds(AppConstants.powerUpNotificationSeconds))
                             await send(.powerUps(.notificationCleared))
                         }
                         .cancellable(id: CancelID.powerUpNotificationDismiss, cancelInFlight: true)
@@ -767,7 +767,7 @@ struct ChickenMapFeature {
                 }
 
                 // Zone check (visual warning only, no elimination)
-                if shouldCheckZone(role: .chicken, gameMod: state.game.gameMode),
+                if shouldCheckZone(role: .chicken, gameMode: state.game.gameMode),
                    let userLoc = state.userLocation,
                    let circle = state.mapCircle {
                     let zoneResult = checkZoneStatus(

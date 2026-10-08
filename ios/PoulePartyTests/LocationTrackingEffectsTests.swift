@@ -96,69 +96,6 @@ struct LocationTrackingEffectsTests {
 
     // MARK: - Radar Ping broadcast decision (regression for stationary-chicken fix)
 
-    @Test func broadcastsDuringRadarPingWhenNotInvisible() {
-        let now = Date(timeIntervalSince1970: 1_800_000_000)
-        let pingUntil = now.addingTimeInterval(30)
-        #expect(shouldBroadcastDuringRadarPing(
-            now: now,
-            radarPingUntil: pingUntil,
-            invisibilityUntil: nil
-        ) == true)
-    }
-
-    @Test func doesNotBroadcastWhenPingIsNil() {
-        let now = Date(timeIntervalSince1970: 1_800_000_000)
-        #expect(shouldBroadcastDuringRadarPing(
-            now: now,
-            radarPingUntil: nil,
-            invisibilityUntil: nil
-        ) == false)
-    }
-
-    @Test func doesNotBroadcastWhenPingExpired() {
-        let now = Date(timeIntervalSince1970: 1_800_000_000)
-        let pingExpired = now.addingTimeInterval(-1)
-        #expect(shouldBroadcastDuringRadarPing(
-            now: now,
-            radarPingUntil: pingExpired,
-            invisibilityUntil: nil
-        ) == false)
-    }
-
-    @Test func doesNotBroadcastAtExactExpiryBoundary() {
-        let now = Date(timeIntervalSince1970: 1_800_000_000)
-        #expect(shouldBroadcastDuringRadarPing(
-            now: now,
-            radarPingUntil: now,
-            invisibilityUntil: nil
-        ) == false)
-    }
-
-    /// Invisibility wins over radar ping, matches the followTheChicken
-    /// behavior and future-proofs stayInTheZone even though invisibility
-    /// isn't spawned there today.
-    @Test func invisibilityOverridesRadarPingBroadcast() {
-        let now = Date(timeIntervalSince1970: 1_800_000_000)
-        let pingUntil = now.addingTimeInterval(30)
-        let invisUntil = now.addingTimeInterval(15)
-        #expect(shouldBroadcastDuringRadarPing(
-            now: now,
-            radarPingUntil: pingUntil,
-            invisibilityUntil: invisUntil
-        ) == false)
-    }
-
-    @Test func expiredInvisibilityDoesNotBlockRadarPingBroadcast() {
-        let now = Date(timeIntervalSince1970: 1_800_000_000)
-        let pingUntil = now.addingTimeInterval(30)
-        let invisExpired = now.addingTimeInterval(-5)
-        #expect(shouldBroadcastDuringRadarPing(
-            now: now,
-            radarPingUntil: pingUntil,
-            invisibilityUntil: invisExpired
-        ) == true)
-    }
-
     // MARK: - Decoy
 
     @Test func decoyActiveCreatesFakePosition() {
@@ -206,19 +143,19 @@ struct LocationTrackingEffectsTests {
     // MARK: - Zone Check by Role and Mode
 
     @Test func shouldCheckZoneChickenInFollowTheChickenIsFalse() {
-        #expect(shouldCheckZone(role: .chicken, gameMod: .followTheChicken) == false)
+        #expect(shouldCheckZone(role: .chicken, gameMode: .followTheChicken) == false)
     }
 
     @Test func shouldCheckZoneHunterInFollowTheChickenIsTrue() {
-        #expect(shouldCheckZone(role: .hunter, gameMod: .followTheChicken) == true)
+        #expect(shouldCheckZone(role: .hunter, gameMode: .followTheChicken) == true)
     }
 
     @Test func shouldCheckZoneChickenInStayInTheZoneIsTrue() {
-        #expect(shouldCheckZone(role: .chicken, gameMod: .stayInTheZone) == true)
+        #expect(shouldCheckZone(role: .chicken, gameMode: .stayInTheZone) == true)
     }
 
     @Test func shouldCheckZoneHunterInStayInTheZoneIsTrue() {
-        #expect(shouldCheckZone(role: .hunter, gameMod: .stayInTheZone) == true)
+        #expect(shouldCheckZone(role: .hunter, gameMode: .stayInTheZone) == true)
     }
 
     // MARK: - Combined Effects

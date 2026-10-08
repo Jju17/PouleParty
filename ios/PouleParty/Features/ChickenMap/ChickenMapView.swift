@@ -125,7 +125,7 @@ struct ChickenMapView: View {
                 if store.game.status == .readyToLaunch {
                     PreGameOverlay(
                         role: .chicken,
-                        gameModTitle: store.game.gameMode.title,
+                        gameModeTitle: store.game.gameMode.title,
                         gameCode: store.game.gameCode,
                         targetDate: store.game.startDate,
                         nowDate: store.nowDate,
@@ -140,7 +140,7 @@ struct ChickenMapView: View {
                 } else if !store.hasGameStarted {
                     PreGameOverlay(
                         role: .chicken,
-                        gameModTitle: store.game.gameMode.title,
+                        gameModeTitle: store.game.gameMode.title,
                         gameCode: store.game.gameCode,
                         targetDate: store.game.startDate,
                         nowDate: store.nowDate,

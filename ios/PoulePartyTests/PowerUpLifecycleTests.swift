@@ -298,7 +298,7 @@ struct PowerUpLifecycleTests {
             currentRadius: 1000,
             radiusDeclinePerUpdate: 100,
             radiusIntervalUpdate: 5,
-            gameMod: .followTheChicken,
+            gameMode: .followTheChicken,
             initialCoordinates: CLLocationCoordinate2D(latitude: 50.8466, longitude: 4.3528),
             currentCircle: CircleOverlay(
                 center: CLLocationCoordinate2D(latitude: 50.8466, longitude: 4.3528),
@@ -322,7 +322,7 @@ struct PowerUpLifecycleTests {
             currentRadius: 1000,
             radiusDeclinePerUpdate: 100,
             radiusIntervalUpdate: 5,
-            gameMod: .followTheChicken,
+            gameMode: .followTheChicken,
             initialCoordinates: CLLocationCoordinate2D(latitude: 50.8466, longitude: 4.3528),
             currentCircle: CircleOverlay(
                 center: CLLocationCoordinate2D(latitude: 50.8466, longitude: 4.3528),

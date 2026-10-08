@@ -141,7 +141,7 @@ struct GameTimerLogicTests {
             currentRadius: 1500,
             radiusDeclinePerUpdate: 100,
             radiusIntervalUpdate: 5,
-            gameMod: .followTheChicken,
+            gameMode: .followTheChicken,
             initialCoordinates: CLLocationCoordinate2D(latitude: 50.0, longitude: 4.0),
             currentCircle: nil
         )
@@ -154,7 +154,7 @@ struct GameTimerLogicTests {
             currentRadius: 1500,
             radiusDeclinePerUpdate: 100,
             radiusIntervalUpdate: 5,
-            gameMod: .followTheChicken,
+            gameMode: .followTheChicken,
             initialCoordinates: CLLocationCoordinate2D(latitude: 50.0, longitude: 4.0),
             currentCircle: nil
         )
@@ -167,7 +167,7 @@ struct GameTimerLogicTests {
             currentRadius: 1500,
             radiusDeclinePerUpdate: 100,
             radiusIntervalUpdate: 5,
-            gameMod: .followTheChicken,
+            gameMode: .followTheChicken,
             initialCoordinates: CLLocationCoordinate2D(latitude: 50.0, longitude: 4.0),
             currentCircle: CircleOverlay(
                 center: CLLocationCoordinate2D(latitude: 50.0, longitude: 4.0),
@@ -185,7 +185,7 @@ struct GameTimerLogicTests {
             currentRadius: 100,
             radiusDeclinePerUpdate: 100,
             radiusIntervalUpdate: 5,
-            gameMod: .followTheChicken,
+            gameMode: .followTheChicken,
             initialCoordinates: CLLocationCoordinate2D(latitude: 50.0, longitude: 4.0),
             currentCircle: nil
         )
@@ -206,7 +206,7 @@ struct GameTimerLogicTests {
             currentRadius: 1500,
             radiusDeclinePerUpdate: 100,
             radiusIntervalUpdate: 5,
-            gameMod: .stayInTheZone,
+            gameMode: .stayInTheZone,
             initialCoordinates: initialCoords,
             currentCircle: CircleOverlay(center: initialCoords, radius: 1500),
             driftSeed: 12345,
@@ -322,7 +322,7 @@ struct GameTimerLogicTests {
             currentRadius: 1500,
             radiusDeclinePerUpdate: 100,
             radiusIntervalUpdate: 5,
-            gameMod: .stayInTheZone,
+            gameMode: .stayInTheZone,
             initialCoordinates: CLLocationCoordinate2D(latitude: 50.8466, longitude: 4.3528),
             currentCircle: nil,
             isZoneFrozen: true
@@ -340,7 +340,7 @@ struct GameTimerLogicTests {
             currentRadius: 1500,
             radiusDeclinePerUpdate: 100,
             radiusIntervalUpdate: 5,
-            gameMod: .stayInTheZone,
+            gameMode: .stayInTheZone,
             initialCoordinates: CLLocationCoordinate2D(latitude: 50.8466, longitude: 4.3528),
             currentCircle: nil,
             isZoneFrozen: false
@@ -352,19 +352,19 @@ struct GameTimerLogicTests {
     // MARK: - shouldCheckZone
 
     @Test func shouldCheckZoneChickenStayInTheZone() {
-        #expect(shouldCheckZone(role: .chicken, gameMod: .stayInTheZone) == true)
+        #expect(shouldCheckZone(role: .chicken, gameMode: .stayInTheZone) == true)
     }
 
     @Test func shouldCheckZoneHunterStayInTheZone() {
-        #expect(shouldCheckZone(role: .hunter, gameMod: .stayInTheZone) == true)
+        #expect(shouldCheckZone(role: .hunter, gameMode: .stayInTheZone) == true)
     }
 
     @Test func shouldCheckZoneChickenFollowTheChicken() {
-        #expect(shouldCheckZone(role: .chicken, gameMod: .followTheChicken) == false)
+        #expect(shouldCheckZone(role: .chicken, gameMode: .followTheChicken) == false)
     }
 
     @Test func shouldCheckZoneHunterFollowTheChicken() {
-        #expect(shouldCheckZone(role: .hunter, gameMod: .followTheChicken) == true)
+        #expect(shouldCheckZone(role: .hunter, gameMode: .followTheChicken) == true)
     }
 
     // MARK: - checkZoneStatus
@@ -665,7 +665,7 @@ struct GameTimerLogicTests {
             currentRadius: 1500,
             radiusDeclinePerUpdate: 0,
             radiusIntervalUpdate: 5,
-            gameMod: .followTheChicken,
+            gameMode: .followTheChicken,
             initialCoordinates: CLLocationCoordinate2D(latitude: 50.0, longitude: 4.0),
             currentCircle: CircleOverlay(center: CLLocationCoordinate2D(latitude: 50.0, longitude: 4.0), radius: 1500)
         )
@@ -681,7 +681,7 @@ struct GameTimerLogicTests {
             currentRadius: 1500,
             radiusDeclinePerUpdate: 0.9,
             radiusIntervalUpdate: 5,
-            gameMod: .followTheChicken,
+            gameMode: .followTheChicken,
             initialCoordinates: CLLocationCoordinate2D(latitude: 50.0, longitude: 4.0),
             currentCircle: CircleOverlay(center: CLLocationCoordinate2D(latitude: 50.0, longitude: 4.0), radius: 1500)
         )
@@ -695,7 +695,7 @@ struct GameTimerLogicTests {
             currentRadius: 50,
             radiusDeclinePerUpdate: 100,
             radiusIntervalUpdate: 5,
-            gameMod: .followTheChicken,
+            gameMode: .followTheChicken,
             initialCoordinates: CLLocationCoordinate2D(latitude: 50.0, longitude: 4.0),
             currentCircle: nil
         )
@@ -710,7 +710,7 @@ struct GameTimerLogicTests {
             currentRadius: 1500,
             radiusDeclinePerUpdate: 100,
             radiusIntervalUpdate: 5,
-            gameMod: .followTheChicken,
+            gameMode: .followTheChicken,
             initialCoordinates: CLLocationCoordinate2D(latitude: 50.0, longitude: 4.0),
             currentCircle: nil // no circle yet (chicken hasn't shared location)
         )
