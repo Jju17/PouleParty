@@ -1,5 +1,7 @@
 {
   "projects": {
-    "default": "pouleparty-ba586"
+    "default": "pouleparty-ba586",
+    "staging": "pouleparty-ba586",
+    "production": "pouleparty-prod"
   }
 }

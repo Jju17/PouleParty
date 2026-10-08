@@ -25,7 +25,8 @@ workflows:
         - content: |
             #!/bin/bash
             set -e
-            echo "$GOOGLE_SERVICE_INFO_PLIST_BASE64" | base64 --decode > "$BITRISE_SOURCE_DIR/ios/GoogleService-Info.plist"
+            mkdir -p "$BITRISE_SOURCE_DIR/ios/Firebase/Production"
+            echo "$GOOGLE_SERVICE_INFO_PLIST_BASE64" | base64 --decode > "$BITRISE_SOURCE_DIR/ios/Firebase/Production/GoogleService-Info.plist"
             echo "GoogleService-Info.plist restored successfully"
     - script@1:
         inputs:
@@ -63,7 +64,8 @@ workflows:
         - content: |
             #!/bin/bash
             set -e
-            echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > "$BITRISE_SOURCE_DIR/android/app/google-services.json"
+            mkdir -p "$BITRISE_SOURCE_DIR/android/app/src/production"
+            echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > "$BITRISE_SOURCE_DIR/android/app/src/production/google-services.json"
             echo "google-services.json restored successfully"
     - script@1:
         title: Restore Android keystore
@@ -76,13 +78,13 @@ workflows:
     - android-unit-test@1:
         inputs:
         - project_location: "$BITRISE_SOURCE_DIR/android"
-        - variant: release
+        - variant: productionRelease
         - arguments: "--stacktrace"
     - android-build@1:
         inputs:
         - project_location: "$BITRISE_SOURCE_DIR/android"
         - module: app
-        - variant: release
+        - variant: productionRelease
         - build_type: aab
         - arguments: >-
             -Pandroid.injected.signing.store.file=$BITRISE_SOURCE_DIR/android/app/release.keystore
@@ -94,7 +96,7 @@ workflows:
     - google-play-deploy@3:
         inputs:
         - service_account_json_key_path: "$BITRISEIO_GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_URL"
-        - package_name: dev.rahier.pouleparty
+        - package_name: dev.rahier.pouleparty2
         - app_path: "$BITRISE_AAB_PATH"
         - track: internal
 
