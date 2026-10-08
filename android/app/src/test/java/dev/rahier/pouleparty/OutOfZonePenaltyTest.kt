@@ -110,7 +110,7 @@ class OutOfZonePenaltyTest {
     /**
      * The production gate is `gameStarted = now >= hunterStartDate`,
      * which short-circuits the penalty path before this helper is
-     * reached. We model that gate by inverting `isOutsideZone` here ,
+     * reached. We model that gate by inverting `isOutsideZone` here,
      * the production code never even evaluates `isOutsideZone` pre-
      * game, so the helper would see `isOutsideZone = false` (default)
      * and produce zero penalties. The check pins the "no firing

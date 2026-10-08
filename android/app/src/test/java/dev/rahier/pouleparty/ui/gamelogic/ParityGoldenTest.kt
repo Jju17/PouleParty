@@ -79,7 +79,7 @@ class ParityGoldenTest {
     // sampling in `disk(previousCenter, delta) ∩ disk(finalCenter,
     // newRadius)` driven by splitmix64 (`seededRandom`), replacing the
     // old linear `seed * 31 xor newRadius` scheme. The new algo is
-    // fully accumulative, basePoint is the previous drifted center ,
+    // fully accumulative, basePoint is the previous drifted center,
     // so successive circles form a genuinely meandering path.
     @Test
     fun `drift seed 12345 from 1500 to 1400`() {

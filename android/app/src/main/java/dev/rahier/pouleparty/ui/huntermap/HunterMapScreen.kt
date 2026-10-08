@@ -1,5 +1,7 @@
 package dev.rahier.pouleparty.ui.huntermap
 
+import dev.rahier.pouleparty.ui.components.CircleOutline
+import dev.rahier.pouleparty.ui.components.ZoneOverlay
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.WindowInsets
 import dev.rahier.pouleparty.model.GameStatus
@@ -187,44 +189,7 @@ fun HunterMapScreen(
                 // Inverted zone overlay (only visible after game starts)
                 if (state.hasGameStarted) {
                     state.circleCenter?.let { center ->
-                        val overlayColor = if (state.isOutsideZone) {
-                            ZoneDanger.copy(alpha = 0.4f)
-                        } else {
-                            Color(0f, 0f, 0f, 0.3f) // Black with ~0.3 alpha
-                        }
-                        val circlePoints = circlePolygonPoints(center, state.radius.toDouble())
-                        PolygonAnnotation(
-                            points = listOf(outerBoundsPoints(center), circlePoints)
-                        ) {
-                            fillColor = overlayColor
-                            fillOpacity = 1.0
-                        }
-
-                        // Zone border circle, neon glow effect (layered polylines)
-                        PolylineAnnotation(
-                            points = circlePoints + listOf(circlePoints.first())
-                        ) {
-                            lineColor = ZoneGreen.copy(alpha = 0.08f)
-                            lineWidth = 16.0
-                        }
-                        PolylineAnnotation(
-                            points = circlePoints + listOf(circlePoints.first())
-                        ) {
-                            lineColor = ZoneGreen.copy(alpha = 0.15f)
-                            lineWidth = 8.0
-                        }
-                        PolylineAnnotation(
-                            points = circlePoints + listOf(circlePoints.first())
-                        ) {
-                            lineColor = ZoneGreen.copy(alpha = 0.35f)
-                            lineWidth = 4.0
-                        }
-                        PolylineAnnotation(
-                            points = circlePoints + listOf(circlePoints.first())
-                        ) {
-                            lineColor = ZoneGreen.copy(alpha = 0.9f)
-                            lineWidth = 2.5
-                        }
+                        ZoneOverlay(center, state.radius.toDouble(), state.isOutsideZone)
                     }
                 }
 
@@ -246,7 +211,7 @@ fun HunterMapScreen(
 
                 // Radar Ping reveal: real Chicken marker, visible only while
                 // `game.isRadarPingActive`. The Chicken broadcasts its
-                // position continuously so this marker shows the live point ,
+                // position continuously so this marker shows the live point,
                 // the power-up is purely a visibility gate, not a trigger for
                 // the broadcast. Mirrors iOS `ChickenMapMarker` in
                 // `HunterMapContent.swift`.
@@ -261,13 +226,7 @@ fun HunterMapScreen(
 
                 // Zone preview circle (from Zone Preview power-up)
                 state.previewCircle?.let { (center, radius) ->
-                    val previewPoints = circlePolygonPoints(center, radius)
-                    PolylineAnnotation(
-                        points = previewPoints + listOf(previewPoints.first())
-                    ) {
-                        lineColor = PowerupFreeze.copy(alpha = 0.6f)
-                        lineWidth = 2.0
-                    }
+                    CircleOutline(center, radius, PowerupFreeze.copy(alpha = 0.6f))
                 }
             }
 

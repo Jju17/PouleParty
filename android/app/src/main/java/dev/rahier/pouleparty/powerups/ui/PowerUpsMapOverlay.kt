@@ -7,7 +7,10 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.remember
+import com.mapbox.maps.extension.compose.MapboxMapComposable
+import dev.rahier.pouleparty.ui.common.rememberReducedMotion
 import com.mapbox.maps.MapboxExperimental
 import com.mapbox.maps.extension.compose.annotation.ViewAnnotation
 import com.mapbox.maps.extension.compose.annotation.generated.PolygonAnnotation
@@ -18,24 +21,18 @@ import dev.rahier.pouleparty.powerups.model.PowerUp
 import dev.rahier.pouleparty.powerups.selection.powerUpColor
 import dev.rahier.pouleparty.ui.components.circlePolygonPoints
 
-/**
- * Power-up markers + collection-radius discs, shared between the chicken
- * and hunter maps. Each power-up renders:
- *   - A semi-transparent pulsing filled disc matching its collection radius
- *     (so players see exactly where auto-collection triggers).
- *   - A circular icon marker (`PowerUpMapMarker`) centered on the disc.
- *
- * Must be called within a `MapboxMap { ... }` scope.
- */
+/** Power-up markers with their collection radius, drawn inside a `MapboxMap` content block. */
 @Suppress("COMPOSE_APPLIER_CALL_MISMATCH")
 @Composable
+@MapboxMapComposable
 @OptIn(MapboxExperimental::class)
 fun PowerUpsMapOverlay(
     powerUps: List<PowerUp>,
     onMarkerClick: (PowerUp) -> Unit
 ) {
+    val reducedMotion = rememberReducedMotion()
     val transition = rememberInfiniteTransition(label = "powerup-pulse")
-    val pulseAlpha by transition.animateFloat(
+    val pulse = transition.animateFloat(
         initialValue = 0.08f,
         targetValue = 0.18f,
         animationSpec = infiniteRepeatable(
@@ -46,25 +43,27 @@ fun PowerUpsMapOverlay(
     )
 
     powerUps.forEach { powerUp ->
-        val circlePoints = circlePolygonPoints(
-            center = powerUp.locationPoint,
-            radiusMeters = AppConstants.POWER_UP_COLLECTION_RADIUS_METERS
-        )
-        PolygonAnnotation(points = listOf(circlePoints)) {
-            fillColor = powerUpColor(powerUp.typeEnum).copy(alpha = pulseAlpha)
-            fillOpacity = 1.0
-        }
-        ViewAnnotation(
-            options = viewAnnotationOptions {
-                geometry(powerUp.locationPoint)
-                allowOverlap(true)
-                allowOverlapWithPuck(true)
+        key(powerUp.id) {
+            val ring = remember(powerUp.locationPoint) {
+                circlePolygonPoints(center = powerUp.locationPoint, radiusMeters = AppConstants.POWER_UP_COLLECTION_RADIUS_METERS)
             }
-        ) {
-            PowerUpMapMarker(
-                type = powerUp.typeEnum,
-                onClick = { onMarkerClick(powerUp) }
-            )
+            val alpha = if (reducedMotion) 0.14f else pulse.value
+            PolygonAnnotation(points = listOf(ring)) {
+                fillColor = powerUpColor(powerUp.typeEnum).copy(alpha = alpha)
+                fillOpacity = 1.0
+            }
+            ViewAnnotation(
+                options = viewAnnotationOptions {
+                    geometry(powerUp.locationPoint)
+                    allowOverlap(true)
+                    allowOverlapWithPuck(true)
+                }
+            ) {
+                PowerUpMapMarker(
+                    type = powerUp.typeEnum,
+                    onClick = { onMarkerClick(powerUp) }
+                )
+            }
         }
     }
 }

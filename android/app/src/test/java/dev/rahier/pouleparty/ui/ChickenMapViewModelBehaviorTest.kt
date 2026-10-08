@@ -422,7 +422,7 @@ class ChickenMapViewModelBehaviorTest {
         testDispatcher.scheduler.runCurrent()
         assertTrue("Precondition: isGameOver true", vm.uiState.value.isGameOver)
 
-        // Now try to push a fresh coord through the cancelled flow ,
+        // Now try to push a fresh coord through the cancelled flow,
         // the collector is gone, so setChickenLocation must NOT fire.
         kotlinx.coroutines.runBlocking {
             locationFlow.emit(Point.fromLngLat(4.3600, 50.8500))
@@ -436,7 +436,7 @@ class ChickenMapViewModelBehaviorTest {
     }
 
     /**
-     * In followTheChicken mode, the dedicated radar-ping loop must not be scheduled ,
+     * In followTheChicken mode, the dedicated radar-ping loop must not be scheduled,
      * writes are already driven by the main locationFlow. We assert that by using a
      * game that has radarPing active in followTheChicken mode with an EMPTY
      * locationFlow: no writes should happen, proving the radar-ping loop never kicked

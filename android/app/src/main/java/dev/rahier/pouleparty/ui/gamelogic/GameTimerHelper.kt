@@ -322,7 +322,7 @@ fun processRadiusUpdate(
         // Drift is independent per shrink: candidate sampled from
         // `disk(initial, R₀ − rᵢ) ∩ disk(final, rᵢ − FINAL −
         // safety)`. That enforces both product rules directly, new
-        // circle inside start zone, final zone inside new circle ,
+        // circle inside start zone, final zone inside new circle,
         // while leaving successive intermediate circles free to
         // overlap each other.
         deterministicDriftCenter(

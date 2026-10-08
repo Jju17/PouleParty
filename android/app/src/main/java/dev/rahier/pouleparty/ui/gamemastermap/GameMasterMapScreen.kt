@@ -1,5 +1,7 @@
 package dev.rahier.pouleparty.ui.gamemastermap
 
+import dev.rahier.pouleparty.ui.components.FinalZoneOutline
+import dev.rahier.pouleparty.ui.components.ZoneOverlay
 import androidx.compose.ui.res.pluralStringResource
 import dev.rahier.pouleparty.model.GameStatus
 import dev.rahier.pouleparty.model.Registration
@@ -104,24 +106,9 @@ fun GameMasterMapScreen(
                 mapViewportState = mapViewportState,
             ) {
                 state.circleCenter?.let { center ->
-                    val circlePoints = circlePolygonPoints(center, state.radius.toDouble())
-                    PolygonAnnotation(points = listOf(outerBoundsPoints(center), circlePoints)) {
-                        fillColor = Color(0f, 0f, 0f, 0.3f)
-                        fillOpacity = 1.0
-                    }
-                    PolylineAnnotation(points = circlePoints + listOf(circlePoints.first())) {
-                        lineColor = ZoneGreen.copy(alpha = 0.9f)
-                        lineWidth = 2.5
-                    }
+                    ZoneOverlay(center, state.radius.toDouble(), isOutsideZone = false, glow = false)
                 }
-
-                state.game.finalLocation?.let { finalPos ->
-                    val finalCirclePoints = circlePolygonPoints(finalPos, 50.0)
-                    PolylineAnnotation(points = finalCirclePoints + listOf(finalCirclePoints.first())) {
-                        lineColor = ZoneGreen.copy(alpha = 0.5f)
-                        lineWidth = 3.0
-                    }
-                }
+                state.game.finalLocation?.let { FinalZoneOutline(it, glow = false) }
 
                 state.chickenLocation?.let { chicken ->
                     ViewAnnotation(
@@ -136,6 +123,7 @@ fun GameMasterMapScreen(
                 }
 
                 state.hunterAnnotations.forEach { hunter ->
+                    key(hunter.id) {
                     ViewAnnotation(
                         options = viewAnnotationOptions {
                             geometry(hunter.coordinate)
@@ -144,6 +132,7 @@ fun GameMasterMapScreen(
                         }
                     ) {
                         HunterMapMarker(displayName = hunter.displayName.asString())
+                    }
                     }
                 }
 

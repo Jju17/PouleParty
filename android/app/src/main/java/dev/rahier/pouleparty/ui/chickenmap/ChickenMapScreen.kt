@@ -1,5 +1,7 @@
 package dev.rahier.pouleparty.ui.chickenmap
 
+import dev.rahier.pouleparty.ui.components.FinalZoneOutline
+import dev.rahier.pouleparty.ui.components.ZoneOverlay
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.WindowInsets
 import dev.rahier.pouleparty.model.GameStatus
@@ -162,64 +164,10 @@ fun ChickenMapScreen(
                 }
             }
 
-            // Inverted zone overlay
             state.circleCenter?.let { center ->
-                val overlayColor = if (state.isOutsideZone) {
-                    ZoneDanger.copy(alpha = 0.4f)
-                } else {
-                    Color(0f, 0f, 0f, 0.3f) // Black with ~0.3 alpha
-                }
-                val circlePoints = circlePolygonPoints(center, state.radius.toDouble())
-                PolygonAnnotation(
-                    points = listOf(outerBoundsPoints(center), circlePoints)
-                ) {
-                    fillColor = overlayColor
-                    fillOpacity = 1.0
-                }
-
-                // Zone border circle, neon glow effect (layered polylines)
-                PolylineAnnotation(
-                    points = circlePoints + listOf(circlePoints.first())
-                ) {
-                    lineColor = ZoneGreen.copy(alpha = 0.08f)
-                    lineWidth = 16.0
-                }
-                PolylineAnnotation(
-                    points = circlePoints + listOf(circlePoints.first())
-                ) {
-                    lineColor = ZoneGreen.copy(alpha = 0.15f)
-                    lineWidth = 8.0
-                }
-                PolylineAnnotation(
-                    points = circlePoints + listOf(circlePoints.first())
-                ) {
-                    lineColor = ZoneGreen.copy(alpha = 0.35f)
-                    lineWidth = 4.0
-                }
-                PolylineAnnotation(
-                    points = circlePoints + listOf(circlePoints.first())
-                ) {
-                    lineColor = ZoneGreen.copy(alpha = 0.9f)
-                    lineWidth = 2.5
-                }
+                ZoneOverlay(center, state.radius.toDouble(), state.isOutsideZone)
             }
-
-            // Final zone glow (always visible for chicken)
-            state.game.finalLocation?.let { finalPos ->
-                val finalCirclePoints = circlePolygonPoints(finalPos, 50.0)
-                PolylineAnnotation(points = finalCirclePoints + listOf(finalCirclePoints.first())) {
-                    lineColor = ZoneGreen.copy(alpha = 0.15f)
-                    lineWidth = 8.0
-                }
-                PolylineAnnotation(points = finalCirclePoints + listOf(finalCirclePoints.first())) {
-                    lineColor = ZoneGreen.copy(alpha = 0.5f)
-                    lineWidth = 3.0
-                }
-                PolylineAnnotation(points = finalCirclePoints + listOf(finalCirclePoints.first())) {
-                    lineColor = ZoneGreen.copy(alpha = 0.9f)
-                    lineWidth = 1.5
-                }
-            }
+            state.game.finalLocation?.let { FinalZoneOutline(it) }
 
             // Power-up markers + collection-radius discs (chicken power-ups only)
             if (state.hasGameStarted) {
@@ -231,6 +179,7 @@ fun ChickenMapScreen(
 
             // Hunter annotations (chickenCanSeeHunters) -- only after hunt starts
             if (state.hasHuntStarted) state.hunterAnnotations.forEach { hunter ->
+                key(hunter.id) {
                 ViewAnnotation(
                     options = viewAnnotationOptions {
                         geometry(hunter.coordinate)
@@ -239,6 +188,7 @@ fun ChickenMapScreen(
                     }
                 ) {
                     HunterMapMarker(displayName = hunter.displayName.asString())
+                }
                 }
             }
         }
