@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import Layout from "../components/Layout";
 import ClickableChicken from "../components/ClickableChicken";
@@ -12,7 +13,7 @@ const D_DAY_BATCH_ID = "game-06-06-2026";
 
 export default function Home() {
   const { t, locale } = useI18n();
-  const showDDayCta = Date.now() < D_DAY_CTA_CUTOFF.getTime();
+  const [showDDayCta] = useState(() => Date.now() < D_DAY_CTA_CUTOFF.getTime());
   const inscriptionHref = `${routePath("inscription", locale)}?batchId=${D_DAY_BATCH_ID}`;
 
   return (

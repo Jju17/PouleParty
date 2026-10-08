@@ -198,8 +198,8 @@ function IntroStep({ t, onNext }: { t: T; onNext: () => void }) {
         {intro.title}
       </h1>
       <div className="text-base leading-relaxed mb-6 space-y-1">
-        {intro.body.map((line, i) => (
-          <p key={i}>{line}</p>
+        {intro.body.map((line) => (
+          <p key={line}>{line}</p>
         ))}
       </div>
       <p className="text-base font-bold text-[#FE6A00] mb-8">{intro.priceLine}</p>

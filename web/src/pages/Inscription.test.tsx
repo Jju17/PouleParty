@@ -7,7 +7,7 @@ import { I18nProvider } from "../i18n";
 import en from "../i18n/en";
 import Inscription from "./Inscription";
 
-vi.mock("../appCheck", () => ({ getAppCheckToken: vi.fn(async () => null) }));
+vi.mock("../appCheck", () => ({ getAppCheckToken: vi.fn<() => Promise<string | null>>(async () => null) }));
 
 function renderPage() {
   return render(

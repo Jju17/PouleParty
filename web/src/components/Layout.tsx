@@ -10,6 +10,8 @@ const NEXT_LOCALE: Record<Locale, Locale> = {
   nl: "en",
 };
 
+const CURRENT_YEAR = new Date().getFullYear();
+
 export default function Layout({ children }: { children: ReactNode }) {
   const { locale, t, setLocale } = useI18n();
   const { theme, toggleTheme } = useTheme();
@@ -78,7 +80,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           <span>·</span>
           {footerLink(routePath("support", locale), t.nav.support)}
         </div>
-        &copy; {new Date().getFullYear()} Julien Rahier. {t.footer.rights}
+        &copy; {CURRENT_YEAR} Julien Rahier. {t.footer.rights}
       </footer>
 
       {/* Theme toggle — bottom right corner */}

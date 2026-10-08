@@ -62,13 +62,14 @@ export function initAppCheck(): void {
  */
 export async function getAppCheckToken(): Promise<string | null> {
   if (!appCheckInstance) return null;
-  for (const forceRefresh of [false, true]) {
-    try {
-      const result = await getToken(appCheckInstance, forceRefresh);
-      return result.token;
-    } catch (err) {
-      console.warn("[appCheck] token fetch failed", { forceRefresh, err });
-    }
+  return (await fetchToken(appCheckInstance, false)) ?? fetchToken(appCheckInstance, true);
+}
+
+async function fetchToken(instance: AppCheck, forceRefresh: boolean): Promise<string | null> {
+  try {
+    return (await getToken(instance, forceRefresh)).token;
+  } catch (err) {
+    console.warn("[appCheck] token fetch failed", { forceRefresh, err });
+    return null;
   }
-  return null;
 }

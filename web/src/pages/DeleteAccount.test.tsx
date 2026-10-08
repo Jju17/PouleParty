@@ -7,7 +7,7 @@ import { I18nProvider } from "../i18n";
 import en from "../i18n/en";
 import DeleteAccount from "./DeleteAccount";
 
-vi.mock("../appCheck", () => ({ getAppCheckToken: vi.fn(async () => "token") }));
+vi.mock("../appCheck", () => ({ getAppCheckToken: vi.fn<() => Promise<string | null>>(async () => "token") }));
 
 function renderPage() {
   return render(
@@ -21,7 +21,7 @@ function renderPage() {
 
 describe("DeleteAccount", () => {
   test("flags an invalid email without calling the server", async () => {
-    const fetchMock = vi.fn();
+    const fetchMock = vi.fn<typeof fetch>();
     vi.stubGlobal("fetch", fetchMock);
     const user = userEvent.setup();
     renderPage();
@@ -32,7 +32,7 @@ describe("DeleteAccount", () => {
   });
 
   test("submits with the keyboard and confirms the request", async () => {
-    const fetchMock = vi.fn(async () => new Response("{}", { status: 200 }));
+    const fetchMock = vi.fn<typeof fetch>(async () => new Response("{}", { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
     const user = userEvent.setup();
     renderPage();

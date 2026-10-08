@@ -107,17 +107,16 @@ export default function DeleteAccount() {
           <p className="mb-4">{t.deleteAccount.formSubtitle}</p>
 
           {status === "success" ? (
-            <div
-              className="rounded-xl p-4 text-white"
+            <output
+              className="block rounded-xl p-4 text-black"
               style={{
                 backgroundImage:
                   "linear-gradient(to right, #FE6A00, #EF0778)",
               }}
-              role="status"
               aria-live="polite"
             >
               {t.deleteAccount.formSuccess.replace("{email}", email.trim().toLowerCase())}
-            </div>
+            </output>
           ) : (
             <form onSubmit={onSubmit} noValidate className="space-y-4">
               <div>

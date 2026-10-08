@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import en from "./en";
 import fr from "./fr";
@@ -48,14 +48,21 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     safeSetItem("locale", locale);
   }, [locale]);
 
-  const setLocale = (newLocale: Locale) => {
-    if (newLocale === locale) return;
-    safeSetItem("locale", newLocale);
-    navigate(equivalentPath(location.pathname, newLocale), { replace: true });
-  };
+  const value = useMemo(
+    () => ({
+      locale,
+      t: translations[locale],
+      setLocale: (newLocale: Locale) => {
+        if (newLocale === locale) return;
+        safeSetItem("locale", newLocale);
+        navigate(equivalentPath(location.pathname, newLocale), { replace: true });
+      },
+    }),
+    [locale, location.pathname, navigate],
+  );
 
   return (
-    <I18nContext.Provider value={{ locale, t: translations[locale], setLocale }}>
+    <I18nContext.Provider value={value}>
       {children}
     </I18nContext.Provider>
   );
