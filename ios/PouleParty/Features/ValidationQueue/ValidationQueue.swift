@@ -181,6 +181,9 @@ struct ValidationQueueView: View {
                                 .font(.title2)
                                 .foregroundStyle(.secondary)
                         }
+                        .accessibilityLabel(String(localized: "Close"))
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
                     }
                 }
         }
@@ -438,6 +441,9 @@ private struct SubmissionDetailView: View {
                             .font(.title2)
                             .foregroundStyle(.secondary)
                     }
+                    .accessibilityLabel(String(localized: "Close"))
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
                 }
             }
         }

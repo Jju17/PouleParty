@@ -56,6 +56,9 @@ struct PowerUpInventorySheet: View {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundStyle(.secondary)
                     }
+                    .accessibilityLabel(String(localized: "Close"))
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
                 }
             }
         }

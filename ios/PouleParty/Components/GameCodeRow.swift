@@ -25,6 +25,9 @@ struct GameCodeRow: View {
                     .foregroundStyle(codeCopied ? Color.success : .gray)
                     .contentTransition(.symbolEffect(.replace))
             }
+            .accessibilityLabel(codeCopied ? String(localized: "Code copied") : String(localized: "Copy game code"))
+            .frame(minWidth: 44, minHeight: 44)
+            .contentShape(Rectangle())
             .buttonStyle(.plain)
         }
     }

@@ -32,6 +32,9 @@ struct MapCompassButton: View {
                 .clipShape(Circle())
                 .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
         }
+        .accessibilityLabel(String(localized: "Point the map north"))
+        .frame(minWidth: 44, minHeight: 44)
+        .contentShape(Rectangle())
         .padding(.trailing, 8)
         .padding(.top, 8)
     }

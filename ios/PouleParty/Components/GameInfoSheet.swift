@@ -62,6 +62,7 @@ struct GameInfoSheet: View {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundStyle(.secondary)
                     }
+                    .accessibilityLabel(String(localized: "Close"))
                 }
             }
         }

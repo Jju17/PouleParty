@@ -356,6 +356,9 @@ struct ChickenMapConfigView: View {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundColor(.gray)
                     }
+                    .accessibilityLabel(String(localized: "Clear search"))
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
                 }
             }
             .padding(12)
@@ -424,6 +427,9 @@ struct ChickenMapConfigView: View {
                         .background(.regularMaterial)
                         .clipShape(Circle())
                 }
+                .accessibilityLabel(String(localized: "Center on my position"))
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
                 .padding(.trailing, 8)
             }
         }

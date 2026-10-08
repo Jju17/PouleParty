@@ -54,7 +54,7 @@ struct MapBottomBar<S: MapFeatureState>: View {
                     }
                 }
                 .accessibilityLabel("Power-ups inventory")
-                .frame(width: 44, height: 40)
+                .frame(minWidth: 44, minHeight: 44)
                 .neonGlow(.CROrange, intensity: .subtle)
             }
             if isActionButtonVisible {
@@ -69,7 +69,7 @@ struct MapBottomBar<S: MapFeatureState>: View {
                     }
                 }
                 .accessibilityLabel(actionAccessibilityLabel)
-                .frame(width: 50, height: 40)
+                .frame(minWidth: 50, minHeight: 44)
                 .neonGlow(.hunterRed, intensity: .subtle)
             }
         }

@@ -113,6 +113,7 @@ struct GameMasterMapView: View {
                             } label: {
                                 Image(systemName: "xmark")
                             }
+                            .accessibilityLabel(String(localized: "Close"))
                         }
                     }
                 }

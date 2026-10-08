@@ -120,7 +120,7 @@ struct LeaderboardRowView: View {
                     Image(systemName: "flag")
                         .font(.system(.subheadline))
                         .foregroundStyle(Color.onBackground.opacity(0.4))
-                        .padding(6)
+                        .frame(minWidth: 44, minHeight: 44)
                         .contentShape(Rectangle())
                 }
                 .accessibilityLabel(String(localized: "Report \(entry.displayName)"))

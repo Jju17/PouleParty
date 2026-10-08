@@ -84,6 +84,7 @@ struct ChickenMapView: View {
                                     Image(systemName: "xmark")
                                         .foregroundStyle(.white)
                                 }
+                                .accessibilityLabel(String(localized: "Close"))
                             }
                         }
                 }
@@ -101,6 +102,7 @@ struct ChickenMapView: View {
                             .clipShape(Circle())
                             .shadow(radius: 3)
                     }
+                    .accessibilityLabel(String(localized: "Proofs to validate"))
                     if store.pendingSubmissionsCount > 0 {
                         Text("\(store.pendingSubmissionsCount)")
                             .font(.caption2.bold())

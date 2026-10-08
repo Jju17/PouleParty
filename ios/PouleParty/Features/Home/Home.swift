@@ -752,6 +752,9 @@ struct HomeView: View {
                                 Image(systemName: "xmark")
                                     .foregroundStyle(Color.onBackground)
                             }
+                            .accessibilityLabel(String(localized: "Close"))
+                            .frame(minWidth: 44, minHeight: 44)
+                            .contentShape(Rectangle())
                         }
                     }
             }

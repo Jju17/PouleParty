@@ -25,6 +25,9 @@ struct PowerUpMapMarker: View {
                 .clipShape(Circle())
                 .shadow(color: powerUp.type.color.opacity(0.5), radius: 4, y: 1)
         }
+        .accessibilityLabel(powerUp.type.displayName)
+        .frame(minWidth: 44, minHeight: 44)
+        .contentShape(Rectangle())
     }
 }
 

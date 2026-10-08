@@ -612,6 +612,9 @@ struct GameCreationView: View {
                             .clipShape(Circle())
                             .shadow(color: .black.opacity(0.1), radius: 2, y: 1)
                     }
+                    .accessibilityLabel(String(localized: "Close"))
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
                 }
             }
             .padding(.horizontal, 20)
