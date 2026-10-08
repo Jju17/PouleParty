@@ -1,5 +1,7 @@
 package dev.rahier.pouleparty.ui.chickenmap
 
+import dev.rahier.pouleparty.ui.gamelogic.requestLaunch
+import dev.rahier.pouleparty.ui.gamelogic.zoneRenderState
 import dev.rahier.pouleparty.data.AnalyticsRepository
 import dev.rahier.pouleparty.model.ZoneCircle
 import dev.rahier.pouleparty.ui.map.MapUiState
@@ -174,13 +176,8 @@ class ChickenMapViewModel @Inject constructor(
         if (state.isLaunching) return
         _uiState.update { it.copy(isLaunching = true, launchError = null) }
         viewModelScope.launch {
-            try {
-                gameFunctions.launchGame(state.game.id)
-                _uiState.update { it.copy(isLaunching = false) }
-            } catch (e: Exception) {
-                Log.e(logTag, "launchGame failed", e)
-                _uiState.update { it.copy(isLaunching = false, launchError = uiText(e.errorMessageRes())) }
-            }
+            val failure = requestLaunch(gameFunctions, state.game.id, "MapLaunch")
+            _uiState.update { it.copy(isLaunching = false, launchError = failure) }
         }
     }
 
@@ -208,20 +205,6 @@ class ChickenMapViewModel @Inject constructor(
 
     /** PP-zone-stored: thin wrapper over the shared selector so all three
      *  map ViewModels resolve the active circle identically. */
-    private fun zoneStateFromCircles(
-        game: Game,
-        circles: List<ZoneCircle>,
-        now: Date,
-    ) = zoneRenderStateFromCircles(
-        gameMode = game.gameModEnum,
-        hunterStartDate = game.hunterStartDate,
-        shrinkIntervalMinutes = game.zone.shrinkIntervalMinutes,
-        fallbackRadius = game.zone.radius,
-        circles = circles,
-        freezeEnd = game.powerUps.activeEffects.zoneFreeze?.toDate(),
-        freezeDurationMs = (PowerUpType.ZONE_FREEZE.durationSeconds ?: 0) * 1000L,
-        now = now,
-    )
 
     private fun retryLoad() {
         _uiState.update { it.copy(loadState = LoadState.Loading) }
@@ -235,7 +218,7 @@ class ChickenMapViewModel @Inject constructor(
                 _uiState.update { it.copy(loadState = LoadState.Failed(error.errorMessageRes())) }
                 return@launch
             }
-            val z = zoneStateFromCircles(game, circles, Date())
+            val z = game.zoneRenderState(circles, Date())
             _uiState.update {
                 it.copy(
                     game = game,
@@ -276,7 +259,7 @@ class ChickenMapViewModel @Inject constructor(
                 // mode, neither phase fires until the chicken/GM taps
                 // LAUNCH and the server stamps `actualStart`. `startDate`
                 // is just "when status flips to readyToLaunch" in that
-                // mode \u2014 the real start is `effectiveStartDate`.
+                // mode, the real start is `effectiveStartDate`.
                 val hasLaunched = !state.game.manualStartEnabled ||
                     state.game.timing.actualStart != null
                 val countdownResult = evaluateCountdown(
@@ -332,7 +315,7 @@ class ChickenMapViewModel @Inject constructor(
                 // (or all-found / cancel), not by "zone collapsed".
                 // followTheChicken keeps the live chicken GPS center (set in
                 // trackLocation); we only update the radius for that mode.
-                val z = zoneStateFromCircles(state.game, state.circles, now)
+                val z = state.game.zoneRenderState(state.circles, now)
                 _uiState.update {
                     it.copy(
                         radius = z.radius,
@@ -462,7 +445,7 @@ class ChickenMapViewModel @Inject constructor(
                         // QA debug: the `advanceStep` callable rewinds the start
                         // anchor so more shrinks appear "elapsed", re-derive the
                         // active circle from the stored schedule on each tick.
-                        val z = zoneStateFromCircles(updatedGame, it.circles, Date())
+                        val z = updatedGame.zoneRenderState(it.circles, Date())
                         it.copy(
                             game = updatedGame,
                             previousWinnersCount = updatedGame.winners.size,

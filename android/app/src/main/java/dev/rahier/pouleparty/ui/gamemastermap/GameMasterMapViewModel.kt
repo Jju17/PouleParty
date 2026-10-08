@@ -1,5 +1,7 @@
 package dev.rahier.pouleparty.ui.gamemastermap
 
+import dev.rahier.pouleparty.ui.gamelogic.requestLaunch
+import dev.rahier.pouleparty.ui.gamelogic.zoneRenderState
 import dev.rahier.pouleparty.model.HunterLocation
 import dev.rahier.pouleparty.model.Registration
 import dev.rahier.pouleparty.model.ZoneCircle
@@ -189,31 +191,11 @@ class GameMasterMapViewModel @Inject constructor(
         if (state.isLaunching) return
         _uiState.update { it.copy(isLaunching = true, launchError = null) }
         viewModelScope.launch {
-            try {
-                gameFunctions.launchGame(state.game.id)
-                _uiState.update { it.copy(isLaunching = false) }
-            } catch (e: Exception) {
-                Log.e("GameMasterMapVM", "launchGame failed", e)
-                _uiState.update { it.copy(isLaunching = false, launchError = uiText(e.errorMessageRes())) }
-            }
+            val failure = requestLaunch(gameFunctions, state.game.id, "MapLaunch")
+            _uiState.update { it.copy(isLaunching = false, launchError = failure) }
         }
     }
 
-    /** PP-zone-stored: thin wrapper over the shared selector. */
-    private fun zoneStateFromCircles(
-        game: Game,
-        circles: List<ZoneCircle>,
-        now: Date,
-    ) = zoneRenderStateFromCircles(
-        gameMode = game.gameModEnum,
-        hunterStartDate = game.hunterStartDate,
-        shrinkIntervalMinutes = game.zone.shrinkIntervalMinutes,
-        fallbackRadius = game.zone.radius,
-        circles = circles,
-        freezeEnd = game.powerUps.activeEffects.zoneFreeze?.toDate(),
-        freezeDurationMs = (PowerUpType.ZONE_FREEZE.durationSeconds ?: 0) * 1000L,
-        now = now,
-    )
 
     private fun loadGame() {
         viewModelScope.launch {
@@ -222,7 +204,7 @@ class GameMasterMapViewModel @Inject constructor(
                 _uiState.update { it.copy(loadState = LoadState.Failed(error.errorMessageRes())) }
                 return@launch
             }
-            val z = zoneStateFromCircles(game, circles, Date())
+            val z = game.zoneRenderState(circles, Date())
             _uiState.update {
                 it.copy(
                     game = game,
@@ -296,7 +278,7 @@ class GameMasterMapViewModel @Inject constructor(
                 val state = _uiState.value
                 val next = state.nextRadiusUpdate
                 if (next != null && state.nowDate.after(next)) {
-                    val z = zoneStateFromCircles(state.game, state.circles, Date())
+                    val z = state.game.zoneRenderState(state.circles, Date())
                     _uiState.update {
                         it.copy(
                             nextRadiusUpdate = z.nextUpdate,
@@ -323,7 +305,7 @@ class GameMasterMapViewModel @Inject constructor(
             // next-update / circle from the fresh timing on every config tick.
             // Real games keep the timer-tick path untouched.
             if (game.isDebugGame) {
-                val z = zoneStateFromCircles(game, it.circles, Date())
+                val z = game.zoneRenderState(it.circles, Date())
                 it.copy(
                     game = game,
                     winnerNotification = notif ?: it.winnerNotification,

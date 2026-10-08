@@ -1,5 +1,7 @@
 package dev.rahier.pouleparty.ui.huntermap
 
+import dev.rahier.pouleparty.ui.gamelogic.requestLaunch
+import dev.rahier.pouleparty.ui.gamelogic.zoneRenderState
 import dev.rahier.pouleparty.config.RemoteConfigProvider
 import dev.rahier.pouleparty.data.AnalyticsRepository
 import dev.rahier.pouleparty.model.ZoneCircle
@@ -202,21 +204,6 @@ class HunterMapViewModel @Inject constructor(
         }
     }
 
-    /** PP-zone-stored: thin wrapper over the shared selector. */
-    private fun zoneStateFromCircles(
-        game: Game,
-        circles: List<ZoneCircle>,
-        now: Date,
-    ) = zoneRenderStateFromCircles(
-        gameMode = game.gameModEnum,
-        hunterStartDate = game.hunterStartDate,
-        shrinkIntervalMinutes = game.zone.shrinkIntervalMinutes,
-        fallbackRadius = game.zone.radius,
-        circles = circles,
-        freezeEnd = game.powerUps.activeEffects.zoneFreeze?.toDate(),
-        freezeDurationMs = (PowerUpType.ZONE_FREEZE.durationSeconds ?: 0) * 1000L,
-        now = now,
-    )
 
     private fun retryLoad() {
         _uiState.update { it.copy(loadState = LoadState.Loading) }
@@ -235,7 +222,7 @@ class HunterMapViewModel @Inject constructor(
                 _uiState.update { it.copy(loadState = LoadState.Failed(error.errorMessageRes())) }
                 return@launch
             }
-            val z = zoneStateFromCircles(game, circles, Date())
+            val z = game.zoneRenderState(circles, Date())
 
             _uiState.update {
                 it.copy(
@@ -332,7 +319,7 @@ class HunterMapViewModel @Inject constructor(
                 // schedule (no on-device recompute). Zone shrinks to the 50m
                 // final circle and stays; game ends by time, not "collapsed".
                 // followTheChicken keeps the live chicken GPS center.
-                val z = zoneStateFromCircles(state.game, state.circles, now)
+                val z = state.game.zoneRenderState(state.circles, now)
                 _uiState.update {
                     it.copy(
                         radius = z.radius,
@@ -414,7 +401,7 @@ class HunterMapViewModel @Inject constructor(
                 // PP-zone-stored: re-resolve the active circle from the stored
                 // schedule on every config tick (covers QA debug anchor-rewind
                 // too). Geometry is read, never recomputed on-device.
-                val z = zoneStateFromCircles(updatedGame, _uiState.value.circles, Date())
+                val z = updatedGame.zoneRenderState(_uiState.value.circles, Date())
                 _uiState.update {
                     it.copy(
                         game = updatedGame,

@@ -1,5 +1,8 @@
 package dev.rahier.pouleparty.ui.gamelogic
 
+import dev.rahier.pouleparty.ui.common.errorMessageRes
+import dev.rahier.pouleparty.data.GameFunctions
+import dev.rahier.pouleparty.powerups.model.PowerUpType
 import dev.rahier.pouleparty.model.ZoneCircle
 import androidx.annotation.StringRes
 import dev.rahier.pouleparty.R
@@ -592,4 +595,27 @@ fun formatOvertime(now: Date, endDate: Date): String {
     } else {
         "+%02d:%02d".format(minutes, secs)
     }
+}
+
+/** The circle to draw right now for [this] game, from its stored schedule. */
+fun Game.zoneRenderState(circles: List<ZoneCircle>, now: Date) = zoneRenderStateFromCircles(
+    gameMode = gameModEnum,
+    hunterStartDate = hunterStartDate,
+    shrinkIntervalMinutes = zone.shrinkIntervalMinutes,
+    fallbackRadius = zone.radius,
+    circles = circles,
+    freezeEnd = powerUps.activeEffects.zoneFreeze?.toDate(),
+    freezeDurationMs = (PowerUpType.ZONE_FREEZE.durationSeconds ?: 0) * 1000L,
+    now = now,
+)
+
+/** Asks the server to launch a manual-start game; returns the reason when it refused. */
+suspend fun requestLaunch(gameFunctions: GameFunctions, gameId: String, logTag: String): UiText? = try {
+    gameFunctions.launchGame(gameId)
+    null
+} catch (e: kotlinx.coroutines.CancellationException) {
+    throw e
+} catch (e: Exception) {
+    android.util.Log.w(logTag, "[launch] launchGame failed", e)
+    uiText(e.errorMessageRes())
 }
