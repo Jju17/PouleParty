@@ -91,6 +91,7 @@ android {
 
     testOptions {
         unitTests.isReturnDefaultValues = false
+        unitTests.isIncludeAndroidResources = true
     }
 
     // AND-M7 (store-audit 2026-05-18): 16 KB page-size alignment for
@@ -180,5 +181,9 @@ dependencies {
     testImplementation("org.json:json:20260814")
     testImplementation("io.mockk:mockk:1.14.11")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
+    testImplementation("org.robolectric:robolectric:4.17")
+    testImplementation("androidx.test.ext:junit:1.3.0")
+    testImplementation(platform("androidx.compose:compose-bom:2026.09.00"))
+    testImplementation("androidx.compose.ui:ui-test-junit4")
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
 }
