@@ -2,6 +2,7 @@
 
 package dev.rahier.pouleparty.ui.huntermap
 
+import dev.rahier.pouleparty.ui.common.ActionErrorDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -538,6 +539,15 @@ fun HunterMapScreen(
                     Text(stringResource(R.string.never_mind))
                 }
             }
+        )
+    }
+
+    state.leaveErrorRes?.let { message ->
+        ActionErrorDialog(
+            title = R.string.leave_game_failed_title,
+            message = message,
+            onRetry = { viewModel.onIntent(HunterMapIntent.ConfirmLeaveGame) },
+            onDismiss = { viewModel.onIntent(HunterMapIntent.DismissLeaveError) },
         )
     }
 

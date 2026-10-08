@@ -8,6 +8,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.rahier.pouleparty.data.GameRepository
 import dev.rahier.pouleparty.data.PresenceRepository
 import dev.rahier.pouleparty.data.GameFunctions
+import dev.rahier.pouleparty.ui.common.errorMessageRes
 import dev.rahier.pouleparty.data.SubmitFoundCodeReason
 import dev.rahier.pouleparty.data.SubmitFoundCodeResult
 import dev.rahier.pouleparty.data.LocationRepository
@@ -58,6 +59,8 @@ data class HunterMapUiState(
      *  `/games/{id}/zone/schedule`; runtime renders `circles[activeIndex]`. */
     val circles: List<dev.rahier.pouleparty.model.ZoneCircle> = emptyList(),
     val showLeaveAlert: Boolean = false,
+    val isLeaving: Boolean = false,
+    @param:androidx.annotation.StringRes val leaveErrorRes: Int? = null,
     val isEnteringFoundCode: Boolean = false,
     val enteredCode: String = "",
     val showWrongCodeAlert: Boolean = false,
@@ -172,6 +175,7 @@ class HunterMapViewModel @Inject constructor(
             HunterMapIntent.LeaveGameTapped -> onLeaveGameTapped()
             HunterMapIntent.DismissLeaveAlert -> dismissLeaveAlert()
             HunterMapIntent.ConfirmLeaveGame -> confirmLeaveGame()
+            HunterMapIntent.DismissLeaveError -> _uiState.update { it.copy(leaveErrorRes = null) }
             HunterMapIntent.InfoTapped -> onInfoTapped()
             HunterMapIntent.DismissGameInfo -> dismissGameInfo()
             HunterMapIntent.CodeCopied -> onCodeCopied()
@@ -855,8 +859,19 @@ class HunterMapViewModel @Inject constructor(
     }
 
     private fun confirmLeaveGame() {
-        _uiState.update { it.copy(showLeaveAlert = false, previewCircle = null) }
-        viewModelScope.launch { _effects.send(HunterMapEffect.NavigateToMenu) }
+        if (_uiState.value.isLeaving) return
+        _uiState.update { it.copy(showLeaveAlert = false, leaveErrorRes = null, isLeaving = true) }
+        viewModelScope.launch {
+            val needsServerLeave = _uiState.value.game.gameStatusEnum != GameStatus.DONE
+            val failure = if (needsServerLeave) runCatching { gameFunctions.leaveGame(gameId) }.exceptionOrNull() else null
+            if (failure != null) {
+                Log.w(TAG, "[leave] leaveGame failed", failure)
+                _uiState.update { it.copy(isLeaving = false, leaveErrorRes = failure.errorMessageRes()) }
+                return@launch
+            }
+            _uiState.update { it.copy(isLeaving = false, previewCircle = null) }
+            _effects.send(HunterMapEffect.NavigateToMenu)
+        }
     }
 
     val hunterSubtitle: String

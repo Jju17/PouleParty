@@ -7,6 +7,7 @@ sealed class GameMasterMapIntent {
     data object HuntersDrawerTapped : GameMasterMapIntent()
     data object DismissHuntersDrawer : GameMasterMapIntent()
     data object LeaveGameTapped : GameMasterMapIntent()
+    data object DismissLeaveError : GameMasterMapIntent()
     data object ValidationQueueTapped : GameMasterMapIntent()
     /** PP-86: GM tapped a registered hunter row → open confirmation alert. */
     data class DesignateHunterTapped(val registration: dev.rahier.pouleparty.model.Registration) : GameMasterMapIntent()

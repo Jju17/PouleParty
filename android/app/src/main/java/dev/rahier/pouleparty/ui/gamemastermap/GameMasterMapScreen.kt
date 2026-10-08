@@ -2,6 +2,7 @@
 
 package dev.rahier.pouleparty.ui.gamemastermap
 
+import dev.rahier.pouleparty.ui.common.ActionErrorDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -302,6 +303,15 @@ fun GameMasterMapScreen(
                     modifier = Modifier
                         .align(Alignment.BottomStart)
                         .padding(start = 12.dp, bottom = 130.dp)
+                )
+            }
+
+            state.leaveErrorRes?.let { message ->
+                ActionErrorDialog(
+                    title = R.string.leave_game_failed_title,
+                    message = message,
+                    onRetry = { viewModel.onIntent(GameMasterMapIntent.LeaveGameTapped) },
+                    onDismiss = { viewModel.onIntent(GameMasterMapIntent.DismissLeaveError) },
                 )
             }
 

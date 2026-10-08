@@ -22,6 +22,7 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -122,6 +123,24 @@ class GameMasterMapViewModelBehaviorTest {
             auth = auth,
             savedStateHandle = SavedStateHandle(mapOf("gameId" to gameId)),
         )
+
+    @Test
+    fun `leaving removes the game master server-side then returns to the menu`() = kotlinx.coroutines.test.runTest(testDispatcher) {
+        val vm = createViewModel()
+        vm.onIntent(GameMasterMapIntent.LeaveGameTapped)
+        assertEquals(GameMasterMapEffect.ReturnedToMenu, vm.effects.first())
+        coVerify(exactly = 1) { gameFunctions.leaveGame("test-id") }
+    }
+
+    @Test
+    fun `a failed leave keeps the game master on the map with an error`() = kotlinx.coroutines.test.runTest(testDispatcher) {
+        coEvery { gameFunctions.leaveGame(any()) } throws IllegalStateException("boom")
+        val vm = createViewModel()
+        vm.onIntent(GameMasterMapIntent.LeaveGameTapped)
+        testDispatcher.scheduler.runCurrent()
+        assertEquals(dev.rahier.pouleparty.R.string.api_error_unknown, vm.uiState.value.leaveErrorRes)
+        assertFalse(vm.uiState.value.isLeaving)
+    }
 
     // ── Read-only intent surface ────────────────────────
 

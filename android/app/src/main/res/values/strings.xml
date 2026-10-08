@@ -312,7 +312,7 @@
 
     <!-- Plan Selection -->
     <string name="create_party">Create Party</string>
-    <string name="retry">Retry</string>
+    <string name="retry">Try again</string>
 
     <!-- Power-Up Dialogs -->
     <string name="no_power_ups_collected">No power-ups collected yet</string>
@@ -433,4 +433,34 @@
     <string name="demo_tab_hunter_map">Hunter Map</string>
     <string name="demo_tab_game_master_map">GameMaster Map</string>
     <string name="demo_tab_victory">Victory</string>
+    <string name="api_error_unauthenticated">Your session has expired. Restart the app and try again.</string>
+    <string name="api_error_invalid_argument">Something in the request is not valid. Check what you entered.</string>
+    <string name="api_error_game_not_found">This game no longer exists.</string>
+    <string name="api_error_game_not_joinable">This game can no longer be joined.</string>
+    <string name="api_error_game_full">This game is full.</string>
+    <string name="api_error_already_has_role">You already play in this game.</string>
+    <string name="api_error_registration_required">This event needs the code from your registration email.</string>
+    <string name="api_error_not_allowed">You are not allowed to do this in this game.</string>
+    <string name="api_error_not_a_hunter">Only a hunter can do this.</string>
+    <string name="api_error_not_in_progress">The game has not started yet.</string>
+    <string name="api_error_game_over">The game is over.</string>
+    <string name="api_error_too_many_attempts">Too many attempts. Wait a moment before trying again.</string>
+    <string name="api_error_game_master_disabled">This game has no game master code.</string>
+    <string name="api_error_not_waiting">This is only possible before the game starts.</string>
+    <string name="api_error_chicken_cannot_leave">The chicken cannot leave. Cancel the game instead.</string>
+    <string name="api_error_power_up_not_found">This power-up is gone.</string>
+    <string name="api_error_power_up_taken">Someone was faster on this power-up.</string>
+    <string name="api_error_power_up_wrong_role">This power-up is for the other side.</string>
+    <string name="api_error_power_up_too_far">Get closer to the power-up to collect it.</string>
+    <string name="api_error_power_up_already_active">This power-up is already active.</string>
+    <string name="api_error_position_unknown">Your position is not known yet. Wait for the GPS.</string>
+    <string name="api_error_submission_not_found">This proof no longer exists.</string>
+    <string name="api_error_submission_already_handled">Another referee already handled this proof.</string>
+    <string name="api_error_challenge_not_found">This challenge no longer exists.</string>
+    <string name="api_error_already_launched">The game has already been launched.</string>
+    <string name="api_error_not_ready_to_launch">The game cannot be launched yet.</string>
+    <string name="api_error_not_a_debug_game">This action only works in a test game.</string>
+    <string name="api_error_network">No connection. Check your network and try again.</string>
+    <string name="api_error_unknown">Something went wrong. Try again.</string>
+    <string name="leave_game_failed_title">Could not leave the game</string>
 </resources>

@@ -11,6 +11,8 @@ import dev.rahier.pouleparty.data.GameRepository
 import dev.rahier.pouleparty.data.PresenceRepository
 import dev.rahier.pouleparty.data.DebugAction
 import dev.rahier.pouleparty.data.GameFunctions
+import dev.rahier.pouleparty.model.GameStatus
+import dev.rahier.pouleparty.ui.common.errorMessageRes
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.powerups.model.PowerUp
 import dev.rahier.pouleparty.powerups.model.PowerUpType
@@ -63,6 +65,8 @@ data class GameMasterMapUiState(
     val circles: List<dev.rahier.pouleparty.model.ZoneCircle> = emptyList(),
     override val showGameInfo: Boolean = false,
     val showHuntersDrawer: Boolean = false,
+    val isLeaving: Boolean = false,
+    @param:androidx.annotation.StringRes val leaveErrorRes: Int? = null,
     override val winnerNotification: String? = null,
     override val hasGameStarted: Boolean = false,
     override val countdownNumber: Int? = null,
@@ -112,15 +116,30 @@ class GameMasterMapViewModel @Inject constructor(
         loadGame()
     }
 
+    private fun leaveGame() {
+        if (_uiState.value.isLeaving) return
+        _uiState.update { it.copy(isLeaving = true, leaveErrorRes = null, showGameInfo = false) }
+        viewModelScope.launch {
+            val needsServerLeave = _uiState.value.game.gameStatusEnum != GameStatus.DONE
+            val failure = if (needsServerLeave) runCatching { gameFunctions.leaveGame(gameId) }.exceptionOrNull() else null
+            if (failure != null) {
+                Log.w("GameMasterMapVM", "[leave] leaveGame failed", failure)
+                _uiState.update { it.copy(isLeaving = false, leaveErrorRes = failure.errorMessageRes()) }
+                return@launch
+            }
+            _uiState.update { it.copy(isLeaving = false) }
+            _effects.send(GameMasterMapEffect.ReturnedToMenu)
+        }
+    }
+
     fun onIntent(intent: GameMasterMapIntent) {
         when (intent) {
             GameMasterMapIntent.InfoTapped -> _uiState.update { it.copy(showGameInfo = true) }
             GameMasterMapIntent.DismissGameInfo -> _uiState.update { it.copy(showGameInfo = false) }
             GameMasterMapIntent.HuntersDrawerTapped -> _uiState.update { it.copy(showHuntersDrawer = true) }
             GameMasterMapIntent.DismissHuntersDrawer -> _uiState.update { it.copy(showHuntersDrawer = false) }
-            GameMasterMapIntent.LeaveGameTapped -> viewModelScope.launch {
-                _effects.send(GameMasterMapEffect.ReturnedToMenu)
-            }
+            GameMasterMapIntent.LeaveGameTapped -> leaveGame()
+            GameMasterMapIntent.DismissLeaveError -> _uiState.update { it.copy(leaveErrorRes = null) }
             GameMasterMapIntent.ValidationQueueTapped -> viewModelScope.launch {
                 _effects.send(GameMasterMapEffect.OpenValidationQueue)
             }

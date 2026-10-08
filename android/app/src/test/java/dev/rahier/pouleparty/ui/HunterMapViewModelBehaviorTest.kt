@@ -239,13 +239,27 @@ class HunterMapViewModelBehaviorTest {
     }
 
     @Test
-    fun `confirmLeaveGame clears alert (NavigateToMenu effect emitted)`() {
+    fun `confirming leave removes the hunter server-side then returns to the menu`() = kotlinx.coroutines.test.runTest(testDispatcher) {
         val vm = createViewModel()
         vm.onIntent(HunterMapIntent.LeaveGameTapped)
         vm.onIntent(HunterMapIntent.ConfirmLeaveGame)
         assertFalse(vm.uiState.value.showLeaveAlert)
-        // Effect emission is covered by the screen integration test;
-        // unit-level we only verify the state transition.
+        assertEquals(HunterMapEffect.NavigateToMenu, vm.effects.first())
+        io.mockk.coVerify(exactly = 1) { gameFunctions.leaveGame("test-id") }
+        assertFalse(vm.uiState.value.isLeaving)
+    }
+
+    @Test
+    fun `a failed leave stays on the map with a translated error`() = kotlinx.coroutines.test.runTest(testDispatcher) {
+        io.mockk.coEvery { gameFunctions.leaveGame(any()) } throws
+            dev.rahier.pouleparty.data.ApiException(dev.rahier.pouleparty.data.ApiErrorCode.NETWORK)
+        val vm = createViewModel()
+        vm.onIntent(HunterMapIntent.ConfirmLeaveGame)
+        advanceUntilIdle()
+        assertEquals(dev.rahier.pouleparty.R.string.api_error_network, vm.uiState.value.leaveErrorRes)
+        assertFalse(vm.uiState.value.isLeaving)
+        vm.onIntent(HunterMapIntent.DismissLeaveError)
+        assertNull(vm.uiState.value.leaveErrorRes)
     }
 
     // MARK:, Game info
