@@ -113,7 +113,7 @@ export const mirrorGameMetaToRtdb = onDocumentWritten(
     const meta = extractGameMeta(after);
     if (meta.creatorId === "") {
       logger.warn(
-        `rtdb meta mirror: game ${gameId} has empty creatorId — malformed or partial doc produces empty authorization data`
+        `rtdb meta mirror: game ${gameId} has empty creatorId: malformed or partial doc produces empty authorization data`
       );
     }
     await rtdbGameRef

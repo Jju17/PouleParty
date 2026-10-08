@@ -2,22 +2,6 @@ import { logger } from "firebase-functions/v2";
 import { fetchWithRetry } from "../http";
 import { eventBatch } from "../events";
 
-// PP-52 — Confirmation email sent by `confirmRegistrationPayment`
-// (functions/src/registrations.ts) after Stripe confirms the payment.
-// Plain HTML (no React Email build step) so the functions bundle
-// stays small and CJS-friendly.
-//
-// Localized on `reg.locale` (`fr`, `en`, `nl`). Unknown locales fall
-// back to `fr` since the D-Day audience is FR-first.
-//
-// Frames the 6-char code as a physical wristband-pickup token, NOT
-// as an in-app join code. The mobile binaries shipped from 1.13.1
-// (4) onward no longer query this code or claim the legacy
-// `pouleparty.be/join?code=…` Universal Link / App Link — compliance
-// with Apple App Store 3.1.1 (paid digital content). All in-app
-// gameplay is free; the Stripe inscription is a real-world ticket
-// for the in-person event in Ixelles.
-
 interface RegistrationSnapshot {
   registrationId: string;
   batchId: string;
@@ -58,7 +42,7 @@ const STRINGS: Record<Locale, EmailStrings> = {
       "Présente ce code au bar de départ pour récupérer ton bracelet et ton verre de bienvenue. C'est aussi ton code pour rejoindre la partie dans l'app : ouvre PouleParty, entre le code de la partie annoncé sur place, puis ce code. Garde ce mail (ou note le code), c'est ton seul justificatif d'inscription.",
     support: "Une question&nbsp;? Écris à",
     reference: "Référence inscription",
-    footer: "PouleParty — Bruxelles 🇧🇪",
+    footer: "PouleParty: Bruxelles 🇧🇪",
   },
   en: {
     subject: "Your PouleParty registration is confirmed 🎉",
@@ -71,7 +55,7 @@ const STRINGS: Record<Locale, EmailStrings> = {
       "Show this code at the start bar to pick up your wristband and welcome drink. It is also your code to join the game in the app: open PouleParty, enter the game code announced on site, then this code. Keep this email (or note the code down). It is your only proof of registration.",
     support: "Anything wrong? Email",
     reference: "Registration reference",
-    footer: "PouleParty — Brussels 🇧🇪",
+    footer: "PouleParty: Brussels 🇧🇪",
   },
   nl: {
     subject: "Je PouleParty-inschrijving is bevestigd 🎉",
@@ -84,7 +68,7 @@ const STRINGS: Record<Locale, EmailStrings> = {
       "Toon deze code aan de startbar om je polsbandje en welkomstdrankje op te halen. Het is ook je code om mee te doen in de app: open PouleParty, voer de spelcode in die ter plaatse wordt aangekondigd, en dan deze code. Bewaar deze e-mail (of noteer de code). Het is je enige bewijs van inschrijving.",
     support: "Een probleem? Mail naar",
     reference: "Inschrijvingsreferentie",
-    footer: "PouleParty — Brussel 🇧🇪",
+    footer: "PouleParty: Brussel 🇧🇪",
   },
 };
 

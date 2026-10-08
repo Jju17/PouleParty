@@ -117,10 +117,6 @@ export const validateChallengeSubmission = onCall<
     }
 
     tx.set(completionRef, payload, { merge: true });
-    // PP-103: denormalized leaderboard read-model. One entry per hunter,
-    // updated in the same transaction so it never drifts from the
-    // authoritative completion doc. Clients read this single doc instead of
-    // streaming the whole challengeCompletions collection.
     tx.set(
       gameRef.collection("aggregates").doc("leaderboard"),
       { entries: { [hunterId]: { teamName, totalPoints: newTotal } } },

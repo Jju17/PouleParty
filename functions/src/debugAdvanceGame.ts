@@ -7,7 +7,7 @@ import { isChicken, isGameMaster } from "./roles";
 import { CALLABLE_OPTIONS, apiError, requireString, requireUid } from "./config";
 
 const REGION = "europe-west1";
-// Power-ups spawned on each debug shrink step — mirrors the real periodic
+// Power-ups spawned on each debug shrink step, mirrors the real periodic
 // batch fired at every zone shrink.
 const DEBUG_SHRINK_SPAWN_SIZE = 2;
 
@@ -175,12 +175,12 @@ export const debugAdvanceGame = onCall<
       }
       if (step.collapsed) {
         logger.info(`debugAdvanceGame: zone collapsed → done for ${gameId} (by ${uid})`);
-        return { success: true, message: "Zone collapsed — game over" };
+        return { success: true, message: "Zone collapsed: game over" };
       }
 
       // Spawn a periodic batch at the new shrink index, just like reality.
       // `idSalt` keeps the generated doc IDs unique so this batch coexists
-      // with the scheduled one instead of merging onto its docs — and so the
+      // with the scheduled one instead of merging onto its docs, and so the
       // shrink index (which drives the radius/center) is NOT inflated. Keyed
       // on the monotonic `spawnIndex` so two same-millisecond taps can't
       // collide on the task id and drop a batch.

@@ -1,19 +1,3 @@
-// PP-99 — Single source of truth for i18n URL routing on the web app.
-//
-// Slug map per route × locale + four pure helpers (routePath /
-// localeFromPath / routeKeyFromPath / equivalentPath) that the React
-// Router config, the I18nProvider, the header toggle and the SEO
-// hreflang injector all consume.
-//
-// Slugs are LOCALIZED — `/fr/inscription` ≠ `/en/registration` ≠
-// `/nl/inschrijving`. Best for SEO + UX in a multilingual market
-// (Belgium FR + NL). The locale prefix is always present (`/fr/...`,
-// `/en/...`, `/nl/...`); the root `/` is 301-redirected to the
-// detected locale by `<LocaleRedirect />`.
-//
-// When adding a route: extend `RouteKey` + add an entry in `ROUTES`
-// + register the React component in `main.tsx`'s `PAGE_COMPONENTS`.
-// No path string-literal anywhere else.
 
 export type Locale = "fr" | "en" | "nl";
 
@@ -54,13 +38,6 @@ export const ROUTES: Record<RouteKey, Record<Locale, string>> = {
     en: "create-a-party",
     nl: "een-feestje-organiseren",
   },
-  // PP-99 — Legal / utility slugs intentionally stay in English on all
-  // three locales (`privacy`, `terms`, `support`, `delete-account`).
-  // Same convention as Apple, Microsoft, Booking for legal pages:
-  // the words are tech-universal, the URLs are predictable, the user
-  // who types `/fr/privacy` gets the page rather than a 404. Product
-  // slugs (`inscription`, `creer-une-partie`) stay fully localized to
-  // preserve the FR-first brand voice + SEO in the local market.
   privacy: { fr: "privacy", en: "privacy", nl: "privacy" },
   terms: { fr: "terms", en: "terms", nl: "terms" },
   support: { fr: "support", en: "support", nl: "support" },
@@ -75,7 +52,7 @@ export function isLocale(value: string): value is Locale {
   return value === "fr" || value === "en" || value === "nl";
 }
 
-/** Full pathname for a (key, locale) — e.g. `routePath("inscription", "fr")` → `/fr/inscription`. */
+/** Full pathname for a (key, locale), e.g. `routePath("inscription", "fr")` → `/fr/inscription`. */
 export function routePath(key: RouteKey, locale: Locale): string {
   const slug = ROUTES[key][locale];
   return slug === "" ? `/${locale}` : `/${locale}/${slug}`;

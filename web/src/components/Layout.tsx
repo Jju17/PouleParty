@@ -48,10 +48,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           Poule Party
         </Link>
         <nav className="flex items-center gap-2">
-          {/* PP-99 — Locale toggle. `setLocale` navigates to the
-              equivalent path in the new locale, so `/fr/inscription`
-              becomes `/nl/inschrijving` rather than dropping the user
-              on `/nl` (the home of the new locale). */}
+          {}
           <button
             onClick={() => setLocale(NEXT_LOCALE[locale])}
             className={`px-2.5 py-1.5 rounded-full border-2 text-xs font-bold transition-all duration-300 ${
@@ -83,7 +80,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         &copy; {CURRENT_YEAR} Julien Rahier. {t.footer.rights}
       </footer>
 
-      {/* Theme toggle — bottom right corner */}
+      {/* Theme toggle, bottom right corner */}
       <button
         onClick={toggleTheme}
         className={`fixed bottom-5 right-5 w-10 h-10 rounded-full flex items-center justify-center text-lg transition-all duration-300 hover:scale-110 shadow-lg ${

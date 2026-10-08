@@ -81,7 +81,7 @@ function ensurePasswordFormat(password: unknown): string {
 /**
  * Sets (or replaces) the 4-digit GameMaster password on a Game.
  * Only the game's `creatorId` can call this. The password lands in
- * `/games/{gameId}/private/security` — a subcollection denied to all
+ * `/games/{gameId}/private/security`, a subcollection denied to all
  * clients by firestore.rules so only admin SDK (this handler) can
  * read it.
  */
@@ -109,11 +109,6 @@ export const setGameMasterPassword = onCall(
   }
 );
 
-/**
- * Clears the GameMaster password. Existing GameMasters keep their
- * role — clearing just stops new joins (PP-70 decision). Only the
- * creator can call this.
- */
 export const clearGameMasterPassword = onCall(
   CALLABLE_OPTIONS,
   async (request) => {
@@ -230,13 +225,6 @@ export const joinAsGameMaster = onCall(
         };
       }
 
-      // Success: set the caller's role to gameMaster, mirror the
-      // membership reverse-index, AND delete the rate-limit doc in the
-      // same transaction.
-      // HIGH-6 (audit 2026-05-17): switched from `tx.set(..., {attempts:0})`
-      // to `tx.delete(...)` so successful joins don't leave growing
-      // dead docs in `/gmRateLimits` — the collection was unbounded
-      // before this fix.
       tx.update(gameRef(gameId), { [`roles.${uid}`]: "gameMaster" });
       tx.set(
         db()

@@ -22,7 +22,7 @@ function pinsAtDistance(distanceM: number) {
 
 // ─── Formula `stayInTheZone`: R = max(D × 1.5, D + 50 + 200, 800) ─
 
-describe("computeZoneConfigurationCore — stayInTheZone radius formula", () => {
+describe("computeZoneConfigurationCore: stayInTheZone radius formula", () => {
   test("D = 50m → max(75, 300, 800) = 800 (floor)", () => {
     const { start, final } = pinsAtDistance(50);
     const out = computeZoneConfigurationCore({
@@ -105,7 +105,7 @@ describe("computeZoneConfigurationCore — stayInTheZone radius formula", () => 
 
 // ─── interior margin ≥ 200 m always satisfied ─────────────────
 
-describe("computeZoneConfigurationCore — interior margin invariant", () => {
+describe("computeZoneConfigurationCore: interior margin invariant", () => {
   test("for every D ≤ 10km, initialRadius − D ≥ 200 m (interior margin)", () => {
     for (const D of [50, 100, 500, 1000, 1500, 2000, 5000, 10_000]) {
       const { start, final } = pinsAtDistance(D);
@@ -133,7 +133,7 @@ describe("computeZoneConfigurationCore — interior margin invariant", () => {
 
 // ─── followTheChicken radius hint ─────────────────────────────
 
-describe("computeZoneConfigurationCore — followTheChicken radius hint", () => {
+describe("computeZoneConfigurationCore: followTheChicken radius hint", () => {
   test("Small (500) → initialRadius 500", () => {
     const out = computeZoneConfigurationCore({
       startPoint: { lat: 50.85, lng: 4.35 },
@@ -182,7 +182,7 @@ describe("computeZoneConfigurationCore — followTheChicken radius hint", () => 
 
 // ─── input validation: every 400 case ─────────────────────────
 
-describe("computeZoneConfigurationCore — input validation", () => {
+describe("computeZoneConfigurationCore: input validation", () => {
   test("stayInTheZone without finalPoint throws invalid-argument", () => {
     expect(() =>
       computeZoneConfigurationCore({
@@ -326,7 +326,7 @@ describe("computeZoneConfigurationCore — input validation", () => {
 
 // ─── forceNewSeed semantics ────────────────────────────────────
 
-describe("computeZoneConfigurationCore — forceNewSeed semantics", () => {
+describe("computeZoneConfigurationCore: forceNewSeed semantics", () => {
   const input = {
     startPoint: { lat: 50.85, lng: 4.35 },
     finalPoint: { lat: 50.86, lng: 4.36 },
@@ -342,9 +342,6 @@ describe("computeZoneConfigurationCore — forceNewSeed semantics", () => {
   });
 
   test("with forceNewSeed, repeated calls produce different seeds", () => {
-    // With Math.random under the hood the chance of two consecutive
-    // shuffles colliding is ~1/2^31. Loop 5 times to make the test
-    // tolerant to a single unlucky collision.
     const seeds = new Set<number>();
     for (let i = 0; i < 5; i++) {
       const out = computeZoneConfigurationCore({ ...input, forceNewSeed: true });
@@ -379,7 +376,7 @@ describe("computeZoneConfigurationCore — forceNewSeed semantics", () => {
 
 // ─── calculateNormalModeSettings parity ───────────────────────
 
-describe("calculateNormalModeSettingsServer — iOS/Android parity", () => {
+describe("calculateNormalModeSettingsServer: iOS/Android parity", () => {
   // These three cases match the iOS GameTests.swift goldens line-for-line.
   test("2h game, 1500m radius → 5min interval, 116.66 m/shrink", () => {
     const { interval, decline } = calculateNormalModeSettingsServer(1500, 120);
@@ -428,9 +425,7 @@ describe("calculateNormalModeSettingsServer — iOS/Android parity", () => {
   });
 });
 
-// ─── circles array (PP-13 recap preview) ──────────────────────
-
-describe("computeZoneConfigurationCore — intermediate circles", () => {
+describe("computeZoneConfigurationCore: intermediate circles", () => {
   test("includes initial circle as first entry", () => {
     const { start, final } = pinsAtDistance(1000);
     const out = computeZoneConfigurationCore({
@@ -511,7 +506,7 @@ describe("computeZoneConfigurationCore — intermediate circles", () => {
 
 // ─── constants pinned ─────────────────────────────────────────
 
-describe("computeZoneConfigurationCore — pinned constants", () => {
+describe("computeZoneConfigurationCore: pinned constants", () => {
   test("finalZoneRadius is 50, interiorMargin is 200", () => {
     const out = computeZoneConfigurationCore({
       startPoint: { lat: 50.85, lng: 4.35 },
@@ -528,7 +523,7 @@ describe("computeZoneConfigurationCore — pinned constants", () => {
 // PP-zone-stored: the persisted schedule is what spawnBatchForGame now
 // indexes into (circles[batchIndex] = the active circle for batch N) and
 // what every client renders read-only. Pin the indexing contract.
-describe("computeShrinkSchedule — stored-circles indexing contract", () => {
+describe("computeShrinkSchedule: stored-circles indexing contract", () => {
   const start = { lat: 50.85, lng: 4.35 };
   const final = { lat: 50.86, lng: 4.36 };
 
@@ -575,7 +570,7 @@ describe("computeShrinkSchedule — stored-circles indexing contract", () => {
 
   test("the schedule the wizard previews equals what onGameCreated would persist", () => {
     // computeZoneConfigurationCore.circles must match a direct
-    // computeShrinkSchedule call on the same derived params — i.e. the
+    // computeShrinkSchedule call on the same derived params, i.e. the
     // recap preview and the stored doc are byte-identical.
     const out = computeZoneConfigurationCore({
       startPoint: start,
@@ -592,7 +587,7 @@ describe("computeShrinkSchedule — stored-circles indexing contract", () => {
 });
 
 // ─── selectActiveCircleIndex (freeze-aware, server == client) ─
-describe("selectActiveCircleIndex — freeze-aware active circle", () => {
+describe("selectActiveCircleIndex: freeze-aware active circle", () => {
   const MIN = 60_000;
   const FREEZE = 120; // seconds, lockstep with zoneFreeze duration
 
@@ -609,7 +604,7 @@ describe("selectActiveCircleIndex — freeze-aware active circle", () => {
     ).toBe(1);
   });
 
-  test("freeze spanning TWO boundaries (1-min interval) lags by 2 — the bug the old -1 missed", () => {
+  test("freeze spanning TWO boundaries (1-min interval) lags by 2: the bug the old -1 missed", () => {
     // 1-min interval, freeze window [2 min, 4 min) covers ticks at 2 min AND
     // 3 min. now=3.5 min => 3 nominal shrinks, 2 frozen => index 1.
     // The old fixed `batchIndex - 1` would have returned 2 (wrong circle).

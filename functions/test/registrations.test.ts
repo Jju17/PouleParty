@@ -21,7 +21,7 @@ function basePayload(overrides: Record<string, unknown> = {}): unknown {
   };
 }
 
-describe("validatePayload — happy path", () => {
+describe("validatePayload: happy path", () => {
   test("accepts a well-formed payload and normalizes the email", () => {
     const out = validatePayload(basePayload({ email: " Alice@Example.COM " }));
     expect(out.batchId).toBe("game-06-06-2026");
@@ -48,7 +48,7 @@ describe("validatePayload — happy path", () => {
   });
 });
 
-describe("validatePayload — body shape rejections", () => {
+describe("validatePayload: body shape rejections", () => {
   test("throws on missing body", () => {
     expect(() => validatePayload(undefined)).toThrow(/Missing request body/);
   });
@@ -60,7 +60,7 @@ describe("validatePayload — body shape rejections", () => {
   });
 });
 
-describe("validatePayload — honeypot", () => {
+describe("validatePayload: honeypot", () => {
   test("rejects when nicknameAlt is non-empty (naive bot fill)", () => {
     expect(() =>
       validatePayload(basePayload({ nicknameAlt: "Acme Corp" }))
@@ -85,7 +85,7 @@ describe("validatePayload — honeypot", () => {
   });
 });
 
-describe("validatePayload — batchId allowlist", () => {
+describe("validatePayload: batchId allowlist", () => {
   test("rejects empty batchId", () => {
     expect(() => validatePayload(basePayload({ batchId: "" }))).toThrow(/batchId is required/);
     expect(() => validatePayload(basePayload({ batchId: "   " }))).toThrow(/batchId is required/);
@@ -103,7 +103,7 @@ describe("validatePayload — batchId allowlist", () => {
   });
 });
 
-describe("validatePayload — playerName / teamName length", () => {
+describe("validatePayload: playerName / teamName length", () => {
   test("rejects empty playerName", () => {
     expect(() => validatePayload(basePayload({ playerName: "" }))).toThrow(/playerName/);
     expect(() => validatePayload(basePayload({ playerName: "    " }))).toThrow(/playerName/);
@@ -122,7 +122,7 @@ describe("validatePayload — playerName / teamName length", () => {
   });
 });
 
-describe("validatePayload — email", () => {
+describe("validatePayload: email", () => {
   test("rejects empty email", () => {
     expect(() => validatePayload(basePayload({ email: "" }))).toThrow(/email/);
   });
@@ -170,7 +170,7 @@ describe("validatePayload — email", () => {
   });
 });
 
-describe("validatePayload — phone", () => {
+describe("validatePayload: phone", () => {
   test("stores a plain local-format phone unmodified", () => {
     expect(validatePayload(basePayload({ phone: "0477123456" })).phone).toBe("0477123456");
   });
@@ -200,7 +200,7 @@ describe("validatePayload — phone", () => {
   });
 });
 
-describe("validatePayload — teamSize", () => {
+describe("validatePayload: teamSize", () => {
   test("accepts 3 / 4 / 5", () => {
     for (const size of [3, 4, 5]) {
       expect(validatePayload(basePayload({ teamSize: size })).teamSize).toBe(size);
@@ -220,7 +220,7 @@ describe("validatePayload — teamSize", () => {
   });
 });
 
-describe("validatePayload — locale fallback", () => {
+describe("validatePayload: locale fallback", () => {
   test("accepts a 2-char locale string", () => {
     for (const loc of ["fr", "en", "nl"]) {
       expect(validatePayload(basePayload({ locale: loc })).locale).toBe(loc);
@@ -243,7 +243,7 @@ describe("validatePayload — locale fallback", () => {
   });
 });
 
-describe("validatePayload — consent", () => {
+describe("validatePayload: consent", () => {
   test("rejects missing consentAcknowledgedAt", () => {
     const p = basePayload();
     delete (p as Record<string, unknown>).consentAcknowledgedAt;
@@ -336,7 +336,7 @@ describe("originFor", () => {
   });
 });
 
-describe("basePathForLocale (PP-99 — locale-prefixed slugs)", () => {
+describe("basePathForLocale (PP-99: locale-prefixed slugs)", () => {
   test("maps each known locale to its localized slug under /<locale>/", () => {
     expect(basePathForLocale("fr")).toBe("/fr/inscription");
     expect(basePathForLocale("en")).toBe("/en/registration");

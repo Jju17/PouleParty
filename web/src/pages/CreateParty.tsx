@@ -1,8 +1,6 @@
 import Layout from "../components/Layout";
 import { useI18n } from "../i18n";
 
-// PP-99 — Locale is derived from the URL prefix (`/fr/...`, `/en/...`,
-// `/nl/...`) by `<I18nProvider>`. No per-page pinning needed.
 export default function CreateParty() {
   const { t } = useI18n();
 

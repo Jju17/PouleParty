@@ -73,7 +73,7 @@ interface SubmitFoundCodeInput {
 
 interface SubmitFoundCodeResult {
   success: boolean;
-  /** When false, what went wrong — drives the UI error copy. */
+  /** When false, what went wrong, drives the UI error copy. */
   reason?: "invalidCode" | "notAHunter" | "alreadyWinner" | "gameNotInProgress" | "cooldown";
   /** Epoch ms the cooldown ends at, when `reason === "cooldown"`. */
   lockedUntil?: number;

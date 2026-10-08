@@ -2,19 +2,6 @@ import { google } from "googleapis";
 import { logger } from "firebase-functions/v2";
 import { formatBrussels } from "./time";
 
-// PP-52 — Append a row to the D-Day Google Sheet whenever a
-// registration is paid. The sheet is shared with Martin / l'orga for
-// at-a-glance roster + reconciliation.
-//
-// Auth: Application Default Credentials. In Cloud Functions v2 ADC
-// resolves to the runtime compute service account (cf
-// `reference_web_firebase.md`):
-//   - prod    : 1047338092854-compute@developer.gserviceaccount.com
-//   - staging :  847523524308-compute@developer.gserviceaccount.com
-// The Sheet MUST be shared as Editor with the relevant compute SA
-// AND the Google Sheets API must be enabled on the project (Console
-// → APIs & Services → Enable Sheets API). Both are one-time setup.
-
 interface RegistrationSnapshot {
   registrationId: string;
   batchId: string;
@@ -42,10 +29,10 @@ const HEADER_ROW = [
   "phone",           // G
   "teamSize",        // H
   "code",            // I
-  "paid",            // J — flips to FALSE on refund (matches Firestore)
-  "paidAt",          // K — never overwritten, original payment timestamp
-  "refunded",        // L — TRUE after a full refund
-  "refundedAt",      // M — refund timestamp
+  "paid",            // J, flips to FALSE on refund (matches Firestore)
+  "paidAt",          // K, never overwritten, original payment timestamp
+  "refunded",        // L, TRUE after a full refund
+  "refundedAt",      // M, refund timestamp
 ];
 
 const REFUND_HEADER_CELLS = ["refunded", "refundedAt"];
@@ -65,13 +52,13 @@ async function sheetsClient() {
 
 /**
  * Write the column header into row 1 if it's still empty. Runs once
- * per sheet lifetime — every subsequent append finds the row already
+ * per sheet lifetime, every subsequent append finds the row already
  * populated and short-circuits. No frozen-row formatting (Sheets API
- * batchUpdate would be needed for that) — Julien freezes row 1
+ * batchUpdate would be needed for that), Julien freezes row 1
  * manually if needed.
  *
  * Also backfills the refund columns (L1/M1) on sheets that were
- * bootstrapped with the pre-refund 11-column header — the original
+ * bootstrapped with the pre-refund 11-column header, the original
  * `ensureHeader` only ran when A1 was empty, so existing prod sheets
  * never got the "refunded" / "refundedAt" headers without this nudge.
  */
@@ -98,7 +85,7 @@ async function ensureHeader(
     return;
   }
 
-  // Header already exists — backfill the refund columns if missing
+  // Header already exists, backfill the refund columns if missing
   // (columns L=11 and M=12 are zero-indexed in the response array).
   const lCell = headerRow[11];
   const mCell = headerRow[12];
@@ -168,16 +155,6 @@ export async function appendRegistrationRow(
   logger.info(`Sheet row appended for ${reg.registrationId}`);
 }
 
-/**
- * Flips an existing row to refunded state on a `charge.refunded`
- * webhook. Finds the row by `registrationId` in column B, then in a
- * single `values.batchUpdate` flips J (paid → FALSE) and writes L
- * (refunded → TRUE) + M (refundedAt → now). K (paidAt) is intentionally
- * left untouched so the original payment timestamp survives as audit.
- *
- * No-op if the row is missing (registration paid before Sheet sync
- * went live, or row manually deleted) — logged for follow-up.
- */
 export async function markRegistrationRefunded(
   registrationId: string,
   sheetId: string

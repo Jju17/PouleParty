@@ -1,26 +1,7 @@
-/**
- * QA bot: simulates N hunters in a (staging) game so the chicken /
- * GameMaster map can be tested without several phones. NOT a Cloud Function —
- * run via ts-node. Staging only.
- *
- * It sets `roles.<uid> = "hunter"`, writes a `players` doc per bot (so the
- * GameMaster drawer shows a team name, PP-86), then random-walks each bot's
- * `hunterLocations/{uid}` doc around the zone centre every few seconds. On
- * Ctrl+C it removes the bots and their location docs so they vanish from the
- * map.
- *
- * Usage:
- *   FIREBASE_PROJECT_ID=pouleparty-ba586 npx tsx scripts/qaBot.ts <GAMECODE> [botCount] [intervalSec]
- *
- * Credentials resolve like `debugGame.ts`: FIREBASE_SERVICE_ACCOUNT, or
- * FIREBASE_PROJECT_ID + Application Default Credentials.
- */
 
 import { FieldValue, Timestamp, getFirestore } from "firebase-admin/firestore";
 import { ServerValue, getDatabase } from "firebase-admin/database";
 import { initAdmin } from "./adminApp";
-
-
 
 // ~metres → degrees (latitude is uniform; longitude scales by cos(lat)).
 function metresToLat(m: number): number {
@@ -60,7 +41,7 @@ async function main() {
     | { latitude: number; longitude: number }
     | undefined;
   if (!center) {
-    console.error("Game has no zone.center — cannot place bots.");
+    console.error("Game has no zone.center: cannot place bots.");
     process.exit(1);
   }
   const radius = (data.zone?.radius as number | undefined) ?? 1000;

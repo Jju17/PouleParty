@@ -88,7 +88,7 @@ export const FINAL_CENTER_SAFETY_METERS = 1.0;
 
 /**
  * Radius of the "final zone" the chicken sees as a green glow on the
- * map — the whole disk, not just its center, must stay inside every
+ * map, the whole disk, not just its center, must stay inside every
  * drifted circle. Matches the hardcoded 50 m used by
  * `finalZoneGlowContent` on iOS and the Android equivalent in
  * `ChickenMapScreen`. Kept here (alongside the other drift
@@ -99,13 +99,13 @@ export const FINAL_ZONE_RADIUS_METERS = 50.0;
 
 /** How many rejection-sampling attempts before falling back to the
  * deterministic "pull toward finalCenter by `delta`" point. Each
- * attempt costs one splitmix64 evaluation; 32 is plenty — the
+ * attempt costs one splitmix64 evaluation; 32 is plenty, the
  * rejection rate only gets high near game end where disk(C, delta)
  * sticks out past disk(F, r), and even at 50 % rejection 32 attempts
  * succeed with probability > 99.99 %. */
 const MAX_DRIFT_ATTEMPTS = 32;
 
-/** splitmix64 — 64-bit mix function matching iOS `seededRandom` in
+/** splitmix64, 64-bit mix function matching iOS `seededRandom` in
  * `GameTimerLogic.swift` and Android `seededRandom` in
  * `GameTimerHelper.kt`. Returns a deterministic [0, 1) double for the
  * given `(seed, index)` pair. Uses BigInt because JS numbers can't
@@ -125,7 +125,7 @@ function seededRandomServer(seed: number, index: number): number {
 }
 
 /**
- * Deterministic drift center for stayInTheZone mode — mirrors the
+ * Deterministic drift center for stayInTheZone mode, mirrors the
  * client `deterministicDriftCenter`. Picks the zone center for one
  * shrink step as a pseudo-random point that simultaneously satisfies:
  *   A. `|candidate − basePoint| ≤ oldRadius − newRadius` → the new
@@ -136,7 +136,7 @@ function seededRandomServer(seed: number, index: number): number {
  *      the drifted circle.
  *
  * Caller contract: [basePoint] is the **initial** zone center and
- * [oldRadius] is the **initial** zone radius — NOT the previous
+ * [oldRadius] is the **initial** zone radius, NOT the previous
  * drifted center. Every shrink's candidate is drawn independently
  * from `disk(initial, R₀ − rᵢ) ∩ disk(final, rᵢ − FINAL − safety)`,
  * so successive circles can overlap each other freely as long as
@@ -292,7 +292,7 @@ export function generatePowerUpsServer(
 }
 
 /**
- * Haversine distance in meters between two lat/lng pairs. Shared helper —
+ * Haversine distance in meters between two lat/lng pairs. Shared helper,
  * used by road-snap validation to reject snaps that moved too far.
  */
 export function haversineDistance(

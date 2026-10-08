@@ -19,11 +19,6 @@ import { fetchWithRetry } from "./http";
 import { sendRegistrationConfirmationEmail } from "./email/registrationConfirmation";
 import { appendRegistrationRow, markRegistrationRefunded } from "./sheets";
 
-// PP-52 — Pre-paid event registrations from the public web form.
-// Top-level collection `/eventRegistrations/{rid}` deliberately
-// decoupled from `/games` (the form runs before any Game exists).
-// See CLAUDE.md "Firestore data model" and PP-52.
-
 const REGION = "europe-west1";
 const COLLECTION = "eventRegistrations";
 
@@ -36,7 +31,7 @@ const CURRENCY = "eur";
 const ALLOWED_TEAM_SIZES = [3, 4, 5] as const;
 type TeamSize = (typeof ALLOWED_TEAM_SIZES)[number];
 
-// Where Stripe Checkout returns the user — built off the request's
+// Where Stripe Checkout returns the user, built off the request's
 // `Origin` header so staging form (pouleparty-ba586.web.app) bounces
 // back to staging and prod form (pouleparty.be) bounces back to prod.
 // Fallback to prod when the header is missing (e.g. a non-browser
@@ -56,10 +51,6 @@ export function originFor(req: { headers: Record<string, string | string[] | und
   return FALLBACK_ORIGIN;
 }
 
-// PP-99 — Mirror of `web/src/i18n/routes.ts:ROUTES.inscription`. Used
-// to build the Stripe Checkout `success_url` / `cancel_url` on the
-// same locale-prefixed + localized slug the visitor came from so they
-// don't get bounced into a foreign language.
 const LOCALE_INSCRIPTION_PATH: Record<string, string> = {
   fr: "/fr/inscription",
   en: "/en/registration",
@@ -78,9 +69,6 @@ interface RegistrationFormPayload {
   phone: string;
   teamSize: TeamSize;
   locale?: string;
-  /** XPLAT-H5 (store-audit 2026-05-18): ISO-8601 timestamp captured
-   *  client-side when the buyer ticked the T&C / Privacy checkbox.
-   *  Required (CRD Art. 8(2) explicit consent + audit trail). */
   consentAcknowledgedAt?: string | null;
 }
 
@@ -108,13 +96,7 @@ interface RegistrationDoc {
   refunded?: boolean;
   refundedAt?: Timestamp;
   locale: string;
-  /** XPLAT-H5 (store-audit 2026-05-18): timestamp persisted from the
-   *  client-side consent checkbox (CRD Art. 8(2) audit trail). The
-   *  validator rejects the submit if missing. */
   consentAcknowledgedAt: Timestamp;
-  /** PP-52 single-use join gate: the first device to validate this code at
-   *  join time claims it. Any later attempt with a different UID is rejected
-   *  (`alreadyUsed`), so one paid registration grants exactly one in-app join. */
   claimedAt?: Timestamp;
   claimedBy?: string;
 }
@@ -127,11 +109,6 @@ function db() {
   return getFirestore();
 }
 
-// CRIT-4: max lengths on free-text fields. The previous validation only
-// checked `length > 0`, so a 10 MB playerName could pass and either
-// blow the Firestore 1 MB doc limit (failing AFTER the Stripe Checkout
-// session was already created → orphan Stripe session) or hit Stripe's
-// 500-char metadata cap.
 const MAX_NAME_LEN = 60;
 const MAX_EMAIL_LEN = 254; // RFC 5321
 const MAX_PHONE_LEN = 20;
@@ -142,13 +119,6 @@ export function validatePayload(body: unknown): RegistrationFormPayload {
   }
   const b = body as Record<string, unknown>;
 
-  // CRIT-4: honeypot field. The web form ships a hidden, aria-hidden
-  // input that real users never see or touch. Bots that auto-fill every
-  // visible field will populate it — reject if non-empty.
-  // XPLAT-staging-fix 2026-05-18: renamed from `company` because Chrome
-  // autofill was populating it with the user's Google profile
-  // organization despite `autoComplete="off"`, triggering false-positive
-  // 400 "invalid request" on every form submit.
   const honeypot = typeof b.nicknameAlt === "string" ? b.nicknameAlt.trim() : "";
   if (honeypot.length > 0) {
     throw new Error("invalid request");
@@ -170,10 +140,6 @@ export function validatePayload(body: unknown): RegistrationFormPayload {
   if (
     !emailRaw ||
     emailRaw.length > MAX_EMAIL_LEN ||
-    // CRIT-4: tighten email regex — the old `/^\S+@\S+\.\S+$/` accepted
-    // `\r\n` (whitespace minus tab) so an email like
-    // `foo@bar.com\r\nBcc: victim@…` could survive `.trim()` and slip
-    // CR/LF into the Resend HTTP API → header-injection risk.
     !/^[^\s@,]+@[^\s@,]+\.[^\s@,]+$/.test(emailRaw)
   ) {
     throw new Error("Valid email is required");
@@ -193,10 +159,6 @@ export function validatePayload(body: unknown): RegistrationFormPayload {
 
   const locale = typeof b.locale === "string" && b.locale.length === 2 ? b.locale : "fr";
 
-  // XPLAT-H5 (store-audit 2026-05-18): explicit consent (CRD Art. 8(2))
-  // must be present. The web form's checkbox cannot be ticked
-  // server-side, so a missing/empty value is a sign of a bot, an old
-  // cached page, or a tampered request.
   const consentRaw = typeof b.consentAcknowledgedAt === "string" ? b.consentAcknowledgedAt.trim() : "";
   if (!consentRaw || Number.isNaN(Date.parse(consentRaw))) {
     throw new Error("consentAcknowledgedAt is required");
@@ -211,12 +173,6 @@ export function validatePayload(body: unknown): RegistrationFormPayload {
 export const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
 export function generateCode(): string {
-  // CRIT-5 (audit 2026-05-17): use `crypto.randomInt` instead of
-  // `Math.random()`. V8's PRNG is xorshift128+, which is non-cryptographic
-  // and has published prediction techniques — an attacker who captured a
-  // few codes could in principle predict subsequent ones. With 32^6 ≈
-  // 1.07 B space and ~50 valid codes per batch, the entropy gate only
-  // holds if the codes are truly unpredictable.
   let out = "";
   for (let i = 0; i < 6; i += 1) {
     out += CODE_ALPHABET[randomInt(0, CODE_ALPHABET.length)];
@@ -224,17 +180,6 @@ export function generateCode(): string {
   return out;
 }
 
-/**
- * CRIT-5 (audit 2026-05-17): generate a unique code AND reserve the
- * registration doc inside a single Firestore transaction, so two
- * concurrent form submits can't both land on the same code (the previous
- * `query-then-set` pattern was a TOCTOU — both callers saw `empty` then
- * both wrote the same id, leaving one of them unreachable from JoinFlow's
- * `limit 1` lookup).
- *
- * Returns the reserved registration id + code. Caller fills in the rest
- * of the doc fields via a later `update(stripeSessionId)`.
- */
 async function reserveRegistrationCode(
   batchId: string,
   baseFields: Omit<RegistrationDoc, "code" | "registrationId">
@@ -274,12 +219,6 @@ export const createPendingRegistration = onRequest(
   {
     region: REGION,
     secrets: [STRIPE_SECRET_KEY],
-    // CRIT-4 (audit 2026-05-17): bounded autoscale + explicit CORS
-    // allowlist. The previous `cors: true` accepted any origin, and the
-    // default scaling let a small script blow up Stripe API quota +
-    // Firestore writes within minutes. 10 instances × ~50 req/s/instance
-    // caps the worst case while leaving generous headroom for D-Day
-    // peak traffic (~150 paying registrations).
     cors: [
       "https://pouleparty.be",
       "https://pouleparty-ba586.web.app",
@@ -295,13 +234,6 @@ export const createPendingRegistration = onRequest(
       return;
     }
 
-    // CRIT-4 (audit 2026-05-17, enforced 2026-05-18): verify the
-    // Firebase App Check token before running any handler logic.
-    // `onRequest` doesn't support the `enforceAppCheck` option (it's
-    // callable-only); manual verification via admin SDK is the documented
-    // pattern for HTTP functions. The web form attaches a reCAPTCHA
-    // Enterprise token via `X-Firebase-AppCheck`. Mobile apps don't hit
-    // this endpoint.
     const appCheckHeader = req.header("X-Firebase-AppCheck");
     if (!appCheckHeader) {
       logger.warn("createPendingRegistration: missing App Check token");
@@ -325,14 +257,10 @@ export const createPendingRegistration = onRequest(
     }
 
     // Tracks the reserved doc so the catch can clean it up if Stripe
-    // fails — otherwise a `paid:false` orphan would consume a code.
+    // fails, otherwise a `paid:false` orphan would consume a code.
     let reservedDocRef: FirebaseFirestore.DocumentReference | null = null;
     try {
       const origin = originFor(req);
-      // CRIT-5 (audit 2026-05-17): reserve the registration doc + the
-      // unique code inside a single transaction. The previous
-      // query-then-set pattern allowed two concurrent submits to land
-      // on the same code.
       const reservation = await reserveRegistrationCode(payload.batchId, {
         batchId: payload.batchId,
         playerName: payload.playerName,
@@ -350,11 +278,6 @@ export const createPendingRegistration = onRequest(
       reservedDocRef = docRef;
 
       const stripe = new Stripe(STRIPE_SECRET_KEY.value());
-      // HIGH-4 (audit 2026-05-17): pass an idempotency key so a network
-      // hiccup that drops the create-session response can't accidentally
-      // mint two charges when the user re-submits. The registrationId is
-      // already unique per call (Firestore auto-id from
-      // reserveRegistrationCode), so it's a perfect natural key.
       const session = await stripe.checkout.sessions.create(
         {
           mode: "payment",
@@ -438,11 +361,11 @@ export const confirmRegistrationPayment = onRequest(
       return;
     }
 
-    // Refund branch — fires when an inscription is refunded from the
+    // Refund branch, fires when an inscription is refunded from the
     // Stripe Dashboard (or via API). FULL refunds mark the row as
     // refunded in the Google Sheet so the wristband desk on D-Day
     // skips the code. Partial refunds are ignored (e.g. refunding one
-    // player from a team of 4 to drop down to 3 — the inscription is
+    // player from a team of 4 to drop down to 3, the inscription is
     // still valid for the remaining players).
     if (event.type === "charge.refunded") {
       const charge = event.data.object;
@@ -473,7 +396,7 @@ export const confirmRegistrationPayment = onRequest(
         registrationId = indexed.docs[0].id;
       } else {
         // Fallback for docs paid before `stripePaymentIntentId` was
-        // persisted — one extra Stripe API call to map PI → session →
+        // persisted, one extra Stripe API call to map PI → session →
         // client_reference_id.
         const sessions = await stripe.checkout.sessions.list({
           payment_intent: paymentIntentId,
@@ -544,7 +467,7 @@ export const confirmRegistrationPayment = onRequest(
       }
       if (refundResult.kind === "alreadyRefunded") {
         logger.info(
-          `charge.refunded re-delivery for ${registrationId} — already refunded, noop`
+          `charge.refunded re-delivery for ${registrationId}: already refunded, noop`
         );
         res.status(200).json({ received: true, idempotent: true });
         return;
@@ -584,14 +507,6 @@ export const confirmRegistrationPayment = onRequest(
       return;
     }
 
-    // HIGH-5 (audit 2026-05-17): defense-in-depth cross-check the
-    // session shape before flipping `paid`. Stripe is the source of
-    // truth for "did the user pay", but the webhook envelope is signed
-    // not encrypted — a compromised webhook secret would let an
-    // attacker forge a checkout.session.completed for any
-    // client_reference_id they guessed. Asserting the amount + currency
-    // + payment_status here blocks 0-amount forgeries, currency swaps,
-    // and "pending" sessions from sneaking through.
     if (session.payment_status !== "paid") {
       logger.warn(`Webhook for ${registrationId}: payment_status=${session.payment_status}, refusing`);
       res.status(200).json({ received: true, ignored: "not-paid" });
@@ -610,14 +525,6 @@ export const confirmRegistrationPayment = onRequest(
 
     const docRef = db().collection(COLLECTION).doc(registrationId);
 
-    // Idempotent flip: a second delivery of the same event MUST be a noop.
-    // HIGH-5 cross-check: also verify the amount matches the expected
-    // teamSize × unit price for this registration. Done inside
-    // the transaction so the check sees the canonical doc state.
-    // HIGH-FN-M9 (audit 2026-05-17): catch the missing-doc case
-    // explicitly so Stripe doesn't retry the webhook for 3 days on a
-    // doc that was deleted between checkout creation and webhook
-    // delivery.
     const result = await db().runTransaction<
       | { kind: "notFound" }
       | { kind: "amountMismatch"; expected: number; got: number | null }
@@ -654,7 +561,7 @@ export const confirmRegistrationPayment = onRequest(
     });
 
     if (result.kind === "notFound") {
-      logger.error(`Webhook for non-existent registration ${registrationId} — was the doc deleted?`);
+      logger.error(`Webhook for non-existent registration ${registrationId}: was the doc deleted?`);
       res.status(200).json({ received: true, error: "registration-not-found" });
       return;
     }
@@ -669,13 +576,13 @@ export const confirmRegistrationPayment = onRequest(
     const snapshot = result.snapshot;
 
     if (!wasFirstFlip) {
-      logger.info(`Webhook re-delivery for ${registrationId} — already paid, skipping side effects`);
+      logger.info(`Webhook re-delivery for ${registrationId}: already paid, skipping side effects`);
       res.status(200).json({ received: true, idempotent: true });
       return;
     }
 
     // Side effects run AFTER the transaction. If either fails we log
-    // but still return 200 — the registration is marked paid (source
+    // but still return 200, the registration is marked paid (source
     // of truth) and the failure is recoverable manually. Returning a
     // 5xx here would make Stripe retry the webhook, which would hit
     // the idempotency guard above and skip these calls entirely.
@@ -755,18 +662,6 @@ async function recordFailedSideEffect(
     logger.error(`ops alert send failed for ${registrationId}`, e);
   }
 }
-
-// ---------------------------------------------------------------------------
-// PP-52 — server-side validation + single-use claim of a registration code.
-//
-// Called by the mobile JoinFlow when a hunter resolves a gameCode whose Game
-// carries a `registrationBatchId`. The client never reads `/eventRegistrations`
-// (rules lock it to `if false`); this callable returns only a discriminated
-// status, never PII. The code is a single-use join token: the first device to
-// validate it claims it, and any later attempt with a different UID is rejected.
-// Manual entry only (no deeplink). Requires an authenticated caller (anonymous
-// Auth is enough — the gate is to prevent unauth curl scraping).
-// ---------------------------------------------------------------------------
 
 // Per-UID rate limit. Threat model: brute-forcing a 6-char alphanum code
 // (32^6 ~ 1B combinations, ~50 valid codes per batch). The legitimate JoinFlow
@@ -858,9 +753,9 @@ function normalizeJoinCode(value: unknown): string {
 
 /**
  * `validateRegistrationCode(batchId, code) -> { status }`.
- *   - `invalid`     — no paid eventRegistration matches the (batchId, code) pair
- *   - `alreadyUsed` — the code was already claimed by a different device
- *   - `valid`       — match found and now claimed by this caller (idempotent if
+ *   - `invalid`    , no paid eventRegistration matches the (batchId, code) pair
+ *   - `alreadyUsed`, the code was already claimed by a different device
+ *   - `valid`      , match found and now claimed by this caller (idempotent if
  *                     this caller already owns the claim)
  * The lookup + claim run in one transaction so two simultaneous submits can't
  * both win the same code.

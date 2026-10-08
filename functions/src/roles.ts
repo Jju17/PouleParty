@@ -9,7 +9,7 @@ export const MAX_TEAM_NAME_LENGTH = 30;
 // Single source of truth for game membership. `game.roles` is a map
 // `{ <uid>: Role }` on the game doc; a uid has exactly one role, so a
 // "ghost" (no role) or a double-role is impossible by construction.
-// `roles` is `write: if false` for clients (firestore.rules) — every
+// `roles` is `write: if false` for clients (firestore.rules), every
 // mutation goes through the callables below (admin SDK). `creatorId`
 // stays on the doc as ownership (orthogonal to the play role; the
 // creator also appears in `roles`).
@@ -173,14 +173,6 @@ export const joinGame = onCall(CALLABLE_OPTIONS, async (request) => {
   return { success: true };
 });
 
-/**
- * Re-designates the chicken before the game starts (PP-86). Caller must be
- * the creator or a GameMaster, `status == waiting`, and `newChickenUid` must
- * currently be a hunter. Atomic swap: the new chicken leaves the hunter pool
- * and the OLD chicken becomes a hunter (a user always keeps exactly one
- * role — no ghost). The old chicken's team name defaults to their saved
- * nickname when they had none.
- */
 export const designateChicken = onCall(CALLABLE_OPTIONS, async (request) => {
   const uid = requireUid(request);
   const gameId = requireString(request.data?.gameId, "gameId");
@@ -210,7 +202,7 @@ export const designateChicken = onCall(CALLABLE_OPTIONS, async (request) => {
     }
 
     // Read the demoted chicken's nickname (for a default team name) BEFORE
-    // any write — transactions require reads first.
+    // any write, transactions require reads first.
     let oldChickenTeamName = "Player";
     if (oldChickenUid) {
       const oldChickenProfile = (await tx.get(userRef(oldChickenUid))).data();

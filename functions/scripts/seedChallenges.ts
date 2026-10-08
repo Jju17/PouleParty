@@ -12,7 +12,7 @@ import { FieldValue, GeoPoint, getFirestore } from "firebase-admin/firestore";
 import { initAdmin } from "./adminApp";
 
 /**
- * FR text only — seed lives FR-first; admin fills `en`/`nl` from the
+ * FR text only, seed lives FR-first; admin fills `en`/`nl` from the
  * Console post-deploy. The 2-level locale cascade on the clients
  * (`titleByLocale[locale]` → `titleByLocale["fr"]`) makes that safe.
  */
@@ -44,7 +44,7 @@ const challenges: SeedChallenge[] = [
   {
     id: "street-demande-mariage",
     title: "Demande en mariage",
-    body: "Demander en mariage un(e) inconnu(e) — à genoux, en bonne et due forme.",
+    body: "Demander en mariage un(e) inconnu(e): à genoux, en bonne et due forme.",
     points: 100,
   },
   {
@@ -68,7 +68,7 @@ const challenges: SeedChallenge[] = [
   {
     id: "street-ecart-age",
     title: "Écart d'âge",
-    body: "Trouver le plus grand écart d'âge entre deux inconnus — photo ensemble.",
+    body: "Trouver le plus grand écart d'âge entre deux inconnus: photo ensemble.",
     points: 70,
   },
   {
@@ -141,7 +141,7 @@ const challenges: SeedChallenge[] = [
   {
     id: "bar-pierre-feuille-ciseaux",
     title: "Pierre-feuille-ciseaux",
-    body: "Pierre-feuille-ciseaux avec un inconnu — le perdant paye le verre.",
+    body: "Pierre-feuille-ciseaux avec un inconnu: le perdant paye le verre.",
     points: 50,
   },
   {
@@ -158,8 +158,6 @@ const challenges: SeedChallenge[] = [
     points: 300,
   },
 ];
-
-
 
 async function main() {
   const projectId = initAdmin({ withDatabase: false });

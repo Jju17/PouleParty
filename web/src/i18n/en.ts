@@ -236,10 +236,6 @@ export default {
       total: "TOTAL",
       note: "In-person event · Saturday June 6, 2026 · 8:30 PM · Ixelles (Brussels). Per player: welcome drink at the start bar, physical wristband, food and real-world prizes at the final spot. The mobile app is only used as a GPS tool during the live event.",
       paymentSecure: "Secure payment via Stripe (Card · Apple Pay · Google Pay)",
-      // XPLAT-H5 (store-audit 2026-05-18, updated 2026-05-18 PM):
-      // implicit consent at submit. Disclosure rendered right above
-      // the "PAY {n} €" button so the user sees the Terms + Privacy
-      // links + the Art. 16(l) waiver at the moment of click.
       consentPrefix: "By clicking Pay, you accept the",
       consentTermsLink: "Terms of Use",
       consentJoin: " and the ",

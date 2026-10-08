@@ -72,15 +72,10 @@ export async function snapToRoad(
     } catch (err) {
       if (err instanceof NonTransientMapboxError) throw err;
       lastError = err;
-      // HIGH-2 (audit 2026-05-17): only log the error message, never
-      // the raw `err` object — some fetch error shapes stringify the
-      // full request URL including `access_token=…`, which would land
-      // the Mapbox secret in Cloud Logging.
       const message = err instanceof Error ? err.message : String(err);
       logger.warn("[spawn] snapToRoad attempt failed", { attempt: attempt + 1, maxRetries, message });
     }
   }
-  // HIGH-2: keep `lastError` message-only here too.
   const lastErrMessage = lastError instanceof Error ? lastError.message : String(lastError);
   throw new Error(`snapToRoad exhausted ${maxRetries} retries for ${lat},${lng}: ${lastErrMessage}`);
 }

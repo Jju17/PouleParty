@@ -28,7 +28,7 @@ function safeSetItem(key: string, value: string): void {
   try {
     localStorage.setItem(key, value);
   } catch {
-    // Quota exceeded / access denied — fail silently.
+    // Quota exceeded / access denied, fail silently.
   }
 }
 

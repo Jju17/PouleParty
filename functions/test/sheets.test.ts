@@ -21,7 +21,7 @@ describe("escapeForSheet", () => {
     expect(escapeForSheet("")).toBe("");
   });
 
-  test("only prefixes the FIRST char — internal trigger chars are fine", () => {
+  test("only prefixes the FIRST char: internal trigger chars are fine", () => {
     expect(escapeForSheet("5+5")).toBe("5+5");
     expect(escapeForSheet("team @home")).toBe("team @home");
     expect(escapeForSheet("rate=5%")).toBe("rate=5%");

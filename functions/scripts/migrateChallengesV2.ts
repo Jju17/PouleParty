@@ -41,8 +41,6 @@ interface DocPlan {
   number: number;
 }
 
-
-
 async function main() {
   const projectId = initAdmin({ withDatabase: false });
 
@@ -74,7 +72,7 @@ async function main() {
       if (typeof data.number === "number" && data.number > 0) {
         if (usedNumbers.has(data.number)) {
           console.warn(
-            `  ⚠️  level ${level}: duplicate number ${data.number} at "${id}" — admin must resolve`
+            `  ⚠️  level ${level}: duplicate number ${data.number} at "${id}": admin must resolve`
           );
         }
         usedNumbers.add(data.number);
@@ -145,7 +143,7 @@ async function main() {
     return;
   }
 
-  // Single batch — well below the 500-op Firestore cap for the current corpus.
+  // Single batch, well below the 500-op Firestore cap for the current corpus.
   const batch = db.batch();
   for (const plan of plans) {
     batch.update(db.collection("challenges").doc(plan.id), plan.updates);

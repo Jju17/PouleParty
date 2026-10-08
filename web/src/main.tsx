@@ -10,9 +10,6 @@ import { initAppCheck } from "./appCheck";
 import { LOCALES, ROUTES, type RouteKey } from "./i18n/routes";
 import "./index.css";
 
-// CRIT-4 (audit 2026-05-17): boot App Check before render so the SDK has
-// time to fetch a token in the background while the user navigates. Token
-// fetch is async; the Inscription form awaits the token when it submits.
 initAppCheck();
 import Home from "./pages/Home";
 import Privacy from "./pages/Privacy";
@@ -37,11 +34,6 @@ const PAGE_COMPONENTS: Record<RouteKey, ComponentType> = {
   deleteAccount: DeleteAccount,
 };
 
-// PP-99 — Build the `<Route>` list by cross-producting locales × route
-// keys. Each (locale, key) pair yields exactly one path. Unknown
-// `/<locale>/<slug>` combos (e.g. `/fr/registration`) intentionally
-// don't match anything and fall through to the wildcard 301 to
-// `/<detected-locale>`.
 function buildLocalizedRoutes() {
   return LOCALES.flatMap((locale) =>
     (Object.keys(ROUTES) as RouteKey[]).map((key) => {

@@ -5,20 +5,6 @@ import { logger } from "firebase-functions/v2";
 import { fetchWithRetry } from "./http";
 import { defineSecret } from "firebase-functions/params";
 
-// AND-H6 (store-audit 2026-05-18) — self-service account-deletion request
-// endpoint backing `pouleparty.be/delete-account`. Google Play 2024+ requires
-// the deletion URL to host a self-service form, not just a `mailto:` link.
-//
-// What this DOES not do : actually scrub the data. The existing Privacy /
-// Terms / DeleteAccount page promise "manual scrub within 30 days" — that
-// scrub is a Julien-side operation (Firebase Auth deletion, /users doc,
-// past game references). What this handler DOES is :
-//   1. Persist the request in `/accountDeletionRequests/{rid}` so it can't
-//      be lost in an inbox.
-//   2. Notify Julien via Resend so the SLA clock starts.
-//   3. Return a synchronous ack to the form so the user gets a clear
-//      "we received it" state instead of a vague mailto trampoline.
-
 const REGION = "europe-west1";
 const COLLECTION = "accountDeletionRequests";
 const RESEND_API_KEY = defineSecret("RESEND_API_KEY");
@@ -41,7 +27,7 @@ function validatePayload(body: unknown): DeletionRequestPayload {
   }
   const b = body as Record<string, unknown>;
 
-  // Honeypot — mirror the pattern from `createPendingRegistration`. Hidden
+  // Honeypot, mirror the pattern from `createPendingRegistration`. Hidden
   // input the web form ships but real users never see; a non-empty value
   // means a bot auto-filled every visible field.
   const honeypot = typeof b.nicknameAlt === "string" ? b.nicknameAlt.trim() : "";
@@ -53,7 +39,7 @@ function validatePayload(body: unknown): DeletionRequestPayload {
   if (
     !emailRaw ||
     emailRaw.length > MAX_EMAIL_LEN ||
-    // Same tight regex as registrations.ts — rejects CR/LF that could
+    // Same tight regex as registrations.ts, rejects CR/LF that could
     // header-inject into Resend.
     !/^[^\s@,]+@[^\s@,]+\.[^\s@,]+$/.test(emailRaw)
   ) {
@@ -127,7 +113,7 @@ export const processAccountDeletion = onRequest(
       "https://pouleparty-prod.web.app",
       "http://localhost:5173",
     ],
-    // Conservative caps — the form fires once per submit, and a brute-force
+    // Conservative caps, the form fires once per submit, and a brute-force
     // here just produces noise (the data we collect is what the attacker
     // already typed into the form).
     maxInstances: 5,
@@ -139,7 +125,7 @@ export const processAccountDeletion = onRequest(
       return;
     }
 
-    // App Check (reCAPTCHA Enterprise on the web) — same gate as
+    // App Check (reCAPTCHA Enterprise on the web), same gate as
     // `createPendingRegistration` so bots can't drown the inbox.
     const appCheckHeader = req.header("X-Firebase-AppCheck");
     if (!appCheckHeader) {
@@ -178,7 +164,7 @@ export const processAccountDeletion = onRequest(
       logger.info("[accountDeletion] request recorded", { requestId });
 
       // Best-effort notification. A Resend outage shouldn't fail the
-      // request — the Firestore doc is the canonical record and Julien
+      // request, the Firestore doc is the canonical record and Julien
       // can poll `/accountDeletionRequests where processed==false`.
       try {
         await notifyJulien(payload, requestId, RESEND_API_KEY.value());

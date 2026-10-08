@@ -5,35 +5,12 @@ import {
   haversineDistance,
 } from "./powerUpSpawn";
 
-/**
- * PP-69 — central zone-configuration calculator.
- *
- * Single source of truth for the zone-creation wizard math: the client
- * passes the two pins + game mode + duration, the function returns the
- * fully computed zone (initial radius, validated final pin, drift seed,
- * shrink schedule, intermediate circles) so every platform draws the
- * same picture.
- *
- * Phase 1 (PP-13 / PP-14) shipped client mirrors of `computeZoneRadius`,
- * `interpolateZoneCenter`, `deterministicDriftCenter` so the recap step
- * could render today. Phase 2 deletes those mirrors and routes everyone
- * through this CF, with the wizard helpers staying alive only as
- * cross-platform parity references.
- *
- * Inputs / outputs / formulas are described inline; the iOS + Android
- * client wrappers mirror this contract field-for-field.
- */
-
-
-// Constants — kept identical to the iOS / Android mirrors so any client
-// that still runs the old helpers (during the PP-13 phase-2 rollout
-// window) produces the exact same number.
 const FINAL_ZONE_RADIUS = 50; // meters
 const INTERIOR_MARGIN = 200; // meters
 const MINIMUM_INITIAL_RADIUS = 800; // meters
 const ALLOWED_FTC_RADII: ReadonlyArray<number> = [500, 1000, 2000];
-const NORMAL_MODE_FIXED_INTERVAL = 5; // minutes — mirrors AppConstants.normalModeFixedInterval
-const NORMAL_MODE_MINIMUM_RADIUS = 100; // meters — mirrors AppConstants.normalModeMinimumRadius
+const NORMAL_MODE_FIXED_INTERVAL = 5; // minutes, mirrors AppConstants.normalModeFixedInterval
+const NORMAL_MODE_MINIMUM_RADIUS = 100; // meters, mirrors AppConstants.normalModeMinimumRadius
 
 interface LatLng {
   lat: number;
@@ -53,7 +30,7 @@ interface ComputeZoneConfigurationInput {
   gameDurationMinutes?: number | null;
   forceNewSeed?: boolean;
   /**
-   * Optional explicit seed — exposed so a client that already holds a
+   * Optional explicit seed, exposed so a client that already holds a
    * `Game.zone.driftSeed` (e.g. recap step re-fetch) can re-derive the
    * same shrink schedule deterministically. When omitted the function
    * derives a stable seed from the inputs themselves.
@@ -121,18 +98,6 @@ function ensureDuration(value: unknown): number {
   return value;
 }
 
-/**
- * Mirrors iOS `calculateNormalModeSettings` and Android
- * `calculateNormalModeSettings`. Returns the fixed 5-minute shrink
- * interval and the matching per-shrink decline so the zone collapses
- * to `NORMAL_MODE_MINIMUM_RADIUS` exactly at the end of the game.
- *
- * Char-for-char identical formula (parity rule from CLAUDE.md):
- *   numberOfShrinks = duration / interval
- *   declinePerUpdate = (R₀ − minRadius) / numberOfShrinks  (floored at 0)
- *
- * When `numberOfShrinks <= 0`, decline is 0 (game too short to shrink).
- */
 export function calculateNormalModeSettingsServer(
   initialRadius: number,
   gameDurationMinutes: number
@@ -154,7 +119,7 @@ export function calculateNormalModeSettingsServer(
  * (`ios/.../GameSettings.swift`) and Android (`.../model/GameSettings.kt`).
  *
  * - `stayInTheZone`: `max(D × 1.5, D + FINAL + INTERIOR_MARGIN, 800)` with
- *   `D = haversine(start, final)`. No max bound on D — bike / car games
+ *   `D = haversine(start, final)`. No max bound on D, bike / car games
  *   produce legitimately large radii.
  * - `followTheChicken`: validated `radiusHint` from {500, 1000, 2000}.
  */
@@ -202,7 +167,7 @@ function deriveSeedFromInputs(
   gameDurationMinutes: number
 ): number {
   // Mix the inputs into a single 32-bit signed integer via a cheap
-  // hash. The exact bit-pattern doesn't matter — it just has to be
+  // hash. The exact bit-pattern doesn't matter, it just has to be
   // (a) deterministic across calls with the same inputs and (b)
   // sensitive enough to inputs that two nearby pins produce different
   // schedules.
@@ -224,19 +189,14 @@ function deriveSeedFromInputs(
     // across platforms that might widen Number to BigInt.
     h = Math.imul(h ^ scaled, 16777619) | 0;
   }
-  // Force strictly positive — the PRNG and drift code treat 0 as
+  // Force strictly positive, the PRNG and drift code treat 0 as
   // "no drift" and we don't want callers to land there by accident.
   const positive = Math.abs(h);
   return positive === 0 ? 1 : positive;
 }
 
-/**
- * Picks a fresh strictly-positive 32-bit seed using `crypto.randomInt`
- * so the Shuffle button (PP-14 phase 2) gets a genuinely random new
- * schedule on every press.
- */
 function freshRandomSeed(): number {
-  // Use Math.random — runs in Cloud Functions Node 22 just fine and
+  // Use Math.random, runs in Cloud Functions Node 22 just fine and
   // avoids pulling in `crypto` only for this one helper. The PRNG is
   // not cryptographically sensitive (the player can read the seed
   // off the Game doc anyway); we just need "different on every press".
@@ -244,25 +204,6 @@ function freshRandomSeed(): number {
   return seed === 0 ? 1 : seed;
 }
 
-/**
- * Computes the intermediate circles the zone will pass through, one
- * entry per shrink step, from `initialRadius` down to `finalZoneRadius`.
- * Used by the wizard recap (PP-13) so the client doesn't have to
- * re-walk the drift algorithm — the CF is now the single source of
- * truth.
- *
- * Step-by-step:
- *   - Step 0 is the initial circle (no drift, raw `start` center).
- *   - Subsequent steps decrement by `shrinkMetersPerUpdate` and, in
- *     `stayInTheZone`, drift the center via `deterministicDriftCenter`
- *     keyed by `(driftSeed, newRadius)`. In `followTheChicken` the
- *     center stays at `start` (the live chicken position drives the
- *     real zone at runtime).
- *   - Stops when the next step would drop at or below `FINAL_ZONE_RADIUS`.
- *     The final entry has `radiusMeters = max(FINAL_ZONE_RADIUS,
- *     candidateRadius)` so the recap always renders a non-degenerate
- *     final circle.
- */
 export function computeShrinkSchedule(
   gameMode: "stayInTheZone" | "followTheChicken",
   start: LatLng,
@@ -330,7 +271,7 @@ export function computeShrinkSchedule(
  * freeze-aware. Char-for-char port of the client
  * `selectActiveCircle` index walk (iOS `GameTimerLogic.swift`, Android
  * `GameTimerHelper.kt`) so the power-up spawner picks the SAME circle every
- * client renders — including when a single `zoneFreeze` (120 s) spans MORE
+ * client renders, including when a single `zoneFreeze` (120 s) spans MORE
  * than one shrink boundary (short intervals, e.g. the QA-debug 1 min one),
  * which the old fixed `batchIndex - 1` only ever compensated by one. Each
  * shrink tick that falls inside `[freezeEnd - freezeDuration, freezeEnd)` is
@@ -373,7 +314,7 @@ export function selectActiveCircleIndex(
  * tests can exercise every validation branch and the formula directly,
  * without spinning up the `onCall` HTTP wrapper.
  *
- * Throws `HttpsError(invalid-argument)` on any input failure — the
+ * Throws `HttpsError(invalid-argument)` on any input failure, the
  * callable below just forwards `request.data` here.
  */
 export function computeZoneConfigurationCore(
@@ -448,11 +389,6 @@ export function computeZoneConfigurationCore(
   };
 }
 
-/**
- * `computeZoneConfiguration` — the PP-69 callable. See file header for
- * the contract; throws `HttpsError(invalid-argument)` for every input
- * validation failure.
- */
 export const computeZoneConfiguration = onCall<
   ComputeZoneConfigurationInput,
   Promise<ComputeZoneConfigurationOutput>

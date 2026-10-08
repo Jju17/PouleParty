@@ -184,7 +184,7 @@ describe("extractGameId (PP-99 /<locale>/challenges/<gameId>)", () => {
   });
 });
 
-describe("renderHtml — locale wiring", () => {
+describe("renderHtml: locale wiring", () => {
   const docs: ChallengeDoc[] = [
     challenge({
       id: "street-brabanconne",
@@ -249,7 +249,7 @@ describe("renderHtml — locale wiring", () => {
   });
 });
 
-describe("renderHtml — structural assertions", () => {
+describe("renderHtml: structural assertions", () => {
   test("renders the cover + challenges as two pages", () => {
     const html = renderHtml([challenge()], "fr");
     expect(html.match(/<div class="page">/g)?.length).toBe(2);

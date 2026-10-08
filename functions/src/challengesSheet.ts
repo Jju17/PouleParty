@@ -71,7 +71,6 @@ interface SheetStrings {
   proofLegend: string;
   goodHunt: string;
   emptyState: string;
-  // PP-99 error pages (CF returns branded HTML instead of plain text).
   errorMissingGameIdTitle: string;
   errorMissingGameIdBody: string;
   errorGameNotFoundTitle: string;
@@ -84,7 +83,7 @@ interface SheetStrings {
 
 const STRINGS: Record<Locale, SheetStrings> = {
   fr: {
-    pageTitle: "PouleParty — Liste des défis",
+    pageTitle: "PouleParty: Liste des défis",
     brandTitle: "POULE PARTY",
     brandTagline: "CHASSE A LA POULE URBAINE",
     rulesHeading: "LES REGLES DU JEU",
@@ -94,7 +93,7 @@ const STRINGS: Record<Locale, SheetStrings> = {
     rules: [
       "Formez des équipes de <strong>2 à 4 joueurs</strong>.",
       "La Poule se cache dans un <strong>bar ou lieu public</strong> de la ville.",
-      "Une <strong>zone GPS</strong> autour d'elle se réduit progressivement — rapprochez-vous !",
+      "Une <strong>zone GPS</strong> autour d'elle se réduit progressivement: rapprochez-vous !",
       "Réalisez des <strong>défis</strong> pour accumuler des points bonus.",
       "Toute preuve doit être envoyée sur le <strong>groupe WhatsApp partagé</strong> pour valider les points.",
       "Pour les défis <span class=\"badge-id\">ID</span>, la pièce d'identité doit être <strong>visible sur la preuve</strong>.",
@@ -141,7 +140,7 @@ const STRINGS: Record<Locale, SheetStrings> = {
       "Quelque chose s'est mal passé de notre côté. Réessaie dans un instant ; si ça persiste, écris-nous à julien@rahier.dev.",
   },
   en: {
-    pageTitle: "PouleParty — Challenges sheet",
+    pageTitle: "PouleParty: Challenges sheet",
     brandTitle: "POULE PARTY",
     brandTagline: "URBAN CHICKEN HUNT",
     rulesHeading: "GAME RULES",
@@ -151,7 +150,7 @@ const STRINGS: Record<Locale, SheetStrings> = {
     rules: [
       "Form teams of <strong>2 to 4 players</strong>.",
       "The Chicken hides in a <strong>bar or public spot</strong> somewhere in the city.",
-      "A <strong>GPS zone</strong> around her shrinks over time — close the distance!",
+      "A <strong>GPS zone</strong> around her shrinks over time: close the distance!",
       "Pull off <strong>challenges</strong> to rack up bonus points.",
       "Every proof goes in the <strong>shared WhatsApp group</strong> to count.",
       "For <span class=\"badge-id\">ID</span> challenges, an ID must be <strong>visible on the proof</strong>.",
@@ -198,7 +197,7 @@ const STRINGS: Record<Locale, SheetStrings> = {
       "Something broke on our side. Try again in a moment; if it keeps failing, write to julien@rahier.dev.",
   },
   nl: {
-    pageTitle: "PouleParty — Uitdagingenlijst",
+    pageTitle: "PouleParty: Uitdagingenlijst",
     brandTitle: "POULE PARTY",
     brandTagline: "STEDELIJKE KIPPENJACHT",
     rulesHeading: "SPELREGELS",
@@ -208,7 +207,7 @@ const STRINGS: Record<Locale, SheetStrings> = {
     rules: [
       "Vorm teams van <strong>2 tot 4 spelers</strong>.",
       "De Kip verstopt zich in een <strong>bar of openbare plek</strong> in de stad.",
-      "Een <strong>GPS-zone</strong> rond haar krimpt gestaag — kom dichterbij!",
+      "Een <strong>GPS-zone</strong> rond haar krimpt gestaag: kom dichterbij!",
       "Voltooi <strong>uitdagingen</strong> om bonuspunten te verzamelen.",
       "Elk bewijs gaat in de <strong>gedeelde WhatsApp-groep</strong> om te tellen.",
       "Voor <span class=\"badge-id\">ID</span>-uitdagingen moet het identiteitsbewijs <strong>zichtbaar zijn op het bewijs</strong>.",
@@ -293,7 +292,7 @@ export function groupByCategory(docs: ChallengeDoc[]): Map<Category, ChallengeDo
 /**
  * Heuristic detection of ID-required challenges. Looks for an explicit
  * mention of an ID requirement in the localized body. Brittle by
- * design — once the data model gains a `requiresIdProof: Boolean`
+ * design, once the data model gains a `requiresIdProof: Boolean`
  * field, replace this with a clean check.
  */
 export function requiresId(body: string): boolean {
@@ -468,11 +467,6 @@ function renderChallengesPage(docs: ChallengeDoc[], lang: Locale, s: SheetString
   </section>`;
 }
 
-// PP-99 — URL shape served by Firebase hosting rewrites:
-//   /<locale>/challenges/<gameId>
-// where <locale> is one of `fr`, `en`, `nl`. The `?lang=` query param
-// is still honoured as a manual override (useful when curl-ing the
-// CF directly without going through hosting).
 export function resolveLocale(req: { path?: string; query?: Record<string, unknown> }): Locale {
   const q = typeof req.query?.lang === "string" ? req.query.lang.toLowerCase() : "";
   if (q === "fr" || q === "en" || q === "nl") return q;
@@ -836,11 +830,6 @@ export function renderHtml(docs: ChallengeDoc[], lang: Locale): string {
 </html>`;
 }
 
-// PP-99 — branded error page for the 4 failure modes of
-// `renderChallengesSheet`. Same beige + Bangers + Press Start 2P
-// look as the success sheet, just a single centered card. No DB
-// access, no images, no fetch outside Google Fonts so it renders
-// even when the function is in a degraded state.
 export function renderErrorPage(
   lang: Locale,
   title: string,
@@ -852,7 +841,7 @@ export function renderErrorPage(
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>${escapeHtml(s.brandTitle)} — ${escapeHtml(title)}</title>
+    <title>${escapeHtml(s.brandTitle)}: ${escapeHtml(title)}</title>
     <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Press+Start+2P&display=swap" rel="stylesheet" />
     <style>
       :root {

@@ -271,13 +271,6 @@ describe("generatePowerUpsServer", () => {
     result.forEach((pu) => expect(pu.type).toBe("radarPing"));
   });
 
-  // PP-37 follow-up to PP-35: locks the narrowed client defaults
-  // through the server spawner. The two types iOS and Android ship by
-  // default in `Game.GamePowerUps().enabledTypes` are zoneFreeze +
-  // zonePreview — both non-positional, so they must spawn happily in
-  // either game mode. If a future refactor reintroduces a positional
-  // type into the default set, this test fires and forces a parity
-  // review across the three platforms.
   test("PP-37: client defaults [zoneFreeze, zonePreview] spawn in followTheChicken", () => {
     const clientDefaults = ["zoneFreeze", "zonePreview"];
     const filtered = filterEnabledTypesServer(clientDefaults, "followTheChicken");

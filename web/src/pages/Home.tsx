@@ -5,9 +5,6 @@ import ClickableChicken from "../components/ClickableChicken";
 import { useI18n } from "../i18n";
 import { routePath } from "../i18n/routes";
 
-// PouleParty D-Day registration cutoff. After this instant the Home CTA
-// stops rendering so visitors don't land on a form for a past event.
-// 2026-06-06 23:59 Europe/Brussels (CEST, UTC+2).
 const D_DAY_CTA_CUTOFF = new Date("2026-06-06T23:59:00+02:00");
 const D_DAY_BATCH_ID = "game-06-06-2026";
 

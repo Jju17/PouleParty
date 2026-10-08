@@ -1,7 +1,7 @@
 /**
  * One-off migration: backfill `/games/{gameId}/challenges` for active
  * games created before the `onGameCreated` snapshot step was deployed.
- * Idempotent — re-runs are no-ops on already-snapshotted games.
+ * Idempotent, re-runs are no-ops on already-snapshotted games.
  *
  * Usage (from the functions/ directory):
  *   FIREBASE_PROJECT_ID=pouleparty-ba586 npx tsx scripts/migrateExistingGamesChallenges.ts
@@ -10,8 +10,6 @@
 
 import { getFirestore } from "firebase-admin/firestore";
 import { initAdmin } from "./adminApp";
-
-
 
 const ACTIVE_STATUSES = ["waiting", "readyToLaunch", "inProgress"] as const;
 
@@ -50,7 +48,7 @@ async function main(): Promise<void> {
     const gameChallengesRef = gameDoc.ref.collection("challenges");
     const existing = await gameChallengesRef.limit(1).get();
     if (!existing.empty) {
-      console.log(`  ${gameDoc.id} [${status}] — already snapshotted, skipping`);
+      console.log(`  ${gameDoc.id} [${status}]: already snapshotted, skipping`);
       skippedAlreadySnapshotted += 1;
       continue;
     }
@@ -62,12 +60,12 @@ async function main(): Promise<void> {
       }
       await batch.commit();
       console.log(
-        `  ${gameDoc.id} [${status}] — copied ${templateSnap.size} challenges`
+        `  ${gameDoc.id} [${status}]: copied ${templateSnap.size} challenges`
       );
       migrated += 1;
     } catch (err) {
       console.error(
-        `  ${gameDoc.id} [${status}] — FAILED: ${(err as Error).message}`
+        `  ${gameDoc.id} [${status}]: FAILED: ${(err as Error).message}`
       );
       failed += 1;
     }

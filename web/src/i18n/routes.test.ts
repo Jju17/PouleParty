@@ -126,7 +126,7 @@ describe("equivalentPath", () => {
 
 describe("detectLocale", () => {
   test("returns en when neither localStorage nor navigator carry a locale signal", () => {
-    // Vitest's default jsdom env has navigator.language === "en-US" — that's
+    // Vitest's default jsdom env has navigator.language === "en-US", that's
     // already our `en` fallback, so this test mainly verifies no crash and
     // a valid Locale return.
     const result = detectLocale();
@@ -162,7 +162,7 @@ describe("ROUTES coverage invariant", () => {
   test("no two routes share the same path across 3 locales (sanity)", () => {
     // Build a flat list of (locale, slug) pairs and verify uniqueness
     // within each locale. A duplicate would mean two route keys
-    // resolve to the same URL — `routeKeyFromPath` would be ambiguous.
+    // resolve to the same URL, `routeKeyFromPath` would be ambiguous.
     for (const locale of ["fr", "en", "nl"] as const) {
       const seen = new Set<string>();
       for (const key of Object.keys(ROUTES) as RouteKey[]) {

@@ -179,7 +179,7 @@ export default function DeleteAccount() {
                 />
               </div>
 
-              {/* Honeypot — hidden from real users, bots auto-fill it. */}
+              {/* Honeypot, hidden from real users, bots auto-fill it. */}
               <div
                 aria-hidden="true"
                 style={{

@@ -1,28 +1,6 @@
-/**
- * One-off prod-only script that restores the legacy `title` / `body`
- * fields on every `/challenges` doc by copying them back from
- * `titleByLocale.fr` / `bodyByLocale.fr`.
- *
- * Context : `migrateChallengesV2` accidentally ran on prod on
- * 2026-05-23 and stripped `title` / `body`, which the live 1.13.x
- * binaries still read directly. This restores the legacy fields so
- * the shipped app keeps working while the localized maps remain in
- * place for the next release.
- *
- * Idempotent : skips a doc when `title` is already a non-empty string.
- *
- * Usage (from the functions/ directory) :
- *
- *   FIREBASE_PROJECT_ID=pouleparty-prod npx tsx scripts/revertChallengesProd.ts
- *
- *   # or with an explicit SA :
- *   FIREBASE_SERVICE_ACCOUNT=/path/to/prod-sa.json npx tsx scripts/revertChallengesProd.ts
- */
 
 import { getFirestore } from "firebase-admin/firestore";
 import { initAdmin } from "./adminApp";
-
-
 
 async function main() {
   const projectId = initAdmin({ withDatabase: false });

@@ -30,7 +30,7 @@ describe("translation parity", () => {
 
   test("no translation contains an em dash", () => {
     for (const dict of [en, fr, nl]) {
-      for (const value of strings(dict)) expect(value).not.toContain("—");
+      for (const value of strings(dict)) expect(value).not.toContain("\u2014");
     }
   });
 });

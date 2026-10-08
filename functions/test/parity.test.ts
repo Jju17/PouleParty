@@ -73,8 +73,8 @@ describe("parity, interpolateZoneCenter", () => {
 // Goldens below were regenerated after the drift rewrite: rejection
 // sampling in `disk(previousCenter, delta) ∩ disk(finalCenter, newRadius)`
 // driven by splitmix64 (`seededRandomServer`), replacing the old linear
-// `seed * 31 ^ newRadius` scheme. The new algo is fully accumulative —
-// basePoint is the previous drifted center — so successive circles form
+// `seed * 31 ^ newRadius` scheme. The new algo is fully accumulative,
+// basePoint is the previous drifted center, so successive circles form
 // a genuinely meandering path instead of hugging `finalCenter`.
 describe("parity, deterministicDriftCenter", () => {
   test("seed 12345, 1500→1400", () => {
@@ -283,15 +283,6 @@ describe("parity, drift edges", () => {
   });
 });
 
-// ─── large-seed safety ───────────────────────────────────────
-//
-// JS bitwise ops are 32-bit; seeds that exceed ~2^31 wrap. The parity
-// audit flagged this as untested: iOS/Android run splitmix64 on 64-bit,
-// the TS reference runs 32-bit ops, and no end-to-end test pinned what
-// happens on seeds past Int32.MAX. These lock the TS behavior so a
-// platform that sends a giant `driftSeed` never silently produces NaN /
-// Infinity / a coordinate flung past the poles.
-
 describe("parity, large seeds don't blow up", () => {
   test("drift center with driftSeed near Int32.MAX stays finite", () => {
     const out = deterministicDriftCenterServer(
@@ -368,7 +359,7 @@ describe("parity, large seeds don't blow up", () => {
 // step, which breaks the invariant once `|initialCenter − finalCenter|`
 // grows past `initialRadius / 2`.
 //
-// If these tests ever fail the geometry has diverged across platforms —
+// If these tests ever fail the geometry has diverged across platforms,
 // don't silence them, fix the formula.
 
 // Distance in meters between two lat/lng points using the same flat-earth
@@ -390,7 +381,7 @@ describe("parity, finalCenter invariant", () => {
     // base at (50.85, 4.35), final ≈ 1316 m NE. With the rewrite the
     // output is drawn by rejection sampling in the A ∩ B intersection,
     // not bounded-and-clipped, so the value differs dramatically from
-    // the pre-rewrite golden — but the invariant still holds.
+    // the pre-rewrite golden, but the invariant still holds.
     const out = deterministicDriftCenterServer(
       { latitude: 50.85, longitude: 4.35 },
       2000,
@@ -401,14 +392,14 @@ describe("parity, finalCenter invariant", () => {
     expect(Math.abs(out.latitude - 50.851285969721935)).toBeLessThan(TOL);
     expect(Math.abs(out.longitude - 4.346931114967598)).toBeLessThan(TOL);
     // Invariant #1: the whole final-zone disk (50 m glow the chicken
-    // sees on the map) must fit inside the drifted circle — not just
+    // sees on the map) must fit inside the drifted circle, not just
     // its center.
     expect(distMeters(out, { latitude: 50.86, longitude: 4.36 }) + 50).toBeLessThanOrEqual(1400);
   });
 
   test("golden: missing finalCenter leaves existing behavior untouched", () => {
     // Exact same args as the `seed 12345, 1500→1400` golden above, with
-    // finalCenter omitted — output must match that pinned value bit-for-bit
+    // finalCenter omitted, output must match that pinned value bit-for-bit
     // so the parity suite keeps passing on every platform.
     const withoutFinal = deterministicDriftCenterServer(
       { latitude: 50.85, longitude: 4.35 },
@@ -464,7 +455,7 @@ describe("parity, finalCenter invariant", () => {
         longitude: initialCenter.longitude,
       };
       for (let seed = 1; seed <= 100; seed++) {
-        // Drift is independent per shrink — just sweep newRadius.
+        // Drift is independent per shrink, just sweep newRadius.
         for (let step = 1; step <= 10; step++) {
           const newRadius = initialRadius - step * 100;
           if (newRadius <= 0) break;
@@ -499,7 +490,7 @@ describe("parity, zone freeze doesn't shift PRNG seeding", () => {
     const types = ["invisibility", "radarPing"];
     const unfrozen = generatePowerUpsServer(center, 1200, 3, 42, 5, types);
     const frozen = generatePowerUpsServer(center, 1500, 3, 42, 5, types);
-    // The ids encode `(batchIndex, i, itemSeed)` — itemSeed is derived
+    // The ids encode `(batchIndex, i, itemSeed)`, itemSeed is derived
     // from `(driftSeed, batchIndex)` only, NOT radius, so the ids must
     // match identically even though the radii differ.
     expect(unfrozen.map((p) => p.id)).toEqual(frozen.map((p) => p.id));
@@ -507,22 +498,7 @@ describe("parity, zone freeze doesn't shift PRNG seeding", () => {
   });
 });
 
-// ─── PP-37: filterEnabledTypesServer parity ───────────────────
-//
-// Mirrors the iOS `availablePowerUpTypes(for:)` and Android
-// `availablePowerUpTypes(GameMod)` helpers. The server filter must
-// agree with both platforms on what spawns in each mode — a drift
-// would make the wizard render power-ups that the server then refuses
-// to spawn, or vice versa.
-//
-// iOS sibling: `PowerUpTests.availablePowerUpTypes*` (PP-35 + PP-37).
-// Android sibling: `PowerUpTest.\`availablePowerUpTypes for *\`` (PP-35
-// + PP-37).
-
 describe("parity, filterEnabledTypesServer (PP-37)", () => {
-  // The defaults shipped by both clients — keep in lockstep with iOS
-  // `Game.GamePowerUps().enabledTypes` and Android
-  // `GamePowerUps().enabledTypes`. PP-35 narrowed this to two types.
   const CLIENT_DEFAULTS = ["zoneFreeze", "zonePreview"];
 
   test("client defaults pass through followTheChicken unchanged", () => {
@@ -543,7 +519,7 @@ describe("parity, filterEnabledTypesServer (PP-37)", () => {
   test("stayInTheZone strips positional types even when explicitly enabled", () => {
     // A creator (or an admin override) explicitly turning on every type
     // must still see invisibility / decoy / jammer disappear in
-    // stayInTheZone — the server doesn't trust the client to do this
+    // stayInTheZone, the server doesn't trust the client to do this
     // correctly. Mirrors the iOS + Android strict-filter goldens.
     const everyType = [
       "zonePreview",
@@ -557,7 +533,7 @@ describe("parity, filterEnabledTypesServer (PP-37)", () => {
     expect(filtered).not.toContain("invisibility");
     expect(filtered).not.toContain("decoy");
     expect(filtered).not.toContain("jammer");
-    // Order is preserved — only positional types are removed.
+    // Order is preserved, only positional types are removed.
     expect(filtered).toEqual(["zonePreview", "radarPing", "zoneFreeze"]);
   });
 

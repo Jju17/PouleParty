@@ -43,11 +43,11 @@ const TRANSLATIONS: ChallengeTranslations[] = [
     id: "street-demande-mariage",
     en: {
       title: "Marriage proposal",
-      body: "Propose to a stranger — on one knee, the full deal.",
+      body: "Propose to a stranger: on one knee, the full deal.",
     },
     nl: {
       title: "Huwelijksaanzoek",
-      body: "Vraag een onbekende ten huwelijk — op één knie, zoals het hoort.",
+      body: "Vraag een onbekende ten huwelijk: op één knie, zoals het hoort.",
     },
   },
   {
@@ -87,11 +87,11 @@ const TRANSLATIONS: ChallengeTranslations[] = [
     id: "street-ecart-age",
     en: {
       title: "Age gap",
-      body: "Find the biggest age gap between two strangers — photo together.",
+      body: "Find the biggest age gap between two strangers: photo together.",
     },
     nl: {
       title: "Leeftijdsverschil",
-      body: "Vind het grootste leeftijdsverschil tussen twee onbekenden — foto samen.",
+      body: "Vind het grootste leeftijdsverschil tussen twee onbekenden: foto samen.",
     },
   },
   {
@@ -195,11 +195,11 @@ const TRANSLATIONS: ChallengeTranslations[] = [
     id: "bar-pierre-feuille-ciseaux",
     en: {
       title: "Rock-paper-scissors",
-      body: "Rock-paper-scissors with a stranger — the loser pays for the drink.",
+      body: "Rock-paper-scissors with a stranger: the loser pays for the drink.",
     },
     nl: {
       title: "Steen-papier-schaar",
-      body: "Steen-papier-schaar met een onbekende — de verliezer betaalt het drankje.",
+      body: "Steen-papier-schaar met een onbekende: de verliezer betaalt het drankje.",
     },
   },
   {
@@ -225,8 +225,6 @@ const TRANSLATIONS: ChallengeTranslations[] = [
     },
   },
 ];
-
-
 
 async function main() {
   const projectId = initAdmin({ withDatabase: false });
@@ -256,7 +254,7 @@ async function main() {
         : {};
 
     // A doc is "untranslated" when the en/nl slot is empty OR carries
-    // the same string as fr — that's the naive-copy signature left by
+    // the same string as fr, that's the naive-copy signature left by
     // migrateChallengesV2 when no real translation existed yet.
     const titleNeeds = (loc: "en" | "nl") =>
       !titleMap[loc] || titleMap[loc].length === 0 || titleMap[loc] === titleMap.fr;

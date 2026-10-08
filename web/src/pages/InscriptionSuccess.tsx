@@ -4,12 +4,7 @@ import confetti from "canvas-confetti";
 import Layout from "../components/Layout";
 import { useI18n } from "../i18n";
 
-// PP-52 — Stripe success_url lands here after a confirmed payment.
-// The confirmation email (Resend) is the source of truth for the
-// validation code; this page is the festive "you're in!" celebration.
-// PP-99: locale comes from the URL prefix via `<I18nProvider>`.
-
-// PouleParty brand palette — confetti picks from these so the burst
+// PouleParty brand palette, confetti picks from these so the burst
 // reads as "the chicken won" rather than a generic shower.
 const BRAND_COLORS = ["#FE6A00", "#EF0778", "#FFD166", "#06D6A0", "#118AB2"];
 
@@ -22,7 +17,7 @@ function fireCelebration() {
     origin: { y: 0.4 },
     colors: BRAND_COLORS,
   });
-  // Side cannons 250ms later — the staggered timing feels handcrafted
+  // Side cannons 250ms later, the staggered timing feels handcrafted
   // rather than a single anonymous splash.
   setTimeout(() => {
     confetti({
@@ -42,7 +37,7 @@ function fireCelebration() {
       colors: BRAND_COLORS,
     });
   }, 250);
-  // Slow trickle 1s in — keeps the page alive while the user reads
+  // Slow trickle 1s in, keeps the page alive while the user reads
   // the email instructions.
   setTimeout(() => {
     confetti({

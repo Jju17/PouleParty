@@ -3,12 +3,6 @@ import Layout from "../components/Layout";
 import { useI18n } from "../i18n";
 import { routePath } from "../i18n/routes";
 
-// PP-99 — 404 page mounted on the React Router wildcard route.
-// The locale comes from `<I18nProvider>` (URL prefix when present,
-// else detected). We don't try to write a 404 HTTP status — Firebase
-// hosting serves 200 + index.html for every unmatched path; the
-// status is cosmetic for crawlers and they'll figure it out from
-// the page content + Open Graph.
 export default function NotFound() {
   const { t, locale } = useI18n();
   const n = t.notFound;

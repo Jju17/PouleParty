@@ -8,12 +8,6 @@ import { registrationErrorMessage } from "../registrationErrors";
 import { formatPrice } from "../formatPrice";
 import { isAllowedBatchId } from "../registrationBatches";
 
-// PP-52 — 3-step inscription wizard (intro → form → récap → Stripe).
-// All copy comes from `t.inscription.*` (en/fr/nl). PP-99: the page's
-// locale comes from the URL prefix (`/fr/inscription`,
-// `/en/registration`, `/nl/inschrijving`) via `<I18nProvider>` — no
-// per-page pinning needed.
-
 const API_ENDPOINT = "/api/createPendingRegistration";
 const UNIT_PRICE_EUR = 12;
 const TEAM_SIZES = [3, 4, 5] as const;
@@ -25,14 +19,6 @@ interface FormState {
   email: string;
   phone: string;
   teamSize: TeamSize | null;
-  /** CRIT-4 (audit 2026-05-17): honeypot. Real users never see / fill
-   *  this field (it's `display:none` + aria-hidden + tabIndex=-1).
-   *  Naive bots that auto-fill every input populate it; the server
-   *  rejects any non-empty value.
-   *  XPLAT-staging-fix 2026-05-18: renamed from `company` because Chrome
-   *  autofill ignores `autoComplete="off"` for that name and was
-   *  populating the field with the user's Google profile organization,
-   *  triggering false-positive 400 "invalid request" on submit. */
   nicknameAlt: string;
 }
 
@@ -363,7 +349,7 @@ function RecapStep({
         <RecapRow label={recap.team} value={form.teamName} />
         <RecapRow label={recap.email} value={form.email} small />
         <RecapRow label={recap.phone} value={form.phone} />
-        <RecapRow label={recap.players} value={String(form.teamSize ?? "—")} />
+        <RecapRow label={recap.players} value={String(form.teamSize ?? ": ")} />
         <div className="border-t border-[#FE6A00]/30 pt-3 flex justify-between items-baseline">
           <span className="text-xs tracking-widest uppercase opacity-75">
             {recap.total}
@@ -383,14 +369,7 @@ function RecapStep({
         {recap.paymentSecure}
       </p>
 
-      {/* XPLAT-H5 (store-audit 2026-05-18, updated 2026-05-18 PM):
-          implicit consent at submit. The disclosure sits right above
-          the Pay button — Belgian clickwrap doctrine accepts this when
-          (1) the button label is unambiguous ("PAY {n} €" → CRD Art. 8(2)
-          obligation-to-pay requirement, ✅), (2) the Terms + Privacy
-          links are prominent at the moment of click, (3) the CRD Art.
-          16(l) waiver is surfaced pre-charge. We still capture a
-          `consentAcknowledgedAt` timestamp server-side. */}
+      {}
       <p className="mt-5 text-xs opacity-75 leading-relaxed text-center">
         {recap.consentPrefix}{" "}
         <a href={termsHref} target="_blank" rel="noopener noreferrer" className="text-[#FE6A00] underline">
@@ -460,7 +439,7 @@ function RecapRow({
         className={`text-right break-all ${small ? "text-xs" : "text-base"}`}
         style={small ? { fontFamily: "monospace", letterSpacing: 0 } : undefined}
       >
-        {value || "—"}
+        {value || ": "}
       </span>
     </div>
   );

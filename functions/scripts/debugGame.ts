@@ -1,15 +1,6 @@
-/**
- * One-off diagnostic script. Reads a game doc by `gameCode` and prints
- * the PP-71-relevant fields + the scheduled Cloud Task IDs.
- *
- * Usage:
- *   FIREBASE_PROJECT_ID=pouleparty-ba586 npx tsx scripts/debugGame.ts P2FGWE
- */
 
 import { getFirestore } from "firebase-admin/firestore";
 import { initAdmin } from "./adminApp";
-
-
 
 async function main() {
   const gameCode = (process.argv[2] || "").toUpperCase();
