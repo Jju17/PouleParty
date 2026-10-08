@@ -75,6 +75,7 @@ export default function InscriptionSuccess() {
   if (!sessionId) {
     return (
       <Layout>
+      <meta name="robots" content="noindex" />
         <div className="max-w-md mx-auto text-center py-16">
           <div className="text-5xl mb-4">🐔</div>
           <h1
@@ -91,6 +92,7 @@ export default function InscriptionSuccess() {
 
   return (
     <Layout>
+      <meta name="robots" content="noindex" />
       <div className="max-w-md mx-auto text-center py-12 animate-step-forward relative">
         <div className="text-7xl mb-4 animate-bounce-in inline-block animate-float">
           🐔

@@ -4,17 +4,9 @@ import Layout from "../components/Layout";
 import { useI18n } from "../i18n";
 import { getAppCheckToken } from "../appCheck";
 
-// AND-H6 (store-audit 2026-05-18) — self-service deletion form. Replaces
-// the previous mailto-only fallback that Google Play 2024+ rejects at
-// upload. Posts to `/api/processAccountDeletion` (Firebase Hosting rewrite
-// → CF in europe-west1). App Check token attached so reCAPTCHA Enterprise
-// gates the endpoint the same way the inscription form does.
-
 const SUPPORT_EMAIL = "julien@rahier.dev";
 const API_ENDPOINT = "/api/processAccountDeletion";
 
-// Same shape as the server-side validator in `accountDeletion.ts`. Re-used
-// client-side so typos surface inline before the round-trip.
 const EMAIL_RE = /^[^\s@,]+@[^\s@,]+\.[^\s@,]+$/;
 
 type Status = "idle" | "submitting" | "success" | "error";
@@ -28,8 +20,6 @@ export default function DeleteAccount() {
   const [email, setEmail] = useState("");
   const [nickname, setNickname] = useState("");
   const [reason, setReason] = useState("");
-  // CRIT-4 mirror : honeypot. Real users never see this field; bots that
-  // auto-fill every visible input populate it → server rejects.
   const [nicknameAlt, setNicknameAlt] = useState("");
   const [status, setStatus] = useState<Status>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -62,17 +52,19 @@ export default function DeleteAccount() {
         }),
       });
       if (!response.ok) {
-        const body = await response.json().catch(() => null);
-        throw new Error(body?.error ?? `HTTP ${response.status}`);
+        setStatus("error");
+        setErrorMessage(
+          response.status === 401
+            ? t.deleteAccount.formErrorVerification
+            : t.deleteAccount.formErrorGeneric
+        );
+        return;
       }
       setStatus("success");
     } catch (err) {
+      console.warn("[deleteAccount] submit failed", err);
       setStatus("error");
-      setErrorMessage(
-        err instanceof Error && err.message
-          ? err.message
-          : t.deleteAccount.formErrorGeneric
-      );
+      setErrorMessage(t.deleteAccount.formErrorGeneric);
     }
   }
 
@@ -80,6 +72,7 @@ export default function DeleteAccount() {
 
   return (
     <Layout>
+      <meta name="robots" content="noindex" />
       <h1 className="text-3xl font-bold mb-6">{t.deleteAccount.title}</h1>
 
       <div className="space-y-6 text-black dark:text-gray-300 leading-relaxed">
@@ -137,6 +130,8 @@ export default function DeleteAccount() {
                 <input
                   id="del-email"
                   type="email"
+                  aria-invalid={status === "error" ? true : undefined}
+                  aria-describedby={status === "error" ? "del-error" : undefined}
                   required
                   autoComplete="email"
                   value={email}
@@ -196,7 +191,7 @@ export default function DeleteAccount() {
                   overflow: "hidden",
                 }}
               >
-                <label htmlFor="del-nickname-alt">Leave this empty</label>
+                <label htmlFor="del-nickname-alt">{t.deleteAccount.honeypotLabel}</label>
                 <input
                   id="del-nickname-alt"
                   type="text"
@@ -209,6 +204,7 @@ export default function DeleteAccount() {
 
               {status === "error" && errorMessage && (
                 <p
+                  id="del-error"
                   className="text-sm text-red-600 dark:text-red-400"
                   role="alert"
                 >

@@ -18,7 +18,7 @@ export default {
     dDayEyebrow: "PouleParty D-Day",
     dDayTitle: "🐔 Zaterdag 6 juni",
     dDayBody: "Een Kip verstopt zich in Elsene. Jouw team moet haar opsporen. €12 / speler · Teams van 3 tot 5.",
-    dDayCta: "SCHRIJF JE TEAM IN →",
+    dDayCta: "SCHRIJF JE TEAM IN",
   },
   privacy: {
     title: "Privacybeleid",
@@ -99,7 +99,7 @@ export default {
     rightRectificationText: "U kunt verzoeken om correctie van onjuiste gegevens.",
     rightErasure: "Recht op gegevenswissing (art. 17):",
     rightErasureText:
-      "Je kan verzoeken om verwijdering van je gegevens. De knop Instellingen > Verwijder mijn account in de app verwijdert onmiddellijk je anonieme Firebase Auth-account en je profieldocument `/users/{uid}`. Spellen waaraan je hebt deelgenomen (en de teamnaam die je daarvoor hebt gebruikt) worden onbeperkt bewaard omwille van de integriteit van de spelgeschiedenis. Ze zijn enkel zichtbaar voor de deelnemers van dezelfde sessie en voor de spelmaker. Voor het volledig wissen van gegevens uit eerdere spellen (inclusief je teamnaam in winnaarslijsten) neem je contact op via julien@rahier.dev en handelen we de manuele wissing af binnen 30 dagen. Inschrijvingen voor betaalde evenementen worden op verzoek verwijderd (onder voorbehoud van de hierboven vermelde boekhoudkundige bewaartermijn van 12 maanden).",
+      "Je kan verzoeken om verwijdering van je gegevens. De knop Instellingen > Verwijder mijn account in de app verwijdert onmiddellijk je anonieme Firebase Auth-account en je profieldocument `/users/{uid}`. Spellen waaraan je hebt deelgenomen, met de teamnaam die je gebruikte, je scores en de foto's of video's die je als bewijs voor uitdagingen stuurde, worden 30 dagen na het einde van het spel automatisch verwijderd. Tot dan zijn ze enkel zichtbaar voor de deelnemers van hetzelfde spel; bewijzen van uitdagingen zijn enkel zichtbaar voor jou, de Kip en de scheidsrechters. Wil je ze sneller laten verwijderen, mail dan naar julien@rahier.dev. Inschrijvingen voor betaalde evenementen worden op verzoek verwijderd (onder voorbehoud van de hierboven vermelde boekhoudkundige bewaartermijn van 12 maanden).",
     rightRestriction: "Recht op beperking (art. 18):",
     rightRestrictionText:
       "U kunt verzoeken dat we de verwerking van uw gegevens beperken.",
@@ -224,7 +224,7 @@ export default {
         "De zone krimpt. De spanning stijgt. Vuile trucs toegestaan. 😈",
       ],
       priceLine: "€12 / persoon · Teams van 3 tot 5 · Za. 6 juni · 20u30",
-      cta: "INSCHRIJVEN →",
+      cta: "INSCHRIJVEN",
     },
     form: {
       title: "Jouw team",
@@ -239,8 +239,8 @@ export default {
       phonePlaceholder: "+32 470 ...",
       teamSizeLabel: "Teamgrootte",
       teamSizeUnit: "SPELERS",
-      back: "← TERUG",
-      next: "OVERZICHT →",
+      back: "TERUG",
+      next: "OVERZICHT",
     },
     recap: {
       title: "Alles goed?",
@@ -257,11 +257,13 @@ export default {
       consentTermsLink: "Gebruiksvoorwaarden",
       consentJoin: " en het ",
       consentPrivacyLink: "Privacybeleid",
-      consentSuffix: ". Vrijetijdsevenement op een vaste datum → geen herroepingsrecht van 14 dagen (art. 16(l) Richtlijn 2011/83/EU).",
-      back: "← AANPASSEN",
-      payButtonTemplate: "BETAAL {total} € 🔒",
+      consentSuffix: ". Vrijetijdsevenement op een vaste datum > geen herroepingsrecht van 14 dagen (art. 16(l) Richtlijn 2011/83/EU).",
+      back: "AANPASSEN",
+      payButtonTemplate: "BETAAL {total} 🔒",
       redirecting: "DOORVERWIJZEN…",
       defaultError: "Betaling kon niet starten. Probeer opnieuw of mail julien@rahier.dev.",
+      verificationError: "We konden je browser niet verifiëren. Zet je advertentie- of scriptblokker uit en probeer opnieuw, of mail julien@rahier.dev.",
+      invalidRequest: "Sommige gegevens lijken niet te kloppen. Controleer het formulier en probeer opnieuw.",
     },
     fatalError: {
       title: "Ongeldige inschrijflink",
@@ -286,7 +288,7 @@ export default {
   deleteAccount: {
     title: "Je Poule Party-account verwijderen",
     intro:
-      "Je kan je Poule Party-account en alle gegevens die eraan gekoppeld zijn verwijderen. Deze pagina is het webtoegankelijke verwijderingsendpoint dat Google Play vereist. Dezelfde actie is ook beschikbaar in de app via Instellingen → Verwijder mijn account.",
+      "Je kan je Poule Party-account en alle gegevens die eraan gekoppeld zijn verwijderen. Deze pagina is het webtoegankelijke verwijderingsendpoint dat Google Play vereist. Dezelfde actie is ook beschikbaar in de app via Instellingen > Verwijder mijn account.",
     dataDeletedTitle: "Wat onmiddellijk wordt verwijderd",
     dataDeleted: [
       "Je anonieme Firebase Auth-gebruikersaccount",
@@ -322,6 +324,8 @@ export default {
     formSubmitting: "VERSTUREN…",
     formSuccess:
       "Goed ontvangen. We hebben je verzoek genoteerd en behandelen het binnen 30 dagen. Een kopie werd naar {email} gestuurd.",
+    formErrorVerification: "We konden je browser niet verifiëren. Zet je blokker uit en probeer opnieuw, of mail ons.",
+    honeypotLabel: "Laat dit veld leeg",
     formErrorGeneric:
       "Er is iets misgelopen. Probeer opnieuw of mail ons op julien@rahier.dev.",
     formErrorInvalidEmail: "Geef een geldig e-mailadres in.",

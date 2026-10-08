@@ -1,22 +1,3 @@
-// CRIT-4 (audit 2026-05-17): Firebase App Check for the public web form.
-//
-// The Inscription form POSTs to `createPendingRegistration` (Stripe Checkout
-// session creation). Without App Check, that endpoint is wide open — a script
-// can spam Stripe API quota, pollute /eventRegistrations with garbage docs,
-// and burn the Firestore + Stripe budget right before D-Day.
-//
-// reCAPTCHA Enterprise (score-based, invisible to real users) attests the
-// browser session. The Firebase SDK fetches a token at startup and refreshes
-// it automatically; we attach it as `X-Firebase-AppCheck` on the fetch().
-//
-// Environment selection is runtime via hostname so a single Vite build serves
-// both staging and prod hosting:
-//   pouleparty.be / pouleparty-prod.web.app    → prod project
-//   pouleparty-ba586.web.app / localhost / 127 → staging project
-//
-// Firebase web config values are public-by-design (apiKey is a project
-// identifier, not a secret); see https://firebase.google.com/support/guides/security-checklist.
-
 import { initializeApp, type FirebaseApp } from "firebase/app";
 import {
   initializeAppCheck,
@@ -70,25 +51,24 @@ export function initAppCheck(): void {
       isTokenAutoRefreshEnabled: true,
     });
   } catch (err) {
-    // Init failure (CSP block, network down at boot, etc.) is recoverable —
-    // `getAppCheckToken` will return null and the request goes through
-    // anyway while `enforceAppCheck` is off server-side. Log so we notice.
-    console.warn("App Check init failed:", err);
+    console.warn("[appCheck] init failed", err);
   }
 }
 
 /**
- * Returns the current App Check token, or null if init didn't complete or
- * token fetch failed. Safe to call before init — returns null. The caller
- * attaches the token as `X-Firebase-AppCheck` header when non-null.
+ * Returns an App Check token, retrying once with a forced refresh. The
+ * registration endpoint rejects requests without one, so null means the
+ * submit will fail with a verification error the form explains.
  */
 export async function getAppCheckToken(): Promise<string | null> {
   if (!appCheckInstance) return null;
-  try {
-    const result = await getToken(appCheckInstance, /* forceRefresh */ false);
-    return result.token;
-  } catch (err) {
-    console.warn("App Check token fetch failed:", err);
-    return null;
+  for (const forceRefresh of [false, true]) {
+    try {
+      const result = await getToken(appCheckInstance, forceRefresh);
+      return result.token;
+    } catch (err) {
+      console.warn("[appCheck] token fetch failed", { forceRefresh, err });
+    }
   }
+  return null;
 }

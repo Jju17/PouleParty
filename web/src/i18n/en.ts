@@ -15,7 +15,7 @@ export default {
     dDayEyebrow: "PouleParty D-Day",
     dDayTitle: "🐔 Saturday, June 6",
     dDayBody: "A Chicken hides in Ixelles. Your team has to hunt them down. €12 / player · Teams of 3 to 5.",
-    dDayCta: "REGISTER YOUR TEAM →",
+    dDayCta: "REGISTER YOUR TEAM",
   },
   privacy: {
     title: "Privacy Policy",
@@ -89,7 +89,7 @@ export default {
     rightRectification: "Right to rectification (Art. 16):",
     rightRectificationText: "You can request correction of inaccurate data.",
     rightErasure: "Right to erasure (Art. 17):",
-    rightErasureText: "You can request deletion of your data. The in-app Settings > Delete Account button deletes your anonymous Firebase Auth account and the `/users/{uid}` profile document immediately. Games you participated in (and the team name you used for them) are kept indefinitely for game-history integrity. They are visible only to participants of the same session and the game creator. For full scrubbing of past game data (including your team name in winners arrays), contact us at julien@rahier.dev and we will process the manual scrub within 30 days. Paid event registrations are deleted on request (subject to the 12-month accounting retention period mentioned above).",
+    rightErasureText: "You can request deletion of your data. The in-app Settings > Delete Account button deletes your anonymous Firebase Auth account and the `/users/{uid}` profile document immediately. Games you took part in, with the team name you used, your scores and the photos or videos you sent as challenge proof, are deleted automatically 30 days after the game ends. Until then they are visible only to participants of the same game; challenge proofs are visible only to you, the Chicken and the referees. For faster deletion, contact us at julien@rahier.dev. Paid event registrations are deleted on request (subject to the 12-month accounting retention period mentioned above).",
     rightRestriction: "Right to restriction (Art. 18):",
     rightRestrictionText: "You can request that we limit the processing of your data.",
     rightPortability: "Right to data portability (Art. 20):",
@@ -207,7 +207,7 @@ export default {
         "The zone shrinks. The pressure rises. Dirty tricks allowed. 😈",
       ],
       priceLine: "€12 / player · Teams of 3 to 5 · Sat. June 6 · 8:30 PM",
-      cta: "SIGN UP →",
+      cta: "SIGN UP",
     },
     form: {
       title: "Your team",
@@ -222,8 +222,8 @@ export default {
       phonePlaceholder: "+32 470 ...",
       teamSizeLabel: "Team size",
       teamSizeUnit: "PLAYERS",
-      back: "← BACK",
-      next: "RECAP →",
+      back: "BACK",
+      next: "RECAP",
     },
     recap: {
       title: "All good?",
@@ -245,11 +245,12 @@ export default {
       consentJoin: " and the ",
       consentPrivacyLink: "Privacy Policy",
       consentSuffix: ". Dated leisure event: the 14-day right of withdrawal does not apply (CRD Art. 16(l)).",
-      back: "← EDIT",
-      // Template: replace {total} with the number, e.g. "PAY 36 € 🔒".
-      payButtonTemplate: "PAY {total} € 🔒",
+      back: "EDIT",
+      payButtonTemplate: "PAY {total} 🔒",
       redirecting: "REDIRECTING…",
       defaultError: "Couldn't start the payment. Try again or write to julien@rahier.dev.",
+      verificationError: "We couldn't verify your browser. Turn off your ad or script blocker and try again, or write to julien@rahier.dev.",
+      invalidRequest: "Some details look wrong. Check the form and try again.",
     },
     fatalError: {
       title: "Invalid registration link",
@@ -274,7 +275,7 @@ export default {
   deleteAccount: {
     title: "Delete your Poule Party account",
     intro:
-      "You can delete your Poule Party account and all the data tied to it. This page is the web-accessible deletion endpoint required by Google Play. The same action is also available inside the app under Settings → Delete Account.",
+      "You can delete your Poule Party account and all the data tied to it. This page is the web-accessible deletion endpoint required by Google Play. The same action is also available inside the app under Settings > Delete Account.",
     dataDeletedTitle: "What is deleted immediately",
     dataDeleted: [
       "Your anonymous Firebase Auth user account",
@@ -310,6 +311,8 @@ export default {
     formSubmitting: "SUBMITTING…",
     formSuccess:
       "Got it. We received your request and will process it within 30 days. A copy was emailed to {email}.",
+    formErrorVerification: "We couldn't verify your browser. Turn off your blocker and try again, or email us.",
+    honeypotLabel: "Leave this empty",
     formErrorGeneric:
       "Something went wrong. Try again or email us at julien@rahier.dev.",
     formErrorInvalidEmail: "Please enter a valid email address.",

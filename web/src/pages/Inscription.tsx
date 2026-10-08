@@ -4,6 +4,8 @@ import Layout from "../components/Layout";
 import { useI18n } from "../i18n";
 import { routePath } from "../i18n/routes";
 import { getAppCheckToken } from "../appCheck";
+import { registrationErrorMessage } from "../registrationErrors";
+import { formatPrice } from "../formatPrice";
 import { isAllowedBatchId } from "../registrationBatches";
 
 // PP-52 — 3-step inscription wizard (intro → form → récap → Stripe).
@@ -100,11 +102,6 @@ export default function Inscription() {
     setSubmitting(true);
     setError(null);
     try {
-      // CRIT-4 (audit 2026-05-17): attach the App Check token. When
-      // `enforceAppCheck` is later flipped to true on the CF, requests
-      // without a valid token will be rejected. Today the token is
-      // tracked-but-not-enforced — the value goes through to populate
-      // the App Check monitoring dashboard.
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       const appCheckToken = await getAppCheckToken();
       if (appCheckToken) headers["X-Firebase-AppCheck"] = appCheckToken;
@@ -120,29 +117,20 @@ export default function Inscription() {
           phone: form.phone.trim(),
           teamSize: form.teamSize,
           locale,
-          // CRIT-4 (audit 2026-05-17): honeypot, real users never
-          // touch this field but naive form-fillers populate it.
-          // Server rejects any non-empty value.
           nicknameAlt: form.nicknameAlt,
-          // XPLAT-H5 (store-audit 2026-05-18, updated 2026-05-18 PM):
-          // implicit consent at submit click. The "Pay" button is
-          // labeled "PAY {n} €" (CRD Art. 8(2) obligation-to-pay
-          // requirement) and the disclosure text right above it
-          // surfaces Terms + Privacy + CRD Art. 16(l) waiver. Belgian
-          // clickwrap doctrine accepts implicit consent when the
-          // disclosure is prominent + the button is unambiguous, so
-          // the previous explicit checkbox was removed to reduce
-          // friction. We still timestamp the click for audit trail.
           consentAcknowledgedAt: new Date().toISOString(),
         }),
       });
-      const json = (await response.json()) as { checkoutUrl?: string; error?: string };
+      const json = (await response.json().catch(() => ({}))) as { checkoutUrl?: string };
       if (!response.ok || !json.checkoutUrl) {
-        throw new Error(json.error ?? `Error ${response.status}`);
+        setError(registrationErrorMessage(response.status, t.inscription.recap));
+        setSubmitting(false);
+        return;
       }
       window.location.href = json.checkoutUrl;
     } catch (err) {
-      setError((err as Error).message || t.inscription.recap.defaultError);
+      console.warn("[inscription] submit failed", err);
+      setError(t.inscription.recap.defaultError);
       setSubmitting(false);
     }
   }
@@ -246,9 +234,6 @@ function FormStep({
       <p className="text-sm opacity-75 mb-6">{f.subtitle}</p>
 
       <div className="space-y-4">
-        {/* CRIT-4 (audit 2026-05-17): honeypot. `display:none` keeps
-            it invisible to real users; bots that fill every input
-            trigger the server's reject path. */}
         <input
           type="text"
           name="nicknameAlt"
@@ -301,12 +286,16 @@ function FormStep({
             inputMode="tel"
           />
         </Field>
-        <Field label={f.teamSizeLabel}>
+        <fieldset>
+          <legend className="text-xs tracking-widest uppercase opacity-75 block mb-1.5">
+            {f.teamSizeLabel}
+          </legend>
           <div className="grid grid-cols-3 gap-2">
             {TEAM_SIZES.map((size) => (
               <button
                 key={size}
                 type="button"
+                aria-pressed={form.teamSize === size}
                 onClick={() => onChange({ ...form, teamSize: size })}
                 className={`py-3 rounded-xl border-2 font-bold transition-all ${
                   form.teamSize === size
@@ -321,7 +310,7 @@ function FormStep({
               </button>
             ))}
           </div>
-        </Field>
+        </fieldset>
       </div>
 
       <div className="flex justify-between items-center mt-8">
@@ -354,9 +343,10 @@ function RecapStep({
   onPay: () => void;
 }) {
   const { recap } = t.inscription;
+  const { locale } = useI18n();
   const payLabel = submitting
     ? recap.redirecting
-    : recap.payButtonTemplate.replace("{total}", String(total));
+    : recap.payButtonTemplate.replace("{total}", formatPrice(total, locale));
   const payDisabled = submitting;
   return (
     <div>
@@ -382,7 +372,7 @@ function RecapStep({
             className="text-3xl text-[#FE6A00]"
             style={{ fontFamily: "Bangers, cursive", letterSpacing: "0.04em" }}
           >
-            {total} €
+            {formatPrice(total, locale)}
           </span>
         </div>
       </div>
@@ -414,7 +404,7 @@ function RecapStep({
       </p>
 
       {error && (
-        <div className="mt-4 p-3 rounded-xl bg-red-100 text-red-800 text-sm">
+        <div role="alert" className="mt-4 p-3 rounded-xl bg-red-100 text-red-800 text-sm">
           {error}
         </div>
       )}

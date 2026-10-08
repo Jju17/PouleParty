@@ -17,7 +17,7 @@ export default {
     dDayEyebrow: "PouleParty D-Day",
     dDayTitle: "🐔 Samedi 6 juin",
     dDayBody: "Une Poule se cache dans Ixelles. Ton équipe doit la traquer. 12 € / joueur · Équipes de 3 à 5.",
-    dDayCta: "INSCRIS TON ÉQUIPE →",
+    dDayCta: "INSCRIS TON ÉQUIPE",
   },
   privacy: {
     title: "Politique de confidentialité",
@@ -91,7 +91,7 @@ export default {
     rightRectification: "Droit de rectification (Art. 16) :",
     rightRectificationText: "Vous pouvez demander la correction de données inexactes.",
     rightErasure: "Droit à l'effacement (Art. 17) :",
-    rightErasureText: "Tu peux demander la suppression de tes données. Le bouton Paramètres > Supprimer mon compte dans l'app supprime immédiatement ton compte Firebase Auth anonyme et le document de profil `/users/{uid}`. Les parties auxquelles tu as participé (et le nom d'équipe que tu y as utilisé) sont conservées indéfiniment pour l'intégrité de l'historique des parties. Elles ne sont visibles que par les participants de la même session et par le créateur de la partie. Pour un effacement complet des données de parties passées (y compris ton nom d'équipe dans les listes de gagnants), contacte-nous à julien@rahier.dev et nous traiterons l'effacement manuel sous 30 jours. Les inscriptions aux événements payants sont supprimées sur demande (sous réserve de la période de conservation comptable de 12 mois mentionnée ci-dessus).",
+    rightErasureText: "Tu peux demander la suppression de tes données. Le bouton Paramètres > Supprimer mon compte dans l'app supprime immédiatement ton compte Firebase Auth anonyme et le document de profil `/users/{uid}`. Les parties auxquelles tu as participé, avec le nom d'équipe que tu y as utilisé, tes scores et les photos ou vidéos envoyées comme preuves de défis, sont supprimées automatiquement 30 jours après la fin de la partie. D'ici là, elles ne sont visibles que par les participants de la même partie ; les preuves de défis ne sont visibles que par toi, la Poule et les arbitres. Pour un effacement plus rapide, contacte-nous à julien@rahier.dev. Les inscriptions aux événements payants sont supprimées sur demande (sous réserve de la période de conservation comptable de 12 mois mentionnée ci-dessus).",
     rightRestriction: "Droit à la limitation (Art. 18) :",
     rightRestrictionText: "Vous pouvez demander que nous limitions le traitement de vos données.",
     rightPortability: "Droit à la portabilité (Art. 20) :",
@@ -209,7 +209,7 @@ export default {
         "La zone rétrécit. La tension monte. Les coups bas sont autorisés. 😈",
       ],
       priceLine: "12 € / pers · Équipes de 3 à 5 · Sam. 6 juin · 20h30",
-      cta: "S'INSCRIRE →",
+      cta: "S'INSCRIRE",
     },
     form: {
       title: "Ton équipe",
@@ -224,8 +224,8 @@ export default {
       phonePlaceholder: "+32 470 ...",
       teamSizeLabel: "Taille de l'équipe",
       teamSizeUnit: "JOUEURS",
-      back: "← RETOUR",
-      next: "RÉCAP →",
+      back: "RETOUR",
+      next: "RÉCAP",
     },
     recap: {
       title: "Tout bon ?",
@@ -242,11 +242,13 @@ export default {
       consentTermsLink: "Conditions d'utilisation",
       consentJoin: " et la ",
       consentPrivacyLink: "Politique de confidentialité",
-      consentSuffix: ". Événement de loisir à date fixe → pas de droit de rétractation 14j (art. 16(l) de la directive 2011/83/UE).",
-      back: "← MODIFIER",
-      payButtonTemplate: "PAYER {total} € 🔒",
+      consentSuffix: ". Événement de loisir à date fixe > pas de droit de rétractation 14j (art. 16(l) de la directive 2011/83/UE).",
+      back: "MODIFIER",
+      payButtonTemplate: "PAYER {total} 🔒",
       redirecting: "REDIRECTION…",
       defaultError: "Impossible de démarrer le paiement. Réessaie ou contacte julien@rahier.dev.",
+      verificationError: "Impossible de vérifier ton navigateur. Désactive ton bloqueur de pubs ou de scripts et réessaie, ou écris à julien@rahier.dev.",
+      invalidRequest: "Certaines infos semblent incorrectes. Vérifie le formulaire et réessaie.",
     },
     fatalError: {
       title: "Lien d'inscription invalide",
@@ -271,7 +273,7 @@ export default {
   deleteAccount: {
     title: "Supprimer ton compte Poule Party",
     intro:
-      "Tu peux supprimer ton compte Poule Party et toutes les données qui y sont rattachées. Cette page est le point de suppression accessible sur le web exigé par Google Play. La même action est aussi disponible dans l'app via Paramètres → Supprimer mon compte.",
+      "Tu peux supprimer ton compte Poule Party et toutes les données qui y sont rattachées. Cette page est le point de suppression accessible sur le web exigé par Google Play. La même action est aussi disponible dans l'app via Paramètres > Supprimer mon compte.",
     dataDeletedTitle: "Ce qui est supprimé immédiatement",
     dataDeleted: [
       "Ton compte utilisateur anonyme Firebase Auth",
@@ -307,6 +309,8 @@ export default {
     formSubmitting: "ENVOI EN COURS…",
     formSuccess:
       "C'est noté. On a bien reçu ta demande et on la traitera sous 30 jours. Une copie a été envoyée à {email}.",
+    formErrorVerification: "Impossible de vérifier ton navigateur. Désactive ton bloqueur et réessaie, ou écris-nous.",
+    honeypotLabel: "Laisse ce champ vide",
     formErrorGeneric:
       "Quelque chose a planté. Réessaie ou écris-nous à julien@rahier.dev.",
     formErrorInvalidEmail: "Merci de saisir une adresse email valide.",
