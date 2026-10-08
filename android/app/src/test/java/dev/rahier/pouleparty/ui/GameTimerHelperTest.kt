@@ -5,6 +5,7 @@ import dev.rahier.pouleparty.powerups.logic.*
 
 import com.mapbox.geojson.Point
 import dev.rahier.pouleparty.model.GameMod
+import dev.rahier.pouleparty.model.PlayerRole
 import dev.rahier.pouleparty.model.Winner
 import dev.rahier.pouleparty.model.calculateNormalModeSettings
 import com.google.firebase.Timestamp

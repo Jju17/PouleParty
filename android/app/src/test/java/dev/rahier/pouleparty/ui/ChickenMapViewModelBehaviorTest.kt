@@ -2,7 +2,10 @@ package dev.rahier.pouleparty.ui
 
 import androidx.lifecycle.SavedStateHandle
 import com.google.firebase.auth.FirebaseAuth
-import dev.rahier.pouleparty.data.FirestoreRepository
+import dev.rahier.pouleparty.data.GameRepository
+import dev.rahier.pouleparty.data.PresenceRepository
+import dev.rahier.pouleparty.data.GameFunctions
+import dev.rahier.pouleparty.data.ChallengeSubmissionRepository
 import dev.rahier.pouleparty.data.LocationRepository
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameMod
@@ -25,21 +28,27 @@ import org.junit.Test
 class ChickenMapViewModelBehaviorTest {
 
     private val testDispatcher = StandardTestDispatcher()
-    private lateinit var firestoreRepository: FirestoreRepository
+    private lateinit var gameRepository: GameRepository
+    private lateinit var presenceRepository: PresenceRepository
+    private lateinit var gameFunctions: GameFunctions
+    private lateinit var challengeSubmissions: ChallengeSubmissionRepository
     private lateinit var locationRepository: LocationRepository
 
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        firestoreRepository = mockk(relaxed = true)
+        gameRepository = mockk(relaxed = true)
+        presenceRepository = mockk(relaxed = true)
+        gameFunctions = mockk(relaxed = true)
+        challengeSubmissions = mockk(relaxed = true)
         locationRepository = mockk(relaxed = true)
         // Make `loadGame()` exit early so init coroutines settle without
         // needing real game data from the relaxed mock.
-        io.mockk.coEvery { firestoreRepository.getConfig(any()) } returns null
-        io.mockk.every { firestoreRepository.gameConfigFlow(any()) } returns kotlinx.coroutines.flow.emptyFlow()
-        io.mockk.every { firestoreRepository.powerUpsFlow(any()) } returns kotlinx.coroutines.flow.emptyFlow()
-        io.mockk.every { firestoreRepository.hunterLocationsFlow(any()) } returns kotlinx.coroutines.flow.emptyFlow()
-        io.mockk.every { firestoreRepository.chickenLocationFlow(any()) } returns kotlinx.coroutines.flow.emptyFlow()
+        io.mockk.coEvery { gameRepository.getConfig(any()) } returns null
+        io.mockk.every { gameRepository.gameConfigFlow(any()) } returns kotlinx.coroutines.flow.emptyFlow()
+        io.mockk.every { gameRepository.powerUpsFlow(any()) } returns kotlinx.coroutines.flow.emptyFlow()
+        io.mockk.every { presenceRepository.hunterLocationsFlow(any()) } returns kotlinx.coroutines.flow.emptyFlow()
+        io.mockk.every { presenceRepository.chickenLocationFlow(any()) } returns kotlinx.coroutines.flow.emptyFlow()
         io.mockk.every { locationRepository.locationFlow() } returns kotlinx.coroutines.flow.emptyFlow()
     }
 
@@ -50,7 +59,9 @@ class ChickenMapViewModelBehaviorTest {
 
     private fun createViewModel(gameId: String = "test-id"): ChickenMapViewModel {
         return ChickenMapViewModel(
-            firestoreRepository = firestoreRepository,
+            gameRepository = gameRepository,
+            presenceRepository = presenceRepository,
+            gameFunctions = gameFunctions,
             locationRepository = locationRepository,
             analyticsRepository = mockk<dev.rahier.pouleparty.data.AnalyticsRepository>(relaxed = true),
             auth = mockk<FirebaseAuth>(relaxed = true),
@@ -208,7 +219,7 @@ class ChickenMapViewModelBehaviorTest {
                 )
             )
         )
-        io.mockk.coEvery { firestoreRepository.getConfig(any()) } returns game
+        io.mockk.coEvery { gameRepository.getConfig(any()) } returns game
         io.mockk.coEvery { locationRepository.getLastLocation() } returns
             com.mapbox.geojson.Point.fromLngLat(4.3928, 50.8266)
 
@@ -219,7 +230,7 @@ class ChickenMapViewModelBehaviorTest {
         testDispatcher.scheduler.runCurrent()
 
         io.mockk.coVerify(atLeast = 1) {
-            firestoreRepository.setChickenLocation(eq("test-id"), any())
+            presenceRepository.setChickenLocation(eq("test-id"), any())
         }
     }
 
@@ -248,7 +259,7 @@ class ChickenMapViewModelBehaviorTest {
                 activeEffects = dev.rahier.pouleparty.model.ActiveEffects(radarPing = null)
             )
         )
-        io.mockk.coEvery { firestoreRepository.getConfig(any()) } returns game
+        io.mockk.coEvery { gameRepository.getConfig(any()) } returns game
         io.mockk.coEvery { locationRepository.getLastLocation() } returns
             com.mapbox.geojson.Point.fromLngLat(4.3928, 50.8266)
 
@@ -259,7 +270,7 @@ class ChickenMapViewModelBehaviorTest {
         testDispatcher.scheduler.runCurrent()
 
         io.mockk.coVerify(atLeast = 1) {
-            firestoreRepository.setChickenLocation(eq("test-id"), any())
+            presenceRepository.setChickenLocation(eq("test-id"), any())
         }
     }
 
@@ -284,7 +295,7 @@ class ChickenMapViewModelBehaviorTest {
                 end = com.google.firebase.Timestamp(java.util.Date(now - 1_000))
             )
         )
-        io.mockk.coEvery { firestoreRepository.getConfig(any()) } returns game
+        io.mockk.coEvery { gameRepository.getConfig(any()) } returns game
 
         val vm = createViewModel()
         // Let loadGame land + the first timer delay(1000) elapse so the
@@ -321,9 +332,9 @@ class ChickenMapViewModelBehaviorTest {
                 shrinkMetersPerUpdate = 100.0
             )
         )
-        io.mockk.coEvery { firestoreRepository.getConfig(any()) } returns game
+        io.mockk.coEvery { gameRepository.getConfig(any()) } returns game
         // Stored schedule: initial 100m circle, final 50m circle.
-        io.mockk.coEvery { firestoreRepository.fetchZoneSchedule(any()) } returns listOf(
+        io.mockk.coEvery { gameRepository.fetchZoneSchedule(any()) } returns listOf(
             dev.rahier.pouleparty.model.ZoneCircle(order = 0, radiusMeters = 100.0, lat = 50.8466, lng = 4.3528),
             dev.rahier.pouleparty.model.ZoneCircle(order = 1, radiusMeters = 50.0, lat = 50.8466, lng = 4.3528),
         )
@@ -351,7 +362,7 @@ class ChickenMapViewModelBehaviorTest {
                 end = com.google.firebase.Timestamp(java.util.Date(now - 1_000))
             )
         )
-        io.mockk.coEvery { firestoreRepository.getConfig(any()) } returns game
+        io.mockk.coEvery { gameRepository.getConfig(any()) } returns game
         // No cached fix → no pre-timer initial write. The first write
         // would only come from the location flow, which we emit
         // post-gameOver to prove the collector has been cancelled.
@@ -376,7 +387,7 @@ class ChickenMapViewModelBehaviorTest {
         testDispatcher.scheduler.runCurrent()
 
         io.mockk.coVerify(exactly = 0) {
-            firestoreRepository.setChickenLocation(any(), any())
+            presenceRepository.setChickenLocation(any(), any())
         }
     }
 
@@ -405,7 +416,7 @@ class ChickenMapViewModelBehaviorTest {
                 )
             )
         )
-        io.mockk.coEvery { firestoreRepository.getConfig(any()) } returns game
+        io.mockk.coEvery { gameRepository.getConfig(any()) } returns game
         io.mockk.coEvery { locationRepository.getLastLocation() } returns null
         // Empty location flow so the primary trackLocation path has nothing to write.
         io.mockk.every { locationRepository.locationFlow() } returns kotlinx.coroutines.flow.emptyFlow()
@@ -420,7 +431,7 @@ class ChickenMapViewModelBehaviorTest {
         // once by the primary track path — but it returns null, and the radar-ping
         // loop (which *would* use it) isn't scheduled, so no writes fire.
         io.mockk.coVerify(exactly = 0) {
-            firestoreRepository.setChickenLocation(any(), any())
+            presenceRepository.setChickenLocation(any(), any())
         }
     }
 }

@@ -6,7 +6,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dev.rahier.pouleparty.data.FirestoreRepository
+import dev.rahier.pouleparty.data.GameRepository
+import dev.rahier.pouleparty.data.ChallengeSubmissionRepository
 import dev.rahier.pouleparty.model.Challenge
 import dev.rahier.pouleparty.model.ChallengeCompletion
 import dev.rahier.pouleparty.model.ChallengeSubmission
@@ -119,7 +120,8 @@ data class LeaderboardHunterEntry(
 
 @HiltViewModel
 class ChallengesViewModel @Inject constructor(
-    private val firestoreRepository: FirestoreRepository,
+    private val gameRepository: GameRepository,
+    private val challengeSubmissions: ChallengeSubmissionRepository,
     auth: FirebaseAuth,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -189,7 +191,7 @@ class ChallengesViewModel @Inject constructor(
                 } else {
                     bytes
                 }
-                firestoreRepository.submitChallenge(
+                challengeSubmissions.submitChallenge(
                     gameId = gameId,
                     challengeId = challengeId,
                     hunterId = state.currentHunterId,
@@ -209,7 +211,7 @@ class ChallengesViewModel @Inject constructor(
     private fun streamChallenges() {
         if (gameId.isEmpty()) return
         viewModelScope.launch {
-            firestoreRepository.challengesStream(gameId).collect { challenges ->
+            gameRepository.challengesStream(gameId).collect { challenges ->
                 _uiState.update { it.copy(challenges = challenges) }
             }
         }
@@ -218,7 +220,7 @@ class ChallengesViewModel @Inject constructor(
     private fun streamLeaderboard() {
         if (gameId.isEmpty()) return
         viewModelScope.launch {
-            firestoreRepository.leaderboardFlow(gameId).collect { completions ->
+            gameRepository.leaderboardFlow(gameId).collect { completions ->
                 _uiState.update { it.copy(completions = completions) }
             }
         }
@@ -227,7 +229,7 @@ class ChallengesViewModel @Inject constructor(
     private fun streamMyCompletion() {
         if (gameId.isEmpty() || hunterId.isEmpty()) return
         viewModelScope.launch {
-            firestoreRepository.myCompletionFlow(gameId, hunterId).collect { mine ->
+            gameRepository.myCompletionFlow(gameId, hunterId).collect { mine ->
                 _uiState.update { it.copy(myCompletion = mine) }
             }
         }
@@ -236,7 +238,7 @@ class ChallengesViewModel @Inject constructor(
     private fun streamSubmissions() {
         if (gameId.isEmpty() || hunterId.isEmpty()) return
         viewModelScope.launch {
-            firestoreRepository.hunterSubmissionsFlow(gameId, hunterId).collect { submissions ->
+            gameRepository.hunterSubmissionsFlow(gameId, hunterId).collect { submissions ->
                 _uiState.update { it.copy(mySubmissions = submissions) }
             }
         }
@@ -246,13 +248,13 @@ class ChallengesViewModel @Inject constructor(
         if (gameId.isEmpty()) return
         viewModelScope.launch {
             try {
-                val game = firestoreRepository.getConfig(gameId)
+                val game = gameRepository.getConfig(gameId)
                 if (game == null) {
                     Log.w(TAG, "loadGameContext: game $gameId not found")
                     return@launch
                 }
                 val hunterIds = game.hunterIds
-                val registrations = firestoreRepository.fetchAllRegistrations(gameId)
+                val registrations = gameRepository.fetchAllRegistrations(gameId)
                 val registrationsByUserId = registrations
                     .filter { it.teamName.isNotBlank() }
                     .associate { it.userId to it.teamName }

@@ -5,7 +5,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dev.rahier.pouleparty.data.FirestoreRepository
+import dev.rahier.pouleparty.data.GameRepository
+import dev.rahier.pouleparty.data.GameFunctions
 import dev.rahier.pouleparty.model.Challenge
 import dev.rahier.pouleparty.model.ChallengeSubmission
 import dev.rahier.pouleparty.model.Registration
@@ -39,7 +40,8 @@ data class ValidationQueueUiState(
 
 @HiltViewModel
 class ValidationQueueViewModel @Inject constructor(
-    private val firestoreRepository: FirestoreRepository,
+    private val gameRepository: GameRepository,
+    private val gameFunctions: GameFunctions,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -88,7 +90,7 @@ class ValidationQueueViewModel @Inject constructor(
         _uiState.update { it.copy(busyIds = it.busyIds + id) }
         viewModelScope.launch {
             try {
-                firestoreRepository.validateChallengeSubmission(gameId, id, accept)
+                gameFunctions.validateChallengeSubmission(gameId, id, accept)
                 _uiState.update {
                     it.copy(
                         busyIds = it.busyIds - id,
@@ -109,7 +111,7 @@ class ValidationQueueViewModel @Inject constructor(
 
     private fun streamSubmissions() {
         viewModelScope.launch {
-            firestoreRepository.pendingSubmissionsFlow(gameId).collect { subs ->
+            gameRepository.pendingSubmissionsFlow(gameId).collect { subs ->
                 _uiState.update { state ->
                     val stillVisible = state.selected?.let { sel ->
                         if (subs.any { it.id == sel.id }) sel else null
@@ -123,7 +125,7 @@ class ValidationQueueViewModel @Inject constructor(
     private fun streamChallenges() {
         if (gameId.isEmpty()) return
         viewModelScope.launch {
-            firestoreRepository.challengesStream(gameId).collect { challenges ->
+            gameRepository.challengesStream(gameId).collect { challenges ->
                 _uiState.update { it.copy(challenges = challenges) }
             }
         }
@@ -131,7 +133,7 @@ class ValidationQueueViewModel @Inject constructor(
 
     private fun streamRegistrations() {
         viewModelScope.launch {
-            firestoreRepository.registrationsFlow(gameId).collect { regs ->
+            gameRepository.registrationsFlow(gameId).collect { regs ->
                 _uiState.update { it.copy(registrations = regs) }
             }
         }

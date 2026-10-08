@@ -5,7 +5,11 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import dev.rahier.pouleparty.AppConstants
 import dev.rahier.pouleparty.data.AnalyticsRepository
-import dev.rahier.pouleparty.data.FirestoreRepository
+import dev.rahier.pouleparty.data.GameRepository
+import dev.rahier.pouleparty.data.PresenceRepository
+import dev.rahier.pouleparty.data.GameFunctions
+import dev.rahier.pouleparty.data.ChallengeSubmissionRepository
+import dev.rahier.pouleparty.data.ActiveGameResult
 import dev.rahier.pouleparty.data.LocationRepository
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameStatus
@@ -38,7 +42,10 @@ import org.junit.Test
 class HomeViewModelJoinFlowTest {
 
     private val testDispatcher = StandardTestDispatcher()
-    private lateinit var firestoreRepository: FirestoreRepository
+    private lateinit var gameRepository: GameRepository
+    private lateinit var presenceRepository: PresenceRepository
+    private lateinit var gameFunctions: GameFunctions
+    private lateinit var challengeSubmissions: ChallengeSubmissionRepository
     private lateinit var locationRepository: LocationRepository
     private lateinit var analyticsRepository: AnalyticsRepository
     private lateinit var prefs: SharedPreferences
@@ -48,7 +55,10 @@ class HomeViewModelJoinFlowTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        firestoreRepository = mockk(relaxed = true)
+        gameRepository = mockk(relaxed = true)
+        presenceRepository = mockk(relaxed = true)
+        gameFunctions = mockk(relaxed = true)
+        challengeSubmissions = mockk(relaxed = true)
         locationRepository = mockk(relaxed = true)
         analyticsRepository = mockk(relaxed = true)
         prefs = mockk(relaxed = true)
@@ -83,7 +93,8 @@ class HomeViewModelJoinFlowTest {
     }
 
     private fun createViewModel(): HomeViewModel = HomeViewModel(
-        firestoreRepository = firestoreRepository,
+        gameRepository = gameRepository,
+        gameFunctions = gameFunctions,
         locationRepository = locationRepository,
         analyticsRepository = analyticsRepository,
         prefs = prefs,
@@ -104,7 +115,7 @@ class HomeViewModelJoinFlowTest {
         val myUid = "user-abc"
         mockAuthUser(myUid)
         val ownGame = Game.mock.copy(creatorId = myUid, roles = mapOf(myUid to "chicken"))
-        coEvery { firestoreRepository.findGameByCode("ABC123") } returns ownGame
+        coEvery { gameRepository.findGameByCode("ABC123") } returns ownGame
 
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
@@ -120,7 +131,7 @@ class HomeViewModelJoinFlowTest {
     fun `typing other creator code ends in CodeValidated`() {
         mockAuthUser("user-xyz")
         val game = Game.mock.copy(creatorId = "other")
-        coEvery { firestoreRepository.findGameByCode("ABC123") } returns game
+        coEvery { gameRepository.findGameByCode("ABC123") } returns game
 
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
@@ -140,9 +151,9 @@ class HomeViewModelJoinFlowTest {
         val cachedWaitingGame = Game.mock.copy(id = "g1", status = "waiting")
         val freshDoneGame = Game.mock.copy(id = "g1", status = "done")
         // checkForActiveGame fires at init: return the waiting cached version.
-        coEvery { firestoreRepository.findActiveGame("user-xyz") } returns FirestoreRepository.ActiveGameResult(cachedWaitingGame, dev.rahier.pouleparty.ui.gamelogic.PlayerRole.HUNTER, dev.rahier.pouleparty.ui.gamelogic.GamePhase.UPCOMING)
+        coEvery { gameRepository.findActiveGame("user-xyz") } returns ActiveGameResult(cachedWaitingGame, dev.rahier.pouleparty.model.PlayerRole.HUNTER, dev.rahier.pouleparty.model.GamePhase.UPCOMING)
         // rejoinActiveGame then refetches.
-        coEvery { firestoreRepository.getConfig("g1") } returns freshDoneGame
+        coEvery { gameRepository.getConfig("g1") } returns freshDoneGame
 
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
@@ -161,7 +172,7 @@ class HomeViewModelJoinFlowTest {
     fun `dismissing active game adds gameId to dismissed set in prefs`() {
         mockAuthUser("user-xyz")
         val game = Game.mock.copy(id = "dismiss-me", status = "waiting")
-        coEvery { firestoreRepository.findActiveGame("user-xyz") } returns FirestoreRepository.ActiveGameResult(game, dev.rahier.pouleparty.ui.gamelogic.PlayerRole.HUNTER, dev.rahier.pouleparty.ui.gamelogic.GamePhase.UPCOMING)
+        coEvery { gameRepository.findActiveGame("user-xyz") } returns ActiveGameResult(game, dev.rahier.pouleparty.model.PlayerRole.HUNTER, dev.rahier.pouleparty.model.GamePhase.UPCOMING)
 
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
@@ -181,7 +192,7 @@ class HomeViewModelJoinFlowTest {
     fun `findActiveGame skips a previously dismissed game`() {
         mockAuthUser("user-xyz")
         val game = Game.mock.copy(id = "dismissed", status = "waiting")
-        coEvery { firestoreRepository.findActiveGame("user-xyz") } returns FirestoreRepository.ActiveGameResult(game, dev.rahier.pouleparty.ui.gamelogic.PlayerRole.HUNTER, dev.rahier.pouleparty.ui.gamelogic.GamePhase.UPCOMING)
+        coEvery { gameRepository.findActiveGame("user-xyz") } returns ActiveGameResult(game, dev.rahier.pouleparty.model.PlayerRole.HUNTER, dev.rahier.pouleparty.model.GamePhase.UPCOMING)
         every { prefs.getStringSet(eq(AppConstants.PREF_DISMISSED_ACTIVE_GAME_IDS), any()) } returns setOf("dismissed")
 
         val vm = createViewModel()

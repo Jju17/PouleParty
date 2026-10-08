@@ -5,7 +5,10 @@ import androidx.lifecycle.ViewModelStore
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import dev.rahier.pouleparty.data.AnalyticsRepository
-import dev.rahier.pouleparty.data.FirestoreRepository
+import dev.rahier.pouleparty.data.GameRepository
+import dev.rahier.pouleparty.data.PresenceRepository
+import dev.rahier.pouleparty.data.GameFunctions
+import dev.rahier.pouleparty.data.ChallengeSubmissionRepository
 import dev.rahier.pouleparty.data.LocationRepository
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.ui.chickenmap.ChickenMapViewModel
@@ -44,7 +47,10 @@ import org.junit.Test
 class BaseMapViewModelTeardownTest {
 
     private val testDispatcher = StandardTestDispatcher()
-    private lateinit var firestoreRepository: FirestoreRepository
+    private lateinit var gameRepository: GameRepository
+    private lateinit var presenceRepository: PresenceRepository
+    private lateinit var gameFunctions: GameFunctions
+    private lateinit var challengeSubmissions: ChallengeSubmissionRepository
     private lateinit var locationRepository: LocationRepository
     private lateinit var analyticsRepository: AnalyticsRepository
     private lateinit var auth: FirebaseAuth
@@ -56,7 +62,10 @@ class BaseMapViewModelTeardownTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        firestoreRepository = mockk(relaxed = true)
+        gameRepository = mockk(relaxed = true)
+        presenceRepository = mockk(relaxed = true)
+        gameFunctions = mockk(relaxed = true)
+        challengeSubmissions = mockk(relaxed = true)
         locationRepository = mockk(relaxed = true)
         analyticsRepository = mockk(relaxed = true)
         auth = mockk(relaxed = true)
@@ -65,12 +74,12 @@ class BaseMapViewModelTeardownTest {
         every { auth.currentUser } returns user
 
         // A realistic game so loadGame() doesn't short-circuit.
-        coEvery { firestoreRepository.getConfig(any()) } returns Game.mock
-        every { firestoreRepository.gameConfigFlow(any()) } returns gameConfig
-        every { firestoreRepository.powerUpsFlow(any()) } returns powerUps
-        every { firestoreRepository.hunterLocationsFlow(any()) } returns emptyFlow()
-        every { firestoreRepository.chickenLocationFlow(any()) } returns emptyFlow()
-        every { firestoreRepository.challengesStream(any()) } returns emptyFlow()
+        coEvery { gameRepository.getConfig(any()) } returns Game.mock
+        every { gameRepository.gameConfigFlow(any()) } returns gameConfig
+        every { gameRepository.powerUpsFlow(any()) } returns powerUps
+        every { presenceRepository.hunterLocationsFlow(any()) } returns emptyFlow()
+        every { presenceRepository.chickenLocationFlow(any()) } returns emptyFlow()
+        every { gameRepository.challengesStream(any()) } returns emptyFlow()
         every { locationRepository.locationFlow() } returns emptyFlow()
     }
 
@@ -80,7 +89,9 @@ class BaseMapViewModelTeardownTest {
     }
 
     private fun createChickenVM(): ChickenMapViewModel = ChickenMapViewModel(
-        firestoreRepository = firestoreRepository,
+        gameRepository = gameRepository,
+        presenceRepository = presenceRepository,
+        gameFunctions = gameFunctions,
         locationRepository = locationRepository,
         analyticsRepository = analyticsRepository,
         auth = auth,

@@ -6,7 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.mapbox.geojson.Point
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dev.rahier.pouleparty.data.FirestoreRepository
+import dev.rahier.pouleparty.data.GameRepository
+import dev.rahier.pouleparty.data.GameFunctions
 import dev.rahier.pouleparty.data.LocationRepository
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameMod
@@ -145,7 +146,8 @@ data class GameCreationUiState(
 
 @HiltViewModel
 class GameCreationViewModel @Inject constructor(
-    private val firestoreRepository: FirestoreRepository,
+    private val gameRepository: GameRepository,
+    private val gameFunctions: GameFunctions,
     private val locationRepository: LocationRepository,
     private val analyticsRepository: dev.rahier.pouleparty.data.AnalyticsRepository,
     private val auth: FirebaseAuth,
@@ -579,10 +581,10 @@ class GameCreationViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                firestoreRepository.setConfig(finalGame)
+                gameRepository.setConfig(finalGame)
                 if (enableGameMaster) {
                     try {
-                        firestoreRepository.setGameMasterPassword(finalGame.id, gmPassword)
+                        gameFunctions.setGameMasterPassword(finalGame.id, gmPassword)
                     } catch (_: Exception) {
                         // Game is created — chicken can retry from
                         // Settings (PP-88 follow-up).

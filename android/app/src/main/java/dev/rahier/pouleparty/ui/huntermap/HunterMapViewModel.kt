@@ -5,7 +5,11 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.mapbox.geojson.Point
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dev.rahier.pouleparty.data.FirestoreRepository
+import dev.rahier.pouleparty.data.GameRepository
+import dev.rahier.pouleparty.data.PresenceRepository
+import dev.rahier.pouleparty.data.GameFunctions
+import dev.rahier.pouleparty.data.SubmitFoundCodeReason
+import dev.rahier.pouleparty.data.SubmitFoundCodeResult
 import dev.rahier.pouleparty.data.LocationRepository
 import com.google.firebase.Timestamp
 import dev.rahier.pouleparty.model.Game
@@ -16,7 +20,7 @@ import dev.rahier.pouleparty.powerups.model.PowerUp
 import dev.rahier.pouleparty.powerups.model.PowerUpType
 import dev.rahier.pouleparty.ui.gamelogic.CountdownPhase
 import dev.rahier.pouleparty.ui.gamelogic.CountdownResult
-import dev.rahier.pouleparty.ui.gamelogic.PlayerRole
+import dev.rahier.pouleparty.model.PlayerRole
 import dev.rahier.pouleparty.ui.gamelogic.checkGameOverByTime
 import dev.rahier.pouleparty.ui.gamelogic.checkZoneStatus
 import dev.rahier.pouleparty.ui.gamelogic.detectNewWinners
@@ -112,13 +116,15 @@ data class HunterMapUiState(
 
 @HiltViewModel
 class HunterMapViewModel @Inject constructor(
-    firestoreRepository: FirestoreRepository,
+    gameRepository: GameRepository,
+    presenceRepository: PresenceRepository,
+    gameFunctions: GameFunctions,
     locationRepository: LocationRepository,
     analyticsRepository: dev.rahier.pouleparty.data.AnalyticsRepository,
     auth: FirebaseAuth,
     savedStateHandle: SavedStateHandle,
     private val remoteConfig: dev.rahier.pouleparty.config.RemoteConfigProvider,
-) : BaseMapViewModel(firestoreRepository, locationRepository, analyticsRepository, auth) {
+) : BaseMapViewModel(gameRepository, presenceRepository, gameFunctions, locationRepository, analyticsRepository, auth) {
 
     companion object {
         private const val TAG = "HunterMapViewModel"
@@ -187,7 +193,7 @@ class HunterMapViewModel @Inject constructor(
     private fun observeChallengesAvailability() {
         if (gameId.isEmpty()) return
         viewModelScope.launch {
-            firestoreRepository.challengesStream(gameId)
+            gameRepository.challengesStream(gameId)
                 .catch { e ->
                     // PP-64: a synchronous flow error (offline / rules
                     // hiccup) should not crash the hunter map. Mirror the
@@ -223,10 +229,9 @@ class HunterMapViewModel @Inject constructor(
                 Log.e(TAG, "hunterId is empty — cannot register hunter or write location")
                 return@launch
             }
-            val game = firestoreRepository.getConfig(gameId) ?: return@launch
-
-            // PP-zone-stored: read the immutable circle schedule once.
-            val circles = firestoreRepository.fetchZoneSchedule(gameId)
+            val (game, circles) = runCatching {
+                gameRepository.getConfig(gameId)?.let { it to gameRepository.fetchZoneSchedule(gameId) }
+            }.onFailure { Log.w(TAG, "[map] game load failed", it) }.getOrNull() ?: return@launch
             val z = zoneStateFromCircles(game, circles, Date())
 
             _uiState.update {
@@ -245,7 +250,7 @@ class HunterMapViewModel @Inject constructor(
                 // server-side, in one idempotent call. Re-running it on
                 // "Reprendre la partie" (or an old game) is the safety net
                 // that keeps the GameMaster marker labeled.
-                firestoreRepository.joinGame(gameId, hunterName.trim())
+                gameFunctions.joinGame(gameId, hunterName.trim())
                 analyticsRepository.gameJoined(gameMode = game.gameMode, gameCode = game.gameCode)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to register hunter $hunterId for game $gameId", e)
@@ -314,7 +319,7 @@ class HunterMapViewModel @Inject constructor(
                 // Game over by time
                 if (checkGameOverByTime(state.game.endDate)) {
                     // Fallback: also update status from hunter side in case chicken didn't
-                    try { firestoreRepository.updateGameStatus(gameId, GameStatus.DONE) } catch (_: Exception) {}
+                    try { gameRepository.updateGameStatus(gameId, GameStatus.DONE) } catch (_: Exception) {}
                     cancelStreams()
                     _uiState.update { it.copy(isGameOver = true) }
                     continue
@@ -366,10 +371,9 @@ class HunterMapViewModel @Inject constructor(
                 }
                 if (decision.shouldFirePenalty) {
                     val gid = zoneState.game.id
-                    val hid = hunterId
                     viewModelScope.launch {
                         try {
-                            firestoreRepository.decrementTotalPoints(gid, hid)
+                            gameFunctions.applyOutOfZonePenalty(gid)
                         } catch (e: Exception) {
                             Log.e(TAG, "Out-of-zone penalty write failed", e)
                         }
@@ -381,7 +385,7 @@ class HunterMapViewModel @Inject constructor(
 
     /** Stream game config changes in real time */
     private suspend fun streamGameConfig(game: Game) {
-        firestoreRepository.gameConfigFlow(gameId).collect { updatedGame ->
+        gameRepository.gameConfigFlow(gameId).collect { updatedGame ->
             if (updatedGame != null) {
                 // PP-107: a GameMaster may have re-designated this hunter as
                 // the chicken while the game is `waiting`. Re-route to the
@@ -487,7 +491,7 @@ class HunterMapViewModel @Inject constructor(
     private suspend fun streamChickenLocation(game: Game) {
         val delayMs = game.hunterStartDate.time - System.currentTimeMillis()
         if (delayMs > 0) delay(delayMs)
-        firestoreRepository.chickenLocationFlow(gameId).collect { chickenLoc ->
+        presenceRepository.chickenLocationFlow(gameId).collect { chickenLoc ->
             if (chickenLoc == null || chickenLoc.invisible) {
                 // PP-87: doc missing OR Invisibility active. Clear the
                 // cached marker so the hunter sees no chicken (same
@@ -558,7 +562,7 @@ class HunterMapViewModel @Inject constructor(
         locationRepository.getLastLocation()?.let { point ->
             _uiState.update { it.copy(userLocation = point) }
             if (shouldWrite) {
-                firestoreRepository.setHunterLocation(gameId, hunterId, point)
+                presenceRepository.setHunterLocation(gameId, hunterId, point)
             }
         }
 
@@ -594,7 +598,7 @@ class HunterMapViewModel @Inject constructor(
             delay(if (hasWritten) AppConstants.LOCATION_THROTTLE_MS else 100L)
             val point = _uiState.value.userLocation ?: continue
             try {
-                firestoreRepository.setHunterLocation(gameId, hunterId, point)
+                presenceRepository.setHunterLocation(gameId, hunterId, point)
                 hasWritten = true
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to send periodic hunter location", e)
@@ -620,7 +624,7 @@ class HunterMapViewModel @Inject constructor(
             // freshest in-state fix if we have one; otherwise ask the repo.
             val point = state.userLocation ?: locationRepository.getLastLocation() ?: return@launch
             try {
-                firestoreRepository.setHunterLocation(gameId, hunterId, point)
+                presenceRepository.setHunterLocation(gameId, hunterId, point)
                 Log.i(TAG, "Hunter location refreshed on app resume")
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to refresh hunter location on resume", e)
@@ -631,7 +635,7 @@ class HunterMapViewModel @Inject constructor(
     // ── Power-ups ──────────────────────────────────────
 
     private suspend fun streamPowerUps() {
-        firestoreRepository.powerUpsFlow(gameId).collect { allPowerUps ->
+        gameRepository.powerUpsFlow(gameId).collect { allPowerUps ->
             val hunterPowerUps = allPowerUps.filter { it.typeEnum.isHunterPowerUp && !it.isCollected }
             val collected = allPowerUps.filter {
                 it.collectedBy == hunterId && it.activatedAt == null
@@ -665,13 +669,7 @@ class HunterMapViewModel @Inject constructor(
         _uiState.update { it.copy(activatingPowerUpId = powerUp.id) }
         viewModelScope.launch {
             try {
-                val duration = powerUp.typeEnum.durationSeconds ?: 0
-                val expiresAt = Timestamp(Date(System.currentTimeMillis() + duration * 1000))
-                val activeEffectField = when (powerUp.typeEnum) {
-                    PowerUpType.RADAR_PING -> "powerUps.activeEffects.radarPing"
-                    else -> null
-                }
-                firestoreRepository.activatePowerUp(gameId, powerUp.id, activeEffectField, expiresAt)
+                gameFunctions.activatePowerUp(gameId, powerUp.id)
                 analyticsRepository.powerUpActivated(type = powerUp.type, role = "hunter")
 
                 if (powerUp.typeEnum == PowerUpType.ZONE_PREVIEW) {
@@ -748,12 +746,13 @@ class HunterMapViewModel @Inject constructor(
         recordFoundCodeSubmission(code, totalAttempts)
     }
 
-    private fun handleWrongCodeRejected() {
+    private fun handleWrongCodeRejected(serverLockedUntilMs: Long? = null) {
         val attempts = _uiState.value.wrongCodeAttempts + 1
         analyticsRepository.hunterWrongCode(attemptNumber = attempts)
-        val cooldown = if (attempts >= remoteConfig.codeMaxWrongAttempts)
+        val localCooldown = if (attempts >= remoteConfig.codeMaxWrongAttempts)
             System.currentTimeMillis() + remoteConfig.codeCooldownMs
         else 0L
+        val cooldown = maxOf(localCooldown, serverLockedUntilMs ?: 0L)
         _uiState.update {
             it.copy(
                 showWrongCodeAlert = true,
@@ -783,11 +782,11 @@ class HunterMapViewModel @Inject constructor(
         }
         viewModelScope.launch {
             try {
-                val result = firestoreRepository.submitFoundCode(gameId, code, hunterName)
+                val result = gameFunctions.submitFoundCode(gameId, code, hunterName)
                 val accepted = when (result) {
-                    FirestoreRepository.SubmitFoundCodeResult.Success -> true
-                    is FirestoreRepository.SubmitFoundCodeResult.Failure ->
-                        result.reason == FirestoreRepository.SubmitFoundCodeReason.AlreadyWinner
+                    SubmitFoundCodeResult.Success -> true
+                    is SubmitFoundCodeResult.Failure ->
+                        result.reason == SubmitFoundCodeReason.AlreadyWinner
                 }
                 if (accepted) {
                     analyticsRepository.hunterFoundChicken(attempts = totalAttempts)
@@ -800,13 +799,10 @@ class HunterMapViewModel @Inject constructor(
                     }
                     _effects.send(HunterMapEffect.NavigateToVictory)
                 } else {
-                    val reason = (result as FirestoreRepository.SubmitFoundCodeResult.Failure).reason
-                    Log.w(TAG, "submitFoundCode rejected: $reason")
-                    // CRIT-2: route InvalidCode to the wrong-code UX
-                    // (alert + cooldown), other reasons to the generic
-                    // retry prompt.
-                    if (reason == FirestoreRepository.SubmitFoundCodeReason.InvalidCode) {
-                        handleWrongCodeRejected()
+                    val failure = result as SubmitFoundCodeResult.Failure
+                    Log.w(TAG, "submitFoundCode rejected: ${failure.reason}")
+                    if (failure.reason == SubmitFoundCodeReason.InvalidCode || failure.reason == SubmitFoundCodeReason.Cooldown) {
+                        handleWrongCodeRejected(failure.lockedUntilMs)
                     } else {
                         _uiState.update {
                             it.copy(

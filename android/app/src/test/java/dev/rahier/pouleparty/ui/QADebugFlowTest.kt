@@ -4,7 +4,11 @@ import androidx.lifecycle.SavedStateHandle
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import dev.rahier.pouleparty.data.AnalyticsRepository
-import dev.rahier.pouleparty.data.FirestoreRepository
+import dev.rahier.pouleparty.data.GameRepository
+import dev.rahier.pouleparty.data.PresenceRepository
+import dev.rahier.pouleparty.data.DebugAction
+import dev.rahier.pouleparty.data.GameFunctions
+import dev.rahier.pouleparty.data.ChallengeSubmissionRepository
 import dev.rahier.pouleparty.data.LocationRepository
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.ui.chickenmap.ChickenMapIntent
@@ -43,7 +47,10 @@ import org.junit.Test
 class QADebugFlowTest {
 
     private val testDispatcher = StandardTestDispatcher()
-    private lateinit var firestoreRepository: FirestoreRepository
+    private lateinit var gameRepository: GameRepository
+    private lateinit var presenceRepository: PresenceRepository
+    private lateinit var gameFunctions: GameFunctions
+    private lateinit var challengeSubmissions: ChallengeSubmissionRepository
     private lateinit var locationRepository: LocationRepository
     private lateinit var analyticsRepository: AnalyticsRepository
     private lateinit var auth: FirebaseAuth
@@ -51,20 +58,23 @@ class QADebugFlowTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        firestoreRepository = mockk(relaxed = true)
+        gameRepository = mockk(relaxed = true)
+        presenceRepository = mockk(relaxed = true)
+        gameFunctions = mockk(relaxed = true)
+        challengeSubmissions = mockk(relaxed = true)
         locationRepository = mockk(relaxed = true)
         analyticsRepository = mockk(relaxed = true)
         auth = mockk(relaxed = true)
         val mockUser = mockk<FirebaseUser>()
         every { mockUser.uid } returns "user-abc"
         every { auth.currentUser } returns mockUser
-        coEvery { firestoreRepository.getConfig(any()) } returns null
-        every { firestoreRepository.gameConfigFlow(any()) } returns emptyFlow()
-        every { firestoreRepository.powerUpsFlow(any()) } returns emptyFlow()
-        every { firestoreRepository.hunterLocationsFlow(any()) } returns emptyFlow()
-        every { firestoreRepository.chickenLocationFlow(any()) } returns emptyFlow()
-        every { firestoreRepository.registrationsFlow(any()) } returns emptyFlow()
-        every { firestoreRepository.challengesStream(any()) } returns emptyFlow()
+        coEvery { gameRepository.getConfig(any()) } returns null
+        every { gameRepository.gameConfigFlow(any()) } returns emptyFlow()
+        every { gameRepository.powerUpsFlow(any()) } returns emptyFlow()
+        every { presenceRepository.hunterLocationsFlow(any()) } returns emptyFlow()
+        every { presenceRepository.chickenLocationFlow(any()) } returns emptyFlow()
+        every { gameRepository.registrationsFlow(any()) } returns emptyFlow()
+        every { gameRepository.challengesStream(any()) } returns emptyFlow()
         every { locationRepository.locationFlow() } returns emptyFlow()
     }
 
@@ -76,7 +86,9 @@ class QADebugFlowTest {
     // ── Helpers ────────────────────────────────────────────
 
     private fun chickenVm(gameId: String = "test-id") = ChickenMapViewModel(
-        firestoreRepository = firestoreRepository,
+        gameRepository = gameRepository,
+        presenceRepository = presenceRepository,
+        gameFunctions = gameFunctions,
         locationRepository = locationRepository,
         analyticsRepository = analyticsRepository,
         auth = auth,
@@ -85,7 +97,9 @@ class QADebugFlowTest {
     )
 
     private fun gameMasterVm(gameId: String = "test-id") = GameMasterMapViewModel(
-        firestoreRepository = firestoreRepository,
+        gameRepository = gameRepository,
+        presenceRepository = presenceRepository,
+        gameFunctions = gameFunctions,
         auth = auth,
         savedStateHandle = SavedStateHandle(mapOf("gameId" to gameId)),
     )
@@ -94,7 +108,8 @@ class QADebugFlowTest {
         gameId: String = "test-id",
         isDebugGame: Boolean = false,
     ): GameCreationViewModel = GameCreationViewModel(
-        firestoreRepository = firestoreRepository,
+        gameRepository = gameRepository,
+        gameFunctions = gameFunctions,
         locationRepository = locationRepository,
         analyticsRepository = analyticsRepository,
         auth = auth,
@@ -111,7 +126,8 @@ class QADebugFlowTest {
     )
 
     private fun homeVm(): HomeViewModel = HomeViewModel(
-        firestoreRepository = firestoreRepository,
+        gameRepository = gameRepository,
+        gameFunctions = gameFunctions,
         locationRepository = locationRepository,
         analyticsRepository = analyticsRepository,
         auth = auth,
@@ -130,7 +146,7 @@ class QADebugFlowTest {
         val vm = chickenVm()
         vm.onIntent(ChickenMapIntent.DebugEndNowTapped)
         testDispatcher.scheduler.advanceUntilIdle()
-        coVerify(exactly = 1) { firestoreRepository.debugAdvanceGame("test-id", "endNow") }
+        coVerify(exactly = 1) { gameFunctions.debugAdvanceGame("test-id", DebugAction.END_NOW) }
     }
 
     @Test
@@ -138,12 +154,12 @@ class QADebugFlowTest {
         val vm = chickenVm()
         vm.onIntent(ChickenMapIntent.DebugAdvanceStepTapped)
         testDispatcher.scheduler.advanceUntilIdle()
-        coVerify(exactly = 1) { firestoreRepository.debugAdvanceGame("test-id", "advanceStep") }
+        coVerify(exactly = 1) { gameFunctions.debugAdvanceGame("test-id", DebugAction.ADVANCE_STEP) }
     }
 
     @Test
     fun `chicken debug action swallows callable error`() {
-        coEvery { firestoreRepository.debugAdvanceGame(any(), any()) } throws RuntimeException("boom")
+        coEvery { gameFunctions.debugAdvanceGame(any(), any()) } throws RuntimeException("boom")
         val vm = chickenVm()
         // Must not crash: the VM wraps the call in try/catch.
         vm.onIntent(ChickenMapIntent.DebugEndNowTapped)
@@ -158,7 +174,7 @@ class QADebugFlowTest {
         val vm = gameMasterVm()
         vm.onIntent(GameMasterMapIntent.DebugEndNowTapped)
         testDispatcher.scheduler.advanceUntilIdle()
-        coVerify(exactly = 1) { firestoreRepository.debugAdvanceGame("test-id", "endNow") }
+        coVerify(exactly = 1) { gameFunctions.debugAdvanceGame("test-id", DebugAction.END_NOW) }
     }
 
     @Test
@@ -166,7 +182,7 @@ class QADebugFlowTest {
         val vm = gameMasterVm()
         vm.onIntent(GameMasterMapIntent.DebugAdvanceStepTapped)
         testDispatcher.scheduler.advanceUntilIdle()
-        coVerify(exactly = 1) { firestoreRepository.debugAdvanceGame("test-id", "advanceStep") }
+        coVerify(exactly = 1) { gameFunctions.debugAdvanceGame("test-id", DebugAction.ADVANCE_STEP) }
     }
 
     // ── Debug game creation compresses the timing ──────────
@@ -174,7 +190,7 @@ class QADebugFlowTest {
     @Test
     fun `debug game creation compresses the timing`() {
         val captured = slot<Game>()
-        coEvery { firestoreRepository.setConfig(capture(captured)) } returns Unit
+        coEvery { gameRepository.setConfig(capture(captured)) } returns Unit
         val vm = gameCreationVm(isDebugGame = true)
         vm.onIntent(GameCreationIntent.StartGameTapped)
         testDispatcher.scheduler.advanceUntilIdle()
@@ -191,7 +207,7 @@ class QADebugFlowTest {
     @Test
     fun `standard game creation keeps standard timing`() {
         val captured = slot<Game>()
-        coEvery { firestoreRepository.setConfig(capture(captured)) } returns Unit
+        coEvery { gameRepository.setConfig(capture(captured)) } returns Unit
         val vm = gameCreationVm(isDebugGame = false)
         vm.onIntent(GameCreationIntent.StartGameTapped)
         testDispatcher.scheduler.advanceUntilIdle()
@@ -226,7 +242,8 @@ class QADebugFlowTest {
     fun `validateAdminCode does not match empty debug code`() {
         // Remote Config cleared the debug code → debug creation disabled.
         val vm = HomeViewModel(
-            firestoreRepository = firestoreRepository,
+            gameRepository = gameRepository,
+            gameFunctions = gameFunctions,
             locationRepository = locationRepository,
             analyticsRepository = analyticsRepository,
             auth = auth,
@@ -244,7 +261,8 @@ class QADebugFlowTest {
     @Test
     fun `validateAdminCode prefers ADMIN when both codes equal`() {
         val vm = HomeViewModel(
-            firestoreRepository = firestoreRepository,
+            gameRepository = gameRepository,
+            gameFunctions = gameFunctions,
             locationRepository = locationRepository,
             analyticsRepository = analyticsRepository,
             auth = auth,

@@ -7,7 +7,10 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.mapbox.geojson.Point
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dev.rahier.pouleparty.data.FirestoreRepository
+import dev.rahier.pouleparty.data.GameRepository
+import dev.rahier.pouleparty.data.PresenceRepository
+import dev.rahier.pouleparty.data.DebugAction
+import dev.rahier.pouleparty.data.GameFunctions
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.powerups.model.PowerUp
 import dev.rahier.pouleparty.powerups.model.PowerUpType
@@ -87,7 +90,9 @@ data class GameMasterMapUiState(
 
 @HiltViewModel
 class GameMasterMapViewModel @Inject constructor(
-    private val firestoreRepository: FirestoreRepository,
+    private val gameRepository: GameRepository,
+    private val presenceRepository: PresenceRepository,
+    private val gameFunctions: GameFunctions,
     auth: FirebaseAuth,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
@@ -131,7 +136,7 @@ class GameMasterMapViewModel @Inject constructor(
                 _uiState.update { it.copy(pendingChickenDesignation = null) }
                 viewModelScope.launch {
                     try {
-                        firestoreRepository.designateChicken(gameId, reg.userId)
+                        gameFunctions.designateChicken(gameId, reg.userId)
                         _uiState.update { it.copy(showHuntersDrawer = false) }
                     } catch (e: Exception) {
                         _uiState.update { it.copy(designationError = e.message ?: "Failed to designate chicken") }
@@ -151,10 +156,10 @@ class GameMasterMapViewModel @Inject constructor(
                 }
             }
             GameMasterMapIntent.DebugEndNowTapped -> viewModelScope.launch {
-                try { firestoreRepository.debugAdvanceGame(gameId, "endNow") } catch (_: Exception) {}
+                try { gameFunctions.debugAdvanceGame(gameId, DebugAction.END_NOW) } catch (_: Exception) {}
             }
             GameMasterMapIntent.DebugAdvanceStepTapped -> viewModelScope.launch {
-                try { firestoreRepository.debugAdvanceGame(gameId, "advanceStep") } catch (_: Exception) {}
+                try { gameFunctions.debugAdvanceGame(gameId, DebugAction.ADVANCE_STEP) } catch (_: Exception) {}
             }
         }
     }
@@ -166,7 +171,7 @@ class GameMasterMapViewModel @Inject constructor(
         _uiState.update { it.copy(isLaunching = true, launchError = null) }
         viewModelScope.launch {
             try {
-                firestoreRepository.launchGame(state.game.id)
+                gameFunctions.launchGame(state.game.id)
                 _uiState.update { it.copy(isLaunching = false) }
             } catch (e: Exception) {
                 Log.e("GameMasterMapVM", "launchGame failed", e)
@@ -193,12 +198,9 @@ class GameMasterMapViewModel @Inject constructor(
 
     private fun loadGame() {
         viewModelScope.launch {
-            val game = firestoreRepository.getConfig(gameId)
-            if (game == null) {
-                Log.w("GameMasterMapVM", "Game $gameId not found")
-                return@launch
-            }
-            val circles = firestoreRepository.fetchZoneSchedule(gameId)
+            val (game, circles) = runCatching {
+                gameRepository.getConfig(gameId)?.let { it to gameRepository.fetchZoneSchedule(gameId) }
+            }.onFailure { Log.w("GameMasterMapVM", "[map] game load failed", it) }.getOrNull() ?: return@launch
             val z = zoneStateFromCircles(game, circles, Date())
             _uiState.update {
                 it.copy(
@@ -217,7 +219,7 @@ class GameMasterMapViewModel @Inject constructor(
 
     private fun startStreams(initialGame: Game) {
         streamJobs += viewModelScope.launch {
-            firestoreRepository.gameConfigFlow(gameId).collect { game ->
+            gameRepository.gameConfigFlow(gameId).collect { game ->
                 if (game != null) onGameUpdated(game)
             }
         }
@@ -228,7 +230,7 @@ class GameMasterMapViewModel @Inject constructor(
         // index-based `Hunter N` fallback as soon as their registration
         // doc lands.
         streamJobs += viewModelScope.launch {
-            firestoreRepository.registrationsFlow(gameId).collect { regs ->
+            gameRepository.registrationsFlow(gameId).collect { regs ->
                 _uiState.update { state ->
                     state.copy(
                         registrations = regs,
@@ -238,7 +240,7 @@ class GameMasterMapViewModel @Inject constructor(
             }
         }
         streamJobs += viewModelScope.launch {
-            firestoreRepository.chickenLocationFlow(gameId).collect { chickenLoc ->
+            presenceRepository.chickenLocationFlow(gameId).collect { chickenLoc ->
                 // PP-87: GM always shows the chicken regardless of the
                 // `invisible` flag, but surfaces the flag so the marker
                 // can render in a distinct "hidden" style.
@@ -254,7 +256,7 @@ class GameMasterMapViewModel @Inject constructor(
             }
         }
         streamJobs += viewModelScope.launch {
-            firestoreRepository.hunterLocationsFlow(gameId).collect { locations ->
+            presenceRepository.hunterLocationsFlow(gameId).collect { locations ->
                 _uiState.update { state ->
                     state.copy(
                         hunterLocations = locations,
@@ -265,13 +267,13 @@ class GameMasterMapViewModel @Inject constructor(
         }
         if (initialGame.powerUps.enabled) {
             streamJobs += viewModelScope.launch {
-                firestoreRepository.powerUpsFlow(gameId).collect { all ->
+                gameRepository.powerUpsFlow(gameId).collect { all ->
                     _uiState.update { it.copy(powerUpAnnotations = all.filter { p -> (p.collectedBy ?: "").isEmpty() }) }
                 }
             }
         }
         streamJobs += viewModelScope.launch {
-            firestoreRepository.pendingSubmissionsFlow(gameId).collect { subs ->
+            gameRepository.pendingSubmissionsFlow(gameId).collect { subs ->
                 _uiState.update { it.copy(pendingSubmissionsCount = subs.size) }
             }
         }

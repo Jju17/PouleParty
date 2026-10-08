@@ -1,10 +1,6 @@
 package dev.rahier.pouleparty
 
-import dev.rahier.pouleparty.data.FirestoreRepository
 import dev.rahier.pouleparty.ui.gamelogic.evaluateOutOfZonePenalty
-import io.mockk.coEvery
-import io.mockk.coVerify
-import io.mockk.mockk
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -20,10 +16,6 @@ import org.junit.Test
  * production code in `HunterMapViewModel.startTimer()` calls, so any
  * drift surfaces immediately: the runtime no longer has a separate
  * inline decision tree.
- *
- * The suite also contains one integration-style smoke check that
- * exercises the real `decrementTotalPoints` call via mockk to lock
- * the Firestore-repository contract (function name + signature).
  */
 class OutOfZonePenaltyTest {
 
@@ -255,30 +247,6 @@ class OutOfZonePenaltyTest {
     @Test
     fun `OUT_OF_ZONE_PENALTY_INTERVAL_MS matches iOS sibling`() {
         assertEquals(5_000L, AppConstants.OUT_OF_ZONE_PENALTY_INTERVAL_MS)
-    }
-
-    // MARK: - Firestore repository contract smoke test
-
-    /**
-     * Integration-style smoke check that locks the
-     * `decrementTotalPoints(gameId, hunterId)` signature on
-     * `FirestoreRepository`. The production penalty path calls this
-     * exact method; if the repo signature drifts the production
-     * build breaks too — but the test makes the contract explicit
-     * and parity-mirrored with iOS's
-     * `apiClient.decrementTotalPoints = { _, _ in ... }` dependency
-     * override.
-     */
-    @Test
-    fun `firestoreRepository decrementTotalPoints is called with gameId and hunterId`() {
-        val repo = mockk<FirestoreRepository>(relaxed = true)
-        coEvery { repo.decrementTotalPoints(any(), any()) } returns Unit
-
-        kotlinx.coroutines.runBlocking {
-            repo.decrementTotalPoints("game-123", "hunter-456")
-        }
-
-        coVerify(exactly = 1) { repo.decrementTotalPoints("game-123", "hunter-456") }
     }
 
     // MARK: - ViewModel wiring stays alive (regression guard)

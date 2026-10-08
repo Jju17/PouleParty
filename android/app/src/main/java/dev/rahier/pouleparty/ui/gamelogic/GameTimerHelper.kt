@@ -1,5 +1,7 @@
 package dev.rahier.pouleparty.ui.gamelogic
 
+import dev.rahier.pouleparty.model.PlayerRole
+
 import dev.rahier.pouleparty.model.distanceMeters
 import com.mapbox.geojson.Point
 import dev.rahier.pouleparty.AppConstants
@@ -17,20 +19,6 @@ import java.util.Date
  */
 
 // ── Zone Check ───────────────────────────────────────
-
-enum class PlayerRole { CHICKEN, HUNTER, GAME_MASTER }
-
-/**
- * Phase of an active game, used by the Home banner to pick the right
- * copy + CTA. See iOS `GamePhase` for parity.
- */
-enum class GamePhase {
-    /** Game is already live (`status == IN_PROGRESS`). Banner: "Reprendre". */
-    IN_PROGRESS,
-    /** Game is scheduled but not started yet (`status == WAITING`). Banner:
-     *  "Préparer" for chicken / "Rejoindre" for hunter. */
-    UPCOMING,
-}
 
 data class ZoneCheckResult(
     val isOutsideZone: Boolean,

@@ -4,7 +4,12 @@ import androidx.lifecycle.SavedStateHandle
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import dev.rahier.pouleparty.AppConstants
-import dev.rahier.pouleparty.data.FirestoreRepository
+import dev.rahier.pouleparty.data.GameRepository
+import dev.rahier.pouleparty.data.PresenceRepository
+import dev.rahier.pouleparty.data.GameFunctions
+import dev.rahier.pouleparty.data.ChallengeSubmissionRepository
+import dev.rahier.pouleparty.data.SubmitFoundCodeResult
+import dev.rahier.pouleparty.data.SubmitFoundCodeReason
 import dev.rahier.pouleparty.data.LocationRepository
 import dev.rahier.pouleparty.ui.huntermap.HunterMapEffect
 import dev.rahier.pouleparty.ui.huntermap.HunterMapIntent
@@ -27,44 +32,50 @@ import org.junit.Test
 class HunterMapViewModelBehaviorTest {
 
     private val testDispatcher = StandardTestDispatcher()
-    private lateinit var firestoreRepository: FirestoreRepository
+    private lateinit var gameRepository: GameRepository
+    private lateinit var presenceRepository: PresenceRepository
+    private lateinit var gameFunctions: GameFunctions
+    private lateinit var challengeSubmissions: ChallengeSubmissionRepository
     private lateinit var locationRepository: LocationRepository
     private lateinit var auth: FirebaseAuth
 
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        firestoreRepository = mockk(relaxed = true)
+        gameRepository = mockk(relaxed = true)
+        presenceRepository = mockk(relaxed = true)
+        gameFunctions = mockk(relaxed = true)
+        challengeSubmissions = mockk(relaxed = true)
         locationRepository = mockk(relaxed = true)
         auth = mockk(relaxed = true)
         // Make `loadGame()` exit early so init coroutines settle without
         // needing real game data from the relaxed mock.
-        io.mockk.coEvery { firestoreRepository.getConfig(any()) } returns null
+        io.mockk.coEvery { gameRepository.getConfig(any()) } returns null
         // Streams default to empty so background flows don't surface NPEs in tests.
-        io.mockk.every { firestoreRepository.gameConfigFlow(any()) } returns kotlinx.coroutines.flow.emptyFlow()
-        io.mockk.every { firestoreRepository.powerUpsFlow(any()) } returns kotlinx.coroutines.flow.emptyFlow()
-        io.mockk.every { firestoreRepository.chickenLocationFlow(any()) } returns kotlinx.coroutines.flow.emptyFlow()
-        io.mockk.every { firestoreRepository.challengesStream(any()) } returns kotlinx.coroutines.flow.emptyFlow()
+        io.mockk.every { gameRepository.gameConfigFlow(any()) } returns kotlinx.coroutines.flow.emptyFlow()
+        io.mockk.every { gameRepository.powerUpsFlow(any()) } returns kotlinx.coroutines.flow.emptyFlow()
+        io.mockk.every { presenceRepository.chickenLocationFlow(any()) } returns kotlinx.coroutines.flow.emptyFlow()
+        io.mockk.every { gameRepository.challengesStream(any()) } returns kotlinx.coroutines.flow.emptyFlow()
         // CRIT-2/CRIT-3 (audit 2026-05-17): the foundCode check is now
         // server-side via `submitFoundCode`. Default the mock to accept
         // only the Game.mock canonical code "1234" — every other code
         // gets a `InvalidCode` rejection, mirroring the real CF. Tests
         // that need throw-based failure modes override per-test.
         io.mockk.coEvery {
-            firestoreRepository.submitFoundCode(any(), any(), any())
+            gameFunctions.submitFoundCode(any(), any(), any())
         } coAnswers {
             if (secondArg<String>() == "1234") {
-                FirestoreRepository.SubmitFoundCodeResult.Success
+                SubmitFoundCodeResult.Success
             } else {
-                FirestoreRepository.SubmitFoundCodeResult.Failure(
-                    FirestoreRepository.SubmitFoundCodeReason.InvalidCode
+                SubmitFoundCodeResult.Failure(
+                    SubmitFoundCodeReason.InvalidCode
                 )
             }
         }
         // CRIT-2: chicken-side foundCode fetch (harmless for hunter VM
         // tests since it's only invoked from ChickenMapViewModel; the
         // relaxed mock returns "" by default which is fine).
-        io.mockk.coEvery { firestoreRepository.getFoundCode(any()) } returns "1234"
+        io.mockk.coEvery { gameFunctions.getFoundCode(any()) } returns "1234"
     }
 
     @After
@@ -83,7 +94,9 @@ class HunterMapViewModelBehaviorTest {
             every { auth.currentUser } returns mockUser
         }
         return HunterMapViewModel(
-            firestoreRepository = firestoreRepository,
+            gameRepository = gameRepository,
+            presenceRepository = presenceRepository,
+            gameFunctions = gameFunctions,
             locationRepository = locationRepository,
             analyticsRepository = mockk<dev.rahier.pouleparty.data.AnalyticsRepository>(relaxed = true),
             auth = auth,
@@ -359,7 +372,7 @@ class HunterMapViewModelBehaviorTest {
 
     @Test
     fun `hasChallenges is false when stream emits empty list`() {
-        io.mockk.every { firestoreRepository.challengesStream(any()) } returns
+        io.mockk.every { gameRepository.challengesStream(any()) } returns
             kotlinx.coroutines.flow.flowOf(emptyList())
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
@@ -374,7 +387,7 @@ class HunterMapViewModelBehaviorTest {
             titleByLocale = mapOf("fr" to "Sing"),
             bodyByLocale = mapOf("fr" to "Sing loudly"),
         )
-        io.mockk.every { firestoreRepository.challengesStream(any()) } returns
+        io.mockk.every { gameRepository.challengesStream(any()) } returns
             kotlinx.coroutines.flow.flowOf(listOf(challenge))
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
@@ -384,7 +397,7 @@ class HunterMapViewModelBehaviorTest {
     @Test
     fun `hasChallenges handles empty then non-empty transition`() {
         val flow = kotlinx.coroutines.flow.MutableStateFlow<List<dev.rahier.pouleparty.model.Challenge>>(emptyList())
-        io.mockk.every { firestoreRepository.challengesStream(any()) } returns flow
+        io.mockk.every { gameRepository.challengesStream(any()) } returns flow
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
         assertFalse(vm.uiState.value.hasChallenges)
@@ -399,7 +412,7 @@ class HunterMapViewModelBehaviorTest {
         val flow = kotlinx.coroutines.flow.MutableStateFlow<List<dev.rahier.pouleparty.model.Challenge>>(
             listOf(dev.rahier.pouleparty.model.Challenge(id = "c1", points = 5, titleByLocale = mapOf("fr" to "T")))
         )
-        io.mockk.every { firestoreRepository.challengesStream(any()) } returns flow
+        io.mockk.every { gameRepository.challengesStream(any()) } returns flow
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
         assertTrue(vm.uiState.value.hasChallenges)
@@ -414,7 +427,7 @@ class HunterMapViewModelBehaviorTest {
         val c1 = dev.rahier.pouleparty.model.Challenge(id = "c1", points = 5, titleByLocale = mapOf("fr" to "T1"))
         val c2 = dev.rahier.pouleparty.model.Challenge(id = "c2", points = 10, titleByLocale = mapOf("fr" to "T2"))
         val flow = kotlinx.coroutines.flow.MutableStateFlow(listOf(c1))
-        io.mockk.every { firestoreRepository.challengesStream(any()) } returns flow
+        io.mockk.every { gameRepository.challengesStream(any()) } returns flow
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
         assertTrue(vm.uiState.value.hasChallenges)
@@ -434,7 +447,7 @@ class HunterMapViewModelBehaviorTest {
 
     @Test
     fun `hasChallenges stays false when stream errors without emitting`() {
-        io.mockk.every { firestoreRepository.challengesStream(any()) } returns
+        io.mockk.every { gameRepository.challengesStream(any()) } returns
             kotlinx.coroutines.flow.flow { throw RuntimeException("boom") }
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
@@ -460,7 +473,7 @@ class HunterMapViewModelBehaviorTest {
     @Test
     fun `submitFoundCode with correct code surfaces retry alert when CF throws`() {
         io.mockk.coEvery {
-            firestoreRepository.submitFoundCode(any(), any(), any())
+            gameFunctions.submitFoundCode(any(), any(), any())
         } coAnswers { throw RuntimeException("offline") }
         val vm = createViewModel()
 
@@ -479,11 +492,11 @@ class HunterMapViewModelBehaviorTest {
     fun `retryWinnerRegistration after transient failure eventually navigates on success`() {
         var callCount = 0
         io.mockk.coEvery {
-            firestoreRepository.submitFoundCode(any(), any(), any())
+            gameFunctions.submitFoundCode(any(), any(), any())
         } coAnswers {
             callCount++
             if (callCount == 1) throw RuntimeException("transient")
-            else FirestoreRepository.SubmitFoundCodeResult.Success
+            else SubmitFoundCodeResult.Success
         }
         val vm = createViewModel()
 
@@ -513,7 +526,7 @@ class HunterMapViewModelBehaviorTest {
         val codesCaptured = mutableListOf<String>()
         val namesCaptured = mutableListOf<String>()
         io.mockk.coEvery {
-            firestoreRepository.submitFoundCode(any(), any(), any())
+            gameFunctions.submitFoundCode(any(), any(), any())
         } answers {
             codesCaptured.add(secondArg<String>())
             namesCaptured.add(thirdArg<String>())
@@ -539,7 +552,7 @@ class HunterMapViewModelBehaviorTest {
     @Test
     fun `dismissWinnerRegistrationError hides alert but keeps pendingFoundCode`() {
         io.mockk.coEvery {
-            firestoreRepository.submitFoundCode(any(), any(), any())
+            gameFunctions.submitFoundCode(any(), any(), any())
         } coAnswers { throw RuntimeException("offline") }
         val vm = createViewModel()
 
@@ -563,7 +576,7 @@ class HunterMapViewModelBehaviorTest {
         testDispatcher.scheduler.advanceUntilIdle()
 
         io.mockk.coVerify(exactly = 0) {
-            firestoreRepository.submitFoundCode(any(), any(), any())
+            gameFunctions.submitFoundCode(any(), any(), any())
         }
         assertFalse(vm.uiState.value.shouldNavigateToVictory)
     }
@@ -595,14 +608,14 @@ class HunterMapViewModelBehaviorTest {
                 radius = 1500.0
             )
         )
-        io.mockk.coEvery { firestoreRepository.getConfig(any()) } returns game
+        io.mockk.coEvery { gameRepository.getConfig(any()) } returns game
         // PP-zone-stored: the circleCenter is now seeded from the stored
         // schedule (read at load), not recomputed. Provide a single 1500m
         // circle centered on the zone center so circleCenter is non-null.
-        io.mockk.coEvery { firestoreRepository.fetchZoneSchedule(any()) } returns listOf(
+        io.mockk.coEvery { gameRepository.fetchZoneSchedule(any()) } returns listOf(
             dev.rahier.pouleparty.model.ZoneCircle(order = 0, radiusMeters = 1500.0, lat = 50.8500, lng = 4.3500),
         )
-        io.mockk.every { firestoreRepository.gameConfigFlow(any()) } returns
+        io.mockk.every { gameRepository.gameConfigFlow(any()) } returns
             kotlinx.coroutines.flow.flowOf(game)
 
         // Emit a chicken position 2 km away — this MUST NOT become the
@@ -612,7 +625,7 @@ class HunterMapViewModelBehaviorTest {
             location = com.google.firebase.firestore.GeoPoint(strayChicken.latitude(), strayChicken.longitude()),
             timestamp = com.google.firebase.Timestamp.now(),
         )
-        io.mockk.every { firestoreRepository.chickenLocationFlow(any()) } returns
+        io.mockk.every { presenceRepository.chickenLocationFlow(any()) } returns
             kotlinx.coroutines.flow.flowOf(strayChickenLoc)
 
         val vm = createViewModel()
@@ -649,14 +662,14 @@ class HunterMapViewModelBehaviorTest {
                 radius = 1500.0
             )
         )
-        io.mockk.coEvery { firestoreRepository.getConfig(any()) } returns game
+        io.mockk.coEvery { gameRepository.getConfig(any()) } returns game
 
         val chickenPos = com.mapbox.geojson.Point.fromLngLat(4.3700, 50.8700)
         val chickenLoc = dev.rahier.pouleparty.model.ChickenLocation(
             location = com.google.firebase.firestore.GeoPoint(chickenPos.latitude(), chickenPos.longitude()),
             timestamp = com.google.firebase.Timestamp.now(),
         )
-        io.mockk.every { firestoreRepository.chickenLocationFlow(any()) } returns
+        io.mockk.every { presenceRepository.chickenLocationFlow(any()) } returns
             kotlinx.coroutines.flow.flowOf(chickenLoc)
 
         val vm = createViewModel()
@@ -702,7 +715,7 @@ class HunterMapViewModelBehaviorTest {
                 end = com.google.firebase.Timestamp(java.util.Date(now - 1_000))
             )
         )
-        io.mockk.coEvery { firestoreRepository.getConfig(any()) } returns game
+        io.mockk.coEvery { gameRepository.getConfig(any()) } returns game
 
         val vm = createViewModel()
         testDispatcher.scheduler.advanceTimeBy(1_500)
@@ -733,8 +746,8 @@ class HunterMapViewModelBehaviorTest {
                 shrinkMetersPerUpdate = 100.0
             )
         )
-        io.mockk.coEvery { firestoreRepository.getConfig(any()) } returns game
-        io.mockk.coEvery { firestoreRepository.fetchZoneSchedule(any()) } returns listOf(
+        io.mockk.coEvery { gameRepository.getConfig(any()) } returns game
+        io.mockk.coEvery { gameRepository.fetchZoneSchedule(any()) } returns listOf(
             dev.rahier.pouleparty.model.ZoneCircle(order = 0, radiusMeters = 100.0, lat = 50.8466, lng = 4.3528),
             dev.rahier.pouleparty.model.ZoneCircle(order = 1, radiusMeters = 50.0, lat = 50.8466, lng = 4.3528),
         )
@@ -777,10 +790,10 @@ class HunterMapViewModelBehaviorTest {
                 end = com.google.firebase.Timestamp(java.util.Date(now + 3_600_000))
             )
         )
-        io.mockk.coEvery { firestoreRepository.getConfig(any()) } returns game
+        io.mockk.coEvery { gameRepository.getConfig(any()) } returns game
         // Push the same game through gameConfigFlow so the all-hunters-found
         // branch in streamGameConfig fires.
-        io.mockk.every { firestoreRepository.gameConfigFlow(any()) } returns
+        io.mockk.every { gameRepository.gameConfigFlow(any()) } returns
             kotlinx.coroutines.flow.flowOf(game)
 
         val vm = createViewModel()
@@ -832,8 +845,8 @@ class HunterMapViewModelBehaviorTest {
                 "other-hunter" to "hunter",
             )
         )
-        io.mockk.coEvery { firestoreRepository.getConfig(any()) } returns baseGame
-        io.mockk.every { firestoreRepository.gameConfigFlow(any()) } returns
+        io.mockk.coEvery { gameRepository.getConfig(any()) } returns baseGame
+        io.mockk.every { gameRepository.gameConfigFlow(any()) } returns
             kotlinx.coroutines.flow.flowOf(swapped)
 
         val vm = createViewModel(hunterId = "hunter-123")
@@ -861,7 +874,7 @@ class HunterMapViewModelBehaviorTest {
                 end = com.google.firebase.Timestamp(java.util.Date(now - 1_000))
             )
         )
-        io.mockk.coEvery { firestoreRepository.getConfig(any()) } returns game
+        io.mockk.coEvery { gameRepository.getConfig(any()) } returns game
 
         val vm = createViewModel()
         testDispatcher.scheduler.advanceTimeBy(1_500)
@@ -881,7 +894,7 @@ class HunterMapViewModelBehaviorTest {
             vm.uiState.value.shouldNavigateToVictory
         )
         io.mockk.coVerify(atLeast = 1) {
-            firestoreRepository.submitFoundCode(eq("test-id"), any(), any())
+            gameFunctions.submitFoundCode(eq("test-id"), any(), any())
         }
     }
 
@@ -901,7 +914,7 @@ class HunterMapViewModelBehaviorTest {
                 end = com.google.firebase.Timestamp(java.util.Date(now - 1_000))
             )
         )
-        io.mockk.coEvery { firestoreRepository.getConfig(any()) } returns game
+        io.mockk.coEvery { gameRepository.getConfig(any()) } returns game
         io.mockk.coEvery { locationRepository.getLastLocation() } returns null
 
         // Hot location flow that emits AFTER gameOver fires.
@@ -920,7 +933,7 @@ class HunterMapViewModelBehaviorTest {
         testDispatcher.scheduler.runCurrent()
 
         io.mockk.coVerify(exactly = 0) {
-            firestoreRepository.setHunterLocation(any(), any(), any())
+            presenceRepository.setHunterLocation(any(), any(), any())
         }
     }
 
@@ -942,7 +955,7 @@ class HunterMapViewModelBehaviorTest {
                 radius = 1500.0
             )
         )
-        io.mockk.coEvery { firestoreRepository.getConfig(any()) } returns game
+        io.mockk.coEvery { gameRepository.getConfig(any()) } returns game
         io.mockk.coEvery { locationRepository.getLastLocation() } returns null
 
         val firstPoint = com.mapbox.geojson.Point.fromLngLat(4.3500, 50.8500)
@@ -957,7 +970,7 @@ class HunterMapViewModelBehaviorTest {
         testDispatcher.scheduler.runCurrent()
 
         io.mockk.coVerify(atLeast = 1) {
-            firestoreRepository.setHunterLocation(eq("test-id"), any(), eq(firstPoint))
+            presenceRepository.setHunterLocation(eq("test-id"), any(), eq(firstPoint))
         }
     }
 }

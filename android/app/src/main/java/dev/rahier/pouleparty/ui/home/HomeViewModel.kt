@@ -1,17 +1,20 @@
 package dev.rahier.pouleparty.ui.home
 
 import android.content.SharedPreferences
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.rahier.pouleparty.AppConstants
-import dev.rahier.pouleparty.data.FirestoreRepository
+import dev.rahier.pouleparty.data.GameRepository
+import dev.rahier.pouleparty.data.GameFunctions
 import dev.rahier.pouleparty.data.LocationRepository
+import dev.rahier.pouleparty.data.ValidationCodeResult
 import dev.rahier.pouleparty.util.ProfanityFilter
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameStatus
-import dev.rahier.pouleparty.ui.gamelogic.PlayerRole
+import dev.rahier.pouleparty.model.PlayerRole
 import dev.rahier.pouleparty.util.getTrimmedString
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -22,6 +25,8 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+private const val TAG = "HomeViewModel"
 
 data class HomeUiState(
     val isShowingJoinSheet: Boolean = false,
@@ -36,7 +41,7 @@ data class HomeUiState(
     val activeGameRole: PlayerRole? = null,
     /** Distinguishes "Reprendre" (IN_PROGRESS) from "Prochaine partie"
      *  (UPCOMING) for the Home banner copy + CTA. Null when no active game. */
-    val activeGamePhase: dev.rahier.pouleparty.ui.gamelogic.GamePhase? = null,
+    val activeGamePhase: dev.rahier.pouleparty.model.GamePhase? = null,
     /** PP-45: admin-code dialog open / current input / wrong-code error. */
     val isShowingAdminCodeDialog: Boolean = false,
     val adminCodeInput: String = "",
@@ -76,7 +81,8 @@ enum class AdminCodeResult { ADMIN, DEBUG, INVALID }
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val firestoreRepository: FirestoreRepository,
+    private val gameRepository: GameRepository,
+    private val gameFunctions: GameFunctions,
     private val locationRepository: LocationRepository,
     private val analyticsRepository: dev.rahier.pouleparty.data.AnalyticsRepository,
     private val prefs: SharedPreferences,
@@ -184,7 +190,7 @@ class HomeViewModel @Inject constructor(
         }
         viewModelScope.launch {
             try {
-                val result = firestoreRepository.joinAsGameMaster(game.id, password)
+                val result = gameFunctions.joinAsGameMaster(game.id, password)
                 if (result.success) {
                     _uiState.update {
                         it.copy(
@@ -288,7 +294,9 @@ class HomeViewModel @Inject constructor(
         if (activeGameCheckInFlight?.isActive == true) return
         val userId = auth.currentUser?.uid ?: return
         activeGameCheckInFlight = viewModelScope.launch {
-            val result = firestoreRepository.findActiveGame(userId)
+            val result = runCatching { gameRepository.findActiveGame(userId) }
+                .onFailure { Log.w(TAG, "[home] active game lookup failed", it) }
+                .getOrNull()
             val dismissedIds = loadDismissedActiveGameIds()
             if (result != null && !dismissedIds.contains(result.game.id)) {
                 _uiState.update {
@@ -360,7 +368,7 @@ class HomeViewModel @Inject constructor(
             // banner being shown and the tap. Falls back to the cached game
             // if the refetch fails (better UX than freezing on a transient
             // network error).
-            val fresh = runCatching { firestoreRepository.getConfig(cachedGame.id) }.getOrNull()
+            val fresh = runCatching { gameRepository.getConfig(cachedGame.id) }.getOrNull()
             val game = fresh ?: cachedGame
             when (game.gameStatusEnum) {
                 GameStatus.DONE -> {
@@ -449,7 +457,7 @@ class HomeViewModel @Inject constructor(
         val userId = auth.currentUser?.uid ?: ""
         validateCodeJob = viewModelScope.launch {
             try {
-                val game = firestoreRepository.findGameByCode(code)
+                val game = gameRepository.findGameByCode(code)
                 if (game == null) {
                     _uiState.update { it.copy(joinStep = JoinFlowStep.CodeNotFound) }
                     return@launch
@@ -538,13 +546,16 @@ class HomeViewModel @Inject constructor(
             )
         }
         viewModelScope.launch {
-            when (firestoreRepository.validateRegistrationCode(batchId, code)) {
-                FirestoreRepository.ValidationCodeResult.VALID -> {
+            val result = runCatching { gameFunctions.validateRegistrationCode(batchId, code) }
+                .onFailure { Log.w(TAG, "[join] registration code check failed", it) }
+                .getOrDefault(ValidationCodeResult.ERROR)
+            when (result) {
+                ValidationCodeResult.VALID -> {
                     _uiState.update {
                         it.copy(joinStep = JoinFlowStep.JoiningWithTeamName(step.game))
                     }
                 }
-                FirestoreRepository.ValidationCodeResult.INVALID -> {
+                ValidationCodeResult.INVALID -> {
                     _uiState.update {
                         it.copy(
                             joinStep = JoinFlowStep.ValidationCodeEntry(step.game),
@@ -552,7 +563,7 @@ class HomeViewModel @Inject constructor(
                         )
                     }
                 }
-                FirestoreRepository.ValidationCodeResult.ALREADY_USED -> {
+                ValidationCodeResult.ALREADY_USED -> {
                     _uiState.update {
                         it.copy(
                             joinStep = JoinFlowStep.ValidationCodeEntry(step.game),
@@ -560,7 +571,7 @@ class HomeViewModel @Inject constructor(
                         )
                     }
                 }
-                FirestoreRepository.ValidationCodeResult.ERROR -> {
+                ValidationCodeResult.ERROR -> {
                     _uiState.update { it.copy(joinStep = JoinFlowStep.NetworkError) }
                 }
             }
@@ -588,7 +599,7 @@ class HomeViewModel @Inject constructor(
                 // PP-107: `joinGame` writes the hunter role + the
                 // `/players/{uid}` team-name doc + the membership index
                 // server-side, in one atomic call.
-                firestoreRepository.joinGame(game.id, teamName)
+                gameFunctions.joinGame(game.id, teamName)
                 analyticsRepository.registrationCompleted()
                 _uiState.update {
                     it.copy(

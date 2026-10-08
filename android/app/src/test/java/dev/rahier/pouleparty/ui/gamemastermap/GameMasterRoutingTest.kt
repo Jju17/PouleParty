@@ -130,7 +130,7 @@ class GameMasterRoutingTest {
         // future addition (e.g. SPECTATOR / OBSERVER) forces a
         // conscious update to both platforms.
         val expected = setOf("CHICKEN", "HUNTER", "GAME_MASTER")
-        val actual = dev.rahier.pouleparty.ui.gamelogic.PlayerRole.entries.map { it.name }.toSet()
+        val actual = dev.rahier.pouleparty.model.PlayerRole.entries.map { it.name }.toSet()
         assertEquals(expected, actual)
     }
 }

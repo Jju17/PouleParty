@@ -4,7 +4,10 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.mapbox.geojson.Point
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dev.rahier.pouleparty.data.FirestoreRepository
+import dev.rahier.pouleparty.data.GameRepository
+import dev.rahier.pouleparty.data.PresenceRepository
+import dev.rahier.pouleparty.data.DebugAction
+import dev.rahier.pouleparty.data.GameFunctions
 import dev.rahier.pouleparty.data.LocationRepository
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameMod
@@ -16,7 +19,7 @@ import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import dev.rahier.pouleparty.ui.gamelogic.CountdownPhase
 import dev.rahier.pouleparty.ui.gamelogic.CountdownResult
-import dev.rahier.pouleparty.ui.gamelogic.PlayerRole
+import dev.rahier.pouleparty.model.PlayerRole
 import dev.rahier.pouleparty.ui.gamelogic.applyJammerNoise
 import dev.rahier.pouleparty.ui.gamelogic.checkGameOverByTime
 import dev.rahier.pouleparty.ui.gamelogic.checkZoneStatus
@@ -63,7 +66,7 @@ data class ChickenMapUiState(
     val showFoundCode: Boolean = false,
     /** CRIT-2 (audit 2026-05-17): the 4-digit code the chicken reads out
      *  to hunters who physically find them. Fetched once on init via
-     *  `firestoreRepository.getFoundCode` — the value lives in
+     *  `gameFunctions.getFoundCode`: the value lives in
      *  `/games/{id}/private/security` (admin-SDK only), so it's no
      *  longer leaked on the public Game doc. Empty until the CF
      *  responds. */
@@ -104,13 +107,15 @@ data class ChickenMapUiState(
 
 @HiltViewModel
 class ChickenMapViewModel @Inject constructor(
-    firestoreRepository: FirestoreRepository,
+    gameRepository: GameRepository,
+    presenceRepository: PresenceRepository,
+    gameFunctions: GameFunctions,
     locationRepository: LocationRepository,
     analyticsRepository: dev.rahier.pouleparty.data.AnalyticsRepository,
     auth: FirebaseAuth,
     private val prefs: android.content.SharedPreferences,
     savedStateHandle: SavedStateHandle
-) : BaseMapViewModel(firestoreRepository, locationRepository, analyticsRepository, auth) {
+) : BaseMapViewModel(gameRepository, presenceRepository, gameFunctions, locationRepository, analyticsRepository, auth) {
 
     override val gameId: String = savedStateHandle["gameId"] ?: ""
     override val playerId: String = auth.currentUser?.uid ?: ""
@@ -154,10 +159,10 @@ class ChickenMapViewModel @Inject constructor(
                 _effects.send(ChickenMapEffect.NavigateToVictory)
             }
             ChickenMapIntent.DebugEndNowTapped -> viewModelScope.launch {
-                try { firestoreRepository.debugAdvanceGame(gameId, "endNow") } catch (_: Exception) {}
+                try { gameFunctions.debugAdvanceGame(gameId, DebugAction.END_NOW) } catch (_: Exception) {}
             }
             ChickenMapIntent.DebugAdvanceStepTapped -> viewModelScope.launch {
-                try { firestoreRepository.debugAdvanceGame(gameId, "advanceStep") } catch (_: Exception) {}
+                try { gameFunctions.debugAdvanceGame(gameId, DebugAction.ADVANCE_STEP) } catch (_: Exception) {}
             }
         }
     }
@@ -169,7 +174,7 @@ class ChickenMapViewModel @Inject constructor(
         _uiState.update { it.copy(isLaunching = true, launchError = null) }
         viewModelScope.launch {
             try {
-                firestoreRepository.launchGame(state.game.id)
+                gameFunctions.launchGame(state.game.id)
                 _uiState.update { it.copy(isLaunching = false) }
             } catch (e: Exception) {
                 Log.e(logTag, "launchGame failed", e)
@@ -195,7 +200,7 @@ class ChickenMapViewModel @Inject constructor(
         // hitting this path just gets "" (harmless).
         viewModelScope.launch {
             try {
-                val code = firestoreRepository.getFoundCode(gameId)
+                val code = gameFunctions.getFoundCode(gameId)
                 _uiState.update { it.copy(chickenFoundCode = code) }
             } catch (e: Exception) {
                 Log.e("ChickenMapVM", "Failed to fetch foundCode for $gameId", e)
@@ -222,10 +227,9 @@ class ChickenMapViewModel @Inject constructor(
 
     private fun loadGame() {
         viewModelScope.launch {
-            val game = firestoreRepository.getConfig(gameId) ?: return@launch
-            // PP-zone-stored: read the immutable circle schedule once. All
-            // geometry now comes from this list (no on-device recompute).
-            val circles = firestoreRepository.fetchZoneSchedule(gameId)
+            val (game, circles) = runCatching {
+                gameRepository.getConfig(gameId)?.let { it to gameRepository.fetchZoneSchedule(gameId) }
+            }.onFailure { Log.w("ChickenMapVM", "[map] game load failed", it) }.getOrNull() ?: return@launch
             val z = zoneStateFromCircles(game, circles, Date())
             _uiState.update {
                 it.copy(
@@ -315,7 +319,7 @@ class ChickenMapViewModel @Inject constructor(
                 if (checkGameOverByTime(state.game.endDate)) {
                     // Update status BEFORE cancelling streams to avoid coroutine self-cancellation
                     try {
-                        firestoreRepository.updateGameStatus(gameId, GameStatus.DONE)
+                        gameRepository.updateGameStatus(gameId, GameStatus.DONE)
                         analyticsRepository.gameEnded(reason = "time_expired", winnersCount = state.game.winners.size)
                     } catch (e: Exception) { Log.e("ChickenMapVM", "Failed to update game status", e) }
                     cancelStreams()
@@ -388,7 +392,7 @@ class ChickenMapViewModel @Inject constructor(
                     } else {
                         latLng
                     }
-                    firestoreRepository.setChickenLocation(gameId, sendLatLng, isInvisible)
+                    presenceRepository.setChickenLocation(gameId, sendLatLng, isInvisible)
                     lastWrite = Date()
                 }
             }
@@ -423,7 +427,7 @@ class ChickenMapViewModel @Inject constructor(
                 )
             }
             val initialIsInvisible = _uiState.value.game.isChickenInvisible
-            firestoreRepository.setChickenLocation(gameId, latLng, initialIsInvisible)
+            presenceRepository.setChickenLocation(gameId, latLng, initialIsInvisible)
             lastWrite = Date()
         }
 
@@ -447,7 +451,7 @@ class ChickenMapViewModel @Inject constructor(
                 } else {
                     latLng
                 }
-                firestoreRepository.setChickenLocation(gameId, sendLatLng, isInvisible)
+                presenceRepository.setChickenLocation(gameId, sendLatLng, isInvisible)
                 lastWrite = Date()
             }
         }
@@ -479,7 +483,7 @@ class ChickenMapViewModel @Inject constructor(
             } else {
                 latLng
             }
-            firestoreRepository.setChickenLocation(gameId, sendLatLng, isInvisible)
+            presenceRepository.setChickenLocation(gameId, sendLatLng, isInvisible)
         }
     }
 
@@ -492,7 +496,7 @@ class ChickenMapViewModel @Inject constructor(
 
         val delayMs = game.hunterStartDate.time - System.currentTimeMillis()
         if (delayMs > 0) delay(delayMs)
-        firestoreRepository.hunterLocationsFlow(gameId).collect { hunters ->
+        presenceRepository.hunterLocationsFlow(gameId).collect { hunters ->
             val sorted = hunters.sortedBy { it.hunterId }
             val annotations = sorted.mapIndexed { index, hunter ->
                 HunterAnnotation(
@@ -507,7 +511,7 @@ class ChickenMapViewModel @Inject constructor(
 
     /** Stream game config to detect winners in real time */
     private suspend fun streamGameConfig() {
-        firestoreRepository.gameConfigFlow(gameId).collect { updatedGame ->
+        gameRepository.gameConfigFlow(gameId).collect { updatedGame ->
             if (updatedGame != null) {
                 // PP-107: a GameMaster may have swapped the chicken to someone
                 // else while the game is `waiting`. If this player is no longer
@@ -599,7 +603,7 @@ class ChickenMapViewModel @Inject constructor(
                     updatedGame.hunterIds.isNotEmpty() &&
                     updatedGame.winners.size >= updatedGame.hunterIds.size) {
                     try {
-                        firestoreRepository.updateGameStatus(gameId, GameStatus.DONE)
+                        gameRepository.updateGameStatus(gameId, GameStatus.DONE)
                         analyticsRepository.gameEnded(reason = "all_hunters_found", winnersCount = updatedGame.winners.size)
                     } catch (e: Exception) {
                         android.util.Log.e("ChickenMapVM", "Failed to set game DONE when all hunters found", e)
@@ -622,7 +626,7 @@ class ChickenMapViewModel @Inject constructor(
     private fun confirmCancelGame() {
         _uiState.update { it.copy(showCancelAlert = false, isCancelling = true) }
         viewModelScope.launch {
-            try { firestoreRepository.updateGameStatus(gameId, GameStatus.DONE) } catch (e: Exception) { Log.e("ChickenMapVM", "Failed to update game status", e) }
+            try { gameRepository.updateGameStatus(gameId, GameStatus.DONE) } catch (e: Exception) { Log.e("ChickenMapVM", "Failed to update game status", e) }
             _effects.send(ChickenMapEffect.NavigateToMenu)
         }
     }
@@ -654,13 +658,13 @@ class ChickenMapViewModel @Inject constructor(
         val delayMs = game.startDate.time - System.currentTimeMillis()
         if (delayMs > 0) delay(delayMs)
         while (true) {
-            firestoreRepository.updateHeartbeat(gameId)
+            presenceRepository.updateHeartbeat(gameId)
             delay(30_000)
         }
     }
 
     private suspend fun streamPowerUps() {
-        firestoreRepository.powerUpsFlow(gameId).collect { allPowerUps ->
+        gameRepository.powerUpsFlow(gameId).collect { allPowerUps ->
             val chickenPowerUps = allPowerUps.filter { !it.typeEnum.isHunterPowerUp && !it.isCollected }
             val collected = allPowerUps.filter {
                 it.collectedBy == playerId && it.activatedAt == null
@@ -672,7 +676,7 @@ class ChickenMapViewModel @Inject constructor(
     }
 
     private suspend fun streamPendingSubmissions() {
-        firestoreRepository.pendingSubmissionsFlow(gameId).collect { subs ->
+        gameRepository.pendingSubmissionsFlow(gameId).collect { subs ->
             _uiState.update { it.copy(pendingSubmissionsCount = subs.size) }
         }
     }
@@ -702,16 +706,7 @@ class ChickenMapViewModel @Inject constructor(
         _uiState.update { it.copy(activatingPowerUpId = powerUp.id) }
         viewModelScope.launch {
             try {
-                val duration = powerUp.typeEnum.durationSeconds ?: 0
-                val expiresAt = Timestamp(Date(System.currentTimeMillis() + duration * 1000))
-                val activeEffectField = when (powerUp.typeEnum) {
-                    PowerUpType.INVISIBILITY -> "powerUps.activeEffects.invisibility"
-                    PowerUpType.ZONE_FREEZE -> "powerUps.activeEffects.zoneFreeze"
-                    PowerUpType.DECOY -> "powerUps.activeEffects.decoy"
-                    PowerUpType.JAMMER -> "powerUps.activeEffects.jammer"
-                    else -> null
-                }
-                firestoreRepository.activatePowerUp(gameId, powerUp.id, activeEffectField, expiresAt)
+                gameFunctions.activatePowerUp(gameId, powerUp.id)
                 analyticsRepository.powerUpActivated(type = powerUp.type, role = "chicken")
                 _uiState.update { it.copy(showPowerUpInventory = false) }
                 showNotification("Activated: ${powerUp.typeEnum.title}!", powerUp.typeEnum)

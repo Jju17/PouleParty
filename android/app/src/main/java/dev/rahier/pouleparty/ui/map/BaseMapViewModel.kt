@@ -7,7 +7,9 @@ import androidx.lifecycle.viewModelScope
 import com.mapbox.geojson.Point
 import dev.rahier.pouleparty.AppConstants
 import dev.rahier.pouleparty.data.AnalyticsRepository
-import dev.rahier.pouleparty.data.FirestoreRepository
+import dev.rahier.pouleparty.data.GameRepository
+import dev.rahier.pouleparty.data.PresenceRepository
+import dev.rahier.pouleparty.data.GameFunctions
 import dev.rahier.pouleparty.data.LocationRepository
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.powerups.model.PowerUp
@@ -27,7 +29,9 @@ import kotlinx.coroutines.launch
  * for state reads/writes rather than accessing `_uiState` directly.
  */
 abstract class BaseMapViewModel(
-    protected val firestoreRepository: FirestoreRepository,
+    protected val gameRepository: GameRepository,
+    protected val presenceRepository: PresenceRepository,
+    protected val gameFunctions: GameFunctions,
     protected val locationRepository: LocationRepository,
     protected val analyticsRepository: AnalyticsRepository,
     protected val auth: FirebaseAuth
@@ -144,7 +148,7 @@ abstract class BaseMapViewModel(
             if (!collectingPowerUpIds.add(powerUp.id)) continue
             viewModelScope.launch {
                 try {
-                    firestoreRepository.collectPowerUp(gameId, powerUp.id, playerId)
+                    gameFunctions.collectPowerUp(gameId, powerUp.id, userLoc.latitude(), userLoc.longitude())
                     analyticsRepository.powerUpCollected(powerUp.type, analyticsRole)
                     notifyPowerUp("Collected: ${powerUp.typeEnum.title}!", powerUp.typeEnum)
                 } catch (e: Exception) {

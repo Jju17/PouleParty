@@ -5,11 +5,15 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import dev.rahier.pouleparty.AppConstants
 import dev.rahier.pouleparty.data.AnalyticsRepository
-import dev.rahier.pouleparty.data.FirestoreRepository
+import dev.rahier.pouleparty.data.GameRepository
+import dev.rahier.pouleparty.data.PresenceRepository
+import dev.rahier.pouleparty.data.GameFunctions
+import dev.rahier.pouleparty.data.ChallengeSubmissionRepository
+import dev.rahier.pouleparty.data.ActiveGameResult
 import dev.rahier.pouleparty.data.LocationRepository
 import dev.rahier.pouleparty.model.Game
-import dev.rahier.pouleparty.ui.gamelogic.GamePhase
-import dev.rahier.pouleparty.ui.gamelogic.PlayerRole
+import dev.rahier.pouleparty.model.GamePhase
+import dev.rahier.pouleparty.model.PlayerRole
 import dev.rahier.pouleparty.ui.home.HomeIntent
 import dev.rahier.pouleparty.ui.home.HomeViewModel
 import io.mockk.coEvery
@@ -37,7 +41,10 @@ import org.junit.Test
 class HomeActivePhaseTest {
 
     private val testDispatcher = StandardTestDispatcher()
-    private lateinit var firestoreRepository: FirestoreRepository
+    private lateinit var gameRepository: GameRepository
+    private lateinit var presenceRepository: PresenceRepository
+    private lateinit var gameFunctions: GameFunctions
+    private lateinit var challengeSubmissions: ChallengeSubmissionRepository
     private lateinit var locationRepository: LocationRepository
     private lateinit var analyticsRepository: AnalyticsRepository
     private lateinit var prefs: SharedPreferences
@@ -47,7 +54,10 @@ class HomeActivePhaseTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        firestoreRepository = mockk(relaxed = true)
+        gameRepository = mockk(relaxed = true)
+        presenceRepository = mockk(relaxed = true)
+        gameFunctions = mockk(relaxed = true)
+        challengeSubmissions = mockk(relaxed = true)
         locationRepository = mockk(relaxed = true)
         analyticsRepository = mockk(relaxed = true)
         prefs = mockk(relaxed = true)
@@ -78,7 +88,8 @@ class HomeActivePhaseTest {
     }
 
     private fun createViewModel(): HomeViewModel = HomeViewModel(
-        firestoreRepository = firestoreRepository,
+        gameRepository = gameRepository,
+        gameFunctions = gameFunctions,
         locationRepository = locationRepository,
         analyticsRepository = analyticsRepository,
         prefs = prefs,
@@ -98,8 +109,8 @@ class HomeActivePhaseTest {
     fun `inProgress phase is propagated to UI state`() {
         mockAuthUser("user-1")
         val game = Game.mock.copy(id = "g-ip")
-        coEvery { firestoreRepository.findActiveGame("user-1") } returns
-            FirestoreRepository.ActiveGameResult(game, PlayerRole.HUNTER, GamePhase.IN_PROGRESS)
+        coEvery { gameRepository.findActiveGame("user-1") } returns
+            ActiveGameResult(game, PlayerRole.HUNTER, GamePhase.IN_PROGRESS)
 
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
@@ -112,8 +123,8 @@ class HomeActivePhaseTest {
     fun `upcoming phase is propagated to UI state`() {
         mockAuthUser("user-1")
         val game = Game.mock.copy(id = "g-up", status = "waiting")
-        coEvery { firestoreRepository.findActiveGame("user-1") } returns
-            FirestoreRepository.ActiveGameResult(game, PlayerRole.CHICKEN, GamePhase.UPCOMING)
+        coEvery { gameRepository.findActiveGame("user-1") } returns
+            ActiveGameResult(game, PlayerRole.CHICKEN, GamePhase.UPCOMING)
 
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
@@ -128,8 +139,8 @@ class HomeActivePhaseTest {
     fun `dismiss adds gameId to the persisted set`() {
         mockAuthUser("user-1")
         val game = Game.mock.copy(id = "g-dismiss")
-        coEvery { firestoreRepository.findActiveGame("user-1") } returns
-            FirestoreRepository.ActiveGameResult(game, PlayerRole.HUNTER, GamePhase.IN_PROGRESS)
+        coEvery { gameRepository.findActiveGame("user-1") } returns
+            ActiveGameResult(game, PlayerRole.HUNTER, GamePhase.IN_PROGRESS)
 
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
@@ -147,8 +158,8 @@ class HomeActivePhaseTest {
     fun `dismiss preserves previously-dismissed ids (set union)`() {
         mockAuthUser("user-1")
         val game = Game.mock.copy(id = "new-one")
-        coEvery { firestoreRepository.findActiveGame("user-1") } returns
-            FirestoreRepository.ActiveGameResult(game, PlayerRole.HUNTER, GamePhase.IN_PROGRESS)
+        coEvery { gameRepository.findActiveGame("user-1") } returns
+            ActiveGameResult(game, PlayerRole.HUNTER, GamePhase.IN_PROGRESS)
         // Pre-existing dismiss: stored set already has one id.
         every { prefs.getStringSet(any(), any()) } returns setOf("prior-game")
 
@@ -172,8 +183,8 @@ class HomeActivePhaseTest {
     fun `rejoin removes gameId from dismiss set without touching others`() {
         mockAuthUser("user-1")
         val game = Game.mock.copy(id = "now-rejoining")
-        coEvery { firestoreRepository.findActiveGame("user-1") } returns
-            FirestoreRepository.ActiveGameResult(game, PlayerRole.HUNTER, GamePhase.IN_PROGRESS)
+        coEvery { gameRepository.findActiveGame("user-1") } returns
+            ActiveGameResult(game, PlayerRole.HUNTER, GamePhase.IN_PROGRESS)
         every { prefs.getStringSet(any(), any()) } returns setOf("now-rejoining", "other-ghost")
 
         val vm = createViewModel()

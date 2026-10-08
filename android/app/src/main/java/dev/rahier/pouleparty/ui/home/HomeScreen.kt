@@ -245,20 +245,20 @@ fun HomeScreen(
             val activeRole = state.activeGameRole
             if (activeGame != null && activePhase != null && activeRole != null) {
                 val titleRes = when (activePhase) {
-                    dev.rahier.pouleparty.ui.gamelogic.GamePhase.IN_PROGRESS ->
+                    dev.rahier.pouleparty.model.GamePhase.IN_PROGRESS ->
                         R.string.rejoin_game_in_progress
-                    dev.rahier.pouleparty.ui.gamelogic.GamePhase.UPCOMING ->
+                    dev.rahier.pouleparty.model.GamePhase.UPCOMING ->
                         R.string.upcoming_game_banner_title
                 }
                 val ctaRes = when (activePhase) {
-                    dev.rahier.pouleparty.ui.gamelogic.GamePhase.IN_PROGRESS -> R.string.rejoin
-                    dev.rahier.pouleparty.ui.gamelogic.GamePhase.UPCOMING ->
+                    dev.rahier.pouleparty.model.GamePhase.IN_PROGRESS -> R.string.rejoin
+                    dev.rahier.pouleparty.model.GamePhase.UPCOMING ->
                         when (activeRole) {
-                            dev.rahier.pouleparty.ui.gamelogic.PlayerRole.CHICKEN ->
+                            dev.rahier.pouleparty.model.PlayerRole.CHICKEN ->
                                 R.string.upcoming_game_cta_chicken
-                            dev.rahier.pouleparty.ui.gamelogic.PlayerRole.HUNTER ->
+                            dev.rahier.pouleparty.model.PlayerRole.HUNTER ->
                                 R.string.upcoming_game_cta_hunter
-                            dev.rahier.pouleparty.ui.gamelogic.PlayerRole.GAME_MASTER ->
+                            dev.rahier.pouleparty.model.PlayerRole.GAME_MASTER ->
                                 R.string.upcoming_game_cta_hunter
                         }
                 }

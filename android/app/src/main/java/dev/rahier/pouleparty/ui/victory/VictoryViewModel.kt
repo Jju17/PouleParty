@@ -6,7 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dev.rahier.pouleparty.data.FirestoreRepository
+import dev.rahier.pouleparty.data.GameRepository
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.Registration
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,7 +30,7 @@ enum class ReportResult { SUCCESS, FAILURE }
 
 @HiltViewModel
 class VictoryViewModel @Inject constructor(
-    private val firestoreRepository: FirestoreRepository,
+    private val gameRepository: GameRepository,
     private val auth: FirebaseAuth,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -61,21 +61,25 @@ class VictoryViewModel @Inject constructor(
     /** Fetch the game once immediately so winners are available right away */
     private fun loadInitialGame() {
         viewModelScope.launch {
-            val game = firestoreRepository.getConfig(gameId) ?: return@launch
+            val game = runCatching { gameRepository.getConfig(gameId) }
+                .onFailure { Log.w("VictoryViewModel", "[victory] game load failed", it) }
+                .getOrNull() ?: return@launch
             _uiState.update { it.copy(game = game) }
         }
     }
 
     private fun loadRegistrations() {
         viewModelScope.launch {
-            val registrations = firestoreRepository.fetchAllRegistrations(gameId)
+            val registrations = runCatching { gameRepository.fetchAllRegistrations(gameId) }
+                .onFailure { Log.w("VictoryViewModel", "[victory] team names load failed", it) }
+                .getOrNull() ?: return@launch
             _uiState.update { it.copy(registrations = registrations) }
         }
     }
 
     private fun startGameStream() {
         viewModelScope.launch {
-            firestoreRepository.gameConfigFlow(gameId).collect { game ->
+            gameRepository.gameConfigFlow(gameId).collect { game ->
                 if (game != null) {
                     _uiState.update { it.copy(game = game) }
                 }
@@ -105,7 +109,7 @@ class VictoryViewModel @Inject constructor(
         }
         viewModelScope.launch {
             val result = runCatching {
-                firestoreRepository.reportPlayer(
+                gameRepository.reportPlayer(
                     reporterId = reporterId,
                     reportedUserId = target.id,
                     reportedNickname = target.displayName,

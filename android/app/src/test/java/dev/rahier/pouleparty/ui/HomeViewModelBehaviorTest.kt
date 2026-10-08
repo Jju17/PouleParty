@@ -1,12 +1,17 @@
 package dev.rahier.pouleparty.ui
 
-import dev.rahier.pouleparty.ui.gamelogic.PlayerRole
+import dev.rahier.pouleparty.model.PlayerRole
 
 import android.content.SharedPreferences
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import dev.rahier.pouleparty.AppConstants
-import dev.rahier.pouleparty.data.FirestoreRepository
+import dev.rahier.pouleparty.data.GameRepository
+import dev.rahier.pouleparty.data.PresenceRepository
+import dev.rahier.pouleparty.data.GameFunctions
+import dev.rahier.pouleparty.data.ChallengeSubmissionRepository
+import dev.rahier.pouleparty.data.ActiveGameResult
+import dev.rahier.pouleparty.data.ValidationCodeResult
 import dev.rahier.pouleparty.data.LocationRepository
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.ui.home.HomeIntent
@@ -29,7 +34,10 @@ import org.junit.Test
 class HomeViewModelBehaviorTest {
 
     private val testDispatcher = StandardTestDispatcher()
-    private lateinit var firestoreRepository: FirestoreRepository
+    private lateinit var gameRepository: GameRepository
+    private lateinit var presenceRepository: PresenceRepository
+    private lateinit var gameFunctions: GameFunctions
+    private lateinit var challengeSubmissions: ChallengeSubmissionRepository
     private lateinit var locationRepository: LocationRepository
     private lateinit var prefs: SharedPreferences
     private lateinit var auth: FirebaseAuth
@@ -37,7 +45,10 @@ class HomeViewModelBehaviorTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        firestoreRepository = mockk(relaxed = true)
+        gameRepository = mockk(relaxed = true)
+        presenceRepository = mockk(relaxed = true)
+        gameFunctions = mockk(relaxed = true)
+        challengeSubmissions = mockk(relaxed = true)
         locationRepository = mockk(relaxed = true)
         prefs = mockk(relaxed = true)
         auth = mockk(relaxed = true)
@@ -60,7 +71,8 @@ class HomeViewModelBehaviorTest {
 
     private fun createViewModel(): HomeViewModel {
         return HomeViewModel(
-            firestoreRepository = firestoreRepository,
+            gameRepository = gameRepository,
+            gameFunctions = gameFunctions,
             locationRepository = locationRepository,
             analyticsRepository = mockk<dev.rahier.pouleparty.data.AnalyticsRepository>(relaxed = true),
             prefs = prefs,
@@ -90,7 +102,7 @@ class HomeViewModelBehaviorTest {
     fun `checkForActiveGame finds hunter game`() {
         mockAuthUser("user-123")
         val game = Game.mock
-        coEvery { firestoreRepository.findActiveGame("user-123") } returns FirestoreRepository.ActiveGameResult(game, PlayerRole.HUNTER, dev.rahier.pouleparty.ui.gamelogic.GamePhase.IN_PROGRESS)
+        coEvery { gameRepository.findActiveGame("user-123") } returns ActiveGameResult(game, PlayerRole.HUNTER, dev.rahier.pouleparty.model.GamePhase.IN_PROGRESS)
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
         assertEquals(game, vm.uiState.value.activeGame)
@@ -101,7 +113,7 @@ class HomeViewModelBehaviorTest {
     fun `checkForActiveGame finds chicken game`() {
         mockAuthUser("user-123")
         val game = Game.mock
-        coEvery { firestoreRepository.findActiveGame("user-123") } returns FirestoreRepository.ActiveGameResult(game, PlayerRole.CHICKEN, dev.rahier.pouleparty.ui.gamelogic.GamePhase.IN_PROGRESS)
+        coEvery { gameRepository.findActiveGame("user-123") } returns ActiveGameResult(game, PlayerRole.CHICKEN, dev.rahier.pouleparty.model.GamePhase.IN_PROGRESS)
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
         assertEquals(game, vm.uiState.value.activeGame)
@@ -111,7 +123,7 @@ class HomeViewModelBehaviorTest {
     @Test
     fun `checkForActiveGame finds no game`() {
         mockAuthUser("user-123")
-        coEvery { firestoreRepository.findActiveGame("user-123") } returns null
+        coEvery { gameRepository.findActiveGame("user-123") } returns null
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
         assertNull(vm.uiState.value.activeGame)
@@ -239,7 +251,7 @@ class HomeViewModelBehaviorTest {
     @Test
     fun `RejoinActiveGameTapped without active game does nothing`() {
         mockAuthUser("user-123")
-        coEvery { firestoreRepository.findActiveGame("user-123") } returns null
+        coEvery { gameRepository.findActiveGame("user-123") } returns null
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
         vm.onIntent(HomeIntent.RejoinActiveGameTapped)
@@ -261,7 +273,7 @@ class HomeViewModelBehaviorTest {
     fun `ActiveGameDismissed clears both game and role`() {
         mockAuthUser("user-123")
         val game = dev.rahier.pouleparty.model.Game.mock
-        coEvery { firestoreRepository.findActiveGame("user-123") } returns FirestoreRepository.ActiveGameResult(game, PlayerRole.HUNTER, dev.rahier.pouleparty.ui.gamelogic.GamePhase.IN_PROGRESS)
+        coEvery { gameRepository.findActiveGame("user-123") } returns ActiveGameResult(game, PlayerRole.HUNTER, dev.rahier.pouleparty.model.GamePhase.IN_PROGRESS)
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
         assertNotNull(vm.uiState.value.activeGame)
@@ -371,7 +383,7 @@ class HomeViewModelBehaviorTest {
 
     private fun driveToCodeValidated(game: Game): HomeViewModel {
         mockAuthUser("user-123")
-        coEvery { firestoreRepository.findGameByCode(any()) } returns game
+        coEvery { gameRepository.findGameByCode(any()) } returns game
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
         vm.onIntent(HomeIntent.GameCodeChanged(game.gameCode))
@@ -400,8 +412,8 @@ class HomeViewModelBehaviorTest {
         val vm = driveToCodeValidated(Game(id = "abcdef", registrationBatchId = "batch-1"))
         vm.onIntent(HomeIntent.JoinAsHunterTapped)
         testDispatcher.scheduler.advanceUntilIdle()
-        coEvery { firestoreRepository.validateRegistrationCode(any(), any()) } returns
-            FirestoreRepository.ValidationCodeResult.VALID
+        coEvery { gameFunctions.validateRegistrationCode(any(), any()) } returns
+            ValidationCodeResult.VALID
         vm.onIntent(HomeIntent.ValidationCodeChanged("ZZZ999"))
         vm.onIntent(HomeIntent.SubmitValidationCodeTapped)
         testDispatcher.scheduler.advanceUntilIdle()
@@ -413,8 +425,8 @@ class HomeViewModelBehaviorTest {
         val vm = driveToCodeValidated(Game(id = "abcdef", registrationBatchId = "batch-1"))
         vm.onIntent(HomeIntent.JoinAsHunterTapped)
         testDispatcher.scheduler.advanceUntilIdle()
-        coEvery { firestoreRepository.validateRegistrationCode(any(), any()) } returns
-            FirestoreRepository.ValidationCodeResult.ALREADY_USED
+        coEvery { gameFunctions.validateRegistrationCode(any(), any()) } returns
+            ValidationCodeResult.ALREADY_USED
         vm.onIntent(HomeIntent.ValidationCodeChanged("ZZZ999"))
         vm.onIntent(HomeIntent.SubmitValidationCodeTapped)
         testDispatcher.scheduler.advanceUntilIdle()

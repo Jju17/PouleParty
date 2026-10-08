@@ -7,7 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.rahier.pouleparty.AppConstants
-import dev.rahier.pouleparty.data.FirestoreRepository
+import dev.rahier.pouleparty.data.GameRepository
 import dev.rahier.pouleparty.model.MyGame
 import dev.rahier.pouleparty.util.ProfanityFilter
 import dev.rahier.pouleparty.util.getTrimmedString
@@ -43,7 +43,7 @@ data class ReportTarget(
 class SettingsViewModel @Inject constructor(
     private val auth: FirebaseAuth,
     private val prefs: SharedPreferences,
-    private val firestoreRepository: FirestoreRepository
+    private val gameRepository: GameRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -84,7 +84,7 @@ class SettingsViewModel @Inject constructor(
         }
         viewModelScope.launch {
             val result = runCatching {
-                firestoreRepository.reportPlayer(
+                gameRepository.reportPlayer(
                     reporterId = reporterId,
                     reportedUserId = target.entry.id,
                     reportedNickname = target.entry.displayName,
@@ -114,7 +114,7 @@ class SettingsViewModel @Inject constructor(
         _uiState.update { it.copy(isLoadingGames = true) }
         viewModelScope.launch {
             val games = try {
-                firestoreRepository.fetchMyGames(userId)
+                gameRepository.fetchMyGames(userId)
             } catch (e: Exception) {
                 Log.e("SettingsViewModel", "Failed to fetch my games", e)
                 emptyList()
@@ -154,7 +154,8 @@ class SettingsViewModel @Inject constructor(
         _uiState.update { it.copy(nickname = trimmed, isShowingNicknameSaved = true) }
         viewModelScope.launch {
             auth.currentUser?.uid?.let { userId ->
-                firestoreRepository.saveNickname(userId, trimmed)
+                runCatching { gameRepository.saveNickname(userId, trimmed) }
+                    .onFailure { Log.w("SettingsViewModel", "[settings] nickname sync failed", it) }
             }
         }
     }
@@ -183,7 +184,7 @@ class SettingsViewModel @Inject constructor(
                 // Delete Firestore user profile first — the security rule requires
                 // auth.uid == userId, which stops holding once the auth user is deleted.
                 if (userId != null) {
-                    runCatching { firestoreRepository.deleteUser(userId) }
+                    runCatching { gameRepository.deleteUser(userId) }
                 }
                 auth.currentUser?.delete()?.await()
                 prefs.edit().clear().apply()

@@ -5,7 +5,10 @@ import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.GeoPoint
-import dev.rahier.pouleparty.data.FirestoreRepository
+import dev.rahier.pouleparty.data.GameRepository
+import dev.rahier.pouleparty.data.PresenceRepository
+import dev.rahier.pouleparty.data.GameFunctions
+import dev.rahier.pouleparty.data.ChallengeSubmissionRepository
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.HunterLocation
 import dev.rahier.pouleparty.model.Registration
@@ -64,7 +67,10 @@ import java.util.Date
 class GameMasterMapViewModelBehaviorTest {
 
     private val testDispatcher = StandardTestDispatcher()
-    private lateinit var firestoreRepository: FirestoreRepository
+    private lateinit var gameRepository: GameRepository
+    private lateinit var presenceRepository: PresenceRepository
+    private lateinit var gameFunctions: GameFunctions
+    private lateinit var challengeSubmissions: ChallengeSubmissionRepository
     private lateinit var auth: FirebaseAuth
 
     private val gameConfigFlow = MutableStateFlow<Game?>(null)
@@ -82,7 +88,10 @@ class GameMasterMapViewModelBehaviorTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        firestoreRepository = mockk(relaxed = true)
+        gameRepository = mockk(relaxed = true)
+        presenceRepository = mockk(relaxed = true)
+        gameFunctions = mockk(relaxed = true)
+        challengeSubmissions = mockk(relaxed = true)
         auth = mockk(relaxed = true)
 
         val mockUser = mockk<FirebaseUser>()
@@ -92,12 +101,12 @@ class GameMasterMapViewModelBehaviorTest {
         // Default stubs — by default no game is configured so
         // `loadGame()` exits early and the infinite-tick loop never
         // starts. Individual tests opt-in to a populated game.
-        coEvery { firestoreRepository.getConfig(any()) } returns null
-        every { firestoreRepository.gameConfigFlow(any()) } returns gameConfigFlow
-        every { firestoreRepository.registrationsFlow(any()) } returns registrationsFlow
-        every { firestoreRepository.chickenLocationFlow(any()) } returns emptyFlow()
-        every { firestoreRepository.hunterLocationsFlow(any()) } returns hunterLocationsFlow
-        every { firestoreRepository.powerUpsFlow(any()) } returns emptyFlow()
+        coEvery { gameRepository.getConfig(any()) } returns null
+        every { gameRepository.gameConfigFlow(any()) } returns gameConfigFlow
+        every { gameRepository.registrationsFlow(any()) } returns registrationsFlow
+        every { presenceRepository.chickenLocationFlow(any()) } returns emptyFlow()
+        every { presenceRepository.hunterLocationsFlow(any()) } returns hunterLocationsFlow
+        every { gameRepository.powerUpsFlow(any()) } returns emptyFlow()
     }
 
     @After
@@ -107,7 +116,9 @@ class GameMasterMapViewModelBehaviorTest {
 
     private fun createViewModel(gameId: String = "test-id"): GameMasterMapViewModel =
         GameMasterMapViewModel(
-            firestoreRepository = firestoreRepository,
+            gameRepository = gameRepository,
+            presenceRepository = presenceRepository,
+            gameFunctions = gameFunctions,
             auth = auth,
             savedStateHandle = SavedStateHandle(mapOf("gameId" to gameId)),
         )
@@ -161,7 +172,7 @@ class GameMasterMapViewModelBehaviorTest {
     fun `designate confirm calls designateChicken with the registration uid`() {
         // Seed the game so the VM has an id to forward through.
         val game = Game.mock.copy(id = "game-x")
-        coEvery { firestoreRepository.getConfig("game-x") } returns game
+        coEvery { gameRepository.getConfig("game-x") } returns game
         val vm = createViewModel(gameId = "game-x")
         testDispatcher.scheduler.runCurrent()
 
@@ -173,7 +184,7 @@ class GameMasterMapViewModelBehaviorTest {
         testDispatcher.scheduler.runCurrent()
 
         coVerify(exactly = 1) {
-            firestoreRepository.designateChicken("game-x", "new-chicken-uid")
+            gameFunctions.designateChicken("game-x", "new-chicken-uid")
         }
         // After success: drawer closes, pending cleared, no error.
         assertFalse(vm.uiState.value.showHuntersDrawer)
@@ -183,8 +194,8 @@ class GameMasterMapViewModelBehaviorTest {
 
     @Test
     fun `designation error surfaces a message and is dismissable`() {
-        coEvery { firestoreRepository.getConfig("game-x") } returns Game.mock.copy(id = "game-x")
-        coEvery { firestoreRepository.designateChicken("game-x", any()) } throws RuntimeException("offline")
+        coEvery { gameRepository.getConfig("game-x") } returns Game.mock.copy(id = "game-x")
+        coEvery { gameFunctions.designateChicken("game-x", any()) } throws RuntimeException("offline")
         val vm = createViewModel(gameId = "game-x")
         testDispatcher.scheduler.runCurrent()
 
@@ -202,7 +213,7 @@ class GameMasterMapViewModelBehaviorTest {
     @Test
     fun `hunter annotations use teamName when registration is known`() {
         val game = Game.mock.copy(id = "game-tn")
-        coEvery { firestoreRepository.getConfig("game-tn") } returns game
+        coEvery { gameRepository.getConfig("game-tn") } returns game
         val vm = createViewModel(gameId = "game-tn")
         testDispatcher.scheduler.runCurrent()
 
@@ -235,7 +246,7 @@ class GameMasterMapViewModelBehaviorTest {
     @Test
     fun `hunter annotations fall back to index when registration is missing`() {
         val game = Game.mock.copy(id = "game-noreg")
-        coEvery { firestoreRepository.getConfig("game-noreg") } returns game
+        coEvery { gameRepository.getConfig("game-noreg") } returns game
         val vm = createViewModel(gameId = "game-noreg")
         testDispatcher.scheduler.runCurrent()
 
@@ -256,7 +267,7 @@ class GameMasterMapViewModelBehaviorTest {
     @Test
     fun `registrations arriving after locations rebuild labels`() {
         val game = Game.mock.copy(id = "game-late-reg")
-        coEvery { firestoreRepository.getConfig("game-late-reg") } returns game
+        coEvery { gameRepository.getConfig("game-late-reg") } returns game
         val vm = createViewModel(gameId = "game-late-reg")
         testDispatcher.scheduler.runCurrent()
 

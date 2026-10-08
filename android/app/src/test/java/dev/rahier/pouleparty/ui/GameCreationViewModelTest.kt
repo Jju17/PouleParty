@@ -5,7 +5,10 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.mapbox.geojson.Point
 import dev.rahier.pouleparty.data.AnalyticsRepository
-import dev.rahier.pouleparty.data.FirestoreRepository
+import dev.rahier.pouleparty.data.GameRepository
+import dev.rahier.pouleparty.data.PresenceRepository
+import dev.rahier.pouleparty.data.GameFunctions
+import dev.rahier.pouleparty.data.ChallengeSubmissionRepository
 import dev.rahier.pouleparty.data.LocationRepository
 import dev.rahier.pouleparty.model.GameMod
 import dev.rahier.pouleparty.powerups.model.PowerUpType
@@ -35,7 +38,10 @@ import java.util.Date
 class GameCreationViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
-    private lateinit var firestoreRepository: FirestoreRepository
+    private lateinit var gameRepository: GameRepository
+    private lateinit var presenceRepository: PresenceRepository
+    private lateinit var gameFunctions: GameFunctions
+    private lateinit var challengeSubmissions: ChallengeSubmissionRepository
     private lateinit var locationRepository: LocationRepository
     private lateinit var analyticsRepository: AnalyticsRepository
     private lateinit var auth: FirebaseAuth
@@ -43,7 +49,10 @@ class GameCreationViewModelTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        firestoreRepository = mockk(relaxed = true)
+        gameRepository = mockk(relaxed = true)
+        presenceRepository = mockk(relaxed = true)
+        gameFunctions = mockk(relaxed = true)
+        challengeSubmissions = mockk(relaxed = true)
         locationRepository = mockk(relaxed = true)
         analyticsRepository = mockk(relaxed = true)
         auth = mockk(relaxed = true)
@@ -64,7 +73,8 @@ class GameCreationViewModelTest {
         isAdminCreation: Boolean = false
     ): GameCreationViewModel {
         return GameCreationViewModel(
-            firestoreRepository = firestoreRepository,
+            gameRepository = gameRepository,
+            gameFunctions = gameFunctions,
             locationRepository = locationRepository,
             analyticsRepository = analyticsRepository,
             auth = auth,
@@ -518,19 +528,19 @@ class GameCreationViewModelTest {
     @Test
     fun `startGame calls setConfig and logs analytics on success`() = runTest(testDispatcher) {
         val vm = createViewModel()
-        coEvery { firestoreRepository.setConfig(any()) } returns Unit
+        coEvery { gameRepository.setConfig(any()) } returns Unit
         vm.onIntent(GameCreationIntent.StartGameTapped)
         advanceUntilIdle()
         val effect = vm.effects.first() as dev.rahier.pouleparty.ui.gamecreation.GameCreationEffect.GameStarted
         assertEquals("test-game-id", effect.gameId)
-        coVerify { firestoreRepository.setConfig(any()) }
+        coVerify { gameRepository.setConfig(any()) }
         coVerify { analyticsRepository.gameCreated(any(), any(), any()) }
     }
 
     @Test
     fun `startGame shows alert on failure`() = runTest(testDispatcher) {
         val vm = createViewModel()
-        coEvery { firestoreRepository.setConfig(any()) } throws RuntimeException("Network error")
+        coEvery { gameRepository.setConfig(any()) } throws RuntimeException("Network error")
         var successCalled = false
         vm.onIntent(GameCreationIntent.StartGameTapped)
         advanceUntilIdle()
@@ -541,7 +551,7 @@ class GameCreationViewModelTest {
     @Test
     fun `dismissAlert hides alert`() {
         val vm = createViewModel()
-        coEvery { firestoreRepository.setConfig(any()) } throws RuntimeException("err")
+        coEvery { gameRepository.setConfig(any()) } throws RuntimeException("err")
         vm.onIntent(GameCreationIntent.StartGameTapped)
         testDispatcher.scheduler.advanceUntilIdle()
         assertTrue(vm.uiState.value.showAlert)
@@ -865,7 +875,7 @@ class GameCreationViewModelTest {
         val vm = createViewModel()
         vm.onIntent(GameCreationIntent.DurationChanged(60.0))
         var capturedGame: dev.rahier.pouleparty.model.Game? = null
-        coEvery { firestoreRepository.setConfig(any()) } answers {
+        coEvery { gameRepository.setConfig(any()) } answers {
             capturedGame = firstArg()
             Unit
         }
@@ -881,7 +891,7 @@ class GameCreationViewModelTest {
     fun `startGame analytics event contains correct game mode`() = runTest(testDispatcher) {
         val vm = createViewModel()
         vm.onIntent(GameCreationIntent.GameModeChanged(GameMod.STAY_IN_THE_ZONE))
-        coEvery { firestoreRepository.setConfig(any()) } returns Unit
+        coEvery { gameRepository.setConfig(any()) } returns Unit
         vm.onIntent(GameCreationIntent.StartGameTapped)
         advanceUntilIdle()
         coVerify {
@@ -897,7 +907,7 @@ class GameCreationViewModelTest {
     fun `startGame analytics event contains correct powerUps enabled state`() = runTest(testDispatcher) {
         val vm = createViewModel()
         vm.onIntent(GameCreationIntent.PowerUpsToggled(true))
-        coEvery { firestoreRepository.setConfig(any()) } returns Unit
+        coEvery { gameRepository.setConfig(any()) } returns Unit
         vm.onIntent(GameCreationIntent.StartGameTapped)
         advanceUntilIdle()
         coVerify {
@@ -913,7 +923,7 @@ class GameCreationViewModelTest {
     fun `startGame analytics carries maxPlayers from current state`() = runTest(testDispatcher) {
         val vm = createViewModel()
         vm.onIntent(GameCreationIntent.MaxPlayersChanged(4))
-        coEvery { firestoreRepository.setConfig(any()) } returns Unit
+        coEvery { gameRepository.setConfig(any()) } returns Unit
         vm.onIntent(GameCreationIntent.StartGameTapped)
         advanceUntilIdle()
         coVerify {
@@ -930,7 +940,7 @@ class GameCreationViewModelTest {
     @Test
     fun `consecutive startGame failures show alert each time`() = runTest(testDispatcher) {
         val vm = createViewModel()
-        coEvery { firestoreRepository.setConfig(any()) } throws RuntimeException("net err")
+        coEvery { gameRepository.setConfig(any()) } throws RuntimeException("net err")
         vm.onIntent(GameCreationIntent.StartGameTapped)
         advanceUntilIdle()
         assertTrue(vm.uiState.value.showAlert)
@@ -1063,7 +1073,7 @@ class GameCreationViewModelTest {
     @Test
     fun `startGame failure does not log analytics`() = runTest(testDispatcher) {
         val vm = createViewModel()
-        coEvery { firestoreRepository.setConfig(any()) } throws RuntimeException("net err")
+        coEvery { gameRepository.setConfig(any()) } throws RuntimeException("net err")
         vm.onIntent(GameCreationIntent.StartGameTapped)
         advanceUntilIdle()
         coVerify(exactly = 0) {
@@ -1074,7 +1084,7 @@ class GameCreationViewModelTest {
     @Test
     fun `startGame success logs analytics exactly once`() = runTest(testDispatcher) {
         val vm = createViewModel()
-        coEvery { firestoreRepository.setConfig(any()) } returns Unit
+        coEvery { gameRepository.setConfig(any()) } returns Unit
         vm.onIntent(GameCreationIntent.StartGameTapped)
         advanceUntilIdle()
         coVerify(exactly = 1) {

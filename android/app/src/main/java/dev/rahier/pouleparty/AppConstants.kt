@@ -30,6 +30,8 @@ object AppConstants {
     // queries on the game doc.
     const val SUBCOLLECTION_MEMBERSHIPS = "memberships"
     const val COLLECTION_CHALLENGES = "challenges"
+    const val COLLECTION_GAME_CODES = "gameCodes"
+    const val COLLECTION_REPORTS = "reports"
 
     /** Last game id the user explicitly dismissed from the "active game" Home
      *  banner. Skipped in findActiveGame so the banner doesn't reappear on the

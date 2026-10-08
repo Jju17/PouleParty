@@ -3,7 +3,10 @@ package dev.rahier.pouleparty.ui
 import androidx.lifecycle.SavedStateHandle
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
-import dev.rahier.pouleparty.data.FirestoreRepository
+import dev.rahier.pouleparty.data.GameRepository
+import dev.rahier.pouleparty.data.PresenceRepository
+import dev.rahier.pouleparty.data.GameFunctions
+import dev.rahier.pouleparty.data.ChallengeSubmissionRepository
 import dev.rahier.pouleparty.model.Challenge
 import dev.rahier.pouleparty.model.ChallengeCompletion
 import dev.rahier.pouleparty.model.Game
@@ -34,19 +37,25 @@ import org.junit.Test
 class ChallengesViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
-    private lateinit var repo: FirestoreRepository
+    private lateinit var gameRepository: GameRepository
+    private lateinit var presenceRepository: PresenceRepository
+    private lateinit var gameFunctions: GameFunctions
+    private lateinit var challengeSubmissions: ChallengeSubmissionRepository
     private lateinit var auth: FirebaseAuth
 
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        repo = mockk(relaxed = true)
+        gameRepository = mockk(relaxed = true)
+        presenceRepository = mockk(relaxed = true)
+        gameFunctions = mockk(relaxed = true)
+        challengeSubmissions = mockk(relaxed = true)
         auth = mockk(relaxed = true)
-        every { repo.challengesStream(any()) } returns emptyFlow()
-        every { repo.leaderboardFlow(any()) } returns emptyFlow()
-        every { repo.myCompletionFlow(any(), any()) } returns emptyFlow()
-        coEvery { repo.getConfig(any()) } returns null
-        coEvery { repo.fetchAllRegistrations(any()) } returns emptyList()
+        every { gameRepository.challengesStream(any()) } returns emptyFlow()
+        every { gameRepository.leaderboardFlow(any()) } returns emptyFlow()
+        every { gameRepository.myCompletionFlow(any(), any()) } returns emptyFlow()
+        coEvery { gameRepository.getConfig(any()) } returns null
+        coEvery { gameRepository.fetchAllRegistrations(any()) } returns emptyList()
     }
 
     @After
@@ -66,7 +75,8 @@ class ChallengesViewModelTest {
     ): ChallengesViewModel {
         mockUser(hunterId)
         return ChallengesViewModel(
-            firestoreRepository = repo,
+            gameRepository = gameRepository,
+            challengeSubmissions = challengeSubmissions,
             auth = auth,
             savedStateHandle = SavedStateHandle(mapOf("gameId" to gameId))
         )
@@ -80,7 +90,7 @@ class ChallengesViewModelTest {
             Challenge(id = "c1", points = 10, titleByLocale = mapOf("fr" to "Take a photo")),
             Challenge(id = "c2", points = 5, titleByLocale = mapOf("fr" to "Drink water"))
         )
-        every { repo.challengesStream(any()) } returns flowOf(streamed)
+        every { gameRepository.challengesStream(any()) } returns flowOf(streamed)
         val vm = create()
         testDispatcher.scheduler.advanceUntilIdle()
         assertEquals(2, vm.uiState.value.challenges.size)
@@ -97,7 +107,7 @@ class ChallengesViewModelTest {
                 teamName = "Team Alpha"
             )
         )
-        every { repo.leaderboardFlow("game-1") } returns flowOf(completions)
+        every { gameRepository.leaderboardFlow("game-1") } returns flowOf(completions)
         val vm = create()
         testDispatcher.scheduler.advanceUntilIdle()
         assertEquals(1, vm.uiState.value.completions.size)
@@ -124,7 +134,7 @@ class ChallengesViewModelTest {
     @Test
     fun `DoingIt sets captureTarget for an available challenge`() {
         val challenge = Challenge(id = "c1", points = 5, titleByLocale = mapOf("fr" to "Hello"))
-        every { repo.challengesStream(any()) } returns flowOf(listOf(challenge))
+        every { gameRepository.challengesStream(any()) } returns flowOf(listOf(challenge))
         val vm = create()
         testDispatcher.scheduler.advanceUntilIdle()
 
@@ -136,8 +146,8 @@ class ChallengesViewModelTest {
     @Test
     fun `DoingIt on an already-completed challenge is a no-op`() {
         val challenge = Challenge(id = "c1", points = 5, titleByLocale = mapOf("fr" to "Hello"))
-        every { repo.challengesStream(any()) } returns flowOf(listOf(challenge))
-        every { repo.myCompletionFlow("game-1", "hunter-1") } returns flowOf(
+        every { gameRepository.challengesStream(any()) } returns flowOf(listOf(challenge))
+        every { gameRepository.myCompletionFlow("game-1", "hunter-1") } returns flowOf(
             ChallengeCompletion(
                 hunterId = "hunter-1",
                 validatedChallengeIds = listOf("c1"),
@@ -155,13 +165,13 @@ class ChallengesViewModelTest {
     @Test
     fun `MediaCaptured uploads + clears captureTarget`() {
         val challenge = Challenge(id = "c1", points = 7, titleByLocale = mapOf("fr" to "Hello"))
-        every { repo.challengesStream(any()) } returns flowOf(listOf(challenge))
-        coEvery { repo.getConfig("game-1") } returns Game(id = "game-1", roles = mapOf("hunter-1" to "hunter"))
-        coEvery { repo.fetchAllRegistrations("game-1") } returns listOf(
+        every { gameRepository.challengesStream(any()) } returns flowOf(listOf(challenge))
+        coEvery { gameRepository.getConfig("game-1") } returns Game(id = "game-1", roles = mapOf("hunter-1" to "hunter"))
+        coEvery { gameRepository.fetchAllRegistrations("game-1") } returns listOf(
             Registration(userId = "hunter-1", teamName = "Dream Team")
         )
         coEvery {
-            repo.submitChallenge(any(), any(), any(), any(), any(), any())
+            challengeSubmissions.submitChallenge(any(), any(), any(), any(), any(), any())
         } returns dev.rahier.pouleparty.model.ChallengeSubmission(id = "s1", challengeId = "c1", hunterId = "hunter-1")
 
         val vm = create(hunterId = "hunter-1")
@@ -177,7 +187,7 @@ class ChallengesViewModelTest {
         testDispatcher.scheduler.advanceUntilIdle()
 
         coVerify {
-            repo.submitChallenge(
+            challengeSubmissions.submitChallenge(
                 gameId = "game-1",
                 challengeId = "c1",
                 hunterId = "hunter-1",
@@ -193,7 +203,7 @@ class ChallengesViewModelTest {
     @Test
     fun `DoingIt while submitting is a no-op`() {
         val challenge = Challenge(id = "c1", points = 5, titleByLocale = mapOf("fr" to "Hello"))
-        every { repo.challengesStream(any()) } returns flowOf(listOf(challenge))
+        every { gameRepository.challengesStream(any()) } returns flowOf(listOf(challenge))
         val state = ChallengesUiState(
             challenges = listOf(challenge),
             submittingIds = setOf("c1"),
