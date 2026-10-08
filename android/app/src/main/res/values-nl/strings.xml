@@ -451,4 +451,8 @@
     <string name="leave_game_failed_title">Kon het spel niet verlaten</string>
     <string name="load_failed_title">Kon het spel niet laden</string>
     <string name="loading_game">Spel laden</string>
+    <string name="create_game_failed">Kon het spel niet aanmaken.</string>
+    <string name="game_master_code_failed_title">Scheidsrechterscode niet opgeslagen</string>
+    <string name="game_master_code_failed_message">Het spel is aangemaakt, maar scheidsrechters kunnen pas meedoen als de code is opgeslagen.</string>
+    <string name="continue_without_referee">Doorgaan zonder scheidsrechter</string>
 </resources>

@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.data
 
+import android.util.Log
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
@@ -63,7 +64,8 @@ class LocationRepository @Inject constructor(
             @Suppress("MissingPermission")
             val location = fusedLocationClient.lastLocation.await()
             if (location != null) Point.fromLngLat(location.longitude, location.latitude) else null
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w("LocationRepository", "[location] last location unavailable", e)
             null
         }
     }

@@ -11,6 +11,8 @@ import dev.rahier.pouleparty.powerups.model.PowerUpType
  */
 sealed interface GameCreationIntent {
     object Next : GameCreationIntent
+    object RetryGameMasterCode : GameCreationIntent
+    object ContinueWithoutGameMaster : GameCreationIntent
     object Back : GameCreationIntent
     object StartTimeTapped : GameCreationIntent
     object DismissDatePicker : GameCreationIntent

@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.gamecreation
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -16,8 +17,10 @@ import dev.rahier.pouleparty.powerups.model.PowerUpType
 import dev.rahier.pouleparty.model.Timing
 import dev.rahier.pouleparty.model.Zone
 import dev.rahier.pouleparty.model.calculateNormalModeSettings
+import dev.rahier.pouleparty.ui.common.errorMessageRes
 import dev.rahier.pouleparty.ui.gamelogic.availablePowerUpTypes
 import dev.rahier.pouleparty.util.calendarAt
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -29,6 +32,8 @@ import kotlinx.coroutines.launch
 import java.util.Date
 import javax.inject.Inject
 
+private const val TAG = "GameCreationVM"
+
 data class GameCreationUiState(
     val game: Game = Game.mock,
     val currentStepIndex: Int = 0,
@@ -37,8 +42,9 @@ data class GameCreationUiState(
     val showPowerUpSelection: Boolean = false,
     val showDatePicker: Boolean = false,
     val showTimePicker: Boolean = false,
-    val showAlert: Boolean = false,
-    val alertMessage: String = "",
+    @param:androidx.annotation.StringRes val createErrorRes: Int? = null,
+    /** Set when the game exists but its referee code could not be saved. */
+    val gameMasterCodeFailedGameId: String? = null,
     val codeCopied: Boolean = false,
     val goingForward: Boolean = true,
     /** PP-42: lifts the maxPlayers stepper from `2..5` (Free standard) to
@@ -194,6 +200,8 @@ class GameCreationViewModel @Inject constructor(
     fun onIntent(intent: GameCreationIntent) {
         when (intent) {
             GameCreationIntent.Next -> next()
+            GameCreationIntent.RetryGameMasterCode -> retryGameMasterCode()
+            GameCreationIntent.ContinueWithoutGameMaster -> continueWithoutGameMaster()
             GameCreationIntent.Back -> back()
             GameCreationIntent.StartTimeTapped -> onStartTimeTapped()
             GameCreationIntent.DismissDatePicker -> dismissDatePicker()
@@ -505,7 +513,32 @@ class GameCreationViewModel @Inject constructor(
     }
 
     private fun dismissAlert() {
-        _uiState.update { it.copy(showAlert = false) }
+        _uiState.update { it.copy(createErrorRes = null) }
+    }
+
+    private fun retryGameMasterCode() {
+        val gameId = _uiState.value.gameMasterCodeFailedGameId ?: return
+        _uiState.update { it.copy(gameMasterCodeFailedGameId = null) }
+        viewModelScope.launch { saveGameMasterCodeThenEnter(gameId, _uiState.value.gameMasterPassword) }
+    }
+
+    private fun continueWithoutGameMaster() {
+        val gameId = _uiState.value.gameMasterCodeFailedGameId ?: return
+        _uiState.update { it.copy(gameMasterCodeFailedGameId = null) }
+        viewModelScope.launch { _effects.send(GameCreationEffect.GameStarted(gameId)) }
+    }
+
+    private suspend fun saveGameMasterCodeThenEnter(gameId: String, password: String) {
+        try {
+            gameFunctions.setGameMasterPassword(gameId, password)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "[create] referee code not saved", e)
+            _uiState.update { it.copy(gameMasterCodeFailedGameId = gameId) }
+            return
+        }
+        _effects.send(GameCreationEffect.GameStarted(gameId))
     }
 
     /** Mirrors iOS `clampStartDateToMinimum`: pushes the start date forward
@@ -582,27 +615,22 @@ class GameCreationViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 gameRepository.setConfig(finalGame)
-                if (enableGameMaster) {
-                    try {
-                        gameFunctions.setGameMasterPassword(finalGame.id, gmPassword)
-                    } catch (_: Exception) {
-                        // Game is created — chicken can retry from
-                        // Settings (PP-88 follow-up).
-                    }
-                }
-                analyticsRepository.gameCreated(
-                    gameMode = finalGame.gameMode,
-                    maxPlayers = finalGame.maxPlayers,
-                    powerUpsEnabled = finalGame.powerUps.enabled
-                )
-                _effects.send(GameCreationEffect.GameStarted(finalGame.id))
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        showAlert = true,
-                        alertMessage = "Could not create the game. Please check your connection and try again."
-                    )
-                }
+                Log.w(TAG, "[create] game write failed", e)
+                _uiState.update { it.copy(createErrorRes = e.errorMessageRes()) }
+                return@launch
+            }
+            analyticsRepository.gameCreated(
+                gameMode = finalGame.gameMode,
+                maxPlayers = finalGame.maxPlayers,
+                powerUpsEnabled = finalGame.powerUps.enabled
+            )
+            if (enableGameMaster) {
+                saveGameMasterCodeThenEnter(finalGame.id, gmPassword)
+            } else {
+                _effects.send(GameCreationEffect.GameStarted(finalGame.id))
             }
         }
     }

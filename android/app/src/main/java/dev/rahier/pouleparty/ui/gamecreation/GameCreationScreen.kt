@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.gamecreation
 
+import androidx.compose.material3.MaterialTheme
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
@@ -243,15 +244,30 @@ fun GameCreationScreen(
         }
     }
 
-    // Error alert
-    if (state.showAlert) {
+    state.createErrorRes?.let { reason ->
         AlertDialog(
             onDismissRequest = { viewModel.onIntent(GameCreationIntent.DismissAlert) },
-            title = { Text(stringResource(R.string.error)) },
-            text = { Text(state.alertMessage) },
+            title = { Text(stringResource(R.string.create_game_failed)) },
+            text = { Text(stringResource(reason), color = MaterialTheme.colorScheme.error) },
             confirmButton = {
                 TextButton(onClick = { viewModel.onIntent(GameCreationIntent.DismissAlert) }) { Text(stringResource(R.string.ok)) }
             }
+        )
+    }
+
+    if (state.gameMasterCodeFailedGameId != null) {
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text(stringResource(R.string.game_master_code_failed_title)) },
+            text = { Text(stringResource(R.string.game_master_code_failed_message)) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.onIntent(GameCreationIntent.RetryGameMasterCode) }) { Text(stringResource(R.string.retry)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.onIntent(GameCreationIntent.ContinueWithoutGameMaster) }) {
+                    Text(stringResource(R.string.continue_without_referee))
+                }
+            },
         )
     }
 }

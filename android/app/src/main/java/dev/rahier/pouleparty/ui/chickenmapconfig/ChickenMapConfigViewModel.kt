@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.chickenmapconfig
 
+import android.util.Log
 import android.content.Context
 import dev.rahier.pouleparty.model.distanceMeters
 import android.location.Geocoder
@@ -192,7 +193,8 @@ class ChickenMapConfigViewModel @Inject constructor(
                     )
                 }
                 _uiState.update { it.copy(searchResults = results) }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.w("ChickenMapConfigVM", "[search] geocoding failed", e)
                 _uiState.update { it.copy(searchResults = emptyList()) }
             }
         }

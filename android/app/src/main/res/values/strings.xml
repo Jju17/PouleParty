@@ -465,4 +465,8 @@
     <string name="leave_game_failed_title">Could not leave the game</string>
     <string name="load_failed_title">Could not load the game</string>
     <string name="loading_game">Loading the game</string>
+    <string name="create_game_failed">Could not create the game.</string>
+    <string name="game_master_code_failed_title">Referee code not saved</string>
+    <string name="game_master_code_failed_message">The game is created, but referees cannot join until the code is saved.</string>
+    <string name="continue_without_referee">Continue without referee</string>
 </resources>

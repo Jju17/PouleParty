@@ -182,10 +182,10 @@ class GameMasterMapViewModel @Inject constructor(
                 }
             }
             GameMasterMapIntent.DebugEndNowTapped -> viewModelScope.launch {
-                try { gameFunctions.debugAdvanceGame(gameId, DebugAction.END_NOW) } catch (_: Exception) {}
+                try { gameFunctions.debugAdvanceGame(gameId, DebugAction.END_NOW) } catch (e: Exception) { Log.w("GameMasterMapVM", "[qa] debug action failed", e) }
             }
             GameMasterMapIntent.DebugAdvanceStepTapped -> viewModelScope.launch {
-                try { gameFunctions.debugAdvanceGame(gameId, DebugAction.ADVANCE_STEP) } catch (_: Exception) {}
+                try { gameFunctions.debugAdvanceGame(gameId, DebugAction.ADVANCE_STEP) } catch (e: Exception) { Log.w("GameMasterMapVM", "[qa] debug action failed", e) }
             }
         }
     }

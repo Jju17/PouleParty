@@ -455,4 +455,8 @@
     <string name="leave_game_failed_title">Impossible de quitter la partie</string>
     <string name="load_failed_title">Impossible de charger la partie</string>
     <string name="loading_game">Chargement de la partie</string>
+    <string name="create_game_failed">Impossible de créer la partie.</string>
+    <string name="game_master_code_failed_title">Code arbitre non enregistré</string>
+    <string name="game_master_code_failed_message">La partie est créée, mais les arbitres ne peuvent pas la rejoindre tant que le code n\'est pas enregistré.</string>
+    <string name="continue_without_referee">Continuer sans arbitre</string>
 </resources>

@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.home
 
+import kotlinx.coroutines.CancellationException
 import android.content.SharedPreferences
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -368,8 +369,14 @@ class HomeViewModel @Inject constructor(
             // banner being shown and the tap. Falls back to the cached game
             // if the refetch fails (better UX than freezing on a transient
             // network error).
-            val fresh = runCatching { gameRepository.getConfig(cachedGame.id) }.getOrNull()
-            val game = fresh ?: cachedGame
+            val game = try {
+                gameRepository.getConfig(cachedGame.id) ?: cachedGame.copy(status = GameStatus.DONE.firestoreValue)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "[home] game refresh failed, using the cached copy", e)
+                cachedGame
+            }
             when (game.gameStatusEnum) {
                 GameStatus.DONE -> {
                     _uiState.update { it.copy(isShowingGameNotFound = true) }

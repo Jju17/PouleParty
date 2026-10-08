@@ -166,10 +166,10 @@ class ChickenMapViewModel @Inject constructor(
                 _effects.send(ChickenMapEffect.NavigateToVictory)
             }
             ChickenMapIntent.DebugEndNowTapped -> viewModelScope.launch {
-                try { gameFunctions.debugAdvanceGame(gameId, DebugAction.END_NOW) } catch (_: Exception) {}
+                try { gameFunctions.debugAdvanceGame(gameId, DebugAction.END_NOW) } catch (e: Exception) { Log.w("ChickenMapVM", "[qa] debug action failed", e) }
             }
             ChickenMapIntent.DebugAdvanceStepTapped -> viewModelScope.launch {
-                try { gameFunctions.debugAdvanceGame(gameId, DebugAction.ADVANCE_STEP) } catch (_: Exception) {}
+                try { gameFunctions.debugAdvanceGame(gameId, DebugAction.ADVANCE_STEP) } catch (e: Exception) { Log.w("ChickenMapVM", "[qa] debug action failed", e) }
             }
         }
     }

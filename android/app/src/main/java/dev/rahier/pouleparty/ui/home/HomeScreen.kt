@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.home
 
+import android.util.Log
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.content.Intent
 import android.media.MediaPlayer
@@ -75,7 +76,7 @@ fun HomeScreen(
                 isLooping = true
                 setVolume(0.1f, 0.1f)
             }
-        }.getOrNull()
+        }.onFailure { Log.w("HomeScreen", "[music] player unavailable", it) }.getOrNull()
     }
 
     DisposableEffect(Unit) {

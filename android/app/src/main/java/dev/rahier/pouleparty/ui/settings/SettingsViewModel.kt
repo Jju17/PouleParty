@@ -184,7 +184,7 @@ class SettingsViewModel @Inject constructor(
                 // Delete Firestore user profile first — the security rule requires
                 // auth.uid == userId, which stops holding once the auth user is deleted.
                 if (userId != null) {
-                    runCatching { gameRepository.deleteUser(userId) }
+                    gameRepository.deleteUser(userId)
                 }
                 auth.currentUser?.delete()?.await()
                 prefs.edit().clear().apply()

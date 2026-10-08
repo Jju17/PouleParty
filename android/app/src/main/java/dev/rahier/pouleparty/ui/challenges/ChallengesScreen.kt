@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.challenges
 
+import android.util.Log
 import android.content.ContentValues
 import android.net.Uri
 import android.provider.MediaStore
@@ -110,7 +111,7 @@ fun ChallengesSheet(
         if (success && uri != null && targetId != null) {
             val bytes = runCatching {
                 context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
-            }.getOrNull()
+            }.onFailure { Log.w("ChallengesScreen", "[challenge] captured media unreadable", it) }.getOrNull()
             if (bytes != null) {
                 viewModel.onIntent(ChallengesIntent.MediaCaptured(targetId, bytes, dev.rahier.pouleparty.model.SubmissionMediaType.IMAGE))
             } else {
@@ -130,7 +131,7 @@ fun ChallengesSheet(
         if (success && uri != null && targetId != null) {
             val bytes = runCatching {
                 context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
-            }.getOrNull()
+            }.onFailure { Log.w("ChallengesScreen", "[challenge] captured media unreadable", it) }.getOrNull()
             if (bytes != null) {
                 viewModel.onIntent(ChallengesIntent.MediaCaptured(targetId, bytes, dev.rahier.pouleparty.model.SubmissionMediaType.VIDEO))
             } else {

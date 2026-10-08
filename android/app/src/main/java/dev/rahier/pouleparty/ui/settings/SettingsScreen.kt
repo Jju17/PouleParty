@@ -1,5 +1,8 @@
 package dev.rahier.pouleparty.ui.settings
 
+import androidx.compose.runtime.remember
+import androidx.core.content.pm.PackageInfoCompat
+import android.util.Log
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.content.Intent
 import android.net.Uri
@@ -222,12 +225,16 @@ fun SettingsScreen(
             // Version section
             SettingsCard {
                 Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                    val packageInfo = try {
-                        context.packageManager.getPackageInfo(context.packageName, 0)
-                    } catch (_: Exception) { null }
-                    val versionName = packageInfo?.versionName ?: "—"
-                    @Suppress("DEPRECATION")
-                    val buildNumber = packageInfo?.versionCode?.toString() ?: "—"
+                    val packageInfo = remember {
+                        try {
+                            context.packageManager.getPackageInfo(context.packageName, 0)
+                        } catch (e: Exception) {
+                            Log.w("SettingsScreen", "[settings] package info unavailable", e)
+                            null
+                        }
+                    }
+                    val versionName = packageInfo?.versionName ?: "?"
+                    val buildNumber = packageInfo?.let { PackageInfoCompat.getLongVersionCode(it).toString() } ?: "?"
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),

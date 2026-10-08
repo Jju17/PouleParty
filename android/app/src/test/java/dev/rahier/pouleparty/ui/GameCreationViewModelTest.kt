@@ -102,7 +102,7 @@ class GameCreationViewModelTest {
         assertEquals(0, state.currentStepIndex)
         assertTrue(state.isParticipating)
         assertEquals(90.0, state.gameDurationMinutes, 0.0)
-        assertFalse(state.showAlert)
+        assertNull(state.createErrorRes)
         assertTrue(state.goingForward)
     }
 
@@ -538,6 +538,39 @@ class GameCreationViewModelTest {
     }
 
     @Test
+    fun `a referee code failure keeps the creator on the wizard with retry and continue`() = runTest(testDispatcher) {
+        val vm = createViewModel()
+        vm.onIntent(GameCreationIntent.GameMasterEnabledChanged(true))
+        vm.onIntent(GameCreationIntent.GameMasterPasswordChanged("1234"))
+        coEvery { gameFunctions.setGameMasterPassword(any(), any()) } throws RuntimeException("offline")
+        vm.onIntent(GameCreationIntent.StartGameTapped)
+        advanceUntilIdle()
+        assertEquals("test-game-id", vm.uiState.value.gameMasterCodeFailedGameId)
+
+        coEvery { gameFunctions.setGameMasterPassword(any(), any()) } returns Unit
+        vm.onIntent(GameCreationIntent.RetryGameMasterCode)
+        advanceUntilIdle()
+        assertNull(vm.uiState.value.gameMasterCodeFailedGameId)
+        val effect = vm.effects.first() as dev.rahier.pouleparty.ui.gamecreation.GameCreationEffect.GameStarted
+        assertEquals("test-game-id", effect.gameId)
+        coVerify(exactly = 2) { gameFunctions.setGameMasterPassword("test-game-id", "1234") }
+    }
+
+    @Test
+    fun `the creator can continue without a referee code`() = runTest(testDispatcher) {
+        val vm = createViewModel()
+        vm.onIntent(GameCreationIntent.GameMasterEnabledChanged(true))
+        vm.onIntent(GameCreationIntent.GameMasterPasswordChanged("1234"))
+        coEvery { gameFunctions.setGameMasterPassword(any(), any()) } throws RuntimeException("offline")
+        vm.onIntent(GameCreationIntent.StartGameTapped)
+        advanceUntilIdle()
+        vm.onIntent(GameCreationIntent.ContinueWithoutGameMaster)
+        advanceUntilIdle()
+        val effect = vm.effects.first() as dev.rahier.pouleparty.ui.gamecreation.GameCreationEffect.GameStarted
+        assertEquals("test-game-id", effect.gameId)
+    }
+
+    @Test
     fun `startGame shows alert on failure`() = runTest(testDispatcher) {
         val vm = createViewModel()
         coEvery { gameRepository.setConfig(any()) } throws RuntimeException("Network error")
@@ -545,7 +578,7 @@ class GameCreationViewModelTest {
         vm.onIntent(GameCreationIntent.StartGameTapped)
         advanceUntilIdle()
         assertFalse("onSuccess should not be called on failure", successCalled)
-        assertTrue("Alert should be shown", vm.uiState.value.showAlert)
+        assertNotNull("Alert should be shown", vm.uiState.value.createErrorRes)
     }
 
     @Test
@@ -554,9 +587,9 @@ class GameCreationViewModelTest {
         coEvery { gameRepository.setConfig(any()) } throws RuntimeException("err")
         vm.onIntent(GameCreationIntent.StartGameTapped)
         testDispatcher.scheduler.advanceUntilIdle()
-        assertTrue(vm.uiState.value.showAlert)
+        assertNotNull(vm.uiState.value.createErrorRes)
         vm.onIntent(GameCreationIntent.DismissAlert)
-        assertFalse(vm.uiState.value.showAlert)
+        assertNull(vm.uiState.value.createErrorRes)
     }
 
     // ── Code copy feedback ──
@@ -943,12 +976,12 @@ class GameCreationViewModelTest {
         coEvery { gameRepository.setConfig(any()) } throws RuntimeException("net err")
         vm.onIntent(GameCreationIntent.StartGameTapped)
         advanceUntilIdle()
-        assertTrue(vm.uiState.value.showAlert)
+        assertNotNull(vm.uiState.value.createErrorRes)
         vm.onIntent(GameCreationIntent.DismissAlert)
-        assertFalse(vm.uiState.value.showAlert)
+        assertNull(vm.uiState.value.createErrorRes)
         vm.onIntent(GameCreationIntent.StartGameTapped)
         advanceUntilIdle()
-        assertTrue("Alert should be shown again on second failure", vm.uiState.value.showAlert)
+        assertNotNull("Alert should be shown again on second failure", vm.uiState.value.createErrorRes)
     }
 
     // ── Date picker interaction ──
