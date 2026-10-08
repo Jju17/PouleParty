@@ -23,6 +23,8 @@ functions/lib/
 functions/node_modules/
 functions/.env
 functions/.env.*
+!functions/.env.pouleparty-ba586
+!functions/.env.pouleparty-prod
 
 # === IDE ===
 .idea/
