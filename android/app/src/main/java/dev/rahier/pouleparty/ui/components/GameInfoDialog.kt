@@ -1,5 +1,7 @@
 package dev.rahier.pouleparty.ui.components
 
+import dev.rahier.pouleparty.ui.common.currentLocale
+import dev.rahier.pouleparty.util.formatTime
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -11,7 +13,6 @@ import androidx.compose.ui.unit.dp
 import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.ui.theme.*
-import java.text.SimpleDateFormat
 import java.util.Locale
 
 /**
@@ -27,7 +28,7 @@ fun GameInfoDialog(
     onCancelGame: (() -> Unit)? = null,
     leaveGameLabel: String? = null
 ) {
-    val dateFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
+    val locale = currentLocale()
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -56,7 +57,7 @@ fun GameInfoDialog(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(stringResource(R.string.start_label))
-                    Text(dateFormat.format(game.startDate), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f))
+                    Text(formatTime(game.startDate, locale), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f))
                 }
 
                 // End time
@@ -65,7 +66,7 @@ fun GameInfoDialog(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(stringResource(R.string.end_label))
-                    Text(dateFormat.format(game.endDate), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f))
+                    Text(formatTime(game.endDate, locale), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f))
                 }
 
                 // Optional cancel game button (chicken only)

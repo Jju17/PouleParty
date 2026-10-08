@@ -22,14 +22,13 @@ import dev.rahier.pouleparty.ui.gamecreation.StepContainer
 import dev.rahier.pouleparty.ui.theme.GradientFire
 import dev.rahier.pouleparty.ui.theme.bangerStyle
 import dev.rahier.pouleparty.ui.theme.gameboyStyle
-import java.text.SimpleDateFormat
 import java.util.Date
 
 @Composable
 fun DurationStep(
     gameDurationMinutes: Double,
     startDate: Date,
-    dateFormat: SimpleDateFormat,
+    dateFormat: (Date) -> String,
     onDurationChanged: (Double) -> Unit
 ) {
     StepContainer(
@@ -72,7 +71,7 @@ fun DurationStep(
 
         val endTime = Date(startDate.time + (gameDurationMinutes * 60 * 1000).toLong())
         Text(
-            text = "${stringResource(R.string.ends_at)} ${dateFormat.format(endTime)}",
+            text = "${stringResource(R.string.ends_at)} ${dateFormat(endTime)}",
             style = gameboyStyle(10),
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
         )

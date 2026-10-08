@@ -11,6 +11,7 @@ import dev.rahier.pouleparty.ui.victory.LeaderboardEntry
  */
 sealed interface SettingsIntent {
     object DismissGameDetail : SettingsIntent
+    object RetryMyGames : SettingsIntent
     object ShowLeaderboard : SettingsIntent
     object DismissLeaderboard : SettingsIntent
     object SaveNickname : SettingsIntent

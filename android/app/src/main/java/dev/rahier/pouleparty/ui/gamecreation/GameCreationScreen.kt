@@ -1,5 +1,8 @@
 package dev.rahier.pouleparty.ui.gamecreation
 
+import java.util.Date
+import dev.rahier.pouleparty.ui.common.currentLocale
+import dev.rahier.pouleparty.util.formatTime
 import androidx.compose.material3.MaterialTheme
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.activity.compose.BackHandler
@@ -55,7 +58,6 @@ import dev.rahier.pouleparty.ui.gamecreation.steps.FinalZoneSetupStep
 import dev.rahier.pouleparty.ui.gamecreation.steps.StartZoneSetupStep
 import dev.rahier.pouleparty.ui.gamecreation.steps.ZonesRecapStep
 import dev.rahier.pouleparty.ui.theme.*
-import java.text.SimpleDateFormat
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -66,7 +68,8 @@ fun GameCreationScreen(
     viewModel: GameCreationViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val dateFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
+    val locale = currentLocale()
+    val dateFormat: (Date) -> String = remember(locale) { { formatTime(it, locale) } }
 
     // One-shot navigation effects from the ViewModel.
     LaunchedEffect(viewModel) {

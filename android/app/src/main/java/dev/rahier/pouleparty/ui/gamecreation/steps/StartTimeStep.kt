@@ -1,5 +1,7 @@
 package dev.rahier.pouleparty.ui.gamecreation.steps
 
+import dev.rahier.pouleparty.ui.common.currentLocale
+import dev.rahier.pouleparty.util.formatDateTime
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -41,7 +43,6 @@ import dev.rahier.pouleparty.ui.theme.CROrange
 import dev.rahier.pouleparty.ui.theme.bangerStyle
 import dev.rahier.pouleparty.ui.theme.gameboyStyle
 import dev.rahier.pouleparty.util.startOfToday
-import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
@@ -60,7 +61,7 @@ fun StartTimeStep(
     onTimeSelected: (hour: Int, minute: Int) -> Unit,
     onManualStartToggled: (Boolean) -> Unit,
 ) {
-    val displayFormat = remember { SimpleDateFormat("EEE d MMM, HH:mm", Locale.getDefault()) }
+    val locale = currentLocale()
     StepContainer(
         title = stringResource(R.string.wizard_start_time_title),
         subtitle = stringResource(R.string.wizard_start_time_subtitle)
@@ -76,7 +77,7 @@ fun StartTimeStep(
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = displayFormat.format(startDate),
+                text = formatDateTime(startDate, locale),
                 style = bangerStyle(28),
                 color = CROrange,
                 textAlign = TextAlign.Center

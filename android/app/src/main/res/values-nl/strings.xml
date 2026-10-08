@@ -481,4 +481,25 @@
         <item quantity="other">%1$d minuten voorsprong voor de kip</item>
     </plurals>
     <string name="countdown_days_format">%1$dd %2$02d:%3$02d:%4$02d</string>
+    <string name="detail_game_code">Spelcode</string>
+    <string name="detail_max_players">Max. spelers</string>
+    <string name="detail_hunters_joined">Jagers aangemeld</string>
+    <string name="detail_winners">Winnaars</string>
+    <string name="detail_chicken_sees_hunters">Kip ziet de jagers</string>
+    <string name="detail_start">Start</string>
+    <string name="detail_end">Einde</string>
+    <string name="detail_head_start">Voorsprong</string>
+    <string name="detail_power_ups">Power-ups</string>
+    <string name="detail_initial_radius">Beginstraal</string>
+    <string name="detail_shrink_interval">Krimpinterval</string>
+    <string name="detail_shrink_amount">Krimp per stap</string>
+    <string name="value_yes">Ja</string>
+    <string name="value_on">Aan</string>
+    <string name="value_off">Uit</string>
+    <string name="value_meters">%1$d m</string>
+    <plurals name="value_minutes">
+        <item quantity="one">%1$d min</item>
+        <item quantity="other">%1$d min</item>
+    </plurals>
+    <string name="my_games_load_failed">Je spellen konden niet geladen worden.</string>
 </resources>

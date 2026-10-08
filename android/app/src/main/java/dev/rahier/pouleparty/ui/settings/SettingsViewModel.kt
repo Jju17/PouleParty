@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.settings
 
+import dev.rahier.pouleparty.ui.common.errorMessageRes
 import androidx.core.content.edit
 import dev.rahier.pouleparty.ui.victory.LeaderboardEntry
 import dev.rahier.pouleparty.ui.victory.ReportResult
@@ -32,6 +33,7 @@ data class SettingsUiState(
     val isShowingNicknameSaved: Boolean = false,
     val myGames: List<MyGame> = emptyList(),
     val isLoadingGames: Boolean = false,
+    @param:androidx.annotation.StringRes val myGamesErrorRes: Int? = null,
     val selectedGame: MyGame? = null,
     val isShowingLeaderboard: Boolean = false,
     val reportTarget: ReportTarget? = null,
@@ -58,6 +60,7 @@ class SettingsViewModel @Inject constructor(
     fun onIntent(intent: SettingsIntent) {
         when (intent) {
             SettingsIntent.DismissGameDetail -> dismissGameDetail()
+            SettingsIntent.RetryMyGames -> loadMyGames()
             SettingsIntent.ShowLeaderboard -> showLeaderboard()
             SettingsIntent.DismissLeaderboard -> dismissLeaderboard()
             SettingsIntent.SaveNickname -> saveNickname()
@@ -116,15 +119,15 @@ class SettingsViewModel @Inject constructor(
 
     private fun loadMyGames() {
         val userId = auth.currentUser?.uid ?: return
-        _uiState.update { it.copy(isLoadingGames = true) }
+        _uiState.update { it.copy(isLoadingGames = true, myGamesErrorRes = null) }
         viewModelScope.launch {
-            val games = try {
-                gameRepository.fetchMyGames(userId)
+            try {
+                val games = gameRepository.fetchMyGames(userId)
+                _uiState.update { it.copy(myGames = games, isLoadingGames = false) }
             } catch (e: Exception) {
-                Log.e("SettingsViewModel", "Failed to fetch my games", e)
-                emptyList()
+                Log.w("SettingsViewModel", "[settings] my games load failed", e)
+                _uiState.update { it.copy(isLoadingGames = false, myGamesErrorRes = e.errorMessageRes()) }
             }
-            _uiState.update { it.copy(myGames = games, isLoadingGames = false) }
         }
     }
 

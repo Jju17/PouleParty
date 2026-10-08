@@ -26,13 +26,12 @@ import dev.rahier.pouleparty.ui.gamecreation.StepContainer
 import dev.rahier.pouleparty.ui.gamecreation.formatDuration
 import dev.rahier.pouleparty.ui.theme.CROrange
 import dev.rahier.pouleparty.ui.theme.gameboyStyle
-import java.text.SimpleDateFormat
 import java.util.Date
 
 @Composable
 fun RecapStep(
     state: GameCreationUiState,
-    dateFormat: SimpleDateFormat,
+    dateFormat: (Date) -> String,
     onCodeCopied: () -> Unit
 ) {
     val game = state.game
@@ -79,7 +78,7 @@ fun RecapStep(
                 HorizontalDivider()
                 RecapRow(
                     label = stringResource(R.string.start_at),
-                    value = dateFormat.format(game.startDate)
+                    value = dateFormat(game.startDate)
                 )
                 HorizontalDivider()
                 RecapRow(
@@ -89,7 +88,7 @@ fun RecapStep(
                 HorizontalDivider()
                 RecapRow(
                     label = stringResource(R.string.ends_at),
-                    value = dateFormat.format(endTime)
+                    value = dateFormat(endTime)
                 )
                 HorizontalDivider()
                 RecapRow(

@@ -1,5 +1,10 @@
 package dev.rahier.pouleparty.ui.settings
 
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.res.pluralStringResource
+import java.util.Date
+import dev.rahier.pouleparty.ui.common.currentLocale
+import dev.rahier.pouleparty.util.formatDateTime
 import androidx.core.net.toUri
 import dev.rahier.pouleparty.model.MyGame
 import dev.rahier.pouleparty.model.MyGameRole
@@ -43,7 +48,6 @@ import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.model.GameMod
 import dev.rahier.pouleparty.model.GameStatus
 import dev.rahier.pouleparty.ui.theme.*
-import java.text.SimpleDateFormat
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -403,7 +407,8 @@ private fun SettingsCard(
 
 @Composable
 private fun MyGamesSection(state: SettingsUiState, viewModel: SettingsViewModel) {
-    val dateFormat = remember { SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault()) }
+    val locale = currentLocale()
+    val dateFormat: (Date) -> String = remember(locale) { { formatDateTime(it, locale) } }
 
     SettingsCard {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -419,6 +424,16 @@ private fun MyGamesSection(state: SettingsUiState, viewModel: SettingsViewModel)
                 state.isLoadingGames -> {
                     Box(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(color = CROrange, modifier = Modifier.size(24.dp))
+                    }
+                }
+                state.myGamesErrorRes != null -> {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Text(stringResource(R.string.my_games_load_failed), color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
+                        Text(stringResource(state.myGamesErrorRes), color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
+                        TextButton(onClick = { viewModel.onIntent(SettingsIntent.RetryMyGames) }) { Text(stringResource(R.string.retry)) }
                     }
                 }
                 state.myGames.isEmpty() -> {
@@ -491,7 +506,7 @@ private fun RoleBadge(role: MyGameRole) {
 @Composable
 private fun GameRow(
     myGame: MyGame,
-    dateFormat: SimpleDateFormat,
+    dateFormat: (Date) -> String,
     onClick: () -> Unit
 ) {
     val game = myGame.game
@@ -531,7 +546,7 @@ private fun GameRow(
                 RoleBadge(role = myGame.role)
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    dateFormat.format(game.startDate),
+                    dateFormat(game.startDate),
                     style = gameboyStyle(7),
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
                     maxLines = 1,
@@ -571,7 +586,7 @@ private fun GameStatusBadge(status: GameStatus) {
 @Composable
 private fun GameDetailDialog(
     myGame: MyGame,
-    dateFormat: SimpleDateFormat,
+    dateFormat: (Date) -> String,
     onDismiss: () -> Unit,
     onViewLeaderboard: () -> Unit
 ) {
@@ -620,31 +635,32 @@ private fun GameDetailDialog(
             HorizontalDivider()
 
             // Info
-            DetailRow("Game Code", game.gameCode)
-            DetailRow("Found Code", game.foundCode)
+            DetailRow(stringResource(R.string.detail_game_code), game.gameCode)
 
             HorizontalDivider()
 
             // Players
-            DetailRow("Max Players", "${game.maxPlayers}")
-            DetailRow("Hunters Joined", "${game.hunterIds.size}")
-            DetailRow("Winners", "${game.winners.size}")
-            if (game.chickenCanSeeHunters) DetailRow("Chicken Sees Hunters", "Yes")
+            DetailRow(stringResource(R.string.detail_max_players), "${game.maxPlayers}")
+            DetailRow(stringResource(R.string.detail_hunters_joined), "${game.hunterIds.size}")
+            DetailRow(stringResource(R.string.detail_winners), "${game.winners.size}")
+            if (game.chickenCanSeeHunters) DetailRow(stringResource(R.string.detail_chicken_sees_hunters), stringResource(R.string.value_yes))
 
             HorizontalDivider()
 
             // Timing
-            DetailRow("Start", dateFormat.format(game.startDate))
-            DetailRow("End", dateFormat.format(game.endDate))
-            if (game.timing.headStartMinutes > 0) DetailRow("Head Start", "${game.timing.headStartMinutes.toInt()} min")
-            DetailRow("Power-ups", if (game.powerUps.enabled) "On" else "Off")
+            DetailRow(stringResource(R.string.detail_start), dateFormat(game.startDate))
+            DetailRow(stringResource(R.string.detail_end), dateFormat(game.endDate))
+            val headStart = game.timing.headStartMinutes.toInt()
+            if (headStart > 0) DetailRow(stringResource(R.string.detail_head_start), pluralStringResource(R.plurals.value_minutes, headStart, headStart))
+            DetailRow(stringResource(R.string.detail_power_ups), stringResource(if (game.powerUps.enabled) R.string.value_on else R.string.value_off))
 
             HorizontalDivider()
 
             // Zone
-            DetailRow("Initial Radius", "${game.zone.radius.toInt()}m")
-            DetailRow("Shrink Interval", "${game.zone.shrinkIntervalMinutes.toInt()} min")
-            DetailRow("Shrink Amount", "${game.zone.shrinkMetersPerUpdate.toInt()}m")
+            val interval = game.zone.shrinkIntervalMinutes.toInt()
+            DetailRow(stringResource(R.string.detail_initial_radius), stringResource(R.string.value_meters, game.zone.radius.toInt()))
+            DetailRow(stringResource(R.string.detail_shrink_interval), pluralStringResource(R.plurals.value_minutes, interval, interval))
+            DetailRow(stringResource(R.string.detail_shrink_amount), stringResource(R.string.value_meters, game.zone.shrinkMetersPerUpdate.toInt()))
 
             Spacer(Modifier.height(32.dp))
         }
