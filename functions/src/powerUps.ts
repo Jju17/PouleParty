@@ -7,7 +7,7 @@ const REGION = "europe-west1";
 // MUST stay in lockstep with iOS `PowerUp.PowerUpType.durationSeconds`
 // and Android `PowerUpType` — drift would let a client claim a longer
 // effect than the server commits to `activeEffects`.
-const EFFECT_DURATION_SECONDS: Record<string, number | null> = {
+export const EFFECT_DURATION_SECONDS: Record<string, number | null> = {
   radarPing: 3,
   invisibility: 30,
   zoneFreeze: 120,

@@ -1,3 +1,4 @@
+import * as logger from "firebase-functions/logger";
 import { haversineDistance } from "./powerUpSpawn";
 
 /**
@@ -48,7 +49,7 @@ export async function snapToRoad(
       if (resp.status === 429 || resp.status >= 500) {
         // Transient error, loop for another attempt.
         lastError = new Error(`Mapbox ${resp.status}`);
-        console.warn(`[spawn] snapToRoad ${resp.status} for ${lat},${lng}, attempt ${attempt + 1}/${maxRetries}`);
+        logger.warn("[spawn] snapToRoad transient status", { status: resp.status, attempt: attempt + 1, maxRetries });
         continue;
       }
       if (!resp.ok) {
@@ -76,7 +77,7 @@ export async function snapToRoad(
       // full request URL including `access_token=…`, which would land
       // the Mapbox secret in Cloud Logging.
       const message = err instanceof Error ? err.message : String(err);
-      console.warn(`[spawn] snapToRoad attempt ${attempt + 1}/${maxRetries} failed for ${lat},${lng}: ${message}`);
+      logger.warn("[spawn] snapToRoad attempt failed", { attempt: attempt + 1, maxRetries, message });
     }
   }
   // HIGH-2: keep `lastError` message-only here too.
