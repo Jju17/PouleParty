@@ -21,6 +21,7 @@ struct SettingsFeature {
         var showingDeleteError = false
         var showingProfanityAlert = false
         var showingEmptyNicknameAlert = false
+        var isNicknameSavedVisible = false
         var myGames: [MyGame] = []
         var isLoadingGames = false
         var myGamesError: String?
@@ -36,6 +37,8 @@ struct SettingsFeature {
         case deleteSuccessAlertDismissed
         case emptyNicknameAlertDismissed
         case nicknameSubmitted(String)
+        case nicknameSaved
+        case nicknameSavedConfirmationExpired
         case profanityAlertDismissed
         case onAppear
         case myGamesLoaded([MyGame])
@@ -46,6 +49,9 @@ struct SettingsFeature {
 
     @Dependency(\.userClient) var userClient
     @Dependency(\.apiClient) var apiClient
+    @Dependency(\.continuousClock) var clock
+
+    private enum CancelID { case nicknameSavedConfirmation }
 
     var body: some ReducerOf<Self> {
         BindingReducer()
@@ -64,10 +70,22 @@ struct SettingsFeature {
                     state.showingProfanityAlert = true
                     return .none
                 }
+                guard trimmed != state.savedNickname else { return .none }
                 state.$savedNickname.withLock { $0 = trimmed }
-                return .run { [userClient] _ in
+                return .run { [userClient] send in
                     await userClient.saveNickname(trimmed)
+                    await send(.nicknameSaved)
                 }
+            case .nicknameSaved:
+                state.isNicknameSavedVisible = true
+                return .run { [clock] send in
+                    try await clock.sleep(for: .seconds(2))
+                    await send(.nicknameSavedConfirmationExpired)
+                }
+                .cancellable(id: CancelID.nicknameSavedConfirmation, cancelInFlight: true)
+            case .nicknameSavedConfirmationExpired:
+                state.isNicknameSavedVisible = false
+                return .none
             case .profanityAlertDismissed:
                 state.showingProfanityAlert = false
                 return .none
@@ -150,6 +168,7 @@ struct SettingsView: View {
                 SettingsNicknameSection(
                     text: $nicknameText,
                     isFocused: $isNicknameFocused,
+                    isSavedVisible: store.isNicknameSavedVisible,
                     onSubmit: { store.send(.nicknameSubmitted($0)) }
                 )
                 SettingsMyGamesSection(

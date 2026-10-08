@@ -13,7 +13,9 @@ import SwiftUI
 struct SettingsNicknameSection: View {
     @Binding var text: String
     var isFocused: FocusState<Bool>.Binding
+    let isSavedVisible: Bool
     let onSubmit: (String) -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -43,9 +45,23 @@ struct SettingsNicknameSection: View {
                 }
                 .onSubmit { onSubmit(text) }
 
-            BangerText("\(text.count)/\(AppConstants.nicknameMaxLength)", size: 14)
-                .foregroundStyle(Color.onBackground.opacity(0.4))
-                .frame(maxWidth: .infinity, alignment: .trailing)
+            HStack {
+                if isSavedVisible {
+                    Label("Nickname saved!", systemImage: "checkmark.circle.fill")
+                        .font(.banger(size: 14))
+                        .foregroundStyle(Color.onBackground)
+                        .transition(.opacity)
+                }
+                Spacer()
+                BangerText("\(text.count)/\(AppConstants.nicknameMaxLength)", size: 14)
+                    .foregroundStyle(Color.onBackground.opacity(0.6))
+            }
+            .animation(reduceMotion ? nil : .easeInOut, value: isSavedVisible)
+            .onChange(of: isSavedVisible) { _, visible in
+                if visible {
+                    AccessibilityNotification.Announcement(String(localized: "Nickname saved!")).post()
+                }
+            }
         }
         .settingsCard()
     }

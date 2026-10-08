@@ -64,6 +64,7 @@ struct NicknameSyncTests {
         let store = TestStore(initialState: SettingsFeature.State()) {
             SettingsFeature()
         } withDependencies: {
+            $0.continuousClock = ImmediateClock()
             $0.userClient.saveNickname = { nickname in
                 savedNickname = nickname
             }
@@ -81,6 +82,7 @@ struct NicknameSyncTests {
         let store = TestStore(initialState: SettingsFeature.State()) {
             SettingsFeature()
         } withDependencies: {
+            $0.continuousClock = ImmediateClock()
             $0.userClient.saveNickname = { nickname in
                 savedNickname = nickname
             }
@@ -141,5 +143,56 @@ struct NicknameSyncTests {
         await store.send(.nicknameSubmitted("   "))
 
         #expect(saveWasCalled == false)
+    }
+
+    // MARK: - Settings saved confirmation
+
+    @Test func settingsShowsSavedConfirmationThenHidesIt() async {
+        let clock = TestClock()
+        let store = TestStore(initialState: SettingsFeature.State()) {
+            SettingsFeature()
+        } withDependencies: {
+            $0.userClient.saveNickname = { _ in }
+            $0.continuousClock = clock
+        }
+        store.exhaustivity = .off
+
+        await store.send(.nicknameSubmitted("Erin"))
+        await store.receive(\.nicknameSaved) {
+            $0.isNicknameSavedVisible = true
+        }
+        await clock.advance(by: .seconds(2))
+        await store.receive(\.nicknameSavedConfirmationExpired) {
+            $0.isNicknameSavedVisible = false
+        }
+    }
+
+    @Test func settingsUnchangedNicknameIsNotSavedAgain() async {
+        var saveCount = 0
+        let state = SettingsFeature.State()
+        state.$savedNickname.withLock { $0 = "Frank" }
+
+        let store = TestStore(initialState: state) {
+            SettingsFeature()
+        } withDependencies: {
+            $0.userClient.saveNickname = { _ in saveCount += 1 }
+        }
+
+        await store.send(.nicknameSubmitted("  Frank "))
+
+        #expect(saveCount == 0)
+        #expect(store.state.isNicknameSavedVisible == false)
+    }
+
+    @Test func settingsRejectedNicknameShowsNoConfirmation() async {
+        let store = TestStore(initialState: SettingsFeature.State()) {
+            SettingsFeature()
+        }
+
+        await store.send(.nicknameSubmitted("   ")) {
+            $0.showingEmptyNicknameAlert = true
+        }
+
+        #expect(store.state.isNicknameSavedVisible == false)
     }
 }

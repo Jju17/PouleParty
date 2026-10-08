@@ -2895,6 +2895,22 @@
         }
       }
     },
+    "Nickname saved!": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pseudo enregistré !"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bijnaam opgeslagen!"
+          }
+        }
+      }
+    },
     "No active game found with this code. Check the code and try again.": {
       "localizations": {
         "fr": {
