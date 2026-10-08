@@ -136,6 +136,7 @@ struct HomeFeature {
         }
     }
 
+    @Dependency(\.openURL) var openURL
     @Dependency(\.apiClient) var apiClient
     @Dependency(\.continuousClock) var clock
     @Dependency(\.locationClient) var locationClient
@@ -245,12 +246,9 @@ struct HomeFeature {
                 return .send(.chickenGameStarted(game))
             case .destination(.presented(.alert(.openSettings))):
                 state.destination = nil
-                return .run { _ in
-                    await MainActor.run {
-                        if let url = URL(string: UIApplication.openSettingsURLString) {
-                            UIApplication.shared.open(url)
-                        }
-                    }
+                return .run { [openURL] _ in
+                    guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+                    await openURL(url)
                 }
             case .destination(.presented(.settings(.deleteSuccessAlertDismissed))):
                 state.destination = nil

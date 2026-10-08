@@ -129,6 +129,7 @@ struct GameMasterMapFeature {
     }
 
     @Dependency(\.apiClient) var apiClient
+    @Dependency(\.hapticClient) var hapticClient
     @Dependency(\.now) var now
     @Dependency(\.continuousClock) var clock
 
@@ -211,6 +212,7 @@ struct GameMasterMapFeature {
             case let .internal(.gameUpdated(game)):
                 let endedNow = game.status == .done && state.game.status != .done
                 state.game = game
+                if endedNow { hapticClient.notify(.warning) }
                 let stopRuntime: Effect<Action> = endedNow ? .cancel(id: CancelID.runtime) : .none
                 // QA debug games drive zone shrinks server-side (the
                 // `advanceStep` callable rewinds the start anchor), so re-derive

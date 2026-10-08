@@ -173,6 +173,7 @@ struct ChickenMapFeature {
     }
 
     @Dependency(\.apiClient) var apiClient
+    @Dependency(\.hapticClient) var hapticClient
     @Dependency(\.now) var now
     @Dependency(\.continuousClock) var clock
     @Dependency(\.liveActivityClient) var liveActivityClient
@@ -729,7 +730,7 @@ struct ChickenMapFeature {
                 guard state.hasHuntStarted else { return .none }
 
                 if !state.isGameOver, checkGameOverByTime(endDate: state.game.endDate, now: state.nowDate) {
-                    HapticManager.notification(.warning)
+                    hapticClient.notify(.warning)
                     state.isGameOver = true
                     locationClient.stopTracking()
                     let endState = gameOverLiveActivityState(game: state.game, radius: state.radius)

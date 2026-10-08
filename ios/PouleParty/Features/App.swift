@@ -50,8 +50,9 @@ struct AppFeature {
                     }
                 }
             case .newUserSignedIn:
-                UserDefaults.standard.set(false, forKey: AppConstants.prefOnboardingCompleted)
-                state = .onboarding(OnboardingFeature.State())
+                let onboarding = OnboardingFeature.State()
+                onboarding.$hasCompletedOnboarding.withLock { $0 = false }
+                state = .onboarding(onboarding)
                 return .none
             case .onboarding(.onboardingCompleted):
                 state = .home(HomeFeature.State())

@@ -182,6 +182,7 @@ struct HunterMapFeature {
     }
 
     @Dependency(\.apiClient) var apiClient
+    @Dependency(\.hapticClient) var hapticClient
     @Dependency(\.now) var now
     @Dependency(\.userClient) var userClient
     @Dependency(\.continuousClock) var clock
@@ -444,7 +445,7 @@ struct HunterMapFeature {
             case let .internal(.wrongCodeRejected(lockedUntil)):
                 state.isSubmittingWinner = false
                 state.pendingFoundCode = nil
-                HapticManager.notification(.error)
+                hapticClient.notify(.error)
                 state.wrongCodeAttempts += 1
                 analyticsClient.hunterWrongCode(attemptNumber: state.wrongCodeAttempts)
                 if state.wrongCodeAttempts >= remoteConfigClient.codeMaxWrongAttempts() {
@@ -875,7 +876,7 @@ struct HunterMapFeature {
                 guard state.hasGameStarted else { return .none }
 
                 if !state.isGameOver, checkGameOverByTime(endDate: state.game.endDate, now: state.nowDate) {
-                    HapticManager.notification(.warning)
+                    hapticClient.notify(.warning)
                     state.isGameOver = true
                     locationClient.stopTracking()
                     let endState = gameOverLiveActivityState(game: state.game, radius: state.radius)
