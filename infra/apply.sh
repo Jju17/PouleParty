@@ -3,7 +3,7 @@
 # Usage: infra/apply.sh <firebase-project-id>
 set -euo pipefail
 project="${1:?project id required, e.g. pouleparty-ba586 or pouleparty-prod}"
-bucket="${BUCKET:-$(gcloud storage buckets list --project "$project" --format='value(name)' | grep -E 'firebasestorage\.app$|appspot\.com$' | head -1)}"
+bucket="${BUCKET:-$(gcloud storage buckets list --project "$project" --format='value(name)' | grep -Fx -e "$project.firebasestorage.app" -e "$project.appspot.com" | head -1)}"
 [[ -n "$bucket" ]] || { echo "No Firebase Storage bucket found; pass BUCKET=<name>"; exit 1; }
 
 echo "== Firestore daily backups, kept 14 days"
