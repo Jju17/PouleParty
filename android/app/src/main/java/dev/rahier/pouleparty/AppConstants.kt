@@ -11,6 +11,7 @@ object AppConstants {
     const val PREF_IS_MUSIC_MUTED = "isMusicMuted"
     const val PREF_LAST_MIGRATED_VERSION = "lastMigratedVersion"
     const val PREF_PENDING_CHALLENGES = "pendingChallenges"
+    const val PREF_PUSH_REGISTRATION_ID = "pushRegistrationId"
 
     // Firestore Collections
     const val COLLECTION_GAMES = "games"

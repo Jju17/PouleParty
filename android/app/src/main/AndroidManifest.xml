@@ -51,6 +51,9 @@
 
         <!-- FCM default notification channel (used when the server does not specify one) -->
         <meta-data
+            android:name="firebase_messaging_installation_id_enabled"
+            android:value="true" />
+        <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="@string/notification_channel_game_events_id" />
         <!-- AND-L2 (store-audit 2026-05-18): monochrome silhouette so the

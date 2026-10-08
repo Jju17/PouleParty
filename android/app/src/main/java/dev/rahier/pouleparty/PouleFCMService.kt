@@ -1,18 +1,22 @@
 package dev.rahier.pouleparty
 
+import dagger.hilt.android.AndroidEntryPoint
+import dev.rahier.pouleparty.data.PushRegistrar
+import javax.inject.Inject
 import android.app.PendingIntent
 import android.content.Intent
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
-import dev.rahier.pouleparty.util.getTrimmedString
 import java.util.concurrent.atomic.AtomicInteger
 
+@AndroidEntryPoint
 class PouleFCMService : FirebaseMessagingService() {
+
+    @Inject lateinit var pushRegistrar: PushRegistrar
+
 
     companion object {
         private const val TAG = "PouleFCMService"
@@ -36,9 +40,9 @@ class PouleFCMService : FirebaseMessagingService() {
         }
     }
 
-    override fun onNewToken(token: String) {
-        super.onNewToken(token)
-        saveTokenToFirestore(token)
+    override fun onRegistered(installationId: String) {
+        super.onRegistered(installationId)
+        pushRegistrar.onRegistered(installationId)
     }
 
     override fun onMessageReceived(message: RemoteMessage) {
@@ -118,27 +122,5 @@ class PouleFCMService : FirebaseMessagingService() {
         } catch (e: SecurityException) {
             Log.w(TAG, "Missing POST_NOTIFICATIONS permission", e)
         }
-    }
-
-    private fun saveTokenToFirestore(token: String) {
-        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
-        val data = mutableMapOf<String, Any>(
-            "token" to token,
-            "platform" to "android",
-            "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
-        )
-        // Always include the nickname so it's restored if the document was recreated
-        val prefs = getSharedPreferences(AppConstants.PREFS_NAME, MODE_PRIVATE)
-        val nickname = prefs.getTrimmedString(AppConstants.PREF_USER_NICKNAME)
-        if (nickname.isNotEmpty()) {
-            data["nickname"] = nickname
-        }
-        FirebaseFirestore.getInstance()
-            .collection(AppConstants.COLLECTION_USERS)
-            .document(userId)
-            .set(data, com.google.firebase.firestore.SetOptions.merge())
-            .addOnFailureListener { e ->
-                Log.e(TAG, "Failed to save FCM token", e)
-            }
     }
 }

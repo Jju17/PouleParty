@@ -3,10 +3,8 @@ package dev.rahier.pouleparty.data
 import android.util.Log
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentSnapshot
-import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
-import com.google.firebase.firestore.SetOptions
 import dev.rahier.pouleparty.AppConstants
 import dev.rahier.pouleparty.model.Challenge
 import dev.rahier.pouleparty.model.ChallengeCompletion
@@ -63,8 +61,6 @@ interface GameRepository {
     fun myCompletionFlow(gameId: String, hunterId: String): Flow<ChallengeCompletion?>
     fun pendingSubmissionsFlow(gameId: String): Flow<List<ChallengeSubmission>>
     fun hunterSubmissionsFlow(gameId: String, hunterId: String): Flow<List<ChallengeSubmission>>
-    suspend fun saveNickname(userId: String, nickname: String)
-    suspend fun deleteUser(userId: String)
     suspend fun reportPlayer(reporterId: String, reportedUserId: String, reportedNickname: String, gameId: String)
 }
 
@@ -289,19 +285,6 @@ class FirestoreGameRepository @Inject constructor(
         "Hunter submissions ($gameId)",
         game(gameId).collection(AppConstants.SUBCOLLECTION_CHALLENGE_SUBMISSIONS).whereEqualTo("hunterId", hunterId),
     ) { doc -> safeToObject<ChallengeSubmission>(doc, "Hunter submissions")?.copy(id = doc.id) }
-
-    override suspend fun saveNickname(userId: String, nickname: String) {
-        if (userId.isEmpty()) return
-        withRetry("saveNickname") {
-            firestore.collection(AppConstants.COLLECTION_USERS).document(userId)
-                .set(mapOf("nickname" to nickname, "updatedAt" to FieldValue.serverTimestamp()), SetOptions.merge())
-                .await()
-        }
-    }
-
-    override suspend fun deleteUser(userId: String) {
-        firestore.collection(AppConstants.COLLECTION_USERS).document(userId).delete().await()
-    }
 
     override suspend fun reportPlayer(reporterId: String, reportedUserId: String, reportedNickname: String, gameId: String) {
         firestore.collection(AppConstants.COLLECTION_REPORTS).add(

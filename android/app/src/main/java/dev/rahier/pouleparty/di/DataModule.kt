@@ -12,6 +12,8 @@ import dev.rahier.pouleparty.data.GameFunctions
 import dev.rahier.pouleparty.data.GameRepository
 import dev.rahier.pouleparty.data.PresenceRepository
 import dev.rahier.pouleparty.data.RealtimePresenceRepository
+import dev.rahier.pouleparty.data.FirestoreUserProfileRepository
+import dev.rahier.pouleparty.data.UserProfileRepository
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -20,4 +22,5 @@ abstract class DataModule {
     @Binds abstract fun presenceRepository(impl: RealtimePresenceRepository): PresenceRepository
     @Binds abstract fun gameFunctions(impl: FirebaseGameFunctions): GameFunctions
     @Binds abstract fun challengeSubmissions(impl: FirebaseChallengeSubmissionRepository): ChallengeSubmissionRepository
+    @Binds abstract fun userProfiles(impl: FirestoreUserProfileRepository): UserProfileRepository
 }

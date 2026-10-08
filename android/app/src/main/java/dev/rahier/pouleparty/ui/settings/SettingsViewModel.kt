@@ -8,6 +8,7 @@ import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.rahier.pouleparty.AppConstants
 import dev.rahier.pouleparty.data.GameRepository
+import dev.rahier.pouleparty.data.UserProfileRepository
 import dev.rahier.pouleparty.model.MyGame
 import dev.rahier.pouleparty.util.ProfanityFilter
 import dev.rahier.pouleparty.util.getTrimmedString
@@ -43,7 +44,8 @@ data class ReportTarget(
 class SettingsViewModel @Inject constructor(
     private val auth: FirebaseAuth,
     private val prefs: SharedPreferences,
-    private val gameRepository: GameRepository
+    private val gameRepository: GameRepository,
+    private val profiles: UserProfileRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -154,7 +156,7 @@ class SettingsViewModel @Inject constructor(
         _uiState.update { it.copy(nickname = trimmed, isShowingNicknameSaved = true) }
         viewModelScope.launch {
             auth.currentUser?.uid?.let { userId ->
-                runCatching { gameRepository.saveNickname(userId, trimmed) }
+                runCatching { profiles.saveNickname(userId, trimmed) }
                     .onFailure { Log.w("SettingsViewModel", "[settings] nickname sync failed", it) }
             }
         }
@@ -184,7 +186,7 @@ class SettingsViewModel @Inject constructor(
                 // Delete Firestore user profile first — the security rule requires
                 // auth.uid == userId, which stops holding once the auth user is deleted.
                 if (userId != null) {
-                    gameRepository.deleteUser(userId)
+                    profiles.deleteProfile(userId)
                 }
                 auth.currentUser?.delete()?.await()
                 prefs.edit().clear().apply()
