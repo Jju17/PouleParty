@@ -38,7 +38,14 @@ struct ApiClient {
     var myCompletionStream: (_ gameId: String, _ hunterId: String) -> AsyncStream<ChallengeCompletion?>
     var hunterSubmissionsStream: (_ gameId: String, _ hunterId: String) -> AsyncStream<[ChallengeSubmission]>
     var pendingSubmissionsStream: (_ gameId: String) -> AsyncStream<[ChallengeSubmission]>
-    var submitChallenge: (_ gameId: String, _ challengeId: String, _ hunterId: String, _ type: Challenge.ChallengeType, _ mediaData: Data, _ mediaType: ChallengeSubmission.MediaType) async throws -> ChallengeSubmission
+    var submitChallenge: (
+        _ gameId: String,
+        _ challengeId: String,
+        _ hunterId: String,
+        _ type: Challenge.ChallengeType,
+        _ mediaData: Data,
+        _ mediaType: ChallengeSubmission.MediaType
+    ) async throws -> ChallengeSubmission
     var validateChallengeSubmission: (_ gameId: String, _ submissionId: String, _ accept: Bool) async throws -> Void
     var applyOutOfZonePenalty: (_ gameId: String) async throws -> Void
     var reportPlayer: (_ gameId: String, _ reportedUserId: String, _ reportedNickname: String) async throws -> Void

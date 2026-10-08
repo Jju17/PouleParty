@@ -1,4 +1,3 @@
-
 import FirebaseAppCheck
 import FirebaseCore
 import Foundation

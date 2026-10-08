@@ -24,6 +24,7 @@ struct GameMasterMapContent: View {
     )
     @State private var mapBearing: Double = 0
     @State private var powerUpPulseClock: TimeInterval = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Map(viewport: $viewport) {
@@ -61,8 +62,13 @@ struct GameMasterMapContent: View {
             Task { @MainActor in mapBearing = newBearing }
         }
         .ignoresSafeArea()
-        .onReceive(Timer.publish(every: 0.1, on: .main, in: .common).autoconnect()) { _ in
-            powerUpPulseClock = Date().timeIntervalSinceReferenceDate
+        .task(id: !reduceMotion && !store.powerUpAnnotations.isEmpty) {
+            // Only redraw the map for the pulse while power-ups are on screen.
+            guard !reduceMotion, !store.powerUpAnnotations.isEmpty else { return }
+            while !Task.isCancelled {
+                powerUpPulseClock = Date().timeIntervalSinceReferenceDate
+                do { try await Task.sleep(for: .milliseconds(100)) } catch { return }
+            }
         }
         .onChange(of: store.mapCircle) { _, newCircle in
             guard let center = newCircle?.center, let radius = newCircle?.radius else { return }

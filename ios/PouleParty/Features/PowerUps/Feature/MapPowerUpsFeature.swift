@@ -18,8 +18,8 @@ struct MapPowerUpsFeature {
     struct State: Equatable {
         var available: [PowerUp] = []
         var collected: [PowerUp] = []
-        var lastActivatedType: PowerUp.PowerUpType? = nil
-        var notification: String? = nil
+        var lastActivatedType: PowerUp.PowerUpType?
+        var notification: String?
         var showInventory: Bool = false
         var collectingIds: Set<String> = []
     }

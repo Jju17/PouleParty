@@ -1,4 +1,3 @@
-
 import CoreLocation
 import FirebaseFirestore
 import Foundation

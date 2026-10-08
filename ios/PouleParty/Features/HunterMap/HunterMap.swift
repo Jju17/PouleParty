@@ -1,4 +1,3 @@
-
 import ComposableArchitecture
 import FirebaseFirestore
 import MapboxMaps
@@ -29,27 +28,27 @@ struct HunterMapFeature {
         var circles: [ZoneCircle] = []
         var zoneScheduleError: String?
         var showGameInfo: Bool = false
-        var winnerNotification: String? = nil
-        var countdownNumber: Int? = nil
-        var countdownText: String? = nil
+        var winnerNotification: String?
+        var countdownNumber: Int?
+        var countdownText: String?
         var wrongCodeAttempts: Int = 0
-        var codeCooldownUntil: Date? = nil
+        var codeCooldownUntil: Date?
         var isLeaving: Bool = false
         var userLocation: CLLocationCoordinate2D?
         var isOutsideZone: Bool = false
         var lastLiveActivityState: PoulePartyAttributes.ContentState?
         var powerUps: MapPowerUpsFeature.State = .init()
-        var previewCircle: CircleOverlay? = nil
-        var decoyLocation: CLLocationCoordinate2D? = nil
+        var previewCircle: CircleOverlay?
+        var decoyLocation: CLLocationCoordinate2D?
         // Latest known Chicken position broadcasted via
         // `chickenLocationsStream`. Tracked in every mode (not just
         // followTheChicken) so Radar Ping has a fresh point to reveal
         // the moment it's activated. Hunter-map rendering gates
         // visibility on `game.isRadarPingActive`, without that gate
         // this would be a free locator.
-        var chickenLocation: CLLocationCoordinate2D? = nil
+        var chickenLocation: CLLocationCoordinate2D?
         var hasChallenges: Bool = false
-        var pendingFoundCode: String? = nil
+        var pendingFoundCode: String?
         var pendingWinnerAttempts: Int = 0
         // Raised while a `submitFoundCode` CF call is in flight so a fast
         // double-tap on the submit button can't enqueue the call twice.
@@ -60,7 +59,7 @@ struct HunterMapFeature {
 
         var isGameOver: Bool = false
 
-        var lastPenaltyAt: Date? = nil
+        var lastPenaltyAt: Date?
 
         // MARK: - MapFeatureState passthroughs (child → parent surface)
         var availablePowerUps: [PowerUp] { powerUps.available }
@@ -999,4 +998,3 @@ struct HunterMapFeature {
         }
     }
 }
-

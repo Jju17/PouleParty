@@ -7,7 +7,7 @@ import SwiftUI
 
 struct GameInfoSheet: View {
     let game: Game
-    var onCancelGame: (() -> Void)? = nil
+    var onCancelGame: (() -> Void)?
     var leaveGameLabel: String = "Cancel game"
     @Environment(\.dismiss) private var dismiss
 

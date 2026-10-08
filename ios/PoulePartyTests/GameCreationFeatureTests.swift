@@ -1,4 +1,3 @@
-
 import ComposableArchitecture
 import CoreLocation
 import FirebaseFirestore
@@ -314,10 +313,8 @@ struct GameCreationFeatureTests {
     @Test func powerUpTypeToggledCannotRemoveLastAvailableTypeInFollowTheChicken() async {
         let state = makeState(gameMode: .followTheChicken)
         state.$game.withLock { game in
-            for type in PowerUp.PowerUpType.allCases {
-                if !game.powerUps.enabledTypes.contains(type.rawValue) {
-                    game.powerUps.enabledTypes.append(type.rawValue)
-                }
+            for type in PowerUp.PowerUpType.allCases where !game.powerUps.enabledTypes.contains(type.rawValue) {
+                game.powerUps.enabledTypes.append(type.rawValue)
             }
         }
         let store = makeStore(state: state)

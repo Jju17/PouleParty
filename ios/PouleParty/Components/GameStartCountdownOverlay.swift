@@ -59,12 +59,12 @@ struct PreGameOverlay: View {
     let targetDate: Date
     let nowDate: Date
     var connectedHunters: Int = 0
-    var onCancelGame: (() -> Void)? = nil
+    var onCancelGame: (() -> Void)?
     var isManualStart: Bool = false
     var isLaunching: Bool = false
-    var launchErrorMessage: String? = nil
-    var onLaunchTapped: (() -> Void)? = nil
-    var onLaunchErrorDismissed: (() -> Void)? = nil
+    var launchErrorMessage: String?
+    var onLaunchTapped: (() -> Void)?
+    var onLaunchErrorDismissed: (() -> Void)?
 
     @State private var codeCopied = false
 

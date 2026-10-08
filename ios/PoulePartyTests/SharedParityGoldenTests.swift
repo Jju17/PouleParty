@@ -42,14 +42,15 @@ struct SharedParityGoldenTests {
         let pickInitialZoneCenter: [Pick]
     }
 
-    private let golden: Golden = {
+    private let golden: Golden
+
+    init() throws {
         let url = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .appendingPathComponent("../../parity/golden.json")
             .standardized
-        let data = try! Data(contentsOf: url)
-        return try! JSONDecoder().decode(Golden.self, from: data)
-    }()
+        golden = try JSONDecoder().decode(Golden.self, from: Data(contentsOf: url))
+    }
 
     private func expectClose(_ expected: LatLng, _ actual: CLLocationCoordinate2D) {
         #expect(abs(expected.latitude - actual.latitude) < tolerance)

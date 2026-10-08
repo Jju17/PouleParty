@@ -1,4 +1,3 @@
-
 import ComposableArchitecture
 import FirebaseFirestore
 import MapboxMaps
@@ -34,9 +33,9 @@ struct GameMasterMapFeature {
         var showGameInfo: Bool = false
         var showHuntersDrawer: Bool = false
         var pendingSubmissionsCount: Int = 0
-        var winnerNotification: String? = nil
-        var countdownNumber: Int? = nil
-        var countdownText: String? = nil
+        var winnerNotification: String?
+        var countdownNumber: Int?
+        var countdownText: String?
         var previousWinnersCount: Int = -1
         var pendingChickenDesignation: Registration?
         var designationError: String?

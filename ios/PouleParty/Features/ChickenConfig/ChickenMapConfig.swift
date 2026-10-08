@@ -1,4 +1,3 @@
-
 import ComposableArchitecture
 import CoreLocation
 import MapboxMaps
@@ -182,7 +181,7 @@ struct ChickenMapConfigView: View {
     }
 
     var body: some View {
-        GeometryReader { proxy in
+        GeometryReader { _ in
             ZStack {
                 mapContent
 

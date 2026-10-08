@@ -45,7 +45,7 @@ struct Game: Codable, Equatable, Identifiable {
         var end: Timestamp = .init(date: Date.now.addingTimeInterval(3900))
         var headStartMinutes: Double = 2
         /// Set by the server at LAUNCH for manual-start games.
-        var actualStart: Timestamp? = nil
+        var actualStart: Timestamp?
     }
 
     struct Zone: Codable, Equatable {

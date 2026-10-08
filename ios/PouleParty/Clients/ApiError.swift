@@ -38,7 +38,7 @@ enum ApiErrorCode: String, CaseIterable, Equatable, Sendable {
 /// A failure the UI can translate; the server message is never displayed.
 struct ApiError: Error, Equatable {
     let code: ApiErrorCode
-    var lockedUntil: Date? = nil
+    var lockedUntil: Date?
 }
 
 extension ApiError {

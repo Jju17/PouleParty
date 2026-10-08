@@ -62,7 +62,7 @@ struct PowerUpTests {
     }
 
     @Test func powerUpTypeDecodesUnknownToZonePreview() throws {
-        let decoded = try JSONDecoder().decode(PowerUp.PowerUpType.self, from: #""futureType""#.data(using: .utf8)!)
+        let decoded = try JSONDecoder().decode(PowerUp.PowerUpType.self, from: Data(#""futureType""#.utf8))
         #expect(decoded == .zonePreview)
     }
 
@@ -76,7 +76,7 @@ struct PowerUpTests {
             ("jammer", .jammer),
         ]
         for (raw, expected) in types {
-            let decoded = try JSONDecoder().decode(PowerUp.PowerUpType.self, from: "\"\(raw)\"".data(using: .utf8)!)
+            let decoded = try JSONDecoder().decode(PowerUp.PowerUpType.self, from: Data("\"\(raw)\"".utf8))
             #expect(decoded == expected, "Expected \(expected) for raw value \(raw)")
         }
     }

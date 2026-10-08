@@ -46,6 +46,7 @@ struct DecoyMapMarker: View {
 /// indistinguishable to the Hunter.
 struct ChickenMapMarker: View {
     @State private var halo: CGFloat = 0.6
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ZStack {
@@ -60,6 +61,7 @@ struct ChickenMapMarker: View {
         }
         .shadow(color: Color.powerupRadar.opacity(0.6), radius: 6)
         .onAppear {
+            guard !reduceMotion else { return }
             withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
                 halo = 1.0
             }

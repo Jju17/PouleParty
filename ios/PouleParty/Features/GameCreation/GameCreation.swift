@@ -1,4 +1,3 @@
-
 import ComposableArchitecture
 import os
 import CoreLocation
@@ -57,7 +56,7 @@ struct GameCreationFeature {
         /// per second.
         ///
         /// Compute via [`recomputedSteps(isParticipating:gameMode:)`]
-        ///, the static helper is the single source of truth for the
+        /// , the static helper is the single source of truth for the
         /// wizard order.
         var steps: [GameCreationStep] = State.recomputedSteps(
             isParticipating: true,

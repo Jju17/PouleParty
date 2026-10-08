@@ -1,4 +1,3 @@
-
 import FirebaseFirestore
 import Testing
 @testable import PouleParty

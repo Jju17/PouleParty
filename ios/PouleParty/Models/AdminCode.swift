@@ -1,4 +1,3 @@
-
 enum AdminCode {
     static let value = "jujurahier"
 }

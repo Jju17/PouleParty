@@ -10,8 +10,8 @@ struct ChallengeSubmission: Codable, Equatable, Identifiable {
     var mediaUrl: String = ""
     var mediaType: MediaType = .image
     var status: SubmissionStatus = .pending
-    var validatedBy: String? = nil
-    var validatedAt: Timestamp? = nil
+    var validatedBy: String?
+    var validatedAt: Timestamp?
 
     /// Stable identifier for SwiftUI diffing. `firestoreId` is injected
     /// by the SDK from the doc path so this is non-nil for real

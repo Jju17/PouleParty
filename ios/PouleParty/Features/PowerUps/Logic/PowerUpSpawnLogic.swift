@@ -1,4 +1,3 @@
-
 import CoreLocation
 import Foundation
 import FirebaseFirestore
@@ -61,4 +60,3 @@ func generatePowerUps(
 
     return result
 }
-

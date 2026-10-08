@@ -19,20 +19,21 @@ struct StringCatalogTests {
         let strings: [String: Entry]
     }
 
-    private let catalog: Catalog = {
+    private func loadCatalog() throws -> Catalog {
         let url = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .appendingPathComponent("../Localizable.xcstrings")
             .standardized
-        return try! JSONDecoder().decode(Catalog.self, from: Data(contentsOf: url))
-    }()
+        return try JSONDecoder().decode(Catalog.self, from: Data(contentsOf: url))
+    }
 
     private func values(_ localization: Catalog.Localization) -> [String] {
         if let unit = localization.stringUnit { return [unit.value] }
         return localization.variations?.plural?.values.flatMap(values) ?? []
     }
 
-    @Test func everyKeyIsTranslatedInFrenchAndDutch() {
+    @Test func everyKeyIsTranslatedInFrenchAndDutch() throws {
+        let catalog = try loadCatalog()
         let missing = catalog.strings.compactMap { key, entry -> String? in
             guard entry.shouldTranslate != false else { return nil }
             let locales = entry.localizations ?? [:]
@@ -42,7 +43,8 @@ struct StringCatalogTests {
         #expect(missing.isEmpty, "\(missing.sorted())")
     }
 
-    @Test func noTranslationUsesAnEmDash() {
+    @Test func noTranslationUsesAnEmDash() throws {
+        let catalog = try loadCatalog()
         let offenders = catalog.strings.flatMap { key, entry -> [String] in
             let texts = [key] + (entry.localizations ?? [:]).values.flatMap(values)
             return texts.contains { $0.contains("\u{2014}") } ? [key] : []

@@ -154,6 +154,7 @@ func buildLeaderboardEntries(
 
 struct VictoryView: View {
     @Bindable var store: StoreOf<VictoryFeature>
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var isSpectator: Bool { store.hunterId.isEmpty && !store.isChicken }
     private var isCurrentUserAWinner: Bool {
@@ -179,7 +180,7 @@ struct VictoryView: View {
         ZStack {
             Color.gradientBackgroundWarmth.ignoresSafeArea()
 
-            if isCurrentUserAWinner && !store.isChicken {
+            if isCurrentUserAWinner && !store.isChicken && !reduceMotion {
                 ConfettiView()
                     .ignoresSafeArea()
                     .allowsHitTesting(false)

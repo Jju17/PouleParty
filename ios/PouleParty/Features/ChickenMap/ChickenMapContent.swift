@@ -25,6 +25,7 @@ struct ChickenMapContent: View {
     )
     @State private var mapBearing: Double = 0
     @State private var powerUpPulseClock: TimeInterval = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var overlayColor: UIColor {
         store.isOutsideZone
@@ -77,8 +78,13 @@ struct ChickenMapContent: View {
             }
         }
         .ignoresSafeArea()
-        .onReceive(Timer.publish(every: 0.1, on: .main, in: .common).autoconnect()) { _ in
-            powerUpPulseClock = Date().timeIntervalSinceReferenceDate
+        .task(id: !reduceMotion && store.hasGameStarted && !store.availablePowerUps.isEmpty) {
+            // Only redraw the map for the pulse while power-ups are on screen.
+            guard !reduceMotion, store.hasGameStarted, !store.availablePowerUps.isEmpty else { return }
+            while !Task.isCancelled {
+                powerUpPulseClock = Date().timeIntervalSinceReferenceDate
+                do { try await Task.sleep(for: .milliseconds(100)) } catch { return }
+            }
         }
         .onChange(of: store.mapCircle) { _, newCircle in
             guard let center = newCircle?.center, let radius = newCircle?.radius else { return }

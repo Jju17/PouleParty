@@ -1,12 +1,11 @@
-
 import SwiftUI
 
 struct CountdownView: View {
     @Binding var nowDate: Date
     @Binding var nextUpdateDate: Date?
-    var chickenStartDate: Date? = nil
-    var hunterStartDate: Date? = nil
-    var endDate: Date? = nil
+    var chickenStartDate: Date?
+    var hunterStartDate: Date?
+    var endDate: Date?
     var isChicken: Bool = false
 
     private enum Phase {

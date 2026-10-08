@@ -289,4 +289,3 @@ private struct GameMasterHuntersListView: View {
         registrations.first(where: { $0.userId == uid })?.teamName ?? "Hunter"
     }
 }
-

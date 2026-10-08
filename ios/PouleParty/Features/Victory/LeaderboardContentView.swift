@@ -15,7 +15,7 @@ import SwiftUI
 struct LeaderboardContentView: View {
     let entries: [LeaderboardEntry]
     let hunterStartDate: Date
-    var onReport: ((LeaderboardEntry) -> Void)? = nil
+    var onReport: ((LeaderboardEntry) -> Void)?
 
     private var sortedFinders: [LeaderboardEntry] {
         entries.filter { $0.hasFound }.sorted { a, b in
@@ -73,7 +73,7 @@ struct LeaderboardRowView: View {
     let rank: Int?
     let entry: LeaderboardEntry
     let hunterStartDate: Date
-    var onReport: ((LeaderboardEntry) -> Void)? = nil
+    var onReport: ((LeaderboardEntry) -> Void)?
 
     private var rankLabel: String {
         guard let rank else { return "-" }

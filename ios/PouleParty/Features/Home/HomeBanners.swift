@@ -1,4 +1,3 @@
-
 import SwiftUI
 
 /// Banner shown when the user has an active game they can open or rejoin.

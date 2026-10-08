@@ -14,9 +14,9 @@ struct Challenge: Codable, Equatable, Identifiable {
     var points: Int = 0
     var lastUpdated: Timestamp?
     var type: ChallengeType = .oneShot
-    var location: GeoPoint? = nil
-    var proximityRadiusMeters: Int? = nil
-    var partner: String? = nil
+    var location: GeoPoint?
+    var proximityRadiusMeters: Int?
+    var partner: String?
     var level: Int = 1
     // `0` is a sentinel for "not yet numbered". `migrateChallengesV2`
     // assigns the first free integer within `level` to every doc

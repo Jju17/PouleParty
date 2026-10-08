@@ -371,27 +371,27 @@ struct GameTests {
     // MARK: - Enum safe decoding (unknown values → safe defaults)
 
     @Test func gameStatusDecodesUnknownToWaiting() throws {
-        let decoded = try JSONDecoder().decode(Game.GameStatus.self, from: #""unknownStatus""#.data(using: .utf8)!)
+        let decoded = try JSONDecoder().decode(Game.GameStatus.self, from: Data(#""unknownStatus""#.utf8))
         #expect(decoded == .waiting)
     }
 
     @Test func gameStatusDecodesKnownValues() throws {
-        let waiting = try JSONDecoder().decode(Game.GameStatus.self, from: #""waiting""#.data(using: .utf8)!)
-        let inProgress = try JSONDecoder().decode(Game.GameStatus.self, from: #""inProgress""#.data(using: .utf8)!)
-        let done = try JSONDecoder().decode(Game.GameStatus.self, from: #""done""#.data(using: .utf8)!)
+        let waiting = try JSONDecoder().decode(Game.GameStatus.self, from: Data(#""waiting""#.utf8))
+        let inProgress = try JSONDecoder().decode(Game.GameStatus.self, from: Data(#""inProgress""#.utf8))
+        let done = try JSONDecoder().decode(Game.GameStatus.self, from: Data(#""done""#.utf8))
         #expect(waiting == .waiting)
         #expect(inProgress == .inProgress)
         #expect(done == .done)
     }
 
     @Test func gameModeDecodesUnknownToFollowTheChicken() throws {
-        let decoded = try JSONDecoder().decode(Game.GameMode.self, from: #""futureMode""#.data(using: .utf8)!)
+        let decoded = try JSONDecoder().decode(Game.GameMode.self, from: Data(#""futureMode""#.utf8))
         #expect(decoded == .followTheChicken)
     }
 
     @Test func gameModeDecodesKnownValues() throws {
-        let ftc = try JSONDecoder().decode(Game.GameMode.self, from: #""followTheChicken""#.data(using: .utf8)!)
-        let siz = try JSONDecoder().decode(Game.GameMode.self, from: #""stayInTheZone""#.data(using: .utf8)!)
+        let ftc = try JSONDecoder().decode(Game.GameMode.self, from: Data(#""followTheChicken""#.utf8))
+        let siz = try JSONDecoder().decode(Game.GameMode.self, from: Data(#""stayInTheZone""#.utf8))
         #expect(ftc == .followTheChicken)
         #expect(siz == .stayInTheZone)
     }

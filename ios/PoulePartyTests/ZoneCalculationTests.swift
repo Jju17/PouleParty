@@ -1,4 +1,3 @@
-
 import CoreLocation
 import Testing
 @testable import PouleParty

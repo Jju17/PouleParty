@@ -1,4 +1,3 @@
-
 import Foundation
 
 /// Power-up types that have no effect in `stayInTheZone` because they rely

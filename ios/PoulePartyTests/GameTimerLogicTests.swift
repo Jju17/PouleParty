@@ -793,13 +793,13 @@ struct GameTimerLogicTests {
     // MARK: - Enum edge cases
 
     @Test func gameStatusDecodesEmptyStringToDefault() throws {
-        let decoded = try JSONDecoder().decode(Game.GameStatus.self, from: #""""#.data(using: .utf8)!)
+        let decoded = try JSONDecoder().decode(Game.GameStatus.self, from: Data(#""""#.utf8))
         #expect(decoded == .waiting)
     }
 
     @Test func gameModeDecodesCaseSensitive() throws {
         // "FollowTheChicken" (capital F) should not match → falls back to default
-        let decoded = try JSONDecoder().decode(Game.GameMode.self, from: #""FollowTheChicken""#.data(using: .utf8)!)
+        let decoded = try JSONDecoder().decode(Game.GameMode.self, from: Data(#""FollowTheChicken""#.utf8))
         #expect(decoded == .followTheChicken)
     }
 
@@ -876,12 +876,12 @@ struct GameTimerLogicTests {
         // `functions/test/parity.test.ts` and Android's
         // `GameTimerHelperTest.kt::drift center cross-platform parity`.
         let tests: [(Double, Double, Int, Double, Double)] = [
-            (1500, 1400, 42,     50.84696960616928,   4.353846433636171),
-            (1500, 1400, 12345,  50.84583912478917,   4.352140612658659),
-            (1500, 1400, 999999, 50.84630221934297,   4.351924973242351),
-            (1000,  900, 42,     50.84611360923295,   4.351984011855909),
-            (2000, 1800, 54321,  50.84742746058778,   4.354741430644523),
-            ( 500,  400, 1,      50.845930021862166,  4.353238494648966),
+            (1500, 1400, 42, 50.84696960616928, 4.353846433636171),
+            (1500, 1400, 12345, 50.84583912478917, 4.352140612658659),
+            (1500, 1400, 999999, 50.84630221934297, 4.351924973242351),
+            (1000, 900, 42, 50.84611360923295, 4.351984011855909),
+            (2000, 1800, 54321, 50.84742746058778, 4.354741430644523),
+            ( 500, 400, 1, 50.845930021862166, 4.353238494648966),
         ]
         for (oldR, newR, seed, expectedLat, expectedLng) in tests {
             let r = deterministicDriftCenter(basePoint: base, oldRadius: oldR, newRadius: newR, driftSeed: seed)
@@ -896,12 +896,12 @@ struct GameTimerLogicTests {
         let initial = CLLocationCoordinate2D(latitude: 50.0, longitude: 4.0)
         let final_ = CLLocationCoordinate2D(latitude: 51.0, longitude: 5.0)
         let tests: [(Double, Double, Double, Double)] = [
-            (1500, 1500, 50.0,                4.0),
-            (1500,  750, 50.5,                4.5),
-            (1500,    0, 51.0,                5.0),
-            (1500, 1000, 50.333333333333336,  4.333333333333333),
-            (1500,  500, 50.666666666666664,  4.666666666666667),
-            (1500,  100, 50.93333333333333,   4.933333333333334),
+            (1500, 1500, 50.0, 4.0),
+            (1500, 750, 50.5, 4.5),
+            (1500, 0, 51.0, 5.0),
+            (1500, 1000, 50.333333333333336, 4.333333333333333),
+            (1500, 500, 50.666666666666664, 4.666666666666667),
+            (1500, 100, 50.93333333333333, 4.933333333333334),
         ]
         for (iR, cR, expectedLat, expectedLng) in tests {
             let r = interpolateZoneCenter(initialCenter: initial, finalCenter: final_, initialRadius: iR, currentRadius: cR)
@@ -914,16 +914,16 @@ struct GameTimerLogicTests {
 
     @Test func normalModeSettingsCrossPlatformParity() {
         let tests: [(Double, Double, Double)] = [
-            (1500,  60, 116.66666666666667),
-            (1500,  90,  77.77777777777777),
-            (1500, 120,  58.333333333333336),
-            (1500, 150,  46.666666666666664),
-            (1500, 180,  38.888888888888886),
-            ( 500,  90,  22.22222222222222),
+            (1500, 60, 116.66666666666667),
+            (1500, 90, 77.77777777777777),
+            (1500, 120, 58.333333333333336),
+            (1500, 150, 46.666666666666664),
+            (1500, 180, 38.888888888888886),
+            ( 500, 90, 22.22222222222222),
             (3000, 120, 120.83333333333333),
-            ( 100,  60,   0.0),
-            (  101, 90,   0.05555555555555555),
-            (50000,180,1386.111111111111),
+            ( 100, 60, 0.0),
+            (  101, 90, 0.05555555555555555),
+            (50000, 180, 1386.111111111111),
         ]
         for (radius, duration, expectedDecline) in tests {
             let (interval, decline) = calculateNormalModeSettings(initialRadius: radius, gameDurationMinutes: duration)

@@ -1,4 +1,3 @@
-
 import ComposableArchitecture
 import FirebaseFirestore
 import MapboxMaps
@@ -28,9 +27,9 @@ struct ChickenMapFeature {
         var circles: [ZoneCircle] = []
         var zoneScheduleError: String?
         var showGameInfo: Bool = false
-        var winnerNotification: String? = nil
-        var countdownNumber: Int? = nil
-        var countdownText: String? = nil
+        var winnerNotification: String?
+        var countdownNumber: Int?
+        var countdownText: String?
         var userLocation: CLLocationCoordinate2D?
         var isOutsideZone: Bool = false
         var lastLiveActivityState: PoulePartyAttributes.ContentState?
@@ -442,7 +441,7 @@ struct ChickenMapFeature {
                         ButtonState(role: .cancel) {
                             TextState("Never mind")
                         }
-                        ButtonState(role: .destructive ,action: .cancelGame) {
+                        ButtonState(role: .destructive, action: .cancelGame) {
                             TextState("Cancel game")
                         }
                     } message: {

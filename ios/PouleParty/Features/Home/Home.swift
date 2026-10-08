@@ -1,4 +1,3 @@
-
 import AVFAudio
 import ComposableArchitecture
 import CoreLocation
@@ -27,7 +26,7 @@ struct HomeFeature {
     @ObservableState
     struct State: Equatable {
         @Presents var destination: Destination.State?
-        @Shared(.appStorage(AppConstants.prefIsMusicMuted)) var isMusicMuted = false
+        @Shared(.appStorage(AppConstants.prefIsMusicMuted)) var isMusicMuted = true
         @Shared(.appStorage(AppConstants.prefUserNickname)) var savedNickname = ""
         /// Set of game ids the user has dismissed from the Home banner. The
         /// banner skips these so it doesn't reappear on every resume for a
@@ -37,12 +36,12 @@ struct HomeFeature {
         @Shared(.dismissedActiveGameIds) var dismissedActiveGameIds: Set<String> = []
         var gameCode: String = ""
         var musicMuted: Bool { isMusicMuted }
-        var activeGame: Game? = nil
-        var activeGameRole: GameRole? = nil
+        var activeGame: Game?
+        var activeGameRole: GameRole?
         /// Distinguishes "Reprendre la partie" (inProgress) from "Prochaine
         /// partie" (upcoming, `.waiting`) so the banner copy + CTA matches
         /// the game state. Nil when no active game.
-        var activeGamePhase: GamePhase? = nil
+        var activeGamePhase: GamePhase?
         var activeGameLookupError: String?
         var isShowingAdminCodeAlert: Bool = false
         var adminCodeInput: String = ""
@@ -326,7 +325,7 @@ struct HomeFeature {
                             timeoutTask.cancel()
                         }
                     }
-                    var resolved: CLLocationCoordinate2D? = nil
+                    var resolved: CLLocationCoordinate2D?
                     for await value in stream {
                         resolved = value
                         break
