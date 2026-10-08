@@ -7,7 +7,6 @@ The living list of what is still open. Close an item by deleting it in the commi
 - **App Check is enforced by default** on every callable (`ENFORCE_APP_CHECK=true`). Check the App Check metrics for both apps and the web site first; set the parameter to false in `functions/.env.<project>` only as a temporary escape hatch.
 - **Rotate the Mapbox public token**: it was committed in Android `strings.xml` and iOS `Info.plist`. Restrict the new token to the app identifiers.
 - **Run `infra/apply.sh`** on staging and production (backups, proof lifecycle, secrets check).
-- **First CI run**: confirm the macOS runner's Xcode can build the project.
 
 ## Open from the October 2026 review
 
