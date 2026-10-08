@@ -146,6 +146,7 @@ struct HunterMapFeature {
 
         @CasePathable
         enum Delegate {
+            case wonGame(Game)
             case returnedToMenu
             /// Game ended for any reason (chicken cancelled, timer
             /// expired, all hunters found). Parent navigates to the
@@ -479,6 +480,8 @@ struct HunterMapFeature {
                     }
                 )
                 return .none
+            case .delegate(.wonGame):
+                return .none
             case .delegate(.returnedToMenu):
                 return .none
             case .delegate(.gameEnded):
@@ -490,7 +493,7 @@ struct HunterMapFeature {
                 let endState = gameOverLiveActivityState(game: state.game, radius: state.radius)
                 return .merge(.cancel(id: CancelID.runtime), .run { _ in
                     await liveActivityClient.end(endState)
-                })
+                }, .send(.delegate(.wonGame(state.game))))
             case .view(.infoButtonTapped):
                 state.showGameInfo = true
                 return .none

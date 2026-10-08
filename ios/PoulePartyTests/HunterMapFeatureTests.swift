@@ -223,6 +223,7 @@ struct HunterMapFeatureTests {
 
         await store.send(.view(.submitCodeButtonTapped))
         await store.receive(\.internal.winnerRegistered)
+        await store.receive(\.delegate.wonGame)
     }
 
     @Test func submitCodeButtonTappedWithCorrectCodeAndFailedWriteShowsRetry() async {
@@ -271,6 +272,7 @@ struct HunterMapFeatureTests {
         // again, this time succeeding → winnerRegistered.
         await store.send(.destination(.presented(.alert(.retryWinnerRegistration))))
         await store.receive(\.internal.winnerRegistered)
+        await store.receive(\.delegate.wonGame)
         #expect(callCount.value == 2)
     }
 
@@ -828,6 +830,7 @@ struct HunterMapFeatureTests {
 
         await store.send(.view(.submitCodeButtonTapped))
         await store.receive(\.internal.winnerRegistered)
+        await store.receive(\.delegate.wonGame)
     }
 
     @Test func pp19_foundCodeStaysActiveAfterGameOver() async {
@@ -848,5 +851,6 @@ struct HunterMapFeatureTests {
         // winnerRegistered fires. The reducer doesn't gate the found
         // code on `isGameOver`.
         await store.receive(\.internal.winnerRegistered)
+        await store.receive(\.delegate.wonGame)
     }
 }

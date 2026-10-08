@@ -119,10 +119,10 @@ struct AppFeature {
                     ))
                 }
                 return .none
-            case .hunterMap(.internal(.winnerRegistered)):
+            case let .hunterMap(.delegate(.wonGame(game))):
                 if case let .hunterMap(hunterState) = state {
                     state = .victory(VictoryFeature.State(
-                        game: hunterState.game,
+                        game: game,
                         hunterId: hunterState.hunterId,
                         hunterName: hunterState.hunterName
                     ))

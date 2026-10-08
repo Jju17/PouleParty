@@ -251,7 +251,21 @@ struct ChallengesFeatureTests {
         }
         await store.receive(\.internal.submissionWriteFailed) {
             $0.submittingIds = []
-            $0.uploadError = "Network unreachable"
+            $0.uploadError = ApiErrorCode.unknown.message
+        }
+    }
+
+    @Test func anOversizedVideoIsRefusedBeforeUpload() async {
+        let challenge = makeChallenge(id: "c1")
+        var state = ChallengesFeature.State(gameId: "g1", hunterId: "me", hunterIds: ["me"], challenges: [challenge])
+        state.captureTarget = challenge
+        let store = TestStore(initialState: state) {
+            ChallengesFeature()
+        }
+        let video = Data(count: AppConstants.maxProofVideoBytes + 1)
+        await store.send(.view(.mediaCaptured(challengeId: "c1", data: video, mediaType: .video))) {
+            $0.captureTarget = nil
+            $0.uploadError = String(localized: "This video is too large. Record a shorter clip (8 MB max).")
         }
     }
 

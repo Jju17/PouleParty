@@ -275,6 +275,10 @@ struct ChallengesFeature {
 
             case let .view(.mediaCaptured(challengeId, data, mediaType)):
                 state.captureTarget = nil
+                if mediaType == .video, data.count > AppConstants.maxProofVideoBytes {
+                    state.uploadError = String(localized: "This video is too large. Record a shorter clip (8 MB max).")
+                    return .none
+                }
                 guard let challenge = state.challenges.first(where: { $0.id == challengeId }) else { return .none }
                 state.submittingIds.insert(challengeId)
                 let gameId = state.gameId
@@ -286,7 +290,7 @@ struct ChallengesFeature {
                         await send(.internal(.submissionWriteSucceeded(challengeId: challengeId)))
                     } catch {
                         logger.error("submitChallenge failed: \(error.localizedDescription)")
-                        await send(.internal(.submissionWriteFailed(challengeId: challengeId, message: error.localizedDescription)))
+                        await send(.internal(.submissionWriteFailed(challengeId: challengeId, message: error.userMessage)))
                     }
                 }
 

@@ -125,8 +125,11 @@ struct JoinFlowFeature {
                     if case let .codeValidated(game) = state.step, game.gameCode == normalized {
                         return .none
                     }
+                    guard let userId = userClient.currentUserId(), !userId.isEmpty else {
+                        state.step = .networkError
+                        return .none
+                    }
                     state.step = .validating
-                    let userId = userClient.currentUserId() ?? ""
                     return .run { send in
                         do {
                             guard let game = try await apiClient.findGameByCode(normalized) else {
@@ -431,27 +434,31 @@ struct JoinFlowView: View {
         case .codeNotFound:
             Text("No game found with this code.")
                 .font(.gameboy(size: 9))
-                .foregroundStyle(Color.CROrange)
+                .foregroundStyle(Color.errorText)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 24)
         case .gameOver:
             Text("This party is already over.")
                 .font(.gameboy(size: 9))
-                .foregroundStyle(Color.CROrange)
+                .foregroundStyle(Color.errorText)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 24)
         case .gameFull:
             Text("This party is full.")
                 .font(.gameboy(size: 9))
-                .foregroundStyle(Color.CROrange)
+                .foregroundStyle(Color.errorText)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 24)
         case .networkError:
-            Text("Network error. Please try again.")
-                .font(.gameboy(size: 9))
-                .foregroundStyle(Color.CROrange)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 24)
+            VStack(spacing: 8) {
+                Text("Network error. Please try again.")
+                    .font(.gameboy(size: 9))
+                    .foregroundStyle(Color.errorText)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
+                Button("Try again") { store.send(.codeChanged(store.code)) }
+                    .frame(minHeight: 44)
+            }
         default:
             Color.clear.frame(height: 1)
         }

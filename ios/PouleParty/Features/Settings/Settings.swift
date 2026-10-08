@@ -403,7 +403,6 @@ struct GameDetailView: View {
     private var infoSection: some View {
         VStack(spacing: 8) {
             detailRow("Game Code", value: game.gameCode)
-            detailRow("Found Code", value: game.foundCode)
         }
         .settingsCard()
     }

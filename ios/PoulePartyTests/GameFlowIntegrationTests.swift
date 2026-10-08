@@ -55,6 +55,7 @@ struct GameFlowIntegrationTests {
         await store.send(.binding(.set(\.enteredCode, "4321")))
         await store.send(.view(.submitCodeButtonTapped))
         await store.receive(\.internal.winnerRegistered)
+        await store.receive(\.delegate.wonGame)
     }
 
     // MARK: - Game ends by time

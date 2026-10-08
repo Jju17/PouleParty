@@ -8700,6 +8700,54 @@
           }
         }
       }
+    },
+    "This video is too large. Record a shorter clip (8 MB max).": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cette vidéo est trop lourde. Filme un clip plus court (8 Mo max)."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deze video is te groot. Neem een kortere clip op (max. 8 MB)."
+          }
+        }
+      }
+    },
+    "A proof for this challenge is already waiting for validation.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une preuve pour ce défi attend déjà d'être validée."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Er wacht al een bewijs voor deze uitdaging op validatie."
+          }
+        }
+      }
+    },
+    "This challenge is already validated.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce défi est déjà validé."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deze uitdaging is al gevalideerd."
+          }
+        }
+      }
     }
   },
   "version": "1.1"

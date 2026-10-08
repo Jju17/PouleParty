@@ -113,5 +113,17 @@ extension ApiErrorCode {
 
 extension Error {
     /// The translated message to show for any failure.
-    var userMessage: String { ApiError(self).code.message }
+    var userMessage: String {
+        if let rejection = self as? SubmissionRejection { return rejection.message }
+        return ApiError(self).code.message
+    }
+}
+
+extension SubmissionRejection {
+    var message: String {
+        switch self {
+        case .alreadyPending: String(localized: "A proof for this challenge is already waiting for validation.")
+        case .alreadyValidated: String(localized: "This challenge is already validated.")
+        }
+    }
 }
