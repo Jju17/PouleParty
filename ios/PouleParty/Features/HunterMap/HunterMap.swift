@@ -175,6 +175,7 @@ struct HunterMapFeature {
             /// fire on the client-side comparison.
             case wrongCodeRejected(lockedUntil: Date?)
             case leaveFailed(String)
+            case teamNameResolved(String)
         }
 
         @CasePathable
@@ -561,10 +562,13 @@ struct HunterMapFeature {
                         registration = nil
                     }
                     if let registration, !registration.teamName.isEmpty {
-                        await send(.challenges(.presented(.binding(.set(\.myTeamName, registration.teamName)))))
+                        await send(.internal(.teamNameResolved(registration.teamName)))
                     }
                 }
             case .challenges:
+                return .none
+            case let .internal(.teamNameResolved(teamName)):
+                state.challenges?.myTeamName = teamName
                 return .none
             case let .internal(.newLocationFetched(location)):
                 // `location` here is the chicken's broadcasted position —
