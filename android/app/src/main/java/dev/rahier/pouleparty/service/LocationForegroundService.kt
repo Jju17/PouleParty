@@ -28,6 +28,11 @@ class LocationForegroundService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent == null) {
+            // Restarted by the system after the process died: no game is tracking anymore.
+            stopSelf()
+            return START_NOT_STICKY
+        }
         val notification = buildNotification()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(
@@ -38,7 +43,7 @@ class LocationForegroundService : Service() {
         } else {
             startForeground(NOTIFICATION_ID, notification)
         }
-        return START_STICKY
+        return START_NOT_STICKY
     }
 
     private fun buildNotification(): Notification {

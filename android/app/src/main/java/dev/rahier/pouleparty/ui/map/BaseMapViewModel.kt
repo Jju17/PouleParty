@@ -83,12 +83,11 @@ abstract class BaseMapViewModel(
 
     // ── Shared helpers ───────────────────────────────────
 
-    /**
-     * Cancels all tracked stream jobs and clears the list.
-     */
+    /** Stops every stream and the foreground location service: nothing runs after the game. */
     protected fun cancelStreams() {
         streamJobs.forEach { it.cancel() }
         streamJobs.clear()
+        locationRepository.stopTrackingService()
     }
 
     // Kill the Firestore/location streams when the VM is finally released -
@@ -98,7 +97,6 @@ abstract class BaseMapViewModel(
         cancelStreams()
         notificationJob?.cancel()
         notificationJob = null
-        locationRepository.stopTrackingService()
         super.onCleared()
     }
 

@@ -109,6 +109,19 @@ class BaseMapViewModelTeardownTest {
     }
 
     @Test
+    fun `the location service stops as soon as the game is done`() {
+        val vm = createChickenVM()
+        testDispatcher.scheduler.runCurrent()
+        io.mockk.verify(exactly = 0) { locationRepository.stopTrackingService() }
+
+        gameConfig.tryEmit(Game.mock.copy(id = "test-game", status = dev.rahier.pouleparty.model.GameStatus.DONE.firestoreValue))
+        testDispatcher.scheduler.runCurrent()
+
+        assertTrue(vm.uiState.value.isGameOver)
+        io.mockk.verify(atLeast = 1) { locationRepository.stopTrackingService() }
+    }
+
+    @Test
     fun `ViewModelStore clear cancels active stream jobs`() {
         val store = ViewModelStore()
         val vm = createChickenVM()

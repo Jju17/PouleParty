@@ -323,7 +323,11 @@ class HunterMapViewModel @Inject constructor(
                 // Game over by time
                 if (checkGameOverByTime(state.game.endDate)) {
                     // Fallback: also update status from hunter side in case chicken didn't
-                    try { gameRepository.updateGameStatus(gameId, GameStatus.DONE) } catch (_: Exception) {}
+                    try {
+                        gameRepository.updateGameStatus(gameId, GameStatus.DONE)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "[lifecycle] end-of-game status write failed", e)
+                    }
                     cancelStreams()
                     _uiState.update { it.copy(isGameOver = true) }
                     continue
