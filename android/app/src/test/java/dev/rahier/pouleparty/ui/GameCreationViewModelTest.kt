@@ -128,17 +128,27 @@ class GameCreationViewModelTest {
         assertEquals(GameCreationStep.PARTICIPATION, steps[0])
         assertEquals(GameCreationStep.MAX_PLAYERS, steps[1])
         assertEquals(GameCreationStep.START_TIME, steps[2])
-        assertEquals(GameCreationStep.DURATION, steps[3])
-        assertEquals(GameCreationStep.HEAD_START, steps[4])
-        assertEquals(GameCreationStep.GAME_MODE, steps[5])
-        assertEquals(GameCreationStep.START_ZONE_SETUP, steps[6])
-        assertEquals(GameCreationStep.FINAL_ZONE_SETUP, steps[7])
-        assertEquals(GameCreationStep.ZONES_RECAP, steps[8])
-        assertEquals(GameCreationStep.GAME_MASTER_PASSWORD, steps[9])
-        assertEquals(GameCreationStep.POWER_UPS, steps[10])
-        assertEquals(GameCreationStep.CHICKEN_SEES_HUNTERS, steps[11])
-        assertEquals(GameCreationStep.RECAP, steps[12])
-        assertEquals(13, steps.size)
+        assertEquals(GameCreationStep.TIMING, steps[3])
+        assertEquals(GameCreationStep.GAME_MODE, steps[4])
+        assertEquals(GameCreationStep.START_ZONE_SETUP, steps[5])
+        assertEquals(GameCreationStep.FINAL_ZONE_SETUP, steps[6])
+        assertEquals(GameCreationStep.ZONES_RECAP, steps[7])
+        assertEquals(GameCreationStep.OPTIONS, steps[8])
+        assertEquals(GameCreationStep.RECAP, steps[9])
+        assertEquals(10, steps.size)
+    }
+
+    @Test
+    fun `options need a 4-digit referee code only while referees are on`() {
+        val vm = createViewModel()
+        assertFalse(vm.uiState.value.isGameMasterCodeValid)
+        vm.onIntent(GameCreationIntent.GameMasterPasswordChanged("12"))
+        assertFalse(vm.uiState.value.isGameMasterCodeValid)
+        vm.onIntent(GameCreationIntent.GameMasterPasswordChanged("1234"))
+        assertTrue(vm.uiState.value.isGameMasterCodeValid)
+        vm.onIntent(GameCreationIntent.GameMasterEnabledChanged(false))
+        vm.onIntent(GameCreationIntent.GameMasterPasswordChanged(""))
+        assertTrue(vm.uiState.value.isGameMasterCodeValid)
     }
 
     @Test
@@ -149,7 +159,7 @@ class GameCreationViewModelTest {
         assertTrue(GameCreationStep.START_ZONE_SETUP in steps)
         assertFalse(GameCreationStep.FINAL_ZONE_SETUP in steps)
         assertTrue(GameCreationStep.ZONES_RECAP in steps)
-        assertEquals(12, steps.size)
+        assertEquals(9, steps.size)
     }
 
     @Test
@@ -161,13 +171,12 @@ class GameCreationViewModelTest {
         assertEquals(GameCreationStep.CHICKEN_SELECTION, steps[1])
         assertEquals(GameCreationStep.MAX_PLAYERS, steps[2])
         assertEquals(GameCreationStep.START_TIME, steps[3])
-        assertEquals(GameCreationStep.DURATION, steps[4])
-        assertEquals(GameCreationStep.HEAD_START, steps[5])
-        assertEquals(GameCreationStep.GAME_MODE, steps[6])
-        assertEquals(GameCreationStep.START_ZONE_SETUP, steps[7])
-        assertEquals(GameCreationStep.FINAL_ZONE_SETUP, steps[8])
-        assertEquals(GameCreationStep.ZONES_RECAP, steps[9])
-        assertEquals(14, steps.size)
+        assertEquals(GameCreationStep.TIMING, steps[4])
+        assertEquals(GameCreationStep.GAME_MODE, steps[5])
+        assertEquals(GameCreationStep.START_ZONE_SETUP, steps[6])
+        assertEquals(GameCreationStep.FINAL_ZONE_SETUP, steps[7])
+        assertEquals(GameCreationStep.ZONES_RECAP, steps[8])
+        assertEquals(11, steps.size)
     }
 
     @Test
@@ -638,14 +647,14 @@ class GameCreationViewModelTest {
     @Test
     fun `toggling participation multiple times keeps step list in sync`() {
         val vm = createViewModel()
-        assertEquals(13, vm.uiState.value.steps.size)
+        assertEquals(10, vm.uiState.value.steps.size)
         vm.onIntent(GameCreationIntent.ParticipatingChanged(false))
-        assertEquals(14, vm.uiState.value.steps.size)
+        assertEquals(11, vm.uiState.value.steps.size)
         vm.onIntent(GameCreationIntent.ParticipatingChanged(true))
-        assertEquals(13, vm.uiState.value.steps.size)
+        assertEquals(10, vm.uiState.value.steps.size)
         vm.onIntent(GameCreationIntent.ParticipatingChanged(false))
         vm.onIntent(GameCreationIntent.ParticipatingChanged(false)) // no-op
-        assertEquals(14, vm.uiState.value.steps.size)
+        assertEquals(11, vm.uiState.value.steps.size)
     }
 
     @Test

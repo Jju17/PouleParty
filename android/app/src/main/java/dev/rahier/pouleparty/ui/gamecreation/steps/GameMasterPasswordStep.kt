@@ -17,18 +17,18 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import dev.rahier.pouleparty.R
-import dev.rahier.pouleparty.ui.gamecreation.StepContainer
+import dev.rahier.pouleparty.ui.gamecreation.WizardSection
 import dev.rahier.pouleparty.ui.theme.CROrange
 import dev.rahier.pouleparty.ui.theme.gameboyStyle
 
 @Composable
-fun GameMasterPasswordStep(
+fun GameMasterSection(
     isEnabled: Boolean,
     password: String,
     onEnabledChanged: (Boolean) -> Unit,
     onPasswordChanged: (String) -> Unit,
 ) {
-    StepContainer(
+    WizardSection(
         title = stringResource(R.string.wizard_gamemaster_title),
         subtitle = stringResource(R.string.wizard_gamemaster_subtitle),
     ) {
@@ -57,6 +57,9 @@ fun GameMasterPasswordStep(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                 visualTransformation = PasswordVisualTransformation(),
                 placeholder = { Text("••••") },
+                supportingText = if (password.length != 4) {
+                    { Text(stringResource(R.string.wizard_gamemaster_code_required)) }
+                } else null,
                 modifier = Modifier.fillMaxWidth(0.5f),
             )
             Text(

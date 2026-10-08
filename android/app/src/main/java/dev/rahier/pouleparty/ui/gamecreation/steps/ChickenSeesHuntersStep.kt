@@ -4,14 +4,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.ui.gamecreation.OptionCard
-import dev.rahier.pouleparty.ui.gamecreation.StepContainer
+import dev.rahier.pouleparty.ui.gamecreation.WizardSection
 
 @Composable
-fun ChickenSeesHuntersStep(
+fun ChickenVisibilitySection(
     chickenCanSeeHunters: Boolean,
     onToggle: (Boolean) -> Unit
 ) {
-    StepContainer(
+    WizardSection(
         title = stringResource(R.string.wizard_chicken_sees_hunters_title),
         subtitle = stringResource(R.string.wizard_chicken_sees_hunters_subtitle)
     ) {

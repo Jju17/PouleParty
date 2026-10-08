@@ -18,20 +18,20 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.rahier.pouleparty.R
-import dev.rahier.pouleparty.ui.gamecreation.StepContainer
+import dev.rahier.pouleparty.ui.gamecreation.WizardSection
 import dev.rahier.pouleparty.ui.theme.GradientFire
 import dev.rahier.pouleparty.ui.theme.bangerStyle
 import dev.rahier.pouleparty.ui.theme.gameboyStyle
 import java.util.Date
 
 @Composable
-fun DurationStep(
+fun DurationSection(
     gameDurationMinutes: Double,
     startDate: Date,
     dateFormat: (Date) -> String,
     onDurationChanged: (Double) -> Unit
 ) {
-    StepContainer(
+    WizardSection(
         title = stringResource(R.string.wizard_duration_title),
         subtitle = stringResource(R.string.wizard_duration_subtitle)
     ) {

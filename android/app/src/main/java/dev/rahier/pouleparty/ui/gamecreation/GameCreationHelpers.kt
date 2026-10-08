@@ -28,6 +28,30 @@ import dev.rahier.pouleparty.ui.theme.gameboyStyle
 
 /** Shared scaffolding for every game-creation step: scrollable column with title + subtitle. */
 @Composable
+internal fun WizardSection(
+    title: String,
+    subtitle: String? = null,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text(text = title, style = bangerStyle(24), color = MaterialTheme.colorScheme.onBackground, textAlign = TextAlign.Center)
+        if (subtitle != null) {
+            Text(
+                text = subtitle,
+                style = gameboyStyle(10),
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                textAlign = TextAlign.Center
+            )
+        }
+        content()
+    }
+}
+
+@Composable
 internal fun StepContainer(
     title: String,
     subtitle: String? = null,

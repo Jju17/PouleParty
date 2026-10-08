@@ -1,5 +1,7 @@
 package dev.rahier.pouleparty.ui.gamecreation
 
+import dev.rahier.pouleparty.ui.gamecreation.steps.OptionsStep
+import dev.rahier.pouleparty.ui.gamecreation.steps.TimingStep
 import dev.rahier.pouleparty.ui.theme.AccentText
 import java.util.Date
 import dev.rahier.pouleparty.ui.common.currentLocale
@@ -44,15 +46,10 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.powerups.selection.PowerUpSelectionScreen
-import dev.rahier.pouleparty.ui.gamecreation.steps.ChickenSeesHuntersStep
 import dev.rahier.pouleparty.ui.gamecreation.steps.ChickenSelectionStep
-import dev.rahier.pouleparty.ui.gamecreation.steps.DurationStep
-import dev.rahier.pouleparty.ui.gamecreation.steps.GameMasterPasswordStep
 import dev.rahier.pouleparty.ui.gamecreation.steps.GameModeStep
-import dev.rahier.pouleparty.ui.gamecreation.steps.HeadStartStep
 import dev.rahier.pouleparty.ui.gamecreation.steps.MaxPlayersStep
 import dev.rahier.pouleparty.ui.gamecreation.steps.ParticipationStep
-import dev.rahier.pouleparty.ui.gamecreation.steps.PowerUpsStep
 import dev.rahier.pouleparty.ui.gamecreation.steps.RecapStep
 import dev.rahier.pouleparty.ui.gamecreation.steps.StartTimeStep
 import dev.rahier.pouleparty.ui.gamecreation.steps.FinalZoneSetupStep
@@ -168,12 +165,6 @@ fun GameCreationScreen(
                         selectedMode = state.game.gameModEnum,
                         onSelect = { viewModel.onIntent(GameCreationIntent.GameModeChanged(it)) }
                     )
-                    GameCreationStep.GAME_MASTER_PASSWORD -> GameMasterPasswordStep(
-                        isEnabled = state.isGameMasterEnabled,
-                        password = state.gameMasterPassword,
-                        onEnabledChanged = { viewModel.onIntent(GameCreationIntent.GameMasterEnabledChanged(it)) },
-                        onPasswordChanged = { viewModel.onIntent(GameCreationIntent.GameMasterPasswordChanged(it)) },
-                    )
                     GameCreationStep.START_ZONE_SETUP -> StartZoneSetupStep(
                         game = state.game,
                         isStartZoneConfigured = state.isStartZoneConfigured,
@@ -202,26 +193,26 @@ fun GameCreationScreen(
                         onTimeSelected = { h, m -> viewModel.onIntent(GameCreationIntent.StartTimeChanged(h, m)) },
                         onManualStartToggled = { viewModel.onIntent(GameCreationIntent.ManualStartToggled(it)) }
                     )
-                    GameCreationStep.DURATION -> DurationStep(
+                    GameCreationStep.TIMING -> TimingStep(
                         gameDurationMinutes = state.gameDurationMinutes,
+                        headStartMinutes = state.game.timing.headStartMinutes,
                         startDate = state.game.startDate,
                         dateFormat = dateFormat,
-                        onDurationChanged = { viewModel.onIntent(GameCreationIntent.DurationChanged(it)) }
+                        onDurationChanged = { viewModel.onIntent(GameCreationIntent.DurationChanged(it)) },
+                        onHeadStartChanged = { viewModel.onIntent(GameCreationIntent.HeadStartChanged(it)) },
                     )
-                    GameCreationStep.HEAD_START -> HeadStartStep(
-                        headStartMinutes = state.game.timing.headStartMinutes,
-                        onHeadStartChanged = { viewModel.onIntent(GameCreationIntent.HeadStartChanged(it)) }
-                    )
-                    GameCreationStep.POWER_UPS -> PowerUpsStep(
+                    GameCreationStep.OPTIONS -> OptionsStep(
+                        isGameMasterEnabled = state.isGameMasterEnabled,
+                        gameMasterPassword = state.gameMasterPassword,
                         powerUpsEnabled = state.game.powerUps.enabled,
                         enabledPowerUpTypes = state.game.powerUps.enabledTypes,
                         gameMod = state.game.gameModEnum,
-                        onTogglePowerUps = { viewModel.onIntent(GameCreationIntent.PowerUpsToggled(it)) },
-                        onPowerUpSelectionTapped = { viewModel.onIntent(GameCreationIntent.PowerUpSelectionTapped) }
-                    )
-                    GameCreationStep.CHICKEN_SEES_HUNTERS -> ChickenSeesHuntersStep(
                         chickenCanSeeHunters = state.game.chickenCanSeeHunters,
-                        onToggle = { viewModel.onIntent(GameCreationIntent.ChickenCanSeeHuntersToggled(it)) }
+                        onGameMasterEnabledChanged = { viewModel.onIntent(GameCreationIntent.GameMasterEnabledChanged(it)) },
+                        onGameMasterPasswordChanged = { viewModel.onIntent(GameCreationIntent.GameMasterPasswordChanged(it)) },
+                        onTogglePowerUps = { viewModel.onIntent(GameCreationIntent.PowerUpsToggled(it)) },
+                        onPowerUpSelectionTapped = { viewModel.onIntent(GameCreationIntent.PowerUpSelectionTapped) },
+                        onChickenVisibilityChanged = { viewModel.onIntent(GameCreationIntent.ChickenCanSeeHuntersToggled(it)) },
                     )
                     GameCreationStep.RECAP -> RecapStep(
                         state = state,
@@ -284,6 +275,7 @@ private fun BottomBar(
     val canProceed = when (state.currentStep) {
         GameCreationStep.START_ZONE_SETUP -> state.isStartZoneConfigured
         GameCreationStep.FINAL_ZONE_SETUP -> state.isFinalZoneConfigured
+        GameCreationStep.OPTIONS -> state.isGameMasterCodeValid
         else -> true
     }
 

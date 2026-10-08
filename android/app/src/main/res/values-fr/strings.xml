@@ -513,4 +513,8 @@
     <string name="qa_debug_title">QA DEBUG</string>
     <string name="clear_search">Effacer la recherche</string>
     <string name="connection_lost">Connexion perdue. Les positions se mettent à jour dès que tu es de nouveau en ligne.</string>
+    <string name="wizard_timing_title">Combien de temps ?</string>
+    <string name="wizard_options_title">Options</string>
+    <string name="wizard_options_subtitle">Arbitres, power-ups et visibilité. Modifie-les maintenant ou garde les réglages par défaut.</string>
+    <string name="wizard_gamemaster_code_required">Saisis un code à 4 chiffres ou désactive les arbitres.</string>
 </resources>

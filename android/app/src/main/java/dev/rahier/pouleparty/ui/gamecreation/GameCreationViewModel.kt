@@ -68,8 +68,7 @@ data class GameCreationUiState(
             base.addAll(listOf(
                 GameCreationStep.MAX_PLAYERS,
                 GameCreationStep.START_TIME,
-                GameCreationStep.DURATION,
-                GameCreationStep.HEAD_START,
+                GameCreationStep.TIMING,
                 GameCreationStep.GAME_MODE,
                 GameCreationStep.START_ZONE_SETUP,
             ))
@@ -77,12 +76,14 @@ data class GameCreationUiState(
                 base.add(GameCreationStep.FINAL_ZONE_SETUP)
             }
             base.add(GameCreationStep.ZONES_RECAP)
-            base.add(GameCreationStep.GAME_MASTER_PASSWORD)
-            base.add(GameCreationStep.POWER_UPS)
-            base.add(GameCreationStep.CHICKEN_SEES_HUNTERS)
+            base.add(GameCreationStep.OPTIONS)
             base.add(GameCreationStep.RECAP)
             return base
         }
+
+    /** Referees need a 4-digit code; with referees off the code does not matter. */
+    val isGameMasterCodeValid: Boolean
+        get() = !isGameMasterEnabled || gameMasterPassword.length == 4
 
     val maxPlayersRange: IntRange
         get() = if (isAdminCreation) 2..500 else 2..5

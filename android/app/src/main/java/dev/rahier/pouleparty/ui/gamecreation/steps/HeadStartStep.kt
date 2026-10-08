@@ -12,17 +12,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import dev.rahier.pouleparty.R
-import dev.rahier.pouleparty.ui.gamecreation.StepContainer
+import dev.rahier.pouleparty.ui.gamecreation.WizardSection
 import dev.rahier.pouleparty.ui.theme.CROrange
 import dev.rahier.pouleparty.ui.theme.bangerStyle
 import dev.rahier.pouleparty.ui.theme.gameboyStyle
 
 @Composable
-fun HeadStartStep(
+fun HeadStartSection(
     headStartMinutes: Double,
     onHeadStartChanged: (Double) -> Unit
 ) {
-    StepContainer(
+    WizardSection(
         title = stringResource(R.string.wizard_head_start_title),
         subtitle = stringResource(R.string.wizard_head_start_subtitle)
     ) {

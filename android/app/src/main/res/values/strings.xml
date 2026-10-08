@@ -509,4 +509,8 @@
     <string name="qa_debug_title">QA DEBUG</string>
     <string name="clear_search">Clear search</string>
     <string name="connection_lost">Connection lost. Positions update again as soon as you are back online.</string>
+    <string name="wizard_timing_title">How long?</string>
+    <string name="wizard_options_title">Options</string>
+    <string name="wizard_options_subtitle">Referees, power-ups and visibility. Change them now or keep the defaults.</string>
+    <string name="wizard_gamemaster_code_required">Enter a 4-digit code or turn referees off.</string>
 </resources>

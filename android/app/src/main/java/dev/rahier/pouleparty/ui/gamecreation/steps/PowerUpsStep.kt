@@ -25,21 +25,21 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.model.GameMod
-import dev.rahier.pouleparty.ui.gamecreation.StepContainer
+import dev.rahier.pouleparty.ui.gamecreation.WizardSection
 import dev.rahier.pouleparty.ui.gamelogic.availablePowerUpTypes
 import dev.rahier.pouleparty.ui.theme.CROrange
 import dev.rahier.pouleparty.ui.theme.bangerStyle
 import dev.rahier.pouleparty.ui.theme.gameboyStyle
 
 @Composable
-fun PowerUpsStep(
+fun PowerUpsSection(
     powerUpsEnabled: Boolean,
     enabledPowerUpTypes: List<String>,
     gameMod: GameMod,
     onTogglePowerUps: (Boolean) -> Unit,
     onPowerUpSelectionTapped: () -> Unit
 ) {
-    StepContainer(
+    WizardSection(
         title = stringResource(R.string.wizard_power_ups_title),
         subtitle = stringResource(R.string.wizard_power_ups_subtitle)
     ) {

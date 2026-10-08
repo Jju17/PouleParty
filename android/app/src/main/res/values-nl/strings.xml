@@ -504,4 +504,8 @@
     <string name="qa_debug_title">QA DEBUG</string>
     <string name="clear_search">Zoekopdracht wissen</string>
     <string name="connection_lost">Verbinding verbroken. De posities worden bijgewerkt zodra je weer online bent.</string>
+    <string name="wizard_timing_title">Hoe lang?</string>
+    <string name="wizard_options_title">Opties</string>
+    <string name="wizard_options_subtitle">Scheidsrechters, power-ups en zichtbaarheid. Pas ze nu aan of hou de standaardinstellingen.</string>
+    <string name="wizard_gamemaster_code_required">Vul een code van 4 cijfers in of zet scheidsrechters uit.</string>
 </resources>
