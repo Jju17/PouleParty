@@ -4,6 +4,7 @@ import com.mapbox.geojson.Point
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.Exclude
 import com.google.firebase.firestore.GeoPoint
+import com.google.firebase.firestore.PropertyName
 import dev.rahier.pouleparty.AppConstants
 import dev.rahier.pouleparty.powerups.model.PowerUpType
 import java.util.Date
@@ -64,7 +65,7 @@ data class Zone(
     val radius: Double = 1500.0,
     val shrinkIntervalMinutes: Double = 5.0,
     val shrinkMetersPerUpdate: Double = 100.0,
-    val driftSeed: Int = 0
+    val driftSeed: Long = 0
 )
 
 data class ActiveEffects(
@@ -118,6 +119,8 @@ data class Game(
      * admin code (`jujurahier`). Garde-fou client only — see PP-45 and the
      * firestore.rules `allow create` clause.
      */
+    @get:PropertyName("isAdminCreation")
+    @field:PropertyName("isAdminCreation")
     val isAdminCreation: Boolean = false,
     /**
      * PP-71: when true, the game waits for an explicit LAUNCH tap from
@@ -132,6 +135,8 @@ data class Game(
      * server-side by the `debugAdvanceGame` callable, which refuses to act
      * on any game where this is false.
      */
+    @get:PropertyName("isDebugGame")
+    @field:PropertyName("isDebugGame")
     val isDebugGame: Boolean = false,
     /**
      * PP-52: when set, this game is linked to a batch of pre-paid web
@@ -243,7 +248,9 @@ data class Game(
     val finalLocation: Point?
         get() = zone.finalCenter?.let { Point.fromLngLat(it.longitude, it.latitude) }
 
+    @get:Exclude
     val startDate: Date get() = timing.start.toDate()
+    @get:Exclude
     val endDate: Date get() = timing.end.toDate()
 
     /**
@@ -255,6 +262,7 @@ data class Game(
     @get:Exclude
     val effectiveStartDate: Date get() = timing.actualStart?.toDate() ?: startDate
 
+    @get:Exclude
     val hunterStartDate: Date get() =
         Date(effectiveStartDate.time + (timing.headStartMinutes * 60 * 1000).toLong())
 
@@ -287,7 +295,11 @@ data class Game(
         val freezeDuration = (PowerUpType.ZONE_FREEZE.durationSeconds ?: 0) * 1000L
         val freezeStart = freezeEnd?.let { Date(it.time - freezeDuration) }
 
-        while (Date(lastUpdate.time + intervalMs).before(now)) {
+        var iterations = 0
+        while (Date(lastUpdate.time + intervalMs).before(now) && lastRadius > 0 &&
+            iterations < dev.rahier.pouleparty.ui.gamelogic.MAX_SHRINK_ITERATIONS
+        ) {
+            iterations += 1
             lastUpdate = Date(lastUpdate.time + intervalMs)
             val isFrozen = freezeStart != null
                 && !lastUpdate.before(freezeStart) && lastUpdate.before(freezeEnd)
@@ -340,7 +352,7 @@ data class Game(
                 radius = 1500.0,
                 shrinkIntervalMinutes = 5.0,
                 shrinkMetersPerUpdate = 100.0,
-                driftSeed = 42
+                driftSeed = 42L
             ),
             gameMode = GameMod.FOLLOW_THE_CHICKEN.firestoreValue,
             foundCode = "1234"

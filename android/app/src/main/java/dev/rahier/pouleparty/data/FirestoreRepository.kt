@@ -280,11 +280,7 @@ class FirestoreRepository @Inject constructor(
 
     suspend fun setConfig(game: Game) {
         withRetry("setConfig(${game.id})") {
-            val ref = firestore.collection(AppConstants.COLLECTION_GAMES).document(game.id)
-            val batch = firestore.batch()
-            batch.set(ref, game)
-            batch.update(ref, "gameCode", game.gameCode)
-            batch.commit().await()
+            firestore.collection(AppConstants.COLLECTION_GAMES).document(game.id).set(game).await()
         }
     }
 

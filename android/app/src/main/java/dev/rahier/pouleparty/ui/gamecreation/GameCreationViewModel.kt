@@ -123,13 +123,7 @@ data class GameCreationUiState(
         get() {
             val finalLoc = game.finalLocation ?: return false
             val start = game.initialLocation
-            val results = FloatArray(1)
-            android.location.Location.distanceBetween(
-                start.latitude(), start.longitude(),
-                finalLoc.latitude(), finalLoc.longitude(),
-                results,
-            )
-            return results[0] >= 100f
+            return dev.rahier.pouleparty.model.distanceMeters(start, finalLoc) >= 100.0
         }
 
     /** Combined gate kept for the recap step and callers that only ask
@@ -174,7 +168,7 @@ class GameCreationViewModel @Inject constructor(
                     radius = remoteConfig.defaultInitialRadius,
                     shrinkIntervalMinutes = 5.0,
                     shrinkMetersPerUpdate = 100.0,
-                    driftSeed = (1..999_999).random()
+                    driftSeed = (1..999_999).random().toLong()
                 ),
                 gameMode = GameMod.STAY_IN_THE_ZONE.firestoreValue,
                 // foundCode is generated SERVER-SIDE in onGameCreated and stored
@@ -255,7 +249,7 @@ class GameCreationViewModel @Inject constructor(
             )
             val effectiveDuration = maxOf(state.gameDurationMinutes - gameWithEnd.timing.headStartMinutes, 1.0)
             val (interval, decline) = dev.rahier.pouleparty.model.calculateNormalModeSettings(radius, effectiveDuration)
-            val newSeed = if (gameWithEnd.zone.driftSeed == 0) dev.rahier.pouleparty.model.generateDriftSeed() else gameWithEnd.zone.driftSeed
+            val newSeed: Int = if (gameWithEnd.zone.driftSeed == 0L) dev.rahier.pouleparty.model.generateDriftSeed() else gameWithEnd.zone.driftSeed.toInt()
             // PP-13 bug fix: pick a non-centered initial disc that
             // still contains both pins (stayInTheZone only —
             // followTheChicken's disc tracks the chicken's live
@@ -276,7 +270,7 @@ class GameCreationViewModel @Inject constructor(
                     zone = gameWithEnd.zone.copy(
                         center = com.google.firebase.firestore.GeoPoint(newCenter.latitude(), newCenter.longitude()),
                         radius = radius,
-                        driftSeed = newSeed,
+                        driftSeed = newSeed.toLong(),
                         shrinkIntervalMinutes = interval,
                         shrinkMetersPerUpdate = decline,
                     )
@@ -309,7 +303,7 @@ class GameCreationViewModel @Inject constructor(
                 game = game.copy(
                     zone = game.zone.copy(
                         center = com.google.firebase.firestore.GeoPoint(newCenter.latitude(), newCenter.longitude()),
-                        driftSeed = newSeed,
+                        driftSeed = newSeed.toLong(),
                     )
                 )
             )
