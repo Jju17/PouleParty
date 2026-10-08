@@ -21,7 +21,13 @@ deploy() {
   local alias="$1" site
   [[ "$alias" == "production" ]] && site="https://pouleparty.be" || site="https://pouleparty-ba586.web.app"
   echo "== Deploying to $alias"
-  firebase deploy --project "$alias" --only firestore:rules,firestore:indexes,database,storage,functions,hosting --non-interactive
+  local live code removed
+  live=$(firebase functions:list --project "$alias" --json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const r=JSON.parse(s);console.log((r.result||[]).map(f=>f.id).join("\n"))})' | LC_ALL=C sort)
+  code=$(cd functions && node -e 'console.log(Object.keys(require("./lib/index.js")).join("\n"))' | LC_ALL=C sort)
+  removed=$(LC_ALL=C comm -23 <(echo "$live") <(echo "$code"))
+  [[ -z "$removed" ]] || { echo "Refusing to deploy: live functions missing from the code would be deleted: $removed"; exit 1; }
+  # --force only acknowledges retry policies here: the check above rules out deletions.
+  firebase deploy --project "$alias" --only firestore:rules,firestore:indexes,database,storage,functions,hosting --non-interactive --force
   for url in "$site/" "$site/fr/inscription"; do
     code=$(curl -s -o /dev/null -w '%{http_code}' "$url")
     [[ "$code" == "200" ]] || { echo "FAILED: $url answered $code after deploy"; exit 1; }
