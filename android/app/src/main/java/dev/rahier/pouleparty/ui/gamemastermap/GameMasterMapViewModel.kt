@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.gamemastermap
 
+import java.util.Collections
 import dev.rahier.pouleparty.util.SystemClock
 import dev.rahier.pouleparty.util.AppClock
 import dev.rahier.pouleparty.ui.gamelogic.requestLaunch
@@ -104,7 +105,7 @@ class GameMasterMapViewModel @Inject constructor(
 
     private val gameId: String = savedStateHandle["gameId"] ?: ""
     private val playerId: String = auth.currentUser?.uid ?: ""
-    private val streamJobs = mutableListOf<Job>()
+    private val streamJobs: MutableList<Job> = Collections.synchronizedList(mutableListOf())
     private var winnerNotificationJob: Job? = null
 
     private val _uiState = MutableStateFlow(GameMasterMapUiState())
@@ -340,8 +341,10 @@ class GameMasterMapViewModel @Inject constructor(
     }
 
     override fun onCleared() {
-        streamJobs.forEach { it.cancel() }
-        streamJobs.clear()
+        synchronized(streamJobs) {
+            streamJobs.forEach { it.cancel() }
+            streamJobs.clear()
+        }
         winnerNotificationJob?.cancel()
     }
 }

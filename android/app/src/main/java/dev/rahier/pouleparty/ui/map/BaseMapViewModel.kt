@@ -87,8 +87,10 @@ abstract class BaseMapViewModel(
 
     /** Stops every stream and the foreground location service: nothing runs after the game. */
     protected fun cancelStreams() {
-        streamJobs.forEach { it.cancel() }
-        streamJobs.clear()
+        synchronized(streamJobs) {
+            streamJobs.forEach { it.cancel() }
+            streamJobs.clear()
+        }
         locationRepository.stopTrackingService()
     }
 
