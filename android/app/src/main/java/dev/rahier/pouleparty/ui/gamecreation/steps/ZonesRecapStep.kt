@@ -58,6 +58,7 @@ import dev.rahier.pouleparty.ui.theme.gameboyStyle
  * `computeDebugShiftedCircles` calls for a PP-69 Cloud Function
  * response.
  */
+@Suppress("COMPOSE_APPLIER_CALL_MISMATCH")
 @Composable
 fun ZonesRecapStep(
     game: Game,
@@ -84,7 +85,7 @@ fun ZonesRecapStep(
     val mapViewportState = rememberMapViewportState {
         setCameraOptions {
             center(game.initialLocation)
-            zoom(zoomForRadius(game.zone.radius * 1.15, game.initialLocation.latitude()).toDouble())
+            zoom(zoomForRadius(game.zone.radius * 1.15, game.initialLocation.latitude()))
         }
     }
     // Re-fit the camera whenever the computed disc center or radius
@@ -97,7 +98,7 @@ fun ZonesRecapStep(
         mapViewportState.flyTo(
             CameraOptions.Builder()
                 .center(game.initialLocation)
-                .zoom(zoomForRadius(game.zone.radius * 1.15, game.initialLocation.latitude()).toDouble())
+                .zoom(zoomForRadius(game.zone.radius * 1.15, game.initialLocation.latitude()))
                 .build()
         )
     }

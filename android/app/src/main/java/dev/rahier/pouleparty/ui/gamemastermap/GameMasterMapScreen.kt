@@ -25,7 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.mapbox.maps.CameraOptions
 import com.mapbox.maps.MapboxExperimental
 import com.mapbox.maps.extension.compose.MapboxMap
@@ -50,6 +50,7 @@ import dev.rahier.pouleparty.ui.theme.*
  * + power-ups in read-only mode. The GM never broadcasts their own GPS
  * and cannot collect power-ups.
  */
+@Suppress("COMPOSE_APPLIER_CALL_MISMATCH")
 @OptIn(MapboxExperimental::class, ExperimentalMaterial3Api::class)
 @Composable
 fun GameMasterMapScreen(

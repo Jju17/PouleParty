@@ -1,9 +1,9 @@
 package dev.rahier.pouleparty.config
 
-import com.google.firebase.ktx.Firebase
+import com.google.firebase.Firebase
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig
-import com.google.firebase.remoteconfig.ktx.remoteConfig
-import com.google.firebase.remoteconfig.ktx.remoteConfigSettings
+import com.google.firebase.remoteconfig.remoteConfig
+import com.google.firebase.remoteconfig.remoteConfigSettings
 import dev.rahier.pouleparty.AppConstants
 import dev.rahier.pouleparty.model.AdminCode
 import dev.rahier.pouleparty.model.DebugCode

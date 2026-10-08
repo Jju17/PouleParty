@@ -19,7 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.mapbox.geojson.Point
 import com.mapbox.maps.CameraOptions
 import com.mapbox.maps.MapboxExperimental
@@ -39,6 +39,7 @@ import dev.rahier.pouleparty.ui.theme.CROrange
 import dev.rahier.pouleparty.ui.theme.ZoneGreen
 import dev.rahier.pouleparty.ui.theme.gameboyStyle
 
+@Suppress("COMPOSE_APPLIER_CALL_MISMATCH")
 @OptIn(MapboxExperimental::class, ExperimentalMaterial3Api::class)
 @Composable
 fun ChickenMapConfigScreen(

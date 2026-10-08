@@ -30,7 +30,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.compose.ui.text.font.FontWeight
@@ -70,6 +70,7 @@ import dev.rahier.pouleparty.ui.challenges.ChallengesSheet
 
 import dev.rahier.pouleparty.ui.theme.*
 
+@Suppress("COMPOSE_APPLIER_CALL_MISMATCH")
 @OptIn(MapboxExperimental::class)
 @Composable
 fun HunterMapScreen(

@@ -29,9 +29,9 @@ fun CountdownView(
     val isHeadStart = !isEnded && !isPreChickenStart && hunterStartDate != null && nowDate.before(hunterStartDate)
 
     val target = when {
-        isEnded -> endDate ?: Date()
-        isPreChickenStart -> chickenStartDate ?: Date()
-        isHeadStart -> hunterStartDate ?: Date()
+        isEnded -> endDate
+        isPreChickenStart -> chickenStartDate
+        isHeadStart -> hunterStartDate
         else -> nextUpdateDate ?: Date()
     }
 
@@ -43,7 +43,7 @@ fun CountdownView(
     }
 
     val text = if (isEnded) {
-        "$label ${formatOvertime(nowDate, endDate!!)}"
+        "$label ${formatOvertime(nowDate, endDate)}"
     } else {
         val diffMs = target.time - nowDate.time
         val totalSeconds = kotlin.math.ceil(diffMs / 1000.0).toLong().coerceAtLeast(0)

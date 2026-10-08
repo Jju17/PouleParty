@@ -27,6 +27,7 @@ import dev.rahier.pouleparty.ui.components.circlePolygonPoints
  *
  * Must be called within a `MapboxMap { ... }` scope.
  */
+@Suppress("COMPOSE_APPLIER_CALL_MISMATCH")
 @Composable
 @OptIn(MapboxExperimental::class)
 fun PowerUpsMapOverlay(

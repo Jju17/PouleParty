@@ -169,6 +169,7 @@ private fun rememberNowTicker(): Date {
     return Date(now)
 }
 
+@Suppress("COMPOSE_APPLIER_CALL_MISMATCH")
 @OptIn(MapboxExperimental::class)
 @Composable
 private fun DemoChickenMapContent() {
@@ -230,6 +231,7 @@ private fun DemoChickenMapContent() {
     }
 }
 
+@Suppress("COMPOSE_APPLIER_CALL_MISMATCH")
 @OptIn(MapboxExperimental::class)
 @Composable
 private fun DemoHunterMapContent() {
@@ -278,6 +280,7 @@ private fun DemoHunterMapContent() {
     }
 }
 
+@Suppress("COMPOSE_APPLIER_CALL_MISMATCH")
 @OptIn(MapboxExperimental::class)
 @Composable
 private fun DemoGameMasterMapContent() {

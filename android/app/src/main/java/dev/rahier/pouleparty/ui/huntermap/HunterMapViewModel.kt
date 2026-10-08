@@ -460,7 +460,7 @@ class HunterMapViewModel @Inject constructor(
                     if (_uiState.value.decoyLocation == null) {
                         val center = _uiState.value.circleCenter ?: updatedGame.initialLocation
                         val decoyTimestamp = (updatedGame.powerUps.activeEffects.decoy?.toDate()?.time ?: 0L) / 1000 // seconds, matching iOS
-                        val seed = updatedGame.zone.driftSeed.toLong() xor decoyTimestamp
+                        val seed = updatedGame.zone.driftSeed xor decoyTimestamp
                         val angle = seededRandom(seed, 0) * 2 * Math.PI
                         val distance = (200 + seededRandom(seed, 1) * 300) / 111_320.0 // 200-500m in degrees
                         val decoy = Point.fromLngLat(

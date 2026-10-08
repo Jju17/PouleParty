@@ -26,7 +26,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.compose.ui.text.font.FontWeight
 import com.mapbox.maps.CameraOptions
 import com.mapbox.maps.MapboxExperimental
@@ -63,6 +63,7 @@ import dev.rahier.pouleparty.ui.components.PreGameOverlay
 import dev.rahier.pouleparty.ui.endgamecode.EndGameCodeContent
 import dev.rahier.pouleparty.ui.theme.*
 
+@Suppress("COMPOSE_APPLIER_CALL_MISMATCH")
 @OptIn(MapboxExperimental::class)
 @Composable
 fun ChickenMapScreen(
