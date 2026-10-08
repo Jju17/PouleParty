@@ -39,6 +39,7 @@ struct HunterMapFeature {
         var countdownText: String? = nil
         var wrongCodeAttempts: Int = 0
         var codeCooldownUntil: Date? = nil
+        var isLeaving: Bool = false
         var userLocation: CLLocationCoordinate2D?
         var isOutsideZone: Bool = false
         var lastLiveActivityState: PoulePartyAttributes.ContentState?
@@ -170,6 +171,7 @@ struct HunterMapFeature {
             /// "Wrong code" alert + cooldown logic that used to
             /// fire on the client-side comparison.
             case wrongCodeRejected(lockedUntil: Date?)
+            case leaveFailed(String)
         }
 
         @CasePathable
@@ -198,6 +200,7 @@ struct HunterMapFeature {
 
             enum Alert: Equatable {
                 case leaveGame
+                case leaveCancelled
                 case wrongCode
                 case retryWinnerRegistration
             }
@@ -274,12 +277,39 @@ struct HunterMapFeature {
                 )
                 return .none
             case .destination(.presented(.alert(.leaveGame))):
-                locationClient.stopTracking()
-                state.previewCircle = nil
+                guard !state.isLeaving else { return .none }
+                state.isLeaving = true
+                let gameId = state.game.id
+                let needsServerLeave = state.game.status != .done
                 return .run { send in
+                    do {
+                        if needsServerLeave { try await apiClient.leaveGame(gameId) }
+                    } catch {
+                        logger.warning("[leave] leaveGame failed: \(error.localizedDescription)")
+                        await send(.internal(.leaveFailed(error.userMessage)))
+                        return
+                    }
+                    locationClient.stopTracking()
                     await liveActivityClient.end(nil)
                     await send(.delegate(.returnedToMenu))
                 }
+            case let .internal(.leaveFailed(message)):
+                state.isLeaving = false
+                state.destination = .alert(
+                    AlertState {
+                        TextState("Could not leave the game")
+                    } actions: {
+                        ButtonState(role: .cancel, action: .leaveCancelled) {
+                            TextState("Cancel")
+                        }
+                        ButtonState(action: .leaveGame) {
+                            TextState("Try again")
+                        }
+                    } message: {
+                        TextState(message)
+                    }
+                )
+                return .none
             case .destination(.presented(.alert(.retryWinnerRegistration))):
                 // Must live above the catch-all `case .destination:` below,
                 // otherwise the pattern never matches.

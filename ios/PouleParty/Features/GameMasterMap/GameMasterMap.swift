@@ -56,6 +56,8 @@ struct GameMasterMapFeature {
         var isLaunching: Bool = false
         /// PP-71: last error from `launchGame`.
         var launchError: String?
+        var isLeaving: Bool = false
+        var leaveError: String?
 
         // MARK: - MapFeatureState surface (GM has no power-up tray)
         var availablePowerUps: [PowerUp] { [] }
@@ -89,6 +91,7 @@ struct GameMasterMapFeature {
             case huntersDrawerDismissed
             case validationQueueTapped
             case leaveGameTapped
+            case leaveErrorDismissed
             case launchTapped
             case launchErrorDismissed
             /// Banner tap at game-end → navigate to the Victory /
@@ -121,6 +124,7 @@ struct GameMasterMapFeature {
             case pendingSubmissionsUpdated(Int)
             case designationSucceeded
             case designationFailed(String)
+            case leaveFailed(String)
         }
 
         @CasePathable
@@ -323,7 +327,28 @@ struct GameMasterMapFeature {
                 state.pendingSubmissionsCount = count
                 return .none
             case .view(.leaveGameTapped):
-                return .send(.delegate(.returnedToMenu))
+                guard !state.isLeaving else { return .none }
+                state.isLeaving = true
+                state.leaveError = nil
+                state.showGameInfo = false
+                let gameId = state.game.id
+                let needsServerLeave = state.game.status != .done
+                return .run { send in
+                    do {
+                        if needsServerLeave { try await apiClient.leaveGame(gameId) }
+                        await send(.delegate(.returnedToMenu))
+                    } catch {
+                        logger.warning("[leave] leaveGame failed: \(error.localizedDescription)")
+                        await send(.internal(.leaveFailed(error.userMessage)))
+                    }
+                }
+            case .view(.leaveErrorDismissed):
+                state.leaveError = nil
+                return .none
+            case let .internal(.leaveFailed(message)):
+                state.isLeaving = false
+                state.leaveError = message
+                return .none
 
             case .view(.viewLeaderboardTapped):
                 return .send(.delegate(.gameEnded(state.game)))

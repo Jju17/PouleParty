@@ -456,16 +456,37 @@ struct HunterMapFeatureTests {
             }
         )
 
+        let left = LockIsolated<[String]>([])
         let store = TestStore(initialState: state) {
             HunterMapFeature()
         } withDependencies: {
             $0.locationClient.stopTracking = { }
+            $0.apiClient.leaveGame = { gameId in left.withValue { $0.append(gameId) } }
         }
 
         await store.send(.destination(.presented(.alert(.leaveGame)))) {
             $0.destination = nil
+            $0.isLeaving = true
         }
         await store.receive(\.delegate.returnedToMenu)
+        #expect(left.value == [Game.mock.id])
+    }
+
+    @Test func failedLeaveStaysOnTheMapWithATranslatedError() async {
+        var state = HunterMapFeature.State(game: .mock)
+        state.destination = .alert(AlertState { TextState("Quit game") } actions: { ButtonState(action: .leaveGame) { TextState("Quit") } })
+        let store = TestStore(initialState: state) {
+            HunterMapFeature()
+        } withDependencies: {
+            $0.apiClient.leaveGame = { _ in throw ApiError(code: .network) }
+        }
+        store.exhaustivity = .off
+
+        await store.send(.destination(.presented(.alert(.leaveGame))))
+        await store.receive(\.internal.leaveFailed) {
+            $0.isLeaving = false
+        }
+        #expect(store.state.destination != nil)
     }
 
     // MARK: - Game info

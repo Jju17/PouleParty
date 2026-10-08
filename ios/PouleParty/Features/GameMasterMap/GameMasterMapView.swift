@@ -148,6 +148,23 @@ struct GameMasterMapView: View {
             } message: { message in
                 Text(message)
             }
+            .alert(
+                "Could not leave the game",
+                isPresented: Binding(
+                    get: { store.leaveError != nil },
+                    set: { if !$0 { store.send(.view(.leaveErrorDismissed)) } }
+                ),
+                presenting: store.leaveError
+            ) { _ in
+                Button("Try again") {
+                    store.send(.view(.leaveGameTapped))
+                }
+                Button("Cancel", role: .cancel) {
+                    store.send(.view(.leaveErrorDismissed))
+                }
+            } message: { message in
+                Text(message)
+            }
             .sheet(isPresented: Binding(
                 get: { store.showGameInfo },
                 set: { if !$0 { store.send(.view(.gameInfoDismissed)) } }

@@ -238,13 +238,32 @@ struct GameMasterMapFeatureTests {
     }
 
     @Test func leaveGameEmitsReturnedToMenuDelegate() async {
+        let left = LockIsolated<[String]>([])
         let store = TestStore(initialState: GameMasterMapFeature.State(game: .mock)) {
             GameMasterMapFeature()
+        } withDependencies: {
+            $0.apiClient.leaveGame = { gameId in left.withValue { $0.append(gameId) } }
         }
         store.exhaustivity = .off
 
         await store.send(.view(.leaveGameTapped))
         await store.receive(\.delegate.returnedToMenu)
+        #expect(left.value == [Game.mock.id])
+    }
+
+    @Test func failedLeaveShowsTheReason() async {
+        let store = TestStore(initialState: GameMasterMapFeature.State(game: .mock)) {
+            GameMasterMapFeature()
+        } withDependencies: {
+            $0.apiClient.leaveGame = { _ in throw ApiError(code: .chickenCannotLeave) }
+        }
+        store.exhaustivity = .off
+
+        await store.send(.view(.leaveGameTapped))
+        await store.receive(\.internal.leaveFailed) {
+            $0.isLeaving = false
+            $0.leaveError = ApiErrorCode.chickenCannotLeave.message
+        }
     }
 
     // MARK: - Designate chicken (PP-86) — read-only API surface
