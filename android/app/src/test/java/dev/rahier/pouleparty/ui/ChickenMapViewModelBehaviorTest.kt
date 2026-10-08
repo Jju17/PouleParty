@@ -234,6 +234,50 @@ class ChickenMapViewModelBehaviorTest {
         }
     }
 
+    private fun startedGame(): dev.rahier.pouleparty.model.Game {
+        val now = System.currentTimeMillis()
+        return dev.rahier.pouleparty.model.Game(
+            id = "test-id",
+            gameMode = dev.rahier.pouleparty.model.GameMod.FOLLOW_THE_CHICKEN.firestoreValue,
+            status = dev.rahier.pouleparty.model.GameStatus.IN_PROGRESS.firestoreValue,
+            timing = dev.rahier.pouleparty.model.Timing(
+                start = com.google.firebase.Timestamp(java.util.Date(now - 60_000)),
+                end = com.google.firebase.Timestamp(java.util.Date(now + 3_600_000)),
+            ),
+        )
+    }
+
+    @Test
+    fun `a failing heartbeat is retried on the next tick instead of crashing`() {
+        io.mockk.coEvery { gameRepository.getConfig(any()) } returns startedGame()
+        io.mockk.coEvery { presenceRepository.updateHeartbeat(any()) } throws IllegalStateException("rtdb down")
+
+        createViewModel()
+        testDispatcher.scheduler.runCurrent()
+        testDispatcher.scheduler.advanceTimeBy(dev.rahier.pouleparty.AppConstants.HEARTBEAT_INTERVAL_MS * 2 + 100)
+        testDispatcher.scheduler.runCurrent()
+
+        io.mockk.coVerify(exactly = 3) { presenceRepository.updateHeartbeat("test-id") }
+    }
+
+    @Test
+    fun `a moving chicken still writes once per throttle window`() {
+        io.mockk.coEvery { gameRepository.getConfig(any()) } returns startedGame()
+        io.mockk.every { locationRepository.locationFlow() } returns kotlinx.coroutines.flow.flow {
+            repeat(20) { step ->
+                emit(com.mapbox.geojson.Point.fromLngLat(4.39 + step * 0.001, 50.82))
+                kotlinx.coroutines.delay(1_000)
+            }
+        }
+
+        createViewModel()
+        testDispatcher.scheduler.runCurrent()
+        testDispatcher.scheduler.advanceTimeBy(dev.rahier.pouleparty.AppConstants.LOCATION_THROTTLE_MS * 3 + 100)
+        testDispatcher.scheduler.runCurrent()
+
+        io.mockk.verify(exactly = 4) { presenceRepository.setChickenLocation(eq("test-id"), any(), any()) }
+    }
+
     /**
      * The chicken stationary rebroadcaster runs continuously regardless of
      * radar-ping state — gating it on ping landed us with a stale write
@@ -241,10 +285,10 @@ class ChickenMapViewModelBehaviorTest {
      * The hunter-side UI is now what decides when to render the marker
      * (`game.isRadarPingActive`). This test asserts the loop fires writes
      * even when ping is inactive, because the next ping must hit a fresh
-     * point. See `chickenStationaryRebroadcastLoop` in `ChickenMapViewModel`.
+     * point. See `broadcastChickenLocation` in `ChickenMapViewModel`.
      */
     @Test
-    fun `chickenStationaryRebroadcastLoop writes regardless of ping state`() {
+    fun `the chicken position is rebroadcast regardless of ping state`() {
         val now = System.currentTimeMillis()
         val game = dev.rahier.pouleparty.model.Game(
             id = "test-id",

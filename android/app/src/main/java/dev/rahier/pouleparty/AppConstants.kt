@@ -47,6 +47,7 @@ object AppConstants {
 
     // Time Intervals
     const val LOCATION_THROTTLE_MS = 5_000L
+    const val HEARTBEAT_INTERVAL_MS = 30_000L
     const val LOCATION_UPDATE_INTERVAL_MS = 5_000L
     const val COUNTDOWN_THRESHOLD_SECONDS = 3.0
     const val COUNTDOWN_DISPLAY_MS = 1_500L

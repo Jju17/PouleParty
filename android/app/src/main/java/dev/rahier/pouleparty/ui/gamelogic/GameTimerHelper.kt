@@ -5,6 +5,7 @@ import dev.rahier.pouleparty.model.PlayerRole
 import dev.rahier.pouleparty.model.distanceMeters
 import com.mapbox.geojson.Point
 import dev.rahier.pouleparty.AppConstants
+import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameMod
 import dev.rahier.pouleparty.model.Winner
 import java.util.Date
@@ -536,6 +537,10 @@ fun detectNewWinners(
  * tests) and the bruit shifts once per second, too fast for a hunter to
  * average out, too slow to burn battery re-computing inside a single write.
  */
+/** What the chicken publishes: the real fix, or a jammed one while the jammer runs. */
+fun chickenBroadcastPoint(location: com.mapbox.geojson.Point, game: Game, nowMillis: Long = System.currentTimeMillis()): com.mapbox.geojson.Point =
+    if (game.isJammerActive) applyJammerNoise(location, game.zone.driftSeed, nowMillis) else location
+
 fun applyJammerNoise(
     coordinate: com.mapbox.geojson.Point,
     driftSeed: Long,

@@ -20,7 +20,7 @@ import com.google.firebase.auth.FirebaseAuth
 import dev.rahier.pouleparty.ui.gamelogic.CountdownPhase
 import dev.rahier.pouleparty.ui.gamelogic.CountdownResult
 import dev.rahier.pouleparty.model.PlayerRole
-import dev.rahier.pouleparty.ui.gamelogic.applyJammerNoise
+import dev.rahier.pouleparty.ui.gamelogic.chickenBroadcastPoint
 import dev.rahier.pouleparty.ui.gamelogic.checkGameOverByTime
 import dev.rahier.pouleparty.ui.gamelogic.checkZoneStatus
 import dev.rahier.pouleparty.ui.gamelogic.detectNewWinners
@@ -28,7 +28,9 @@ import dev.rahier.pouleparty.ui.gamelogic.evaluateCountdown
 import dev.rahier.pouleparty.ui.map.BaseMapViewModel
 import dev.rahier.pouleparty.ui.gamelogic.zoneRenderStateFromCircles
 import dev.rahier.pouleparty.ui.gamelogic.shouldCheckZone
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -252,15 +254,7 @@ class ChickenMapViewModel @Inject constructor(
             streamJobs += viewModelScope.launch { streamPowerUps() }
             streamJobs += viewModelScope.launch { streamPendingSubmissions() }
             streamJobs += viewModelScope.launch { sendHeartbeat(game) }
-            // Run the stationary-rebroadcast loop in BOTH modes. The Chicken
-            // broadcasts its position continuously so Radar Ping (3 s) has a
-            // fresh point to reveal; without this loop a non-moving Chicken
-            // only writes on its very first coord (CoreLocation / Fused
-            // Location's 10 m distance filter blocks subsequent emits), and
-            // a 3 s Ping landing after that first write would miss any
-            // update. Mirrors the `.run` block in iOS `ChickenMap.swift`
-            // that fires every `locationThrottleSeconds` regardless of mode.
-            streamJobs += viewModelScope.launch { chickenStationaryRebroadcastLoop(game) }
+            streamJobs += viewModelScope.launch { broadcastChickenLocation(game) }
         }
     }
 
@@ -362,128 +356,36 @@ class ChickenMapViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Chicken sends its position to hunters (except in stayInTheZone mode).
-     * Circle follows chicken position in followTheChicken mode.
-     * In stayInTheZone, tracks location for zone check only (no Firestore writes).
-     */
+    /** Keeps the chicken's own position in state; the zone follows it only in followTheChicken. */
     private suspend fun trackLocation(game: Game) {
         val delayMs = game.startDate.time - System.currentTimeMillis()
         if (delayMs > 0) delay(delayMs)
-
-        if (game.gameModEnum == GameMod.STAY_IN_THE_ZONE) {
-            // stayInTheZone (PP-24, PP-87): chicken broadcasts its
-            // position continuously, with the `invisible` flag set
-            // when Invisibility is active. Hunters gate visibility on
-            // `game.isRadarPingActive`; GameMaster reads the doc
-            // directly. The continuous write keeps the last-known
-            // position fresh for Radar Ping windows.
-            locationRepository.getLastLocation()?.let { latLng ->
-                _uiState.update { it.copy(userLocation = latLng) }
-            }
-            var lastWrite = Date(0L)
-            locationRepository.locationFlow().collect { latLng ->
-                _uiState.update { it.copy(userLocation = latLng) }
-                val currentGame = _uiState.value.game
-                val isInvisible = currentGame.isChickenInvisible
-                if (Date().time - lastWrite.time >= AppConstants.LOCATION_THROTTLE_MS) {
-                    val sendLatLng = if (currentGame.isJammerActive) {
-                        applyJammerNoise(latLng, currentGame.zone.driftSeed)
-                    } else {
-                        latLng
-                    }
-                    presenceRepository.setChickenLocation(gameId, sendLatLng, isInvisible)
-                    lastWrite = Date()
-                }
-            }
-            return
-        }
-
-        // Radar Ping support for stayInTheZone is driven by [radarPingBroadcastLoop]
-        // instead of the location flow above, because the flow's 10 m distance
-        // filter means a stationary chicken would never emit a write here, even
-        // during an active ping.
-
-        // `circleCenter` represents the zone center. In followTheChicken it
-        // follows the chicken's GPS; in stayInTheZone the zone drifts
-        // deterministically and must NOT be moved by the chicken's own
-        // location updates. iOS already gated this on `newLocationFetched`,
-        // Android was not — visible as the zone visually following the
-        // chicken even in stayInTheZone, and zone-check firing against
-        // the chicken's position rather than the real drifted zone.
-        val zoneFollowsChicken = _uiState.value.game.gameModEnum != GameMod.STAY_IN_THE_ZONE
-
-        // Send current location immediately if we have a cached fix. If we
-        // don't, lastWrite stays at epoch so the very first coord emitted
-        // by locationFlow is broadcast immediately — otherwise hunters
-        // see no chicken puck for the first 5 s + however long the 10 m
-        // distance filter takes to produce the second coord.
-        var lastWrite = Date(0L)
-        locationRepository.getLastLocation()?.let { latLng ->
+        val zoneFollowsChicken = game.gameModEnum != GameMod.STAY_IN_THE_ZONE
+        val onFix: (Point) -> Unit = { latLng ->
             _uiState.update {
                 it.copy(
                     circleCenter = if (zoneFollowsChicken) latLng else it.circleCenter,
                     userLocation = latLng,
                 )
             }
-            val initialIsInvisible = _uiState.value.game.isChickenInvisible
-            presenceRepository.setChickenLocation(gameId, latLng, initialIsInvisible)
-            lastWrite = Date()
         }
-
-        locationRepository.locationFlow().collect { latLng ->
-            _uiState.update {
-                it.copy(
-                    circleCenter = if (zoneFollowsChicken) latLng else it.circleCenter,
-                    userLocation = latLng,
-                )
-            }
-
-            // PP-87: chicken always broadcasts its position — hunters
-            // filter the marker out on the `invisible: true` flag,
-            // GameMaster ignores the flag. Throttled the same way as
-            // before; no more invisibility gate around the write.
-            val liveGame = _uiState.value.game
-            val isInvisible = liveGame.isChickenInvisible
-            if (Date().time - lastWrite.time >= AppConstants.LOCATION_THROTTLE_MS) {
-                val sendLatLng = if (liveGame.isJammerActive) {
-                    applyJammerNoise(latLng, liveGame.zone.driftSeed)
-                } else {
-                    latLng
-                }
-                presenceRepository.setChickenLocation(gameId, sendLatLng, isInvisible)
-                lastWrite = Date()
-            }
-        }
+        locationRepository.getLastLocation()?.let(onFix)
+        locationRepository.locationFlow().collect(onFix)
     }
 
     /**
-     * Timer-driven rebroadcaster for a stationary Chicken. Ticks every
-     * `LOCATION_THROTTLE_MS` and rewrites the last-known chicken position
-     * to Firestore so any Radar Ping (3 s) lands on a recent point. Needed
-     * because `locationFlow()` only emits on movement (≥10 m filter), so a
-     * non-moving Chicken would otherwise write once and then go silent.
-     * Not gated by Radar Ping anymore — the Chicken broadcasts
-     * continuously and the Hunter-side UI is what decides when to render
-     * the marker (gated on `game.isRadarPingActive`). Mirrors the iOS
-     * rebroadcast timer in `ChickenMap.swift`.
+     * The only position writer: one write per throttle window, moving or not,
+     * so a radar ping always finds a recent point.
      */
-    private suspend fun chickenStationaryRebroadcastLoop(game: Game) {
+    private suspend fun broadcastChickenLocation(game: Game) {
         val delayMs = game.startDate.time - System.currentTimeMillis()
         if (delayMs > 0) delay(delayMs)
-        while (true) {
-            delay(AppConstants.LOCATION_THROTTLE_MS)
-            val currentGame = _uiState.value.game
-            val latLng = locationRepository.getLastLocation() ?: continue
-            // PP-87: keep ticking during Invisibility, just flag the
-            // doc. Lets GameMaster always render a fresh chicken pin.
-            val isInvisible = currentGame.isChickenInvisible
-            val sendLatLng = if (currentGame.isJammerActive) {
-                applyJammerNoise(latLng, currentGame.zone.driftSeed)
-            } else {
-                latLng
+        while (currentCoroutineContext().isActive && !_uiState.value.isGameOver) {
+            val state = _uiState.value
+            state.userLocation?.let { location ->
+                presenceRepository.setChickenLocation(gameId, chickenBroadcastPoint(location, state.game), state.game.isChickenInvisible)
             }
-            presenceRepository.setChickenLocation(gameId, sendLatLng, isInvisible)
+            delay(AppConstants.LOCATION_THROTTLE_MS)
         }
     }
 
@@ -653,13 +555,19 @@ class ChickenMapViewModel @Inject constructor(
 
     // ── Power-ups ──────────────────────────────────────
 
-    /** Periodically write a heartbeat so hunters can detect chicken disconnect. */
+    /** A failed heartbeat must never end the loop: the next tick retries. */
     private suspend fun sendHeartbeat(game: Game) {
         val delayMs = game.startDate.time - System.currentTimeMillis()
         if (delayMs > 0) delay(delayMs)
-        while (true) {
-            presenceRepository.updateHeartbeat(gameId)
-            delay(30_000)
+        while (currentCoroutineContext().isActive && !_uiState.value.isGameOver) {
+            try {
+                presenceRepository.updateHeartbeat(gameId)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w("ChickenMapVM", "[presence] heartbeat failed", e)
+            }
+            delay(AppConstants.HEARTBEAT_INTERVAL_MS)
         }
     }
 
