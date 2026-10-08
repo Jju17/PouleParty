@@ -14,40 +14,138 @@
   },
   "hosting": {
     "public": "web/dist",
-    "ignore": ["firebase.json", "**/.DS_Store", "**/node_modules/**"],
+    "ignore": [
+      "firebase.json",
+      "**/.DS_Store",
+      "**/node_modules/**"
+    ],
     "headers": [
       {
         "source": "**/*.@(html)",
         "headers": [
-          { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" },
-          { "key": "X-Content-Type-Options", "value": "nosniff" },
-          { "key": "X-Frame-Options", "value": "DENY" },
-          { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
-          { "key": "Permissions-Policy", "value": "geolocation=(), camera=(), microphone=(), payment=()" },
-          { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://*.cloudfunctions.net https://*.run.app https://api.stripe.com; frame-ancestors 'none'; form-action 'self' https://checkout.stripe.com; base-uri 'self'" }
+          {
+            "key": "Strict-Transport-Security",
+            "value": "max-age=63072000; includeSubDomains; preload"
+          },
+          {
+            "key": "X-Content-Type-Options",
+            "value": "nosniff"
+          },
+          {
+            "key": "X-Frame-Options",
+            "value": "DENY"
+          },
+          {
+            "key": "Referrer-Policy",
+            "value": "strict-origin-when-cross-origin"
+          },
+          {
+            "key": "Permissions-Policy",
+            "value": "geolocation=(), camera=(), microphone=(), payment=()"
+          },
+          {
+            "key": "Content-Security-Policy",
+            "value": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://*.cloudfunctions.net https://*.run.app https://api.stripe.com; frame-ancestors 'none'; form-action 'self' https://checkout.stripe.com; base-uri 'self'"
+          }
         ]
       }
     ],
     "redirects": [
-      { "source": "/inscription", "destination": "/fr/inscription", "type": 301 },
-      { "source": "/inscription/success", "destination": "/fr/inscription/success", "type": 301 },
-      { "source": "/inscription/cancel", "destination": "/fr/inscription/cancel", "type": 301 },
-      { "source": "/registration", "destination": "/en/registration", "type": 301 },
-      { "source": "/registration/success", "destination": "/en/registration/success", "type": 301 },
-      { "source": "/registration/cancel", "destination": "/en/registration/cancel", "type": 301 },
-      { "source": "/inschrijving", "destination": "/nl/inschrijving", "type": 301 },
-      { "source": "/inschrijving/success", "destination": "/nl/inschrijving/success", "type": 301 },
-      { "source": "/inschrijving/cancel", "destination": "/nl/inschrijving/cancel", "type": 301 },
-      { "source": "/creer-une-partie", "destination": "/fr/creer-une-partie", "type": 301 },
-      { "source": "/create-a-party", "destination": "/en/create-a-party", "type": 301 },
-      { "source": "/een-feestje-organiseren", "destination": "/nl/een-feestje-organiseren", "type": 301 },
-      { "source": "/challenges-fr/:gameId", "destination": "/fr/challenges/:gameId", "type": 301 },
-      { "source": "/challenges-en/:gameId", "destination": "/en/challenges/:gameId", "type": 301 },
-      { "source": "/challenges-nl/:gameId", "destination": "/nl/challenges/:gameId", "type": 301 },
-      { "source": "/privacy", "destination": "/fr/privacy", "type": 301 },
-      { "source": "/terms", "destination": "/fr/terms", "type": 301 },
-      { "source": "/support", "destination": "/fr/support", "type": 301 },
-      { "source": "/delete-account", "destination": "/fr/delete-account", "type": 301 }
+      {
+        "source": "/inscription",
+        "destination": "/fr/inscription",
+        "type": 301
+      },
+      {
+        "source": "/inscription/success",
+        "destination": "/fr/inscription/success",
+        "type": 301
+      },
+      {
+        "source": "/inscription/cancel",
+        "destination": "/fr/inscription/cancel",
+        "type": 301
+      },
+      {
+        "source": "/registration",
+        "destination": "/en/registration",
+        "type": 301
+      },
+      {
+        "source": "/registration/success",
+        "destination": "/en/registration/success",
+        "type": 301
+      },
+      {
+        "source": "/registration/cancel",
+        "destination": "/en/registration/cancel",
+        "type": 301
+      },
+      {
+        "source": "/inschrijving",
+        "destination": "/nl/inschrijving",
+        "type": 301
+      },
+      {
+        "source": "/inschrijving/success",
+        "destination": "/nl/inschrijving/success",
+        "type": 301
+      },
+      {
+        "source": "/inschrijving/cancel",
+        "destination": "/nl/inschrijving/cancel",
+        "type": 301
+      },
+      {
+        "source": "/creer-une-partie",
+        "destination": "/fr/creer-une-partie",
+        "type": 301
+      },
+      {
+        "source": "/create-a-party",
+        "destination": "/en/create-a-party",
+        "type": 301
+      },
+      {
+        "source": "/een-feestje-organiseren",
+        "destination": "/nl/een-feestje-organiseren",
+        "type": 301
+      },
+      {
+        "source": "/challenges-fr/:gameId",
+        "destination": "/fr/challenges/:gameId",
+        "type": 301
+      },
+      {
+        "source": "/challenges-en/:gameId",
+        "destination": "/en/challenges/:gameId",
+        "type": 301
+      },
+      {
+        "source": "/challenges-nl/:gameId",
+        "destination": "/nl/challenges/:gameId",
+        "type": 301
+      },
+      {
+        "source": "/privacy",
+        "destination": "/fr/privacy",
+        "type": 301
+      },
+      {
+        "source": "/terms",
+        "destination": "/fr/terms",
+        "type": 301
+      },
+      {
+        "source": "/support",
+        "destination": "/fr/support",
+        "type": 301
+      },
+      {
+        "source": "/delete-account",
+        "destination": "/fr/delete-account",
+        "type": 301
+      }
     ],
     "rewrites": [
       {
@@ -94,5 +192,23 @@
   "functions": {
     "source": "functions",
     "runtime": "nodejs22"
+  },
+  "emulators": {
+    "firestore": {
+      "host": "127.0.0.1",
+      "port": 8180
+    },
+    "database": {
+      "host": "127.0.0.1",
+      "port": 9100
+    },
+    "storage": {
+      "host": "127.0.0.1",
+      "port": 9299
+    },
+    "ui": {
+      "enabled": false
+    },
+    "singleProjectMode": true
   }
 }

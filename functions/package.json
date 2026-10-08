@@ -4,7 +4,8 @@
     "build": "tsc",
     "serve": "npm run build && firebase emulators:start --only functions",
     "deploy": "firebase deploy --only functions",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:rules": "firebase emulators:exec --project demo-pouleparty --only firestore,database,storage \"vitest run --config vitest.rules.config.ts\""
   },
   "engines": {
     "node": "22"
@@ -17,6 +18,8 @@
     "stripe": "^22.1.1"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "6.0.0",
+    "firebase": "13.0.0",
     "typescript": "^5.4.0",
     "vitest": "^4.1.4"
   },
