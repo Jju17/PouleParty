@@ -36,13 +36,7 @@ struct GameEndedBanner: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
-            .background(
-                LinearGradient(
-                    colors: [Color.CROrange, Color.CRPink],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-            )
+            .background(Color.gradientFire)
             .clipShape(RoundedRectangle(cornerRadius: 14))
             .neonGlow(Color.CROrange, intensity: .subtle)
         }

@@ -258,13 +258,7 @@ struct PreGameOverlay: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 18)
-                    .background(
-                        LinearGradient(
-                            colors: [Color.CROrange, Color.CRPink],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                    .background(Color.gradientFire)
                     .clipShape(RoundedRectangle(cornerRadius: 16))
                 }
                 .disabled(isLaunching)

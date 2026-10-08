@@ -21,7 +21,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -259,7 +258,7 @@ fun PreGameOverlay(
                                 .fillMaxWidth()
                                 .height(64.dp)
                                 .background(
-                                    brush = Brush.linearGradient(listOf(CROrange, CRPink)),
+                                    brush = GradientFire,
                                     shape = RoundedCornerShape(16.dp),
                                 ),
                             shape = RoundedCornerShape(16.dp),

@@ -405,11 +405,7 @@ struct GameDetailView: View {
                     .padding(.vertical, 12)
                     .background(
                         RoundedRectangle(cornerRadius: 12)
-                            .fill(LinearGradient(
-                                colors: [.CROrange, .CRPink],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            ))
+                            .fill(Color.gradientFire)
                     )
                 }
                 .padding(.top, 4)
