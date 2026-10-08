@@ -6,7 +6,8 @@
     "test": "vitest run",
     "test:rules": "firebase emulators:exec --project demo-pouleparty --only firestore,database,storage \"vitest run --config vitest.rules.config.ts\"",
     "verify": "npm run typecheck && npm test",
-    "serve": "npm run build && firebase emulators:start --only functions"
+    "serve": "npm run build && firebase emulators:start --only functions",
+    "gcp-build": ""
   },
   "engines": {
     "node": "22"
