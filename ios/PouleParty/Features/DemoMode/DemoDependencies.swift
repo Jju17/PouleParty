@@ -129,7 +129,7 @@ extension UserClient {
         UserClient(
             currentUserId: { MockDemoData.chickenUid },
             deleteAccount: { },
-            fcmToken: { nil },
+            syncPushToken: { },
             saveNickname: { _ in },
             signInAnonymously: {
                 SignInResult(uid: MockDemoData.chickenUid, isNewUser: false)

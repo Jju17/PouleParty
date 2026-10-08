@@ -1,12 +1,9 @@
-//
-//  AuthClient.swift
-//  PouleParty
-//
-
 import ComposableArchitecture
 import FirebaseAuth
 import FirebaseFirestore
-import FirebaseMessaging
+import os
+
+private let logger = Logger(category: "UserClient")
 
 struct SignInResult: Equatable {
     let uid: String
@@ -16,7 +13,7 @@ struct SignInResult: Equatable {
 struct UserClient {
     var currentUserId: () -> String?
     var deleteAccount: () async throws -> Void
-    var fcmToken: () -> String?
+    var syncPushToken: () async -> Void
     var saveNickname: (String) async -> Void
     var signInAnonymously: () async throws -> SignInResult
 }
@@ -25,14 +22,14 @@ extension UserClient: TestDependencyKey {
     static let testValue = UserClient(
         currentUserId: { "test-auth-uid" },
         deleteAccount: { },
-        fcmToken: { "test-fcm-token" },
+        syncPushToken: { },
         saveNickname: { _ in },
         signInAnonymously: { SignInResult(uid: "test-auth-uid", isNewUser: false) }
     )
 }
 
 extension UserClient: DependencyKey {
-    static var liveValue = UserClient(
+    static let liveValue = UserClient(
         currentUserId: {
             Auth.auth().currentUser?.uid
         },
@@ -42,21 +39,25 @@ extension UserClient: DependencyKey {
             // AFTER the Firestore delete because the rules check disappears once
             // the auth user is gone.
             if let userId = Auth.auth().currentUser?.uid {
-                try? await Firestore.firestore()
+                try await Firestore.firestore()
                     .collection("users").document(userId)
                     .delete()
             }
             try await Auth.auth().currentUser?.delete()
             _ = try await Auth.auth().signInAnonymously()
         },
-        fcmToken: {
-            Messaging.messaging().fcmToken
+        syncPushToken: {
+            await FCMTokenManager.shared.userSignedIn()
         },
         saveNickname: { nickname in
             guard let userId = Auth.auth().currentUser?.uid else { return }
-            try? await Firestore.firestore()
-                .collection("users").document(userId)
-                .setData(["nickname": nickname, "updatedAt": FieldValue.serverTimestamp()], merge: true)
+            do {
+                try await Firestore.firestore()
+                    .collection("users").document(userId)
+                    .setData(["nickname": nickname, "updatedAt": FieldValue.serverTimestamp()], merge: true)
+            } catch {
+                logger.warning("[profile] nickname sync failed: \(error.localizedDescription)")
+            }
         },
         signInAnonymously: {
             if let uid = Auth.auth().currentUser?.uid {

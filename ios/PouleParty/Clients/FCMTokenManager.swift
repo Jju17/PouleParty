@@ -1,8 +1,3 @@
-//
-//  FCMTokenManager.swift
-//  PouleParty
-//
-
 import FirebaseAuth
 import FirebaseFirestore
 import os
@@ -11,12 +6,20 @@ actor FCMTokenManager {
     static let shared = FCMTokenManager()
 
     private let logger = Logger(category: "FCMTokenManager")
+    /// The token can arrive before the anonymous sign-in finishes on first launch.
+    private var pendingToken: String?
+
+    func userSignedIn() {
+        guard let pendingToken else { return }
+        saveToken(pendingToken)
+    }
 
     func saveToken(_ token: String) {
         guard let userId = Auth.auth().currentUser?.uid else {
-            logger.warning("Cannot save FCM token — no authenticated user")
+            pendingToken = token
             return
         }
+        pendingToken = nil
 
         var data: [String: Any] = [
             "token": token,

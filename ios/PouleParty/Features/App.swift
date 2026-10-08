@@ -50,9 +50,7 @@ struct AppFeature {
                         if result.isNewUser {
                             await send(.newUserSignedIn)
                         }
-                        if let token = userClient.fcmToken() {
-                            await FCMTokenManager.shared.saveToken(token)
-                        }
+                        await userClient.syncPushToken()
                     } catch {
                         Logger(category: "AppFeature")
                             .error("Anonymous sign-in failed: \(error.localizedDescription)")

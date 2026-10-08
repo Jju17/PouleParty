@@ -1,8 +1,8 @@
 import FirebaseAuth
 import FirebaseCore
 import FirebaseFirestore
-import FirebaseMessaging
 import Foundation
+import os
 
 enum MigrationManager {
     static func runIfNeeded() {
@@ -25,12 +25,12 @@ enum MigrationManager {
         if !nickname.isEmpty {
             data["nickname"] = nickname
         }
-        if let token = Messaging.messaging().fcmToken {
-            data["token"] = token
-            data["platform"] = "ios"
-        }
         Firestore.firestore()
             .collection("users").document(userId)
-            .setData(data, merge: true)
+            .setData(data, merge: true) { error in
+                if let error {
+                    Logger(category: "Migration").warning("[profile] migration write failed: \(error.localizedDescription)")
+                }
+            }
     }
 }
