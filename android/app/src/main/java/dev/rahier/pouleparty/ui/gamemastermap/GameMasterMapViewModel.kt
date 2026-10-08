@@ -11,6 +11,8 @@ import dev.rahier.pouleparty.data.GameRepository
 import dev.rahier.pouleparty.data.PresenceRepository
 import dev.rahier.pouleparty.data.DebugAction
 import dev.rahier.pouleparty.data.GameFunctions
+import dev.rahier.pouleparty.ui.common.LoadState
+import dev.rahier.pouleparty.ui.common.loadGameWithSchedule
 import dev.rahier.pouleparty.model.GameStatus
 import dev.rahier.pouleparty.ui.common.errorMessageRes
 import dev.rahier.pouleparty.model.Game
@@ -42,6 +44,7 @@ import javax.inject.Inject
  */
 data class GameMasterMapUiState(
     override val game: Game = Game.mock,
+    val loadState: LoadState = LoadState.Loading,
     val chickenLocation: Point? = null,
     val chickenIsInvisible: Boolean = false,
     val hunterAnnotations: List<HunterAnnotation> = emptyList(),
@@ -139,6 +142,10 @@ class GameMasterMapViewModel @Inject constructor(
             GameMasterMapIntent.HuntersDrawerTapped -> _uiState.update { it.copy(showHuntersDrawer = true) }
             GameMasterMapIntent.DismissHuntersDrawer -> _uiState.update { it.copy(showHuntersDrawer = false) }
             GameMasterMapIntent.LeaveGameTapped -> leaveGame()
+            GameMasterMapIntent.RetryLoad -> {
+                _uiState.update { it.copy(loadState = LoadState.Loading) }
+                loadGame()
+            }
             GameMasterMapIntent.DismissLeaveError -> _uiState.update { it.copy(leaveErrorRes = null) }
             GameMasterMapIntent.ValidationQueueTapped -> viewModelScope.launch {
                 _effects.send(GameMasterMapEffect.OpenValidationQueue)
@@ -217,14 +224,17 @@ class GameMasterMapViewModel @Inject constructor(
 
     private fun loadGame() {
         viewModelScope.launch {
-            val (game, circles) = runCatching {
-                gameRepository.getConfig(gameId)?.let { it to gameRepository.fetchZoneSchedule(gameId) }
-            }.onFailure { Log.w("GameMasterMapVM", "[map] game load failed", it) }.getOrNull() ?: return@launch
+            val (game, circles) = loadGameWithSchedule(gameRepository, gameId).getOrElse { error ->
+                Log.w("GameMasterMapVM", "[map] game load failed", error)
+                _uiState.update { it.copy(loadState = LoadState.Failed(error.errorMessageRes())) }
+                return@launch
+            }
             val z = zoneStateFromCircles(game, circles, Date())
             _uiState.update {
                 it.copy(
                     game = game,
                     circles = circles,
+                    loadState = LoadState.Ready,
                     nextRadiusUpdate = z.nextUpdate,
                     radius = z.radius,
                     circleCenter = z.center ?: it.circleCenter,

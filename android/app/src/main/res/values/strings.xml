@@ -463,4 +463,6 @@
     <string name="api_error_network">No connection. Check your network and try again.</string>
     <string name="api_error_unknown">Something went wrong. Try again.</string>
     <string name="leave_game_failed_title">Could not leave the game</string>
+    <string name="load_failed_title">Could not load the game</string>
+    <string name="loading_game">Loading the game</string>
 </resources>

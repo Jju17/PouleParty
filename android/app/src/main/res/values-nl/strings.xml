@@ -449,4 +449,6 @@
     <string name="api_error_network">Geen verbinding. Controleer je netwerk en probeer opnieuw.</string>
     <string name="api_error_unknown">Er ging iets mis. Probeer opnieuw.</string>
     <string name="leave_game_failed_title">Kon het spel niet verlaten</string>
+    <string name="load_failed_title">Kon het spel niet laden</string>
+    <string name="loading_game">Spel laden</string>
 </resources>

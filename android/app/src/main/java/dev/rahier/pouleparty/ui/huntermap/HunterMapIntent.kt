@@ -4,6 +4,7 @@ import dev.rahier.pouleparty.powerups.model.PowerUp
 
 /** User-initiated actions on the hunter-map screen. */
 sealed interface HunterMapIntent {
+    object RetryLoad : HunterMapIntent
     /**
      * Dispatched from `LifecycleEventEffect(Lifecycle.Event.ON_RESUME)` in
      * [HunterMapScreen]. Triggers an immediate hunter-location refresh so

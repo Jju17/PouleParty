@@ -2,6 +2,8 @@
 
 package dev.rahier.pouleparty.ui.chickenmap
 
+import dev.rahier.pouleparty.ui.common.LoadState
+import dev.rahier.pouleparty.ui.common.LoadStateScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -88,6 +90,11 @@ fun ChickenMapScreen(
                     onBecameHunter(effect.gameId, effect.teamName)
             }
         }
+    }
+
+    if (state.loadState != LoadState.Ready) {
+        LoadStateScreen(state.loadState, onRetry = { viewModel.onIntent(ChickenMapIntent.RetryLoad) }, onBack = onGoToMenu)
+        return
     }
 
     // Show winner notification as snackbar

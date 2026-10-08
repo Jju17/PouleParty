@@ -2,6 +2,8 @@
 
 package dev.rahier.pouleparty.ui.gamemastermap
 
+import dev.rahier.pouleparty.ui.common.LoadState
+import dev.rahier.pouleparty.ui.common.LoadStateScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.rahier.pouleparty.ui.common.ActionErrorDialog
 import androidx.compose.foundation.background
@@ -65,6 +67,11 @@ fun GameMasterMapScreen(
                 GameMasterMapEffect.NavigateToVictory -> onVictory(state.game.id)
             }
         }
+    }
+
+    if (state.loadState != LoadState.Ready) {
+        LoadStateScreen(state.loadState, onRetry = { viewModel.onIntent(GameMasterMapIntent.RetryLoad) }, onBack = onGoToMenu)
+        return
     }
 
     LaunchedEffect(state.winnerNotification) {

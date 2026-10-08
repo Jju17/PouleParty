@@ -239,6 +239,39 @@ class HunterMapViewModelBehaviorTest {
     }
 
     @Test
+    fun `a missing game is an error state, not the demo game`() = kotlinx.coroutines.test.runTest(testDispatcher) {
+        val vm = createViewModel()
+        advanceUntilIdle()
+        assertEquals(
+            dev.rahier.pouleparty.ui.common.LoadState.Failed(dev.rahier.pouleparty.R.string.api_error_game_not_found),
+            vm.uiState.value.loadState,
+        )
+    }
+
+    @Test
+    fun `a failed load can be retried`() {
+        io.mockk.coEvery { gameRepository.getConfig(any()) } throws java.io.IOException("offline")
+        val vm = createViewModel()
+        testDispatcher.scheduler.runCurrent()
+        assertEquals(
+            dev.rahier.pouleparty.ui.common.LoadState.Failed(dev.rahier.pouleparty.R.string.api_error_network),
+            vm.uiState.value.loadState,
+        )
+
+        val now = System.currentTimeMillis()
+        io.mockk.coEvery { gameRepository.getConfig(any()) } returns dev.rahier.pouleparty.model.Game.mock.copy(
+            id = "test-id",
+            timing = dev.rahier.pouleparty.model.Timing(
+                start = com.google.firebase.Timestamp(java.util.Date(now + 3_600_000)),
+                end = com.google.firebase.Timestamp(java.util.Date(now + 7_200_000)),
+            ),
+        )
+        vm.onIntent(HunterMapIntent.RetryLoad)
+        testDispatcher.scheduler.runCurrent()
+        assertEquals(dev.rahier.pouleparty.ui.common.LoadState.Ready, vm.uiState.value.loadState)
+    }
+
+    @Test
     fun `confirming leave removes the hunter server-side then returns to the menu`() = kotlinx.coroutines.test.runTest(testDispatcher) {
         val vm = createViewModel()
         vm.onIntent(HunterMapIntent.LeaveGameTapped)

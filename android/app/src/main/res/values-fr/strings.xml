@@ -453,4 +453,6 @@
     <string name="api_error_network">Pas de connexion. Vérifie ton réseau et réessaie.</string>
     <string name="api_error_unknown">Un problème est survenu. Réessaie.</string>
     <string name="leave_game_failed_title">Impossible de quitter la partie</string>
+    <string name="load_failed_title">Impossible de charger la partie</string>
+    <string name="loading_game">Chargement de la partie</string>
 </resources>

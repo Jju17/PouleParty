@@ -8,6 +8,9 @@ import dev.rahier.pouleparty.data.GameRepository
 import dev.rahier.pouleparty.data.PresenceRepository
 import dev.rahier.pouleparty.data.DebugAction
 import dev.rahier.pouleparty.data.GameFunctions
+import dev.rahier.pouleparty.ui.common.LoadState
+import dev.rahier.pouleparty.ui.common.errorMessageRes
+import dev.rahier.pouleparty.ui.common.loadGameWithSchedule
 import dev.rahier.pouleparty.data.LocationRepository
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameMod
@@ -53,6 +56,7 @@ data class HunterAnnotation(
 
 data class ChickenMapUiState(
     override val game: Game = Game.mock,
+    val loadState: LoadState = LoadState.Loading,
     val hunterAnnotations: List<HunterAnnotation> = emptyList(),
     override val nextRadiusUpdate: Date? = null,
     override val nowDate: Date = Date(),
@@ -139,6 +143,7 @@ class ChickenMapViewModel @Inject constructor(
     /** Single entry point for every user interaction. */
     fun onIntent(intent: ChickenMapIntent) {
         when (intent) {
+            ChickenMapIntent.RetryLoad -> retryLoad()
             ChickenMapIntent.CancelGameTapped -> onCancelGameTapped()
             ChickenMapIntent.DismissCancelAlert -> dismissCancelAlert()
             ChickenMapIntent.ConfirmCancelGame -> confirmCancelGame()
@@ -227,16 +232,24 @@ class ChickenMapViewModel @Inject constructor(
         now = now,
     )
 
+    private fun retryLoad() {
+        _uiState.update { it.copy(loadState = LoadState.Loading) }
+        loadGame()
+    }
+
     private fun loadGame() {
         viewModelScope.launch {
-            val (game, circles) = runCatching {
-                gameRepository.getConfig(gameId)?.let { it to gameRepository.fetchZoneSchedule(gameId) }
-            }.onFailure { Log.w("ChickenMapVM", "[map] game load failed", it) }.getOrNull() ?: return@launch
+            val (game, circles) = loadGameWithSchedule(gameRepository, gameId).getOrElse { error ->
+                Log.w("ChickenMapVM", "[map] game load failed", error)
+                _uiState.update { it.copy(loadState = LoadState.Failed(error.errorMessageRes())) }
+                return@launch
+            }
             val z = zoneStateFromCircles(game, circles, Date())
             _uiState.update {
                 it.copy(
                     game = game,
                     circles = circles,
+                    loadState = LoadState.Ready,
                     radius = z.radius,
                     nextRadiusUpdate = z.nextUpdate,
                     circleCenter = z.center ?: it.circleCenter,

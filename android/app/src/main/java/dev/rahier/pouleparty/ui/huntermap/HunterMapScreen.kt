@@ -2,6 +2,8 @@
 
 package dev.rahier.pouleparty.ui.huntermap
 
+import dev.rahier.pouleparty.ui.common.LoadState
+import dev.rahier.pouleparty.ui.common.LoadStateScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.rahier.pouleparty.ui.common.ActionErrorDialog
 import androidx.compose.foundation.background
@@ -98,6 +100,11 @@ fun HunterMapScreen(
     }
 
     // Show winner notification as snackbar
+    if (state.loadState != LoadState.Ready) {
+        LoadStateScreen(state.loadState, onRetry = { viewModel.onIntent(HunterMapIntent.RetryLoad) }, onBack = onGoToMenu)
+        return
+    }
+
     LaunchedEffect(state.winnerNotification) {
         state.winnerNotification?.let { message ->
             HapticManager.success(view)

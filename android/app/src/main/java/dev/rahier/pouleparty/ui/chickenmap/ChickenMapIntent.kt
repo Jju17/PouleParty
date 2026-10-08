@@ -4,6 +4,7 @@ import dev.rahier.pouleparty.powerups.model.PowerUp
 
 /** User-initiated actions on the chicken-map screen. */
 sealed interface ChickenMapIntent {
+    object RetryLoad : ChickenMapIntent
     object CancelGameTapped : ChickenMapIntent
     object DismissCancelAlert : ChickenMapIntent
     object ConfirmCancelGame : ChickenMapIntent

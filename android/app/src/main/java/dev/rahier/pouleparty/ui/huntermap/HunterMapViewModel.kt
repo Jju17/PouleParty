@@ -8,6 +8,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.rahier.pouleparty.data.GameRepository
 import dev.rahier.pouleparty.data.PresenceRepository
 import dev.rahier.pouleparty.data.GameFunctions
+import dev.rahier.pouleparty.ui.common.LoadState
+import dev.rahier.pouleparty.ui.common.loadGameWithSchedule
 import dev.rahier.pouleparty.ui.common.errorMessageRes
 import dev.rahier.pouleparty.data.SubmitFoundCodeReason
 import dev.rahier.pouleparty.data.SubmitFoundCodeResult
@@ -51,6 +53,7 @@ import javax.inject.Inject
 
 data class HunterMapUiState(
     override val game: Game = Game.mock,
+    val loadState: LoadState = LoadState.Loading,
     override val nextRadiusUpdate: Date? = null,
     override val nowDate: Date = Date(),
     override val radius: Int = 1500,
@@ -163,6 +166,7 @@ class HunterMapViewModel @Inject constructor(
     /** Single entry point for every user interaction. */
     fun onIntent(intent: HunterMapIntent) {
         when (intent) {
+            HunterMapIntent.RetryLoad -> retryLoad()
             HunterMapIntent.ChallengesSheetDismissed -> Unit
             HunterMapIntent.AppResumed -> onAppResumed()
             HunterMapIntent.PowerUpInventoryTapped -> onPowerUpInventoryTapped()
@@ -227,21 +231,30 @@ class HunterMapViewModel @Inject constructor(
         now = now,
     )
 
+    private fun retryLoad() {
+        _uiState.update { it.copy(loadState = LoadState.Loading) }
+        loadGame()
+    }
+
     private fun loadGame() {
         viewModelScope.launch {
             if (hunterId.isEmpty()) {
-                Log.e(TAG, "hunterId is empty — cannot register hunter or write location")
+                Log.e(TAG, "[map] no signed-in hunter")
+                _uiState.update { it.copy(loadState = LoadState.Failed(dev.rahier.pouleparty.R.string.api_error_unauthenticated)) }
                 return@launch
             }
-            val (game, circles) = runCatching {
-                gameRepository.getConfig(gameId)?.let { it to gameRepository.fetchZoneSchedule(gameId) }
-            }.onFailure { Log.w(TAG, "[map] game load failed", it) }.getOrNull() ?: return@launch
+            val (game, circles) = loadGameWithSchedule(gameRepository, gameId).getOrElse { error ->
+                Log.w(TAG, "[map] game load failed", error)
+                _uiState.update { it.copy(loadState = LoadState.Failed(error.errorMessageRes())) }
+                return@launch
+            }
             val z = zoneStateFromCircles(game, circles, Date())
 
             _uiState.update {
                 it.copy(
                     game = game,
                     circles = circles,
+                    loadState = LoadState.Ready,
                     radius = z.radius,
                     nextRadiusUpdate = z.nextUpdate,
                     circleCenter = z.center ?: it.circleCenter,
