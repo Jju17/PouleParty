@@ -801,10 +801,10 @@ private struct CameraPicker: UIViewControllerRepresentable {
         func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
             let mediaType = info[.mediaType] as? String ?? "public.image"
             if mediaType == "public.movie", let url = info[.mediaURL] as? URL {
-                let data = try? Data(contentsOf: url)
-                if let data {
-                    onCaptured(.some(data, .video))
-                } else {
+                do {
+                    onCaptured(.some(try Data(contentsOf: url), .video))
+                } catch {
+                    logger.warning("[challenge] recorded video unreadable: \(error.localizedDescription)")
                     onCaptured(.none)
                 }
             } else if let image = info[.originalImage] as? UIImage {

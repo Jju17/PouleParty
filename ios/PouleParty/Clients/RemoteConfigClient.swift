@@ -6,6 +6,7 @@
 import ComposableArchitecture
 import FirebaseRemoteConfig
 import Foundation
+import os
 
 /// Runtime-tunable game values backed by Firebase Remote Config.
 ///
@@ -86,7 +87,11 @@ extension RemoteConfigClient: DependencyKey {
                 remoteConfig.configValue(forKey: Key.defaultInitialRadius.rawValue).numberValue.doubleValue
             },
             activate: {
-                _ = try? await remoteConfig.fetchAndActivate()
+                do {
+                    _ = try await remoteConfig.fetchAndActivate()
+                } catch {
+                    Logger(category: "RemoteConfig").warning("[config] fetch failed, compiled defaults stay active: \(error.localizedDescription)")
+                }
             }
         )
     }()

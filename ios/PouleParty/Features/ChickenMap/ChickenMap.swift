@@ -573,12 +573,20 @@ struct ChickenMapFeature {
             case .view(.debugEndNowTapped):
                 let gameId = state.game.id
                 return .run { _ in
-                    try? await apiClient.debugAdvanceGame(gameId, .endNow)
+                    do {
+                        try await apiClient.debugAdvanceGame(gameId, .endNow)
+                    } catch {
+                        logger.warning("[qa] debug action failed: \(error.localizedDescription)")
+                    }
                 }
             case .view(.debugAdvanceStepTapped):
                 let gameId = state.game.id
                 return .run { _ in
-                    try? await apiClient.debugAdvanceGame(gameId, .advanceStep)
+                    do {
+                        try await apiClient.debugAdvanceGame(gameId, .advanceStep)
+                    } catch {
+                        logger.warning("[qa] debug action failed: \(error.localizedDescription)")
+                    }
                 }
             case .validationQueue:
                 return .none

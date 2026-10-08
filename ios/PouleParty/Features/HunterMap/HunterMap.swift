@@ -561,8 +561,14 @@ struct HunterMapFeature {
                     isClosedForSubmissions: state.isGameOver
                 )
                 return .run { [apiClient] send in
-                    if let registration = try? await apiClient.findRegistration(gameId, hunterId),
-                       !registration.teamName.isEmpty {
+                    let registration: Registration?
+                    do {
+                        registration = try await apiClient.findRegistration(gameId, hunterId)
+                    } catch {
+                        logger.warning("[challenges] team name lookup failed: \(error.localizedDescription)")
+                        registration = nil
+                    }
+                    if let registration, !registration.teamName.isEmpty {
                         await send(.challenges(.presented(.binding(.set(\.myTeamName, registration.teamName)))))
                     }
                 }

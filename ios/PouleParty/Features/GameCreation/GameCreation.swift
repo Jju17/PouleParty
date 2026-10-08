@@ -6,6 +6,7 @@
 //
 
 import ComposableArchitecture
+import os
 import CoreLocation
 import SwiftUI
 
@@ -44,6 +45,8 @@ enum GameCreationStep: Equatable {
 
 // MARK: - Reducer
 
+
+private let logger = Logger(category: "GameCreation")
 @Reducer
 struct GameCreationFeature {
 
@@ -239,7 +242,8 @@ struct GameCreationFeature {
         case chickenCanSeeHuntersChanged(Bool)
         case manualStartChanged(Bool)
         case chickenHeadStartChanged(Double)
-        case configSaveFailed
+        case configSaveFailed(String)
+        case gameMasterCodeFailed
         case destination(PresentationAction<Destination.Action>)
         case gameCreated(Game)
         case gameDurationChanged(Double)
@@ -274,7 +278,10 @@ struct GameCreationFeature {
         enum Action {
             case alert(Alert)
 
-            enum Alert: Equatable { }
+            enum Alert: Equatable {
+                case retryGameMasterCode
+                case continueWithoutGameMaster
+            }
         }
 
         var body: some ReducerOf<Self> {
@@ -361,19 +368,42 @@ struct GameCreationFeature {
                 recalculateNormalMode(state: &state)
                 return .none
 
-            case .configSaveFailed:
+            case let .configSaveFailed(reason):
                 state.destination = .alert(
                     AlertState {
-                        TextState("Error")
+                        TextState("Could not create the game.")
                     } actions: {
                         ButtonState(role: .cancel) {
                             TextState("OK")
                         }
                     } message: {
-                        TextState("Could not create the game. Please check your connection and try again.")
+                        TextState(reason)
                     }
                 )
                 return .none
+
+            case .gameMasterCodeFailed:
+                state.destination = .alert(
+                    AlertState {
+                        TextState("Referee code not saved")
+                    } actions: {
+                        ButtonState(action: .retryGameMasterCode) {
+                            TextState("Try again")
+                        }
+                        ButtonState(action: .continueWithoutGameMaster) {
+                            TextState("Continue without referee")
+                        }
+                    } message: {
+                        TextState("The game is created, but referees cannot join until the code is saved.")
+                    }
+                )
+                return .none
+
+            case .destination(.presented(.alert(.retryGameMasterCode))):
+                return saveGameMasterCodeThenEnter(state.game, password: state.gameMasterPassword)
+
+            case .destination(.presented(.alert(.continueWithoutGameMaster))):
+                return .send(.gameCreated(state.game))
 
             case .destination:
                 return .none
@@ -560,30 +590,31 @@ struct GameCreationFeature {
                 let enableGameMaster = state.isGameMasterEnabled
                     && state.gameMasterPassword.count == 4
                 let gameMasterPassword = state.gameMasterPassword
-                return .run { [state = state, analyticsClient] send in
+                let game = state.game
+                return .run { [analyticsClient] send in
                     do {
-                        try await apiClient.setConfig(state.game)
-                        // PP-88: enable the GM role *after* the Game doc
-                        // exists — `setGameMasterPassword` validates the
-                        // caller is `creatorId`, which only resolves once
-                        // the doc is committed. Wizard skips silently
-                        // when the toggle is OFF or the password is empty.
-                        if enableGameMaster {
-                            do {
-                                try await apiClient.setGameMasterPassword(state.game.id, gameMasterPassword)
-                            } catch {
-                                // Game is still created — chicken can
-                                // retry from Settings.
-                            }
-                        }
-                        analyticsClient.gameCreated(
-                            gameMode: state.game.gameMode.rawValue,
-                            maxPlayers: state.game.maxPlayers,
-                            powerUpsEnabled: state.game.powerUps.enabled
-                        )
-                        await send(.gameCreated(state.game))
+                        try await apiClient.setConfig(game)
                     } catch {
-                        await send(.configSaveFailed)
+                        logger.warning("[create] game write failed: \(error.localizedDescription)")
+                        await send(.configSaveFailed(error.userMessage))
+                        return
+                    }
+                    analyticsClient.gameCreated(
+                        gameMode: game.gameMode.rawValue,
+                        maxPlayers: game.maxPlayers,
+                        powerUpsEnabled: game.powerUps.enabled
+                    )
+                    guard enableGameMaster else {
+                        await send(.gameCreated(game))
+                        return
+                    }
+                    // The callable checks the caller owns the game, so the code is saved after the game exists.
+                    do {
+                        try await apiClient.setGameMasterPassword(game.id, gameMasterPassword)
+                        await send(.gameCreated(game))
+                    } catch {
+                        logger.warning("[create] referee code not saved: \(error.localizedDescription)")
+                        await send(.gameMasterCodeFailed)
                     }
                 }
 
@@ -593,6 +624,18 @@ struct GameCreationFeature {
         }
         .ifLet(\.$destination, action: \.destination) {
             Destination()
+        }
+    }
+
+    private func saveGameMasterCodeThenEnter(_ game: Game, password: String) -> Effect<Action> {
+        .run { send in
+            do {
+                try await apiClient.setGameMasterPassword(game.id, password)
+                await send(.gameCreated(game))
+            } catch {
+                logger.warning("[create] referee code retry failed: \(error.localizedDescription)")
+                await send(.gameMasterCodeFailed)
+            }
         }
     }
 }
