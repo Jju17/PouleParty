@@ -13,7 +13,7 @@ struct HeadStartStep: View {
 
             VStack(spacing: 12) {
                 BangerText("\(Int(store.currentGame.timing.headStartMinutes)) min", size: 48)
-                    .foregroundStyle(Color.CROrange)
+                    .foregroundStyle(Color.accentText)
 
                 Slider(
                     value: Binding(

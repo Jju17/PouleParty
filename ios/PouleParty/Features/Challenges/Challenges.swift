@@ -652,7 +652,7 @@ private struct ChallengeRow: View {
                     if challenge.number > 0 {
                         Text("#\(challenge.number)")
                             .font(.headline.bold())
-                            .foregroundStyle(Color.CROrange)
+                            .foregroundStyle(Color.accentText)
                     }
                     Text(challenge.localizedTitle(langCode))
                         .font(.headline)
@@ -665,7 +665,7 @@ private struct ChallengeRow: View {
                 Text("\(challenge.points) pts")
                     .font(.caption)
                     .bold()
-                    .foregroundStyle(Color.CROrange)
+                    .foregroundStyle(Color.accentText)
             }
             Spacer()
             Button(action: buttonAction) {
@@ -734,7 +734,7 @@ private struct LeaderboardRow: View {
             Spacer()
             Text("\(entry.totalPoints) pts")
                 .font(emphasized ? .title3.bold() : .body.bold())
-                .foregroundStyle(Color.CROrange)
+                .foregroundStyle(Color.accentText)
         }
         .padding(emphasized ? 14 : 10)
         .background(

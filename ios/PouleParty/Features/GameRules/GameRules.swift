@@ -129,7 +129,7 @@ struct GameRulesView: View {
                 HStack(alignment: .top, spacing: 6) {
                     Text(">")
                         .font(.system(.subheadline, weight: .bold))
-                        .foregroundStyle(Color.CROrange)
+                        .foregroundStyle(Color.accentText)
                     Text(detail)
                         .font(.system(.subheadline))
                         .foregroundStyle(Color.onBackground)
@@ -152,7 +152,7 @@ struct GameRulesView: View {
         VStack(alignment: .leading, spacing: 3) {
             Text(name)
                 .font(.gameboy(size: 10))
-                .foregroundStyle(Color.CROrange)
+                .foregroundStyle(Color.accentText)
             Text(explanation)
                 .font(.system(.subheadline))
                 .foregroundStyle(Color.onBackground.opacity(0.7))

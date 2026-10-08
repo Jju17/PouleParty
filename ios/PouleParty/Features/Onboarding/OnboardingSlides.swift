@@ -355,7 +355,7 @@ struct OnboardingReadySlide: View {
         } extraContent: {
             VStack(spacing: 8) {
                 BangerText("⚠️ Play safely", size: 16)
-                    .foregroundStyle(Color.CROrange)
+                    .foregroundStyle(Color.accentText)
                 BangerText("Watch for traffic. Respect private property. Don't run where you wouldn't normally run. PouleParty is not responsible for injuries or damage.", size: 13)
                     .multilineTextAlignment(.center)
                     .foregroundStyle(Color.onBackground.opacity(0.6))

@@ -58,7 +58,7 @@ struct DurationStep: View {
                 Spacer()
                 Text(endDate, style: .time)
                     .font(.gameboy(size: 10))
-                    .foregroundStyle(Color.CROrange)
+                    .foregroundStyle(Color.accentText)
             }
             .padding(.horizontal, 28)
 

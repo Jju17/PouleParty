@@ -616,7 +616,7 @@ struct JoinFlowView: View {
             if let error = store.validationCodeError {
                 Text(error)
                     .font(.gameboy(size: 9))
-                    .foregroundStyle(Color.CROrange)
+                    .foregroundStyle(Color.errorText)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 24)
             }
@@ -676,7 +676,7 @@ struct JoinFlowView: View {
                 if store.isTeamNameProfane {
                     Text("Please choose a different team name.")
                         .font(.gameboy(size: 9))
-                        .foregroundStyle(Color.CROrange)
+                        .foregroundStyle(Color.errorText)
                 }
             }
             .padding(.horizontal, 24)

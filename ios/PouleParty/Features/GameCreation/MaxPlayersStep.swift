@@ -30,7 +30,7 @@ struct MaxPlayersStep: GameCreationStepView {
                 // because Text-style rendering is what TextField needs).
                 ZStack {
                     BangerText("\(store.currentGame.maxPlayers)", size: 64)
-                        .foregroundStyle(Color.CROrange)
+                        .foregroundStyle(Color.accentText)
                         .opacity(isFocused ? 0 : 1)
                         .allowsHitTesting(!isFocused)
 
@@ -38,7 +38,7 @@ struct MaxPlayersStep: GameCreationStepView {
                         .keyboardType(.numberPad)
                         .multilineTextAlignment(.center)
                         .font(.banger(size: 64))
-                        .foregroundStyle(Color.CROrange)
+                        .foregroundStyle(Color.accentText)
                         .focused($isFocused)
                         .opacity(isFocused ? 1 : 0)
                         .frame(maxWidth: 220)

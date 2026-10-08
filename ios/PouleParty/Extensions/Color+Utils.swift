@@ -53,6 +53,13 @@ extension Color {
             : UIColor(Color(hex: 0xB00020))
     })
 
+    /// Orange for text: AA contrast on the beige and the dark backgrounds.
+    static let accentText = Color(UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(Color(hex: 0xFF8C33))
+            : UIColor(Color(hex: 0xB34700))
+    })
+
     static let onBackground = Color(UIColor { trait in
         trait.userInterfaceStyle == .dark
             ? UIColor.white

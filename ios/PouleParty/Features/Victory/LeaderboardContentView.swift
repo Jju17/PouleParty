@@ -37,7 +37,7 @@ struct LeaderboardContentView: View {
             if !podium.isEmpty {
                 VStack(spacing: 8) {
                     BangerText("Podium", size: 20)
-                        .foregroundStyle(Color.CROrange)
+                        .foregroundStyle(Color.accentText)
                     ForEach(Array(podium.enumerated()), id: \.element.id) { index, entry in
                         LeaderboardRowView(rank: index + 1, entry: entry, hunterStartDate: hunterStartDate, onReport: onReport)
                     }

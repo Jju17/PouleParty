@@ -307,7 +307,7 @@ private struct SubmissionRow: View {
                     if let challenge {
                         Text("\(challenge.points) pts")
                             .font(.caption)
-                            .foregroundStyle(Color.CROrange)
+                            .foregroundStyle(Color.accentText)
                     }
                 }
                 Spacer()
@@ -392,7 +392,7 @@ private struct SubmissionDetailView: View {
                             .foregroundStyle(.secondary)
                         Text("\(challenge.points) pts")
                             .font(.subheadline.bold())
-                            .foregroundStyle(Color.CROrange)
+                            .foregroundStyle(Color.accentText)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)

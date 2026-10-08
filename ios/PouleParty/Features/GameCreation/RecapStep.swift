@@ -28,7 +28,7 @@ struct RecapStep: GameCreationStepView {
                              ? "Set a start zone and final zone to start"
                              : "Set a start zone to start")
                             .font(.gameboy(size: 8))
-                            .foregroundStyle(Color.CROrange)
+                            .foregroundStyle(Color.accentText)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 16)
                     }
@@ -46,7 +46,7 @@ struct RecapStep: GameCreationStepView {
                 .font(.gameboy(size: 8))
                 .foregroundStyle(Color.onBackground.opacity(0.6))
             BangerText(store.currentGame.gameCode, size: 40)
-                .foregroundStyle(Color.CROrange)
+                .foregroundStyle(Color.accentText)
         }
         .padding(.vertical, 16)
         .frame(maxWidth: .infinity)
