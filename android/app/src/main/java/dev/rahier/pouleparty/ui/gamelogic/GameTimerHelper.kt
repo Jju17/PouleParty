@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.gamelogic
 
+import dev.rahier.pouleparty.model.ZoneCircle
 import androidx.annotation.StringRes
 import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.ui.common.uiText
@@ -422,7 +423,7 @@ fun zoneRenderStateFromCircles(
     hunterStartDate: Date,
     shrinkIntervalMinutes: Double,
     fallbackRadius: Double,
-    circles: List<dev.rahier.pouleparty.model.ZoneCircle>,
+    circles: List<ZoneCircle>,
     freezeEnd: Date?,
     freezeDurationMs: Long,
     now: Date = Date(),
@@ -464,7 +465,7 @@ data class DebugShrinkCircle(
  * chicken map to render every future circle simultaneously. Mirrors
  * the iOS `computeDebugShiftedCircles` sibling.
  */
-fun computeDebugShiftedCircles(game: dev.rahier.pouleparty.model.Game): List<DebugShrinkCircle> {
+fun computeDebugShiftedCircles(game: Game): List<DebugShrinkCircle> {
     if (game.gameModEnum != GameMod.STAY_IN_THE_ZONE) return emptyList()
     val initialRadius = game.zone.radius
     if (initialRadius <= 0 || game.zone.shrinkIntervalMinutes <= 0) return emptyList()
@@ -540,21 +541,21 @@ fun detectNewWinners(
  * average out, too slow to burn battery re-computing inside a single write.
  */
 /** What the chicken publishes: the real fix, or a jammed one while the jammer runs. */
-fun chickenBroadcastPoint(location: com.mapbox.geojson.Point, game: Game, nowMillis: Long = System.currentTimeMillis()): com.mapbox.geojson.Point =
+fun chickenBroadcastPoint(location: Point, game: Game, nowMillis: Long = System.currentTimeMillis()): Point =
     if (game.isJammerActive) applyJammerNoise(location, game.zone.driftSeed, nowMillis) else location
 
 fun applyJammerNoise(
-    coordinate: com.mapbox.geojson.Point,
+    coordinate: Point,
     driftSeed: Long,
     nowMillis: Long = System.currentTimeMillis(),
-    jammerNoiseDegrees: Double = dev.rahier.pouleparty.AppConstants.JAMMER_NOISE_DEGREES
-): com.mapbox.geojson.Point {
+    jammerNoiseDegrees: Double = AppConstants.JAMMER_NOISE_DEGREES
+): Point {
     val bucket = nowMillis / 1000L
     val seed = driftSeed xor bucket
     val halfNoise = jammerNoiseDegrees / 2.0
     val latNoise = (seededRandom(seed, 0) * 2.0 - 1.0) * halfNoise
     val lonNoise = (seededRandom(seed, 1) * 2.0 - 1.0) * halfNoise
-    return com.mapbox.geojson.Point.fromLngLat(
+    return Point.fromLngLat(
         coordinate.longitude() + lonNoise,
         coordinate.latitude() + latNoise
     )
@@ -581,7 +582,7 @@ fun seededRandom(seed: Long, index: Int): Double {
  * (i.e. `now < endDate`) clamp to `+00:00`. Mirrors the Swift
  * `formatOvertime` so the two platforms produce identical strings.
  */
-fun formatOvertime(now: java.util.Date, endDate: java.util.Date): String {
+fun formatOvertime(now: Date, endDate: Date): String {
     val seconds = ((now.time - endDate.time) / 1000L).coerceAtLeast(0L).toInt()
     val hours = seconds / 3600
     val minutes = (seconds % 3600) / 60

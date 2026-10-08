@@ -1,5 +1,3 @@
-@file:Suppress("DEPRECATION")
-
 package dev.rahier.pouleparty.ui.demo
 
 import androidx.compose.foundation.background
@@ -26,7 +24,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
@@ -126,7 +124,7 @@ fun DemoModeScreen(onExit: () -> Unit) {
                 }
             }
 
-            ScrollableTabRow(
+            PrimaryScrollableTabRow(
                 selectedTabIndex = pagerState.currentPage,
                 containerColor = MaterialTheme.colorScheme.background,
                 edgePadding = 8.dp,

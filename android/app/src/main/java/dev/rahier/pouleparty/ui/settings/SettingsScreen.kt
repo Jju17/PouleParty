@@ -1,5 +1,9 @@
 package dev.rahier.pouleparty.ui.settings
 
+import dev.rahier.pouleparty.model.MyGame
+import dev.rahier.pouleparty.model.MyGameRole
+import dev.rahier.pouleparty.ui.components.GameLeaderboardSheet
+import dev.rahier.pouleparty.ui.victory.ReportResult
 import dev.rahier.pouleparty.ui.common.teamNameOrDefault
 import androidx.compose.runtime.remember
 import androidx.core.content.pm.PackageInfoCompat
@@ -357,7 +361,7 @@ fun SettingsScreen(
     }
 
     when (state.reportResult) {
-        dev.rahier.pouleparty.ui.victory.ReportResult.SUCCESS -> AlertDialog(
+        ReportResult.SUCCESS -> AlertDialog(
             onDismissRequest = { viewModel.onIntent(SettingsIntent.ReportResultDismissed) },
             title = { Text(stringResource(R.string.report_player_success)) },
             confirmButton = {
@@ -366,7 +370,7 @@ fun SettingsScreen(
                 }
             }
         )
-        dev.rahier.pouleparty.ui.victory.ReportResult.FAILURE -> AlertDialog(
+        ReportResult.FAILURE -> AlertDialog(
             onDismissRequest = { viewModel.onIntent(SettingsIntent.ReportResultDismissed) },
             title = { Text(stringResource(R.string.error)) },
             text = { Text(stringResource(R.string.report_player_error)) },
@@ -454,7 +458,7 @@ private fun MyGamesSection(state: SettingsUiState, viewModel: SettingsViewModel)
             onViewLeaderboard = { viewModel.onIntent(SettingsIntent.ShowLeaderboard) }
         )
         if (state.isShowingLeaderboard) {
-            dev.rahier.pouleparty.ui.components.GameLeaderboardSheet(
+            GameLeaderboardSheet(
                 game = selectedGame.game,
                 currentUserId = viewModel.currentUserId(),
                 onDismiss = { viewModel.onIntent(SettingsIntent.DismissLeaderboard) },
@@ -467,10 +471,10 @@ private fun MyGamesSection(state: SettingsUiState, viewModel: SettingsViewModel)
 }
 
 @Composable
-private fun RoleBadge(role: dev.rahier.pouleparty.model.MyGameRole) {
+private fun RoleBadge(role: MyGameRole) {
     val (emoji, label, bg) = when (role) {
-        dev.rahier.pouleparty.model.MyGameRole.CREATOR -> Triple("🐔", "CREATED", CROrange)
-        dev.rahier.pouleparty.model.MyGameRole.HUNTER -> Triple("🎯", "JOINED", CRPink)
+        MyGameRole.CREATOR -> Triple("🐔", "CREATED", CROrange)
+        MyGameRole.HUNTER -> Triple("🎯", "JOINED", CRPink)
     }
     Row(
         modifier = Modifier
@@ -486,7 +490,7 @@ private fun RoleBadge(role: dev.rahier.pouleparty.model.MyGameRole) {
 
 @Composable
 private fun GameRow(
-    myGame: dev.rahier.pouleparty.model.MyGame,
+    myGame: MyGame,
     dateFormat: SimpleDateFormat,
     onClick: () -> Unit
 ) {
@@ -566,7 +570,7 @@ private fun GameStatusBadge(status: GameStatus) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun GameDetailDialog(
-    myGame: dev.rahier.pouleparty.model.MyGame,
+    myGame: MyGame,
     dateFormat: SimpleDateFormat,
     onDismiss: () -> Unit,
     onViewLeaderboard: () -> Unit
@@ -591,7 +595,7 @@ private fun GameDetailDialog(
                     GameStatusBadge(game.gameStatusEnum)
                 }
 
-                if (game.gameStatusEnum == dev.rahier.pouleparty.model.GameStatus.DONE) {
+                if (game.gameStatusEnum == GameStatus.DONE) {
                     Spacer(Modifier.height(12.dp))
                     Box(
                         modifier = Modifier

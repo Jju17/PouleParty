@@ -1,5 +1,9 @@
 package dev.rahier.pouleparty.ui.huntermap
 
+import dev.rahier.pouleparty.config.RemoteConfigProvider
+import dev.rahier.pouleparty.data.AnalyticsRepository
+import dev.rahier.pouleparty.model.ZoneCircle
+import dev.rahier.pouleparty.ui.map.MapUiState
 import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.ui.common.uiText
 import dev.rahier.pouleparty.ui.common.UiText
@@ -63,7 +67,7 @@ data class HunterMapUiState(
     override val circleCenter: Point? = null,
     /** PP-zone-stored: ordered circle schedule read once from
      *  `/games/{id}/zone/schedule`; runtime renders `circles[activeIndex]`. */
-    val circles: List<dev.rahier.pouleparty.model.ZoneCircle> = emptyList(),
+    val circles: List<ZoneCircle> = emptyList(),
     val showLeaveAlert: Boolean = false,
     val isLeaving: Boolean = false,
     @param:androidx.annotation.StringRes val leaveErrorRes: Int? = null,
@@ -106,7 +110,7 @@ data class HunterMapUiState(
     // but this UX gate avoids the round-trip.
     val isSubmittingWinner: Boolean = false,
     val lastPenaltyAt: Long? = null,
-) : dev.rahier.pouleparty.ui.map.MapUiState
+) : MapUiState
 
 @HiltViewModel
 class HunterMapViewModel @Inject constructor(
@@ -114,10 +118,10 @@ class HunterMapViewModel @Inject constructor(
     presenceRepository: PresenceRepository,
     gameFunctions: GameFunctions,
     locationRepository: LocationRepository,
-    analyticsRepository: dev.rahier.pouleparty.data.AnalyticsRepository,
+    analyticsRepository: AnalyticsRepository,
     auth: FirebaseAuth,
     savedStateHandle: SavedStateHandle,
-    private val remoteConfig: dev.rahier.pouleparty.config.RemoteConfigProvider,
+    private val remoteConfig: RemoteConfigProvider,
 ) : BaseMapViewModel(gameRepository, presenceRepository, gameFunctions, locationRepository, analyticsRepository, auth) {
 
     companion object {
@@ -125,7 +129,7 @@ class HunterMapViewModel @Inject constructor(
     }
 
     override val gameId: String = savedStateHandle["gameId"] ?: ""
-    val hunterName: String = savedStateHandle["hunterName"] ?: "Hunter"
+    val hunterName: String = savedStateHandle["hunterName"] ?: AppConstants.DEFAULT_TEAM_NAME
     override val playerId: String = auth.currentUser?.uid ?: ""
     override val analyticsRole: String = "hunter"
     override val logTag: String = TAG
@@ -201,7 +205,7 @@ class HunterMapViewModel @Inject constructor(
     /** PP-zone-stored: thin wrapper over the shared selector. */
     private fun zoneStateFromCircles(
         game: Game,
-        circles: List<dev.rahier.pouleparty.model.ZoneCircle>,
+        circles: List<ZoneCircle>,
         now: Date,
     ) = zoneRenderStateFromCircles(
         gameMode = game.gameModEnum,
@@ -223,7 +227,7 @@ class HunterMapViewModel @Inject constructor(
         viewModelScope.launch {
             if (hunterId.isEmpty()) {
                 Log.e(TAG, "[map] no signed-in hunter")
-                _uiState.update { it.copy(loadState = LoadState.Failed(dev.rahier.pouleparty.R.string.api_error_unauthenticated)) }
+                _uiState.update { it.copy(loadState = LoadState.Failed(R.string.api_error_unauthenticated)) }
                 return@launch
             }
             val (game, circles) = loadGameWithSchedule(gameRepository, gameId).getOrElse { error ->
@@ -484,7 +488,7 @@ class HunterMapViewModel @Inject constructor(
                 _uiState.update { it.copy(chickenLocation = null) }
                 return@collect
             }
-            val point = com.mapbox.geojson.Point.fromLngLat(
+            val point = Point.fromLngLat(
                 chickenLoc.location.longitude,
                 chickenLoc.location.latitude,
             )

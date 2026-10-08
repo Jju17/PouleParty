@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.gamelogic
 
+import dev.rahier.pouleparty.AppConstants
 import com.mapbox.geojson.Point
 import dev.rahier.pouleparty.powerups.logic.generatePowerUps
 import dev.rahier.pouleparty.powerups.model.PowerUpType
@@ -498,7 +499,7 @@ class ParityGoldenTest {
     @Test
     fun `jammer stays within half-noise bounds across 1000 buckets`() {
         val coord = Point.fromLngLat(4.35, 50.85)
-        val halfNoise = dev.rahier.pouleparty.AppConstants.JAMMER_NOISE_DEGREES / 2.0
+        val halfNoise = AppConstants.JAMMER_NOISE_DEGREES / 2.0
         for (i in 0 until 1000) {
             val out = applyJammerNoise(coord, 12345, i * 1000L)
             val latDiff = kotlin.math.abs(out.latitude() - coord.latitude())

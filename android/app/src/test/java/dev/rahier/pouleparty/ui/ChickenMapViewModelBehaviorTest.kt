@@ -1,5 +1,19 @@
 package dev.rahier.pouleparty.ui
 
+import com.google.firebase.Timestamp
+import com.google.firebase.firestore.GeoPoint
+import com.mapbox.geojson.Point
+import dev.rahier.pouleparty.AppConstants
+import dev.rahier.pouleparty.R
+import dev.rahier.pouleparty.data.AnalyticsRepository
+import dev.rahier.pouleparty.model.ActiveEffects
+import dev.rahier.pouleparty.model.GamePowerUps
+import dev.rahier.pouleparty.model.GameStatus
+import dev.rahier.pouleparty.model.Timing
+import dev.rahier.pouleparty.model.Zone
+import dev.rahier.pouleparty.model.ZoneCircle
+import java.util.Date
+import kotlinx.coroutines.flow.MutableSharedFlow
 import androidx.lifecycle.SavedStateHandle
 import com.google.firebase.auth.FirebaseAuth
 import dev.rahier.pouleparty.data.GameRepository
@@ -63,7 +77,7 @@ class ChickenMapViewModelBehaviorTest {
             presenceRepository = presenceRepository,
             gameFunctions = gameFunctions,
             locationRepository = locationRepository,
-            analyticsRepository = mockk<dev.rahier.pouleparty.data.AnalyticsRepository>(relaxed = true),
+            analyticsRepository = mockk<AnalyticsRepository>(relaxed = true),
             auth = mockk<FirebaseAuth>(relaxed = true),
             prefs = mockk<android.content.SharedPreferences>(relaxed = true),
             savedStateHandle = SavedStateHandle(mapOf("gameId" to gameId))
@@ -127,7 +141,7 @@ class ChickenMapViewModelBehaviorTest {
     fun `chickenSubtitle for followTheChicken`() {
         val vm = createViewModel()
         // Default game mock is followTheChicken + chickenCanSeeHunters = true
-        assertEquals(dev.rahier.pouleparty.R.string.subtitle_chicken_sees, dev.rahier.pouleparty.ui.gamelogic.chickenSubtitleRes(vm.uiState.value.game))
+        assertEquals(R.string.subtitle_chicken_sees, dev.rahier.pouleparty.ui.gamelogic.chickenSubtitleRes(vm.uiState.value.game))
     }
 
     // MARK: - Confirm cancel game
@@ -197,29 +211,29 @@ class ChickenMapViewModelBehaviorTest {
     @Test
     fun `radarPingBroadcastLoop writes chicken location while ping is active in stayInTheZone`() {
         val now = System.currentTimeMillis()
-        val game = dev.rahier.pouleparty.model.Game(
+        val game = Game(
             id = "test-id",
-            gameMode = dev.rahier.pouleparty.model.GameMod.STAY_IN_THE_ZONE.firestoreValue,
-            status = dev.rahier.pouleparty.model.GameStatus.IN_PROGRESS.firestoreValue,
-            timing = dev.rahier.pouleparty.model.Timing(
-                start = com.google.firebase.Timestamp(java.util.Date(now - 60_000)),
-                end = com.google.firebase.Timestamp(java.util.Date(now + 3_600_000))
+            gameMode = GameMod.STAY_IN_THE_ZONE.firestoreValue,
+            status = GameStatus.IN_PROGRESS.firestoreValue,
+            timing = Timing(
+                start = Timestamp(Date(now - 60_000)),
+                end = Timestamp(Date(now + 3_600_000))
             ),
-            powerUps = dev.rahier.pouleparty.model.GamePowerUps(
+            powerUps = GamePowerUps(
                 enabled = true,
-                activeEffects = dev.rahier.pouleparty.model.ActiveEffects(
-                    radarPing = com.google.firebase.Timestamp(java.util.Date(now + 30_000))
+                activeEffects = ActiveEffects(
+                    radarPing = Timestamp(Date(now + 30_000))
                 )
             )
         )
         io.mockk.coEvery { gameRepository.getConfig(any()) } returns game
         io.mockk.coEvery { locationRepository.getLastLocation() } returns
-            com.mapbox.geojson.Point.fromLngLat(4.3928, 50.8266)
+            Point.fromLngLat(4.3928, 50.8266)
 
         val vm = createViewModel()
         testDispatcher.scheduler.runCurrent() // let loadGame launch children, all block on first delay
 
-        testDispatcher.scheduler.advanceTimeBy(dev.rahier.pouleparty.AppConstants.LOCATION_THROTTLE_MS + 100)
+        testDispatcher.scheduler.advanceTimeBy(AppConstants.LOCATION_THROTTLE_MS + 100)
         testDispatcher.scheduler.runCurrent()
 
         io.mockk.coVerify(atLeast = 1) {
@@ -227,15 +241,15 @@ class ChickenMapViewModelBehaviorTest {
         }
     }
 
-    private fun startedGame(): dev.rahier.pouleparty.model.Game {
+    private fun startedGame(): Game {
         val now = System.currentTimeMillis()
-        return dev.rahier.pouleparty.model.Game(
+        return Game(
             id = "test-id",
-            gameMode = dev.rahier.pouleparty.model.GameMod.FOLLOW_THE_CHICKEN.firestoreValue,
-            status = dev.rahier.pouleparty.model.GameStatus.IN_PROGRESS.firestoreValue,
-            timing = dev.rahier.pouleparty.model.Timing(
-                start = com.google.firebase.Timestamp(java.util.Date(now - 60_000)),
-                end = com.google.firebase.Timestamp(java.util.Date(now + 3_600_000)),
+            gameMode = GameMod.FOLLOW_THE_CHICKEN.firestoreValue,
+            status = GameStatus.IN_PROGRESS.firestoreValue,
+            timing = Timing(
+                start = Timestamp(Date(now - 60_000)),
+                end = Timestamp(Date(now + 3_600_000)),
             ),
         )
     }
@@ -247,7 +261,7 @@ class ChickenMapViewModelBehaviorTest {
 
         createViewModel()
         testDispatcher.scheduler.runCurrent()
-        testDispatcher.scheduler.advanceTimeBy(dev.rahier.pouleparty.AppConstants.HEARTBEAT_INTERVAL_MS * 2 + 100)
+        testDispatcher.scheduler.advanceTimeBy(AppConstants.HEARTBEAT_INTERVAL_MS * 2 + 100)
         testDispatcher.scheduler.runCurrent()
 
         io.mockk.coVerify(exactly = 3) { presenceRepository.updateHeartbeat("test-id") }
@@ -258,14 +272,14 @@ class ChickenMapViewModelBehaviorTest {
         io.mockk.coEvery { gameRepository.getConfig(any()) } returns startedGame()
         io.mockk.every { locationRepository.locationFlow() } returns kotlinx.coroutines.flow.flow {
             repeat(20) { step ->
-                emit(com.mapbox.geojson.Point.fromLngLat(4.39 + step * 0.001, 50.82))
+                emit(Point.fromLngLat(4.39 + step * 0.001, 50.82))
                 kotlinx.coroutines.delay(1_000)
             }
         }
 
         createViewModel()
         testDispatcher.scheduler.runCurrent()
-        testDispatcher.scheduler.advanceTimeBy(dev.rahier.pouleparty.AppConstants.LOCATION_THROTTLE_MS * 3 + 100)
+        testDispatcher.scheduler.advanceTimeBy(AppConstants.LOCATION_THROTTLE_MS * 3 + 100)
         testDispatcher.scheduler.runCurrent()
 
         io.mockk.verify(exactly = 4) { presenceRepository.setChickenLocation(eq("test-id"), any(), any()) }
@@ -283,27 +297,27 @@ class ChickenMapViewModelBehaviorTest {
     @Test
     fun `the chicken position is rebroadcast regardless of ping state`() {
         val now = System.currentTimeMillis()
-        val game = dev.rahier.pouleparty.model.Game(
+        val game = Game(
             id = "test-id",
-            gameMode = dev.rahier.pouleparty.model.GameMod.STAY_IN_THE_ZONE.firestoreValue,
-            status = dev.rahier.pouleparty.model.GameStatus.IN_PROGRESS.firestoreValue,
-            timing = dev.rahier.pouleparty.model.Timing(
-                start = com.google.firebase.Timestamp(java.util.Date(now - 60_000)),
-                end = com.google.firebase.Timestamp(java.util.Date(now + 3_600_000))
+            gameMode = GameMod.STAY_IN_THE_ZONE.firestoreValue,
+            status = GameStatus.IN_PROGRESS.firestoreValue,
+            timing = Timing(
+                start = Timestamp(Date(now - 60_000)),
+                end = Timestamp(Date(now + 3_600_000))
             ),
-            powerUps = dev.rahier.pouleparty.model.GamePowerUps(
+            powerUps = GamePowerUps(
                 enabled = true,
-                activeEffects = dev.rahier.pouleparty.model.ActiveEffects(radarPing = null)
+                activeEffects = ActiveEffects(radarPing = null)
             )
         )
         io.mockk.coEvery { gameRepository.getConfig(any()) } returns game
         io.mockk.coEvery { locationRepository.getLastLocation() } returns
-            com.mapbox.geojson.Point.fromLngLat(4.3928, 50.8266)
+            Point.fromLngLat(4.3928, 50.8266)
 
         val vm = createViewModel()
         testDispatcher.scheduler.runCurrent()
 
-        testDispatcher.scheduler.advanceTimeBy(3 * dev.rahier.pouleparty.AppConstants.LOCATION_THROTTLE_MS + 100)
+        testDispatcher.scheduler.advanceTimeBy(3 * AppConstants.LOCATION_THROTTLE_MS + 100)
         testDispatcher.scheduler.runCurrent()
 
         io.mockk.coVerify(atLeast = 1) {
@@ -316,13 +330,13 @@ class ChickenMapViewModelBehaviorTest {
     @Test
     fun `pp19 timeout flips isGameOver without transition`() {
         val now = System.currentTimeMillis()
-        val game = dev.rahier.pouleparty.model.Game(
+        val game = Game(
             id = "test-id",
-            gameMode = dev.rahier.pouleparty.model.GameMod.FOLLOW_THE_CHICKEN.firestoreValue,
-            status = dev.rahier.pouleparty.model.GameStatus.IN_PROGRESS.firestoreValue,
-            timing = dev.rahier.pouleparty.model.Timing(
-                start = com.google.firebase.Timestamp(java.util.Date(now - 3_600_000)),
-                end = com.google.firebase.Timestamp(java.util.Date(now - 1_000))
+            gameMode = GameMod.FOLLOW_THE_CHICKEN.firestoreValue,
+            status = GameStatus.IN_PROGRESS.firestoreValue,
+            timing = Timing(
+                start = Timestamp(Date(now - 3_600_000)),
+                end = Timestamp(Date(now - 1_000))
             )
         )
         io.mockk.coEvery { gameRepository.getConfig(any()) } returns game
@@ -347,16 +361,16 @@ class ChickenMapViewModelBehaviorTest {
     @Test
     fun `pp-zone-stored zone shrinks to final circle without game over`() {
         val now = System.currentTimeMillis()
-        val game = dev.rahier.pouleparty.model.Game(
+        val game = Game(
             id = "test-id",
-            gameMode = dev.rahier.pouleparty.model.GameMod.FOLLOW_THE_CHICKEN.firestoreValue,
-            status = dev.rahier.pouleparty.model.GameStatus.IN_PROGRESS.firestoreValue,
-            timing = dev.rahier.pouleparty.model.Timing(
-                start = com.google.firebase.Timestamp(java.util.Date(now - 3_600_000)),
-                end = com.google.firebase.Timestamp(java.util.Date(now + 3_600_000))
+            gameMode = GameMod.FOLLOW_THE_CHICKEN.firestoreValue,
+            status = GameStatus.IN_PROGRESS.firestoreValue,
+            timing = Timing(
+                start = Timestamp(Date(now - 3_600_000)),
+                end = Timestamp(Date(now + 3_600_000))
             ),
-            zone = dev.rahier.pouleparty.model.Zone(
-                center = com.google.firebase.firestore.GeoPoint(50.8466, 4.3528),
+            zone = Zone(
+                center = GeoPoint(50.8466, 4.3528),
                 radius = 100.0,
                 shrinkIntervalMinutes = 1.0,
                 shrinkMetersPerUpdate = 100.0
@@ -365,8 +379,8 @@ class ChickenMapViewModelBehaviorTest {
         io.mockk.coEvery { gameRepository.getConfig(any()) } returns game
         // Stored schedule: initial 100m circle, final 50m circle.
         io.mockk.coEvery { gameRepository.fetchZoneSchedule(any()) } returns listOf(
-            dev.rahier.pouleparty.model.ZoneCircle(order = 0, radiusMeters = 100.0, lat = 50.8466, lng = 4.3528),
-            dev.rahier.pouleparty.model.ZoneCircle(order = 1, radiusMeters = 50.0, lat = 50.8466, lng = 4.3528),
+            ZoneCircle(order = 0, radiusMeters = 100.0, lat = 50.8466, lng = 4.3528),
+            ZoneCircle(order = 1, radiusMeters = 50.0, lat = 50.8466, lng = 4.3528),
         )
 
         val vm = createViewModel()
@@ -383,13 +397,13 @@ class ChickenMapViewModelBehaviorTest {
     @Test
     fun `pp19 GPS writes stop after isGameOver flips on timeout`() {
         val now = System.currentTimeMillis()
-        val game = dev.rahier.pouleparty.model.Game(
+        val game = Game(
             id = "test-id",
-            gameMode = dev.rahier.pouleparty.model.GameMod.FOLLOW_THE_CHICKEN.firestoreValue,
-            status = dev.rahier.pouleparty.model.GameStatus.IN_PROGRESS.firestoreValue,
-            timing = dev.rahier.pouleparty.model.Timing(
-                start = com.google.firebase.Timestamp(java.util.Date(now - 3_600_000)),
-                end = com.google.firebase.Timestamp(java.util.Date(now - 1_000))
+            gameMode = GameMod.FOLLOW_THE_CHICKEN.firestoreValue,
+            status = GameStatus.IN_PROGRESS.firestoreValue,
+            timing = Timing(
+                start = Timestamp(Date(now - 3_600_000)),
+                end = Timestamp(Date(now - 1_000))
             )
         )
         io.mockk.coEvery { gameRepository.getConfig(any()) } returns game
@@ -398,7 +412,7 @@ class ChickenMapViewModelBehaviorTest {
         // post-gameOver to prove the collector has been cancelled.
         io.mockk.coEvery { locationRepository.getLastLocation() } returns null
 
-        val locationFlow = kotlinx.coroutines.flow.MutableSharedFlow<com.mapbox.geojson.Point>(replay = 0)
+        val locationFlow = MutableSharedFlow<Point>(replay = 0)
         io.mockk.every { locationRepository.locationFlow() } returns locationFlow
 
         val vm = createViewModel()
@@ -411,7 +425,7 @@ class ChickenMapViewModelBehaviorTest {
         // Now try to push a fresh coord through the cancelled flow ,
         // the collector is gone, so setChickenLocation must NOT fire.
         kotlinx.coroutines.runBlocking {
-            locationFlow.emit(com.mapbox.geojson.Point.fromLngLat(4.3600, 50.8500))
+            locationFlow.emit(Point.fromLngLat(4.3600, 50.8500))
         }
         testDispatcher.scheduler.advanceTimeBy(100)
         testDispatcher.scheduler.runCurrent()
@@ -431,18 +445,18 @@ class ChickenMapViewModelBehaviorTest {
     @Test
     fun `radarPingBroadcastLoop is not scheduled in followTheChicken mode`() {
         val now = System.currentTimeMillis()
-        val game = dev.rahier.pouleparty.model.Game(
+        val game = Game(
             id = "test-id",
-            gameMode = dev.rahier.pouleparty.model.GameMod.FOLLOW_THE_CHICKEN.firestoreValue,
-            status = dev.rahier.pouleparty.model.GameStatus.IN_PROGRESS.firestoreValue,
-            timing = dev.rahier.pouleparty.model.Timing(
-                start = com.google.firebase.Timestamp(java.util.Date(now - 60_000)),
-                end = com.google.firebase.Timestamp(java.util.Date(now + 3_600_000))
+            gameMode = GameMod.FOLLOW_THE_CHICKEN.firestoreValue,
+            status = GameStatus.IN_PROGRESS.firestoreValue,
+            timing = Timing(
+                start = Timestamp(Date(now - 60_000)),
+                end = Timestamp(Date(now + 3_600_000))
             ),
-            powerUps = dev.rahier.pouleparty.model.GamePowerUps(
+            powerUps = GamePowerUps(
                 enabled = true,
-                activeEffects = dev.rahier.pouleparty.model.ActiveEffects(
-                    radarPing = com.google.firebase.Timestamp(java.util.Date(now + 30_000))
+                activeEffects = ActiveEffects(
+                    radarPing = Timestamp(Date(now + 30_000))
                 )
             )
         )
@@ -454,7 +468,7 @@ class ChickenMapViewModelBehaviorTest {
         val vm = createViewModel()
         testDispatcher.scheduler.runCurrent()
 
-        testDispatcher.scheduler.advanceTimeBy(3 * dev.rahier.pouleparty.AppConstants.LOCATION_THROTTLE_MS + 100)
+        testDispatcher.scheduler.advanceTimeBy(3 * AppConstants.LOCATION_THROTTLE_MS + 100)
         testDispatcher.scheduler.runCurrent()
 
         // In followTheChicken, `locationRepository.getLastLocation()` would be called

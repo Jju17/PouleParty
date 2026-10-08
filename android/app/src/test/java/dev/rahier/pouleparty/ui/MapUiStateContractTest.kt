@@ -1,5 +1,7 @@
 package dev.rahier.pouleparty.ui
 
+import com.google.firebase.Timestamp
+import com.google.firebase.firestore.GeoPoint
 import dev.rahier.pouleparty.ui.common.UiText
 import dev.rahier.pouleparty.ui.map.MapUiState
 import dev.rahier.pouleparty.powerups.ui.PowerUpsUiState
@@ -57,8 +59,8 @@ class MapUiStateContractTest {
         val powerUp = PowerUp(
             id = "pu1",
             type = "invisibility",
-            location = com.google.firebase.firestore.GeoPoint(50.0, 4.0),
-            spawnedAt = com.google.firebase.Timestamp.now()
+            location = GeoPoint(50.0, 4.0),
+            spawnedAt = Timestamp.now()
         )
         val state: MapUiState = ChickenMapUiState(
             game = Game.mock,

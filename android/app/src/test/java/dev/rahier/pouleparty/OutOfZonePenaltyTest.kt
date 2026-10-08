@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty
 
+import dev.rahier.pouleparty.ui.huntermap.HunterMapUiState
 import dev.rahier.pouleparty.ui.gamelogic.evaluateOutOfZonePenalty
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -242,7 +243,7 @@ class OutOfZonePenaltyTest {
 
     @Test
     fun `HunterMapUiState lastPenaltyAt default stays null`() {
-        val state = dev.rahier.pouleparty.ui.huntermap.HunterMapUiState()
+        val state = HunterMapUiState()
         assertNull(state.lastPenaltyAt)
     }
 }

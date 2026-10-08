@@ -1,5 +1,8 @@
 package dev.rahier.pouleparty.ui.gamemastermap
 
+import dev.rahier.pouleparty.model.HunterLocation
+import dev.rahier.pouleparty.model.Registration
+import dev.rahier.pouleparty.model.ZoneCircle
 import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.ui.common.uiText
 import dev.rahier.pouleparty.ui.common.UiText
@@ -47,17 +50,17 @@ data class GameMasterMapUiState(
     /** Raw hunter locations cached so marker labels can be rebuilt when
      *  the registrations stream emits, a hunter's team name may land
      *  after their first location ping. */
-    val hunterLocations: List<dev.rahier.pouleparty.model.HunterLocation> = emptyList(),
+    val hunterLocations: List<HunterLocation> = emptyList(),
     val powerUpAnnotations: List<PowerUp> = emptyList(),
-    val registrations: List<dev.rahier.pouleparty.model.Registration> = emptyList(),
-    val pendingChickenDesignation: dev.rahier.pouleparty.model.Registration? = null,
+    val registrations: List<Registration> = emptyList(),
+    val pendingChickenDesignation: Registration? = null,
     val designationError: UiText? = null,
     override val nextRadiusUpdate: Date? = null,
     override val nowDate: Date = Date(),
     override val radius: Int = 1500,
     override val circleCenter: Point? = null,
     /** PP-zone-stored: ordered circle schedule read once at map load. */
-    val circles: List<dev.rahier.pouleparty.model.ZoneCircle> = emptyList(),
+    val circles: List<ZoneCircle> = emptyList(),
     override val showGameInfo: Boolean = false,
     val showHuntersDrawer: Boolean = false,
     val isLeaving: Boolean = false,
@@ -182,7 +185,7 @@ class GameMasterMapViewModel @Inject constructor(
 
     private fun onLaunchTapped() {
         val state = _uiState.value
-        if (state.game.gameStatusEnum != dev.rahier.pouleparty.model.GameStatus.READY_TO_LAUNCH) return
+        if (state.game.gameStatusEnum != GameStatus.READY_TO_LAUNCH) return
         if (state.isLaunching) return
         _uiState.update { it.copy(isLaunching = true, launchError = null) }
         viewModelScope.launch {
@@ -199,7 +202,7 @@ class GameMasterMapViewModel @Inject constructor(
     /** PP-zone-stored: thin wrapper over the shared selector. */
     private fun zoneStateFromCircles(
         game: Game,
-        circles: List<dev.rahier.pouleparty.model.ZoneCircle>,
+        circles: List<ZoneCircle>,
         now: Date,
     ) = zoneRenderStateFromCircles(
         gameMode = game.gameModEnum,
@@ -310,7 +313,7 @@ class GameMasterMapViewModel @Inject constructor(
 
     private fun onGameUpdated(game: Game) {
         val previousCount = _uiState.value.previousWinnersCount
-        val isNowDone = game.gameStatusEnum == dev.rahier.pouleparty.model.GameStatus.DONE
+        val isNowDone = game.gameStatusEnum == GameStatus.DONE
         val notif = if (previousCount >= 0) {
             detectNewWinners(winners = game.winners, previousCount = previousCount)
         } else null
@@ -366,8 +369,8 @@ class GameMasterMapViewModel @Inject constructor(
  * matched with a registration doc still gets a stable label.
  */
 private fun buildHunterAnnotations(
-    locations: List<dev.rahier.pouleparty.model.HunterLocation>,
-    registrations: List<dev.rahier.pouleparty.model.Registration>,
+    locations: List<HunterLocation>,
+    registrations: List<Registration>,
 ): List<HunterAnnotation> {
     val sorted = locations.sortedBy { it.hunterId }
     val teamNameByUserId = registrations.associate { it.userId to it.teamName }

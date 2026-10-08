@@ -1,5 +1,8 @@
 package dev.rahier.pouleparty.ui.home
 
+import com.google.firebase.firestore.FirebaseFirestore
+import dev.rahier.pouleparty.model.GamePhase
+import dev.rahier.pouleparty.model.PlayerRole
 import android.util.Log
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.content.Intent
@@ -99,7 +102,7 @@ fun HomeScreen(
     }
 
     fun launchCreateParty(isAdminCreation: Boolean, isDebugGame: Boolean = false) {
-        val gameId = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+        val gameId = FirebaseFirestore.getInstance()
             .collection("games")
             .document()
             .id
@@ -238,20 +241,20 @@ fun HomeScreen(
             val activeRole = state.activeGameRole
             if (activeGame != null && activePhase != null && activeRole != null) {
                 val titleRes = when (activePhase) {
-                    dev.rahier.pouleparty.model.GamePhase.IN_PROGRESS ->
+                    GamePhase.IN_PROGRESS ->
                         R.string.rejoin_game_in_progress
-                    dev.rahier.pouleparty.model.GamePhase.UPCOMING ->
+                    GamePhase.UPCOMING ->
                         R.string.upcoming_game_banner_title
                 }
                 val ctaRes = when (activePhase) {
-                    dev.rahier.pouleparty.model.GamePhase.IN_PROGRESS -> R.string.rejoin
-                    dev.rahier.pouleparty.model.GamePhase.UPCOMING ->
+                    GamePhase.IN_PROGRESS -> R.string.rejoin
+                    GamePhase.UPCOMING ->
                         when (activeRole) {
-                            dev.rahier.pouleparty.model.PlayerRole.CHICKEN ->
+                            PlayerRole.CHICKEN ->
                                 R.string.upcoming_game_cta_chicken
-                            dev.rahier.pouleparty.model.PlayerRole.HUNTER ->
+                            PlayerRole.HUNTER ->
                                 R.string.upcoming_game_cta_hunter
-                            dev.rahier.pouleparty.model.PlayerRole.GAME_MASTER ->
+                            PlayerRole.GAME_MASTER ->
                                 R.string.upcoming_game_cta_hunter
                         }
                 }

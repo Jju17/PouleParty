@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui
 
+import dev.rahier.pouleparty.model.Zone
 import dev.rahier.pouleparty.ui.common.UiText
 import com.mapbox.geojson.Point
 import com.google.firebase.Timestamp
@@ -39,7 +40,7 @@ class HunterMapViewModelTest {
 
     @Test
     fun `radius update reduces radius`() {
-        val game = Game(id = "test", zone = dev.rahier.pouleparty.model.Zone(shrinkMetersPerUpdate = 100.0))
+        val game = Game(id = "test", zone = Zone(shrinkMetersPerUpdate = 100.0))
         var state = HunterMapUiState(game = game, radius = 500)
 
         val newRadius = state.radius - game.zone.shrinkMetersPerUpdate.toInt()
@@ -49,7 +50,7 @@ class HunterMapViewModelTest {
 
     @Test
     fun `radius does not go below zero`() {
-        val game = Game(id = "test", zone = dev.rahier.pouleparty.model.Zone(shrinkMetersPerUpdate = 100.0))
+        val game = Game(id = "test", zone = Zone(shrinkMetersPerUpdate = 100.0))
         val state = HunterMapUiState(game = game, radius = 50)
 
         val newRadius = state.radius - game.zone.shrinkMetersPerUpdate.toInt()
@@ -77,8 +78,8 @@ class HunterMapViewModelTest {
 
     @Test
     fun `game config update refreshes state`() {
-        val oldGame = Game(id = "test", zone = dev.rahier.pouleparty.model.Zone(radius = 1500.0))
-        val newGame = oldGame.copy(zone = dev.rahier.pouleparty.model.Zone(radius = 2000.0))
+        val oldGame = Game(id = "test", zone = Zone(radius = 1500.0))
+        val newGame = oldGame.copy(zone = Zone(radius = 2000.0))
 
         val state = HunterMapUiState(game = newGame, circleCenter = newGame.initialLocation)
         assertEquals(2000.0, state.game.zone.radius, 0.01)

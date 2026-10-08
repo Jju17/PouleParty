@@ -1,5 +1,7 @@
 package dev.rahier.pouleparty.ui.settings
 
+import dev.rahier.pouleparty.ui.victory.LeaderboardEntry
+import dev.rahier.pouleparty.ui.victory.ReportResult
 import android.content.SharedPreferences
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -32,12 +34,12 @@ data class SettingsUiState(
     val selectedGame: MyGame? = null,
     val isShowingLeaderboard: Boolean = false,
     val reportTarget: ReportTarget? = null,
-    val reportResult: dev.rahier.pouleparty.ui.victory.ReportResult? = null
+    val reportResult: ReportResult? = null
 )
 
 data class ReportTarget(
     val gameId: String,
-    val entry: dev.rahier.pouleparty.ui.victory.LeaderboardEntry
+    val entry: LeaderboardEntry
 )
 
 @HiltViewModel
@@ -81,7 +83,7 @@ class SettingsViewModel @Inject constructor(
         val reporterId = auth.currentUser?.uid
         _uiState.update { it.copy(reportTarget = null) }
         if (reporterId.isNullOrEmpty()) {
-            _uiState.update { it.copy(reportResult = dev.rahier.pouleparty.ui.victory.ReportResult.FAILURE) }
+            _uiState.update { it.copy(reportResult = ReportResult.FAILURE) }
             return
         }
         viewModelScope.launch {
@@ -97,7 +99,7 @@ class SettingsViewModel @Inject constructor(
                 Log.e("SettingsViewModel", "reportPlayer failed", result.exceptionOrNull())
             }
             _uiState.update {
-                it.copy(reportResult = if (result.isSuccess) dev.rahier.pouleparty.ui.victory.ReportResult.SUCCESS else dev.rahier.pouleparty.ui.victory.ReportResult.FAILURE)
+                it.copy(reportResult = if (result.isSuccess) ReportResult.SUCCESS else ReportResult.FAILURE)
             }
         }
     }

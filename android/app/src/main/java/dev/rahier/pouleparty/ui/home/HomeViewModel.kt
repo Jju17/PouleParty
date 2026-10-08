@@ -1,5 +1,11 @@
 package dev.rahier.pouleparty.ui.home
 
+import dev.rahier.pouleparty.R
+import dev.rahier.pouleparty.config.RemoteConfigProvider
+import dev.rahier.pouleparty.data.AnalyticsRepository
+import dev.rahier.pouleparty.model.DemoCode
+import dev.rahier.pouleparty.model.GamePhase
+import kotlinx.coroutines.Job
 import dev.rahier.pouleparty.ui.common.errorMessageRes
 import kotlinx.coroutines.CancellationException
 import android.content.SharedPreferences
@@ -43,7 +49,7 @@ data class HomeUiState(
     val activeGameRole: PlayerRole? = null,
     /** Distinguishes "Reprendre" (IN_PROGRESS) from "Prochaine partie"
      *  (UPCOMING) for the Home banner copy + CTA. Null when no active game. */
-    val activeGamePhase: dev.rahier.pouleparty.model.GamePhase? = null,
+    val activeGamePhase: GamePhase? = null,
     val isShowingAdminCodeDialog: Boolean = false,
     val adminCodeInput: String = "",
     val isShowingAdminCodeError: Boolean = false,
@@ -83,12 +89,12 @@ class HomeViewModel @Inject constructor(
     private val gameRepository: GameRepository,
     private val gameFunctions: GameFunctions,
     private val locationRepository: LocationRepository,
-    private val analyticsRepository: dev.rahier.pouleparty.data.AnalyticsRepository,
+    private val analyticsRepository: AnalyticsRepository,
     private val prefs: SharedPreferences,
     private val auth: FirebaseAuth,
     @dagger.hilt.android.qualifiers.ApplicationContext
     private val appContext: android.content.Context,
-    private val remoteConfig: dev.rahier.pouleparty.config.RemoteConfigProvider,
+    private val remoteConfig: RemoteConfigProvider,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -143,7 +149,7 @@ class HomeViewModel @Inject constructor(
      */
     fun validateDemoCode() {
         val entered = _uiState.value.demoCodeInput.trim()
-        if (entered == dev.rahier.pouleparty.model.DemoCode.VALUE) {
+        if (entered == DemoCode.VALUE) {
             _uiState.update { it.copy(isShowingDemoCodeDialog = false, demoCodeInput = "") }
             viewModelScope.launch { _effects.send(HomeEffect.NavigateToDemoMode) }
         } else {
@@ -201,9 +207,9 @@ class HomeViewModel @Inject constructor(
                 } else {
                     val msg = if (result.lockedUntilMs != null) {
                         val mins = ((result.lockedUntilMs - System.currentTimeMillis()) / 60_000L).coerceAtLeast(1L).toInt()
-                        appContext.getString(dev.rahier.pouleparty.R.string.join_flow_gm_too_many_attempts, mins)
+                        appContext.getString(R.string.join_flow_gm_too_many_attempts, mins)
                     } else {
-                        appContext.getString(dev.rahier.pouleparty.R.string.join_flow_gm_wrong_code, result.attemptsRemaining)
+                        appContext.getString(R.string.join_flow_gm_wrong_code, result.attemptsRemaining)
                     }
                     _uiState.update {
                         it.copy(
@@ -281,7 +287,7 @@ class HomeViewModel @Inject constructor(
      * race: only the first fetch runs; the second one becomes a no-op.
      */
     @Volatile
-    private var activeGameCheckInFlight: kotlinx.coroutines.Job? = null
+    private var activeGameCheckInFlight: Job? = null
 
     private fun checkForActiveGame() {
         if (activeGameCheckInFlight?.isActive == true) return
@@ -355,7 +361,7 @@ class HomeViewModel @Inject constructor(
             it.copy(activeGame = null, activeGameRole = null, activeGamePhase = null)
         }
         val savedNickname = prefs.getTrimmedString(AppConstants.PREF_USER_NICKNAME)
-        val hunterName = savedNickname.ifEmpty { "Hunter" }
+        val hunterName = savedNickname.ifEmpty { AppConstants.DEFAULT_TEAM_NAME }
         viewModelScope.launch {
             // Refetch to catch games that transitioned to done between the
             // banner being shown and the tap. Falls back to the cached game
@@ -446,7 +452,7 @@ class HomeViewModel @Inject constructor(
     }
 
     @Volatile
-    private var validateCodeJob: kotlinx.coroutines.Job? = null
+    private var validateCodeJob: Job? = null
 
     private fun validateCode(code: String) {
         // Drop any stale validation so a fast re-type doesn't race the previous
@@ -479,7 +485,7 @@ class HomeViewModel @Inject constructor(
                         teamName = if (it.teamName.isBlank()) savedNickname else it.teamName,
                     )
                 }
-            } catch (e: kotlinx.coroutines.CancellationException) {
+            } catch (e: CancellationException) {
                 // Sheet was dismissed or a newer validation started, don't
                 // update state and don't flip to NetworkError.
                 throw e
@@ -542,7 +548,7 @@ class HomeViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             joinStep = JoinFlowStep.ValidationCodeEntry(step.game),
-                            validationCodeError = appContext.getString(dev.rahier.pouleparty.R.string.validation_code_invalid),
+                            validationCodeError = appContext.getString(R.string.validation_code_invalid),
                         )
                     }
                 }
@@ -550,7 +556,7 @@ class HomeViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             joinStep = JoinFlowStep.ValidationCodeEntry(step.game),
-                            validationCodeError = appContext.getString(dev.rahier.pouleparty.R.string.validation_code_already_used),
+                            validationCodeError = appContext.getString(R.string.validation_code_already_used),
                         )
                     }
                 }

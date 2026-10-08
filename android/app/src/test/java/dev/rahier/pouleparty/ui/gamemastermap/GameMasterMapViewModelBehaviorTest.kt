@@ -1,5 +1,7 @@
 package dev.rahier.pouleparty.ui.gamemastermap
 
+import dev.rahier.pouleparty.R
+import dev.rahier.pouleparty.ui.common.UiText
 import androidx.lifecycle.SavedStateHandle
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
@@ -110,7 +112,7 @@ class GameMasterMapViewModelBehaviorTest {
         val vm = createViewModel()
         vm.onIntent(GameMasterMapIntent.LeaveGameTapped)
         testDispatcher.scheduler.runCurrent()
-        assertEquals(dev.rahier.pouleparty.R.string.api_error_unknown, vm.uiState.value.leaveErrorRes)
+        assertEquals(R.string.api_error_unknown, vm.uiState.value.leaveErrorRes)
         assertFalse(vm.uiState.value.isLeaving)
     }
 
@@ -225,9 +227,9 @@ class GameMasterMapViewModelBehaviorTest {
         testDispatcher.scheduler.runCurrent()
 
         val labels = vm.uiState.value.hunterAnnotations.map { it.displayName }
-        assertTrue("Expected 'The Foxes' in $labels", labels.contains(dev.rahier.pouleparty.ui.common.UiText.Verbatim("The Foxes")))
-        assertTrue("Expected 'Les Coyotes' in $labels", labels.contains(dev.rahier.pouleparty.ui.common.UiText.Verbatim("Les Coyotes")))
-        assertFalse(labels.any { it is dev.rahier.pouleparty.ui.common.UiText.Resource })
+        assertTrue("Expected 'The Foxes' in $labels", labels.contains(UiText.Verbatim("The Foxes")))
+        assertTrue("Expected 'Les Coyotes' in $labels", labels.contains(UiText.Verbatim("Les Coyotes")))
+        assertFalse(labels.any { it is UiText.Resource })
     }
 
     @Test
@@ -247,8 +249,8 @@ class GameMasterMapViewModelBehaviorTest {
 
         // Sorted by hunterId: uid-aaa = "Hunter 1", uid-zzz = "Hunter 2".
         val byId = vm.uiState.value.hunterAnnotations.associate { it.id to it.displayName }
-        assertEquals(dev.rahier.pouleparty.ui.common.uiText(dev.rahier.pouleparty.R.string.hunter_number, 1), byId["uid-aaa"])
-        assertEquals(dev.rahier.pouleparty.ui.common.uiText(dev.rahier.pouleparty.R.string.hunter_number, 2), byId["uid-zzz"])
+        assertEquals(dev.rahier.pouleparty.ui.common.uiText(R.string.hunter_number, 1), byId["uid-aaa"])
+        assertEquals(dev.rahier.pouleparty.ui.common.uiText(R.string.hunter_number, 2), byId["uid-zzz"])
     }
 
     @Test
@@ -265,12 +267,12 @@ class GameMasterMapViewModelBehaviorTest {
             )
         )
         testDispatcher.scheduler.runCurrent()
-        assertEquals(dev.rahier.pouleparty.ui.common.uiText(dev.rahier.pouleparty.R.string.hunter_number, 1), vm.uiState.value.hunterAnnotations.first().displayName)
+        assertEquals(dev.rahier.pouleparty.ui.common.uiText(R.string.hunter_number, 1), vm.uiState.value.hunterAnnotations.first().displayName)
 
         // Registration arrives → label must flip to teamName.
         registrationsFlow.tryEmit(listOf(Registration(userId = "uid-1", teamName = "Apex Predators")))
         testDispatcher.scheduler.runCurrent()
-        assertEquals(dev.rahier.pouleparty.ui.common.UiText.Verbatim("Apex Predators"), vm.uiState.value.hunterAnnotations.first().displayName)
+        assertEquals(UiText.Verbatim("Apex Predators"), vm.uiState.value.hunterAnnotations.first().displayName)
     }
 
     // ── Read-only stream surface (no power-up tray) ─────

@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui
 
+import dev.rahier.pouleparty.config.RemoteConfigProvider
 import androidx.lifecycle.SavedStateHandle
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
@@ -113,7 +114,7 @@ class QADebugFlowTest {
         locationRepository = locationRepository,
         analyticsRepository = analyticsRepository,
         auth = auth,
-        remoteConfig = mockk<dev.rahier.pouleparty.config.RemoteConfigProvider>(relaxed = true) {
+        remoteConfig = mockk<RemoteConfigProvider>(relaxed = true) {
             every { defaultInitialRadius } returns 1500.0
         },
         savedStateHandle = SavedStateHandle(
@@ -133,7 +134,7 @@ class QADebugFlowTest {
         auth = auth,
         prefs = mockk(relaxed = true),
         appContext = mockk(relaxed = true),
-        remoteConfig = mockk<dev.rahier.pouleparty.config.RemoteConfigProvider>(relaxed = true).also {
+        remoteConfig = mockk<RemoteConfigProvider>(relaxed = true).also {
             every { it.adminCode } returns "jujurahier"
             every { it.qaDebugCode } returns "qadebug"
         },
@@ -249,7 +250,7 @@ class QADebugFlowTest {
             auth = auth,
             prefs = mockk(relaxed = true),
             appContext = mockk(relaxed = true),
-            remoteConfig = mockk<dev.rahier.pouleparty.config.RemoteConfigProvider>(relaxed = true).also {
+            remoteConfig = mockk<RemoteConfigProvider>(relaxed = true).also {
                 every { it.adminCode } returns "jujurahier"
                 every { it.qaDebugCode } returns ""
             },
@@ -268,7 +269,7 @@ class QADebugFlowTest {
             auth = auth,
             prefs = mockk(relaxed = true),
             appContext = mockk(relaxed = true),
-            remoteConfig = mockk<dev.rahier.pouleparty.config.RemoteConfigProvider>(relaxed = true).also {
+            remoteConfig = mockk<RemoteConfigProvider>(relaxed = true).also {
                 every { it.adminCode } returns "samecode"
                 every { it.qaDebugCode } returns "samecode"
             },

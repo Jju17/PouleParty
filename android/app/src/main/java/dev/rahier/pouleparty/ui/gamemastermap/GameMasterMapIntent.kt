@@ -1,5 +1,7 @@
 package dev.rahier.pouleparty.ui.gamemastermap
 
+import dev.rahier.pouleparty.model.Registration
+
 sealed class GameMasterMapIntent {
     data object InfoTapped : GameMasterMapIntent()
     data object DismissGameInfo : GameMasterMapIntent()
@@ -9,7 +11,7 @@ sealed class GameMasterMapIntent {
     data object RetryLoad : GameMasterMapIntent()
     data object DismissLeaveError : GameMasterMapIntent()
     data object ValidationQueueTapped : GameMasterMapIntent()
-    data class DesignateHunterTapped(val registration: dev.rahier.pouleparty.model.Registration) : GameMasterMapIntent()
+    data class DesignateHunterTapped(val registration: Registration) : GameMasterMapIntent()
     data object DesignateConfirmTapped : GameMasterMapIntent()
     data object DesignateCancelTapped : GameMasterMapIntent()
     data object DesignationErrorDismissed : GameMasterMapIntent()

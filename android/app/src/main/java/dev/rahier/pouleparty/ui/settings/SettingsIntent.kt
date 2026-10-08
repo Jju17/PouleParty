@@ -1,11 +1,12 @@
 package dev.rahier.pouleparty.ui.settings
 
+import dev.rahier.pouleparty.ui.home.HomeIntent
 import dev.rahier.pouleparty.model.MyGame
 import dev.rahier.pouleparty.ui.victory.LeaderboardEntry
 
 /**
  * User-initiated actions on the settings screen. Single entry point via
- * [SettingsViewModel.onIntent], mirrors the [dev.rahier.pouleparty.ui.home.HomeIntent]
+ * [SettingsViewModel.onIntent], mirrors the [HomeIntent]
  * pattern.
  */
 sealed interface SettingsIntent {

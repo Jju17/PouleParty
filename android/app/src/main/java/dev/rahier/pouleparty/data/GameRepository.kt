@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.data
 
+import com.google.firebase.firestore.DocumentReference
 import android.util.Log
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentSnapshot
@@ -123,7 +124,7 @@ class FirestoreGameRepository @Inject constructor(
     private fun games() = firestore.collection(AppConstants.COLLECTION_GAMES)
     private fun game(gameId: String) = games().document(gameId)
 
-    private suspend fun getDocument(ref: com.google.firebase.firestore.DocumentReference): DocumentSnapshot =
+    private suspend fun getDocument(ref: DocumentReference): DocumentSnapshot =
         withTimeout(READ_TIMEOUT_MS) { ref.get().await() }
 
     override fun newGameId(): String = games().document().id

@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.gamecreation
 
+import dev.rahier.pouleparty.ui.home.HomeIntent
 import com.mapbox.geojson.Point
 import dev.rahier.pouleparty.model.GameMod
 import dev.rahier.pouleparty.powerups.model.PowerUpType
@@ -7,7 +8,7 @@ import dev.rahier.pouleparty.powerups.model.PowerUpType
 /**
  * User-initiated actions on the game-creation wizard. Dispatched through
  * [GameCreationViewModel.onIntent] so each button wires to exactly one
- * case, mirrors the [dev.rahier.pouleparty.ui.home.HomeIntent] pattern.
+ * case, mirrors the [HomeIntent] pattern.
  */
 sealed interface GameCreationIntent {
     object Next : GameCreationIntent

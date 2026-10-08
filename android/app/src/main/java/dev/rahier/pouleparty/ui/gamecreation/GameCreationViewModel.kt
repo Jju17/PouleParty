@@ -1,5 +1,11 @@
 package dev.rahier.pouleparty.ui.gamecreation
 
+import com.google.firebase.Timestamp
+import com.google.firebase.firestore.GeoPoint
+import dev.rahier.pouleparty.AppConstants
+import dev.rahier.pouleparty.config.RemoteConfigProvider
+import dev.rahier.pouleparty.data.AnalyticsRepository
+import java.util.Calendar
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -93,8 +99,8 @@ data class GameCreationUiState(
     val isStartZoneConfigured: Boolean
         get() {
             val loc = game.initialLocation
-            val isDefault = kotlin.math.abs(loc.latitude() - dev.rahier.pouleparty.AppConstants.DEFAULT_LATITUDE) < 0.001
-                    && kotlin.math.abs(loc.longitude() - dev.rahier.pouleparty.AppConstants.DEFAULT_LONGITUDE) < 0.001
+            val isDefault = kotlin.math.abs(loc.latitude() - AppConstants.DEFAULT_LATITUDE) < 0.001
+                    && kotlin.math.abs(loc.longitude() - AppConstants.DEFAULT_LONGITUDE) < 0.001
             return !isDefault
         }
 
@@ -125,9 +131,9 @@ class GameCreationViewModel @Inject constructor(
     private val gameRepository: GameRepository,
     private val gameFunctions: GameFunctions,
     private val locationRepository: LocationRepository,
-    private val analyticsRepository: dev.rahier.pouleparty.data.AnalyticsRepository,
+    private val analyticsRepository: AnalyticsRepository,
     private val auth: FirebaseAuth,
-    private val remoteConfig: dev.rahier.pouleparty.config.RemoteConfigProvider,
+    private val remoteConfig: RemoteConfigProvider,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -234,7 +240,7 @@ class GameCreationViewModel @Inject constructor(
             state.copy(
                 game = gameWithEnd.copy(
                     zone = gameWithEnd.zone.copy(
-                        center = com.google.firebase.firestore.GeoPoint(newCenter.latitude(), newCenter.longitude()),
+                        center = GeoPoint(newCenter.latitude(), newCenter.longitude()),
                         radius = radius,
                         driftSeed = newSeed.toLong(),
                         shrinkIntervalMinutes = interval,
@@ -263,7 +269,7 @@ class GameCreationViewModel @Inject constructor(
             state.copy(
                 game = game.copy(
                     zone = game.zone.copy(
-                        center = com.google.firebase.firestore.GeoPoint(newCenter.latitude(), newCenter.longitude()),
+                        center = GeoPoint(newCenter.latitude(), newCenter.longitude()),
                         driftSeed = newSeed.toLong(),
                     )
                 )
@@ -336,12 +342,12 @@ class GameCreationViewModel @Inject constructor(
      */
     private fun updateStartDateOnly(year: Int, month: Int, day: Int) {
         _uiState.update { state ->
-            val cal = java.util.Calendar.getInstance().apply {
+            val cal = Calendar.getInstance().apply {
                 time = state.game.startDate
-                set(java.util.Calendar.YEAR, year)
-                set(java.util.Calendar.MONTH, month)
-                set(java.util.Calendar.DAY_OF_MONTH, day)
-                set(java.util.Calendar.SECOND, 0)
+                set(Calendar.YEAR, year)
+                set(Calendar.MONTH, month)
+                set(Calendar.DAY_OF_MONTH, day)
+                set(Calendar.SECOND, 0)
             }
             val endDate = Date(cal.timeInMillis + (state.gameDurationMinutes * 60 * 1000).toLong())
             state.copy(
@@ -491,7 +497,7 @@ class GameCreationViewModel @Inject constructor(
         if (current.before(minimum)) {
             _uiState.update {
                 val newGame = it.game.copy(
-                    timing = it.game.timing.copy(start = com.google.firebase.Timestamp(minimum))
+                    timing = it.game.timing.copy(start = Timestamp(minimum))
                 )
                 it.copy(game = newGame)
             }
@@ -531,8 +537,8 @@ class GameCreationViewModel @Inject constructor(
         return game.copy(
             manualStartEnabled = true,
             timing = game.timing.copy(
-                start = com.google.firebase.Timestamp(start),
-                end = com.google.firebase.Timestamp(end),
+                start = Timestamp(start),
+                end = Timestamp(end),
                 headStartMinutes = 0.0,
             ),
             zone = game.zone.copy(

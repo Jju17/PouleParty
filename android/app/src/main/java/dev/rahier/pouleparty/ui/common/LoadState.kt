@@ -1,5 +1,11 @@
 package dev.rahier.pouleparty.ui.common
 
+import dev.rahier.pouleparty.data.ApiErrorCode
+import dev.rahier.pouleparty.data.ApiException
+import dev.rahier.pouleparty.data.GameRepository
+import dev.rahier.pouleparty.model.Game
+import dev.rahier.pouleparty.model.ZoneCircle
+import kotlinx.coroutines.CancellationException
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -67,13 +73,13 @@ fun LoadStateScreen(loadState: LoadState, onRetry: () -> Unit, onBack: () -> Uni
 
 /** The game and its stored zone schedule, or why they could not be read. */
 suspend fun loadGameWithSchedule(
-    gameRepository: dev.rahier.pouleparty.data.GameRepository,
+    gameRepository: GameRepository,
     gameId: String,
-): Result<Pair<dev.rahier.pouleparty.model.Game, List<dev.rahier.pouleparty.model.ZoneCircle>>> = try {
+): Result<Pair<Game, List<ZoneCircle>>> = try {
     val game = gameRepository.getConfig(gameId)
-        ?: throw dev.rahier.pouleparty.data.ApiException(dev.rahier.pouleparty.data.ApiErrorCode.GAME_NOT_FOUND)
+        ?: throw ApiException(ApiErrorCode.GAME_NOT_FOUND)
     Result.success(game to gameRepository.fetchZoneSchedule(gameId))
-} catch (e: kotlinx.coroutines.CancellationException) {
+} catch (e: CancellationException) {
     throw e
 } catch (e: Exception) {
     Result.failure(e)

@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.data
 
+import kotlinx.coroutines.CancellationException
 import com.google.firebase.functions.FirebaseFunctions
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeout
@@ -78,7 +79,7 @@ class FirebaseGameFunctions @Inject constructor(
 
     private suspend fun call(name: String, payload: Map<String, Any?>): Map<*, *>? = try {
         withTimeout(READ_TIMEOUT_MS) { functions.getHttpsCallable(name).call(payload).await() }.getData() as? Map<*, *>
-    } catch (e: kotlinx.coroutines.CancellationException) {
+    } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
         throw ApiException(e.toApiErrorCode(), e)

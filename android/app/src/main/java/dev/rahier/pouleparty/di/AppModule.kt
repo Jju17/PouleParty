@@ -1,5 +1,7 @@
 package dev.rahier.pouleparty.di
 
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.storage.FirebaseStorage
 import android.content.Context
 import android.content.SharedPreferences
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -37,13 +39,13 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideFirebaseDatabase(): com.google.firebase.database.FirebaseDatabase =
-        com.google.firebase.database.FirebaseDatabase.getInstance()
+    fun provideFirebaseDatabase(): FirebaseDatabase =
+        FirebaseDatabase.getInstance()
 
     @Provides
     @Singleton
-    fun provideFirebaseStorage(): com.google.firebase.storage.FirebaseStorage =
-        com.google.firebase.storage.FirebaseStorage.getInstance()
+    fun provideFirebaseStorage(): FirebaseStorage =
+        FirebaseStorage.getInstance()
 
     @Provides
     @Singleton

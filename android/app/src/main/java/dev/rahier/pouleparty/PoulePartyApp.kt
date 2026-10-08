@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty
 
+import dev.rahier.pouleparty.service.LocationForegroundService
 import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -46,7 +47,7 @@ class PoulePartyApp : Application() {
         )
         manager.createNotificationChannel(
             NotificationChannel(
-                dev.rahier.pouleparty.service.LocationForegroundService.CHANNEL_ID,
+                LocationForegroundService.CHANNEL_ID,
                 getString(R.string.location_service_channel_name),
                 NotificationManager.IMPORTANCE_LOW
             ).apply {

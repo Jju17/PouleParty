@@ -1,5 +1,12 @@
 package dev.rahier.pouleparty.ui
 
+import dev.rahier.pouleparty.data.AnalyticsRepository
+import dev.rahier.pouleparty.model.AdminCode
+import dev.rahier.pouleparty.model.DemoCode
+import dev.rahier.pouleparty.model.GamePhase
+import dev.rahier.pouleparty.ui.home.AdminCodeResult
+import dev.rahier.pouleparty.ui.home.HomeEffect
+import dev.rahier.pouleparty.ui.home.JoinFlowStep
 import dev.rahier.pouleparty.model.PlayerRole
 
 import android.content.SharedPreferences
@@ -74,15 +81,15 @@ class HomeViewModelBehaviorTest {
             gameRepository = gameRepository,
             gameFunctions = gameFunctions,
             locationRepository = locationRepository,
-            analyticsRepository = mockk<dev.rahier.pouleparty.data.AnalyticsRepository>(relaxed = true),
+            analyticsRepository = mockk<AnalyticsRepository>(relaxed = true),
             prefs = prefs,
             auth = auth,
             appContext = mockk(relaxed = true),
             remoteConfig = mockk(relaxed = true) {
-                io.mockk.every { adminCode } returns dev.rahier.pouleparty.model.AdminCode.VALUE
-                io.mockk.every { codeMaxWrongAttempts } returns dev.rahier.pouleparty.AppConstants.CODE_MAX_WRONG_ATTEMPTS
-                io.mockk.every { codeCooldownMs } returns dev.rahier.pouleparty.AppConstants.CODE_COOLDOWN_MS
-                io.mockk.every { defaultInitialRadius } returns dev.rahier.pouleparty.AppConstants.DEFAULT_INITIAL_RADIUS
+                io.mockk.every { adminCode } returns AdminCode.VALUE
+                io.mockk.every { codeMaxWrongAttempts } returns AppConstants.CODE_MAX_WRONG_ATTEMPTS
+                io.mockk.every { codeCooldownMs } returns AppConstants.CODE_COOLDOWN_MS
+                io.mockk.every { defaultInitialRadius } returns AppConstants.DEFAULT_INITIAL_RADIUS
             },
         )
     }
@@ -102,7 +109,7 @@ class HomeViewModelBehaviorTest {
     fun `checkForActiveGame finds hunter game`() {
         mockAuthUser("user-123")
         val game = Game.mock
-        coEvery { gameRepository.findActiveGame("user-123") } returns ActiveGameResult(game, PlayerRole.HUNTER, dev.rahier.pouleparty.model.GamePhase.IN_PROGRESS)
+        coEvery { gameRepository.findActiveGame("user-123") } returns ActiveGameResult(game, PlayerRole.HUNTER, GamePhase.IN_PROGRESS)
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
         assertEquals(game, vm.uiState.value.activeGame)
@@ -113,7 +120,7 @@ class HomeViewModelBehaviorTest {
     fun `checkForActiveGame finds chicken game`() {
         mockAuthUser("user-123")
         val game = Game.mock
-        coEvery { gameRepository.findActiveGame("user-123") } returns ActiveGameResult(game, PlayerRole.CHICKEN, dev.rahier.pouleparty.model.GamePhase.IN_PROGRESS)
+        coEvery { gameRepository.findActiveGame("user-123") } returns ActiveGameResult(game, PlayerRole.CHICKEN, GamePhase.IN_PROGRESS)
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
         assertEquals(game, vm.uiState.value.activeGame)
@@ -231,7 +238,7 @@ class HomeViewModelBehaviorTest {
     fun `GameCodeChanged below required length stays in EnteringCode step`() {
         val vm = createViewModel()
         vm.onIntent(HomeIntent.GameCodeChanged("ABC"))
-        assertTrue(vm.uiState.value.joinStep is dev.rahier.pouleparty.ui.home.JoinFlowStep.EnteringCode)
+        assertTrue(vm.uiState.value.joinStep is JoinFlowStep.EnteringCode)
     }
 
     @Test
@@ -245,7 +252,7 @@ class HomeViewModelBehaviorTest {
     fun `GameCodeChanged with non-alphanumeric stays in EnteringCode`() {
         val vm = createViewModel()
         vm.onIntent(HomeIntent.GameCodeChanged("AB!@#1"))
-        assertTrue(vm.uiState.value.joinStep is dev.rahier.pouleparty.ui.home.JoinFlowStep.EnteringCode)
+        assertTrue(vm.uiState.value.joinStep is JoinFlowStep.EnteringCode)
     }
 
     @Test
@@ -272,8 +279,8 @@ class HomeViewModelBehaviorTest {
     @Test
     fun `ActiveGameDismissed clears both game and role`() {
         mockAuthUser("user-123")
-        val game = dev.rahier.pouleparty.model.Game.mock
-        coEvery { gameRepository.findActiveGame("user-123") } returns ActiveGameResult(game, PlayerRole.HUNTER, dev.rahier.pouleparty.model.GamePhase.IN_PROGRESS)
+        val game = Game.mock
+        coEvery { gameRepository.findActiveGame("user-123") } returns ActiveGameResult(game, PlayerRole.HUNTER, GamePhase.IN_PROGRESS)
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
         assertNotNull(vm.uiState.value.activeGame)
@@ -298,8 +305,8 @@ class HomeViewModelBehaviorTest {
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
         vm.onIntent(HomeIntent.CreatePartyLongPressed)
-        vm.onIntent(HomeIntent.AdminCodeChanged(dev.rahier.pouleparty.model.AdminCode.VALUE))
-        assertEquals(dev.rahier.pouleparty.ui.home.AdminCodeResult.ADMIN, vm.validateAdminCode())
+        vm.onIntent(HomeIntent.AdminCodeChanged(AdminCode.VALUE))
+        assertEquals(AdminCodeResult.ADMIN, vm.validateAdminCode())
         assertFalse(vm.uiState.value.isShowingAdminCodeDialog)
         assertEquals("", vm.uiState.value.adminCodeInput)
         assertFalse(vm.uiState.value.isShowingAdminCodeError)
@@ -311,7 +318,7 @@ class HomeViewModelBehaviorTest {
         testDispatcher.scheduler.advanceUntilIdle()
         vm.onIntent(HomeIntent.CreatePartyLongPressed)
         vm.onIntent(HomeIntent.AdminCodeChanged("nope"))
-        assertEquals(dev.rahier.pouleparty.ui.home.AdminCodeResult.INVALID, vm.validateAdminCode())
+        assertEquals(AdminCodeResult.INVALID, vm.validateAdminCode())
         assertFalse(vm.uiState.value.isShowingAdminCodeDialog)
         assertEquals("", vm.uiState.value.adminCodeInput)
         assertTrue(vm.uiState.value.isShowingAdminCodeError)
@@ -344,14 +351,14 @@ class HomeViewModelBehaviorTest {
         val vm = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
         vm.onIntent(HomeIntent.StartButtonLongPressed)
-        vm.onIntent(HomeIntent.DemoCodeChanged(dev.rahier.pouleparty.model.DemoCode.VALUE))
+        vm.onIntent(HomeIntent.DemoCodeChanged(DemoCode.VALUE))
         vm.validateDemoCode()
         testDispatcher.scheduler.advanceUntilIdle()
         assertFalse(vm.uiState.value.isShowingDemoCodeDialog)
         assertEquals("", vm.uiState.value.demoCodeInput)
         assertFalse(vm.uiState.value.isShowingDemoCodeError)
         val effect = vm.effects.first()
-        assertEquals(dev.rahier.pouleparty.ui.home.HomeEffect.NavigateToDemoMode, effect)
+        assertEquals(HomeEffect.NavigateToDemoMode, effect)
     }
 
     @Test
@@ -392,7 +399,7 @@ class HomeViewModelBehaviorTest {
         val vm = driveToCodeValidated(Game(id = "abcdef", registrationBatchId = "game-06-06-2026"))
         vm.onIntent(HomeIntent.JoinAsHunterTapped)
         testDispatcher.scheduler.advanceUntilIdle()
-        assertTrue(vm.uiState.value.joinStep is dev.rahier.pouleparty.ui.home.JoinFlowStep.ValidationCodeEntry)
+        assertTrue(vm.uiState.value.joinStep is JoinFlowStep.ValidationCodeEntry)
     }
 
     @Test
@@ -400,7 +407,7 @@ class HomeViewModelBehaviorTest {
         val vm = driveToCodeValidated(Game(id = "abcdef", registrationBatchId = null))
         vm.onIntent(HomeIntent.JoinAsHunterTapped)
         testDispatcher.scheduler.advanceUntilIdle()
-        assertTrue(vm.uiState.value.joinStep is dev.rahier.pouleparty.ui.home.JoinFlowStep.JoiningWithTeamName)
+        assertTrue(vm.uiState.value.joinStep is JoinFlowStep.JoiningWithTeamName)
     }
 
     @Test
@@ -413,7 +420,7 @@ class HomeViewModelBehaviorTest {
         vm.onIntent(HomeIntent.ValidationCodeChanged("ZZZ999"))
         vm.onIntent(HomeIntent.SubmitValidationCodeTapped)
         testDispatcher.scheduler.advanceUntilIdle()
-        assertTrue(vm.uiState.value.joinStep is dev.rahier.pouleparty.ui.home.JoinFlowStep.JoiningWithTeamName)
+        assertTrue(vm.uiState.value.joinStep is JoinFlowStep.JoiningWithTeamName)
     }
 
     @Test
@@ -426,6 +433,6 @@ class HomeViewModelBehaviorTest {
         vm.onIntent(HomeIntent.ValidationCodeChanged("ZZZ999"))
         vm.onIntent(HomeIntent.SubmitValidationCodeTapped)
         testDispatcher.scheduler.advanceUntilIdle()
-        assertTrue(vm.uiState.value.joinStep is dev.rahier.pouleparty.ui.home.JoinFlowStep.ValidationCodeEntry)
+        assertTrue(vm.uiState.value.joinStep is JoinFlowStep.ValidationCodeEntry)
     }
 }

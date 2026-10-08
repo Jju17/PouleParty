@@ -1,5 +1,10 @@
 package dev.rahier.pouleparty.ui
 
+import dev.rahier.pouleparty.AppConstants
+import dev.rahier.pouleparty.model.AdminCode
+import dev.rahier.pouleparty.model.Game
+import dev.rahier.pouleparty.ui.gamecreation.GameCreationEffect
+import java.util.Calendar
 import androidx.lifecycle.SavedStateHandle
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
@@ -79,10 +84,10 @@ class GameCreationViewModelTest {
             analyticsRepository = analyticsRepository,
             auth = auth,
             remoteConfig = mockk(relaxed = true) {
-                io.mockk.every { adminCode } returns dev.rahier.pouleparty.model.AdminCode.VALUE
-                io.mockk.every { codeMaxWrongAttempts } returns dev.rahier.pouleparty.AppConstants.CODE_MAX_WRONG_ATTEMPTS
-                io.mockk.every { codeCooldownMs } returns dev.rahier.pouleparty.AppConstants.CODE_COOLDOWN_MS
-                io.mockk.every { defaultInitialRadius } returns dev.rahier.pouleparty.AppConstants.DEFAULT_INITIAL_RADIUS
+                io.mockk.every { adminCode } returns AdminCode.VALUE
+                io.mockk.every { codeMaxWrongAttempts } returns AppConstants.CODE_MAX_WRONG_ATTEMPTS
+                io.mockk.every { codeCooldownMs } returns AppConstants.CODE_COOLDOWN_MS
+                io.mockk.every { defaultInitialRadius } returns AppConstants.DEFAULT_INITIAL_RADIUS
             },
             savedStateHandle = SavedStateHandle(
                 mapOf(
@@ -139,7 +144,7 @@ class GameCreationViewModelTest {
     @Test
     fun `steps skip FINAL_ZONE_SETUP in followTheChicken`() {
         val vm = createViewModel()
-        vm.onIntent(GameCreationIntent.GameModeChanged(dev.rahier.pouleparty.model.GameMod.FOLLOW_THE_CHICKEN))
+        vm.onIntent(GameCreationIntent.GameModeChanged(GameMod.FOLLOW_THE_CHICKEN))
         val steps = vm.uiState.value.steps
         assertTrue(GameCreationStep.START_ZONE_SETUP in steps)
         assertFalse(GameCreationStep.FINAL_ZONE_SETUP in steps)
@@ -510,7 +515,7 @@ class GameCreationViewModelTest {
         coEvery { gameRepository.setConfig(any()) } returns Unit
         vm.onIntent(GameCreationIntent.StartGameTapped)
         advanceUntilIdle()
-        val effect = vm.effects.first() as dev.rahier.pouleparty.ui.gamecreation.GameCreationEffect.GameStarted
+        val effect = vm.effects.first() as GameCreationEffect.GameStarted
         assertEquals("test-game-id", effect.gameId)
         coVerify { gameRepository.setConfig(any()) }
         coVerify { analyticsRepository.gameCreated(any(), any(), any()) }
@@ -530,7 +535,7 @@ class GameCreationViewModelTest {
         vm.onIntent(GameCreationIntent.RetryGameMasterCode)
         advanceUntilIdle()
         assertNull(vm.uiState.value.gameMasterCodeFailedGameId)
-        val effect = vm.effects.first() as dev.rahier.pouleparty.ui.gamecreation.GameCreationEffect.GameStarted
+        val effect = vm.effects.first() as GameCreationEffect.GameStarted
         assertEquals("test-game-id", effect.gameId)
         coVerify(exactly = 2) { gameFunctions.setGameMasterPassword("test-game-id", "1234") }
     }
@@ -545,7 +550,7 @@ class GameCreationViewModelTest {
         advanceUntilIdle()
         vm.onIntent(GameCreationIntent.ContinueWithoutGameMaster)
         advanceUntilIdle()
-        val effect = vm.effects.first() as dev.rahier.pouleparty.ui.gamecreation.GameCreationEffect.GameStarted
+        val effect = vm.effects.first() as GameCreationEffect.GameStarted
         assertEquals("test-game-id", effect.gameId)
     }
 
@@ -660,8 +665,8 @@ class GameCreationViewModelTest {
         val vm = createViewModel()
         vm.onIntent(GameCreationIntent.LocationSelected(
             Point.fromLngLat(
-                dev.rahier.pouleparty.AppConstants.DEFAULT_LONGITUDE,
-                dev.rahier.pouleparty.AppConstants.DEFAULT_LATITUDE
+                AppConstants.DEFAULT_LONGITUDE,
+                AppConstants.DEFAULT_LATITUDE
             ))
         )
         vm.onIntent(GameCreationIntent.GameModeChanged(GameMod.FOLLOW_THE_CHICKEN))
@@ -673,8 +678,8 @@ class GameCreationViewModelTest {
         val vm = createViewModel()
         vm.onIntent(GameCreationIntent.LocationSelected(
             Point.fromLngLat(
-                dev.rahier.pouleparty.AppConstants.DEFAULT_LONGITUDE + 0.0005,
-                dev.rahier.pouleparty.AppConstants.DEFAULT_LATITUDE + 0.0005
+                AppConstants.DEFAULT_LONGITUDE + 0.0005,
+                AppConstants.DEFAULT_LATITUDE + 0.0005
             ))
         )
         vm.onIntent(GameCreationIntent.GameModeChanged(GameMod.FOLLOW_THE_CHICKEN))
@@ -686,8 +691,8 @@ class GameCreationViewModelTest {
         val vm = createViewModel()
         vm.onIntent(GameCreationIntent.LocationSelected(
             Point.fromLngLat(
-                dev.rahier.pouleparty.AppConstants.DEFAULT_LONGITUDE + 0.002,
-                dev.rahier.pouleparty.AppConstants.DEFAULT_LATITUDE + 0.002
+                AppConstants.DEFAULT_LONGITUDE + 0.002,
+                AppConstants.DEFAULT_LATITUDE + 0.002
             ))
         )
         vm.onIntent(GameCreationIntent.GameModeChanged(GameMod.FOLLOW_THE_CHICKEN))
@@ -877,7 +882,7 @@ class GameCreationViewModelTest {
     fun `startGame sets endDate based on duration and passes to firestore`() = runTest(testDispatcher) {
         val vm = createViewModel()
         vm.onIntent(GameCreationIntent.DurationChanged(60.0))
-        var capturedGame: dev.rahier.pouleparty.model.Game? = null
+        var capturedGame: Game? = null
         coEvery { gameRepository.setConfig(any()) } answers {
             capturedGame = firstArg()
         }
@@ -960,32 +965,32 @@ class GameCreationViewModelTest {
         val vm = createViewModel()
         // Initial date is now + 90 min, set hour/minute to something specific first
         vm.onIntent(GameCreationIntent.StartTimeChanged(15, 30))
-        val cal = java.util.Calendar.getInstance().apply { time = vm.uiState.value.game.startDate }
-        val origHour = cal.get(java.util.Calendar.HOUR_OF_DAY)
-        val origMinute = cal.get(java.util.Calendar.MINUTE)
+        val cal = Calendar.getInstance().apply { time = vm.uiState.value.game.startDate }
+        val origHour = cal.get(Calendar.HOUR_OF_DAY)
+        val origMinute = cal.get(Calendar.MINUTE)
         // updateStartDateOnly should keep the time
-        val nextYear = cal.get(java.util.Calendar.YEAR) + 1
+        val nextYear = cal.get(Calendar.YEAR) + 1
         vm.onIntent(GameCreationIntent.StartDateChanged(nextYear, 0, 1)) // January 1 next year
-        val newCal = java.util.Calendar.getInstance().apply { time = vm.uiState.value.game.startDate }
-        assertEquals(nextYear, newCal.get(java.util.Calendar.YEAR))
-        assertEquals(0, newCal.get(java.util.Calendar.MONTH))
-        assertEquals(1, newCal.get(java.util.Calendar.DAY_OF_MONTH))
+        val newCal = Calendar.getInstance().apply { time = vm.uiState.value.game.startDate }
+        assertEquals(nextYear, newCal.get(Calendar.YEAR))
+        assertEquals(0, newCal.get(Calendar.MONTH))
+        assertEquals(1, newCal.get(Calendar.DAY_OF_MONTH))
         // Hour/minute should be preserved (not necessarily the clamped version)
-        assertEquals(origHour, newCal.get(java.util.Calendar.HOUR_OF_DAY))
-        assertEquals(origMinute, newCal.get(java.util.Calendar.MINUTE))
+        assertEquals(origHour, newCal.get(Calendar.HOUR_OF_DAY))
+        assertEquals(origMinute, newCal.get(Calendar.MINUTE))
     }
 
     @Test
     fun `updateStartTime strips seconds`() {
         val vm = createViewModel()
         // Use a date far in the future so minimumStartDate clamp doesn't override seconds
-        val futureCal = java.util.Calendar.getInstance().apply {
-            add(java.util.Calendar.DAY_OF_YEAR, 1)
+        val futureCal = Calendar.getInstance().apply {
+            add(Calendar.DAY_OF_YEAR, 1)
         }
-        vm.onIntent(GameCreationIntent.StartDateChanged(futureCal.get(java.util.Calendar.YEAR), futureCal.get(java.util.Calendar.MONTH), futureCal.get(java.util.Calendar.DAY_OF_MONTH)))
+        vm.onIntent(GameCreationIntent.StartDateChanged(futureCal.get(Calendar.YEAR), futureCal.get(Calendar.MONTH), futureCal.get(Calendar.DAY_OF_MONTH)))
         vm.onIntent(GameCreationIntent.StartTimeChanged(15, 45))
-        val cal = java.util.Calendar.getInstance().apply { time = vm.uiState.value.game.startDate }
-        assertEquals(0, cal.get(java.util.Calendar.SECOND))
+        val cal = Calendar.getInstance().apply { time = vm.uiState.value.game.startDate }
+        assertEquals(0, cal.get(Calendar.SECOND))
     }
 
     @Test

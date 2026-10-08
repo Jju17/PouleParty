@@ -1,7 +1,13 @@
-@file:Suppress("DEPRECATION")
-
 package dev.rahier.pouleparty.ui.gamemastermap
 
+import dev.rahier.pouleparty.model.GameStatus
+import dev.rahier.pouleparty.model.Registration
+import dev.rahier.pouleparty.powerups.ui.PowerUpsMapOverlay
+import dev.rahier.pouleparty.ui.chickenmap.HunterAnnotation
+import dev.rahier.pouleparty.ui.components.DebugQAPanel
+import dev.rahier.pouleparty.ui.components.GameEndedBanner
+import dev.rahier.pouleparty.ui.components.PreGameOverlay
+import dev.rahier.pouleparty.ui.components.PreGameRole
 import dev.rahier.pouleparty.ui.common.teamNameOrDefault
 import dev.rahier.pouleparty.ui.common.asString
 import dev.rahier.pouleparty.ui.common.LoadState
@@ -141,7 +147,7 @@ fun GameMasterMapScreen(
                 }
 
                 if (state.hasGameStarted) {
-                    dev.rahier.pouleparty.powerups.ui.PowerUpsMapOverlay(
+                    PowerUpsMapOverlay(
                         powerUps = state.powerUpAnnotations,
                         onMarkerClick = { /* GM cannot collect */ },
                     )
@@ -216,7 +222,7 @@ fun GameMasterMapScreen(
                         allHunterIds = state.game.hunterIds,
                         registrations = state.registrations,
                         currentChickenId = state.game.chickenId,
-                        canDesignate = state.game.gameStatusEnum == dev.rahier.pouleparty.model.GameStatus.WAITING,
+                        canDesignate = state.game.gameStatusEnum == GameStatus.WAITING,
                         onDesignateTapped = { viewModel.onIntent(GameMasterMapIntent.DesignateHunterTapped(it)) },
                     )
                 }
@@ -260,9 +266,9 @@ fun GameMasterMapScreen(
             // authority as the chicken to start the party); before the
             // planned `timing.start` it ticks down so the GM sees the
             // same lobby UI as everyone else.
-            if (state.game.gameStatusEnum == dev.rahier.pouleparty.model.GameStatus.READY_TO_LAUNCH) {
-                dev.rahier.pouleparty.ui.components.PreGameOverlay(
-                    role = dev.rahier.pouleparty.ui.components.PreGameRole.GAME_MASTER,
+            if (state.game.gameStatusEnum == GameStatus.READY_TO_LAUNCH) {
+                PreGameOverlay(
+                    role = PreGameRole.GAME_MASTER,
                     gameModTitle = stringResource(state.game.gameModEnum.titleRes),
                     gameCode = state.game.gameCode,
                     targetDate = state.game.startDate,
@@ -275,8 +281,8 @@ fun GameMasterMapScreen(
                     onLaunchErrorDismissed = { viewModel.onIntent(GameMasterMapIntent.LaunchErrorDismissed) },
                 )
             } else if (!state.hasGameStarted) {
-                dev.rahier.pouleparty.ui.components.PreGameOverlay(
-                    role = dev.rahier.pouleparty.ui.components.PreGameRole.GAME_MASTER,
+                PreGameOverlay(
+                    role = PreGameRole.GAME_MASTER,
                     gameModTitle = stringResource(state.game.gameModEnum.titleRes),
                     gameCode = state.game.gameCode,
                     targetDate = state.game.startDate,
@@ -295,14 +301,14 @@ fun GameMasterMapScreen(
                         .align(Alignment.TopCenter)
                         .padding(top = 92.dp, start = 16.dp, end = 16.dp)
                 ) {
-                    dev.rahier.pouleparty.ui.components.GameEndedBanner(
+                    GameEndedBanner(
                         onTap = { viewModel.onIntent(GameMasterMapIntent.ViewLeaderboardTapped) }
                     )
                 }
             }
 
             if (state.game.isDebugGame) {
-                dev.rahier.pouleparty.ui.components.DebugQAPanel(
+                DebugQAPanel(
                     onNextStep = { viewModel.onIntent(GameMasterMapIntent.DebugAdvanceStepTapped) },
                     onEndNow = { viewModel.onIntent(GameMasterMapIntent.DebugEndNowTapped) },
                     modifier = Modifier
@@ -336,12 +342,12 @@ fun GameMasterMapScreen(
 
 @Composable
 private fun HuntersList(
-    connectedAnnotations: List<dev.rahier.pouleparty.ui.chickenmap.HunterAnnotation>,
+    connectedAnnotations: List<HunterAnnotation>,
     allHunterIds: List<String>,
-    registrations: List<dev.rahier.pouleparty.model.Registration> = emptyList(),
+    registrations: List<Registration> = emptyList(),
     currentChickenId: String = "",
     canDesignate: Boolean = false,
-    onDesignateTapped: (dev.rahier.pouleparty.model.Registration) -> Unit = {},
+    onDesignateTapped: (Registration) -> Unit = {},
 ) {
     val hunterFallback = stringResource(R.string.hunter_fallback_name)
     fun displayName(uid: String): String =

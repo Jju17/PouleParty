@@ -1,5 +1,7 @@
 package dev.rahier.pouleparty.model
 
+import com.mapbox.geojson.Point
+import dev.rahier.pouleparty.R
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.GeoPoint
 import dev.rahier.pouleparty.powerups.model.PowerUpType
@@ -109,7 +111,7 @@ class GameTest {
     @Test
     fun `withInitialLocation creates new game with updated coordinates`() {
         val game = Game(id = "test")
-        val point = com.mapbox.geojson.Point.fromLngLat(2.3522, 48.8566)
+        val point = Point.fromLngLat(2.3522, 48.8566)
         val updated = game.withInitialLocation(point)
 
         assertEquals(48.8566, updated.initialLocation.latitude(), 0.0001)
@@ -126,8 +128,8 @@ class GameTest {
 
     @Test
     fun `all game mods have correct titles`() {
-        assertEquals(dev.rahier.pouleparty.R.string.mode_follow_title, GameMod.FOLLOW_THE_CHICKEN.titleRes)
-        assertEquals(dev.rahier.pouleparty.R.string.mode_stay_title, GameMod.STAY_IN_THE_ZONE.titleRes)
+        assertEquals(R.string.mode_follow_title, GameMod.FOLLOW_THE_CHICKEN.titleRes)
+        assertEquals(R.string.mode_stay_title, GameMod.STAY_IN_THE_ZONE.titleRes)
     }
 
     @Test
@@ -567,32 +569,32 @@ class GameTest {
 
     @Test
     fun `computeZoneRadius followTheChicken validates radiusHint against allowed sizes`() {
-        val start = com.mapbox.geojson.Point.fromLngLat(4.4, 50.85)
+        val start = Point.fromLngLat(4.4, 50.85)
         // Valid hints pass through.
-        assertEquals(500.0, dev.rahier.pouleparty.model.computeZoneRadius(start, null, dev.rahier.pouleparty.model.GameMod.FOLLOW_THE_CHICKEN, 500.0), 0.0)
-        assertEquals(1000.0, dev.rahier.pouleparty.model.computeZoneRadius(start, null, dev.rahier.pouleparty.model.GameMod.FOLLOW_THE_CHICKEN, 1000.0), 0.0)
-        assertEquals(2000.0, dev.rahier.pouleparty.model.computeZoneRadius(start, null, dev.rahier.pouleparty.model.GameMod.FOLLOW_THE_CHICKEN, 2000.0), 0.0)
+        assertEquals(500.0, dev.rahier.pouleparty.model.computeZoneRadius(start, null, GameMod.FOLLOW_THE_CHICKEN, 500.0), 0.0)
+        assertEquals(1000.0, dev.rahier.pouleparty.model.computeZoneRadius(start, null, GameMod.FOLLOW_THE_CHICKEN, 1000.0), 0.0)
+        assertEquals(2000.0, dev.rahier.pouleparty.model.computeZoneRadius(start, null, GameMod.FOLLOW_THE_CHICKEN, 2000.0), 0.0)
         // Out-of-range hint falls back to the medium preset.
-        assertEquals(1000.0, dev.rahier.pouleparty.model.computeZoneRadius(start, null, dev.rahier.pouleparty.model.GameMod.FOLLOW_THE_CHICKEN, 1337.0), 0.0)
+        assertEquals(1000.0, dev.rahier.pouleparty.model.computeZoneRadius(start, null, GameMod.FOLLOW_THE_CHICKEN, 1337.0), 0.0)
         // No hint at all falls back to medium.
-        assertEquals(1000.0, dev.rahier.pouleparty.model.computeZoneRadius(start, null, dev.rahier.pouleparty.model.GameMod.FOLLOW_THE_CHICKEN, null), 0.0)
+        assertEquals(1000.0, dev.rahier.pouleparty.model.computeZoneRadius(start, null, GameMod.FOLLOW_THE_CHICKEN, null), 0.0)
     }
 
     @Test
     fun `computeZoneRadius stayInTheZone clamps to 800m minimum when pins are close`() {
-        val start = com.mapbox.geojson.Point.fromLngLat(4.4, 50.85)
+        val start = Point.fromLngLat(4.4, 50.85)
         // ~110 m offset → 1.5x = 165m, plus margins = ~360m. Floor wins.
-        val finalNear = com.mapbox.geojson.Point.fromLngLat(4.4, 50.851)
-        val radius = dev.rahier.pouleparty.model.computeZoneRadius(start, finalNear, dev.rahier.pouleparty.model.GameMod.STAY_IN_THE_ZONE, null)
-        assertEquals(dev.rahier.pouleparty.model.ZONE_MINIMUM_INITIAL_RADIUS_METERS, radius, 0.0)
+        val finalNear = Point.fromLngLat(4.4, 50.851)
+        val radius = dev.rahier.pouleparty.model.computeZoneRadius(start, finalNear, GameMod.STAY_IN_THE_ZONE, null)
+        assertEquals(ZONE_MINIMUM_INITIAL_RADIUS_METERS, radius, 0.0)
     }
 
     @Test
     fun `computeZoneRadius stayInTheZone uses 1_5x distance for wide pins`() {
-        val start = com.mapbox.geojson.Point.fromLngLat(4.4, 50.85)
+        val start = Point.fromLngLat(4.4, 50.85)
         // ~1.1 km offset (0.01° latitude ≈ 1.11 km near 51°N).
-        val finalFar = com.mapbox.geojson.Point.fromLngLat(4.4, 50.86)
-        val radius = dev.rahier.pouleparty.model.computeZoneRadius(start, finalFar, dev.rahier.pouleparty.model.GameMod.STAY_IN_THE_ZONE, null)
+        val finalFar = Point.fromLngLat(4.4, 50.86)
+        val radius = dev.rahier.pouleparty.model.computeZoneRadius(start, finalFar, GameMod.STAY_IN_THE_ZONE, null)
         // 1.5x of ~1112 m ≈ 1668 m, well above both the 800 m floor
         // and the (D + 50 + 200) = 1362 m alternative.
         assertTrue("Expected ~1.5x distance, got $radius", radius in 1600.0..1750.0)
@@ -600,9 +602,9 @@ class GameTest {
 
     @Test
     fun `computeZoneRadius stayInTheZone null final returns the 800m floor`() {
-        val start = com.mapbox.geojson.Point.fromLngLat(4.4, 50.85)
-        val radius = dev.rahier.pouleparty.model.computeZoneRadius(start, null, dev.rahier.pouleparty.model.GameMod.STAY_IN_THE_ZONE, null)
-        assertEquals(dev.rahier.pouleparty.model.ZONE_MINIMUM_INITIAL_RADIUS_METERS, radius, 0.0)
+        val start = Point.fromLngLat(4.4, 50.85)
+        val radius = dev.rahier.pouleparty.model.computeZoneRadius(start, null, GameMod.STAY_IN_THE_ZONE, null)
+        assertEquals(ZONE_MINIMUM_INITIAL_RADIUS_METERS, radius, 0.0)
     }
 
     // ── generateDriftSeed ────────────────────────────────────────

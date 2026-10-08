@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui
 
+import dev.rahier.pouleparty.model.ChallengeSubmission
 import androidx.lifecycle.SavedStateHandle
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
@@ -173,7 +174,7 @@ class ChallengesViewModelTest {
         )
         coEvery {
             challengeSubmissions.submitChallenge(any(), any(), any(), any(), any(), any())
-        } returns dev.rahier.pouleparty.model.ChallengeSubmission(id = "s1", challengeId = "c1", hunterId = "hunter-1")
+        } returns ChallengeSubmission(id = "s1", challengeId = "c1", hunterId = "hunter-1")
 
         val vm = create(hunterId = "hunter-1")
         testDispatcher.scheduler.advanceUntilIdle()

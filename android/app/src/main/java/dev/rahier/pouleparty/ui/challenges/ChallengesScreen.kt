@@ -1,5 +1,7 @@
 package dev.rahier.pouleparty.ui.challenges
 
+import dev.rahier.pouleparty.model.SubmissionMediaType
+import dev.rahier.pouleparty.ui.gamelogic.LevelProgress
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.AlertDialog
 import dev.rahier.pouleparty.ui.common.teamNameOrDefault
@@ -121,7 +123,7 @@ fun ChallengesSheet(
                 context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
             }.onFailure { Log.w("ChallengesScreen", "[challenge] captured media unreadable", it) }.getOrNull()
             if (bytes != null) {
-                viewModel.onIntent(ChallengesIntent.MediaCaptured(targetId, bytes, dev.rahier.pouleparty.model.SubmissionMediaType.IMAGE))
+                viewModel.onIntent(ChallengesIntent.MediaCaptured(targetId, bytes, SubmissionMediaType.IMAGE))
             } else {
                 viewModel.onIntent(ChallengesIntent.CaptureCancelled)
             }
@@ -141,7 +143,7 @@ fun ChallengesSheet(
                 context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
             }.onFailure { Log.w("ChallengesScreen", "[challenge] captured media unreadable", it) }.getOrNull()
             if (bytes != null) {
-                viewModel.onIntent(ChallengesIntent.MediaCaptured(targetId, bytes, dev.rahier.pouleparty.model.SubmissionMediaType.VIDEO))
+                viewModel.onIntent(ChallengesIntent.MediaCaptured(targetId, bytes, SubmissionMediaType.VIDEO))
             } else {
                 viewModel.onIntent(ChallengesIntent.CaptureCancelled)
             }
@@ -341,7 +343,7 @@ private fun ChallengesTabContent(
 private fun LevelHeader(
     level: Int,
     isLocked: Boolean,
-    progress: dev.rahier.pouleparty.ui.gamelogic.LevelProgress,
+    progress: LevelProgress,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(top = 4.dp),

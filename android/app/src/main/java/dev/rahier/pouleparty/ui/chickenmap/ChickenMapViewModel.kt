@@ -1,5 +1,8 @@
 package dev.rahier.pouleparty.ui.chickenmap
 
+import dev.rahier.pouleparty.data.AnalyticsRepository
+import dev.rahier.pouleparty.model.ZoneCircle
+import dev.rahier.pouleparty.ui.map.MapUiState
 import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.ui.common.uiText
 import dev.rahier.pouleparty.ui.common.UiText
@@ -68,7 +71,7 @@ data class ChickenMapUiState(
     /** PP-zone-stored: the ordered circle schedule read once from
      *  `/games/{id}/zone/schedule`. Runtime renders `circles[activeIndex]`
      *  instead of recomputing the drift. Empty = no zone to render. */
-    val circles: List<dev.rahier.pouleparty.model.ZoneCircle> = emptyList(),
+    val circles: List<ZoneCircle> = emptyList(),
     val showCancelAlert: Boolean = false,
     override val showGameInfo: Boolean = false,
     val codeCopied: Boolean = false,
@@ -102,7 +105,7 @@ data class ChickenMapUiState(
     val isLaunching: Boolean = false,
     val launchError: UiText? = null,
     val showNewChickenAlert: Boolean = false,
-) : dev.rahier.pouleparty.ui.map.MapUiState
+) : MapUiState
 
 @HiltViewModel
 class ChickenMapViewModel @Inject constructor(
@@ -110,7 +113,7 @@ class ChickenMapViewModel @Inject constructor(
     presenceRepository: PresenceRepository,
     gameFunctions: GameFunctions,
     locationRepository: LocationRepository,
-    analyticsRepository: dev.rahier.pouleparty.data.AnalyticsRepository,
+    analyticsRepository: AnalyticsRepository,
     auth: FirebaseAuth,
     private val prefs: android.content.SharedPreferences,
     savedStateHandle: SavedStateHandle
@@ -207,7 +210,7 @@ class ChickenMapViewModel @Inject constructor(
      *  map ViewModels resolve the active circle identically. */
     private fun zoneStateFromCircles(
         game: Game,
-        circles: List<dev.rahier.pouleparty.model.ZoneCircle>,
+        circles: List<ZoneCircle>,
         now: Date,
     ) = zoneRenderStateFromCircles(
         gameMode = game.gameModEnum,
@@ -421,7 +424,7 @@ class ChickenMapViewModel @Inject constructor(
                     && updatedGame.role(playerId) != null) {
                     val savedNickname = prefs
                         .getString(AppConstants.PREF_USER_NICKNAME, "").orEmpty().trim()
-                    val teamName = savedNickname.ifEmpty { "Hunter" }
+                    val teamName = savedNickname.ifEmpty { AppConstants.DEFAULT_TEAM_NAME }
                     cancelStreams()
                     viewModelScope.launch {
                         _effects.send(ChickenMapEffect.NavigateToHunterMap(gameId, teamName))

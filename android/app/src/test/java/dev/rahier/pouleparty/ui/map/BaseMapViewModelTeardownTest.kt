@@ -1,5 +1,7 @@
 package dev.rahier.pouleparty.ui.map
 
+import dev.rahier.pouleparty.model.GameStatus
+import dev.rahier.pouleparty.powerups.model.PowerUp
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModelStore
 import com.google.firebase.auth.FirebaseAuth
@@ -57,7 +59,7 @@ class BaseMapViewModelTeardownTest {
 
     // Hot flows so we can measure `subscriptionCount` before/after clear().
     private val gameConfig = MutableSharedFlow<Game?>(replay = 1)
-    private val powerUps = MutableSharedFlow<List<dev.rahier.pouleparty.powerups.model.PowerUp>>(replay = 1)
+    private val powerUps = MutableSharedFlow<List<PowerUp>>(replay = 1)
 
     @Before
     fun setUp() {
@@ -102,7 +104,7 @@ class BaseMapViewModelTeardownTest {
     @Suppress("UNCHECKED_CAST")
     private fun streamJobsOf(vm: Any): List<Job> {
         // Reflect into the protected `streamJobs` list on BaseMapViewModel.
-        val field = Class.forName("dev.rahier.pouleparty.ui.map.BaseMapViewModel")
+        val field = BaseMapViewModel::class.java
             .getDeclaredField("streamJobs")
         field.isAccessible = true
         return field.get(vm) as List<Job>
@@ -114,7 +116,7 @@ class BaseMapViewModelTeardownTest {
         testDispatcher.scheduler.runCurrent()
         io.mockk.verify(exactly = 0) { locationRepository.stopTrackingService() }
 
-        gameConfig.tryEmit(Game.mock.copy(id = "test-game", status = dev.rahier.pouleparty.model.GameStatus.DONE.firestoreValue))
+        gameConfig.tryEmit(Game.mock.copy(id = "test-game", status = GameStatus.DONE.firestoreValue))
         testDispatcher.scheduler.runCurrent()
 
         assertTrue(vm.uiState.value.isGameOver)

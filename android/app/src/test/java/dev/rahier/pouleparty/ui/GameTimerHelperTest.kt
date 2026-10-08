@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui
 
+import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.ui.common.UiText
 import dev.rahier.pouleparty.ui.gamelogic.*
 import dev.rahier.pouleparty.powerups.logic.*
@@ -311,7 +312,7 @@ class GameTimerHelperTest {
             Winner("h1", "Alice", Timestamp.now()),
             Winner("h2", "Bob", Timestamp.now())
         )
-        assertEquals(dev.rahier.pouleparty.ui.common.uiText(dev.rahier.pouleparty.R.string.notif_winner_found, UiText.Verbatim("Bob")), detectNewWinners(winners, previousCount = 1))
+        assertEquals(dev.rahier.pouleparty.ui.common.uiText(R.string.notif_winner_found, UiText.Verbatim("Bob")), detectNewWinners(winners, previousCount = 1))
     }
 
     @Test
@@ -333,7 +334,7 @@ class GameTimerHelperTest {
         val winners = listOf(
             Winner("h1", "Alice", Timestamp.now())
         )
-        assertEquals(dev.rahier.pouleparty.ui.common.uiText(dev.rahier.pouleparty.R.string.notif_winner_found, UiText.Verbatim("Alice")), detectNewWinners(winners, previousCount = 0))
+        assertEquals(dev.rahier.pouleparty.ui.common.uiText(R.string.notif_winner_found, UiText.Verbatim("Alice")), detectNewWinners(winners, previousCount = 0))
     }
 
     // ── shouldCheckZone ────────────────────────────────

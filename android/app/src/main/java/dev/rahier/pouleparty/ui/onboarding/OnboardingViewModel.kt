@@ -1,5 +1,7 @@
 package dev.rahier.pouleparty.ui.onboarding
 
+import dev.rahier.pouleparty.data.AnalyticsRepository
+import dev.rahier.pouleparty.util.RandomNickname
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
@@ -29,7 +31,7 @@ data class OnboardingUiState(
 @HiltViewModel
 class OnboardingViewModel @Inject constructor(
     private val locationRepository: LocationRepository,
-    private val analyticsRepository: dev.rahier.pouleparty.data.AnalyticsRepository,
+    private val analyticsRepository: AnalyticsRepository,
     @param:ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -146,7 +148,7 @@ class OnboardingViewModel @Inject constructor(
             _uiState.update { it.copy(showProfanityAlert = true) }
             return null
         }
-        return if (trimmed.isEmpty()) dev.rahier.pouleparty.util.RandomNickname.generate() else trimmed
+        return if (trimmed.isEmpty()) RandomNickname.generate() else trimmed
     }
 
     val isLastPage: Boolean

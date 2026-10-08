@@ -14,6 +14,9 @@ object AppConstants {
     const val PREF_PUSH_REGISTRATION_ID = "pushRegistrationId"
 
     // Firestore Collections
+    /** Team name stored for a player who never typed one. */
+    const val DEFAULT_TEAM_NAME = "Hunter"
+
     const val COLLECTION_GAMES = "games"
     const val SUBCOLLECTION_CHICKEN_LOCATIONS = "chickenLocations"
     const val SUBCOLLECTION_HUNTER_LOCATIONS = "hunterLocations"

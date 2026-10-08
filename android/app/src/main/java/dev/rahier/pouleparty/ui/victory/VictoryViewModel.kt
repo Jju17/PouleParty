@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.victory
 
+import dev.rahier.pouleparty.AppConstants
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -36,7 +37,7 @@ class VictoryViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val gameId: String = savedStateHandle["gameId"] ?: ""
-    private val hunterName: String = savedStateHandle["hunterName"] ?: "Hunter"
+    private val hunterName: String = savedStateHandle["hunterName"] ?: AppConstants.DEFAULT_TEAM_NAME
     private val hunterId: String = savedStateHandle["hunterId"] ?: ""
     // Whether the current user is the chicken in this game.
     // Passed as a navigation argument from the screen of origin (ChickenMap = true,

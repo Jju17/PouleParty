@@ -1,5 +1,7 @@
 package dev.rahier.pouleparty.ui.map
 
+import java.util.Collections
+import java.util.Date
 import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.ui.common.errorMessageRes
 import dev.rahier.pouleparty.ui.common.uiText
@@ -42,9 +44,9 @@ abstract class BaseMapViewModel(
 ) : ViewModel() {
 
     protected val streamJobs: MutableList<Job> =
-        java.util.Collections.synchronizedList(mutableListOf())
+        Collections.synchronizedList(mutableListOf())
     protected var notificationJob: Job? = null
-    private val collectingPowerUpIds = java.util.Collections.synchronizedSet(mutableSetOf<String>())
+    private val collectingPowerUpIds = Collections.synchronizedSet(mutableSetOf<String>())
 
     init {
         // Start the location foreground service *synchronously* when the VM
@@ -191,7 +193,7 @@ abstract class BaseMapViewModel(
             Check(oldGame.powerUps.activeEffects.decoy, newGame.powerUps.activeEffects.decoy, PowerUpType.DECOY),
             Check(oldGame.powerUps.activeEffects.jammer, newGame.powerUps.activeEffects.jammer, PowerUpType.JAMMER),
         )
-        val now = java.util.Date()
+        val now = Date()
         for (check in checks) {
             if (check.new != null && now.before(check.new.toDate()) && check.old?.toDate() != check.new.toDate()) {
                 onNotification(uiText(R.string.notif_powerup_opponent, powerUpEmoji(check.type), uiText(check.type.titleRes)), check.type)

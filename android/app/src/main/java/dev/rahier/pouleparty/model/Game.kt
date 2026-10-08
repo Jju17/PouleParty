@@ -1,5 +1,7 @@
 package dev.rahier.pouleparty.model
 
+import dev.rahier.pouleparty.ui.gamelogic.MAX_SHRINK_ITERATIONS
+import java.util.UUID
 import com.mapbox.geojson.Point
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.Exclude
@@ -215,7 +217,7 @@ data class Game(
 
         var iterations = 0
         while (Date(lastUpdate.time + intervalMs).before(now) && lastRadius > 0 &&
-            iterations < dev.rahier.pouleparty.ui.gamelogic.MAX_SHRINK_ITERATIONS
+            iterations < MAX_SHRINK_ITERATIONS
         ) {
             iterations += 1
             lastUpdate = Date(lastUpdate.time + intervalMs)
@@ -255,7 +257,7 @@ data class Game(
         fun generateFoundCode(): String = "%04d".format((0..9999).random())
 
         val mock get() = Game(
-            id = java.util.UUID.randomUUID().toString(),
+            id = UUID.randomUUID().toString(),
             name = "Mock",
             maxPlayers = 10,
             timing = Timing(

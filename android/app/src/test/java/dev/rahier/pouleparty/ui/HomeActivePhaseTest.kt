@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui
 
+import dev.rahier.pouleparty.model.AdminCode
 import android.content.SharedPreferences
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
@@ -89,10 +90,10 @@ class HomeActivePhaseTest {
         auth = auth,
         appContext = mockk(relaxed = true),
         remoteConfig = mockk(relaxed = true) {
-            io.mockk.every { adminCode } returns dev.rahier.pouleparty.model.AdminCode.VALUE
-            io.mockk.every { codeMaxWrongAttempts } returns dev.rahier.pouleparty.AppConstants.CODE_MAX_WRONG_ATTEMPTS
-            io.mockk.every { codeCooldownMs } returns dev.rahier.pouleparty.AppConstants.CODE_COOLDOWN_MS
-            io.mockk.every { defaultInitialRadius } returns dev.rahier.pouleparty.AppConstants.DEFAULT_INITIAL_RADIUS
+            io.mockk.every { adminCode } returns AdminCode.VALUE
+            io.mockk.every { codeMaxWrongAttempts } returns AppConstants.CODE_MAX_WRONG_ATTEMPTS
+            io.mockk.every { codeCooldownMs } returns AppConstants.CODE_COOLDOWN_MS
+            io.mockk.every { defaultInitialRadius } returns AppConstants.DEFAULT_INITIAL_RADIUS
         },
     )
 

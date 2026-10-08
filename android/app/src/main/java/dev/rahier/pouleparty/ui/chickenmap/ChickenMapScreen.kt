@@ -1,7 +1,11 @@
-@file:Suppress("DEPRECATION")
-
 package dev.rahier.pouleparty.ui.chickenmap
 
+import dev.rahier.pouleparty.model.GameStatus
+import dev.rahier.pouleparty.powerups.ui.PowerUpsMapOverlay
+import dev.rahier.pouleparty.ui.components.DebugQAPanel
+import dev.rahier.pouleparty.ui.components.GameEndedBanner
+import dev.rahier.pouleparty.ui.components.HunterMapMarker
+import dev.rahier.pouleparty.ui.components.PreGameRole
 import dev.rahier.pouleparty.ui.gamelogic.chickenSubtitleRes
 import dev.rahier.pouleparty.ui.common.asString
 import dev.rahier.pouleparty.ui.common.LoadState
@@ -216,7 +220,7 @@ fun ChickenMapScreen(
 
             // Power-up markers + collection-radius discs (chicken power-ups only)
             if (state.hasGameStarted) {
-                dev.rahier.pouleparty.powerups.ui.PowerUpsMapOverlay(
+                PowerUpsMapOverlay(
                     powerUps = state.availablePowerUps,
                     onMarkerClick = { selectedPowerUpType = it.typeEnum }
                 )
@@ -231,7 +235,7 @@ fun ChickenMapScreen(
                         allowOverlapWithPuck(true)
                     }
                 ) {
-                    dev.rahier.pouleparty.ui.components.HunterMapMarker(displayName = hunter.displayName.asString())
+                    HunterMapMarker(displayName = hunter.displayName.asString())
                 }
             }
         }
@@ -321,14 +325,14 @@ fun ChickenMapScreen(
                     .align(Alignment.TopCenter)
                     .padding(top = 92.dp, start = 16.dp, end = 16.dp)
             ) {
-                dev.rahier.pouleparty.ui.components.GameEndedBanner(
+                GameEndedBanner(
                     onTap = { viewModel.onIntent(ChickenMapIntent.ViewLeaderboardTapped) }
                 )
             }
         }
 
         if (state.game.isDebugGame) {
-            dev.rahier.pouleparty.ui.components.DebugQAPanel(
+            DebugQAPanel(
                 onNextStep = { viewModel.onIntent(ChickenMapIntent.DebugAdvanceStepTapped) },
                 onEndNow = { viewModel.onIntent(ChickenMapIntent.DebugEndNowTapped) },
                 modifier = Modifier
@@ -396,9 +400,9 @@ fun ChickenMapScreen(
             countdownText = state.countdownText?.asString()
         )
 
-        if (state.game.gameStatusEnum == dev.rahier.pouleparty.model.GameStatus.READY_TO_LAUNCH) {
+        if (state.game.gameStatusEnum == GameStatus.READY_TO_LAUNCH) {
             PreGameOverlay(
-                role = dev.rahier.pouleparty.ui.components.PreGameRole.CHICKEN,
+                role = PreGameRole.CHICKEN,
                 gameModTitle = stringResource(state.game.gameModEnum.titleRes),
                 gameCode = state.game.gameCode,
                 targetDate = state.game.startDate,
@@ -413,7 +417,7 @@ fun ChickenMapScreen(
             )
         } else if (!state.hasGameStarted) {
             PreGameOverlay(
-                role = dev.rahier.pouleparty.ui.components.PreGameRole.CHICKEN,
+                role = PreGameRole.CHICKEN,
                 gameModTitle = stringResource(state.game.gameModEnum.titleRes),
                 gameCode = state.game.gameCode,
                 targetDate = state.game.startDate,

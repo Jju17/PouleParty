@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.data
 
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import dev.rahier.pouleparty.model.ChallengeSubmission
 import dev.rahier.pouleparty.model.ChallengeType
 import dev.rahier.pouleparty.model.SubmissionStatus
@@ -12,7 +13,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalCoroutinesApi::class)
 class FirebaseSupportTest {
 
     @Test

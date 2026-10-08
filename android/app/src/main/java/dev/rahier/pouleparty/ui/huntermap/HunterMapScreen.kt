@@ -1,7 +1,9 @@
-@file:Suppress("DEPRECATION")
-
 package dev.rahier.pouleparty.ui.huntermap
 
+import dev.rahier.pouleparty.model.GameStatus
+import dev.rahier.pouleparty.powerups.ui.PowerUpsMapOverlay
+import dev.rahier.pouleparty.ui.components.GameEndedBanner
+import dev.rahier.pouleparty.ui.components.PreGameRole
 import dev.rahier.pouleparty.ui.gamelogic.hunterSubtitleRes
 import dev.rahier.pouleparty.ui.common.asString
 import dev.rahier.pouleparty.ui.common.LoadState
@@ -224,7 +226,7 @@ fun HunterMapScreen(
 
                 // Power-up markers + collection-radius discs (hunter power-ups only)
                 if (state.hasGameStarted) {
-                    dev.rahier.pouleparty.powerups.ui.PowerUpsMapOverlay(
+                    PowerUpsMapOverlay(
                         powerUps = state.availablePowerUps,
                         onMarkerClick = { selectedPowerUpType = it.typeEnum }
                     )
@@ -319,7 +321,7 @@ fun HunterMapScreen(
                         .align(Alignment.TopCenter)
                         .padding(top = 92.dp, start = 16.dp, end = 16.dp)
                 ) {
-                    dev.rahier.pouleparty.ui.components.GameEndedBanner(
+                    GameEndedBanner(
                         onTap = { viewModel.onIntent(HunterMapIntent.ViewLeaderboardTapped) }
                     )
                 }
@@ -412,9 +414,9 @@ fun HunterMapScreen(
                 countdownText = state.countdownText?.asString()
             )
 
-            if (state.game.gameStatusEnum == dev.rahier.pouleparty.model.GameStatus.READY_TO_LAUNCH) {
+            if (state.game.gameStatusEnum == GameStatus.READY_TO_LAUNCH) {
                 PreGameOverlay(
-                    role = dev.rahier.pouleparty.ui.components.PreGameRole.HUNTER,
+                    role = PreGameRole.HUNTER,
                     gameModTitle = stringResource(state.game.gameModEnum.titleRes),
                     gameCode = null,
                     targetDate = state.game.hunterStartDate,
@@ -424,7 +426,7 @@ fun HunterMapScreen(
                 )
             } else if (!state.hasGameStarted) {
                 PreGameOverlay(
-                    role = dev.rahier.pouleparty.ui.components.PreGameRole.HUNTER,
+                    role = PreGameRole.HUNTER,
                     gameModTitle = stringResource(state.game.gameModEnum.titleRes),
                     gameCode = null,
                     targetDate = state.game.hunterStartDate,

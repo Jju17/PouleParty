@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui
 
+import dev.rahier.pouleparty.model.Zone
 import dev.rahier.pouleparty.ui.common.UiText
 import com.mapbox.geojson.Point
 import com.google.firebase.Timestamp
@@ -85,7 +86,7 @@ class ChickenMapViewModelTest {
     @Test
     fun `radius update reduces radius`() {
         var state = ChickenMapUiState(radius = 500)
-        val game = Game(id = "test", zone = dev.rahier.pouleparty.model.Zone(shrinkMetersPerUpdate = 100.0))
+        val game = Game(id = "test", zone = Zone(shrinkMetersPerUpdate = 100.0))
         val newRadius = state.radius - game.zone.shrinkMetersPerUpdate.toInt()
 
         state = state.copy(radius = newRadius)
@@ -95,7 +96,7 @@ class ChickenMapViewModelTest {
     @Test
     fun `radius does not go below zero check`() {
         val state = ChickenMapUiState(radius = 50)
-        val game = Game(id = "test", zone = dev.rahier.pouleparty.model.Zone(shrinkMetersPerUpdate = 100.0))
+        val game = Game(id = "test", zone = Zone(shrinkMetersPerUpdate = 100.0))
         val newRadius = state.radius - game.zone.shrinkMetersPerUpdate.toInt()
 
         // The ViewModel should guard against this

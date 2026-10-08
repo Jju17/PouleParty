@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui
 
+import dev.rahier.pouleparty.model.Zone
 import com.google.firebase.Timestamp
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.model.GameMod
@@ -70,8 +71,8 @@ class VictoryViewModelTest {
 
     @Test
     fun `game config update replaces game in state`() {
-        val oldGame = Game(id = "game-1", name = "Old Game", zone = dev.rahier.pouleparty.model.Zone(radius = 1500.0))
-        val newGame = oldGame.copy(name = "Updated Game", zone = dev.rahier.pouleparty.model.Zone(radius = 2000.0))
+        val oldGame = Game(id = "game-1", name = "Old Game", zone = Zone(radius = 1500.0))
+        val newGame = oldGame.copy(name = "Updated Game", zone = Zone(radius = 2000.0))
 
         var state = VictoryUiState(game = oldGame)
         assertEquals("Old Game", state.game.name)

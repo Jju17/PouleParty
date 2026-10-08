@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.gamemastermap
 
+import dev.rahier.pouleparty.model.PlayerRole
 import dev.rahier.pouleparty.model.Game
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -113,7 +114,7 @@ class GameMasterRoutingTest {
         // future addition (e.g. SPECTATOR / OBSERVER) forces a
         // conscious update to both platforms.
         val expected = setOf("CHICKEN", "HUNTER", "GAME_MASTER")
-        val actual = dev.rahier.pouleparty.model.PlayerRole.entries.map { it.name }.toSet()
+        val actual = PlayerRole.entries.map { it.name }.toSet()
         assertEquals(expected, actual)
     }
 }

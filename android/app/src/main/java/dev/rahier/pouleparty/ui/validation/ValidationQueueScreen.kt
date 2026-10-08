@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.validation
 
+import dev.rahier.pouleparty.model.SubmissionMediaType
 import dev.rahier.pouleparty.ui.common.teamNameOrDefault
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -181,7 +182,7 @@ private fun SubmissionRow(
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (submission.mediaTypeEnum == dev.rahier.pouleparty.model.SubmissionMediaType.VIDEO) {
+        if (submission.mediaTypeEnum == SubmissionMediaType.VIDEO) {
             Box(
                 modifier = Modifier
                     .size(72.dp)
@@ -258,7 +259,7 @@ private fun SubmissionDetailDialog(
         title = { Text(challengeTitle) },
         text = {
             Column {
-                if (submission.mediaTypeEnum == dev.rahier.pouleparty.model.SubmissionMediaType.VIDEO) {
+                if (submission.mediaTypeEnum == SubmissionMediaType.VIDEO) {
                     androidx.compose.ui.viewinterop.AndroidView(
                         factory = { ctx ->
                             android.widget.VideoView(ctx).apply {
