@@ -435,18 +435,21 @@ struct JoinFlowView: View {
             Text("No game found with this code.")
                 .font(.gameboy(size: 9))
                 .foregroundStyle(Color.errorText)
+                .announcedError(String(localized: "No game found with this code."))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 24)
         case .gameOver:
             Text("This party is already over.")
                 .font(.gameboy(size: 9))
                 .foregroundStyle(Color.errorText)
+                .announcedError(String(localized: "This party is already over."))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 24)
         case .gameFull:
             Text("This party is full.")
                 .font(.gameboy(size: 9))
                 .foregroundStyle(Color.errorText)
+                .announcedError(String(localized: "This party is full."))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 24)
         case .networkError:
@@ -454,6 +457,7 @@ struct JoinFlowView: View {
                 Text("Network error. Please try again.")
                     .font(.gameboy(size: 9))
                     .foregroundStyle(Color.errorText)
+                    .announcedError(String(localized: "Network error. Please try again."))
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 24)
                 Button("Try again") { store.send(.codeChanged(store.code)) }
@@ -546,7 +550,8 @@ struct JoinFlowView: View {
             if let err = store.gameMasterError {
                 Text(err)
                     .font(.gameboy(size: 9))
-                    .foregroundStyle(Color.CROrange)
+                    .foregroundStyle(Color.errorText)
+                    .announcedError(err)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 24)
             }

@@ -21,5 +21,6 @@ struct LoadErrorBanner: View {
         .padding(12)
         .background(RoundedRectangle(cornerRadius: 12).fill(Color.surface))
         .accessibilityElement(children: .combine)
+        .announcedError(message)
     }
 }

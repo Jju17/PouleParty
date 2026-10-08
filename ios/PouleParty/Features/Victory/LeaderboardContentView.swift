@@ -88,7 +88,7 @@ struct LeaderboardRowView: View {
     private var timeString: String? {
         guard let foundTimestamp = entry.foundTimestamp else { return nil }
         let totalSeconds = max(0, Int(foundTimestamp.timeIntervalSince(hunterStartDate)))
-        return "+\(totalSeconds / 60)m \(String(format: "%02d", totalSeconds % 60))s"
+        return "+" + Duration.seconds(totalSeconds).formatted(.units(allowed: [.minutes, .seconds], width: .narrow))
     }
 
     private var canReport: Bool {

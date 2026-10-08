@@ -118,20 +118,15 @@ struct RecapRow: View {
 // MARK: - Formatters
 
 enum GameCreationFormatters {
-    static func date(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .short
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
+    static func date(_ date: Date, locale: Locale = .current) -> String {
+        var style = Date.FormatStyle(date: .numeric, time: .shortened, locale: locale)
+        style.timeZone = AppConstants.gameTimeZone
+        return date.formatted(style)
     }
 
-    static func duration(_ minutes: Double) -> String {
-        let hours = Int(minutes) / 60
-        let mins = Int(minutes) % 60
-        if mins == 0 {
-            return "\(hours)h"
-        }
-        return "\(hours)h\(String(format: "%02d", mins))"
+    static func duration(_ minutes: Double, locale: Locale = .current) -> String {
+        Duration.seconds(Int(minutes) * 60)
+            .formatted(.units(allowed: [.hours, .minutes], width: .narrow).locale(locale))
     }
 
 }

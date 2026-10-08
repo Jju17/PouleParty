@@ -19,7 +19,7 @@ struct OptionsStep: GameCreationStepView {
                         .foregroundStyle(Color.errorText)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 32)
-                        .accessibilityAddTraits(.updatesFrequently)
+                        .announcedError(String(localized: "Enter a 4-digit code or turn referees off."))
                 }
                 PowerUpsStep(store: store)
                 ChickenSeesHuntersStep(store: store)
