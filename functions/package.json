@@ -5,10 +5,12 @@
     "typecheck": "tsc --noEmit -p . && tsc -p tsconfig.test.json && tsc -p tsconfig.scripts.json",
     "test": "vitest run",
     "test:rules": "firebase emulators:exec --project demo-pouleparty --only firestore,database,storage \"vitest run --config vitest.rules.config.ts\"",
-    "verify": "npm run typecheck && npm test",
+    "verify": "npm run typecheck && npm run lint && npm test",
     "serve": "npm run build && firebase emulators:start --only functions",
     "gcp-build": "",
-    "parity:golden": "tsx scripts/generateParityGolden.ts"
+    "parity:golden": "tsx scripts/generateParityGolden.ts",
+    "lint": "oxlint --deny-warnings",
+    "test:coverage": "vitest run --coverage"
   },
   "engines": {
     "node": "24"
@@ -23,7 +25,9 @@
   "devDependencies": {
     "@firebase/rules-unit-testing": "6.0.0",
     "@types/node": "24.19.1",
+    "@vitest/coverage-v8": "5.0.3",
     "firebase": "13.0.0",
+    "oxlint": "1.87.0",
     "tsx": "4.23.15",
     "typescript": "7.0.2",
     "vitest": "5.0.3"

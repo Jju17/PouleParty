@@ -58,8 +58,8 @@ describe("recordGameFailure", () => {
 describe("ensureTeamName", () => {
   it("trims and bounds team names", () => {
     expect(ensureTeamName("  Les Poulets  ")).toBe("Les Poulets");
-    expect(() => ensureTeamName("x".repeat(MAX_TEAM_NAME_LENGTH + 1))).toThrow();
-    expect(() => ensureTeamName("   ")).toThrow();
-    expect(() => ensureTeamName(42)).toThrow();
+    expect(() => ensureTeamName("x".repeat(MAX_TEAM_NAME_LENGTH + 1))).toThrow(/characters/);
+    expect(() => ensureTeamName("   ")).toThrow(/characters/);
+    expect(() => ensureTeamName(42)).toThrow(/required/);
   });
 });

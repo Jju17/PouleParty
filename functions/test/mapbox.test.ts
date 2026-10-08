@@ -32,7 +32,7 @@ afterEach(() => {
 
 describe("snapToRoad, happy path", () => {
   test("returns snapped coords on first 200", async () => {
-    const fetchStub: FetchStub = vi.fn().mockResolvedValueOnce(okResponse(4.3500123, 50.8500456));
+    const fetchStub: FetchStub = vi.fn<typeof fetch>().mockResolvedValueOnce(okResponse(4.3500123, 50.8500456));
     vi.stubGlobal("fetch", fetchStub);
 
     const out = await snapToRoad(50.85, 4.35, "TOKEN", 3, () => 0, noSleep);
@@ -46,7 +46,7 @@ describe("snapToRoad, happy path", () => {
 describe("snapToRoad, transient failures retry", () => {
   test("429 on first attempt, 200 on second", async () => {
     const fetchStub: FetchStub = vi
-      .fn()
+      .fn<typeof fetch>()
       .mockResolvedValueOnce(status(429, "rate limited"))
       .mockResolvedValueOnce(okResponse(4.3501, 50.8501));
     vi.stubGlobal("fetch", fetchStub);
@@ -59,7 +59,7 @@ describe("snapToRoad, transient failures retry", () => {
 
   test("500 on first, 503 on second, 200 on third", async () => {
     const fetchStub: FetchStub = vi
-      .fn()
+      .fn<typeof fetch>()
       .mockResolvedValueOnce(status(500))
       .mockResolvedValueOnce(status(503))
       .mockResolvedValueOnce(okResponse(4.35, 50.85));
@@ -73,7 +73,7 @@ describe("snapToRoad, transient failures retry", () => {
 
   test("network error (fetch rejects) retries", async () => {
     const fetchStub: FetchStub = vi
-      .fn()
+      .fn<typeof fetch>()
       .mockRejectedValueOnce(new TypeError("network down"))
       .mockResolvedValueOnce(okResponse(4.35, 50.85));
     vi.stubGlobal("fetch", fetchStub);
@@ -86,14 +86,14 @@ describe("snapToRoad, transient failures retry", () => {
 
   test("exponential backoff between retries", async () => {
     const fetchStub: FetchStub = vi
-      .fn()
+      .fn<typeof fetch>()
       .mockResolvedValueOnce(status(500))
       .mockResolvedValueOnce(status(500))
       .mockResolvedValueOnce(okResponse(4.35, 50.85));
     vi.stubGlobal("fetch", fetchStub);
 
     const sleeps: number[] = [];
-    const sleepSpy = vi.fn((ms: number) => {
+    const sleepSpy = vi.fn<(ms: number) => Promise<void>>((ms: number) => {
       sleeps.push(ms);
       return Promise.resolve();
     });
@@ -106,7 +106,7 @@ describe("snapToRoad, transient failures retry", () => {
 
 describe("snapToRoad, non-transient failures don't retry", () => {
   test("404 throws immediately (no second attempt)", async () => {
-    const fetchStub: FetchStub = vi.fn().mockResolvedValueOnce(status(404));
+    const fetchStub: FetchStub = vi.fn<typeof fetch>().mockResolvedValueOnce(status(404));
     vi.stubGlobal("fetch", fetchStub);
 
     await expect(snapToRoad(50.85, 4.35, "TOKEN", 3, () => 0, noSleep)).rejects.toThrow(/non-transient 404/);
@@ -114,7 +114,7 @@ describe("snapToRoad, non-transient failures don't retry", () => {
   });
 
   test("401 (bad token) throws immediately", async () => {
-    const fetchStub: FetchStub = vi.fn().mockResolvedValueOnce(status(401));
+    const fetchStub: FetchStub = vi.fn<typeof fetch>().mockResolvedValueOnce(status(401));
     vi.stubGlobal("fetch", fetchStub);
 
     await expect(snapToRoad(50.85, 4.35, "TOKEN", 3, () => 0, noSleep)).rejects.toThrow(/non-transient 401/);
@@ -127,7 +127,7 @@ describe("snapToRoad, non-transient failures don't retry", () => {
     // a flaky response or a deterministic protocol change); second try
     // returns a good response.
     const fetchStub: FetchStub = vi
-      .fn()
+      .fn<typeof fetch>()
       .mockResolvedValueOnce(new Response(JSON.stringify({ waypoints: [] }), { status: 200 }))
       .mockResolvedValueOnce(okResponse(4.35, 50.85));
     vi.stubGlobal("fetch", fetchStub);
@@ -141,7 +141,7 @@ describe("snapToRoad, non-transient failures don't retry", () => {
 describe("snapToRoad, exhausted retries", () => {
   test("3 consecutive 500s → throws with exhausted message", async () => {
     const fetchStub: FetchStub = vi
-      .fn()
+      .fn<typeof fetch>()
       .mockResolvedValueOnce(status(500))
       .mockResolvedValueOnce(status(500))
       .mockResolvedValueOnce(status(500));
@@ -152,7 +152,7 @@ describe("snapToRoad, exhausted retries", () => {
   });
 
   test("1 retry cap still throws if it fails once", async () => {
-    const fetchStub: FetchStub = vi.fn().mockResolvedValueOnce(status(500));
+    const fetchStub: FetchStub = vi.fn<typeof fetch>().mockResolvedValueOnce(status(500));
     vi.stubGlobal("fetch", fetchStub);
 
     await expect(snapToRoad(50.85, 4.35, "TOKEN", 1, () => 0, noSleep)).rejects.toThrow(/exhausted 1 retries/);
@@ -163,7 +163,7 @@ describe("snapToRoad, exhausted retries", () => {
 describe("snapToRoad, 200m sanity check", () => {
   test("snap moved > 200m → returns original coord (no throw)", async () => {
     // 0.01° lat shift ≈ 1.1 km, way beyond the 200m threshold.
-    const fetchStub: FetchStub = vi.fn().mockResolvedValueOnce(okResponse(4.35, 50.86));
+    const fetchStub: FetchStub = vi.fn<typeof fetch>().mockResolvedValueOnce(okResponse(4.35, 50.86));
     vi.stubGlobal("fetch", fetchStub);
 
     const out = await snapToRoad(50.85, 4.35, "TOKEN", 3, () => 0, noSleep);
@@ -175,7 +175,7 @@ describe("snapToRoad, 200m sanity check", () => {
 
   test("snap within 200m → returns snapped coord", async () => {
     // ~0.0005° lat ≈ 55m, well under the threshold.
-    const fetchStub: FetchStub = vi.fn().mockResolvedValueOnce(okResponse(4.35, 50.8505));
+    const fetchStub: FetchStub = vi.fn<typeof fetch>().mockResolvedValueOnce(okResponse(4.35, 50.8505));
     vi.stubGlobal("fetch", fetchStub);
 
     const out = await snapToRoad(50.85, 4.35, "TOKEN", 3, () => 0, noSleep);
@@ -186,7 +186,7 @@ describe("snapToRoad, 200m sanity check", () => {
 
 describe("snapToRoad, URL construction", () => {
   test("includes token, coords and correct profile", async () => {
-    const fetchStub: FetchStub = vi.fn().mockResolvedValueOnce(okResponse(4.35, 50.85));
+    const fetchStub: FetchStub = vi.fn<typeof fetch>().mockResolvedValueOnce(okResponse(4.35, 50.85));
     vi.stubGlobal("fetch", fetchStub);
 
     await snapToRoad(50.85, 4.35, "my-secret-token", 3, () => 0, noSleep);

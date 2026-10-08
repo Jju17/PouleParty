@@ -475,24 +475,9 @@ describe("parity, finalCenter invariant", () => {
             seed,
             finalCenter,
           );
-          // Rule 1: drifted circle fits inside start zone.
-          const distFromI = distMeters(drifted, initialCenter);
-          if (distFromI + newRadius > initialRadius + 1e-6) {
-            throw new Error(
-              `rule 1 broken (outside start zone): seed=${seed} step=${step} ` +
-              `finalDist=${dM} distFromI=${distFromI.toFixed(3)} ` +
-              `newRadius=${newRadius}`,
-            );
-          }
-          // Rule 2: full 50 m final zone inside drifted circle.
-          const distFromF = distMeters(drifted, finalCenter);
-          if (distFromF + 50 > newRadius + 1e-6) {
-            throw new Error(
-              `rule 2 broken (final zone outside): seed=${seed} step=${step} ` +
-              `finalDist=${dM} distFromF=${distFromF.toFixed(3)} ` +
-              `newRadius=${newRadius}`,
-            );
-          }
+          const where = `seed=${seed} step=${step} finalDist=${dM}`;
+          expect(distMeters(drifted, initialCenter) + newRadius, `inside start zone: ${where}`).toBeLessThanOrEqual(initialRadius + 1e-6);
+          expect(distMeters(drifted, finalCenter) + 50, `final zone inside: ${where}`).toBeLessThanOrEqual(newRadius + 1e-6);
         }
       }
     }

@@ -1,0 +1,35 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": [
+    "typescript",
+    "import",
+    "vitest",
+    "node"
+  ],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "warn"
+  },
+  "env": {
+    "node": true
+  },
+  "ignorePatterns": [
+    "lib",
+    "node_modules"
+  ],
+  "rules": {
+    "no-await-in-loop": "off",
+    "vitest/expect-expect": [
+      "error",
+      {
+        "assertFunctionNames": [
+          "expect",
+          "assertSucceeds",
+          "assertFails",
+          "expectTypeOf"
+        ]
+      }
+    ]
+  }
+}
