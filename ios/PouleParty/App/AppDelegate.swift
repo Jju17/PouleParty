@@ -8,6 +8,7 @@ import Firebase
 import FirebaseAppCheck
 import FirebaseMessaging
 import UIKit
+import os
 import UserNotifications
 
 class AppDelegate: NSObject, UIApplicationDelegate, MessagingDelegate, UNUserNotificationCenterDelegate {
@@ -59,14 +60,19 @@ class AppDelegate: NSObject, UIApplicationDelegate, MessagingDelegate, UNUserNot
         didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
     ) {
         Messaging.messaging().apnsToken = deviceToken
+        Messaging.messaging().register { error in
+            if let error {
+                Logger(category: "Push").warning("[push] FCM registration failed: \(error.localizedDescription)")
+            }
+        }
     }
 
     // MARK: - MessagingDelegate
 
-    func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
-        guard let token = fcmToken else { return }
+    func messaging(_ messaging: Messaging, didReceiveRegistration installationId: String?) {
+        guard let installationId else { return }
         Task {
-            await FCMTokenManager.shared.saveToken(token)
+            await FCMTokenManager.shared.saveToken(installationId)
         }
     }
 
