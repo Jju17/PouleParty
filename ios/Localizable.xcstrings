@@ -5190,6 +5190,38 @@
           }
         }
       }
+    },
+    "Follow the chicken 🐔": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suis la poule 🐔"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Volg de kip 🐔"
+          }
+        }
+      }
+    },
+    "Stay in the zone 📍": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reste dans la zone 📍"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Blijf in de zone 📍"
+          }
+        }
+      }
     }
   },
   "version": "1.1"

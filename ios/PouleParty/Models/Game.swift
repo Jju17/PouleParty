@@ -1,21 +1,9 @@
-//
-//  Game.swift
-//  PouleParty
-//
-//  Created by Julien Rahier on 16/03/2024.
-//
-
 import CoreLocation
 import Foundation
 import FirebaseFirestore
 
-/// PP-zone-stored: one pre-generated zone circle, read from
-/// `/games/{id}/zone/schedule` (written server-side by `onGameCreated`).
-/// Clients render `circles[shrinkIndex]` read-only instead of recomputing
-/// the drift on-device — this is what guarantees every device shows the
-/// exact same circle. `radiusMeters` is an exact Double (no Int truncation).
-/// In `followTheChicken`, `lat`/`lng` hold the start pin but the runtime
-/// uses the live chicken GPS for the center and only takes `radiusMeters`.
+/// One stored zone circle from `/games/{id}/zone/schedule`; every device
+/// renders the same list.
 struct ZoneCircle: Codable, Equatable {
     var order: Int = 0
     var radiusMeters: Double = 0
@@ -37,47 +25,16 @@ struct Game: Codable, Equatable, Identifiable {
     var status: GameStatus = .waiting
     var winners: [Winner] = []
     var creatorId: String = ""
-    /// PP-107: single source of truth for membership. Maps each
-    /// participant's uid to their role (`"chicken"` | `"hunter"` |
-    /// `"gameMaster"`). A uid has exactly one role, so a "ghost" (no role)
-    /// or a double-role is impossible by construction. Written server-side
-    /// only (the role callables via admin SDK); `creatorId` stays as
-    /// ownership and also appears here with a role. Read through the
-    /// computed `chickenId` / `hunterIds` / `gameMasterIds` accessors in
-    /// `Game+Computed.swift` — never mutate `roles` from a client.
+    /// uid to role. Written by the server only.
     var roles: [String: String] = [:]
-    /// True when the creator has enabled the GameMaster role and set a
-    /// password. The actual password lives in
-    /// `/games/{gameId}/private/security` (admin-SDK only, PP-23) — this
-    /// flag is the public signal so JoinFlow can show / hide the "Join
-    /// as GameMaster" CTA without leaking the password (PP-70).
     var hasGameMasterPassword: Bool = false
-
     var timing: Timing = Timing()
     var zone: Zone = Zone()
     var powerUps: GamePowerUps = GamePowerUps()
-    /// Lifts the `maxPlayers` cap from 5 to 500 for parties created via the
-    /// admin code (`jujurahier`). Garde-fou client only — see PP-45 and the
-    /// firestore.rules `allow create` clause.
     var isAdminCreation: Bool = false
-    /// PP-71: when true, the game waits for an explicit LAUNCH tap from
-    /// the chicken or a GameMaster at `timing.start` instead of starting
-    /// automatically. Lets the host absorb logistical delays without
-    /// burning the planned countdown.
     var manualStartEnabled: Bool = false
-    /// QA only: when true the game was created via the `qa_debug_code`
-    /// long-press entry. Surfaces the on-map QA debug panel (force end /
-    /// spawn power-ups) and pairs with a compressed timing setup. Gated
-    /// server-side by the `debugAdvanceGame` callable, which refuses to act
-    /// on any game where this is false.
     var isDebugGame: Bool = false
-    /// PP-52: when set, this game is linked to a batch of pre-paid web
-    /// registrations. The JoinFlow then requires the unique registration code
-    /// (validated + single-use-claimed server-side via `validateRegistrationCode`)
-    /// before a hunter can join. `nil` for every normal free game.
     var registrationBatchId: String?
-
-    // MARK: - Nested Types
 
     struct Timing: Codable, Equatable {
         var start: Timestamp = {
@@ -87,26 +44,12 @@ struct Game: Codable, Equatable, Identifiable {
         }()
         var end: Timestamp = .init(date: Date.now.addingTimeInterval(3900))
         var headStartMinutes: Double = 2
-        /// PP-71: server-set timestamp of the effective launch when
-        /// `manualStartEnabled == true`. `nil` until the LAUNCH callable
-        /// fires; read by `hunterStartDate` (and the recomputed `end`)
-        /// to anchor every downstream timer on the actual start.
+        /// Set by the server at LAUNCH for manual-start games.
         var actualStart: Timestamp? = nil
     }
 
     struct Zone: Codable, Equatable {
-        /// Initial geometric center of the shrinking zone disc. PP-13
-        /// recomputes this on the recap step so the first circle
-        /// contains BOTH `startPin` and `finalCenter` without being
-        /// centered on either — the user-placed start pin sits inside
-        /// the disc as a marker, not as its center.
         var center: GeoPoint = .init(latitude: AppConstants.defaultLatitude, longitude: AppConstants.defaultLongitude)
-        /// PP-11 / PP-13: user-placed start pin. Decoupled from
-        /// `center` so the recap can pick a non-centered initial disc
-        /// while keeping the visual start marker exactly where the
-        /// chicken dropped it. `nil` for legacy games created before
-        /// the split — readers fall back to `center` (see
-        /// `Game.startPinOrCenter`).
         var startPin: GeoPoint?
         var finalCenter: GeoPoint?
         var radius: Double = 1500
@@ -131,9 +74,6 @@ struct Game: Codable, Equatable, Identifiable {
 
     enum GameStatus: String, CaseIterable, Equatable, Codable {
         case waiting
-        /// PP-71: only used when `manualStartEnabled == true`. Reached
-        /// at `timing.start`; the LAUNCH callable advances it to
-        /// `inProgress` and stamps `timing.actualStart`.
         case readyToLaunch
         case inProgress
         case done
@@ -151,9 +91,9 @@ struct Game: Codable, Equatable, Identifiable {
         var title: String {
             switch self {
             case .followTheChicken:
-                return "Follow the chicken 🐔"
+                return String(localized: "Follow the chicken 🐔")
             case .stayInTheZone:
-                return "Stay in the zone 📍"
+                return String(localized: "Stay in the zone 📍")
             }
         }
 
@@ -161,5 +101,73 @@ struct Game: Codable, Equatable, Identifiable {
             let rawValue = try decoder.singleValueContainer().decode(String.self)
             self = GameMode(rawValue: rawValue) ?? .followTheChicken
         }
+    }
+}
+
+// Missing keys fall back to the property defaults, exactly like Android, so
+// a document written before a field existed still decodes.
+extension Game {
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let defaults = Game(id: "")
+        id = try c.decodeIfPresent(String.self, forKey: .id) ?? ""
+        name = try c.decodeIfPresent(String.self, forKey: .name) ?? defaults.name
+        maxPlayers = try c.decodeIfPresent(Int.self, forKey: .maxPlayers) ?? defaults.maxPlayers
+        gameMode = try c.decodeIfPresent(GameMode.self, forKey: .gameMode) ?? defaults.gameMode
+        chickenCanSeeHunters = try c.decodeIfPresent(Bool.self, forKey: .chickenCanSeeHunters) ?? defaults.chickenCanSeeHunters
+        foundCode = try c.decodeIfPresent(String.self, forKey: .foundCode) ?? defaults.foundCode
+        status = try c.decodeIfPresent(GameStatus.self, forKey: .status) ?? defaults.status
+        winners = (try? c.decodeIfPresent([LossyWinner].self, forKey: .winners))?.compactMap(\.winner) ?? []
+        creatorId = try c.decodeIfPresent(String.self, forKey: .creatorId) ?? defaults.creatorId
+        roles = try c.decodeIfPresent([String: String].self, forKey: .roles) ?? defaults.roles
+        hasGameMasterPassword = try c.decodeIfPresent(Bool.self, forKey: .hasGameMasterPassword) ?? false
+        timing = try c.decodeIfPresent(Timing.self, forKey: .timing) ?? defaults.timing
+        zone = try c.decodeIfPresent(Zone.self, forKey: .zone) ?? defaults.zone
+        powerUps = try c.decodeIfPresent(GamePowerUps.self, forKey: .powerUps) ?? defaults.powerUps
+        isAdminCreation = try c.decodeIfPresent(Bool.self, forKey: .isAdminCreation) ?? false
+        manualStartEnabled = try c.decodeIfPresent(Bool.self, forKey: .manualStartEnabled) ?? false
+        isDebugGame = try c.decodeIfPresent(Bool.self, forKey: .isDebugGame) ?? false
+        registrationBatchId = try c.decodeIfPresent(String.self, forKey: .registrationBatchId)
+    }
+
+    private struct LossyWinner: Decodable {
+        let winner: Winner?
+        init(from decoder: Decoder) throws {
+            winner = try? Winner(from: decoder)
+        }
+    }
+}
+
+extension Game.Timing {
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let defaults = Game.Timing()
+        start = try c.decodeIfPresent(Timestamp.self, forKey: .start) ?? defaults.start
+        end = try c.decodeIfPresent(Timestamp.self, forKey: .end) ?? defaults.end
+        headStartMinutes = try c.decodeIfPresent(Double.self, forKey: .headStartMinutes) ?? defaults.headStartMinutes
+        actualStart = try c.decodeIfPresent(Timestamp.self, forKey: .actualStart)
+    }
+}
+
+extension Game.Zone {
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let defaults = Game.Zone()
+        center = try c.decodeIfPresent(GeoPoint.self, forKey: .center) ?? defaults.center
+        startPin = try c.decodeIfPresent(GeoPoint.self, forKey: .startPin)
+        finalCenter = try c.decodeIfPresent(GeoPoint.self, forKey: .finalCenter)
+        radius = try c.decodeIfPresent(Double.self, forKey: .radius) ?? defaults.radius
+        shrinkIntervalMinutes = try c.decodeIfPresent(Double.self, forKey: .shrinkIntervalMinutes) ?? defaults.shrinkIntervalMinutes
+        shrinkMetersPerUpdate = try c.decodeIfPresent(Double.self, forKey: .shrinkMetersPerUpdate) ?? defaults.shrinkMetersPerUpdate
+        driftSeed = try c.decodeIfPresent(Int.self, forKey: .driftSeed) ?? 0
+    }
+}
+
+extension Game.GamePowerUps {
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        enabled = try c.decodeIfPresent(Bool.self, forKey: .enabled) ?? false
+        enabledTypes = try c.decodeIfPresent([String].self, forKey: .enabledTypes) ?? Game.GamePowerUps().enabledTypes
+        activeEffects = try c.decodeIfPresent(Game.ActiveEffects.self, forKey: .activeEffects) ?? Game.ActiveEffects()
     }
 }
