@@ -1,10 +1,9 @@
-import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
-import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { FieldValue, Timestamp } from "firebase-admin/firestore";
+import { onCall } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/v2";
 import { isChicken, isGameMaster, isHunter } from "./roles";
+import { CALLABLE_OPTIONS, apiError, db, requireString, requireUid } from "./config";
 
-const REGION = "europe-west1";
-// Lockstep with the client AppConstants.outOfZonePenaltyIntervalSeconds.
 const OUT_OF_ZONE_PENALTY_INTERVAL_SECONDS = 5;
 
 interface ValidateChallengeSubmissionInput {
@@ -18,59 +17,44 @@ interface ValidateChallengeSubmissionResult {
   pointsAwarded: number;
 }
 
-function ensureNonEmptyString(value: unknown, field: string): string {
-  if (typeof value !== "string" || value.trim().length === 0) {
-    throw new HttpsError("invalid-argument", `${field} is required`);
-  }
-  return value.trim();
-}
-
 export const validateChallengeSubmission = onCall<
   ValidateChallengeSubmissionInput,
   Promise<ValidateChallengeSubmissionResult>
->({ region: REGION }, async (request) => {
-  const uid = request.auth?.uid;
-  if (!uid) throw new HttpsError("unauthenticated", "Sign in required");
-
-  const gameId = ensureNonEmptyString(request.data?.gameId, "gameId");
-  const submissionId = ensureNonEmptyString(request.data?.submissionId, "submissionId");
+>(CALLABLE_OPTIONS, async (request) => {
+  const uid = requireUid(request);
+  const gameId = requireString(request.data?.gameId, "gameId");
+  const submissionId = requireString(request.data?.submissionId, "submissionId");
   if (typeof request.data?.accept !== "boolean") {
-    throw new HttpsError("invalid-argument", "accept must be a boolean");
+    throw apiError("invalid-argument", "invalidArgument", "accept must be a boolean");
   }
   const accept = request.data.accept;
 
-  const db = getFirestore();
-  const gameRef = db.collection("games").doc(gameId);
+  const firestore = db();
+  const gameRef = firestore.collection("games").doc(gameId);
   const submissionRef = gameRef.collection("challengeSubmissions").doc(submissionId);
 
-  const result = await db.runTransaction<ValidateChallengeSubmissionResult>(async (tx) => {
+  const result = await firestore.runTransaction<ValidateChallengeSubmissionResult>(async (tx) => {
     const gameSnap = await tx.get(gameRef);
     if (!gameSnap.exists) {
-      throw new HttpsError("not-found", "Game not found");
+      throw apiError("not-found", "gameNotFound", "Game not found");
     }
     const gameData = gameSnap.data() ?? {};
     const isAuthorized = isChicken(gameData, uid) || isGameMaster(gameData, uid);
     if (!isAuthorized) {
-      throw new HttpsError(
-        "permission-denied",
-        "Only the chicken or a GameMaster can validate submissions"
-      );
+      throw apiError("permission-denied", "notAllowed", "Only the chicken or a GameMaster can validate submissions");
     }
 
     const submissionSnap = await tx.get(submissionRef);
     if (!submissionSnap.exists) {
-      throw new HttpsError("not-found", "Submission not found");
+      throw apiError("not-found", "submissionNotFound", "Submission not found");
     }
     const submission = submissionSnap.data() ?? {};
     if (submission.status !== "pending") {
-      throw new HttpsError(
-        "failed-precondition",
-        `Submission already ${submission.status}`
-      );
+      throw apiError("failed-precondition", "submissionAlreadyHandled", `Submission already ${submission.status}`);
     }
 
-    const hunterId = ensureNonEmptyString(submission.hunterId, "submission.hunterId");
-    const challengeId = ensureNonEmptyString(submission.challengeId, "submission.challengeId");
+    const hunterId = requireString(submission.hunterId, "submission.hunterId");
+    const challengeId = requireString(submission.challengeId, "submission.challengeId");
     const submissionType = submission.type === "repeatable" ? "repeatable" : "oneShot";
 
     const completionRef = gameRef.collection("challengeCompletions").doc(hunterId);
@@ -90,10 +74,7 @@ export const validateChallengeSubmission = onCall<
     const challengeRef = gameRef.collection("challenges").doc(challengeId);
     const challengeSnap = await tx.get(challengeRef);
     if (!challengeSnap.exists) {
-      throw new HttpsError(
-        "not-found",
-        `Challenge ${challengeId} not found in game ${gameId}`
-      );
+      throw apiError("not-found", "challengeNotFound", `Challenge ${challengeId} not found in game ${gameId}`);
     }
     const challenge = challengeSnap.data() ?? {};
     const points = typeof challenge.points === "number" ? challenge.points : 0;
@@ -107,7 +88,7 @@ export const validateChallengeSubmission = onCall<
 
     // Re-resolve the team name on every call so a rename propagates to the
     // completion + leaderboard, instead of freezing the first-seen value.
-    const teamName = await resolveTeamName(db, gameId, hunterId);
+    const teamName = await resolveTeamName(firestore, gameId, hunterId);
 
     if (submissionType === "oneShot" && existingValidated.includes(challengeId)) {
       tx.update(submissionRef, {
@@ -165,71 +146,92 @@ interface ApplyOutOfZonePenaltyInput {
   gameId?: string;
 }
 
-export const applyOutOfZonePenalty = onCall<
-  ApplyOutOfZonePenaltyInput,
-  Promise<{ newTotal: number }>
->({ region: REGION }, async (request) => {
-  const uid = request.auth?.uid;
-  if (!uid) throw new HttpsError("unauthenticated", "Sign in required");
-  const gameId = ensureNonEmptyString(request.data?.gameId, "gameId");
+export interface PenaltyDecision {
+  points: number;
+  newLastPenaltyAtMs: number | null;
+}
 
-  const db = getFirestore();
-  const gameRef = db.collection("games").doc(gameId);
-  const completionRef = gameRef.collection("challengeCompletions").doc(uid);
+/**
+ * Removes `points` from a hunter's challenge total and keeps the leaderboard
+ * read-model in sync, in one transaction. `decide` receives the stored
+ * `lastPenaltyAt` so client calls and server checks share one window and can
+ * never charge the same interval twice.
+ */
+export async function applyPenaltyPoints(
+  gameId: string,
+  hunterId: string,
+  decide: (lastPenaltyAtMs: number | null) => PenaltyDecision
+): Promise<number> {
+  const firestore = db();
+  const gameRef = firestore.collection("games").doc(gameId);
+  const completionRef = gameRef.collection("challengeCompletions").doc(hunterId);
+  const teamName = await resolveTeamName(firestore, gameId, hunterId);
 
-  const newTotal = await db.runTransaction<number>(async (tx) => {
+  return firestore.runTransaction<number>(async (tx) => {
     const gameSnap = await tx.get(gameRef);
-    if (!gameSnap.exists) throw new HttpsError("not-found", "Game not found");
-    const gameData = gameSnap.data() ?? {};
-    if (!isHunter(gameData, uid)) {
-      throw new HttpsError("permission-denied", "Not a hunter on this game");
+    if (!gameSnap.exists) throw apiError("not-found", "gameNotFound", "Game not found");
+    if (!isHunter(gameSnap.data() ?? {}, hunterId)) {
+      throw apiError("permission-denied", "notAHunter", "Not a hunter on this game");
     }
     const completionSnap = await tx.get(completionRef);
     const existing = completionSnap.exists ? completionSnap.data() ?? {} : {};
     const existingTotal = typeof existing.totalPoints === "number" ? existing.totalPoints : 0;
-
-    // Idempotency / rate guard: at most one out-of-zone penalty per interval
-    // per hunter, so a withRetry re-delivery (or a tampered client) can't
-    // double-penalize. The legit client calls once per interval; a retry lands
-    // within ~1-2 s and is absorbed (returns the unchanged total).
-    const now = Timestamp.now();
     const lastPenaltyAt = existing.lastPenaltyAt as Timestamp | undefined;
-    const guardMs = (OUT_OF_ZONE_PENALTY_INTERVAL_SECONDS - 1) * 1000;
-    if (lastPenaltyAt && now.toMillis() - lastPenaltyAt.toMillis() < guardMs) {
-      return existingTotal;
-    }
+    const decision = decide(lastPenaltyAt ? lastPenaltyAt.toMillis() : null);
+    if (decision.points === 0 && decision.newLastPenaltyAtMs === null) return existingTotal;
 
-    const next = existingTotal - 1;
-    // Re-resolve on every call so a rename propagates (don't freeze the
-    // first-seen team name).
-    const teamName = await resolveTeamName(db, gameId, uid);
+    const next = existingTotal - decision.points;
     const payload: Record<string, unknown> = {
-      hunterId: uid,
+      hunterId,
       totalPoints: next,
       validatedChallengeIds: existing.validatedChallengeIds ?? [],
       repeatableCounts: existing.repeatableCounts ?? {},
       teamName,
-      lastPenaltyAt: now,
     };
+    if (decision.newLastPenaltyAtMs !== null) {
+      payload.lastPenaltyAt = Timestamp.fromMillis(decision.newLastPenaltyAtMs);
+    }
     tx.set(completionRef, payload, { merge: true });
-    // PP-103: keep the denormalized leaderboard in sync with the penalty.
-    tx.set(
-      gameRef.collection("aggregates").doc("leaderboard"),
-      { entries: { [uid]: { teamName, totalPoints: next } } },
-      { merge: true }
-    );
+    if (decision.points > 0) {
+      tx.set(
+        gameRef.collection("aggregates").doc("leaderboard"),
+        { entries: { [hunterId]: { teamName, totalPoints: next } } },
+        { merge: true }
+      );
+    }
     return next;
   });
+}
 
+/**
+ * Client-reported penalty for immediate feedback. At most one point per
+ * interval: a retried call landing inside the window is absorbed.
+ */
+export function decideClientPenalty(lastPenaltyAtMs: number | null, nowMs: number): PenaltyDecision {
+  const guardMs = (OUT_OF_ZONE_PENALTY_INTERVAL_SECONDS - 1) * 1000;
+  if (lastPenaltyAtMs !== null && nowMs - lastPenaltyAtMs < guardMs) {
+    return { points: 0, newLastPenaltyAtMs: null };
+  }
+  return { points: 1, newLastPenaltyAtMs: nowMs };
+}
+
+export const applyOutOfZonePenalty = onCall<
+  ApplyOutOfZonePenaltyInput,
+  Promise<{ newTotal: number }>
+>(CALLABLE_OPTIONS, async (request) => {
+  const uid = requireUid(request);
+  const gameId = requireString(request.data?.gameId, "gameId");
+  const nowMs = Date.now();
+  const newTotal = await applyPenaltyPoints(gameId, uid, (last) => decideClientPenalty(last, nowMs));
   return { newTotal };
 });
 
 async function resolveTeamName(
-  db: FirebaseFirestore.Firestore,
+  firestore: FirebaseFirestore.Firestore,
   gameId: string,
   hunterId: string
 ): Promise<string> {
-  const playerSnap = await db
+  const playerSnap = await firestore
     .collection("games")
     .doc(gameId)
     .collection("players")
@@ -237,7 +239,7 @@ async function resolveTeamName(
     .get();
   const fromPlayer = playerSnap.data()?.teamName as string | undefined;
   if (fromPlayer && fromPlayer.length > 0) return fromPlayer;
-  const userSnap = await db.collection("users").doc(hunterId).get();
+  const userSnap = await firestore.collection("users").doc(hunterId).get();
   const nickname = userSnap.data()?.nickname as string | undefined;
   return nickname && nickname.length > 0 ? nickname : "Hunter";
 }

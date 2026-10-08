@@ -28,3 +28,4 @@ export { sendGameNotification } from "./notifications";
 export { transitionGameStatus } from "./lifecycleTasks";
 export { spawnPowerUpBatch } from "./powerUpSpawnTask";
 export { onGameCreated, onGameDeleted, onGameUpdated } from "./gameTriggers";
+export { evaluateOutOfZone } from "./outOfZone";
