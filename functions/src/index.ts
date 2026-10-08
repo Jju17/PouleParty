@@ -17,7 +17,7 @@ export {
 } from "./registrations";
 export { processAccountDeletion } from "./accountDeletion";
 export { submitFoundCode, getFoundCode } from "./gameplay";
-export { activatePowerUp } from "./powerUps";
+export { activatePowerUp, collectPowerUp } from "./powerUps";
 export { validateChallengeSubmission, applyOutOfZonePenalty } from "./validation";
 export { renderChallengesSheet } from "./challengesSheet";
 export { launchGame } from "./launchGame";

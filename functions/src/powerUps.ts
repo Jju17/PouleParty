@@ -1,13 +1,14 @@
-import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
-import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { FieldValue, GeoPoint, Timestamp } from "firebase-admin/firestore";
+import { getDatabase } from "firebase-admin/database";
+import { onCall } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/v2";
 import { mirrorGameMetaInline } from "./rtdbMirror";
+import { CALLABLE_OPTIONS, apiError, db, requireString, requireUid } from "./config";
+import { roleOf } from "./roles";
+import { haversineDistance } from "./powerUpSpawn";
 
-const REGION = "europe-west1";
-
-// MUST stay in lockstep with iOS `PowerUp.PowerUpType.durationSeconds`
-// and Android `PowerUpType` — drift would let a client claim a longer
-// effect than the server commits to `activeEffects`.
+// Lockstep with the client duration tables: a drift would let a client show a
+// longer effect than the server commits.
 export const EFFECT_DURATION_SECONDS: Record<string, number | null> = {
   radarPing: 3,
   invisibility: 30,
@@ -17,142 +18,172 @@ export const EFFECT_DURATION_SECONDS: Record<string, number | null> = {
   zonePreview: null,
 };
 
+export const HUNTER_POWER_UP_TYPES = ["zonePreview", "radarPing"];
+export const POWER_UP_COLLECTION_RADIUS_METERS = 30;
+// GPS jitter between the device fix and the last stored position.
+export const POWER_UP_COLLECTION_TOLERANCE_METERS = 30;
+const STORED_POSITION_FRESHNESS_MS = 30_000;
+
 interface PowerUpDoc {
   id?: string;
   type?: string;
+  location?: GeoPoint;
   collectedBy?: string | null;
   activatedAt?: Timestamp | null;
 }
 
-interface ActivatePowerUpInput {
-  gameId?: string;
-  powerUpId?: string;
+export function roleMayUsePowerUp(role: string | null, type: string): boolean {
+  if (role === "hunter") return HUNTER_POWER_UP_TYPES.includes(type);
+  if (role === "chicken") return type in EFFECT_DURATION_SECONDS && !HUNTER_POWER_UP_TYPES.includes(type);
+  return false;
 }
+
+export function isWithinCollectionRange(
+  powerUp: { lat: number; lng: number },
+  player: { lat: number; lng: number }
+): boolean {
+  const distance = haversineDistance(powerUp.lat, powerUp.lng, player.lat, player.lng);
+  return distance <= POWER_UP_COLLECTION_RADIUS_METERS + POWER_UP_COLLECTION_TOLERANCE_METERS;
+}
+
+function requireCoordinate(value: unknown, field: string, limit: number): number {
+  if (typeof value !== "number" || !Number.isFinite(value) || Math.abs(value) > limit) {
+    throw apiError("invalid-argument", "invalidArgument", `${field} must be a valid coordinate`);
+  }
+  return value;
+}
+
+function assertLiveGame(gameData: FirebaseFirestore.DocumentData): void {
+  if (gameData.status !== "inProgress") {
+    throw apiError("failed-precondition", "notInProgress", "Game is not in progress");
+  }
+  const end = (gameData.timing as { end?: Timestamp } | undefined)?.end;
+  if (end && end.toMillis() <= Date.now()) {
+    throw apiError("failed-precondition", "gameOver", "Game has already ended");
+  }
+}
+
+async function storedPosition(
+  gameId: string,
+  uid: string,
+  role: string | null
+): Promise<{ lat: number; lng: number } | null> {
+  const path = role === "chicken"
+    ? `/games/${gameId}/chickenLocations/latest`
+    : `/games/${gameId}/hunterLocations/${uid}`;
+  const value = (await getDatabase().ref(path).get()).val() as { lat?: number; lng?: number; ts?: number } | null;
+  if (typeof value?.lat !== "number" || typeof value?.lng !== "number" || typeof value?.ts !== "number") return null;
+  if (Date.now() - value.ts > STORED_POSITION_FRESHNESS_MS) return null;
+  return { lat: value.lat, lng: value.lng };
+}
+
+/**
+ * Collects a power-up for the caller. The client position must be within
+ * range, and so must the last stored position when the player shares one.
+ */
+export const collectPowerUp = onCall(CALLABLE_OPTIONS, async (request) => {
+  const uid = requireUid(request);
+  const gameId = requireString(request.data?.gameId, "gameId");
+  const powerUpId = requireString(request.data?.powerUpId, "powerUpId");
+  const player = {
+    lat: requireCoordinate(request.data?.lat, "lat", 90),
+    lng: requireCoordinate(request.data?.lng, "lng", 180),
+  };
+
+  const gameRef = db().collection("games").doc(gameId);
+  const puRef = gameRef.collection("powerUps").doc(powerUpId);
+  const preGame = (await gameRef.get()).data();
+  if (!preGame) throw apiError("not-found", "gameNotFound", "Game not found");
+  const stored = await storedPosition(gameId, uid, roleOf(preGame, uid));
+
+  await db().runTransaction(async (tx) => {
+    const gameSnap = await tx.get(gameRef);
+    if (!gameSnap.exists) throw apiError("not-found", "gameNotFound", "Game not found");
+    const gameData = gameSnap.data() ?? {};
+    assertLiveGame(gameData);
+
+    const puSnap = await tx.get(puRef);
+    if (!puSnap.exists) throw apiError("not-found", "powerUpNotFound", "Power-up not found");
+    const pu = puSnap.data() as PowerUpDoc;
+    if (pu.collectedBy) throw apiError("failed-precondition", "powerUpTaken", "Power-up already collected");
+    const type = typeof pu.type === "string" ? pu.type : "";
+    if (!roleMayUsePowerUp(roleOf(gameData, uid), type)) {
+      throw apiError("permission-denied", "powerUpWrongRole", "This power-up belongs to the other role");
+    }
+    if (!pu.location) throw apiError("failed-precondition", "powerUpNotFound", "Power-up has no location");
+    const target = { lat: pu.location.latitude, lng: pu.location.longitude };
+    if (!isWithinCollectionRange(target, player) || (stored && !isWithinCollectionRange(target, stored))) {
+      throw apiError("failed-precondition", "powerUpTooFar", "Too far from the power-up");
+    }
+    tx.update(puRef, { collectedBy: uid, collectedAt: Timestamp.now() });
+  });
+
+  logger.info("[powerUp] collected", { gameId, powerUpId, uid });
+  return { success: true };
+});
 
 interface ActivatePowerUpResult {
   activatedAt: number;
   expiresAt: number | null;
 }
 
-function ensureGameId(gameId: unknown): string {
-  if (typeof gameId !== "string" || gameId.trim().length === 0) {
-    throw new HttpsError("invalid-argument", "gameId is required");
-  }
-  return gameId;
-}
+export const activatePowerUp = onCall(CALLABLE_OPTIONS, async (request): Promise<ActivatePowerUpResult> => {
+  const uid = requireUid(request);
+  const gameId = requireString(request.data?.gameId, "gameId");
+  const powerUpId = requireString(request.data?.powerUpId, "powerUpId");
 
-function ensurePowerUpId(powerUpId: unknown): string {
-  if (typeof powerUpId !== "string" || powerUpId.trim().length === 0) {
-    throw new HttpsError("invalid-argument", "powerUpId is required");
-  }
-  return powerUpId;
-}
-
-export const activatePowerUp = onCall<
-  ActivatePowerUpInput,
-  Promise<ActivatePowerUpResult>
->({ region: REGION }, async (request) => {
-  const uid = request.auth?.uid;
-  if (!uid) {
-    throw new HttpsError("unauthenticated", "Sign in required");
-  }
-
-  const gameId = ensureGameId(request.data?.gameId);
-  const powerUpId = ensurePowerUpId(request.data?.powerUpId);
-
-  const db = getFirestore();
-  const gameRef = db.collection("games").doc(gameId);
+  const gameRef = db().collection("games").doc(gameId);
   const puRef = gameRef.collection("powerUps").doc(powerUpId);
 
-  const { result, type: activatedType } = await db.runTransaction<{
-    result: ActivatePowerUpResult;
-    type: string;
-  }>(async (tx) => {
-    // All reads before any write. The game doc gates activation on a live,
-    // non-ended game so effects can't be applied after the game is over.
+  const { result, type: activatedType } = await db().runTransaction(async (tx) => {
     const gameSnap = await tx.get(gameRef);
-    if (!gameSnap.exists) {
-      throw new HttpsError("not-found", "Game not found");
-    }
+    if (!gameSnap.exists) throw apiError("not-found", "gameNotFound", "Game not found");
     const gameData = gameSnap.data() ?? {};
-    const status = typeof gameData.status === "string" ? gameData.status : "";
-    if (status !== "inProgress") {
-      throw new HttpsError(
-        "failed-precondition",
-        "Game is not in progress"
-      );
-    }
-    const end = (gameData.timing as { end?: Timestamp } | undefined)?.end;
-    if (end && end.toMillis() <= Timestamp.now().toMillis()) {
-      throw new HttpsError(
-        "failed-precondition",
-        "Game has already ended"
-      );
-    }
+    assertLiveGame(gameData);
 
     const puSnap = await tx.get(puRef);
-    if (!puSnap.exists) {
-      throw new HttpsError("not-found", "Power-up not found");
-    }
+    if (!puSnap.exists) throw apiError("not-found", "powerUpNotFound", "Power-up not found");
     const pu = puSnap.data() as PowerUpDoc;
 
+    // Same answer whether uncollected or owned by someone else.
     if (pu.collectedBy !== uid) {
-      // Same response whether uncollected or owned by another player —
-      // don't leak which.
-      throw new HttpsError(
-        "permission-denied",
-        "Only the collector can activate this power-up"
-      );
+      throw apiError("permission-denied", "notAllowed", "Only the collector can activate this power-up");
     }
     if (pu.activatedAt) {
-      throw new HttpsError(
-        "failed-precondition",
-        "Power-up already activated"
-      );
+      throw apiError("failed-precondition", "powerUpAlreadyActive", "Power-up already activated");
     }
     const type = typeof pu.type === "string" ? pu.type : "";
     if (!(type in EFFECT_DURATION_SECONDS)) {
-      throw new HttpsError(
-        "failed-precondition",
-        `Unknown power-up type: ${type}`
-      );
+      throw apiError("failed-precondition", "powerUpNotFound", `Unknown power-up type: ${type}`);
+    }
+    if (!roleMayUsePowerUp(roleOf(gameData, uid), type)) {
+      throw apiError("permission-denied", "powerUpWrongRole", "This power-up belongs to the other role");
     }
     const durationSeconds = EFFECT_DURATION_SECONDS[type];
 
     const now = Timestamp.now();
     const expiresAt =
-      durationSeconds === null
-        ? null
-        : Timestamp.fromMillis(now.toMillis() + durationSeconds * 1000);
+      durationSeconds === null ? null : Timestamp.fromMillis(now.toMillis() + durationSeconds * 1000);
 
     tx.update(puRef, {
       activatedAt: now,
       expiresAt: expiresAt ?? FieldValue.delete(),
     });
-
-    // zonePreview is personal — no game-level effect to mirror.
+    // zonePreview is personal: no game-level effect.
     if (expiresAt !== null) {
-      tx.update(gameRef, {
-        [`powerUps.activeEffects.${type}`]: expiresAt,
-      });
+      tx.update(gameRef, { [`powerUps.activeEffects.${type}`]: expiresAt });
     }
 
     return {
-      result: {
-        activatedAt: now.toMillis(),
-        expiresAt: expiresAt?.toMillis() ?? null,
-      },
+      result: { activatedAt: now.toMillis(), expiresAt: expiresAt?.toMillis() ?? null },
       type,
     };
   });
 
-  // Hunters' RTDB read of the chicken position depends on the mirrored ping
-  // window: push it now instead of waiting for the async trigger.
+  // The hunters' RTDB read of the chicken depends on the mirrored ping window.
   if (activatedType === "radarPing") {
     await mirrorGameMetaInline(gameId, (await gameRef.get()).data());
   }
-  logger.info(
-    `Power-up ${powerUpId} (game ${gameId}) activated by ${uid}, expires at ${result.expiresAt}`
-  );
+  logger.info("[powerUp] activated", { gameId, powerUpId, uid, expiresAt: result.expiresAt });
   return result;
 });

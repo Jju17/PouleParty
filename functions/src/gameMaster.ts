@@ -1,12 +1,17 @@
-import { getFirestore, Timestamp } from "firebase-admin/firestore";
-import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { Timestamp } from "firebase-admin/firestore";
+import { onCall } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/v2";
 import { mirrorGameMetaInline } from "./rtdbMirror";
 import { isChicken, isGameMaster, isHunter } from "./roles";
+import { CALLABLE_OPTIONS, apiError, db, requireString, requireUid } from "./config";
 
-const REGION = "europe-west1";
 const RATE_LIMIT_MAX_ATTEMPTS = 5;
 const RATE_LIMIT_LOCK_MS = 5 * 60 * 1000;
+// Fresh anonymous accounts reset the per-user counter, so every failure also
+// counts against the game itself.
+export const GAME_RATE_LIMIT_MAX_FAILURES = 20;
+export const GAME_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
+export const GAME_RATE_LIMIT_LOCK_MS = 15 * 60 * 1000;
 
 const PRIVATE_DOC_ID = "security";
 
@@ -20,8 +25,32 @@ interface GmRateLimit {
   lockedUntil: Timestamp | null;
 }
 
+export interface GameFailureCounter {
+  failures: number;
+  windowStartMs: number;
+  lockedUntilMs: number | null;
+}
+
+/** Records one failed attempt against the game-wide counter. */
+export function recordGameFailure(counter: GameFailureCounter | null, nowMs: number): GameFailureCounter {
+  const fresh =
+    counter !== null && nowMs - counter.windowStartMs <= GAME_RATE_LIMIT_WINDOW_MS
+      ? counter
+      : { failures: 0, windowStartMs: nowMs, lockedUntilMs: null };
+  const failures = fresh.failures + 1;
+  return {
+    failures,
+    windowStartMs: fresh.windowStartMs,
+    lockedUntilMs: failures >= GAME_RATE_LIMIT_MAX_FAILURES ? nowMs + GAME_RATE_LIMIT_LOCK_MS : fresh.lockedUntilMs,
+  };
+}
+
+export function isGameLocked(counter: GameFailureCounter | null, nowMs: number): boolean {
+  return counter?.lockedUntilMs != null && counter.lockedUntilMs > nowMs;
+}
+
 function gamePrivateRef(gameId: string) {
-  return getFirestore()
+  return db()
     .collection("games")
     .doc(gameId)
     .collection("private")
@@ -29,30 +58,24 @@ function gamePrivateRef(gameId: string) {
 }
 
 function gameRef(gameId: string) {
-  return getFirestore().collection("games").doc(gameId);
+  return db().collection("games").doc(gameId);
 }
 
 function rateLimitRef(userId: string, gameId: string) {
-  return getFirestore()
+  return db()
     .collection("gmRateLimits")
     .doc(`${userId}_${gameId}`);
 }
 
-function ensurePasswordFormat(password: unknown): string {
-  if (typeof password !== "string" || !/^\d{4}$/.test(password)) {
-    throw new HttpsError(
-      "invalid-argument",
-      "Password must be a 4-digit string"
-    );
-  }
-  return password;
+function gameRateLimitRef(gameId: string) {
+  return db().collection("gmRateLimits").doc(`game_${gameId}`);
 }
 
-function ensureGameId(gameId: unknown): string {
-  if (typeof gameId !== "string" || gameId.trim().length === 0) {
-    throw new HttpsError("invalid-argument", "gameId is required");
+function ensurePasswordFormat(password: unknown): string {
+  if (typeof password !== "string" || !/^\d{4}$/.test(password)) {
+    throw apiError("invalid-argument", "invalidArgument", "Password must be a 4-digit string");
   }
-  return gameId;
+  return password;
 }
 
 /**
@@ -63,27 +86,22 @@ function ensureGameId(gameId: unknown): string {
  * read it.
  */
 export const setGameMasterPassword = onCall(
-  { region: REGION },
+  CALLABLE_OPTIONS,
   async (request) => {
-    const uid = request.auth?.uid;
-    if (!uid) throw new HttpsError("unauthenticated", "Sign in required");
-
-    const gameId = ensureGameId(request.data?.gameId);
+    const uid = requireUid(request);
+    const gameId = requireString(request.data?.gameId, "gameId");
     const password = ensurePasswordFormat(request.data?.password);
 
     const game = (await gameRef(gameId).get()).data();
-    if (!game) throw new HttpsError("not-found", "Game not found");
+    if (!game) throw apiError("not-found", "gameNotFound", "Game not found");
     if (game.creatorId !== uid) {
-      throw new HttpsError(
-        "permission-denied",
-        "Only the creator can set the GameMaster password"
-      );
+      throw apiError("permission-denied", "notAllowed", "Only the creator can set the GameMaster password");
     }
 
     // Update both the private doc (the actual secret) and the public
     // `hasGameMasterPassword` flag in a batch so the Game doc stays
     // truthful even if a CF retry happens mid-write.
-    const batch = getFirestore().batch();
+    const batch = db().batch();
     batch.set(gamePrivateRef(gameId), { gameMasterPassword: password } satisfies GamePrivateSecurity);
     batch.update(gameRef(gameId), { hasGameMasterPassword: true });
     await batch.commit();
@@ -97,22 +115,17 @@ export const setGameMasterPassword = onCall(
  * creator can call this.
  */
 export const clearGameMasterPassword = onCall(
-  { region: REGION },
+  CALLABLE_OPTIONS,
   async (request) => {
-    const uid = request.auth?.uid;
-    if (!uid) throw new HttpsError("unauthenticated", "Sign in required");
-
-    const gameId = ensureGameId(request.data?.gameId);
+    const uid = requireUid(request);
+    const gameId = requireString(request.data?.gameId, "gameId");
     const game = (await gameRef(gameId).get()).data();
-    if (!game) throw new HttpsError("not-found", "Game not found");
+    if (!game) throw apiError("not-found", "gameNotFound", "Game not found");
     if (game.creatorId !== uid) {
-      throw new HttpsError(
-        "permission-denied",
-        "Only the creator can clear the GameMaster password"
-      );
+      throw apiError("permission-denied", "notAllowed", "Only the creator can clear the GameMaster password");
     }
 
-    const batch = getFirestore().batch();
+    const batch = db().batch();
     batch.delete(gamePrivateRef(gameId));
     batch.update(gameRef(gameId), { hasGameMasterPassword: false });
     await batch.commit();
@@ -130,44 +143,24 @@ export const clearGameMasterPassword = onCall(
  * the limit.
  */
 export const joinAsGameMaster = onCall(
-  { region: REGION },
+  CALLABLE_OPTIONS,
   async (request) => {
-    const uid = request.auth?.uid;
-    if (!uid) throw new HttpsError("unauthenticated", "Sign in required");
-
-    const gameId = ensureGameId(request.data?.gameId);
+    const uid = requireUid(request);
+    const gameId = requireString(request.data?.gameId, "gameId");
     const password = ensurePasswordFormat(request.data?.password);
 
-    const result = await getFirestore().runTransaction(async (tx) => {
+    const result = await db().runTransaction(async (tx) => {
       const gameSnap = await tx.get(gameRef(gameId));
       const game = gameSnap.data();
       if (!game) {
-        throw new HttpsError("not-found", "Game not found");
+        throw apiError("not-found", "gameNotFound", "Game not found");
       }
       const status = typeof game.status === "string" ? game.status : "";
       if (status === "done") {
-        throw new HttpsError(
-          "failed-precondition",
-          "The game is over"
-        );
+        throw apiError("failed-precondition", "gameOver", "The game is over");
       }
-      if (game.creatorId === uid) {
-        throw new HttpsError(
-          "failed-precondition",
-          "The creator cannot also be a GameMaster"
-        );
-      }
-      if (isChicken(game, uid)) {
-        throw new HttpsError(
-          "failed-precondition",
-          "The chicken cannot also be a GameMaster"
-        );
-      }
-      if (isHunter(game, uid)) {
-        throw new HttpsError(
-          "failed-precondition",
-          "A hunter cannot also be a GameMaster"
-        );
+      if (game.creatorId === uid || isChicken(game, uid) || isHunter(game, uid)) {
+        throw apiError("failed-precondition", "alreadyHasRole", "You already have a role in this game");
       }
       if (isGameMaster(game, uid)) {
         // Idempotent re-join: already a GM, no change, no rate-limit
@@ -176,7 +169,14 @@ export const joinAsGameMaster = onCall(
       }
 
       const rateLimitSnap = await tx.get(rateLimitRef(uid, gameId));
+      const gameCounterSnap = await tx.get(gameRateLimitRef(gameId));
+      const gameCounter = (gameCounterSnap.data() as GameFailureCounter | undefined) ?? null;
       const now = Timestamp.now();
+      if (isGameLocked(gameCounter, now.toMillis())) {
+        throw apiError("resource-exhausted", "tooManyAttempts", "Too many attempts on this game", {
+          lockedUntil: gameCounter!.lockedUntilMs,
+        });
+      }
       let rateLimit: GmRateLimit = (rateLimitSnap.data() as GmRateLimit) ?? {
         attempts: 0,
         firstAttemptAt: now,
@@ -193,7 +193,7 @@ export const joinAsGameMaster = onCall(
       }
 
       if (rateLimit.lockedUntil) {
-        throw new HttpsError("resource-exhausted", "Too many attempts", {
+        throw apiError("resource-exhausted", "tooManyAttempts", "Too many attempts", {
           lockedUntil: rateLimit.lockedUntil.toMillis(),
         });
       }
@@ -201,10 +201,7 @@ export const joinAsGameMaster = onCall(
       const privateSnap = await tx.get(gamePrivateRef(gameId));
       const securedPassword = (privateSnap.data() as GamePrivateSecurity | undefined)?.gameMasterPassword;
       if (!securedPassword) {
-        throw new HttpsError(
-          "failed-precondition",
-          "GameMaster role is not enabled on this game"
-        );
+        throw apiError("failed-precondition", "gameMasterDisabled", "GameMaster role is not enabled on this game");
       }
 
       if (securedPassword !== password) {
@@ -217,7 +214,15 @@ export const joinAsGameMaster = onCall(
             ? Timestamp.fromMillis(now.toMillis() + RATE_LIMIT_LOCK_MS)
             : null,
         };
-        tx.set(rateLimitRef(uid, gameId), updated);
+        tx.set(rateLimitRef(uid, gameId), {
+          ...updated,
+          expiresAt: Timestamp.fromMillis(now.toMillis() + 24 * 60 * 60 * 1000),
+        });
+        const nextGameCounter = recordGameFailure(gameCounter, now.toMillis());
+        tx.set(gameRateLimitRef(gameId), {
+          ...nextGameCounter,
+          expiresAt: Timestamp.fromMillis(now.toMillis() + 24 * 60 * 60 * 1000),
+        });
         return {
           success: false,
           attemptsRemaining: Math.max(0, RATE_LIMIT_MAX_ATTEMPTS - attempts),
@@ -234,7 +239,7 @@ export const joinAsGameMaster = onCall(
       // before this fix.
       tx.update(gameRef(gameId), { [`roles.${uid}`]: "gameMaster" });
       tx.set(
-        getFirestore()
+        db()
           .collection("users")
           .doc(uid)
           .collection("memberships")

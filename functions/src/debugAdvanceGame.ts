@@ -1,9 +1,10 @@
 import { getFirestore, Timestamp } from "firebase-admin/firestore";
 import { getFunctions } from "firebase-admin/functions";
-import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { onCall } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/v2";
 import { launchReadyGame } from "./launchGame";
-import { isGameMaster } from "./roles";
+import { isChicken, isGameMaster } from "./roles";
+import { CALLABLE_OPTIONS, apiError, requireString, requireUid } from "./config";
 
 const REGION = "europe-west1";
 // Power-ups spawned on each debug shrink step — mirrors the real periodic
@@ -34,13 +35,6 @@ interface GameDoc {
     actualStart?: Timestamp;
     headStartMinutes?: number;
   };
-}
-
-function ensureString(value: unknown, field: string): string {
-  if (typeof value !== "string" || value.trim().length === 0) {
-    throw new HttpsError("invalid-argument", `${field} is required`);
-  }
-  return value.trim();
 }
 
 function shrinkIntervalMinutesOf(data: GameDoc): number {
@@ -88,32 +82,24 @@ function elapsedShrinks(data: GameDoc): number {
 export const debugAdvanceGame = onCall<
   DebugAdvanceGameInput,
   Promise<DebugAdvanceGameResult>
->({ region: REGION }, async (request) => {
-  const uid = request.auth?.uid;
-  if (!uid) throw new HttpsError("unauthenticated", "Sign in required");
-
-  const gameId = ensureString(request.data?.gameId, "gameId");
-  const action = ensureString(request.data?.action, "action") as DebugAction;
+>(CALLABLE_OPTIONS, async (request) => {
+  const uid = requireUid(request);
+  const gameId = requireString(request.data?.gameId, "gameId");
+  const action = requireString(request.data?.action, "action") as DebugAction;
 
   const db = getFirestore();
   const gameRef = db.collection("games").doc(gameId);
   const snap = await gameRef.get();
-  if (!snap.exists) throw new HttpsError("not-found", "Game not found");
+  if (!snap.exists) throw apiError("not-found", "gameNotFound", "Game not found");
   const data = snap.data() ?? {};
 
   // Hard gate: only debug games can be driven from the QA panel.
   if (data.isDebugGame !== true) {
-    throw new HttpsError(
-      "permission-denied",
-      "debugAdvanceGame only operates on debug games"
-    );
+    throw apiError("permission-denied", "notADebugGame", "debugAdvanceGame only operates on debug games");
   }
   const creatorId = (data.creatorId as string | undefined) ?? "";
-  if (uid !== creatorId && !isGameMaster(data, uid)) {
-    throw new HttpsError(
-      "permission-denied",
-      "Only the chicken or a GameMaster can drive the QA panel"
-    );
+  if (uid !== creatorId && !isChicken(data, uid) && !isGameMaster(data, uid)) {
+    throw apiError("permission-denied", "notAllowed", "Only the chicken or a GameMaster can drive the QA panel");
   }
 
   switch (action) {
@@ -212,6 +198,6 @@ export const debugAdvanceGame = onCall<
       return { success: true, message: "Zone shrunk" };
     }
     default:
-      throw new HttpsError("invalid-argument", `Unknown action: ${action}`);
+      throw apiError("invalid-argument", "invalidArgument", `Unknown action: ${action}`);
   }
 });

@@ -13,6 +13,7 @@ import { randomInt } from "crypto";
 // + discriminated-union narrowing on `event.type`.
 import Stripe = require("stripe");
 
+import { CALLABLE_OPTIONS, requireUid } from "./config";
 import { sendRegistrationConfirmationEmail } from "./email/registrationConfirmation";
 import { appendRegistrationRow, markRegistrationRefunded } from "./sheets";
 
@@ -870,11 +871,8 @@ function normalizeJoinCode(value: unknown): string {
 export const validateRegistrationCode = onCall<
   ValidateRegistrationCodeInput,
   Promise<ValidateRegistrationCodeResult>
->({ region: REGION }, async (request) => {
-  if (!request.auth) {
-    throw new HttpsError("unauthenticated", "Sign in required");
-  }
-  const uid = request.auth.uid;
+>(CALLABLE_OPTIONS, async (request) => {
+  const uid = requireUid(request);
   const batchId = normalizeBatchId(request.data?.batchId);
   const code = normalizeJoinCode(request.data?.code);
   if (!batchId || !code) return { status: "invalid" };

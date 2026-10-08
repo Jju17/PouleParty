@@ -1,9 +1,10 @@
-import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
-import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { FieldValue, Timestamp } from "firebase-admin/firestore";
+import { onCall } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/v2";
 import { mirrorGameMetaInline } from "./rtdbMirror";
+import { CALLABLE_OPTIONS, apiError, db, requireString, requireUid } from "./config";
 
-const REGION = "europe-west1";
+export const MAX_TEAM_NAME_LENGTH = 30;
 
 // Single source of truth for game membership. `game.roles` is a map
 // `{ <uid>: Role }` on the game doc; a uid has exactly one role, so a
@@ -62,11 +63,11 @@ export function isGameMaster(game: GameData | undefined, uid: string): boolean {
 }
 
 function gameRef(gameId: string) {
-  return getFirestore().collection("games").doc(gameId);
+  return db().collection("games").doc(gameId);
 }
 
 function playerRef(gameId: string, uid: string) {
-  return getFirestore()
+  return db()
     .collection("games")
     .doc(gameId)
     .collection("players")
@@ -74,7 +75,7 @@ function playerRef(gameId: string, uid: string) {
 }
 
 function membershipRef(uid: string, gameId: string) {
-  return getFirestore()
+  return db()
     .collection("users")
     .doc(uid)
     .collection("memberships")
@@ -82,28 +83,27 @@ function membershipRef(uid: string, gameId: string) {
 }
 
 function userRef(uid: string) {
-  return getFirestore().collection("users").doc(uid);
+  return db().collection("users").doc(uid);
 }
 
-function ensureGameId(gameId: unknown): string {
-  if (typeof gameId !== "string" || gameId.trim().length === 0) {
-    throw new HttpsError("invalid-argument", "gameId is required");
+export function ensureTeamName(value: unknown): string {
+  if (typeof value !== "string") {
+    throw apiError("invalid-argument", "invalidArgument", "teamName is required");
   }
-  return gameId;
+  const trimmed = value.trim();
+  if (trimmed.length === 0 || trimmed.length > MAX_TEAM_NAME_LENGTH) {
+    throw apiError("invalid-argument", "invalidArgument", `teamName must be 1 to ${MAX_TEAM_NAME_LENGTH} characters`);
+  }
+  return trimmed;
 }
 
-function ensureUid(value: unknown, label: string): string {
-  if (typeof value !== "string" || value.trim().length === 0) {
-    throw new HttpsError("invalid-argument", `${label} is required`);
-  }
-  return value;
-}
-
-function ensureTeamName(value: unknown): string {
-  if (typeof value !== "string" || value.trim().length === 0) {
-    throw new HttpsError("invalid-argument", "teamName is required");
-  }
-  return value.trim();
+function paidClaimQuery(batchId: string, uid: string) {
+  return db()
+    .collection("eventRegistrations")
+    .where("batchId", "==", batchId)
+    .where("claimedBy", "==", uid)
+    .where("paid", "==", true)
+    .limit(1);
 }
 
 // Mirror a user's role into the reverse index `/users/{uid}/memberships/{gameId}`
@@ -121,41 +121,40 @@ function setMembership(
 }
 
 /**
- * Joins the caller as a hunter. Replaces the old client-side
- * `arrayUnion(hunterIds)` + direct `/registrations` write — membership is
- * now server-authoritative. The PP-52 validation-code gate (when the game
- * is batch-linked) runs in `validateRegistrationCode` BEFORE this call;
- * `joinGame` only records the hunter.
+ * Joins the caller as a hunter. On a game linked to a paid batch, the caller
+ * must already own a paid registration claimed by `validateRegistrationCode`.
  */
-export const joinGame = onCall({ region: REGION }, async (request) => {
-  const uid = request.auth?.uid;
-  if (!uid) throw new HttpsError("unauthenticated", "Sign in required");
-
-  const gameId = ensureGameId(request.data?.gameId);
+export const joinGame = onCall(CALLABLE_OPTIONS, async (request) => {
+  const uid = requireUid(request);
+  const gameId = requireString(request.data?.gameId, "gameId");
   const teamName = ensureTeamName(request.data?.teamName);
 
-  await getFirestore().runTransaction(async (tx) => {
+  await db().runTransaction(async (tx) => {
     const game = (await tx.get(gameRef(gameId))).data();
-    if (!game) throw new HttpsError("not-found", "Game not found");
+    if (!game) throw apiError("not-found", "gameNotFound", "Game not found");
 
     const status = typeof game.status === "string" ? game.status : "";
     if (!JOINABLE_STATUSES.includes(status)) {
-      throw new HttpsError("failed-precondition", "Game is not joinable");
+      throw apiError("failed-precondition", "gameNotJoinable", "Game is not joinable");
     }
 
     const existing = roleOf(game, uid);
     if (existing === "chicken" || existing === "gameMaster") {
-      throw new HttpsError(
-        "failed-precondition",
-        "You already have a role in this game"
-      );
+      throw apiError("failed-precondition", "alreadyHasRole", "You already have a role in this game");
     }
 
     if (existing !== "hunter") {
+      const batchId = typeof game.registrationBatchId === "string" ? game.registrationBatchId : "";
+      if (batchId !== "") {
+        const claim = await tx.get(paidClaimQuery(batchId, uid));
+        if (claim.empty) {
+          throw apiError("failed-precondition", "registrationRequired", "A paid registration code is required");
+        }
+      }
       const maxPlayers =
         typeof game.maxPlayers === "number" ? game.maxPlayers : 0;
       if (huntersOf(game).length + 1 > maxPlayers) {
-        throw new HttpsError("resource-exhausted", "Game is full");
+        throw apiError("resource-exhausted", "gameFull", "Game is full");
       }
       tx.update(gameRef(gameId), { [`roles.${uid}`]: "hunter" });
       setMembership(tx, uid, gameId, "hunter");
@@ -182,38 +181,27 @@ export const joinGame = onCall({ region: REGION }, async (request) => {
  * role — no ghost). The old chicken's team name defaults to their saved
  * nickname when they had none.
  */
-export const designateChicken = onCall({ region: REGION }, async (request) => {
-  const uid = request.auth?.uid;
-  if (!uid) throw new HttpsError("unauthenticated", "Sign in required");
+export const designateChicken = onCall(CALLABLE_OPTIONS, async (request) => {
+  const uid = requireUid(request);
+  const gameId = requireString(request.data?.gameId, "gameId");
+  const newChickenUid = requireString(request.data?.newChickenUid, "newChickenUid");
 
-  const gameId = ensureGameId(request.data?.gameId);
-  const newChickenUid = ensureUid(request.data?.newChickenUid, "newChickenUid");
-
-  await getFirestore().runTransaction(async (tx) => {
+  await db().runTransaction(async (tx) => {
     const game = (await tx.get(gameRef(gameId))).data();
-    if (!game) throw new HttpsError("not-found", "Game not found");
+    if (!game) throw apiError("not-found", "gameNotFound", "Game not found");
 
     const status = typeof game.status === "string" ? game.status : "";
     if (status !== "waiting") {
-      throw new HttpsError(
-        "failed-precondition",
-        "The chicken can only be re-designated while the game is waiting"
-      );
+      throw apiError("failed-precondition", "notWaiting", "The chicken can only be re-designated while the game is waiting");
     }
 
     const isCreator = game.creatorId === uid;
     if (!isCreator && roleOf(game, uid) !== "gameMaster") {
-      throw new HttpsError(
-        "permission-denied",
-        "Only the creator or a GameMaster can designate the chicken"
-      );
+      throw apiError("permission-denied", "notAllowed", "Only the creator or a GameMaster can designate the chicken");
     }
 
     if (roleOf(game, newChickenUid) !== "hunter") {
-      throw new HttpsError(
-        "failed-precondition",
-        "The new chicken must currently be a hunter"
-      );
+      throw apiError("failed-precondition", "notAHunter", "The new chicken must currently be a hunter");
     }
 
     const oldChickenUid = chickenIdOf(game);
@@ -247,7 +235,7 @@ export const designateChicken = onCall({ region: REGION }, async (request) => {
     // The demoted chicken becomes a hunter and needs a team name.
     if (oldChickenUid) {
       tx.set(playerRef(gameId, oldChickenUid), {
-        teamName: oldChickenTeamName,
+        teamName: oldChickenTeamName.slice(0, MAX_TEAM_NAME_LENGTH),
         joinedAt: Timestamp.now(),
       });
       setMembership(tx, oldChickenUid, gameId, "hunter");
@@ -264,23 +252,21 @@ export const designateChicken = onCall({ region: REGION }, async (request) => {
  * the chicken cancels the game instead (the creator-only `status -> done`
  * rule). Clears the role, the team-name doc, and the membership index.
  */
-export const leaveGame = onCall({ region: REGION }, async (request) => {
-  const uid = request.auth?.uid;
-  if (!uid) throw new HttpsError("unauthenticated", "Sign in required");
+export const leaveGame = onCall(CALLABLE_OPTIONS, async (request) => {
+  const uid = requireUid(request);
+  const gameId = requireString(request.data?.gameId, "gameId");
 
-  const gameId = ensureGameId(request.data?.gameId);
-
-  await getFirestore().runTransaction(async (tx) => {
+  await db().runTransaction(async (tx) => {
     const game = (await tx.get(gameRef(gameId))).data();
-    if (!game) throw new HttpsError("not-found", "Game not found");
+    if (!game) throw apiError("not-found", "gameNotFound", "Game not found");
 
     const role = roleOf(game, uid);
-    if (role === null) return; // already not a member
+    if (role === null) {
+      tx.delete(membershipRef(uid, gameId));
+      return;
+    }
     if (role === "chicken") {
-      throw new HttpsError(
-        "failed-precondition",
-        "The chicken cannot leave; cancel the game instead"
-      );
+      throw apiError("failed-precondition", "chickenCannotLeave", "The chicken cannot leave; cancel the game instead");
     }
 
     tx.update(gameRef(gameId), { [`roles.${uid}`]: FieldValue.delete() });

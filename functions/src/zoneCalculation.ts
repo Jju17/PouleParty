@@ -1,4 +1,5 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { CALLABLE_OPTIONS, requireUid } from "./config";
 import {
   deterministicDriftCenterServer,
   haversineDistance,
@@ -23,7 +24,6 @@ import {
  * client wrappers mirror this contract field-for-field.
  */
 
-const REGION = "europe-west1";
 
 // Constants — kept identical to the iOS / Android mirrors so any client
 // that still runs the old helpers (during the PP-13 phase-2 rollout
@@ -456,7 +456,8 @@ export function computeZoneConfigurationCore(
 export const computeZoneConfiguration = onCall<
   ComputeZoneConfigurationInput,
   Promise<ComputeZoneConfigurationOutput>
->({ region: REGION }, async (request) => {
+>(CALLABLE_OPTIONS, async (request) => {
+  requireUid(request);
   return computeZoneConfigurationCore(request.data ?? {});
 });
 
