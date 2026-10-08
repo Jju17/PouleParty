@@ -160,7 +160,6 @@ fun AppNavigation(session: AppSessionViewModel = hiltViewModel()) {
                 onOpenValidationQueue = {
                     navController.navigate(Routes.validationQueue(gameId))
                 },
-                // PP-107: chicken was swapped to a plain hunter mid-`waiting`.
                 onBecameHunter = { gid, teamName ->
                     navController.navigate(Routes.hunterMap(gid, teamName)) {
                         popUpTo(Routes.chickenMap(gameId)) { inclusive = true }
@@ -189,7 +188,6 @@ fun AppNavigation(session: AppSessionViewModel = hiltViewModel()) {
                         popUpTo(Routes.HOME) { inclusive = false }
                     }
                 },
-                // PP-107: this hunter was re-designated chicken mid-`waiting`.
                 onBecameChicken = { gid ->
                     navController.navigate(Routes.chickenMap(gid, becameChicken = true)) {
                         popUpTo(Routes.hunterMap(gameId, hunterName)) { inclusive = true }

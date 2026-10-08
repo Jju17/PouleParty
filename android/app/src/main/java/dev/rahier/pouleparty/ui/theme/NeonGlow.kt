@@ -15,7 +15,7 @@ import androidx.compose.ui.unit.dp
 /**
  * Intensity of the neon glow halo, mirroring the iOS `NeonGlow.GlowIntensity`.
  * Higher intensities stack more blurred layers at wider radii for a stronger
- * "bright lamp" feel — used on key CTAs (countdown text, active power-up badges).
+ * "bright lamp" feel, used on key CTAs (countdown text, active power-up badges).
  * `SUBTLE` is best for incidental accents (map bar buttons, notifications).
  */
 enum class NeonGlowIntensity { SUBTLE, MEDIUM, INTENSE }

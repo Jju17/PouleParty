@@ -250,7 +250,7 @@ class PowerUpLifecycleTest {
         // Returning null left the countdown anchored on a past tick, which
         // overshot endDate after freeze expired. The new contract is to
         // keep `currentRadius` and roll `nextRadiusUpdate` forward by one
-        // interval so countdowns stay monotonic — see GameTimerHelper.kt.
+        // interval so countdowns stay monotonic, see GameTimerHelper.kt.
         assertNotNull(result)
         assertEquals(1000, result?.newRadius)
         assertFalse(result?.isGameOver == true)

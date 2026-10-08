@@ -70,8 +70,6 @@ fun PowerUpsStep(
         }
 
         if (powerUpsEnabled) {
-            // PP-35: strict filter. Only count and offer power-ups that
-            // actually work in the current game mode.
             val available = availablePowerUpTypes(gameMod)
             val availableRaw = available.map { it.firestoreValue }.toSet()
             val enabledCount = enabledPowerUpTypes.count { it in availableRaw }

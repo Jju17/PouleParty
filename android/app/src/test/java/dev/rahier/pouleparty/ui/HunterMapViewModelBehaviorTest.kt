@@ -56,11 +56,6 @@ class HunterMapViewModelBehaviorTest {
         io.mockk.every { gameRepository.powerUpsFlow(any()) } returns kotlinx.coroutines.flow.emptyFlow()
         io.mockk.every { presenceRepository.chickenLocationFlow(any()) } returns kotlinx.coroutines.flow.emptyFlow()
         io.mockk.every { gameRepository.challengesStream(any()) } returns kotlinx.coroutines.flow.emptyFlow()
-        // CRIT-2/CRIT-3 (audit 2026-05-17): the foundCode check is now
-        // server-side via `submitFoundCode`. Default the mock to accept
-        // only the Game.mock canonical code "1234" — every other code
-        // gets a `InvalidCode` rejection, mirroring the real CF. Tests
-        // that need throw-based failure modes override per-test.
         io.mockk.coEvery {
             gameFunctions.submitFoundCode(any(), any(), any())
         } coAnswers {
@@ -72,9 +67,6 @@ class HunterMapViewModelBehaviorTest {
                 )
             }
         }
-        // CRIT-2: chicken-side foundCode fetch (harmless for hunter VM
-        // tests since it's only invoked from ChickenMapViewModel; the
-        // relaxed mock returns "" by default which is fine).
         io.mockk.coEvery { gameFunctions.getFoundCode(any()) } returns "1234"
     }
 
@@ -150,8 +142,6 @@ class HunterMapViewModelBehaviorTest {
         val vm = createViewModel()
         vm.onIntent(HunterMapIntent.EnteredCodeChanged("9999"))
         vm.onIntent(HunterMapIntent.SubmitFoundCode)
-        // CRIT-2 (audit 2026-05-17): wrong-code check is now server-side;
-        // advance the dispatcher so the CF mock resolves before asserting.
         testDispatcher.scheduler.advanceUntilIdle()
         assertTrue(vm.uiState.value.showWrongCodeAlert)
         assertEquals("", vm.uiState.value.enteredCode)
@@ -501,8 +491,6 @@ class HunterMapViewModelBehaviorTest {
         assertFalse(vm.uiState.value.hasChallenges)
     }
 
-    // MARK:, submitFoundCode retry flow (CRIT-3 audit 2026-05-17)
-
     @Test
     fun `submitFoundCode with correct code clears pendingFoundCode on success`() {
         val vm = createViewModel()
@@ -565,11 +553,6 @@ class HunterMapViewModelBehaviorTest {
 
     @Test
     fun `retryWinnerRegistration re-sends same code and name across retries`() {
-        // CRIT-3: the user-typed code must be the SAME on each retry. The
-        // server stamps the winner's timestamp at success, so we don't
-        // preserve a Winner across retries anymore; but if the retry sent
-        // a different code, the hunter could in theory submit a wrong code
-        // after the typed one was forgotten.
         val codesCaptured = mutableListOf<String>()
         val namesCaptured = mutableListOf<String>()
         io.mockk.coEvery {
@@ -665,7 +648,7 @@ class HunterMapViewModelBehaviorTest {
         io.mockk.every { gameRepository.gameConfigFlow(any()) } returns
             kotlinx.coroutines.flow.flowOf(game)
 
-        // Emit a chicken position 2 km away — this MUST NOT become the
+        // Emit a chicken position 2 km away, this MUST NOT become the
         // zone center in stayInTheZone.
         val strayChicken = com.mapbox.geojson.Point.fromLngLat(4.3700, 50.8700)
         val strayChickenLoc = dev.rahier.pouleparty.model.ChickenLocation(
@@ -729,26 +712,7 @@ class HunterMapViewModelBehaviorTest {
         assertEquals(chickenPos.longitude(), centerNow?.longitude())
     }
 
-    // MARK:, First-write throttle regression (bug 3)
-    //
-    // The initial `setHunterLocation` used to be gated behind
-    // `locationRepository.getLastLocation()` returning a cached fix. If
-    // it returned null, the throttle was already armed at `Date.now` and
-    // the FIRST coord from `locationFlow` was blocked for 5 s. Result:
-    // in a small 2-device test, the hunter marker stayed invisible on
-    // the chicken's map for the first several seconds even though the
-    // hunter was moving. Fix: keep `lastWrite` at epoch until the first
-    // successful write, so the first `locationFlow` emit triggers an
-    // unthrottled write.
-    // MARK: - PP-19 end-game stays on map
-    //
-    // Hunter mirror of `ChickenMapViewModelBehaviorTest` PP-19 block.
-    // The map stays mounted at gameOver; `isGameOver` flips to true;
-    // GPS writes stop. Only `winnerRegistered` (scenario 4) keeps the
-    // Victory transition. The found code stays active after gameOver
-    // (scenario 6, per PP-2).
-
-    /** Scenario 1 (hunter): timeout — `nowDate >= endDate` flips
+    /** Scenario 1 (hunter): timeout, `nowDate >= endDate` flips
      *  `isGameOver` and shows the alert. No auto-transition. */
     @Test
     fun `pp19 timeout flips isGameOver and shows alert without transition`() {
@@ -851,9 +815,6 @@ class HunterMapViewModelBehaviorTest {
         assertFalse("must NOT auto-transition to Victory", vm.uiState.value.shouldNavigateToVictory)
     }
 
-    /** Scenario 4 (PP-16 exception): an individual hunter entering the
-     *  correct found code triggers the transition to Victory — the
-     *  personal-win path is preserved. */
     @Test
     fun `pp19 winnerRegistered keeps the Victory transition`() {
         val vm = createViewModel()
@@ -863,9 +824,6 @@ class HunterMapViewModelBehaviorTest {
         assertTrue("Personal win still navigates to Victory", vm.uiState.value.shouldNavigateToVictory)
     }
 
-    /** PP-107: when a GameMaster re-designates this hunter as the chicken
-     *  mid-`waiting`, the live game-config emission must re-route to the
-     *  chicken map (mirrors iOS `becameChicken` delegate). */
     @Test
     fun `pp107 hunter whose uid becomes chicken re-routes to chicken map`() = kotlinx.coroutines.test.runTest(testDispatcher) {
         val now = System.currentTimeMillis()
@@ -905,9 +863,6 @@ class HunterMapViewModelBehaviorTest {
         )
     }
 
-    /** Scenario 6 (PP-2): the FOUND code stays active for the hunter
-     *  even after `isGameOver` is set, so a straggler can still close
-     *  the loop. */
     @Test
     fun `pp19 found code still works after isGameOver flips`() {
         val now = System.currentTimeMillis()
@@ -933,9 +888,6 @@ class HunterMapViewModelBehaviorTest {
         vm.onIntent(HunterMapIntent.SubmitFoundCode)
         testDispatcher.scheduler.advanceUntilIdle()
 
-        // The submit path is NOT gated on isGameOver — submitFoundCode is
-        // dispatched and the hunter heads to Victory (their personal win
-        // path stays open per PP-2).
         assertTrue(
             "Found code must stay active after gameOver",
             vm.uiState.value.shouldNavigateToVictory
@@ -1011,7 +963,7 @@ class HunterMapViewModelBehaviorTest {
 
         val vm = createViewModel()
         testDispatcher.scheduler.runCurrent()
-        // Crucially DON'T advance past the 5 s throttle window — the
+        // Crucially DON'T advance past the 5 s throttle window, the
         // whole point of the fix is that the first emit is unthrottled.
         testDispatcher.scheduler.advanceTimeBy(100)
         testDispatcher.scheduler.runCurrent()

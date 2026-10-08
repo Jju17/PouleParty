@@ -102,7 +102,7 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    /** Kept as a direct API (not an Intent) — read synchronously by composables. */
+    /** Kept as a direct API (not an Intent), read synchronously by composables. */
     fun currentUserId(): String = auth.currentUser?.uid ?: ""
 
     init {
@@ -183,7 +183,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             val success = try {
                 val userId = auth.currentUser?.uid
-                // Delete Firestore user profile first — the security rule requires
+                // Delete Firestore user profile first, the security rule requires
                 // auth.uid == userId, which stops holding once the auth user is deleted.
                 if (userId != null) {
                     profiles.deleteProfile(userId)

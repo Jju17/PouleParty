@@ -44,7 +44,6 @@ data class HomeUiState(
     /** Distinguishes "Reprendre" (IN_PROGRESS) from "Prochaine partie"
      *  (UPCOMING) for the Home banner copy + CTA. Null when no active game. */
     val activeGamePhase: dev.rahier.pouleparty.model.GamePhase? = null,
-    /** PP-45: admin-code dialog open / current input / wrong-code error. */
     val isShowingAdminCodeDialog: Boolean = false,
     val adminCodeInput: String = "",
     val isShowingAdminCodeError: Boolean = false,
@@ -52,10 +51,8 @@ data class HomeUiState(
     val isShowingDemoCodeDialog: Boolean = false,
     val demoCodeInput: String = "",
     val isShowingDemoCodeError: Boolean = false,
-    /** PP-88: 4-digit buffer + last error from joinAsGameMaster. */
     val gameMasterPasswordInput: String = "",
     val gameMasterPasswordError: String? = null,
-    /** PP-52: registration-code buffer + last error for paid-event join gate. */
     val validationCodeInput: String = "",
     val validationCodeError: String? = null,
 ) {
@@ -89,9 +86,6 @@ class HomeViewModel @Inject constructor(
     private val analyticsRepository: dev.rahier.pouleparty.data.AnalyticsRepository,
     private val prefs: SharedPreferences,
     private val auth: FirebaseAuth,
-    // CRIT-8 (audit 2026-05-17): @ApplicationContext for `getString` calls
-    // when surfacing user-facing errors from the VM. Stays on the app
-    // singleton so it's process-scoped — no Activity leak risk.
     @dagger.hilt.android.qualifiers.ApplicationContext
     private val appContext: android.content.Context,
     private val remoteConfig: dev.rahier.pouleparty.config.RemoteConfigProvider,
@@ -112,7 +106,7 @@ class HomeViewModel @Inject constructor(
             HomeIntent.GameNotFoundDismissed -> onGameNotFoundDismissed()
             HomeIntent.LocationRequiredDismissed -> onLocationRequiredDismissed()
             HomeIntent.LocationPermissionDenied -> onLocationPermissionDenied()
-            HomeIntent.CreatePartyTapped -> { /* host handles — see [canCreateParty] */ }
+            HomeIntent.CreatePartyTapped -> { /* host handles, see [canCreateParty] */ }
             HomeIntent.CreatePartyLongPressed -> onCreatePartyLongPressed()
             HomeIntent.JoinSheetDismissed -> onJoinSheetDismissed()
             HomeIntent.ToggleMusic -> toggleMusicMuted()
@@ -205,9 +199,6 @@ class HomeViewModel @Inject constructor(
                     }
                     _effects.send(HomeEffect.NavigateToGameMasterMap(game.id))
                 } else {
-                    // CRIT-8 (audit 2026-05-17): resolve via @ApplicationContext
-                    // so NL / EN users see localized copy instead of French
-                    // literals.
                     val msg = if (result.lockedUntilMs != null) {
                         val mins = ((result.lockedUntilMs - System.currentTimeMillis()) / 60_000L).coerceAtLeast(1L).toInt()
                         appContext.getString(dev.rahier.pouleparty.R.string.join_flow_gm_too_many_attempts, mins)
@@ -470,10 +461,6 @@ class HomeViewModel @Inject constructor(
                     _uiState.update { it.copy(joinStep = JoinFlowStep.CodeNotFound) }
                     return@launch
                 }
-                // Block the chicken from joining their own game as a hunter:
-                // they'd end up in both `chickenId` and `hunterIds` and
-                // break the map (PP-26 — the chicken may be any designated
-                // user, not just the creator).
                 if (game.isChicken(userId)) {
                     _uiState.update { it.copy(joinStep = JoinFlowStep.CodeNotFound) }
                     return@launch
@@ -485,8 +472,6 @@ class HomeViewModel @Inject constructor(
                     _uiState.update { it.copy(joinStep = JoinFlowStep.GameFull) }
                     return@launch
                 }
-                // PP-90: pre-fill teamName from the saved nickname so the
-                // user can join in one tap if they're happy with the default.
                 val savedNickname = prefs.getTrimmedString(AppConstants.PREF_USER_NICKNAME)
                 _uiState.update {
                     it.copy(
@@ -495,7 +480,7 @@ class HomeViewModel @Inject constructor(
                     )
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
-                // Sheet was dismissed or a newer validation started — don't
+                // Sheet was dismissed or a newer validation started, don't
                 // update state and don't flip to NetworkError.
                 throw e
             } catch (e: Exception) {
@@ -515,9 +500,6 @@ class HomeViewModel @Inject constructor(
     private fun onJoinAsHunterTapped() {
         val step = _uiState.value.joinStep
         if (step !is JoinFlowStep.CodeValidated) return
-        // PP-52: a game linked to a paid registration batch requires the unique
-        // registration code (validated server-side) before the teamName step.
-        // Free games (registrationBatchId == null) go straight to teamName.
         val next = if (step.game.registrationBatchId != null) {
             JoinFlowStep.ValidationCodeEntry(step.game)
         } else {
@@ -529,18 +511,11 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun onValidationCodeChanged(code: String) {
-        // Same alphabet as the email code (alphanum, no O/0/1/I). Uppercase to
-        // match the server-side normalization; clear any prior error on edit.
         _uiState.update {
             it.copy(validationCodeInput = code.trim().uppercase(), validationCodeError = null)
         }
     }
 
-    /**
-     * PP-52: validates the registration code server-side and single-use-claims
-     * it. `valid` → advance to the teamName step; `invalid` / `alreadyUsed` →
-     * inline error, stay on the step. Network failure → NetworkError.
-     */
     private fun onSubmitValidationCodeTapped() {
         val step = _uiState.value.joinStep
         if (step !is JoinFlowStep.ValidationCodeEntry) return
@@ -586,13 +561,6 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    /**
-     * PP-90: collects the teamName, writes the registration doc keyed by
-     * userId, then navigates to the hunter map. Anyone can join at any
-     * point — there's no deadline. The registration subcollection is
-     * still written so PP-86 GameMaster can pick a chicken from the
-     * teamName list.
-     */
     private fun onSubmitJoinTapped() {
         val step = _uiState.value.joinStep
         if (step !is JoinFlowStep.JoiningWithTeamName) return
@@ -604,9 +572,6 @@ class HomeViewModel @Inject constructor(
         _uiState.update { it.copy(joinStep = JoinFlowStep.SubmittingJoin(game)) }
         viewModelScope.launch {
             try {
-                // PP-107: `joinGame` writes the hunter role + the
-                // `/players/{uid}` team-name doc + the membership index
-                // server-side, in one atomic call.
                 gameFunctions.joinGame(game.id, teamName)
                 analyticsRepository.registrationCompleted()
                 _uiState.update {

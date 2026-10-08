@@ -137,7 +137,7 @@ class OnboardingViewModel @Inject constructor(
      * Returns the final nickname to persist when the user taps "Let's Go".
      * Returns null if the typed nickname triggers the profanity filter (the
      * caller stays on the screen so the user can fix it). An empty nickname
-     * is auto-generated via [RandomNickname] — Apple 5.1.5 makes every
+     * is auto-generated via [RandomNickname], Apple 5.1.5 makes every
      * slide skippable, and the player always needs a teamName.
      */
     fun resolveFinalNickname(): String? {

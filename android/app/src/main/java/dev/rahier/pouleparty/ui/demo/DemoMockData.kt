@@ -44,7 +44,6 @@ object DemoMockData {
         gameMode = GameMod.FOLLOW_THE_CHICKEN.firestoreValue,
         chickenCanSeeHunters = true,
         foundCode = "0000",
-        // PP-107: membership is the single `roles` map (chicken + hunters + GM).
         roles = mapOf(
             CHICKEN_ID to "chicken",
             HUNTER_1_ID to "hunter",

@@ -194,13 +194,6 @@ class ChickenMapViewModelBehaviorTest {
 
     // MARK: - Radar Ping broadcast in stayInTheZone
 
-    /**
-     * Regression guard for the 1.6.3 fix: in stayInTheZone, the chicken's location
-     * is written to Firestore via a dedicated timer loop while a radar ping is active,
-     * even if the chicken has not moved (CoreLocation/FusedLocation 10 m distance
-     * filter would otherwise suppress the `locationFlow` emission that originally
-     * triggered writes).
-     */
     @Test
     fun `radarPingBroadcastLoop writes chicken location while ping is active in stayInTheZone`() {
         val now = System.currentTimeMillis()
@@ -280,7 +273,7 @@ class ChickenMapViewModelBehaviorTest {
 
     /**
      * The chicken stationary rebroadcaster runs continuously regardless of
-     * radar-ping state — gating it on ping landed us with a stale write
+     * radar-ping state, gating it on ping landed us with a stale write
      * window when the 3 s ping fired right after a long stationary period.
      * The hunter-side UI is now what decides when to render the marker
      * (`game.isRadarPingActive`). This test asserts the loop fires writes
@@ -318,14 +311,7 @@ class ChickenMapViewModelBehaviorTest {
         }
     }
 
-    // MARK: - PP-19 end-game stays on map
-    //
-    // The map must stay mounted at gameOver — `isGameOver` flips to
-    // true, no auto-transition to Victory. The GPS write loop stops
-    // (no `setChickenLocation` writes after gameOver). Mirrors iOS
-    // `ChickenMapFeatureTests` PP-19 block.
-
-    /** Scenario 1 (chicken): timeout — `nowDate >= endDate` flips
+    /** Scenario 1 (chicken): timeout, `nowDate >= endDate` flips
      *  `isGameOver`. No auto-transition to Victory; map stays mounted. */
     @Test
     fun `pp19 timeout flips isGameOver without transition`() {
@@ -348,7 +334,7 @@ class ChickenMapViewModelBehaviorTest {
         testDispatcher.scheduler.runCurrent()
 
         assertTrue("isGameOver must flip true on timeout", vm.uiState.value.isGameOver)
-        // The map is still mounted — no NavigateToVictory effect was
+        // The map is still mounted, no NavigateToVictory effect was
         // dispatched (effect emission is not asserted unit-level; the
         // post-condition is `isGameOver = true`, screen stays put).
     }
@@ -422,7 +408,7 @@ class ChickenMapViewModelBehaviorTest {
         testDispatcher.scheduler.runCurrent()
         assertTrue("Precondition: isGameOver true", vm.uiState.value.isGameOver)
 
-        // Now try to push a fresh coord through the cancelled flow —
+        // Now try to push a fresh coord through the cancelled flow ,
         // the collector is gone, so setChickenLocation must NOT fire.
         kotlinx.coroutines.runBlocking {
             locationFlow.emit(com.mapbox.geojson.Point.fromLngLat(4.3600, 50.8500))
@@ -436,7 +422,7 @@ class ChickenMapViewModelBehaviorTest {
     }
 
     /**
-     * In followTheChicken mode, the dedicated radar-ping loop must not be scheduled —
+     * In followTheChicken mode, the dedicated radar-ping loop must not be scheduled ,
      * writes are already driven by the main locationFlow. We assert that by using a
      * game that has radarPing active in followTheChicken mode with an EMPTY
      * locationFlow: no writes should happen, proving the radar-ping loop never kicked
@@ -472,7 +458,7 @@ class ChickenMapViewModelBehaviorTest {
         testDispatcher.scheduler.runCurrent()
 
         // In followTheChicken, `locationRepository.getLastLocation()` would be called
-        // once by the primary track path — but it returns null, and the radar-ping
+        // once by the primary track path, but it returns null, and the radar-ping
         // loop (which *would* use it) isn't scheduled, so no writes fire.
         io.mockk.coVerify(exactly = 0) {
             presenceRepository.setChickenLocation(any(), any())

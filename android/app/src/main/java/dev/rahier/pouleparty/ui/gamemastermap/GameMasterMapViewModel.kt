@@ -38,13 +38,6 @@ import kotlinx.coroutines.launch
 import java.util.Date
 import javax.inject.Inject
 
-/**
- * Read-only map state for the GameMaster role (PP-24). Mirrors iOS
- * `GameMasterMapFeature.State` — same shape as the Chicken/Hunter
- * states (so shared composables work) but power-up tray fields are
- * always empty and `isOutsideZone` is never set (the GM is a pure
- * spectator and is not zone-checked).
- */
 data class GameMasterMapUiState(
     override val game: Game = Game.mock,
     val loadState: LoadState = LoadState.Loading,
@@ -52,16 +45,12 @@ data class GameMasterMapUiState(
     val chickenIsInvisible: Boolean = false,
     val hunterAnnotations: List<HunterAnnotation> = emptyList(),
     /** Raw hunter locations cached so marker labels can be rebuilt when
-     *  the registrations stream emits — a hunter's team name may land
+     *  the registrations stream emits, a hunter's team name may land
      *  after their first location ping. */
     val hunterLocations: List<dev.rahier.pouleparty.model.HunterLocation> = emptyList(),
     val powerUpAnnotations: List<PowerUp> = emptyList(),
-    /** PP-86: registrations preloaded once at game load so the drawer
-     *  can render teamNames + offer designation. */
     val registrations: List<dev.rahier.pouleparty.model.Registration> = emptyList(),
-    /** PP-86: hunter awaiting confirmation. Non-null = alert showing. */
     val pendingChickenDesignation: dev.rahier.pouleparty.model.Registration? = null,
-    /** PP-86: last error message from `designateChicken` to surface. */
     val designationError: UiText? = null,
     override val nextRadiusUpdate: Date? = null,
     override val nowDate: Date = Date(),
@@ -85,9 +74,7 @@ data class GameMasterMapUiState(
     override val showPowerUpInventory: Boolean = false,
     override val powerUpNotification: UiText? = null,
     override val lastActivatedPowerUpType: PowerUpType? = null,
-    /** PP-71: in flight while `launchGame` runs. */
     val isLaunching: Boolean = false,
-    /** PP-71: last error from `launchGame`. Null clears the alert. */
     val launchError: UiText? = null,
     /** True once `game.status == DONE` lands. Drives the "Game ended"
      *  banner overlay; tapping the banner fires `ViewLeaderboardTapped`
@@ -255,12 +242,6 @@ class GameMasterMapViewModel @Inject constructor(
                 if (game != null) onGameUpdated(game)
             }
         }
-        // PP-86 + GM-live-fix: stream registrations so the hunter
-        // counter + drawer team-name list update the instant a hunter
-        // joins, instead of staying frozen on a one-shot load. Also
-        // rebuild marker labels so a hunter's `teamName` replaces the
-        // index-based `Hunter N` fallback as soon as their registration
-        // doc lands.
         streamJobs += viewModelScope.launch {
             gameRepository.registrationsFlow(gameId).collect { regs ->
                 _uiState.update { state ->
@@ -273,9 +254,6 @@ class GameMasterMapViewModel @Inject constructor(
         }
         streamJobs += viewModelScope.launch {
             presenceRepository.chickenLocationFlow(gameId).collect { chickenLoc ->
-                // PP-87: GM always shows the chicken regardless of the
-                // `invisible` flag, but surfaces the flag so the marker
-                // can render in a distinct "hidden" style.
                 val point = chickenLoc?.let {
                     Point.fromLngLat(it.location.longitude, it.location.latitude)
                 }

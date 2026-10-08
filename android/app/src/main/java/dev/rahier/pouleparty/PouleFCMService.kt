@@ -17,7 +17,6 @@ class PouleFCMService : FirebaseMessagingService() {
 
     @Inject lateinit var pushRegistrar: PushRegistrar
 
-
     companion object {
         private const val TAG = "PouleFCMService"
 

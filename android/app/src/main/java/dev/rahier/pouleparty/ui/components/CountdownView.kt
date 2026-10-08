@@ -18,9 +18,6 @@ fun CountdownView(
     nextUpdateDate: Date?,
     chickenStartDate: Date? = null,
     hunterStartDate: Date? = null,
-    /** PP-17 — when reached, the bar flips to the ENDED phase
-     *  (red "Overtime:" label + `+MM:SS` delta). Optional so legacy
-     *  callsites stay compatible. */
     endDate: Date? = null,
     isChicken: Boolean = false
 ) {
@@ -52,9 +49,6 @@ fun CountdownView(
         "$label %02d:%02d".format(minutes, seconds)
     }
 
-    // PP-17: crossfade the colour between phases (250 ms, mirrors
-    // iOS). The text re-renders every second without a re-mount, so
-    // only the colour interpolates while the digits keep ticking.
     val animatedColor by animateColorAsState(
         targetValue = if (isEnded) HunterRed else LocalContentColor.current,
         animationSpec = tween(durationMillis = 250),

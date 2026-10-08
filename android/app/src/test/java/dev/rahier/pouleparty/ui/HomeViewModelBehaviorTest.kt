@@ -282,8 +282,6 @@ class HomeViewModelBehaviorTest {
         assertNull(vm.uiState.value.activeGameRole)
     }
 
-    // ── PP-45: admin code dialog ──
-
     @Test
     fun `CreatePartyLongPressed opens admin code dialog without gating on location permission`() {
         every { locationRepository.hasFineLocationPermission() } returns false
@@ -378,8 +376,6 @@ class HomeViewModelBehaviorTest {
         assertFalse(vm.uiState.value.isShowingDemoCodeDialog)
         assertEquals("", vm.uiState.value.demoCodeInput)
     }
-
-    // ── PP-52: paid-event registration-code gate ──
 
     private fun driveToCodeValidated(game: Game): HomeViewModel {
         mockAuthUser("user-123")

@@ -30,13 +30,6 @@ import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 
-/**
- * Pins the Home banner phase-aware behaviour introduced on 2026-04-23:
- *  - `activeGamePhase` is populated from the repository's
- *    `ActiveGameResult.phase`
- *  - dismiss persists into a Set (not a single string)
- *  - rejoin clears the dismiss flag for the current game only
- */
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeActivePhaseTest {
 
@@ -194,7 +187,7 @@ class HomeActivePhaseTest {
 
         // Simulate the user re-seeing the banner somehow (e.g. opening via deep link)
         // and tapping rejoin. For this test we short-circuit by calling rejoin via
-        // forcing the state directly — not ideal but the goal is to verify the
+        // forcing the state directly, not ideal but the goal is to verify the
         // prefs write path, which tests at the ViewModel level.
         //
         // We mock the API so the banner shows again (opt out of dismiss).

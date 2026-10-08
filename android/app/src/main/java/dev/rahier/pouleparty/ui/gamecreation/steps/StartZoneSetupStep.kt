@@ -25,13 +25,6 @@ import dev.rahier.pouleparty.ui.theme.CROrange
 import dev.rahier.pouleparty.ui.theme.bangerStyle
 import dev.rahier.pouleparty.ui.theme.gameboyStyle
 
-/**
- * PP-11 — start pin step. In `stayInTheZone` the user only places the
- * start; the zone size is computed at the recap step (PP-13). In
- * `followTheChicken` a small / medium / large picker sets the radius
- * inline (no slider). The Next button is gated by
- * `state.isStartZoneConfigured`.
- */
 @Composable
 fun StartZoneSetupStep(
     game: Game,
@@ -84,7 +77,7 @@ fun StartZoneSetupStep(
                 initialRadius = game.zone.radius,
                 finalMarker = game.finalLocation,
                 onLocationSelected = onLocationSelected,
-                onFinalLocationSelected = { /* PP-11 never touches final */ },
+                onFinalLocationSelected = {  },
                 onRadiusChanged = onRadiusChanged,
                 isFollowMode = isFollowMode,
                 forcedPinMode = MapConfigPinMode.START,

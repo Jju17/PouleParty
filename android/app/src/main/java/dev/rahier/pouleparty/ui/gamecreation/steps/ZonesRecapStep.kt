@@ -47,17 +47,6 @@ import dev.rahier.pouleparty.ui.theme.CROrange
 import dev.rahier.pouleparty.ui.theme.ZoneGreen
 import dev.rahier.pouleparty.ui.theme.gameboyStyle
 
-/**
- * PP-13 phase 1 — read-only map preview of the upcoming game. Shows
- * the initial zone circle plus every future shrunk circle (rainbow
- * palette, numbered 1..N so the chicken reads the trajectory in
- * order) and the user-placed start + final pins inside the disc.
- * Hosts the PP-14 Shuffle button which regenerates
- * `Game.zone.driftSeed` (and re-picks the initial center). Phase 2
- * swaps the client-side `computeZoneRadius` +
- * `computeDebugShiftedCircles` calls for a PP-69 Cloud Function
- * response.
- */
 @Suppress("COMPOSE_APPLIER_CALL_MISMATCH")
 @Composable
 fun ZonesRecapStep(
@@ -108,7 +97,6 @@ fun ZonesRecapStep(
             modifier = Modifier.fillMaxSize(),
             mapViewportState = mapViewportState,
         ) {
-            // Initial radius — neon orange glow (matches PP-11 / PP-12).
             val initialPoints = circlePolygonPoints(game.initialLocation, game.zone.radius)
             PolylineAnnotation(points = initialPoints + listOf(initialPoints.first())) {
                 lineColor = CROrange.copy(alpha = 0.15f)
@@ -152,10 +140,6 @@ fun ZonesRecapStep(
                 }
             }
 
-            // PP-13: numbered badge on the initial disc (1) and on
-            // every shrink circle (2..N) so the chicken reads the
-            // trajectory in order. North-edge anchor keeps them on
-            // a single bearing for easy visual scanning.
             ViewAnnotation(
                 options = viewAnnotationOptions {
                     geometry(badgeAnchor(game.initialLocation, game.zone.radius, displayIndex = 1))
@@ -180,8 +164,6 @@ fun ZonesRecapStep(
                 }
             }
 
-            // User-placed pins — distinct from the geometric initial
-            // center which PP-13 picks elsewhere.
             ViewAnnotation(
                 options = viewAnnotationOptions {
                     geometry(game.startPinPoint)
@@ -205,7 +187,7 @@ fun ZonesRecapStep(
             }
         }
 
-        // Shuffle button — stayInTheZone only.
+        // Shuffle button, stayInTheZone only.
         if (isStay) {
             Box(
                 modifier = Modifier
@@ -232,11 +214,6 @@ fun ZonesRecapStep(
     }
 }
 
-/**
- * PP-13 numbered badge attached to each shrink circle so the chicken
- * reads the shrink order at a glance. The fill colour matches the
- * circle's stroke palette so users can pair label and outline.
- */
 @Composable
 private fun ShrinkOrderBadge(index: Int, color: Color) {
     Box(
@@ -268,7 +245,7 @@ private fun MapLabel(text: String, background: Color, textColor: Color) {
  * Places the numbered badge on the circle's outline at a stable
  * pseudo-random angle in the **NW quadrant** (270° → 360°, i.e.
  * west through north). Same circle index → same bearing on every
- * render — Shuffle doesn't move the badges, only the circles
+ * render, Shuffle doesn't move the badges, only the circles
  * themselves.
  */
 private fun badgeAnchor(center: Point, radius: Double, displayIndex: Int): Point {

@@ -16,7 +16,7 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * Behaviour tests for the MVI surface of [OnboardingViewModel] — verify
+ * Behaviour tests for the MVI surface of [OnboardingViewModel], verify
  * each [OnboardingIntent] mutates the state as expected.
  */
 class OnboardingViewModelBehaviorTest {
@@ -174,7 +174,7 @@ class OnboardingViewModelBehaviorTest {
 
     @Test
     fun `NicknameChanged with whitespace-only value advances NextPage on slide 5`() {
-        // Whitespace-only nicknames advance freely — they're treated as
+        // Whitespace-only nicknames advance freely, they're treated as
         // empty at `resolveFinalNickname` time and auto-replaced.
         val vm = createViewModel()
         vm.onIntent(OnboardingIntent.PageSet(5))

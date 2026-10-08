@@ -83,9 +83,6 @@ fun PowerUpSelectionScreen(
     onToggle: (PowerUpType) -> Unit,
     onDismiss: () -> Unit
 ) {
-    // PP-35: strict mode filter. Only power-ups that work in the current
-    // game mode appear at all. No greyed-out "Not available in this mode"
-    // cards.
     val available = availablePowerUpTypes(gameMod)
     val chickenPowerUps = available.filter { !it.isHunterPowerUp }
     val hunterPowerUps = available.filter { it.isHunterPowerUp }

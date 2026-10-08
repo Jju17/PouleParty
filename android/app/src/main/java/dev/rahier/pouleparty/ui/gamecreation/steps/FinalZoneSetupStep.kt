@@ -24,12 +24,6 @@ import dev.rahier.pouleparty.ui.theme.CROrange
 import dev.rahier.pouleparty.ui.theme.bangerStyle
 import dev.rahier.pouleparty.ui.theme.gameboyStyle
 
-/**
- * PP-12 — final pin step. Only shown in `stayInTheZone` (skipped
- * entirely in `followTheChicken`). The start pin is rendered as a
- * read-only reference; the user can only edit the final pin. Next is
- * gated by `state.isFinalZoneConfigured` (distance ≥ 100 m).
- */
 @Composable
 fun FinalZoneSetupStep(
     game: Game,
@@ -79,9 +73,9 @@ fun FinalZoneSetupStep(
             ChickenMapConfigScreen(
                 initialRadius = game.zone.radius,
                 finalMarker = game.finalLocation,
-                onLocationSelected = { /* PP-12 never edits the start */ },
+                onLocationSelected = {  },
                 onFinalLocationSelected = onFinalLocationSelected,
-                onRadiusChanged = { /* No slider on PP-12 */ },
+                onRadiusChanged = {  },
                 isFollowMode = false,
                 forcedPinMode = MapConfigPinMode.FINAL,
             )

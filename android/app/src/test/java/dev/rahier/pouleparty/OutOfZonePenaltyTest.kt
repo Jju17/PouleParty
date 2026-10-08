@@ -6,17 +6,6 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-/**
- * PP-37: parity tests for the PP-36 out-of-zone penalty (-1 point /
- * 5 s). Strict mirror of the iOS `OutOfZonePenaltyTests` — same
- * scenarios in the same order, same expected numeric outputs, so a
- * one-platform drift fails on this side without the other.
- *
- * The tests target the same `evaluateOutOfZonePenalty` helper the
- * production code in `HunterMapViewModel.startTimer()` calls, so any
- * drift surfaces immediately: the runtime no longer has a separate
- * inline decision tree.
- */
 class OutOfZonePenaltyTest {
 
     /** Anchor "now" for deterministic windows. Real wall clock is irrelevant. */
@@ -77,7 +66,7 @@ class OutOfZonePenaltyTest {
 
     /**
      * Re-entry resets `lastPenaltyAt` to null. The next tick checks
-     * `isOutsideZone` again — if the hunter is back inside, no
+     * `isOutsideZone` again, if the hunter is back inside, no
      * penalty fires that tick.
      */
     @Test
@@ -97,7 +86,7 @@ class OutOfZonePenaltyTest {
     // MARK: - Scenario 4: exits just after a tick → first penalty 5s later
 
     /**
-     * First out-of-zone tick MUST NOT fire immediately — it just
+     * First out-of-zone tick MUST NOT fire immediately, it just
      * starts the 5 s window. Mirrors the iOS
      * `firstTickOutOfZoneStartsWindowAndDoesNotFire` test.
      */
@@ -120,7 +109,7 @@ class OutOfZonePenaltyTest {
     /**
      * The production gate is `gameStarted = now >= hunterStartDate`,
      * which short-circuits the penalty path before this helper is
-     * reached. We model that gate by inverting `isOutsideZone` here —
+     * reached. We model that gate by inverting `isOutsideZone` here ,
      * the production code never even evaluates `isOutsideZone` pre-
      * game, so the helper would see `isOutsideZone = false` (default)
      * and produce zero penalties. The check pins the "no firing
@@ -184,7 +173,7 @@ class OutOfZonePenaltyTest {
 
     /**
      * Two ticks fired within the same 5 s window must fire exactly
-     * one penalty — the `lastPenaltyAt` guard is the anti
+     * one penalty, the `lastPenaltyAt` guard is the anti
      * double-count. Models two ticks where the first fires (bumps
      * `lastPenaltyAt` to `now`), and the second runs immediately
      * after with no time advanced.

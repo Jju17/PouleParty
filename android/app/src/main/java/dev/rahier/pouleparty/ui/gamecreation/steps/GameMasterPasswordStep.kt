@@ -21,12 +21,6 @@ import dev.rahier.pouleparty.ui.gamecreation.StepContainer
 import dev.rahier.pouleparty.ui.theme.CROrange
 import dev.rahier.pouleparty.ui.theme.gameboyStyle
 
-/**
- * PP-88 — chicken opts in to the GameMaster role and sets the 4-digit
- * password. Server side (PP-70) writes the password to the private
- * subcollection and flips `Game.hasGameMasterPassword`. Toggle ON by
- * default for D-Day so every Free game ships with a GameMaster slot.
- */
 @Composable
 fun GameMasterPasswordStep(
     isEnabled: Boolean,

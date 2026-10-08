@@ -49,11 +49,6 @@ fun ChickenMapConfigScreen(
     onFinalLocationSelected: (Point?) -> Unit,
     onRadiusChanged: (Double) -> Unit,
     isFollowMode: Boolean = false,
-    /**
-     * PP-11 / PP-12: the step view forces this so the user can only
-     * edit the pin owned by the active step. Defaults to `START` for
-     * the legacy callers that haven't been migrated.
-     */
     forcedPinMode: MapConfigPinMode = MapConfigPinMode.START,
     viewModel: ChickenMapConfigViewModel = hiltViewModel()
 ) {
@@ -114,11 +109,6 @@ fun ChickenMapConfigScreen(
                 }
             }
 
-            // PP-11: preview circle only when the radius is actually
-            // user-controlled — i.e. followTheChicken's 3-button size
-            // picker. In stayInTheZone the radius is recomputed at the
-            // recap step (PP-13), so showing a stale default circle
-            // would mislead the user.
             if (isFollowMode && state.pinMode == MapConfigPinMode.START) {
                 val circlePoints = circlePolygonPoints(state.markerPosition, state.radius)
                 PolylineAnnotation(points = circlePoints + listOf(circlePoints.first())) {
@@ -240,10 +230,6 @@ fun ChickenMapConfigScreen(
             }
         }
 
-        // PP-11 / PP-12: bottom bar is step-specific.
-        // - START in followTheChicken → 3-button size picker
-        // - START in stayInTheZone → empty (radius computed at recap)
-        // - FINAL → empty (final pin is map-tap only)
         if (state.pinMode == MapConfigPinMode.START && isFollowMode) {
             Column(
                 modifier = Modifier
@@ -266,11 +252,6 @@ fun ChickenMapConfigScreen(
     }
 }
 
-/**
- * PP-11 — 3-button size picker shown on the `startZoneSetup` step in
- * followTheChicken mode. Mirrors the iOS `zoneSizePicker` so both
- * platforms surface the same Small / Medium / Large preset choices.
- */
 @Composable
 private fun ZoneSizePicker(
     selectedRadius: Double,

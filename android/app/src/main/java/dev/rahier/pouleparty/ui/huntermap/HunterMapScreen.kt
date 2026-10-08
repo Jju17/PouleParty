@@ -128,7 +128,7 @@ fun HunterMapScreen(
     // Force a hunter-location refresh whenever the player re-opens the
     // app. The periodic 5 s writer in the VM is the primary cadence,
     // but Android can suspend the writer coroutine while the app is
-    // backgrounded — this bridges the gap so the chicken's map catches
+    // backgrounded, this bridges the gap so the chicken's map catches
     // up as soon as we're back in the foreground instead of waiting
     // on the next scheduled tick.
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
@@ -194,7 +194,7 @@ fun HunterMapScreen(
                             fillOpacity = 1.0
                         }
 
-                        // Zone border circle — neon glow effect (layered polylines)
+                        // Zone border circle, neon glow effect (layered polylines)
                         PolylineAnnotation(
                             points = circlePoints + listOf(circlePoints.first())
                         ) {
@@ -240,7 +240,7 @@ fun HunterMapScreen(
 
                 // Radar Ping reveal: real Chicken marker, visible only while
                 // `game.isRadarPingActive`. The Chicken broadcasts its
-                // position continuously so this marker shows the live point —
+                // position continuously so this marker shows the live point ,
                 // the power-up is purely a visibility gate, not a trigger for
                 // the broadcast. Mirrors iOS `ChickenMapMarker` in
                 // `HunterMapContent.swift`.
@@ -325,7 +325,7 @@ fun HunterMapScreen(
                 }
             }
 
-            // Challenges FAB — sits above the bottom bar on the right.
+            // Challenges FAB, sits above the bottom bar on the right.
             if (state.hasChallenges) {
                 Box(
                     modifier = Modifier
@@ -388,8 +388,6 @@ fun HunterMapScreen(
                         }
                     }
 
-
-
                     // FOUND button (only visible after game starts)
                     if (state.hasGameStarted) {
                         Button(
@@ -414,9 +412,6 @@ fun HunterMapScreen(
                 countdownText = state.countdownText?.asString()
             )
 
-            // PP-71: unified pre-game overlay. Status == READY_TO_LAUNCH
-            // shows the passive "waiting for the chicken to launch"
-            // state; otherwise it ticks down to `hunterStartDate`.
             if (state.game.gameStatusEnum == dev.rahier.pouleparty.model.GameStatus.READY_TO_LAUNCH) {
                 PreGameOverlay(
                     role = dev.rahier.pouleparty.ui.components.PreGameRole.HUNTER,
@@ -438,7 +433,7 @@ fun HunterMapScreen(
                 )
             }
 
-            // Zone warning banner (visual warning only — no elimination)
+            // Zone warning banner (visual warning only, no elimination)
             if (state.isOutsideZone) {
                 Text(
                     text = stringResource(R.string.return_to_zone),
@@ -454,10 +449,6 @@ fun HunterMapScreen(
                 )
             }
 
-            // PP-36: "-1 point / 5 s" pill sits just below the red
-            // "Return to the zone!" banner. Phase gates mirror the
-            // ViewModel's penalty gate so indicator and writes can't
-            // disagree.
             if (state.isOutsideZone &&
                 state.hasGameStarted &&
                 !state.isGameOver

@@ -8,20 +8,13 @@ sealed class JoinFlowStep {
     data class CodeValidated(val game: Game) : JoinFlowStep()
     object CodeNotFound : JoinFlowStep()
     /** The resolved game already has `hunterIds.size >= maxPlayers` and the
-     *  user isn't a member — terminal "party full" state. */
+     *  user isn't a member, terminal "party full" state. */
     object GameFull : JoinFlowStep()
     object NetworkError : JoinFlowStep()
-    /** PP-52: paid-event game (registrationBatchId set) — the hunter must enter
-     *  the unique registration code from their confirmation email before joining. */
     data class ValidationCodeEntry(val game: Game) : JoinFlowStep()
-    /** PP-52: validateRegistrationCode CF in flight. */
     data class SubmittingValidationCode(val game: Game) : JoinFlowStep()
-    /** PP-90: collect teamName before joining; required for every hunter. */
     data class JoiningWithTeamName(val game: Game) : JoinFlowStep()
-    /** PP-90: registration doc + join in flight. */
     data class SubmittingJoin(val game: Game) : JoinFlowStep()
-    /** PP-88: chicken enabled GM role; user picked "Join as GM". */
     data class GameMasterPasswordEntry(val game: Game) : JoinFlowStep()
-    /** PP-88: joinAsGameMaster CF in flight. */
     data class SubmittingGameMasterPassword(val game: Game) : JoinFlowStep()
 }

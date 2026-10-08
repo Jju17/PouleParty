@@ -35,9 +35,6 @@ data class ChallengesUiState(
     val selectedTab: ChallengesTab = ChallengesTab.CHALLENGES,
     val challenges: List<Challenge> = emptyList(),
     val completions: List<ChallengeCompletion> = emptyList(),
-    /** PP-103: current hunter's own completion (single-doc). Source for
-     *  [completedIdsForCurrentHunter]; the leaderboard uses [completions]
-     *  (the aggregate read-model). */
     val myCompletion: ChallengeCompletion? = null,
     val mySubmissions: List<ChallengeSubmission> = emptyList(),
     val hunterIds: List<String> = emptyList(),

@@ -9,7 +9,7 @@ import kotlin.math.*
  * Wide HSV hue sweep so successive shrink circles are as distinct as
  * possible visually while staying on a coherent monotonic curve.
  * Goes orange (~28°) → yellow → green → cyan → blue → purple →
- * magenta (~332°) — every neighbouring pair differs by enough hue
+ * magenta (~332°), every neighbouring pair differs by enough hue
  * for the chicken to read the shrink order at a glance. Stable
  * across iOS + Android by matching the Swift `zonePreviewColor`
  * HSV formula.

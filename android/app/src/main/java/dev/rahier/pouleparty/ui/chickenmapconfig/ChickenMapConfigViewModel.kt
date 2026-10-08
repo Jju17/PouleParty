@@ -103,13 +103,6 @@ class ChickenMapConfigViewModel @Inject constructor(
 
     fun onMapTapped(point: Point) {
         val state = _uiState.value
-        // PP-11 / PP-12: each step owns one pinMode, forced via
-        // `setPinMode` by `StartZoneSetupStep` / `FinalZoneSetupStep`.
-        // The recap step (PP-13) will recompute the radius from the two
-        // pins, so we no longer constrain final to fit inside an
-        // arbitrary slider-controlled radius — only the ≥ 100 m
-        // minimum, enforced when Next is tapped via
-        // `isFinalZoneConfigured`.
         when (state.pinMode) {
             MapConfigPinMode.FINAL -> {
                 _uiState.update { it.copy(finalMarkerPosition = point) }
@@ -123,8 +116,6 @@ class ChickenMapConfigViewModel @Inject constructor(
                         cameraZoom = zoom,
                     )
                 }
-                // If the new start is < 100 m from the existing final,
-                // clear final so PP-12 forces the user to re-place.
                 _uiState.value.finalMarkerPosition?.let { finalPos ->
                     if (distanceMeters(point, finalPos) < 100.0) {
                         _uiState.update { it.copy(finalMarkerPosition = null) }
@@ -150,8 +141,6 @@ class ChickenMapConfigViewModel @Inject constructor(
     fun onSearchResultSelected(result: SearchResult) {
         val point = Point.fromLngLat(result.longitude, result.latitude)
         val state = _uiState.value
-        // PP-11 / PP-12: same logic as `onMapTapped` — each step owns
-        // one pinMode, no in-place mode flip from the search bar.
         when (state.pinMode) {
             MapConfigPinMode.FINAL -> {
                 _uiState.update {

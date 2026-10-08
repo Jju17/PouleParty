@@ -50,13 +50,6 @@ class ChickenMapConfigViewModelTest {
         return ChickenMapConfigViewModel(locationRepository, context)
     }
 
-    // ── PP-11 / PP-12: final-pin placement is unconstrained by the
-    //    slider-controlled start radius. The recap step (PP-13) picks
-    //    the radius from the pin distance, so PP-12 only enforces the
-    //    ≥ 100 m minimum (via `GameCreationUiState.isFinalZoneConfigured`,
-    //    not at tap time). Tap inside or outside the legacy circle:
-    //    both stick. ──
-
     @Test
     fun `final zone tap inside start zone is accepted`() {
         val vm = createViewModel()
@@ -73,17 +66,9 @@ class ChickenMapConfigViewModelTest {
         vm.initialize(1500.0, null)
         vm.onMapTapped(brussels)
         vm.setPinMode(MapConfigPinMode.FINAL)
-        // Pre-PP-11 this would be rejected (> 1500 m from start); PP-12
-        // removed the radius constraint, so the pin sticks.
         vm.onMapTapped(farAway)
         assertNotNull(vm.uiState.value.finalMarkerPosition)
     }
-
-    // ── PP-12: the only auto-clear path is when the user moves the
-    //    START pin to within 100 m of the existing FINAL pin — at that
-    //    distance the final wouldn't satisfy `isFinalZoneConfigured`
-    //    anyway, so the VM clears it to force a re-placement. Any other
-    //    start move leaves the final untouched. ──
 
     @Test
     fun `moving start zone within 100 m of final clears final`() {
@@ -108,20 +93,10 @@ class ChickenMapConfigViewModelTest {
         vm.setPinMode(MapConfigPinMode.FINAL)
         vm.onMapTapped(nearby)
         assertNotNull(vm.uiState.value.finalMarkerPosition)
-        // Move start very far. Pre-PP-12 the final would be cleared
-        // (outside the slider radius); now the recap recomputes the
-        // radius from the new pin pair, so the final persists.
         vm.setPinMode(MapConfigPinMode.START)
         vm.onMapTapped(farAway)
         assertNotNull(vm.uiState.value.finalMarkerPosition)
     }
-
-    // ── PP-13 radius slider only fires in followTheChicken now; in
-    //    stayInTheZone the radius is recomputed at the recap step from
-    //    the two pins. The VM helper `updateRadius` still validates the
-    //    final against the new radius for the followTheChicken case
-    //    (legacy code path) so we keep these tests as regression
-    //    coverage for that branch. ──
 
     @Test
     fun `shrinking radius clears final zone if now outside`() {
@@ -170,9 +145,6 @@ class ChickenMapConfigViewModelTest {
         vm.initialize(1500.0, null)
         vm.onMapTapped(brussels)
         vm.setPinMode(MapConfigPinMode.FINAL)
-        // PP-12 no longer enforces a minimum at tap time — only at the
-        // Next button via `isFinalZoneConfigured`. So a coincident tap
-        // still leaves the marker on the map.
         vm.onMapTapped(brussels)
         assertNotNull(vm.uiState.value.finalMarkerPosition)
     }

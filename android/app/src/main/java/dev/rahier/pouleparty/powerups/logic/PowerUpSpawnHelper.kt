@@ -9,15 +9,6 @@ import dev.rahier.pouleparty.powerups.model.PowerUpType
 import java.util.UUID
 import kotlin.math.*
 
-/**
- * Deterministic power-up spawn logic. Uses the game's driftSeed to produce
- * identical spawn positions on all clients.
- *
- * Cross-platform parity: mirrors `ios/PouleParty/Components/PowerUpSpawnLogic.swift`.
- * Any change here must be reflected on the iOS side (and vice versa) — both platforms
- * must generate identical spawn positions for the same seed. See `CLAUDE.md`.
- */
-
 fun generatePowerUps(
     center: Point,
     radius: Double,

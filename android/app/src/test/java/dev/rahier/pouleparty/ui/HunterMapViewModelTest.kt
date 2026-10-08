@@ -34,7 +34,7 @@ class HunterMapViewModelTest {
         val state = HunterMapUiState(game = game, circleCenter = game.initialLocation)
 
         assertEquals(game.initialLocation.latitude(), state.circleCenter!!.latitude(), 0.0001)
-        assertEquals(game.initialLocation.longitude(), state.circleCenter!!.longitude(), 0.0001)
+        assertEquals(game.initialLocation.longitude(), state.circleCenter.longitude(), 0.0001)
     }
 
     @Test

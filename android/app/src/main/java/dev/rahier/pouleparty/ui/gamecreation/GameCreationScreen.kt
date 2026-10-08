@@ -108,11 +108,6 @@ fun GameCreationScreen(
                 .padding(padding)
                 .fillMaxSize()
         ) {
-            // Progress bar + PP-15 step counter. Y reflects the
-            // currently-active step subset so steps that skip (e.g.
-            // FINAL_ZONE_SETUP in followTheChicken or
-            // CHICKEN_SELECTION when the chicken is participating)
-            // don't inflate the denominator.
             Column(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             ) {
@@ -282,8 +277,6 @@ private fun BottomBar(
     onStartGame: () -> Unit
 ) {
     val isRecap = state.currentStep == GameCreationStep.RECAP
-    // PP-11 / PP-12: each map step has its own validation gate (start
-    // pin placed for PP-11, final pin ≥ 100 m from start for PP-12).
     val canProceed = when (state.currentStep) {
         GameCreationStep.START_ZONE_SETUP -> state.isStartZoneConfigured
         GameCreationStep.FINAL_ZONE_SETUP -> state.isFinalZoneConfigured

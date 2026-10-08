@@ -50,7 +50,7 @@ class ProfanityFilterTest {
     @Test
     fun `does not false positive on partial words`() {
         // "ass" is in the blocked list, so "class" will match (substring match)
-        // This documents intended behavior — the filter is aggressive
+        // This documents intended behavior, the filter is aggressive
         assertTrue(ProfanityFilter.containsProfanity("class"))
     }
 

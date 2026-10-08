@@ -34,7 +34,6 @@ import dev.rahier.pouleparty.ui.home.JoinFlowStep
 import dev.rahier.pouleparty.ui.theme.GameBoyFont
 import dev.rahier.pouleparty.ui.theme.GradientFire
 
-/** Modal sheet driving the multi-step join flow (PP-90: no more registration gate). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun JoinFlowBottomSheet(

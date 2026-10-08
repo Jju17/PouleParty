@@ -73,12 +73,6 @@ data class ChickenMapUiState(
     override val showGameInfo: Boolean = false,
     val codeCopied: Boolean = false,
     val showFoundCode: Boolean = false,
-    /** CRIT-2 (audit 2026-05-17): the 4-digit code the chicken reads out
-     *  to hunters who physically find them. Fetched once on init via
-     *  `gameFunctions.getFoundCode`: the value lives in
-     *  `/games/{id}/private/security` (admin-SDK only), so it's no
-     *  longer leaked on the public Game doc. Empty until the CF
-     *  responds. */
     val chickenFoundCode: String = "",
     val previousWinnersCount: Int = -1,
     val pendingSubmissionsCount: Int = 0,
@@ -105,12 +99,8 @@ data class ChickenMapUiState(
     /** True once the game is over for any reason. Drives the bottom-
      *  bar trophy CTA + greys gameplay controls. Mirrors iOS. */
     val isGameOver: Boolean = false,
-    /** PP-71: in flight while `launchGame` runs. */
     val isLaunching: Boolean = false,
-    /** PP-71: last error from `launchGame`. Null clears the alert. */
     val launchError: UiText? = null,
-    /** PP-107: one-time "you are the new chicken! 🐔" alert, shown right
-     *  after a GameMaster re-designation routes the player onto this map. */
     val showNewChickenAlert: Boolean = false,
 ) : dev.rahier.pouleparty.ui.map.MapUiState
 
@@ -129,12 +119,10 @@ class ChickenMapViewModel @Inject constructor(
     override val gameId: String = savedStateHandle["gameId"] ?: ""
     override val playerId: String = auth.currentUser?.uid ?: ""
 
-    /** PP-18: exposed for the leaderboard sheet so it can highlight the current user's row. */
     fun currentUserId(): String = playerId
     override val analyticsRole: String = "chicken"
     override val logTag: String = "ChickenMapVM"
 
-    /** PP-107: set when the player landed here via a GameMaster re-designation. */
     private val becameChicken: Boolean = savedStateHandle["becameChicken"] ?: false
 
     private val _uiState = MutableStateFlow(ChickenMapUiState(showNewChickenAlert = becameChicken))
@@ -205,9 +193,6 @@ class ChickenMapViewModel @Inject constructor(
 
     init {
         loadGame()
-        // CRIT-2 (audit 2026-05-17): fetch foundCode once on map load.
-        // The CF refuses for non-chicken callers, so a non-chicken VM
-        // hitting this path just gets "" (harmless).
         viewModelScope.launch {
             try {
                 val code = gameFunctions.getFoundCode(gameId)
@@ -339,7 +324,7 @@ class ChickenMapViewModel @Inject constructor(
 
                 // PP-zone-stored: select the active circle from the stored
                 // schedule. No on-device geometry recompute, no Int-truncation
-                // drift — every device reads the same list. The zone shrinks to
+                // drift, every device reads the same list. The zone shrinks to
                 // the 50m final circle and stays there; the game ends by time
                 // (or all-found / cancel), not by "zone collapsed".
                 // followTheChicken keeps the live chicken GPS center (set in
@@ -353,12 +338,12 @@ class ChickenMapViewModel @Inject constructor(
                     )
                 }
                 // Periodic power-ups are spawned by the `spawnPowerUpBatch`
-                // Cloud Task scheduled at game creation — no client-side spawn.
+                // Cloud Task scheduled at game creation, no client-side spawn.
 
                 // Power-up proximity check
                 checkPowerUpProximity()
 
-                // Zone check (visual warning only — no elimination)
+                // Zone check (visual warning only, no elimination)
                 val currentState = _uiState.value
                 if (shouldCheckZone(PlayerRole.CHICKEN, currentState.game.gameModEnum)) {
                     val userLoc = currentState.userLocation
@@ -431,10 +416,6 @@ class ChickenMapViewModel @Inject constructor(
     private suspend fun streamGameConfig() {
         gameRepository.gameConfigFlow(gameId).collect { updatedGame ->
             if (updatedGame != null) {
-                // PP-107: a GameMaster may have swapped the chicken to someone
-                // else while the game is `waiting`. If this player is no longer
-                // the chicken but still has a role, re-route to the hunter map
-                // so they aren't stranded on the chicken map.
                 if (playerId.isNotEmpty()
                     && !updatedGame.isChicken(playerId)
                     && updatedGame.role(playerId) != null) {
@@ -476,7 +457,7 @@ class ChickenMapViewModel @Inject constructor(
                     // incremental timer path (zone-freeze aware) untouched.
                     if (updatedGame.isDebugGame) {
                         // QA debug: the `advanceStep` callable rewinds the start
-                        // anchor so more shrinks appear "elapsed" — re-derive the
+                        // anchor so more shrinks appear "elapsed", re-derive the
                         // active circle from the stored schedule on each tick.
                         val z = zoneStateFromCircles(updatedGame, it.circles, Date())
                         it.copy(
@@ -532,7 +513,6 @@ class ChickenMapViewModel @Inject constructor(
     }
 
     private fun onCancelGameTapped() {
-        // PP-16: can't cancel an already-over game.
         if (_uiState.value.isGameOver) return
         _uiState.update { it.copy(showCancelAlert = true) }
     }
@@ -613,16 +593,6 @@ class ChickenMapViewModel @Inject constructor(
 
     private fun activatePowerUp(powerUp: PowerUp) {
         if (_uiState.value.activatingPowerUpId != null) return
-        // Guard against double activation of the same timed effect.
-        // `activatePowerUp` writes `powerUps.activeEffects.<field>` =
-        // now + duration, overwriting any existing timestamp. A second
-        // zone-freeze while the first is still running shifts the
-        // freeze-window start forward, which makes findLastUpdate skip
-        // a different set of shrinks on Hunter vs Chicken during the
-        // brief listener lag — reported as "Hunter still frozen after
-        // Chicken's game ended" in 1.11.2 live-test. Inventory UI
-        // also disables the button on `game.isActive(type)`, this is
-        // the defensive server-adjacent check.
         if (_uiState.value.game.isActive(powerUp.typeEnum)) {
             showNotification(uiText(R.string.notif_powerup_already_active, uiText(powerUp.typeEnum.titleRes)), powerUp.typeEnum)
             return

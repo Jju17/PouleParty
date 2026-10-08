@@ -57,12 +57,6 @@ fun HunterMapMarker(displayName: String) {
     }
 }
 
-/**
- * Chicken avatar rendered on the GameMaster map (PP-24/PP-87). The
- * GM is the only role that ever sees the `invisible` state — the
- * disc fades and a dashed white outline draws around it so the
- * chicken's mid-power-up status is unambiguous.
- */
 @Composable
 fun GMChickenMarker(isInvisible: Boolean) {
     val emojiAlpha = if (isInvisible) 0.65f else 1f
@@ -102,7 +96,7 @@ fun GMChickenMarker(isInvisible: Boolean) {
 /**
  * White text with a 1-px black outline (four offset clones). The
  * Mapbox tile palette switches with the system theme, so any single
- * text colour breaks on one of the two — the halo keeps the label
+ * text colour breaks on one of the two, the halo keeps the label
  * legible on every background.
  */
 @Composable

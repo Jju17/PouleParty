@@ -122,22 +122,13 @@ class GameCreationViewModelTest {
         val steps = vm.uiState.value.steps
         assertEquals(GameCreationStep.PARTICIPATION, steps[0])
         assertEquals(GameCreationStep.MAX_PLAYERS, steps[1])
-        // Wizard order: When → How long → Mode → Where → Rules.
-        // GAME_MODE sits right before the zone block (it decides
-        // whether FINAL_ZONE_SETUP exists), and the timing trio
-        // comes earlier so PP-13's recap has a valid duration
-        // window for the shrink schedule.
         assertEquals(GameCreationStep.START_TIME, steps[2])
         assertEquals(GameCreationStep.DURATION, steps[3])
         assertEquals(GameCreationStep.HEAD_START, steps[4])
         assertEquals(GameCreationStep.GAME_MODE, steps[5])
-        // PP-11 / PP-12 / PP-13: zone setup as three consecutive
-        // sub-steps in stayInTheZone (default mode).
         assertEquals(GameCreationStep.START_ZONE_SETUP, steps[6])
         assertEquals(GameCreationStep.FINAL_ZONE_SETUP, steps[7])
         assertEquals(GameCreationStep.ZONES_RECAP, steps[8])
-        // PP-70 / PP-88: GameMaster password sits with the other
-        // modifier toggles at the tail of the wizard.
         assertEquals(GameCreationStep.GAME_MASTER_PASSWORD, steps[9])
         assertEquals(GameCreationStep.POWER_UPS, steps[10])
         assertEquals(GameCreationStep.CHICKEN_SEES_HUNTERS, steps[11])
@@ -150,10 +141,6 @@ class GameCreationViewModelTest {
         val vm = createViewModel()
         vm.onIntent(GameCreationIntent.GameModeChanged(dev.rahier.pouleparty.model.GameMod.FOLLOW_THE_CHICKEN))
         val steps = vm.uiState.value.steps
-        // PP-12: no `finalCenter` in followTheChicken — the zone
-        // tracks the chicken's live position, so FINAL_ZONE_SETUP is
-        // dropped from the sequence (forward + back). The recap step
-        // (PP-13) stays — it shows a single circle.
         assertTrue(GameCreationStep.START_ZONE_SETUP in steps)
         assertFalse(GameCreationStep.FINAL_ZONE_SETUP in steps)
         assertTrue(GameCreationStep.ZONES_RECAP in steps)
@@ -168,9 +155,6 @@ class GameCreationViewModelTest {
         assertEquals(GameCreationStep.PARTICIPATION, steps[0])
         assertEquals(GameCreationStep.CHICKEN_SELECTION, steps[1])
         assertEquals(GameCreationStep.MAX_PLAYERS, steps[2])
-        // Wizard order (PP-11..15): timing trio precedes the zone block,
-        // so chickenSelection slots in right after PARTICIPATION and
-        // pushes every step down by one. GAME_MODE is steps[6].
         assertEquals(GameCreationStep.START_TIME, steps[3])
         assertEquals(GameCreationStep.DURATION, steps[4])
         assertEquals(GameCreationStep.HEAD_START, steps[5])
@@ -178,8 +162,6 @@ class GameCreationViewModelTest {
         assertEquals(GameCreationStep.START_ZONE_SETUP, steps[7])
         assertEquals(GameCreationStep.FINAL_ZONE_SETUP, steps[8])
         assertEquals(GameCreationStep.ZONES_RECAP, steps[9])
-        // PP-13 + PP-88: base 13 (stayInTheZone, participating) +1 for
-        // CHICKEN_SELECTION when the chicken is not playing.
         assertEquals(14, steps.size)
     }
 
@@ -191,8 +173,6 @@ class GameCreationViewModelTest {
         val maxPlayersIndex = steps.indexOf(GameCreationStep.MAX_PLAYERS)
         assertEquals(participationIndex + 1, maxPlayersIndex)
     }
-
-    // ── Max players (PP-42) ──
 
     @Test
     fun `default max players range is 2 to 5`() {
@@ -408,7 +388,6 @@ class GameCreationViewModelTest {
         val vm = createViewModel()
         vm.onIntent(GameCreationIntent.GameModeChanged(GameMod.STAY_IN_THE_ZONE))
         vm.onIntent(GameCreationIntent.LocationSelected(Point.fromLngLat(4.4, 50.9)))
-        // ~150 m offset: a hair over PP-12's threshold.
         vm.onIntent(GameCreationIntent.FinalLocationSelected(Point.fromLngLat(4.4, 50.9015)))
         assertTrue(vm.uiState.value.isFinalZoneConfigured)
         assertTrue(vm.uiState.value.isZoneConfigured)
@@ -621,7 +600,7 @@ class GameCreationViewModelTest {
     @Test
     fun `updateStartTime clamps to minimum when in the past`() {
         val vm = createViewModel()
-        // Set hour to 00:00 (midnight) — certainly in the past for the current date
+        // Set hour to 00:00 (midnight), certainly in the past for the current date
         vm.onIntent(GameCreationIntent.StartTimeChanged(0, 0))
         val startDate = vm.uiState.value.game.startDate
         val minExpected = System.currentTimeMillis() + 60_000L - 2000 // 1 min minimum - tolerance
@@ -653,9 +632,6 @@ class GameCreationViewModelTest {
 
     @Test
     fun `toggling participation multiple times keeps step list in sync`() {
-        // PP-11..13 split zone setup into 3 sub-steps + PP-88 added
-        // GAME_MASTER_PASSWORD → base 13 (stayInTheZone, participating),
-        // +1 for chickenSelection when not participating.
         val vm = createViewModel()
         assertEquals(13, vm.uiState.value.steps.size)
         vm.onIntent(GameCreationIntent.ParticipatingChanged(false))
@@ -743,10 +719,6 @@ class GameCreationViewModelTest {
 
     // ── Power-up toggle constraints ──
 
-    /** Helper: bring `enabledTypes` to a known "every-type-enabled" baseline. PP-35
-     *  shrunk the default to `[ZONE_FREEZE, ZONE_PREVIEW]`, so toggling the missing
-     *  ones flips them ON. The `togglePowerUpType` constraint guard prevents
-     *  removing the last *available* type so we have to seed explicitly. */
     private fun GameCreationViewModel.enableAllPowerUpTypes() {
         val current = uiState.value.game.powerUps.enabledTypes
         PowerUpType.entries.forEach { type ->
@@ -760,8 +732,6 @@ class GameCreationViewModelTest {
     fun `togglePowerUpType cannot remove last available type in followTheChicken`() {
         val vm = createViewModel()
         vm.onIntent(GameCreationIntent.GameModeChanged(GameMod.FOLLOW_THE_CHICKEN))
-        // PP-35 default ships only ZONE_FREEZE + ZONE_PREVIEW. Enable every
-        // type first so the guard below trips on the LAST one.
         vm.enableAllPowerUpTypes()
         assertEquals(PowerUpType.entries.size, vm.uiState.value.game.powerUps.enabledTypes.size)
         // Remove every type except the tail one. In followTheChicken every
@@ -783,7 +753,7 @@ class GameCreationViewModelTest {
         val vm = createViewModel()
         vm.onIntent(GameCreationIntent.GameModeChanged(GameMod.STAY_IN_THE_ZONE))
         // Defaults ship every type enabled. INVISIBILITY is unavailable in
-        // stayInTheZone — removable in a single toggle, since the guard
+        // stayInTheZone, removable in a single toggle, since the guard
         // counts only AVAILABLE enabled types.
         assertTrue(
             "INVISIBILITY ships enabled by default",
@@ -798,7 +768,7 @@ class GameCreationViewModelTest {
         val vm = createViewModel()
         vm.onIntent(GameCreationIntent.GameModeChanged(GameMod.STAY_IN_THE_ZONE))
         // INVISIBILITY ships enabled. First toggle REMOVES, second toggle
-        // RE-ADDS — guard does not apply to unavailable types.
+        // RE-ADDS, guard does not apply to unavailable types.
         vm.onIntent(GameCreationIntent.PowerUpTypeToggled(PowerUpType.INVISIBILITY))
         vm.onIntent(GameCreationIntent.PowerUpTypeToggled(PowerUpType.INVISIBILITY))
         assertTrue(vm.uiState.value.game.powerUps.enabledTypes.contains(PowerUpType.INVISIBILITY.firestoreValue))
@@ -910,7 +880,6 @@ class GameCreationViewModelTest {
         var capturedGame: dev.rahier.pouleparty.model.Game? = null
         coEvery { gameRepository.setConfig(any()) } answers {
             capturedGame = firstArg()
-            Unit
         }
         vm.onIntent(GameCreationIntent.StartGameTapped)
         advanceUntilIdle()

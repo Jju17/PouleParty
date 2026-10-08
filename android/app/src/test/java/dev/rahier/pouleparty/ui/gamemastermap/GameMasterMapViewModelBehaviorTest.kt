@@ -36,34 +36,6 @@ import org.junit.Before
 import org.junit.Test
 import java.util.Date
 
-/**
- * PP-66 — Behavioural tests for `GameMasterMapViewModel` (Android
- * mirror of iOS `GameMasterMapFeature`).
- *
- * Covers:
- *  - The read-only intent surface (info / hunters drawer / leave game).
- *  - Designate-chicken flow (pending state, confirm wires through to
- *    `FirestoreRepository.designateChicken`, error path surfaces a
- *    message, cancel clears the pending registration).
- *  - The teamName-everywhere rule (PP-90 / 2026-05-08): hunter markers
- *    surface the registered `teamName`, with a deterministic
- *    `Hunter N` fallback (sorted by hunterId) when registrations
- *    haven't landed yet.
- *  - The "registrations arrive after locations" parity scenario: the
- *    `Hunter N` placeholder must be re-labelled the instant the
- *    registration doc lands.
- *
- * Note: the routing decision (GM lands on `GameMasterMapScreen`, not
- * `ChickenMapScreen`) is covered separately by
- * `GameMasterRoutingTest`. This file focuses on what the screen does
- * once it's on it.
- *
- * Test-runner gotcha: `GameMasterMapViewModel.startStreams` spawns
- * an infinite `while (true) { delay(1000) }` ticker. We MUST use
- * `testDispatcher.scheduler.runCurrent()` here — `advanceUntilIdle()`
- * loops forever through the virtual delays. Pattern matches
- * `ChickenMapViewModelBehaviorTest`.
- */
 @OptIn(ExperimentalCoroutinesApi::class)
 class GameMasterMapViewModelBehaviorTest {
 
@@ -99,7 +71,7 @@ class GameMasterMapViewModelBehaviorTest {
         every { mockUser.uid } returns "gm-uid"
         every { auth.currentUser } returns mockUser
 
-        // Default stubs — by default no game is configured so
+        // Default stubs, by default no game is configured so
         // `loadGame()` exits early and the infinite-tick loop never
         // starts. Individual tests opt-in to a populated game.
         coEvery { gameRepository.getConfig(any()) } returns null
@@ -168,8 +140,6 @@ class GameMasterMapViewModelBehaviorTest {
         assertFalse(vm.uiState.value.showHuntersDrawer)
     }
 
-    // ── Designate chicken (PP-86) ───────────────────────
-
     @Test
     fun `designate hunter tapped sets pending registration`() {
         val vm = createViewModel()
@@ -226,8 +196,6 @@ class GameMasterMapViewModelBehaviorTest {
         vm.onIntent(GameMasterMapIntent.DesignationErrorDismissed)
         assertNull(vm.uiState.value.designationError)
     }
-
-    // ── teamName-everywhere (PP-90 / 2026-05-08) ────────
 
     @Test
     fun `hunter annotations use teamName when registration is known`() {

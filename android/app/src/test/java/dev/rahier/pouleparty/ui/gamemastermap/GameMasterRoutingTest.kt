@@ -6,21 +6,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * PP-66 / PP-107 — Role routing tests for the GameMaster.
- *
- * The actual `findActiveGame` query lives in `FirestoreRepository`
- * and resolves each membership's role from the authoritative `roles`
- * map (PP-107). The decision that lands a user on `GameMasterMapScreen`
- * (rather than `ChickenMapScreen` / `HunterMapScreen`) boils down to
- * the pure `Game.isChicken` / `isHunter` / `isGameMaster` predicates
- * derived from `roles`. We pin those predicates here so any drift
- * between iOS and Android shows up at unit-test time.
- *
- * Since `roles` maps each uid to exactly one role, the old
- * "same uid in two buckets" ambiguity is now impossible by
- * construction — a uid is chicken XOR hunter XOR gameMaster.
- */
 class GameMasterRoutingTest {
 
     // ── isChicken predicate ─────────────────────────────
@@ -30,7 +15,7 @@ class GameMasterRoutingTest {
         val game = Game.mock.copy(
             creatorId = "creator-uid",
             roles = mapOf(
-                "designated-uid" to "chicken",   // PP-26: GM-re-designated chicken
+                "designated-uid" to "chicken",   
                 "gm-uid" to "gameMaster",
                 "hunter-uid" to "hunter",
             ),
@@ -81,8 +66,6 @@ class GameMasterRoutingTest {
         assertFalse(game.isChicken("gm-uid"))
         assertFalse(game.hunterIds.contains("gm-uid"))
     }
-
-    // ── teamName-everywhere (PP-90 / 2026-05-08) ────────
 
     @Test
     fun `chicken cannot appear in hunterIds`() {

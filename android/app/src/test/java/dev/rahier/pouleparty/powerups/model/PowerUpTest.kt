@@ -108,10 +108,6 @@ class PowerUpTest {
         assertEquals(PowerUpType.RADAR_PING, injected.typeEnum)
     }
 
-    /**
-     * Server 1.6.2+ writes an explicit `id` field. Round-trip must preserve it
-     * even when `.copy(id = doc.id)` is chained afterwards — both should agree.
-     */
     @Test
     fun `explicit id from Firestore is preserved through copy`() {
         val fromServer = PowerUp(
@@ -123,8 +119,6 @@ class PowerUpTest {
         val afterCopy = fromServer.copy(id = "pu-0-0-1529788")
         assertEquals("pu-0-0-1529788", afterCopy.id)
     }
-
-    // MARK: PP-35 availablePowerUpTypes helper
 
     /**
      * `FOLLOW_THE_CHICKEN` keeps every power-up type. Ordering must match the
@@ -171,12 +165,10 @@ class PowerUpTest {
         assertEquals(PowerUpType.entries.map { it.firestoreValue }, defaults)
     }
 
-    // MARK: PP-37 parity goldens (PP-35 follow-up)
-
     /**
      * Strict count parity: 6 types in FOLLOW_THE_CHICKEN vs 3 in
      * STAY_IN_THE_ZONE. Mirrors the iOS
-     * `availablePowerUpTypesCountsMatchParityMatrix` test — a silent enum
+     * `availablePowerUpTypesCountsMatchParityMatrix` test, a silent enum
      * addition that bypassed the positional filter would fail this on
      * one platform without the other and surface the divergence loudly.
      */
@@ -187,7 +179,7 @@ class PowerUpTest {
     }
 
     /**
-     * `STAY_IN_THE_ZONE` MUST NOT contain any positional power-up — the
+     * `STAY_IN_THE_ZONE` MUST NOT contain any positional power-up, the
      * chicken does not broadcast its position in that mode so spawning
      * invisibility / decoy / jammer is wasted. Mirrors the iOS
      * `availablePowerUpTypesStayInTheZoneExcludesEveryPositionalType`
@@ -216,7 +208,7 @@ class PowerUpTest {
     }
 
     /**
-     * `FOLLOW_THE_CHICKEN` is a passthrough — every enum case lands in
+     * `FOLLOW_THE_CHICKEN` is a passthrough, every enum case lands in
      * the returned list. Mirrors the iOS
      * `availablePowerUpTypesFollowTheChickenIsPassthrough` test.
      */
@@ -231,7 +223,7 @@ class PowerUpTest {
     /**
      * The Firestore wire format for `enabledTypes` is a `List<String>` of
      * `firestoreValue`s. The strings used by iOS, Android and the TS
-     * server MUST match exactly — a typo on one platform silently breaks
+     * server MUST match exactly, a typo on one platform silently breaks
      * the `stayInTheZone` filter on the server. Locks the wire contract.
      */
     @Test
@@ -251,7 +243,7 @@ class PowerUpTest {
 
     /**
      * The defaults shipped to players (`zoneFreeze` + `zonePreview`)
-     * must be available in BOTH modes — a player who keeps the defaults
+     * must be available in BOTH modes, a player who keeps the defaults
      * in `stayInTheZone` should still see both power-up types spawn.
      * Guards against a future filter change that would accidentally
      * strip a default type.

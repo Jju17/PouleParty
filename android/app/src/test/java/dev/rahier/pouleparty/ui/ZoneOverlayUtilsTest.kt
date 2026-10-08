@@ -177,7 +177,7 @@ class ZoneOverlayUtilsTest {
 
     @Test
     fun `powerUpPulseAlpha handles very large time values`() {
-        // 10 years of milliseconds — should still be within bounds
+        // 10 years of milliseconds, should still be within bounds
         val tenYearsMs = 10L * 365L * 24L * 3600L * 1000L
         val alpha = powerUpPulseAlpha(timeMs = tenYearsMs, periodMs = 2000L, minAlpha = 0.08f, maxAlpha = 0.18f)
         assertTrue(alpha in 0.08f..0.18f)

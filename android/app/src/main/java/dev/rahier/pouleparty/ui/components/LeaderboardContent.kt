@@ -27,7 +27,7 @@ import dev.rahier.pouleparty.ui.victory.LeaderboardEntry
  * Shared leaderboard rendering used by VictoryScreen (post-game) and
  * LeaderboardDialog (opened from Settings > My Games for finished games).
  *
- * Pure presentational — callers provide pre-built [LeaderboardEntry] values and the
+ * Pure presentational, callers provide pre-built [LeaderboardEntry] values and the
  * effective hunter start time for relative time computation.
  */
 @Composable
@@ -93,7 +93,7 @@ fun LeaderboardEntryRow(
     onReport: ((LeaderboardEntry) -> Unit)? = null
 ) {
     val rankLabel = when (rank) {
-        null -> "—"
+        null -> ":"
         1 -> "\uD83E\uDD47"
         2 -> "\uD83E\uDD48"
         3 -> "\uD83E\uDD49"

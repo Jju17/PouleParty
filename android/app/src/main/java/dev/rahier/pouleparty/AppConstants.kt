@@ -18,17 +18,10 @@ object AppConstants {
     const val SUBCOLLECTION_CHICKEN_LOCATIONS = "chickenLocations"
     const val SUBCOLLECTION_HUNTER_LOCATIONS = "hunterLocations"
     const val SUBCOLLECTION_POWER_UPS = "powerUps"
-    // PP-107: the per-game team-name subcollection was renamed `players`
-    // server-side. Writes happen via the `joinGame` callable now; clients
-    // only read. Doc shape `{ teamName, joinedAt }` — the uid is the doc id.
     const val SUBCOLLECTION_PLAYERS = "players"
     const val SUBCOLLECTION_CHALLENGE_COMPLETIONS = "challengeCompletions"
     const val SUBCOLLECTION_CHALLENGE_SUBMISSIONS = "challengeSubmissions"
     const val COLLECTION_USERS = "users"
-    // PP-107: `/users/{uid}/memberships/{gameId}` (`{ gameId, role }`) is the
-    // per-user membership index written server-side by the role callables.
-    // Read by `findActiveGame` / `fetchMyGames` instead of array-contains
-    // queries on the game doc.
     const val SUBCOLLECTION_MEMBERSHIPS = "memberships"
     const val COLLECTION_CHALLENGES = "challenges"
     const val COLLECTION_GAME_CODES = "gameCodes"
@@ -37,7 +30,7 @@ object AppConstants {
     /** Last game id the user explicitly dismissed from the "active game" Home
      *  banner. Skipped in findActiveGame so the banner doesn't reappear on the
      *  next onResume for a game the user actively hid. (Legacy single-value;
-     *  superseded by `PREF_DISMISSED_ACTIVE_GAME_IDS` — kept to avoid breaking
+     *  superseded by `PREF_DISMISSED_ACTIVE_GAME_IDS`, kept to avoid breaking
      *  existing installs that still write here from older app versions.) */
     const val PREF_DISMISSED_ACTIVE_GAME_ID = "dismissedActiveGameId"
     /** Set of game ids the user explicitly dismissed from the Home banner.
@@ -74,13 +67,8 @@ object AppConstants {
     const val CODE_MAX_WRONG_ATTEMPTS = 3
     const val CODE_COOLDOWN_MS = 10_000L
 
-    // Zone — grace period disabled, kept for future game mode
+    // Zone, grace period disabled, kept for future game mode
     // const val OUTSIDE_ZONE_GRACE_PERIOD_SECONDS = 30
-    /**
-     * PP-36: how often the hunter loses a point while outside the zone.
-     * Mirrors iOS `AppConstants.outOfZonePenaltyIntervalSeconds` — both
-     * platforms must tick at the same cadence.
-     */
     const val OUT_OF_ZONE_PENALTY_INTERVAL_MS = 5_000L
 
     // Power-Ups

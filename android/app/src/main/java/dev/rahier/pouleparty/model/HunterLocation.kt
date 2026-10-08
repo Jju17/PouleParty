@@ -11,11 +11,6 @@ data class HunterLocation(
     val timestamp: Timestamp = Timestamp.now()
 ) {
     companion object {
-        /**
-         * Decodes from a Realtime Database child snapshot (PP-102). The
-         * [hunterId] is the RTDB key (not stored in the payload).
-         * Schema: `{ lat, lng, ts }`.
-         */
         fun fromRtdb(hunterId: String, snapshot: DataSnapshot): HunterLocation? {
             val lat = rtdbDouble(snapshot.child("lat").value) ?: return null
             val lng = rtdbDouble(snapshot.child("lng").value) ?: return null

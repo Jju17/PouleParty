@@ -66,10 +66,6 @@ fun HomeScreen(
         }
     }
 
-    // Music playback. HIGH-14 (audit 2026-05-17): `MediaPlayer.create`
-    // returns null on prep failure (corrupt asset, OOM, codec quirk).
-    // The previous `.apply { … }` chained directly off the result threw
-    // NPE in that path → Home (launcher screen) crashes.
     val mediaPlayer = remember {
         runCatching {
             MediaPlayer.create(context, R.raw.background_music)?.apply {
@@ -93,8 +89,6 @@ fun HomeScreen(
         }
     }
 
-    // PP-39: pause on backgrounding, resume on foregrounding (respecting mute).
-    // ON_STOP fires when the app goes to background; ON_START when it returns.
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
         val player = mediaPlayer ?: return@LifecycleEventEffect
         if (player.isPlaying) player.pause()
@@ -104,9 +98,6 @@ fun HomeScreen(
         if (!state.isMusicMuted && !player.isPlaying) player.start()
     }
 
-    // PP-42: Forms a fresh Firestore-style auto-ID, then navigates straight
-    // into the Free wizard. PlanSelection is gone; the cap (5) lives in the
-    // wizard's Stepper. The admin entry point (PP-45) will pass `true` here.
     fun launchCreateParty(isAdminCreation: Boolean, isDebugGame: Boolean = false) {
         val gameId = com.google.firebase.firestore.FirebaseFirestore.getInstance()
             .collection("games")
@@ -240,8 +231,8 @@ fun HomeScreen(
                 .navigationBarsPadding(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Active game banner (either "Partie en cours — Reprendre" or
-            // "Prochaine partie — Préparer/Rejoindre" depending on phase).
+            // Active game banner (either "Partie en cours, Reprendre" or
+            // "Prochaine partie, Préparer/Rejoindre" depending on phase).
             val activeGame = state.activeGame
             val activePhase = state.activeGamePhase
             val activeRole = state.activeGameRole
@@ -334,9 +325,6 @@ fun HomeScreen(
                         color = MaterialTheme.colorScheme.onBackground
                     )
                 }
-                // Hidden admin-mode entry: long-press opens the admin
-                // code dialog (PP-45). The password isn't advertised via
-                // a visible button so Apple reviewers don't surface it.
                 Box(
                     modifier = Modifier
                         .padding(16.dp)
@@ -416,7 +404,6 @@ fun HomeScreen(
         GameRulesOverlay(onDismiss = { viewModel.onIntent(HomeIntent.RulesDismissed) })
     }
 
-    // Admin code dialog (PP-45)
     if (state.isShowingAdminCodeDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.onIntent(HomeIntent.AdminCodeDismissed) },

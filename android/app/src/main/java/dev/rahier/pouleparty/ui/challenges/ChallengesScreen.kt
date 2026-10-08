@@ -75,7 +75,7 @@ import dev.rahier.pouleparty.ui.theme.gameboyStyle
 /**
  * Near-full-height modal bottom sheet showing Challenges and Leaderboard tabs.
  *
- * Hoist visibility at the caller — render this composable only when the sheet
+ * Hoist visibility at the caller, render this composable only when the sheet
  * should be visible, and use [onDismiss] to hide it.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -198,12 +198,6 @@ fun ChallengesSheet(
         sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.background
     ) {
-        // Fill the sheet entirely. Don't use fillMaxHeight(0.95f): the 5% of
-        // empty space at the bottom belongs to the sheet and hijacks vertical
-        // drags as swipe-to-dismiss. Don't wrap the LazyColumn in a Box either:
-        // ModalBottomSheet auto-wires its NestedScrollConnection to the nearest
-        // scrollable descendant, and a Box wrapper breaks that path on
-        // Material3 (PP-38).
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -637,7 +631,7 @@ private fun RegularPlayerRow(rank: Int, entry: LeaderboardHunterEntry) {
 /**
  * Two-option modal that's properly centered on the screen (unlike the
  * previous ModalBottomSheet which floated at the bottom and felt
- * detached from the source row). Photo or short video — same flow as
+ * detached from the source row). Photo or short video, same flow as
  * iOS's native camera segmented control, just split into two intents
  * because Android has no equivalent.
  */

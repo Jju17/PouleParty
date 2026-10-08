@@ -13,33 +13,12 @@ fun calculateNormalModeSettings(initialRadius: Double, gameDurationMinutes: Doub
     return Pair(NORMAL_MODE_FIXED_INTERVAL, maxOf(0.0, declinePerUpdate))
 }
 
-// ── Zone radius computation (PP-13 phase 1, mirrors PP-69) ──────────
-
-/** Final-zone disc shown on the recap preview + applied at runtime
- *  when the zone collapses. 50 m matches the PP-69 backend spec. */
 const val ZONE_FINAL_RADIUS_METERS = 50.0
 
-/** Minimum buffer between the shrinking start zone and the final
- *  disc so the zone never collapses earlier than `endDate`. 200 m
- *  matches the PP-69 backend spec. */
 const val ZONE_INTERIOR_MARGIN_METERS = 200.0
 
-/** Floor for the initial radius in `stayInTheZone`: even when start
- *  and final pins are very close the game starts with at least 800 m
- *  of breathing room. 800 m matches the PP-69 backend spec. */
 const val ZONE_MINIMUM_INITIAL_RADIUS_METERS = 800.0
 
-/**
- * Computes the initial zone radius for the recap step (PP-13 phase 1).
- * Mirrors the PP-69 Cloud Function formula bit-for-bit so phase 1
- * produces the exact same radius the backend will return once phase 2
- * lands and this helper is deleted.
- *
- * - `stayInTheZone`: `max(D × 1.5, D + final + margin, minimumInitial)`
- *   with `D = haversine(start, final)`.
- * - `followTheChicken`: the user-picked `radiusHint` (500/1000/2000);
- *   defaults to 1000 m if no hint is set yet.
- */
 fun computeZoneRadius(
     start: Point,
     finalCenter: Point?,
@@ -64,12 +43,6 @@ fun computeZoneRadius(
     }
 }
 
-/**
- * PP-14 phase 1 — fresh client-side drift seed for the Shuffle button.
- * Must be `> 0` (the runtime PRNG treats 0 as "no drift"). Dropped at
- * the same time as `computeZoneRadius` per PP-13 phase 2 once PP-69
- * lands.
- */
 fun generateDriftSeed(): Int {
     var seed = 0
     while (seed == 0) {
@@ -78,14 +51,6 @@ fun generateDriftSeed(): Int {
     return seed
 }
 
-/**
- * PP-13 — picks a center for the initial zone disc such that the
- * disc contains BOTH `startPin` and `finalCenter` without being
- * centered on either. Mirrors the iOS `pickInitialZoneCenter` so
- * both platforms agree on the chosen center for the same `seed`.
- *
- * See the Swift sibling for the algorithm.
- */
 fun pickInitialZoneCenter(
     startPin: Point,
     finalCenter: Point,

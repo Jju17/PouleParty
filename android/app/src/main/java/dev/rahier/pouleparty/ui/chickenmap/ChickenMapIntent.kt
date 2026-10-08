@@ -17,11 +17,8 @@ sealed interface ChickenMapIntent {
     object DismissPowerUpInventory : ChickenMapIntent
     data class ActivatePowerUp(val powerUp: PowerUp) : ChickenMapIntent
     object ValidationQueueTapped : ChickenMapIntent
-    /** PP-107: dismisses the one-time "you are the new chicken" alert. */
     object DismissNewChickenAlert : ChickenMapIntent
-    /** PP-71: chicken taps LAUNCH when status == READY_TO_LAUNCH. */
     object LaunchTapped : ChickenMapIntent
-    /** PP-71: dismisses the error alert after a failed launchGame call. */
     object LaunchErrorDismissed : ChickenMapIntent
     /** Banner tap at game-end → navigate to the Victory / leaderboard page. */
     object ViewLeaderboardTapped : ChickenMapIntent

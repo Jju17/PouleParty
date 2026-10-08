@@ -13,7 +13,7 @@ import java.util.Date
  * PP-zone-stored: one pre-generated zone circle, read from
  * `/games/{id}/zone/schedule` (written server-side by `onGameCreated`).
  * Clients render `circles[shrinkIndex]` read-only instead of recomputing
- * the drift on-device — this is what guarantees every device shows the
+ * the drift on-device, this is what guarantees every device shows the
  * exact same circle. `radiusMeters` is an exact Double (no Int truncation).
  * In `followTheChicken`, `lat`/`lng` hold the start pin but the runtime
  * uses the live chicken GPS for the center and only takes `radiusMeters`.
@@ -35,31 +35,11 @@ data class Timing(
     )),
     val end: Timestamp = Timestamp(Date(System.currentTimeMillis() + 3_900_000)),
     val headStartMinutes: Double = 2.0,
-    /**
-     * PP-71: server-set timestamp of the effective launch when
-     * `manualStartEnabled == true`. `null` until the LAUNCH callable
-     * fires; read by `hunterStartDate` (and the recomputed `end`)
-     * to anchor every downstream timer on the actual start.
-     */
     val actualStart: Timestamp? = null,
 )
 
 data class Zone(
-    /**
-     * Initial geometric center of the shrinking zone disc. PP-13
-     * recomputes this on the recap step so the first circle
-     * contains BOTH `startPin` and `finalCenter` without being
-     * centered on either.
-     */
     val center: GeoPoint = GeoPoint(AppConstants.DEFAULT_LATITUDE, AppConstants.DEFAULT_LONGITUDE),
-    /**
-     * PP-11 / PP-13: user-placed start pin. Decoupled from
-     * `center` so the recap can pick a non-centered initial disc
-     * while keeping the visual start marker exactly where the
-     * chicken dropped it. `null` for legacy games written before
-     * the split — readers fall back to `center` (see
-     * `Game.startPinPoint`).
-     */
     val startPin: GeoPoint? = null,
     val finalCenter: GeoPoint? = null,
     val radius: Double = 1500.0,
@@ -92,41 +72,14 @@ data class Game(
     val status: String = GameStatus.WAITING.firestoreValue,
     val winners: List<Winner> = emptyList(),
     val creatorId: String = "",
-    /**
-     * PP-107: single source of truth for membership. Maps each
-     * participant's uid to their role (`"chicken"` | `"hunter"` |
-     * `"gameMaster"`). A uid has exactly one role, so a "ghost" (no role)
-     * or a double-role is impossible by construction. Written server-side
-     * only (the role callables via admin SDK); `creatorId` stays as
-     * ownership and also appears here with a role. Read through the
-     * derived `chickenId` / `hunterIds` / `gameMasterIds` accessors below
-     * — never mutate `roles` from a client.
-     */
     val roles: Map<String, String> = emptyMap(),
-    /**
-     * True when the creator has enabled the GameMaster role and set a
-     * password. The actual password lives in
-     * `/games/{gameId}/private/security` (admin-SDK only, PP-23) — this
-     * flag is the public signal so JoinFlow can show / hide the "Join
-     * as GameMaster" CTA without leaking the password (PP-70).
-     */
     val hasGameMasterPassword: Boolean = false,
     val timing: Timing = Timing(),
     val zone: Zone = Zone(),
     val powerUps: GamePowerUps = GamePowerUps(),
-    /**
-     * Lifts the `maxPlayers` cap from 5 to 500 for parties created via the
-     * admin code (`jujurahier`). Garde-fou client only — see PP-45 and the
-     * firestore.rules `allow create` clause.
-     */
     @get:PropertyName("isAdminCreation")
     @field:PropertyName("isAdminCreation")
     val isAdminCreation: Boolean = false,
-    /**
-     * PP-71: when true, the game waits for an explicit LAUNCH tap from
-     * the chicken or a GameMaster at `timing.start` instead of starting
-     * automatically.
-     */
     val manualStartEnabled: Boolean = false,
     /**
      * QA only: when true the game was created via the `qa_debug_code`
@@ -138,19 +91,8 @@ data class Game(
     @get:PropertyName("isDebugGame")
     @field:PropertyName("isDebugGame")
     val isDebugGame: Boolean = false,
-    /**
-     * PP-52: when set, this game is linked to a batch of pre-paid web
-     * registrations (`/eventRegistrations`). The JoinFlow then requires the
-     * unique registration code (validated + single-use-claimed server-side via
-     * `validateRegistrationCode`) before a hunter can join. Null for every
-     * normal free game, which join with the gameCode alone.
-     */
     val registrationBatchId: String? = null,
 ) {
-    // ── Roles (PP-107) ─────────────────────────────────
-    // `roles` is the stored single source of truth (uid -> role string).
-    // These derived accessors keep every read site working unchanged while
-    // the doc holds one clean map instead of three sprawled id fields.
 
     /** The single chicken's uid, or "" when none is set yet. */
     @get:Exclude
@@ -172,11 +114,6 @@ data class Game(
     fun role(userId: String): String? =
         if (userId.isEmpty()) null else roles[userId]
 
-    /**
-     * True when [userId] is the player designated as the chicken
-     * (PP-26 / PP-107). Use this instead of `creatorId == userId`
-     * everywhere the question is "who runs and hides".
-     */
     @Exclude
     fun isChicken(userId: String): Boolean = role(userId) == "chicken"
 
@@ -208,16 +145,6 @@ data class Game(
     val isJammerActive: Boolean
         get() = powerUps.activeEffects.jammer != null && Date().before(powerUps.activeEffects.jammer.toDate())
 
-    /**
-     * Whether the timed effect associated with [type] is currently active on
-     * the game doc. Used to gate activation — a second activation overwrites
-     * `powerUps.activeEffects.<field>`, shifting the freeze window and
-     * desyncing `findLastUpdate` between Chicken + Hunter (a 1.11.2
-     * live-test report: the Hunter kept seeing the zone frozen after the
-     * Chicken's game had already ended). Blocking the second activation at
-     * the UI + ViewModel layer prevents that entirely. Keep in lockstep
-     * with iOS `Game.isActive(effectOf:)`.
-     */
     @Exclude
     fun isActive(type: PowerUpType): Boolean = when (type) {
         PowerUpType.INVISIBILITY -> isChickenInvisible
@@ -234,9 +161,6 @@ data class Game(
     val initialLocation: Point
         get() = Point.fromLngLat(zone.center.longitude, zone.center.latitude)
 
-    /** PP-11 / PP-13 — user-placed start pin. Falls back to
-     *  `zone.center` for legacy games written before the `startPin`
-     *  field existed, so existing readers keep working. */
     @get:Exclude
     val startPinPoint: Point
         get() {
@@ -253,12 +177,6 @@ data class Game(
     @get:Exclude
     val endDate: Date get() = timing.end.toDate()
 
-    /**
-     * PP-71: post-launch this is the server-stamped real start; before
-     * the launch (or in auto-start mode) it falls through to the
-     * planned `start`. Every downstream timer must read this instead
-     * of `startDate` to stay in sync with the recomputed `end`.
-     */
     @get:Exclude
     val effectiveStartDate: Date get() = timing.actualStart?.toDate() ?: startDate
 
@@ -321,9 +239,6 @@ data class Game(
         zone = zone.copy(center = GeoPoint(point.latitude(), point.longitude()))
     )
 
-    /** PP-11 / PP-13 — write the user-placed start pin AND mirror it
-     *  into `zone.center` so the PP-11 preview circle stays anchored
-     *  on the pin until PP-13 picks a non-centered computed center. */
     fun withStartPin(point: Point): Game = copy(
         zone = zone.copy(
             startPin = GeoPoint(point.latitude(), point.longitude()),

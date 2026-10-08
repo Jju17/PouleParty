@@ -20,18 +20,6 @@ import dev.rahier.pouleparty.ui.theme.gameboyStyle
 import dev.rahier.pouleparty.ui.victory.LeaderboardEntry
 import dev.rahier.pouleparty.ui.victory.buildLeaderboardEntries
 
-/**
- * Reusable bottom sheet that shows the final leaderboard for a finished game.
- *
- * Used by:
- * - [dev.rahier.pouleparty.ui.settings.SettingsScreen] (My Games > tap finished game)
- * - PP-18: chicken & hunter map screens, after gameOver, behind the
- *   "View leaderboard" CTA in the bottom bar.
- *
- * Builds entries from winners only — no network fetch needed for a basic
- * leaderboard. Hunters without a registration doc fall back to the winner's
- * `hunterName` or "Hunter".
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GameLeaderboardSheet(

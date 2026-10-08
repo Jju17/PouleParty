@@ -45,11 +45,6 @@ import dev.rahier.pouleparty.ui.components.outerBoundsPoints
 import dev.rahier.pouleparty.ui.components.zoomForRadius
 import dev.rahier.pouleparty.ui.theme.*
 
-/**
- * GameMaster observer view (PP-24). Streams chicken + hunter positions
- * + power-ups in read-only mode. The GM never broadcasts their own GPS
- * and cannot collect power-ups.
- */
 @Suppress("COMPOSE_APPLIER_CALL_MISMATCH")
 @OptIn(MapboxExperimental::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -153,7 +148,7 @@ fun GameMasterMapScreen(
                 }
             }
 
-            // Top bar (shared component with chicken/hunter — includes
+            // Top bar (shared component with chicken/hunter, includes
             // the info button on the right).
             Box(modifier = Modifier.align(Alignment.TopCenter)) {
                 MapTopBar(
@@ -227,7 +222,6 @@ fun GameMasterMapScreen(
                 }
             }
 
-            // PP-86 — confirmation alert
             val pending = state.pendingChickenDesignation
             if (pending != null) {
                 AlertDialog(
@@ -247,7 +241,6 @@ fun GameMasterMapScreen(
                 )
             }
 
-            // PP-86 — error alert
             val designationError = state.designationError
             if (designationError != null) {
                 AlertDialog(
@@ -263,7 +256,7 @@ fun GameMasterMapScreen(
             }
 
             // Unified pre-game overlay. READY_TO_LAUNCH flips it into
-            // manual-launch mode (LAUNCH button — GM has the same
+            // manual-launch mode (LAUNCH button, GM has the same
             // authority as the chicken to start the party); before the
             // planned `timing.start` it ticks down so the GM sees the
             // same lobby UI as everyone else.

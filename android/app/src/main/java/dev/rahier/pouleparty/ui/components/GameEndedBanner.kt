@@ -33,7 +33,7 @@ import dev.rahier.pouleparty.ui.theme.neonGlow
  * Shared "Game ended → tap to see leaderboard" banner shown on top
  * of every active map (chicken / hunter / GameMaster) once the game
  * reaches `status == DONE`. The map stays on screen; tapping the
- * banner is the only path forward — it sends the screen's
+ * banner is the only path forward, it sends the screen's
  * `ViewLeaderboardTapped` intent which routes to the Victory /
  * leaderboard screen (which has the canonical "Back to menu" CTA).
  *

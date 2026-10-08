@@ -11,7 +11,6 @@ import java.util.UUID
 
 class GameTest {
 
-
     @Test
     fun `gameCode is first 6 chars uppercased`() {
         val game = Game(id = "abcdef-1234-5678")
@@ -479,7 +478,7 @@ class GameTest {
         // 1 min / 5 min interval = 0.2 shrinks (fractional but > 0, passes guard)
         val (interval, decline) = calculateNormalModeSettings(1500.0, 1.0)
         assertEquals(5.0, interval, 0.0)
-        // decline = (1500-100) / 0.2 = 7000 — very large but valid
+        // decline = (1500-100) / 0.2 = 7000, very large but valid
         assertTrue("Decline should be positive", decline > 0)
     }
 
@@ -566,8 +565,6 @@ class GameTest {
         assertFalse(game.isJammerActive)
     }
 
-    // ── computeZoneRadius (PP-13 phase 1, mirrors PP-69) ──────────
-
     @Test
     fun `computeZoneRadius followTheChicken validates radiusHint against allowed sizes`() {
         val start = com.mapbox.geojson.Point.fromLngLat(4.4, 50.85)
@@ -612,7 +609,7 @@ class GameTest {
 
     @Test
     fun `generateDriftSeed never returns zero`() {
-        // The runtime PRNG treats 0 as "no drift" — the recap step
+        // The runtime PRNG treats 0 as "no drift", the recap step
         // would render a static stack of circles. The helper loops
         // until it finds a positive seed, so 1000 samples should all
         // be > 0 (probabilistically zero chance to fail otherwise).

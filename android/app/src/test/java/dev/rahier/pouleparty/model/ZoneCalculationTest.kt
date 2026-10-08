@@ -16,16 +16,6 @@ import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-/**
- * PP-64 — strict goldens for the PP-13 / PP-14 zone helpers
- * (`model/GameSettings.kt`). Mirrors the iOS sibling
- * `ZoneCalculationTests.swift` byte-for-byte and the TS reference
- * `functions/test/zoneCalculation.test.ts`. Any drift between iOS,
- * Android, or the Cloud Function will fail one of these on every
- * platform that's wrong — the cross-platform contract is that
- * `computeZoneRadius` on the same inputs returns the same number to
- * within 1 m (sub-millimetre after the haversine round).
- */
 class ZoneCalculationTest {
 
     /** Tolerance for the radius-from-pin-distance goldens. The test
@@ -61,7 +51,7 @@ class ZoneCalculationTest {
         unmockkStatic(Location::class)
     }
 
-    // ── computeZoneRadius (stayInTheZone) — golden distances ──────────
+    // ── computeZoneRadius (stayInTheZone), golden distances ──────────
 
     @Test
     fun `radius stayInTheZone at 50 m falls to floor`() {
@@ -112,9 +102,6 @@ class ZoneCalculationTest {
 
     @Test
     fun `radius stayInTheZone interior margin invariant for D up to 10 km`() {
-        // PP-69 / PP-13 contract: for every D ≤ 10 km, the interior
-        // margin (initialRadius − D) is ≥ 200 m so the zone never
-        // collapses early. Sweep at 100 m steps to lock it in.
         val start = Point.fromLngLat(4.35, 50.85)
         var d = 100.0
         while (d <= 10_000.0) {
@@ -163,14 +150,14 @@ class ZoneCalculationTest {
     @Test
     fun `generateDriftSeed never returns zero`() {
         // 0 is treated as "no drift" by the runtime PRNG. The helper
-        // re-rolls until it gets a positive value — 1000 samples is
+        // re-rolls until it gets a positive value, 1000 samples is
         // statistically more than enough.
         repeat(1000) {
             assertTrue(generateDriftSeed() > 0)
         }
     }
 
-    // ── interpolateZoneCenter — strict goldens ────────────────────────
+    // ── interpolateZoneCenter, strict goldens ────────────────────────
 
     @Test
     fun `interpolate at zero progress returns initial`() {
@@ -208,7 +195,7 @@ class ZoneCalculationTest {
         assertEquals(4.37, out.longitude(), interpolateTolerance)
     }
 
-    // ── deterministicDriftCenter — same seed → same output ────────────
+    // ── deterministicDriftCenter, same seed → same output ────────────
 
     @Test
     fun `drift deterministic same inputs same output`() {
@@ -239,7 +226,7 @@ class ZoneCalculationTest {
         assertEquals(4.349340564597558, out.longitude(), interpolateTolerance)
     }
 
-    // ── pickInitialZoneCenter — same seed yields same center ──────────
+    // ── pickInitialZoneCenter, same seed yields same center ──────────
 
     @Test
     fun `pickInitialZoneCenter is deterministic for same seed`() {
@@ -253,10 +240,6 @@ class ZoneCalculationTest {
 
     @Test
     fun `pickInitialZoneCenter respects containment lens`() {
-        // For ANY seed in 1..32, the picked center must keep both pins
-        // inside the disc of `radius` around it. PP-13 / PP-69
-        // contract: user-placed pins live inside the disc as markers,
-        // not at its center, and never escape it.
         val start = Point.fromLngLat(4.35, 50.85)
         val finalCenter = Point.fromLngLat(4.36, 50.86)
         val radius = 1668.0

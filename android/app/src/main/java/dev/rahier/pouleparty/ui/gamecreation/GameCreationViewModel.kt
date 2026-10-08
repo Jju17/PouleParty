@@ -47,13 +47,8 @@ data class GameCreationUiState(
     val gameMasterCodeFailedGameId: String? = null,
     val codeCopied: Boolean = false,
     val goingForward: Boolean = true,
-    /** PP-42: lifts the maxPlayers stepper from `2..5` (Free standard) to
-     *  `2..500`. Always `false` in PP-42; PP-45 will flip it via the
-     *  `jujurahier` admin code modal. */
     val isAdminCreation: Boolean = false,
-    /** PP-88: toggle on the gameMasterPassword step. Default ON. */
     val isGameMasterEnabled: Boolean = true,
-    /** PP-88: 4-digit GameMaster password collected on the step. */
     val gameMasterPassword: String = "",
 ) {
     val steps: List<GameCreationStep>
@@ -64,15 +59,6 @@ data class GameCreationUiState(
             if (!isParticipating) {
                 base.add(GameCreationStep.CHICKEN_SELECTION)
             }
-            // Wizard order: When → How long → Mode → Where → Rules.
-            // The timing trio precedes the zone block so PP-13's
-            // recap sees a valid duration window when it computes
-            // the shrink schedule. `GAME_MODE` sits right before
-            // `START_ZONE_SETUP` because it decides the zone setup
-            // sub-steps themselves (stayInTheZone has a final pin
-            // step, followTheChicken doesn't) — keeping them
-            // adjacent makes the wizard read as one coherent
-            // "configure the playing field" beat.
             base.addAll(listOf(
                 GameCreationStep.MAX_PLAYERS,
                 GameCreationStep.START_TIME,
@@ -81,17 +67,10 @@ data class GameCreationUiState(
                 GameCreationStep.GAME_MODE,
                 GameCreationStep.START_ZONE_SETUP,
             ))
-            // PP-12: `FINAL_ZONE_SETUP` only exists in stayInTheZone —
-            // followTheChicken's zone tracks the chicken's live
-            // position, no `finalCenter` to place.
             if (game.gameModEnum == GameMod.STAY_IN_THE_ZONE) {
                 base.add(GameCreationStep.FINAL_ZONE_SETUP)
             }
-            // PP-13: recap step lives right after the zone pins so
-            // the chicken can preview the trajectory.
             base.add(GameCreationStep.ZONES_RECAP)
-            // PP-70 / PP-88: GameMaster password parked with the
-            // other modifier toggles at the tail end of the wizard.
             base.add(GameCreationStep.GAME_MASTER_PASSWORD)
             base.add(GameCreationStep.POWER_UPS)
             base.add(GameCreationStep.CHICKEN_SEES_HUNTERS)
@@ -99,8 +78,6 @@ data class GameCreationUiState(
             return base
         }
 
-    /** Closed range allowed by the current Stepper. PP-45 plumbs through
-     *  `isAdminCreation = true` to unlock the wider range. */
     val maxPlayersRange: IntRange
         get() = if (isAdminCreation) 2..500 else 2..5
 
@@ -113,9 +90,6 @@ data class GameCreationUiState(
     val canGoBack: Boolean
         get() = currentStepIndex > 0
 
-    /** PP-11: start pin has been placed (zone center is no longer the
-     *  Brussels default seeded at wizard creation). Gates the Next
-     *  button on `START_ZONE_SETUP`. */
     val isStartZoneConfigured: Boolean
         get() {
             val loc = game.initialLocation
@@ -124,8 +98,6 @@ data class GameCreationUiState(
             return !isDefault
         }
 
-    /** PP-12: final pin placed AND at least 100 m from the start
-     *  (haversine). Gates Next on `FINAL_ZONE_SETUP`. */
     val isFinalZoneConfigured: Boolean
         get() {
             val finalLoc = game.finalLocation ?: return false
@@ -144,8 +116,6 @@ data class GameCreationUiState(
             return true
         }
 
-    /** PP-90: anyone can join anytime, even mid-game. Minimum start time
-     *  is now + 1 minute (avoids clock skew on submission). */
     val minimumStartDate: Date
         get() = Date(System.currentTimeMillis() + 60_000L)
 }
@@ -182,9 +152,6 @@ class GameCreationViewModel @Inject constructor(
                 // foundCode is generated SERVER-SIDE in onGameCreated and stored
                 // only in /private/security (never on the public doc).
                 creatorId = auth.currentUser?.uid ?: "",
-                // PP-107: membership is the single `roles` map. The creator
-                // starts as the chicken. firestore.rules requires the create
-                // payload's `roles` to be exactly `{ <creatorId>: "chicken" }`.
                 roles = (auth.currentUser?.uid ?: "").let { uid -> mapOf(uid to "chicken") },
                 isAdminCreation = isAdminCreation,
                 isDebugGame = isDebugGame
@@ -234,13 +201,6 @@ class GameCreationViewModel @Inject constructor(
         }
     }
 
-    /**
-     * PP-13 phase 1 — recompute the initial radius from the start +
-     * final pins (or the user-picked size in followTheChicken) and
-     * allocate a fresh `driftSeed` on first visit. Mirrors the iOS
-     * `zonesRecapEntered` handler. Phase 2 will replace this with a
-     * call to the PP-69 Cloud Function.
-     */
     private fun onZonesRecapEntered() {
         _uiState.update { state ->
             val game = state.game
@@ -260,10 +220,6 @@ class GameCreationViewModel @Inject constructor(
             val effectiveDuration = maxOf(state.gameDurationMinutes - gameWithEnd.timing.headStartMinutes, 1.0)
             val (interval, decline) = dev.rahier.pouleparty.model.calculateNormalModeSettings(radius, effectiveDuration)
             val newSeed: Int = if (gameWithEnd.zone.driftSeed == 0L) dev.rahier.pouleparty.model.generateDriftSeed() else gameWithEnd.zone.driftSeed.toInt()
-            // PP-13 bug fix: pick a non-centered initial disc that
-            // still contains both pins (stayInTheZone only —
-            // followTheChicken's disc tracks the chicken's live
-            // position so there's no second point to contain).
             val finalLoc = gameWithEnd.finalLocation
             val newCenter = if (gameWithEnd.gameModEnum == GameMod.STAY_IN_THE_ZONE && finalLoc != null) {
                 dev.rahier.pouleparty.model.pickInitialZoneCenter(
@@ -289,11 +245,6 @@ class GameCreationViewModel @Inject constructor(
         }
     }
 
-    /**
-     * PP-14 phase 1 — Shuffle: regenerate `driftSeed` AND re-pick the
-     * initial disc center using the new seed (stayInTheZone only).
-     * The preview circles redraw deterministically.
-     */
     private fun onShuffleDriftSeed() {
         _uiState.update { state ->
             val game = state.game
@@ -413,9 +364,6 @@ class GameCreationViewModel @Inject constructor(
             if (cal.time.before(minDate)) {
                 cal.time = minDate
             }
-            // Sync endDate so PP-13's recap sees a valid duration
-            // window long before the wizard finishes — see iOS
-            // sibling for the rationale.
             val endDate = Date(cal.timeInMillis + (state.gameDurationMinutes * 60 * 1000).toLong())
             state.copy(
                 game = state.game.withStartDate(cal.time).withEndDate(endDate),
@@ -460,8 +408,6 @@ class GameCreationViewModel @Inject constructor(
     private fun togglePowerUpType(type: PowerUpType) {
         _uiState.update { state ->
             val current = state.game.powerUps.enabledTypes
-            // PP-35: lean on the strict availability helper so we don't
-            // drift from the UI's filter rules.
             val availableRaw = availablePowerUpTypes(state.game.gameModEnum)
                 .map { it.firestoreValue }
                 .toSet()
@@ -485,10 +431,6 @@ class GameCreationViewModel @Inject constructor(
     }
 
     private fun onLocationSelected(point: Point) {
-        // PP-11 / PP-13: the user-placed pin lives on `zone.startPin`
-        // while `zone.center` mirrors it on PP-11 — PP-13's recap
-        // will overwrite the center later with a computed non-centered
-        // value, but `startPin` stays at the user's placement.
         _uiState.update { it.copy(game = it.game.withStartPin(point)) }
     }
 

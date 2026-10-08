@@ -14,15 +14,6 @@ import dev.rahier.pouleparty.model.GameMod
 import dev.rahier.pouleparty.model.Winner
 import java.util.Date
 
-/**
- * Pure helper functions shared between ChickenMapViewModel and HunterMapViewModel.
- * Extracts duplicated countdown / radius / game-over / winner-detection logic.
- *
- * Cross-platform parity: mirrors `ios/PouleParty/Components/GameTimerLogic.swift`.
- * Any change here must be reflected on the iOS side (and vice versa) — both platforms
- * must produce identical outputs for the same inputs. See `CLAUDE.md` → "Cross-platform parity".
- */
-
 // ── Zone Check ───────────────────────────────────────
 
 data class ZoneCheckResult(
@@ -30,10 +21,6 @@ data class ZoneCheckResult(
     val distanceToCenter: Float
 )
 
-/**
- * Whether this role should be zone-checked under the given game mode.
- * GameMaster (PP-24) is a pure spectator and is never zone-checked.
- */
 fun shouldCheckZone(role: PlayerRole, gameMod: GameMod): Boolean {
     if (role == PlayerRole.GAME_MASTER) return false
     return when (gameMod) {
@@ -154,7 +141,7 @@ const val FINAL_CENTER_SAFETY_METERS = 1.0
 
 /**
  * Radius of the "final zone" the chicken sees as a green glow on the
- * map — the whole disk, not just its center, must stay inside every
+ * map, the whole disk, not just its center, must stay inside every
  * drifted circle. Matches the hardcoded 50 m used by the final-zone
  * polyline block in `ChickenMapScreen.kt` and iOS'
  * `finalZoneGlowContent`. Kept alongside the other drift constants
@@ -166,7 +153,7 @@ const val FINAL_ZONE_RADIUS_METERS = 50.0
 /**
  * How many rejection-sampling attempts before falling back to the
  * deterministic "pull toward finalCenter by `delta`" point. Each
- * attempt costs one splitmix64 evaluation; 32 is plenty — the
+ * attempt costs one splitmix64 evaluation; 32 is plenty, the
  * rejection rate only gets high near game end where
  * `disk(C, delta)` sticks out past `disk(F, r)`, and even at 50 %
  * rejection 32 attempts succeed with probability > 99.99 %.
@@ -184,7 +171,7 @@ private const val MAX_DRIFT_ATTEMPTS = 32
  *     disk (50 m glow) fits entirely inside the drifted circle.
  *
  * Caller contract: [basePoint] is the **initial** zone center and
- * [oldRadius] is the **initial** zone radius — NOT the previous
+ * [oldRadius] is the **initial** zone radius, NOT the previous
  * drifted center. Every shrink's candidate is drawn independently
  * from `disk(initial, R₀ − rᵢ) ∩ disk(final, rᵢ − FINAL −
  * safety)`, so successive circles can overlap each other freely as
@@ -199,7 +186,7 @@ private const val MAX_DRIFT_ATTEMPTS = 32
  * overlap, the lens/smaller-disk ratio is usually > 10 %, so 32
  * splitmix64-seeded attempts succeed with overwhelming probability.
  * When rejection exhausts, fall back to a deterministic point on
- * the base→final line — always in the intersection whenever the
+ * the base→final line, always in the intersection whenever the
  * disks overlap (caller invariant: final zone fits in start zone).
  */
 fun deterministicDriftCenter(
@@ -296,14 +283,11 @@ fun processRadiusUpdate(
 ): RadiusUpdateResult? {
     val nextUpdate = nextRadiusUpdate ?: return null
     val now = Date()
-    // HIGH-17 (audit 2026-05-17): match iOS `now >= nextUpdate`. Previously
-    // `!now.after(nextUpdate)` was strict `<=`, so Android fired one tick later
-    // than iOS at the exact-second boundary — 1 s desync at every shrink.
     if (now.time < nextUpdate.time) return null
     // Zone Freeze: skip the radius reduction for THIS scheduled shrink but
     // still advance `nextRadiusUpdate` to the following one. Previously we
     // returned null here, which left the countdown target frozen on a past
-    // date — after freeze expired, one tick would process and jump the next
+    // date, after freeze expired, one tick would process and jump the next
     // update past `endDate`, producing a "Map update in: 3:00 / 4:59"
     // countdown on the hunter side even after the chicken's game had ended.
     // Advancing here keeps the countdown monotonic and in sync with
@@ -336,8 +320,8 @@ fun processRadiusUpdate(
     val newCenter = if (gameMod == GameMod.STAY_IN_THE_ZONE) {
         // Drift is independent per shrink: candidate sampled from
         // `disk(initial, R₀ − rᵢ) ∩ disk(final, rᵢ − FINAL −
-        // safety)`. That enforces both product rules directly — new
-        // circle inside start zone, final zone inside new circle —
+        // safety)`. That enforces both product rules directly, new
+        // circle inside start zone, final zone inside new circle ,
         // while leaving successive intermediate circles free to
         // overlap each other.
         deterministicDriftCenter(
@@ -374,7 +358,7 @@ data class ActiveCircleResult(
 /**
  * PP-zone-stored: pick the active shrink index at `now` from the timing
  * alone (freeze-aware), then the caller looks up `circles[circleIndex]`.
- * Replaces the on-device radius/center recomputation — geometry now comes
+ * Replaces the on-device radius/center recomputation, geometry now comes
  * from the stored schedule, so every device renders the same circle.
  *
  * Index 0 = the initial circle (active from `hunterStartDate`). Each
@@ -415,7 +399,7 @@ fun selectActiveCircle(
 }
 
 /**
- * PP-zone-stored: resolved render state for the active circle — the Int
+ * PP-zone-stored: resolved render state for the active circle, the Int
  * radius and (for stayInTheZone) the stored center, plus the next shrink
  * time for the "Map update in" countdown. In followTheChicken `center` is
  * null (the caller keeps the live chicken GPS).
@@ -461,7 +445,7 @@ fun zoneRenderStateFromCircles(
 
 /**
  * A single preview circle entry returned by [computeDebugShiftedCircles]
- * — the center and radius the zone will hold at each scheduled shrink,
+ *, the center and radius the zone will hold at each scheduled shrink,
  * in order.
  */
 data class DebugShrinkCircle(
@@ -476,7 +460,7 @@ data class DebugShrinkCircle(
  * per scheduled shrink, ordered from first to last, stopping early
  * when the radius would collapse to zero.
  *
- * Pure function — only used by the long-press debug preview on the
+ * Pure function, only used by the long-press debug preview on the
  * chicken map to render every future circle simultaneously. Mirrors
  * the iOS `computeDebugShiftedCircles` sibling.
  */
@@ -496,7 +480,7 @@ fun computeDebugShiftedCircles(game: dev.rahier.pouleparty.model.Game): List<Deb
     val maxShrinks = kotlin.math.floor(duration / intervalSeconds).toInt()
     val result = mutableListOf<DebugShrinkCircle>()
     var radius = initialRadius
-    // Drift is independent per shrink — every call uses the initial
+    // Drift is independent per shrink, every call uses the initial
     // center/radius, no state between iterations.
     for (i in 0 until maxShrinks) {
         val newRadius = radius - declinePerUpdate
@@ -580,7 +564,7 @@ fun applyJammerNoise(
 
 /**
  * Deterministic pseudo-random number from [seed] and [index].
- * Uses splitmix64 — must match iOS GameTimerLogic.seededRandom exactly.
+ * Uses splitmix64, must match iOS GameTimerLogic.seededRandom exactly.
  */
 @Suppress("INTEGER_OVERFLOW")
 fun seededRandom(seed: Long, index: Int): Double {
@@ -590,8 +574,6 @@ fun seededRandom(seed: Long, index: Int): Double {
     z = z xor (z ushr 31)
     return (z ushr 1).toDouble() / Long.MAX_VALUE.toDouble()
 }
-
-// ── PP-17 Overtime formatter ────────────────────────────────────
 
 /**
  * Renders the `+MM:SS` (or `+HH:MM:SS` past one hour) overtime

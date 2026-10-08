@@ -73,10 +73,6 @@ data class HunterMapUiState(
     val previousWinnersCount: Int = -1,
     override val winnerNotification: UiText? = null,
     val shouldNavigateToVictory: Boolean = false,
-    /** PP-16: flipped when the game ends (time-out, zone collapse,
-     *  all hunters found). The map stays visible, gameplay
-     *  controls grey, GPS stops. Found-code submission stays
-     *  active (per PP-2 spec). Mirrors iOS `isGameOver`. */
     val isGameOver: Boolean = false,
     override val hasGameStarted: Boolean = false,
     override val countdownNumber: Int? = null,
@@ -98,28 +94,17 @@ data class HunterMapUiState(
     // Latest known Chicken position broadcasted via `chickenLocationFlow`.
     // Tracked in every mode (not just followTheChicken) so Radar Ping has a
     // fresh point to reveal the instant it's activated. HunterMapScreen
-    // gates marker visibility on `game.isRadarPingActive` — without that
+    // gates marker visibility on `game.isRadarPingActive`, without that
     // gate this would be a free locator.
     val chickenLocation: Point? = null,
     val hasChallenges: Boolean = false,
     val winnerRegistrationFailed: Boolean = false,
-    // CRIT-3 (audit 2026-05-17): hold the typed-in code (not a pre-built
-    // Winner) between a failed `submitFoundCode` CF call and a retry. The
-    // server stamps the winner's timestamp at success, so we no longer
-    // build a Winner client-side.
     val pendingFoundCode: String? = null,
     // Raised while a `submitFoundCode` CF call is in flight so a fast
     // double-tap on the submit button can't enqueue two CF calls. The CF
     // itself is also idempotent (returns AlreadyWinner on re-submission),
     // but this UX gate avoids the round-trip.
     val isSubmittingWinner: Boolean = false,
-    /** PP-36: epoch-millis of the last out-of-zone penalty tick. The 1 s
-     *  timer fires the decrement only when the previous tick was ≥
-     *  [AppConstants.OUT_OF_ZONE_PENALTY_INTERVAL_MS] ago, so the penalty
-     *  is exactly -1 point per 5 s while the hunter stays outside. Reset
-     *  to `null` whenever the hunter is inside the zone so re-exit
-     *  starts a fresh 5 s window rather than firing immediately on
-     *  re-cross. */
     val lastPenaltyAt: Long? = null,
 ) : dev.rahier.pouleparty.ui.map.MapUiState
 
@@ -147,7 +132,6 @@ class HunterMapViewModel @Inject constructor(
     /** Public alias kept for external callers (e.g. HunterMapScreen). */
     val hunterId: String get() = playerId
 
-    /** PP-18: exposed for the leaderboard sheet so it can highlight the current user's row. */
     fun currentUserId(): String = playerId
 
     private val _uiState = MutableStateFlow(HunterMapUiState())
@@ -206,11 +190,7 @@ class HunterMapViewModel @Inject constructor(
         viewModelScope.launch {
             gameRepository.challengesStream(gameId)
                 .catch { e ->
-                    // PP-64: a synchronous flow error (offline / rules
-                    // hiccup) should not crash the hunter map. Mirror the
-                    // iOS `try? await` semantics: leave `hasChallenges`
-                    // at its last value and log for telemetry.
-                    Log.w(TAG, "challengesStream error — leaving hasChallenges as-is", e)
+                    Log.w(TAG, "challengesStream error: leaving hasChallenges as-is", e)
                 }
                 .collect { list ->
                     _uiState.update { it.copy(hasChallenges = list.isNotEmpty()) }
@@ -265,11 +245,6 @@ class HunterMapViewModel @Inject constructor(
             }
 
             try {
-                // PP-107: `joinGame` writes the hunter role + the
-                // `/players/{uid}` team-name doc + the membership index
-                // server-side, in one idempotent call. Re-running it on
-                // "Reprendre la partie" (or an old game) is the safety net
-                // that keeps the GameMaster marker labeled.
                 gameFunctions.joinGame(gameId, hunterName.trim())
                 analyticsRepository.gameJoined(gameMode = game.gameMode, gameCode = game.gameCode)
             } catch (e: Exception) {
@@ -366,7 +341,7 @@ class HunterMapViewModel @Inject constructor(
                 // Power-up proximity check
                 checkPowerUpProximity()
 
-                // Zone check (visual warning only — no elimination)
+                // Zone check (visual warning only, no elimination)
                 val currentState = _uiState.value
                 if (shouldCheckZone(PlayerRole.HUNTER, currentState.game.gameModEnum)) {
                     val userLoc = currentState.userLocation
@@ -377,9 +352,6 @@ class HunterMapViewModel @Inject constructor(
                     }
                 }
 
-                // PP-36 / PP-37: route the penalty decision through the
-                // shared evaluator so unit tests and production exercise
-                // the same code path (see `OutOfZonePenaltyEvaluator.kt`).
                 val zoneState = _uiState.value
                 val decision = evaluateOutOfZonePenalty(
                     isOutsideZone = zoneState.isOutsideZone,
@@ -411,9 +383,6 @@ class HunterMapViewModel @Inject constructor(
     private suspend fun streamGameConfig(game: Game) {
         gameRepository.gameConfigFlow(gameId).collect { updatedGame ->
             if (updatedGame != null) {
-                // PP-107: a GameMaster may have re-designated this hunter as
-                // the chicken while the game is `waiting`. Re-route to the
-                // chicken map so the player isn't stranded on the hunter map.
                 if (hunterId.isNotEmpty() && updatedGame.isChicken(hunterId)) {
                     cancelStreams()
                     viewModelScope.launch {
@@ -491,11 +460,6 @@ class HunterMapViewModel @Inject constructor(
                     }
                 }
 
-                // PP-16: end the game when all hunters have found
-                // the chicken. Stay on the map — no auto-Victory.
-                // Chicken is authoritative for the Firestore
-                // `status = DONE` write; hunter just flips its
-                // local phase + cancels GPS.
                 if (!_uiState.value.isGameOver &&
                     updatedGame.hunterIds.isNotEmpty() &&
                     updatedGame.winners.size >= updatedGame.hunterIds.size) {
@@ -517,9 +481,6 @@ class HunterMapViewModel @Inject constructor(
         if (delayMs > 0) delay(delayMs)
         presenceRepository.chickenLocationFlow(gameId).collect { chickenLoc ->
             if (chickenLoc == null || chickenLoc.invisible) {
-                // PP-87: doc missing OR Invisibility active. Clear the
-                // cached marker so the hunter sees no chicken (same
-                // behavior as pre-PP-87 absence-of-doc).
                 _uiState.update { it.copy(chickenLocation = null) }
                 return@collect
             }
@@ -528,7 +489,7 @@ class HunterMapViewModel @Inject constructor(
                 chickenLoc.location.latitude,
             )
             // Always cache the latest Chicken position so Radar Ping has a
-            // fresh point to reveal — the UI gates rendering on
+            // fresh point to reveal, the UI gates rendering on
             // `game.isRadarPingActive`, so this is not a free locator.
             // Only update the zone centre (`circleCenter`) in
             // followTheChicken: in stayInTheZone the centre is the
@@ -550,30 +511,7 @@ class HunterMapViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Hunter always tracks own location (for zone check).
-     * When chickenCanSeeHunters, also writes to Firestore.
-     *
-     * Pre-1.11.2 we wrote only when FusedLocationProvider emitted a new
-     * coord. With `setMinUpdateDistanceMeters = 10 m`, a stationary hunter
-     * produced zero fixes and therefore zero writes — the chicken saw a
-     * frozen marker for as long as the player sat still. 1.11.2 splits
-     * the work across two coroutines:
-     *   1. Tracker — collects `locationFlow` and only updates
-     *      `_uiState.userLocation`; never writes directly.
-     *   2. Writer — `periodicHunterLocationWriter()` fires every
-     *      [AppConstants.LOCATION_THROTTLE_MS] and re-broadcasts the
-     *      latest cached `_uiState.userLocation` so a stationary hunter
-     *      still refreshes on the chicken's map.
-     * A `HunterMapIntent.AppResumed` handler writes one extra refresh
-     * each time the app returns to the foreground, in case Android
-     * suspended the writer coroutine during a deep background.
-     */
     private suspend fun trackHunterSelfLocation(game: Game) {
-        // PP-24: hunters always broadcast their position when at least
-        // one GameMaster has joined, so the GM observer map can render
-        // them even in `stayInTheZone`. Other hunters cannot read this
-        // collection (Firestore rules), so privacy is preserved.
         val shouldWrite = game.chickenCanSeeHunters || game.gameMasterIds.isNotEmpty()
 
         val delayMs = game.hunterStartDate.time - System.currentTimeMillis()
@@ -599,23 +537,6 @@ class HunterMapViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Every [AppConstants.LOCATION_THROTTLE_MS] re-broadcasts the latest
-     * known `_uiState.userLocation` to Firestore. Split out from
-     * [trackHunterSelfLocation] so the period is bounded by the wall
-     * clock rather than by the GPS emission cadence — a hunter who
-     * stops moving still refreshes on the chicken's map.
-     * Registered in `streamJobs` so leaving the game cancels it.
-     *
-     * Before the first successful write, the loop polls at a tighter
-     * 100 ms cadence — [trackHunterSelfLocation] only fires the initial
-     * synchronous write when `locationRepository.getLastLocation()`
-     * already has a cached fix. On a cold start without one, the chicken
-     * would otherwise wait the full 5 s throttle window before the
-     * hunter's first coord showed up (reproduction: 1.11.1's
-     * `first locationFlow emit writes immediately when getLastLocation
-     * is null` regression test).
-     */
     private suspend fun periodicHunterLocationWriter() {
         var hasWritten = false
         while (coroutineContext.isActive) {
@@ -643,7 +564,7 @@ class HunterMapViewModel @Inject constructor(
         if (hunterId.isEmpty()) return
         if (!state.hasGameStarted) return
         viewModelScope.launch {
-            // `getLastLocation()` suspends — lives inside the coroutine, not
+            // `getLastLocation()` suspends, lives inside the coroutine, not
             // at the synchronous early-return prelude above. Prefer the
             // freshest in-state fix if we have one; otherwise ask the repo.
             val point = state.userLocation ?: locationRepository.getLastLocation() ?: return@launch
@@ -698,7 +619,7 @@ class HunterMapViewModel @Inject constructor(
 
                 if (powerUp.typeEnum == PowerUpType.ZONE_PREVIEW) {
                     // PP-zone-stored: the NEXT zone boundary is just the next
-                    // entry in the stored schedule — no client recompute. In
+                    // entry in the stored schedule, no client recompute. In
                     // followTheChicken the next circle recentres on the
                     // Chicken's live GPS, so we keep the current center and
                     // only preview the next radius.
@@ -761,11 +682,6 @@ class HunterMapViewModel @Inject constructor(
         val code = _uiState.value.enteredCode.trim()
         _uiState.update { it.copy(isEnteringFoundCode = false, enteredCode = "") }
 
-        // CRIT-2 (audit 2026-05-17): the client used to compare
-        // `code != game.foundCode` here, but foundCode is no longer
-        // on the public Game doc. The CF re-verifies server-side and
-        // returns `InvalidCode` for misses — routed to the same
-        // wrong-code alert + cooldown logic via [handleWrongCode].
         val totalAttempts = _uiState.value.wrongCodeAttempts + 1
         recordFoundCodeSubmission(code, totalAttempts)
     }
@@ -789,13 +705,6 @@ class HunterMapViewModel @Inject constructor(
         }
     }
 
-    /** CRIT-3 (audit 2026-05-17): submit the typed code through the
-     *  server-authoritative CF. `AlreadyWinner` is treated as success
-     *  — the server already has the hunter recorded from an earlier
-     *  attempt, so the UX proceeds to Victory. Any other rejection
-     *  surfaces the retry prompt. Extracted so the retry path can
-     *  re-send the same (code, name) pair.
-     */
     private fun recordFoundCodeSubmission(code: String, totalAttempts: Int) {
         _uiState.update {
             it.copy(

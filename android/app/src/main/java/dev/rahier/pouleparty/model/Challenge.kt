@@ -38,7 +38,7 @@ data class Challenge(
     /** Locale → text with a 2-level cascade: requested locale, then
      *  `"fr"` (the D-Day FR-first audience). Empty strings count as
      *  missing so a partially-populated doc falls through cleanly.
-     *  Returns `""` when both are missing — surfaces the bug in the
+     *  Returns `""` when both are missing, surfaces the bug in the
      *  UI so the admin populates the maps. */
     fun localizedTitle(locale: String): String =
         titleByLocale[locale]?.takeIf { it.isNotEmpty() }

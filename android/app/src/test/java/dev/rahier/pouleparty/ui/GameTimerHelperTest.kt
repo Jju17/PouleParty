@@ -223,7 +223,7 @@ class GameTimerHelperTest {
         // `processRadiusUpdate` passes `initialLocation` +
         // `initialRadius` as the drift base (not previous center).
         // The resulting circle must fit entirely inside the start
-        // zone — `|C_i − I| + r_i ≤ R₀`.
+        // zone, `|C_i − I| + r_i ≤ R₀`.
         val initialLocation = Point.fromLngLat(4.0, 50.0)
         val result = processRadiusUpdate(
             nextRadiusUpdate = Date(System.currentTimeMillis() - 1000),
@@ -443,7 +443,7 @@ class GameTimerHelperTest {
 
     /**
      * Hard-coded expected values verified against iOS output.
-     * If these break, cross-platform parity is lost — fix both platforms.
+     * If these break, cross-platform parity is lost, fix both platforms.
      */
     @Test
     fun `seededRandom cross-platform parity`() {
@@ -994,13 +994,6 @@ class GameTimerHelperTest {
         assertEquals(50.5, result.latitude(), 1e-10)
         assertEquals(4.5, result.longitude(), 1e-10)
     }
-
-    // ── PP-19 formatOvertime cross-platform parity ──
-    //
-    // The strings produced by `formatOvertime` are rendered byte-for-byte
-    // on the gameOver countdown bar. The iOS mirror in
-    // `GameTimerLogicTests.swift` asserts the same inputs map to the same
-    // outputs.
 
     @Test
     fun `formatOvertime clamps negative delta to plus zero`() {

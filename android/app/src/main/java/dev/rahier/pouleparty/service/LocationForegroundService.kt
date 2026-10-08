@@ -19,7 +19,7 @@ import dev.rahier.pouleparty.R
  * Foreground service required whenever the app tracks location while backgrounded
  * (Android 14+ enforces this because the app declares ACCESS_BACKGROUND_LOCATION).
  *
- * The service itself doesn't pull location — LocationRepository owns the FusedLocationProvider
+ * The service itself doesn't pull location, LocationRepository owns the FusedLocationProvider
  * callback. The service just keeps the process in the foreground state so Android doesn't
  * kill the location callback when the user switches away from the map screen during a game.
  */
@@ -47,9 +47,6 @@ class LocationForegroundService : Service() {
     }
 
     private fun buildNotification(): Notification {
-        // HIGH-12 (audit 2026-05-17): channel registration moved to
-        // PoulePartyApp.createNotificationChannels so it always exists
-        // by the time this service starts.
 
         val openIntent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -74,12 +71,6 @@ class LocationForegroundService : Service() {
 
     companion object {
         const val CHANNEL_ID = "location_tracking"
-        // AND-M8 (store-audit 2026-05-18): bumped from 42 to a high
-        // value to avoid colliding with FCM notification IDs minted by
-        // `PouleFCMService` (which auto-increments from a low counter).
-        // A collision would let an FCM notification overwrite (or be
-        // overwritten by) the foreground-service notification, breaking
-        // the location service's "ongoing" badge.
         private const val NOTIFICATION_ID = 1_000_001
 
         fun start(context: Context) {

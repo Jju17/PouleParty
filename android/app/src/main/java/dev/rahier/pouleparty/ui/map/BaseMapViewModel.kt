@@ -41,12 +41,6 @@ abstract class BaseMapViewModel(
     protected val auth: FirebaseAuth
 ) : ViewModel() {
 
-    /** HIGH-13 (audit 2026-05-17): synchronized list. The previous
-     *  `mutableListOf<Job>()` was mutated from multiple coroutines (the
-     *  periodic hunter writer, the timer ticks, `onCleared`) without
-     *  any guard — concurrent add + clear could trip a
-     *  `ConcurrentModificationException`. Same pattern as the existing
-     *  `collectingPowerUpIds = Collections.synchronizedSet(...)` below. */
     protected val streamJobs: MutableList<Job> =
         java.util.Collections.synchronizedList(mutableListOf())
     protected var notificationJob: Job? = null
@@ -54,7 +48,7 @@ abstract class BaseMapViewModel(
 
     init {
         // Start the location foreground service *synchronously* when the VM
-        // is created — the screen is being composed, so the app is
+        // is created, the screen is being composed, so the app is
         // guaranteed to be in the foreground. Starting here (rather than
         // lazily inside `locationRepository.locationFlow()`) avoids the
         // ForegroundServiceStartNotAllowedException crash that fired when
@@ -64,7 +58,7 @@ abstract class BaseMapViewModel(
         locationRepository.startTrackingService()
     }
 
-    /** The game document ID — provided by SavedStateHandle in each subclass. */
+    /** The game document ID, provided by SavedStateHandle in each subclass. */
     abstract val gameId: String
 
     /** The current player's ID (userId for chicken, hunterId for hunter). */

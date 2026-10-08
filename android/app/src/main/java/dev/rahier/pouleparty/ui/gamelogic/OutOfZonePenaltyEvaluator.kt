@@ -2,26 +2,6 @@ package dev.rahier.pouleparty.ui.gamelogic
 
 import dev.rahier.pouleparty.AppConstants
 
-/**
- * PP-36: pure decision rule for the out-of-zone penalty (-1 point /
- * 5 s). Production callers (`HunterMapViewModel.startTimer()`) and
- * parity tests both go through this single function, so the test
- * surface is the actual code path the runtime exercises.
- *
- * iOS sibling: the same rule is encoded inline in the TCA reducer
- * (`HunterMapFeature` timerTicked branch). Both implementations must
- * stay aligned — `OutOfZonePenaltyTests` (iOS) and
- * `OutOfZonePenaltyTest` (Android) pin the contract with strict
- * parity scenarios.
- *
- * @param newLastPenaltyAt if non-null, set the state's `lastPenaltyAt`
- *   to this value. `null` means "leave it as-is".
- * @param resetLastPenaltyAt when true, clear `lastPenaltyAt`. Set on
- *   re-entry into the zone so the next exit starts a fresh window.
- *   When set, `newLastPenaltyAt` must be null.
- * @param shouldFirePenalty when true, the caller must invoke
- *   `decrementTotalPoints` for this tick.
- */
 data class OutOfZonePenaltyDecision(
     val newLastPenaltyAt: Long?,
     val resetLastPenaltyAt: Boolean,

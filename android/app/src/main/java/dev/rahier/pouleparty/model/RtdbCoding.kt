@@ -1,10 +1,5 @@
 package dev.rahier.pouleparty.model
 
-/**
- * Coerces a Realtime Database numeric leaf into a [Double] / [Long]. RTDB hands
- * numbers back as `Long` or `Double` depending on the value, so position
- * decoding (PP-102) normalizes through these helpers.
- */
 fun rtdbDouble(value: Any?): Double? = when (value) {
     is Double -> value
     is Long -> value.toDouble()

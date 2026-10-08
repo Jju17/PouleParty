@@ -170,7 +170,7 @@ fun ChickenMapScreen(
                     fillOpacity = 1.0
                 }
 
-                // Zone border circle — neon glow effect (layered polylines)
+                // Zone border circle, neon glow effect (layered polylines)
                 PolylineAnnotation(
                     points = circlePoints + listOf(circlePoints.first())
                 ) {
@@ -375,7 +375,6 @@ fun ChickenMapScreen(
                 }
             }
 
-            // FOUND button (only visible after game starts, hidden at gameOver per PP-18)
             if (state.hasGameStarted && !state.isGameOver) {
                 Button(
                     onClick = { viewModel.onIntent(ChickenMapIntent.FoundButtonTapped) },
@@ -397,9 +396,6 @@ fun ChickenMapScreen(
             countdownText = state.countdownText?.asString()
         )
 
-        // PP-71: unified pre-game overlay. Status == READY_TO_LAUNCH
-        // flips it into manual-launch mode (LAUNCH button); otherwise
-        // it ticks down to `timing.start`.
         if (state.game.gameStatusEnum == dev.rahier.pouleparty.model.GameStatus.READY_TO_LAUNCH) {
             PreGameOverlay(
                 role = dev.rahier.pouleparty.ui.components.PreGameRole.CHICKEN,
@@ -427,7 +423,7 @@ fun ChickenMapScreen(
             )
         }
 
-        // Zone warning banner (visual warning only — no elimination)
+        // Zone warning banner (visual warning only, no elimination)
         if (state.isOutsideZone) {
             Text(
                 text = stringResource(R.string.return_to_zone),
@@ -464,8 +460,6 @@ fun ChickenMapScreen(
         )
     }
 
-    // PP-107: one-time "you are the new chicken" alert after a GameMaster
-    // re-designation routed this player onto the chicken map.
     if (state.showNewChickenAlert) {
         AlertDialog(
             onDismissRequest = { viewModel.onIntent(ChickenMapIntent.DismissNewChickenAlert) },
@@ -484,10 +478,6 @@ fun ChickenMapScreen(
         AlertDialog(
             onDismissRequest = { viewModel.onIntent(ChickenMapIntent.DismissFoundCode) },
             title = null,
-            // CRIT-2 (audit 2026-05-17): read from chickenFoundCode
-            // (populated by getFoundCode CF on map load). The public
-            // game.foundCode is now "" since V2.3 moves it to
-            // /games/{id}/private/security (admin-SDK only).
             text = { EndGameCodeContent(foundCode = state.chickenFoundCode) },
             confirmButton = {
                 TextButton(onClick = { viewModel.onIntent(ChickenMapIntent.DismissFoundCode) }) {
