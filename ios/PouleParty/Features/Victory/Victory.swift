@@ -139,7 +139,7 @@ func buildLeaderboardEntries(
         let registration = registrationByUserId[hunterId]
         let winner = winnerById[hunterId]
         let teamName = registration?.teamName
-        let displayName = teamName ?? winner?.hunterName ?? "Hunter"
+        let displayName = teamName ?? winner?.hunterName ?? AppConstants.fallbackTeamName
         return LeaderboardEntry(
             id: hunterId,
             displayName: displayName,

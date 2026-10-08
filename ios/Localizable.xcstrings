@@ -8748,6 +8748,22 @@
           }
         }
       }
+    },
+    "Hunter": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chasseur"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jager"
+          }
+        }
+      }
     }
   },
   "version": "1.1"

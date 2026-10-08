@@ -29,7 +29,7 @@ struct ValidationQueueFeature {
                !reg.teamName.isEmpty {
                 return reg.teamName
             }
-            return "Hunter"
+            return AppConstants.fallbackTeamName
         }
     }
 
@@ -158,7 +158,7 @@ struct ValidationQueueFeature {
                 await send(.internal(.validateSucceeded(id)))
             } catch {
                 logger.error("validateChallengeSubmission failed: \(error.localizedDescription)")
-                await send(.internal(.validateFailed(id, error.localizedDescription)))
+                await send(.internal(.validateFailed(id, error.userMessage)))
             }
         }
     }

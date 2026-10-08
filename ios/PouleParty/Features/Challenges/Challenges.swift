@@ -149,7 +149,7 @@ struct ChallengesFeature {
                 let teamName: String = {
                     if let registeredTeamName, !registeredTeamName.isEmpty { return registeredTeamName }
                     if let completion, !completion.teamName.isEmpty { return completion.teamName }
-                    return "Hunter"
+                    return AppConstants.fallbackTeamName
                 }()
                 return ChallengeLeaderboardEntry(
                     hunterId: hid,

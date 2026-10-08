@@ -17,6 +17,7 @@ enum AppConstants {
     static let locationThrottleSeconds: TimeInterval = 5
     static let heartbeatIntervalSeconds: TimeInterval = 30
     static let powerUpNotificationSeconds: TimeInterval = 2
+    static var fallbackTeamName: String { String(localized: "Hunter") }
     static let maxProofVideoBytes = 8 * 1024 * 1024
     static let countdownThresholdSeconds: TimeInterval = 3
     static let countdownDisplaySeconds: TimeInterval = 1.5

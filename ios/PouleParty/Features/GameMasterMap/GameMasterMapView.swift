@@ -286,6 +286,6 @@ private struct GameMasterHuntersListView: View {
     }
 
     private func displayName(for uid: String) -> String {
-        registrations.first(where: { $0.userId == uid })?.teamName ?? "Hunter"
+        registrations.first(where: { $0.userId == uid })?.teamName ?? AppConstants.fallbackTeamName
     }
 }
