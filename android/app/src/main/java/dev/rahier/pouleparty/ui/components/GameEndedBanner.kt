@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.components
 
+import dev.rahier.pouleparty.ui.theme.GradientFire
 import dev.rahier.pouleparty.R
 import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
@@ -50,7 +51,7 @@ fun GameEndedBanner(
             .fillMaxWidth()
             .neonGlow(CROrange, NeonGlowIntensity.SUBTLE, cornerRadius = 14.dp)
             .background(
-                brush = Brush.horizontalGradient(listOf(CROrange, CRPink)),
+                brush = GradientFire,
                 shape = RoundedCornerShape(14.dp),
             )
             .clickable { onTap() }
@@ -60,7 +61,7 @@ fun GameEndedBanner(
         Icon(
             imageVector = Icons.Filled.EmojiEvents,
             contentDescription = null,
-            tint = Color.White,
+            tint = Color.Black,
             modifier = Modifier.size(20.dp),
         )
         Spacer(Modifier.width(12.dp))
@@ -70,20 +71,20 @@ fun GameEndedBanner(
         ) {
             Text(
                 text = stringResource(R.string.game_ended_banner_title),
-                color = Color.White,
+                color = Color.Black,
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp,
             )
             Text(
                 text = stringResource(R.string.game_ended_banner_subtitle),
-                color = Color.White.copy(alpha = 0.85f),
+                color = Color.Black.copy(alpha = 0.85f),
                 fontSize = 12.sp,
             )
         }
         Icon(
             imageVector = Icons.Filled.ChevronRight,
             contentDescription = null,
-            tint = Color.White.copy(alpha = 0.85f),
+            tint = Color.Black.copy(alpha = 0.85f),
             modifier = Modifier.size(20.dp),
         )
     }

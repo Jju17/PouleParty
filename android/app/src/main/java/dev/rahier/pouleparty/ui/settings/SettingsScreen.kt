@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.settings
 
+import dev.rahier.pouleparty.ui.theme.GradientFire
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
@@ -619,7 +620,7 @@ private fun GameDetailDialog(
                             .fillMaxWidth()
                             .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
                             .background(
-                                androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(CROrange, CRPink))
+                                GradientFire
                             )
                             .clickable { onViewLeaderboard() }
                             .padding(vertical = 12.dp),
@@ -628,7 +629,7 @@ private fun GameDetailDialog(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text("🏆", fontSize = 18.sp)
                             Spacer(Modifier.width(6.dp))
-                            Text(stringResource(R.string.view_leaderboard), style = bangerStyle(18), color = Color.White)
+                            Text(stringResource(R.string.view_leaderboard), style = bangerStyle(18), color = Color.Black)
                         }
                     }
                 }

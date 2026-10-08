@@ -1,5 +1,8 @@
 package dev.rahier.pouleparty.ui.gamemastermap
 
+import dev.rahier.pouleparty.ui.theme.MapOverlayOffsets
+import dev.rahier.pouleparty.ui.common.ConnectionLostBanner
+import dev.rahier.pouleparty.ui.common.rememberIsOnline
 import androidx.compose.ui.platform.LocalView
 import dev.rahier.pouleparty.ui.components.MapHapticsEffect
 import dev.rahier.pouleparty.ui.components.FinalZoneOutline
@@ -308,6 +311,10 @@ fun GameMasterMapScreen(
                         .align(Alignment.BottomStart)
                         .padding(start = 12.dp, bottom = 130.dp)
                 )
+            }
+
+            if (!rememberIsOnline()) {
+                ConnectionLostBanner(Modifier.align(Alignment.TopCenter).padding(top = MapOverlayOffsets.belowTopBar))
             }
 
             state.leaveErrorRes?.let { message ->

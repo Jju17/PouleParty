@@ -1,5 +1,7 @@
 package dev.rahier.pouleparty.ui.huntermap
 
+import dev.rahier.pouleparty.ui.common.ConnectionLostBanner
+import dev.rahier.pouleparty.ui.common.rememberIsOnline
 import dev.rahier.pouleparty.ui.theme.MinTouchTarget
 import dev.rahier.pouleparty.ui.theme.MapOverlayOffsets
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -228,6 +230,10 @@ fun HunterMapScreen(
                 state.previewCircle?.let { (center, radius) ->
                     CircleOutline(center, radius, PowerupFreeze.copy(alpha = 0.6f))
                 }
+            }
+
+            if (!rememberIsOnline()) {
+                ConnectionLostBanner(Modifier.align(Alignment.TopCenter).padding(top = MapOverlayOffsets.belowTopBar))
             }
 
             // Compass button + active power-up badges

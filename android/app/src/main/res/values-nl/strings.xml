@@ -512,4 +512,5 @@
     <string name="dismiss_active_game">Dit spel verbergen</string>
     <string name="qa_debug_title">QA DEBUG</string>
     <string name="clear_search">Zoekopdracht wissen</string>
+    <string name="connection_lost">Verbinding verbroken. De posities worden bijgewerkt zodra je weer online bent.</string>
 </resources>

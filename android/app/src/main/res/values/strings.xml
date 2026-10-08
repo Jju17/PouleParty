@@ -526,4 +526,5 @@
     <string name="dismiss_active_game">Hide this game</string>
     <string name="qa_debug_title">QA DEBUG</string>
     <string name="clear_search">Clear search</string>
+    <string name="connection_lost">Connection lost. Positions update again as soon as you are back online.</string>
 </resources>
