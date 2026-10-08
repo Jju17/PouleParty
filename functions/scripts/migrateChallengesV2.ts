@@ -31,7 +31,7 @@
  * Run staging first, eyeball the log, then prod.
  */
 
-import * as admin from "firebase-admin";
+import { getFirestore } from "firebase-admin/firestore";
 import { initAdmin } from "./adminApp";
 
 interface DocPlan {
@@ -46,7 +46,7 @@ interface DocPlan {
 async function main() {
   const projectId = initAdmin({ withDatabase: false });
 
-  const db = admin.firestore();
+  const db = getFirestore();
   console.log(`Migrating /challenges in project "${projectId}"...`);
 
   const snap = await db.collection("challenges").get();

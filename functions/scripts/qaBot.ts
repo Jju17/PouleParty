@@ -16,7 +16,8 @@
  * FIREBASE_PROJECT_ID + Application Default Credentials.
  */
 
-import * as admin from "firebase-admin";
+import { FieldValue, Timestamp, getFirestore } from "firebase-admin/firestore";
+import { ServerValue, getDatabase } from "firebase-admin/database";
 import { initAdmin } from "./adminApp";
 
 
@@ -41,8 +42,8 @@ async function main() {
   }
 
   const projectId = initAdmin({ withDatabase: true });
-  const db = admin.firestore();
-  const rtdb = admin.database();
+  const db = getFirestore();
+  const rtdb = getDatabase();
 
   // gameCode = first 6 chars of the doc id, uppercased.
   const snap = await db.collection("games").get();
@@ -76,7 +77,7 @@ async function main() {
     await gameRef.update({ [`roles.${uid}`]: "hunter" });
     await gameRef.collection("players").doc(uid).set({
       teamName: `QA Bot ${i + 1}`,
-      joinedAt: admin.firestore.Timestamp.now(),
+      joinedAt: Timestamp.now(),
     });
   }
   console.log(
@@ -100,7 +101,7 @@ async function main() {
     console.log("\nCleaning up bots...");
     for (const uid of botIds) {
       await gameRef
-        .update({ [`roles.${uid}`]: admin.firestore.FieldValue.delete() })
+        .update({ [`roles.${uid}`]: FieldValue.delete() })
         .catch(() => undefined);
       await rtdb
         .ref(`/games/${gameId}/hunterLocations/${uid}`)
@@ -129,7 +130,7 @@ async function main() {
         .set({
           lat: positions[i].lat,
           lng: positions[i].lng,
-          ts: admin.database.ServerValue.TIMESTAMP,
+          ts: ServerValue.TIMESTAMP,
         });
     }
     console.log(

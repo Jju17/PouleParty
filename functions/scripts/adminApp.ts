@@ -1,4 +1,4 @@
-import * as admin from "firebase-admin";
+import { applicationDefault, initializeApp } from "firebase-admin/app";
 
 const PROD_PROJECTS = new Set(["pouleparty-prod"]);
 
@@ -17,8 +17,8 @@ export function initAdmin(options: { withDatabase?: boolean } = {}): string {
     console.error(`Refusing to run on ${projectId} without CONFIRM_PROD=yes.`);
     process.exit(1);
   }
-  admin.initializeApp({
-    credential: admin.credential.applicationDefault(),
+  initializeApp({
+    credential: applicationDefault(),
     projectId,
     ...(options.withDatabase
       ? {

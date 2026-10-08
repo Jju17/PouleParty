@@ -19,7 +19,7 @@
  *   FIREBASE_SERVICE_ACCOUNT=/path/to/prod-sa.json npx tsx scripts/revertChallengesProd.ts
  */
 
-import * as admin from "firebase-admin";
+import { getFirestore } from "firebase-admin/firestore";
 import { initAdmin } from "./adminApp";
 
 
@@ -33,7 +33,7 @@ async function main() {
     process.exit(1);
   }
 
-  const db = admin.firestore();
+  const db = getFirestore();
   console.log(`Restoring legacy title/body on /challenges in "${projectId}"...\n`);
 
   const snap = await db.collection("challenges").get();

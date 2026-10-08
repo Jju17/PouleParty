@@ -8,7 +8,7 @@
  *   FIREBASE_PROJECT_ID=pouleparty-ba586 npx tsx scripts/seedChallenges.ts
  */
 
-import * as admin from "firebase-admin";
+import { FieldValue, GeoPoint, getFirestore } from "firebase-admin/firestore";
 import { initAdmin } from "./adminApp";
 
 /**
@@ -22,7 +22,7 @@ type SeedChallenge = {
   body: string;
   points: number;
   type?: "oneShot" | "repeatable";
-  location?: admin.firestore.GeoPoint;
+  location?: GeoPoint;
   proximityRadiusMeters?: number;
   partner?: string;
 };
@@ -164,11 +164,11 @@ const challenges: SeedChallenge[] = [
 async function main() {
   const projectId = initAdmin({ withDatabase: false });
 
-  const db = admin.firestore();
+  const db = getFirestore();
   console.log(`Seeding ${challenges.length} challenges into project "${projectId}"...`);
 
   const batch = db.batch();
-  const now = admin.firestore.FieldValue.serverTimestamp();
+  const now = FieldValue.serverTimestamp();
 
   for (const challenge of challenges) {
     const ref = db.collection("challenges").doc(challenge.id);

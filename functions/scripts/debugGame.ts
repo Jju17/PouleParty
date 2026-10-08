@@ -6,7 +6,7 @@
  *   FIREBASE_PROJECT_ID=pouleparty-ba586 npx tsx scripts/debugGame.ts P2FGWE
  */
 
-import * as admin from "firebase-admin";
+import { getFirestore } from "firebase-admin/firestore";
 import { initAdmin } from "./adminApp";
 
 
@@ -20,7 +20,7 @@ async function main() {
   const projectId = initAdmin({ withDatabase: false });
   console.log(`Searching for gameCode=${gameCode} in project "${projectId}"\n`);
 
-  const db = admin.firestore();
+  const db = getFirestore();
   const snap = await db
     .collection("games")
     .where("gameCode", "==", gameCode)

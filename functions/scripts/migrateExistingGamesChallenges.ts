@@ -8,7 +8,7 @@
  *   FIREBASE_SERVICE_ACCOUNT=/path/to/prod-sa.json npx tsx scripts/migrateExistingGamesChallenges.ts
  */
 
-import * as admin from "firebase-admin";
+import { getFirestore } from "firebase-admin/firestore";
 import { initAdmin } from "./adminApp";
 
 
@@ -19,7 +19,7 @@ async function main(): Promise<void> {
   const projectId = initAdmin({ withDatabase: false });
   console.log(`[migrateExistingGamesChallenges] project=${projectId}`);
 
-  const db = admin.firestore();
+  const db = getFirestore();
 
   const templateSnap = await db.collection("challenges").get();
   if (templateSnap.empty) {

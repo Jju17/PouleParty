@@ -4,7 +4,13 @@
     "noEmit": true,
     "module": "preserve",
     "moduleResolution": "bundler",
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "rootDir": "."
   },
-  "include": ["src", "test", "vitest.config.ts", "vitest.rules.config.ts"]
+  "include": [
+    "src",
+    "test",
+    "vitest.config.ts",
+    "vitest.rules.config.ts"
+  ]
 }

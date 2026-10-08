@@ -14,7 +14,7 @@
  *   FIREBASE_SERVICE_ACCOUNT=/path/to/sa.json npx tsx scripts/fillChallengeTranslations.ts
  */
 
-import * as admin from "firebase-admin";
+import { getFirestore } from "firebase-admin/firestore";
 import { initAdmin } from "./adminApp";
 
 interface Translation {
@@ -230,7 +230,7 @@ const TRANSLATIONS: ChallengeTranslations[] = [
 
 async function main() {
   const projectId = initAdmin({ withDatabase: false });
-  const db = admin.firestore();
+  const db = getFirestore();
   console.log(`Filling en/nl translations in project "${projectId}"...\n`);
 
   let updated = 0;
