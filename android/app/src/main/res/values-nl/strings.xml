@@ -120,7 +120,7 @@
     <string name="mode">Modus</string>
     <string name="start_label">Start</string>
     <string name="end_label">Einde</string>
-    <string name="game_over">Game Over</string>
+    <string name="game_over">Spel voorbij</string>
     <string name="copy_game_code">Spelcode kopiëren</string>
 
     <!-- Victory -->
@@ -362,9 +362,9 @@
     <string name="wizard_participation_organizer">Ik organiseer</string>
     <string name="wizard_game_mode_title">Welke spelmodus?</string>
     <string name="wizard_game_mode_subtitle">Kies hoe je wilt spelen</string>
-    <string name="wizard_game_mode_follow_title">Follow the Chicken</string>
+    <string name="wizard_game_mode_follow_title">Volg de kip</string>
     <string name="wizard_game_mode_follow_subtitle">De zone krimpt richting de kip</string>
-    <string name="wizard_game_mode_stay_title">Stay in the Zone</string>
+    <string name="wizard_game_mode_stay_title">Blijf in de zone</string>
     <string name="wizard_game_mode_stay_subtitle">Vaste zone die krimpt</string>
     <string name="wizard_chicken_selection_title">Wie wordt de Kip?</string>
     <string name="wizard_chicken_selection_subtitle">Hoe kies je de kip?</string>

@@ -47,6 +47,23 @@ class StringResourcesParityTest {
     }
 
     @Test
+    fun `Dutch values are translated, apart from words Dutch borrows as is`() {
+        val borrowed = setOf("PouleParty", "Start", "Podium", "Power-ups", "Power-ups?", "GameMaster", "GameMaster 🦅", "QA DEBUG")
+        val english = entries("values", "string")
+        val untranslated = entries("values-nl", "string").filter { (key, value) ->
+            value == english[key] && value !in borrowed && Regex("[a-z]{3}").containsMatchIn(value)
+        }
+        assertTrue("untranslated Dutch: ${untranslated.keys}", untranslated.isEmpty())
+    }
+
+    @Test
+    fun `English uses British spelling`() {
+        val american = Regex("\\b(meters?|centers?|colors?|favorites?|behaviors?|canceled|gray)\\b", RegexOption.IGNORE_CASE)
+        val offenders = entries("values", "string").filterValues { american.containsMatchIn(it) }
+        assertTrue("American spelling: ${offenders.keys}", offenders.isEmpty())
+    }
+
+    @Test
     fun `every server error code has a message`() {
         val names = entries("values", "string").keys
         ApiErrorCode.entries.forEach { code ->

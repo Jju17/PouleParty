@@ -6,7 +6,7 @@
     <string name="start">START</string>
     <string name="press_start">Press start to play</string>
     <string name="rules">Rules</string>
-    <string name="join_game">Join Game</string>
+    <string name="join_game">Join game</string>
     <string name="join">Join</string>
     <string name="cancel">Cancel</string>
     <string name="ok">OK</string>
@@ -18,7 +18,7 @@
     <string name="upcoming_game_banner_title">Next game</string>
     <string name="upcoming_game_cta_chicken">Open</string>
     <string name="upcoming_game_cta_hunter">Join</string>
-    <string name="location_required">Location Required</string>
+    <string name="location_required">Location required</string>
     <!-- AND-H2 (store-audit 2026-05-18): explicit prominent disclosure
          per Google Play sensitive-permissions policy. Names the
          third-party processor (Firebase), the data flow (real-time
@@ -43,9 +43,9 @@
     <!-- Game creation registration step -->
 
     <!-- Chicken Config -->
-    <string name="game_settings">Game Settings</string>
+    <string name="game_settings">Game settings</string>
     <string name="start_at">Start at</string>
-    <string name="game_mode">Game Mode</string>
+    <string name="game_mode">Game mode</string>
     <string name="map_setup">Map setup</string>
     <string name="start_game">Start game</string>
     <string name="set_start_zone">Set a start zone to start</string>
@@ -88,7 +88,7 @@
     <!-- PP-107: one-time alert when a GameMaster swaps this player to chicken. -->
     <string name="new_chicken_alert_title">You are the new chicken! 🐔</string>
     <string name="new_chicken_alert_message">A GameMaster made you the chicken. Get ready to run and hide!</string>
-    <string name="game_info">Game Info</string>
+    <string name="game_info">Game info</string>
 
     <!-- Hunter Map -->
     <string name="you_are_hunter">You are the Hunter</string>
@@ -114,7 +114,7 @@
     <string name="quit">Quit</string>
     <string name="quit_game">Quit game</string>
     <string name="quit_game_message">Are you sure you want to quit the game?</string>
-    <string name="enter_found_code">Enter Found Code</string>
+    <string name="enter_found_code">Enter found code</string>
     <string name="enter_code_message">Enter the 4-digit code shown by the chicken.</string>
     <string name="four_digit_code">4-digit code</string>
     <string name="submit">Submit</string>
@@ -127,11 +127,11 @@
     <string name="mode">Mode</string>
     <string name="start_label">Start</string>
     <string name="end_label">End</string>
-    <string name="game_over">Game Over</string>
+    <string name="game_over">Game over</string>
     <string name="copy_game_code">Copy game code to clipboard</string>
 
     <!-- Victory -->
-    <string name="game_results">Game Results</string>
+    <string name="game_results">Game results</string>
     <string name="you_found_chicken">You found\nthe chicken!</string>
     <string name="back_to_menu">BACK TO MENU</string>
 
@@ -151,11 +151,11 @@
     <!-- Onboarding -->
     <string name="welcome_title">Welcome to\nPouleParty!</string>
     <string name="welcome_subtitle">The ultimate real-world\nhide-and-seek game</string>
-    <string name="nominate_chicken">Nominate a Chicken</string>
+    <string name="nominate_chicken">Nominate a chicken</string>
     <string name="nominate_subtitle">Pick the Stag, the Birthday Girl, or whoever just really wants to be a Chicken.\n\nTheir job is to hide.</string>
-    <string name="hunt_them_down">Hunt Them Down</string>
+    <string name="hunt_them_down">Hunt them down</string>
     <string name="hunt_subtitle">Split into squads. Use the map to track them.\n\nThe Chicken could be hiding anywhere!</string>
-    <string name="need_location">We Need Your Location</string>
+    <string name="need_location">We need your location</string>
     <string name="location_granted">You\'re all set! The game will track location even in the background.\n\nMaximum fun guaranteed!</string>
     <string name="location_partial">Thanks! You\'re good to go.\n\nFor the smoothest experience during a hunt, you can also allow location in the background so the Chicken keeps broadcasting when the phone is in your pocket. Totally optional.</string>
     <string name="location_denied">PouleParty uses your GPS during a game so the Chicken and Hunters can find each other on the map.\n\nYou can grant access now, or wait. We\'ll ask again when you start your first game.</string>
@@ -185,10 +185,10 @@
          re-reading the 1.11.1 App Review notes. -->
     <string name="allow_always">Continue</string>
     <string name="allow_location_access">Set up location</string>
-    <string name="choose_nickname">Choose Your Nickname</string>
+    <string name="choose_nickname">Choose your nickname</string>
     <string name="nickname_subtitle">This is how other players\nwill see you in the game.</string>
     <string name="your_nickname">Your nickname</string>
-    <string name="the_endgame">Ready to Play?</string>
+    <string name="the_endgame">Ready to play?</string>
     <string name="endgame_subtitle">Close in on the Chicken. The zone shrinks, the hunt intensifies.\n\nFind the Chicken before time runs out!</string>
     <string name="back">Back</string>
     <string name="next">Next</string>
@@ -199,27 +199,27 @@
     <string name="notif_enabled_description">Notifications enabled! You\'ll know when the game starts, the zone shrinks, and when hunters find the chicken.</string>
     <string name="notif_enabled">Notifications enabled!</string>
     <string name="notif_request_description">Get notified when the game starts, the zone shrinks, and when a hunter finds the chicken!\n\nThis is optional but recommended.</string>
-    <string name="notif_enable_button">Enable Notifications</string>
+    <string name="notif_enable_button">Enable notifications</string>
 
     <!-- Notifications (FCM localization) -->
-    <string name="notif_chicken_start_title">Game Started!</string>
+    <string name="notif_chicken_start_title">Game started!</string>
     <string name="notif_chicken_start_body">You\'re the Chicken! Start hiding now!</string>
-    <string name="notif_hunter_start_title">The Hunt Begins!</string>
+    <string name="notif_hunter_start_title">The hunt begins!</string>
     <string name="notif_hunter_start_body">The Chicken is hiding. Go find them!</string>
-    <string name="notif_zone_shrink_title">Zone Shrinking!</string>
+    <string name="notif_zone_shrink_title">Zone shrinking!</string>
     <string name="notif_zone_shrink_body">The zone just got smaller. Stay inside!</string>
-    <string name="notif_hunter_found_title">Chicken Found!</string>
+    <string name="notif_hunter_found_title">Chicken found!</string>
     <string name="notif_hunter_found_body">%1$s found the chicken! %2$s hunters remaining</string>
 
     <!-- Game Rules -->
     <string name="how_to_play">How to play</string>
-    <string name="game_modes">Game Modes</string>
+    <string name="game_modes">Game modes</string>
     <string name="rule_one_chicken">One player is the Chicken, the others are Hunters.</string>
     <string name="rule_circular_zone">The game takes place in a circular zone on the map.</string>
     <string name="rule_zone_shrinks">The zone shrinks over time based on game settings.</string>
     <string name="rule_win_condition">Hunters win by finding the Chicken. The Chicken wins by surviving until the end!</string>
     <string name="mode_follow_desc">The zone shrinks periodically toward the Chicken\'s position. Hunters don\'t see the Chicken\'s exact location, only the zone moving!</string>
-    <string name="mode_follow_detail1">The zone center follows the Chicken\'s live position</string>
+    <string name="mode_follow_detail1">The zone centre follows the Chicken\'s live position</string>
     <string name="mode_follow_detail2">Hunters see the zone move but not where the Chicken is</string>
     <string name="mode_follow_detail3">The Chicken must stay inside the zone to survive</string>
     <string name="mode_stay_desc">The zone shrinks and drifts randomly around the starting point. Hunters must find the Chicken with no position clues!</string>
@@ -235,7 +235,7 @@
     <string name="setting_start_end_name">Start / End time</string>
     <string name="setting_start_end_desc">When the game starts and ends. The Chicken wins if the time runs out!</string>
     <string name="setting_radius_interval_desc">How often the zone shrinks (in minutes).</string>
-    <string name="setting_radius_decline_desc">How many meters the zone shrinks each update.</string>
+    <string name="setting_radius_decline_desc">How many metres the zone shrinks each update.</string>
     <string name="setting_map_desc">Choose the starting location and initial radius of the zone.</string>
 
     <!-- Game Modes (subtitles) -->
@@ -255,7 +255,7 @@
     <string name="copied">Copied!</string>
 
     <!-- Profanity -->
-    <string name="inappropriate_nickname">Inappropriate Nickname</string>
+    <string name="inappropriate_nickname">Inappropriate nickname</string>
     <string name="inappropriate_nickname_message">Please choose a different nickname. This one contains inappropriate language.</string>
 
     <!-- Settings -->
@@ -263,31 +263,31 @@
     <string name="nickname">Nickname</string>
     <string name="save">Save</string>
     <string name="nickname_saved">Nickname saved!</string>
-    <string name="privacy_policy">Privacy Policy</string>
-    <string name="terms_of_use">Terms of Use</string>
-    <string name="contact_support">Contact Support</string>
+    <string name="privacy_policy">Privacy policy</string>
+    <string name="terms_of_use">Terms of use</string>
+    <string name="contact_support">Contact support</string>
     <!-- iOS-H6 / store-audit 2026-05-18: "Delete Account" (not "Delete My Data")
          is the Apple-mandated wording for Guideline 5.1.1(v). Play Console's
          account-deletion policy uses the same term. -->
-    <string name="delete_my_data">Delete Account</string>
+    <string name="delete_my_data">Delete account</string>
     <string name="delete_data_footer">This deletes your anonymous Firebase Auth account and the profile data associated with it (nickname, push token). Past games keep the team name you used for them: they\'re visible only to participants of those sessions. You can continue using the app, a new anonymous account will be created automatically.</string>
-    <string name="delete_data_title">Delete Account</string>
+    <string name="delete_data_title">Delete account</string>
     <string name="delete_data_message">This will permanently delete your anonymous account. Any active games will be abandoned. Are you sure?</string>
     <string name="delete">Delete</string>
-    <string name="data_deleted">Data Deleted</string>
+    <string name="data_deleted">Data deleted</string>
     <string name="data_deleted_message">Your account and data have been deleted.</string>
     <string name="delete_error_message">Failed to delete your account. Please try again later.</string>
     <string name="version">Version</string>
 
     <!-- Power-Ups -->
-    <string name="power_ups">Power-Ups</string>
-    <string name="enable_power_ups">Enable Power-Ups</string>
-    <string name="choose_power_ups">Choose Power-Ups</string>
+    <string name="power_ups">Power-ups</string>
+    <string name="enable_power_ups">Enable power-ups</string>
+    <string name="choose_power_ups">Choose power-ups</string>
     <string name="done">Done</string>
     <string name="power_ups_count_format">%1$d/%2$d</string>
 
     <!-- Plan Selection -->
-    <string name="create_party">Create Party</string>
+    <string name="create_party">Create party</string>
     <string name="retry">Try again</string>
 
     <!-- Power-Up Dialogs -->
@@ -296,7 +296,7 @@
     <string name="instant">Instant</string>
 
     <!-- My Games -->
-    <string name="my_games">My Games</string>
+    <string name="my_games">My games</string>
     <string name="no_games_yet">No games yet</string>
 
     <!-- Mapbox -->
@@ -327,10 +327,10 @@
 
     <string name="podium">Podium</string>
     <string name="other_hunters">Other hunters</string>
-    <string name="view_leaderboard">View Leaderboard</string>
-    <string name="open_settings">Open Settings</string>
+    <string name="view_leaderboard">View leaderboard</string>
+    <string name="open_settings">Open settings</string>
     <!-- PP-88 GameMaster join flow -->
-    <string name="join_as_hunter">Join as Hunter</string>
+    <string name="join_as_hunter">Join as hunter</string>
     <string name="join_as_game_master">Join as GameMaster 🦅</string>
     <string name="gamemaster_join_title">GameMaster 🦅</string>
     <!-- PP-52: paid-event registration code gate -->
@@ -353,7 +353,7 @@
     <string name="wizard_head_start_title">Chicken head start?</string>
     <string name="wizard_head_start_subtitle">Time before the hunters can start</string>
     <string name="wizard_head_start_none">No head start</string>
-    <string name="wizard_power_ups_title">Power-Ups?</string>
+    <string name="wizard_power_ups_title">Power-ups?</string>
     <string name="wizard_power_ups_subtitle">Enable in-game bonuses</string>
     <string name="wizard_chicken_sees_hunters_title">Can the chicken see the hunters?</string>
     <string name="wizard_chicken_sees_hunters_subtitle">Can the chicken see where the hunters are?</string>
@@ -375,9 +375,9 @@
     <string name="wizard_participation_organizer">I\'m organizing</string>
     <string name="wizard_game_mode_title">Which game mode?</string>
     <string name="wizard_game_mode_subtitle">Choose how you want to play</string>
-    <string name="wizard_game_mode_follow_title">Follow the Chicken</string>
+    <string name="wizard_game_mode_follow_title">Follow the chicken</string>
     <string name="wizard_game_mode_follow_subtitle">The zone shrinks toward the chicken</string>
-    <string name="wizard_game_mode_stay_title">Stay in the Zone</string>
+    <string name="wizard_game_mode_stay_title">Stay in the zone</string>
     <string name="wizard_game_mode_stay_subtitle">Fixed zone that shrinks</string>
     <string name="wizard_chicken_selection_title">Who will be the Chicken?</string>
     <string name="wizard_chicken_selection_subtitle">How to choose the chicken?</string>
@@ -394,11 +394,11 @@
     <!-- App Review demo mode (hidden entry: long-press START on Home) -->
     <string name="demo_code_title">App Review code</string>
     <string name="demo_code_prompt">Enter the App Review code</string>
-    <string name="demo_mode_title">Demo Mode</string>
-    <string name="demo_mode_quit">Quit Demo</string>
-    <string name="demo_tab_chicken_map">Chicken Map</string>
-    <string name="demo_tab_hunter_map">Hunter Map</string>
-    <string name="demo_tab_game_master_map">GameMaster Map</string>
+    <string name="demo_mode_title">Demo mode</string>
+    <string name="demo_mode_quit">Quit demo</string>
+    <string name="demo_tab_chicken_map">Chicken map</string>
+    <string name="demo_tab_hunter_map">Hunter map</string>
+    <string name="demo_tab_game_master_map">GameMaster map</string>
     <string name="demo_tab_victory">Victory</string>
     <string name="api_error_unauthenticated">Your session has expired. Restart the app and try again.</string>
     <string name="api_error_invalid_argument">Something in the request is not valid. Check what you entered.</string>
