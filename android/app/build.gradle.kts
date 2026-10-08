@@ -9,6 +9,12 @@ plugins {
 
 import java.util.Properties
 
+val localProperties = Properties().apply {
+    rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+}
+val mapboxAccessToken: String =
+    localProperties.getProperty("MAPBOX_ACCESS_TOKEN") ?: System.getenv("MAPBOX_ACCESS_TOKEN") ?: ""
+
 val keystorePropertiesFile = rootProject.file("keystore.properties")
 val keystoreProperties = Properties()
 if (keystorePropertiesFile.exists()) {
@@ -36,6 +42,7 @@ android {
         versionName = "1.14.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        resValue("string", "mapbox_access_token", mapboxAccessToken)
     }
 
     signingConfigs {
@@ -80,6 +87,7 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+        resValues = true
     }
 
     testOptions {
@@ -110,6 +118,16 @@ kotlin {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
     }
 }
+
+val requireMapboxToken = tasks.register("requireMapboxToken") {
+    doLast {
+        if (mapboxAccessToken.isBlank()) {
+            throw GradleException("MAPBOX_ACCESS_TOKEN is missing: set it in local.properties or the environment")
+        }
+    }
+}
+tasks.matching { (it.name.startsWith("assemble") || it.name.startsWith("bundle")) && it.name.endsWith("Release") }
+    .configureEach { dependsOn(requireMapboxToken) }
 
 dependencies {
     implementation(platform("androidx.compose:compose-bom:2026.09.00"))

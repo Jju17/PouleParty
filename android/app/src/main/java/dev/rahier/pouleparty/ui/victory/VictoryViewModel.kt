@@ -18,7 +18,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class VictoryUiState(
-    val game: Game = Game.mock,
+    val game: Game = Game(),
     val hunterId: String = "",
     val hunterName: String = "",
     val isChicken: Boolean = false,

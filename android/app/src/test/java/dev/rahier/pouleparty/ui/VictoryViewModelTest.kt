@@ -15,9 +15,10 @@ class VictoryViewModelTest {
     // MARK: - Initial state defaults
 
     @Test
-    fun `initial state has default game mock`() {
+    fun `initial state holds an empty game, never demo data`() {
         val state = VictoryUiState()
-        assertEquals("Mock", state.game.name)
+        assertEquals("", state.game.id)
+        assertEquals("", state.game.foundCode)
     }
 
     @Test

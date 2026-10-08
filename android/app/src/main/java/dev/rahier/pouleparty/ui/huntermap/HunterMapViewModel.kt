@@ -59,7 +59,7 @@ import java.util.Date
 import javax.inject.Inject
 
 data class HunterMapUiState(
-    override val game: Game = Game.mock,
+    override val game: Game = Game(),
     val loadState: LoadState = LoadState.Loading,
     override val nextRadiusUpdate: Date? = null,
     override val nowDate: Date = Date(),

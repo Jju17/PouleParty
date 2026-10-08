@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.gamemastermap
 
+import dev.rahier.pouleparty.model.mock
 import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.ui.common.UiText
 import androidx.lifecycle.SavedStateHandle

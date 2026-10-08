@@ -61,7 +61,7 @@ data class HunterAnnotation(
 )
 
 data class ChickenMapUiState(
-    override val game: Game = Game.mock,
+    override val game: Game = Game(),
     val loadState: LoadState = LoadState.Loading,
     val hunterAnnotations: List<HunterAnnotation> = emptyList(),
     override val nextRadiusUpdate: Date? = null,

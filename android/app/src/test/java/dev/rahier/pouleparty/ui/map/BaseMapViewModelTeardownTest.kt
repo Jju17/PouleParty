@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.map
 
+import dev.rahier.pouleparty.model.mock
 import dev.rahier.pouleparty.model.GameStatus
 import dev.rahier.pouleparty.powerups.model.PowerUp
 import androidx.lifecycle.SavedStateHandle

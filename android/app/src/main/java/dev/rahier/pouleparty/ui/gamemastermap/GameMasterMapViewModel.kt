@@ -42,7 +42,7 @@ import java.util.Date
 import javax.inject.Inject
 
 data class GameMasterMapUiState(
-    override val game: Game = Game.mock,
+    override val game: Game = Game(),
     val loadState: LoadState = LoadState.Loading,
     val chickenLocation: Point? = null,
     val chickenIsInvisible: Boolean = false,

@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui
 
+import dev.rahier.pouleparty.model.mock
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.GeoPoint
 import dev.rahier.pouleparty.ui.common.UiText

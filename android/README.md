@@ -4,11 +4,11 @@ PouleParty Android app built with Jetpack Compose, MVVM architecture, and Hilt d
 
 ## Requirements
 
-- Android Studio with JDK 17
-- compileSdk 35, minSdk 26, targetSdk 35
-- `google-services.json` in `app/src/debug/` (staging) and `app/src/production/` (production) — gitignored
-- `MAPBOX_DOWNLOADS_TOKEN` in `gradle.properties` or `local.properties`
-- Mapbox access token in `res/values/strings.xml`
+- Android Studio with JDK 21
+- compileSdk 37, minSdk 26, targetSdk 36
+- `google-services.json` in `app/src/staging/` and `app/src/production/` (gitignored, one per flavour)
+- `MAPBOX_DOWNLOADS_TOKEN` in `~/.gradle/gradle.properties`
+- `MAPBOX_ACCESS_TOKEN` (public `pk.` token, restricted to the app package in the Mapbox console) in `local.properties` or the environment; release builds refuse to start without it
 
 ## Build & run
 

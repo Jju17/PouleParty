@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty
 
+import dev.rahier.pouleparty.model.mock
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.GeoPoint
 import com.mapbox.geojson.Point

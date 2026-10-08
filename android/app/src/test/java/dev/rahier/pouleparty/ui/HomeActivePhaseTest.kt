@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui
 
+import dev.rahier.pouleparty.model.mock
 import dev.rahier.pouleparty.model.AdminCode
 import android.content.SharedPreferences
 import com.google.firebase.auth.FirebaseAuth

@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.gamemastermap
 
+import dev.rahier.pouleparty.model.mock
 import dev.rahier.pouleparty.model.PlayerRole
 import dev.rahier.pouleparty.model.Game
 import org.junit.Assert.assertEquals

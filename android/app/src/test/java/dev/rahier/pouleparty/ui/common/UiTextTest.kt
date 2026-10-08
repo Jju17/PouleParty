@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.common
 
+import dev.rahier.pouleparty.model.mock
 import android.content.Context
 import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.data.ApiErrorCode

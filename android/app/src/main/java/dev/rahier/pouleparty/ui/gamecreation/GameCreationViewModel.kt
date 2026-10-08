@@ -41,7 +41,7 @@ import javax.inject.Inject
 private const val TAG = "GameCreationVM"
 
 data class GameCreationUiState(
-    val game: Game = Game.mock,
+    val game: Game = Game(),
     val currentStepIndex: Int = 0,
     val isParticipating: Boolean = true,
     val gameDurationMinutes: Double = 90.0,

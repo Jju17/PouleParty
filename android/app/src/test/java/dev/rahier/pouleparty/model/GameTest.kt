@@ -171,31 +171,6 @@ class GameTest {
         assertEquals("", game.foundCode)
     }
 
-    @Test
-    fun `generateFoundCode is 4 digits`() {
-        val code = Game.generateFoundCode()
-        assertEquals(4, code.length)
-        assertNotNull(code.toIntOrNull())
-    }
-
-    @Test
-    fun `generateFoundCode is in range`() {
-        repeat(50) {
-            val code = Game.generateFoundCode()
-            val value = code.toInt()
-            assertTrue("Code should be >= 0", value >= 0)
-            assertTrue("Code should be <= 9999", value <= 9999)
-        }
-    }
-
-    @Test
-    fun `generateFoundCode pads with zeros`() {
-        repeat(100) {
-            val code = Game.generateFoundCode()
-            assertEquals("Code should always be 4 chars", 4, code.length)
-        }
-    }
-
     // MARK: - Winners tests
 
     @Test
@@ -295,28 +270,6 @@ class GameTest {
     @Test
     fun `PowerUpType fromFirestore empty string defaults to ZONE_PREVIEW`() {
         assertEquals(PowerUpType.ZONE_PREVIEW, PowerUpType.fromFirestore(""))
-    }
-
-    // ── Found code generation ──
-
-    @Test
-    fun `foundCode is always 4 digits`() {
-        repeat(100) {
-            val code = Game.generateFoundCode()
-            assertEquals(4, code.length)
-            assertNotNull(code.toIntOrNull())
-        }
-    }
-
-    @Test
-    fun `foundCode preserves leading zeros`() {
-        var seenLeadingZero = false
-        repeat(1000) {
-            val code = Game.generateFoundCode()
-            if (code.startsWith("0")) seenLeadingZero = true
-            assertEquals(4, code.length)
-        }
-        assertTrue("Should see at least one code with leading zero", seenLeadingZero)
     }
 
     // ── Game code derivation ──

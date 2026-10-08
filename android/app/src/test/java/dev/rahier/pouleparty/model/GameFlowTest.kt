@@ -17,7 +17,7 @@ class GameFlowTest {
         val game = Game(
             id = "test-game-id",
             name = "Test Game",
-            foundCode = Game.generateFoundCode(),
+            foundCode = "0427",
             status = GameStatus.WAITING.firestoreValue
         )
         assertEquals(GameStatus.WAITING, game.gameStatusEnum)

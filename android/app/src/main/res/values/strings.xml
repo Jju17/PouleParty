@@ -353,7 +353,6 @@
     <string name="challenge_level_locked_label">🔒 Unlock at %1$d / %2$d</string>
     <string name="leaderboard_empty">No hunters yet.</string>
 
-    <string name="mapbox_access_token" translatable="false">pk.eyJ1Ijoiamp1MTciLCJhIjoiY21wYmZpZzhyMDRvejJxc2J4cWM4YXY2YyJ9.kzhYo5q-xC_2gC8S73SDrA</string>
     <string name="podium">Podium</string>
     <string name="other_hunters">Other hunters</string>
     <string name="view_leaderboard">View Leaderboard</string>
