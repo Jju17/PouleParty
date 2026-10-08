@@ -192,6 +192,20 @@ func selectActiveCircle(
 /// geometry is resolved identically. Picks `circles[selectActiveCircle(...)]`;
 /// the Int radius floors the SAME stored Double on every device, so parity
 /// holds by construction. Mirrors Android `zoneRenderStateFromCircles`.
+/// The zone to draw for a game at `now`, from its stored circle schedule.
+func zoneRenderState(for game: Game, circles: [ZoneCircle], now: Date) -> ZoneRenderState {
+    zoneRenderState(
+        gameMode: game.gameMode,
+        hunterStartDate: game.hunterStartDate,
+        shrinkIntervalMinutes: game.zone.shrinkIntervalMinutes,
+        fallbackRadius: game.zone.radius,
+        circles: circles,
+        freezeEnd: game.powerUps.activeEffects.zoneFreeze?.dateValue(),
+        freezeDuration: PowerUp.PowerUpType.zoneFreeze.durationSeconds ?? 0,
+        now: now
+    )
+}
+
 func zoneRenderState(
     gameMode: Game.GameMode,
     hunterStartDate: Date,
@@ -363,9 +377,9 @@ func processRadiusUpdate(
     driftSeed: Int = 0,
     isZoneFrozen: Bool = false,
     finalCoordinates: CLLocationCoordinate2D? = nil,
-    initialRadius: Double = 0
+    initialRadius: Double = 0,
+    now: Date = .now
 ) -> RadiusUpdateResult? {
-    let now = Date.now
     guard let nextUpdate = nextRadiusUpdate, now >= nextUpdate else { return nil }
     // Zone Freeze: skip the radius reduction for THIS scheduled shrink but
     // still advance `nextRadiusUpdate` to the following one. Previously we

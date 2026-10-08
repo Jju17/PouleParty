@@ -89,6 +89,7 @@ struct JoinFlowFeature {
     }
 
     @Dependency(\.apiClient) var apiClient
+    @Dependency(\.now) var now
     @Dependency(\.userClient) var userClient
     @Dependency(\.analyticsClient) var analyticsClient
 
@@ -302,7 +303,7 @@ struct JoinFlowFeature {
 
             case let .gameMasterJoinFailed(attemptsRemaining, lockedUntilMs):
                 if let lockedUntilMs {
-                    let secs = max(0, (lockedUntilMs - Int(Date.now.timeIntervalSince1970 * 1000)) / 1000)
+                    let secs = max(0, (lockedUntilMs - Int(now.now.timeIntervalSince1970 * 1000)) / 1000)
                     let mins = max(1, secs / 60)
                     state.gameMasterError = String(localized: "Too many attempts. Try again in \(mins) min.")
                 } else {

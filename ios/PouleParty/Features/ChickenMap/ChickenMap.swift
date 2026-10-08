@@ -213,6 +213,7 @@ struct ChickenMapFeature {
     }
 
     @Dependency(\.apiClient) var apiClient
+    @Dependency(\.now) var now
     @Dependency(\.continuousClock) var clock
     @Dependency(\.liveActivityClient) var liveActivityClient
     @Dependency(\.locationClient) var locationClient
@@ -378,15 +379,7 @@ struct ChickenMapFeature {
                 // every config tick. Real games keep the incremental timer path
                 // (which handles the zone-freeze window) untouched.
                 if game.isDebugGame {
-                    let zDebug = zoneRenderState(
-                        gameMode: game.gameMode,
-                        hunterStartDate: game.hunterStartDate,
-                        shrinkIntervalMinutes: game.zone.shrinkIntervalMinutes,
-                        fallbackRadius: game.zone.radius,
-                        circles: state.circles,
-                        freezeEnd: game.powerUps.activeEffects.zoneFreeze?.dateValue(),
-                        freezeDuration: PowerUp.PowerUpType.zoneFreeze.durationSeconds ?? 0
-                    )
+                    let zDebug = zoneRenderState(for: game, circles: state.circles, now: now.now)
                     state.radius = zDebug.radius
                     if let next = zDebug.nextUpdate { state.nextRadiusUpdate = next }
                     let dbgCenter = zDebug.center ?? state.mapCircle?.center
@@ -713,7 +706,7 @@ struct ChickenMapFeature {
                         }
                         while !Task.isCancelled {
                             if let coordinate = latestLocation.value {
-                                let now = Date.now
+                                let now = self.now.now
                                 let isInvisible = invisibilityUntil.value.map { now < $0 } ?? false
                                 let isJammed = jammerUntil.value.map { now < $0 } ?? false
                                 let sendCoordinate = isJammed ? applyJammerNoise(to: coordinate, driftSeed: driftSeed) : coordinate
@@ -792,15 +785,7 @@ struct ChickenMapFeature {
             case let .internal(.scheduleLoaded(circles)):
                 state.zoneScheduleError = nil
                 state.circles = circles
-                let z = zoneRenderState(
-                    gameMode: state.game.gameMode,
-                    hunterStartDate: state.game.hunterStartDate,
-                    shrinkIntervalMinutes: state.game.zone.shrinkIntervalMinutes,
-                    fallbackRadius: state.game.zone.radius,
-                    circles: circles,
-                    freezeEnd: state.game.powerUps.activeEffects.zoneFreeze?.dateValue(),
-                    freezeDuration: PowerUp.PowerUpType.zoneFreeze.durationSeconds ?? 0
-                )
+                let z = zoneRenderState(for: state.game, circles: circles, now: now.now)
                 state.radius = z.radius
                 if let next = z.nextUpdate { state.nextRadiusUpdate = next }
                 let center = z.center ?? state.mapCircle?.center ?? state.game.zone.center.toCLCoordinates
@@ -808,7 +793,7 @@ struct ChickenMapFeature {
                 return .none
 
             case .internal(.timerTicked):
-                state.nowDate = .now
+                state.nowDate = now.now
 
                 // Countdown phases (chicken perspective).
                 // In manual-start mode, the planned `startDate` is just
@@ -854,7 +839,7 @@ struct ChickenMapFeature {
                 guard state.destination == nil else { return .none }
                 guard state.hasHuntStarted else { return .none }
 
-                if !state.isGameOver, checkGameOverByTime(endDate: state.game.endDate) {
+                if !state.isGameOver, checkGameOverByTime(endDate: state.game.endDate, now: state.nowDate) {
                     HapticManager.notification(.warning)
                     state.isGameOver = true
                     locationClient.stopTracking()
@@ -885,15 +870,7 @@ struct ChickenMapFeature {
                 // ends by time / all-found / cancel, not by "zone collapsed".
                 // followTheChicken keeps the live chicken GPS center (set on
                 // location updates); only the radius comes from the schedule.
-                let zTick = zoneRenderState(
-                    gameMode: state.game.gameMode,
-                    hunterStartDate: state.game.hunterStartDate,
-                    shrinkIntervalMinutes: state.game.zone.shrinkIntervalMinutes,
-                    fallbackRadius: state.game.zone.radius,
-                    circles: state.circles,
-                    freezeEnd: state.game.powerUps.activeEffects.zoneFreeze?.dateValue(),
-                    freezeDuration: PowerUp.PowerUpType.zoneFreeze.durationSeconds ?? 0
-                )
+                let zTick = zoneRenderState(for: state.game, circles: state.circles, now: now.now)
                 state.radius = zTick.radius
                 if let next = zTick.nextUpdate { state.nextRadiusUpdate = next }
                 let tickCenter = zTick.center ?? state.mapCircle?.center

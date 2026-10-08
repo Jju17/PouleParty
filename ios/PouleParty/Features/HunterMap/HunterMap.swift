@@ -217,6 +217,7 @@ struct HunterMapFeature {
     }
 
     @Dependency(\.apiClient) var apiClient
+    @Dependency(\.now) var now
     @Dependency(\.userClient) var userClient
     @Dependency(\.continuousClock) var clock
     @Dependency(\.liveActivityClient) var liveActivityClient
@@ -491,7 +492,7 @@ struct HunterMapFeature {
                 state.wrongCodeAttempts += 1
                 analyticsClient.hunterWrongCode(attemptNumber: state.wrongCodeAttempts)
                 if state.wrongCodeAttempts >= remoteConfigClient.codeMaxWrongAttempts() {
-                    state.codeCooldownUntil = .now.addingTimeInterval(remoteConfigClient.codeCooldownSeconds())
+                    state.codeCooldownUntil = now.now.addingTimeInterval(remoteConfigClient.codeCooldownSeconds())
                     state.wrongCodeAttempts = 0
                 }
                 if let lockedUntil, lockedUntil > (state.codeCooldownUntil ?? .distantPast) {
@@ -842,15 +843,7 @@ struct HunterMapFeature {
 
                 // PP-zone-stored: re-resolve the active circle from the stored
                 // schedule on every config tick (covers QA debug anchor-rewind).
-                let zCfg = zoneRenderState(
-                    gameMode: game.gameMode,
-                    hunterStartDate: game.hunterStartDate,
-                    shrinkIntervalMinutes: game.zone.shrinkIntervalMinutes,
-                    fallbackRadius: game.zone.radius,
-                    circles: state.circles,
-                    freezeEnd: game.powerUps.activeEffects.zoneFreeze?.dateValue(),
-                    freezeDuration: PowerUp.PowerUpType.zoneFreeze.durationSeconds ?? 0
-                )
+                let zCfg = zoneRenderState(for: game, circles: state.circles, now: now.now)
                 state.radius = zCfg.radius
                 if let next = zCfg.nextUpdate { state.nextRadiusUpdate = next }
                 if let center = zCfg.center {
@@ -953,15 +946,7 @@ struct HunterMapFeature {
             case let .internal(.scheduleLoaded(circles)):
                 state.zoneScheduleError = nil
                 state.circles = circles
-                let z = zoneRenderState(
-                    gameMode: state.game.gameMode,
-                    hunterStartDate: state.game.hunterStartDate,
-                    shrinkIntervalMinutes: state.game.zone.shrinkIntervalMinutes,
-                    fallbackRadius: state.game.zone.radius,
-                    circles: circles,
-                    freezeEnd: state.game.powerUps.activeEffects.zoneFreeze?.dateValue(),
-                    freezeDuration: PowerUp.PowerUpType.zoneFreeze.durationSeconds ?? 0
-                )
+                let z = zoneRenderState(for: state.game, circles: circles, now: now.now)
                 state.radius = z.radius
                 if let next = z.nextUpdate { state.nextRadiusUpdate = next }
                 // stayInTheZone: use the stored center. followTheChicken: keep
@@ -978,7 +963,7 @@ struct HunterMapFeature {
                     state.isOutsideZone = false
                     return .cancel(id: CancelID.timer)
                 }
-                state.nowDate = .now
+                state.nowDate = now.now
 
                 // Countdown phases (hunter perspective). Same gate as
                 // the chicken: in manual-start mode, nothing counts down
@@ -1022,7 +1007,7 @@ struct HunterMapFeature {
                 guard state.destination == nil else { return .none }
                 guard state.hasGameStarted else { return .none }
 
-                if !state.isGameOver, checkGameOverByTime(endDate: state.game.endDate) {
+                if !state.isGameOver, checkGameOverByTime(endDate: state.game.endDate, now: state.nowDate) {
                     HapticManager.notification(.warning)
                     state.isGameOver = true
                     locationClient.stopTracking()
@@ -1044,15 +1029,7 @@ struct HunterMapFeature {
                 // game ends by time / all-found / cancel, not "collapsed".
                 // followTheChicken keeps the live chicken GPS center.
                 let prevRadiusHM = state.radius
-                let zTick = zoneRenderState(
-                    gameMode: state.game.gameMode,
-                    hunterStartDate: state.game.hunterStartDate,
-                    shrinkIntervalMinutes: state.game.zone.shrinkIntervalMinutes,
-                    fallbackRadius: state.game.zone.radius,
-                    circles: state.circles,
-                    freezeEnd: state.game.powerUps.activeEffects.zoneFreeze?.dateValue(),
-                    freezeDuration: PowerUp.PowerUpType.zoneFreeze.durationSeconds ?? 0
-                )
+                let zTick = zoneRenderState(for: state.game, circles: state.circles, now: now.now)
                 state.radius = zTick.radius
                 if let next = zTick.nextUpdate { state.nextRadiusUpdate = next }
                 let tickCenterHM = zTick.center ?? state.mapCircle?.center

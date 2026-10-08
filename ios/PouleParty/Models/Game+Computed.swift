@@ -128,17 +128,20 @@ extension Game {
         return .now < until.dateValue()
     }
 
-    var isRadarPingActive: Bool {
-        guard let until = powerUps.activeEffects.radarPing else { return false }
-        return .now < until.dateValue()
+    var isRadarPingActive: Bool { isRadarPingActive(at: .now) }
+    var isDecoyActive: Bool { isDecoyActive(at: .now) }
+    var isJammerActive: Bool { isJammerActive(at: .now) }
+
+    func isRadarPingActive(at now: Date) -> Bool {
+        powerUps.activeEffects.radarPing.map { now < $0.dateValue() } ?? false
     }
 
-    var isDecoyActive: Bool {
-        powerUps.activeEffects.decoy.map { Date.now < $0.dateValue() } ?? false
+    func isDecoyActive(at now: Date) -> Bool {
+        powerUps.activeEffects.decoy.map { now < $0.dateValue() } ?? false
     }
 
-    var isJammerActive: Bool {
-        powerUps.activeEffects.jammer.map { Date.now < $0.dateValue() } ?? false
+    func isJammerActive(at now: Date) -> Bool {
+        powerUps.activeEffects.jammer.map { now < $0.dateValue() } ?? false
     }
 
     /// Whether the timed effect associated with this power-up type is
@@ -168,7 +171,7 @@ extension Game {
         String(format: "%04d", Int.random(in: 0...9999))
     }
 
-    func findLastUpdate() -> (Date, Int) {
+    func findLastUpdate(now: Date = .now) -> (Date, Int) {
         var lastUpdate: Date = self.hunterStartDate
         var lastRadius: Int = Int(self.zone.radius)
 
@@ -188,7 +191,6 @@ extension Game {
         // loop runs on every 1 s timer event on three feature stacks.
         let maxIterations = 10_000
         let interval = TimeInterval(self.zone.shrinkIntervalMinutes * 60)
-        let now = Date.now
         var iterations = 0
         while lastUpdate.addingTimeInterval(interval) < now && iterations < maxIterations {
             lastUpdate.addTimeInterval(interval)

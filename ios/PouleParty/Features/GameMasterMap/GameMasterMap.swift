@@ -145,6 +145,7 @@ struct GameMasterMapFeature {
     }
 
     @Dependency(\.apiClient) var apiClient
+    @Dependency(\.now) var now
     @Dependency(\.continuousClock) var clock
 
     private func loadScheduleEffect(_ gameId: String) -> Effect<Action> {
@@ -230,15 +231,7 @@ struct GameMasterMapFeature {
             case let .internal(.scheduleLoaded(circles)):
                 state.zoneScheduleError = nil
                 state.circles = circles
-                let z = zoneRenderState(
-                    gameMode: state.game.gameMode,
-                    hunterStartDate: state.game.hunterStartDate,
-                    shrinkIntervalMinutes: state.game.zone.shrinkIntervalMinutes,
-                    fallbackRadius: state.game.zone.radius,
-                    circles: circles,
-                    freezeEnd: state.game.powerUps.activeEffects.zoneFreeze?.dateValue(),
-                    freezeDuration: PowerUp.PowerUpType.zoneFreeze.durationSeconds ?? 0
-                )
+                let z = zoneRenderState(for: state.game, circles: circles, now: now.now)
                 state.radius = z.radius
                 if let next = z.nextUpdate { state.nextRadiusUpdate = next }
                 let center = z.center ?? state.mapCircle?.center
@@ -255,15 +248,7 @@ struct GameMasterMapFeature {
                 // radius / next-update / circle from the fresh timing on every
                 // config tick. Real games keep the timer-tick path untouched.
                 if game.isDebugGame {
-                    let zDebug = zoneRenderState(
-                        gameMode: game.gameMode,
-                        hunterStartDate: game.hunterStartDate,
-                        shrinkIntervalMinutes: game.zone.shrinkIntervalMinutes,
-                        fallbackRadius: game.zone.radius,
-                        circles: state.circles,
-                        freezeEnd: game.powerUps.activeEffects.zoneFreeze?.dateValue(),
-                        freezeDuration: PowerUp.PowerUpType.zoneFreeze.durationSeconds ?? 0
-                    )
+                    let zDebug = zoneRenderState(for: game, circles: state.circles, now: now.now)
                     state.radius = zDebug.radius
                     if let next = zDebug.nextUpdate { state.nextRadiusUpdate = next }
                     let dbgCenter = zDebug.center ?? state.mapCircle?.center
@@ -305,18 +290,10 @@ struct GameMasterMapFeature {
                 state.powerUpAnnotations = powerUps.filter { !$0.isCollected }
                 return .none
             case .internal(.timerTicked):
-                let now: Date = .now
+                let now = self.now.now
                 state.nowDate = now
                 if let next = state.nextRadiusUpdate, now >= next {
-                    let zTick = zoneRenderState(
-                        gameMode: state.game.gameMode,
-                        hunterStartDate: state.game.hunterStartDate,
-                        shrinkIntervalMinutes: state.game.zone.shrinkIntervalMinutes,
-                        fallbackRadius: state.game.zone.radius,
-                        circles: state.circles,
-                        freezeEnd: state.game.powerUps.activeEffects.zoneFreeze?.dateValue(),
-                        freezeDuration: PowerUp.PowerUpType.zoneFreeze.durationSeconds ?? 0
-                    )
+                    let zTick = zoneRenderState(for: state.game, circles: state.circles, now: now)
                     state.radius = zTick.radius
                     if let nextUpdate = zTick.nextUpdate { state.nextRadiusUpdate = nextUpdate }
                     let tickCenter = zTick.center ?? state.mapCircle?.center
