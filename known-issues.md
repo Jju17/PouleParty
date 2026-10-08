@@ -9,6 +9,18 @@ The living list of what is still open. Close an item by deleting it in the commi
 - **Run `infra/apply.sh`** on staging and production (backups, proof lifecycle, secrets check).
 - **First CI run**: confirm the macOS runner's Xcode can build the project and add the `MAPBOX_DOWNLOADS_TOKEN` repository secret for Android.
 
+## Open from the October 2026 review
+
+Larger refactors left for later; the app behaves correctly without them.
+
+- iOS maps share their zone, countdown and game-over logic, but `ZoneSchedule` and `GameLifecycle` are not yet child features (IOS-02). Home and Settings still talk to their parents through state, not delegate actions (IOS-12). Sheets and alerts are separate booleans instead of one presentation enum (IOS-13).
+- iOS has no `Domain/` folder; the challenge catalogue stays in `Models/` (IOS-16). `Registration` and `hunterName` keep their old names until a data-model release can rename them on both apps (IOS-19).
+- Proof videos are capped by size on both apps; there is no 720p re-encode yet (IOS-20).
+- Android `GameMasterMapViewModel` does not extend `BaseMapViewModel` (AND-09). Not every screen has a light and dark `@Preview` (AND-19).
+- Tests: several older fixtures still read the real clock (TST-05); `ApiClient.testValue` returns no-ops and many Android tests use relaxed mocks, so an unexpected dependency call does not fail a test (TST-07); older TCA stores run with exhaustivity off (TST-14); no accessibility UI test on iOS (TST-16).
+- Icons and emojis are not yet compared across platforms (UX-13). iOS spacing and button tokens are not extracted (UX-24).
+- iOS strict concurrency is `targeted`; `complete` needs a Sendable pass over the whole app.
+
 ## Kept for installed app versions
 
 Remove once a minimum app version forces everyone past the October 2026 builds.
