@@ -18,6 +18,8 @@ export interface GameMeta {
    * because RTDB rules can't test a map for the presence of a value.
    */
   shareHunterLocations: boolean;
+  /** Epoch ms until which hunters may read the chicken position in any mode. */
+  radarPingUntil: number;
   roles: RolesMap;
 }
 
@@ -51,12 +53,16 @@ export function extractGameMeta(
   const roles = toRolesMap(data?.roles);
   const chickenCanSeeHunters = data?.chickenCanSeeHunters !== false;
   const hasGameMaster = Object.values(roles).includes("gameMaster");
+  const radarPing = (data?.powerUps as { activeEffects?: { radarPing?: unknown } } | undefined)
+    ?.activeEffects?.radarPing as { toMillis?: () => number } | undefined;
+  const radarPingUntil = typeof radarPing?.toMillis === "function" ? radarPing.toMillis() : 0;
   return {
     creatorId: typeof data?.creatorId === "string" ? data.creatorId : "",
     gameMode: typeof data?.gameMode === "string" ? data.gameMode : "",
     status: typeof data?.status === "string" ? data.status : "",
     chickenCanSeeHunters,
     shareHunterLocations: chickenCanSeeHunters || hasGameMaster,
+    radarPingUntil,
     roles,
   };
 }

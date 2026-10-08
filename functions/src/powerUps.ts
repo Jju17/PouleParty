@@ -1,6 +1,7 @@
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/v2";
+import { mirrorGameMetaInline } from "./rtdbMirror";
 
 const REGION = "europe-west1";
 
@@ -63,7 +64,10 @@ export const activatePowerUp = onCall<
   const gameRef = db.collection("games").doc(gameId);
   const puRef = gameRef.collection("powerUps").doc(powerUpId);
 
-  const result = await db.runTransaction<ActivatePowerUpResult>(async (tx) => {
+  const { result, type: activatedType } = await db.runTransaction<{
+    result: ActivatePowerUpResult;
+    type: string;
+  }>(async (tx) => {
     // All reads before any write. The game doc gates activation on a live,
     // non-ended game so effects can't be applied after the game is over.
     const gameSnap = await tx.get(gameRef);
@@ -134,11 +138,19 @@ export const activatePowerUp = onCall<
     }
 
     return {
-      activatedAt: now.toMillis(),
-      expiresAt: expiresAt?.toMillis() ?? null,
+      result: {
+        activatedAt: now.toMillis(),
+        expiresAt: expiresAt?.toMillis() ?? null,
+      },
+      type,
     };
   });
 
+  // Hunters' RTDB read of the chicken position depends on the mirrored ping
+  // window: push it now instead of waiting for the async trigger.
+  if (activatedType === "radarPing") {
+    await mirrorGameMetaInline(gameId, (await gameRef.get()).data());
+  }
   logger.info(
     `Power-up ${powerUpId} (game ${gameId}) activated by ${uid}, expires at ${result.expiresAt}`
   );

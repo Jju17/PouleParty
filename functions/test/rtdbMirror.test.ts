@@ -15,6 +15,7 @@ describe("extractGameMeta", () => {
       status: "inProgress",
       chickenCanSeeHunters: true,
       shareHunterLocations: true,
+      radarPingUntil: 0,
       roles: { ch1: "chicken", h1: "hunter", h2: "hunter", g1: "gameMaster" },
     });
   });
@@ -26,6 +27,7 @@ describe("extractGameMeta", () => {
       status: "",
       chickenCanSeeHunters: true,
       shareHunterLocations: true,
+      radarPingUntil: 0,
       roles: {},
     });
   });
@@ -74,5 +76,15 @@ describe("extractGameMeta", () => {
       extractGameMeta({ chickenCanSeeHunters: false, roles: {} })
         .chickenCanSeeHunters
     ).toBe(false);
+  });
+
+  it("mirrors the radar ping expiry so hunters can read the chicken in any mode", () => {
+    const meta = extractGameMeta({
+      powerUps: { activeEffects: { radarPing: { toMillis: () => 1_800_000_000_000 } } },
+      roles: {},
+    });
+    expect(meta.radarPingUntil).toBe(1_800_000_000_000);
+    expect(extractGameMeta({ powerUps: { activeEffects: {} } }).radarPingUntil).toBe(0);
+    expect(extractGameMeta({ powerUps: { activeEffects: { radarPing: "bad" } } }).radarPingUntil).toBe(0);
   });
 });
