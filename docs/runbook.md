@@ -15,7 +15,7 @@ Never run `firebase deploy` by hand: the script replays the gates, refuses a dir
 ## First deploy after the October 2026 review
 
 1. Open Firebase console, App Check, and confirm that both apps and the web site send valid tokens. `ENFORCE_APP_CHECK` defaults to true, so callables reject requests without a token once deployed.
-2. Rotate the Mapbox public token that used to be committed in Android `strings.xml` and iOS `Info.plist`, restrict the new one to the app identifiers, and set it in `android/local.properties`, `ios/Secrets.xcconfig` and the Bitrise secrets.
+2. Rotate the Mapbox public token that used to be committed in Android `strings.xml` and iOS `Info.plist`, restrict the new one to the app identifiers, and set it in `android/local.properties`, `ios/Config/Secrets.xcconfig` and the Bitrise secrets.
 3. Run `infra/apply.sh pouleparty-ba586`, deploy staging, play one short QA debug game end to end, then do the same for production.
 4. Run `functions/scripts` migrations only if a release note asks for it; they require `FIREBASE_PROJECT_ID` and, for production, `CONFIRM_PROD=yes`.
 

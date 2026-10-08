@@ -87,7 +87,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - run: mkdir -p Firebase/Staging && cp ../ci/firebase/GoogleService-Info.placeholder.plist Firebase/Staging/GoogleService-Info.plist
-      - run: if [ -f Secrets.xcconfig.example ]; then cp Secrets.xcconfig.example Secrets.xcconfig; fi
+      - run: cp Config/Secrets.xcconfig.example Config/Secrets.xcconfig
       - run: swiftlint --strict
       - run: >-
           xcodebuild test

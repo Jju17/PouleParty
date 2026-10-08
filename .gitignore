@@ -7,8 +7,6 @@ GoogleService-Info.plist
 *.xcbkptlist
 xcuserdata/
 
-ios/Secrets.xcconfig
-
 # === Android ===
 android/.gradle/
 android/build/
