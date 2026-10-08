@@ -2,6 +2,8 @@
 
 package dev.rahier.pouleparty.ui.gamemastermap
 
+import dev.rahier.pouleparty.ui.common.teamNameOrDefault
+import dev.rahier.pouleparty.ui.common.asString
 import dev.rahier.pouleparty.ui.common.LoadState
 import dev.rahier.pouleparty.ui.common.LoadStateScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -74,8 +76,9 @@ fun GameMasterMapScreen(
         return
     }
 
-    LaunchedEffect(state.winnerNotification) {
-        state.winnerNotification?.let { snackbarHostState.showSnackbar(it, duration = SnackbarDuration.Short) }
+    val winnerMessage = state.winnerNotification?.asString()
+    LaunchedEffect(winnerMessage) {
+        winnerMessage?.let { snackbarHostState.showSnackbar(it, duration = SnackbarDuration.Short) }
     }
 
     Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { padding ->
@@ -137,7 +140,7 @@ fun GameMasterMapScreen(
                             allowOverlapWithPuck(true)
                         }
                     ) {
-                        HunterMapMarker(displayName = hunter.displayName)
+                        HunterMapMarker(displayName = hunter.displayName.asString())
                     }
                 }
 
@@ -249,7 +252,7 @@ fun GameMasterMapScreen(
                 AlertDialog(
                     onDismissRequest = { viewModel.onIntent(GameMasterMapIntent.DesignationErrorDismissed) },
                     title = { Text(stringResource(R.string.error)) },
-                    text = { Text(designationError) },
+                    text = { Text(designationError.asString()) },
                     confirmButton = {
                         TextButton(onClick = { viewModel.onIntent(GameMasterMapIntent.DesignationErrorDismissed) }) {
                             Text(stringResource(R.string.ok))
@@ -266,21 +269,21 @@ fun GameMasterMapScreen(
             if (state.game.gameStatusEnum == dev.rahier.pouleparty.model.GameStatus.READY_TO_LAUNCH) {
                 dev.rahier.pouleparty.ui.components.PreGameOverlay(
                     role = dev.rahier.pouleparty.ui.components.PreGameRole.GAME_MASTER,
-                    gameModTitle = state.game.gameModEnum.title,
+                    gameModTitle = stringResource(state.game.gameModEnum.titleRes),
                     gameCode = state.game.gameCode,
                     targetDate = state.game.startDate,
                     nowDate = state.nowDate,
                     connectedHunters = state.game.hunterIds.size,
                     isManualStart = true,
                     isLaunching = state.isLaunching,
-                    launchErrorMessage = state.launchError,
+                    launchErrorMessage = state.launchError?.asString(),
                     onLaunchTapped = { viewModel.onIntent(GameMasterMapIntent.LaunchTapped) },
                     onLaunchErrorDismissed = { viewModel.onIntent(GameMasterMapIntent.LaunchErrorDismissed) },
                 )
             } else if (!state.hasGameStarted) {
                 dev.rahier.pouleparty.ui.components.PreGameOverlay(
                     role = dev.rahier.pouleparty.ui.components.PreGameRole.GAME_MASTER,
-                    gameModTitle = state.game.gameModEnum.title,
+                    gameModTitle = stringResource(state.game.gameModEnum.titleRes),
                     gameCode = state.game.gameCode,
                     targetDate = state.game.startDate,
                     nowDate = state.nowDate,

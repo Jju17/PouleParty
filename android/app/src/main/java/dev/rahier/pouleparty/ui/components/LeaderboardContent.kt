@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.components
 
+import dev.rahier.pouleparty.ui.common.teamNameOrDefault
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -124,7 +125,7 @@ fun LeaderboardEntryRow(
         )
 
         Text(
-            text = entry.displayName,
+            text = teamNameOrDefault(entry.displayName),
             style = bangerStyle(18),
             color = MaterialTheme.colorScheme.onBackground,
             maxLines = 1,
@@ -146,7 +147,7 @@ fun LeaderboardEntryRow(
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Flag,
-                    contentDescription = stringResource(R.string.report_player_cd, entry.displayName),
+                    contentDescription = stringResource(R.string.report_player_cd, teamNameOrDefault(entry.displayName)),
                     modifier = Modifier.size(16.dp),
                     tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
                 )

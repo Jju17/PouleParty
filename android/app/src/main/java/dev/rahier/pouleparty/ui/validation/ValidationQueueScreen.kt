@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.validation
 
+import dev.rahier.pouleparty.ui.common.teamNameOrDefault
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -122,7 +123,7 @@ fun ValidationQueueScreen(
                             submission = submission,
                             challengeTitle = ch?.localizedTitle(langCode) ?: submission.challengeId,
                             challengePoints = ch?.points ?: 0,
-                            teamName = state.teamName(submission.hunterId),
+                            teamName = teamNameOrDefault(state.teamName(submission.hunterId)),
                             onTap = { viewModel.onIntent(ValidationQueueIntent.SubmissionTapped(submission)) },
                         )
                     }
@@ -138,7 +139,7 @@ fun ValidationQueueScreen(
                     challengeTitle = sel?.localizedTitle(langCode) ?: selected.challengeId,
                     challengeBody = sel?.localizedBody(langCode) ?: "",
                     challengePoints = sel?.points ?: 0,
-                    teamName = state.teamName(selected.hunterId),
+                    teamName = teamNameOrDefault(state.teamName(selected.hunterId)),
                     isBusy = state.busyIds.contains(selected.id),
                     onValidate = { viewModel.onIntent(ValidationQueueIntent.ValidateTapped(selected)) },
                     onReject = { viewModel.onIntent(ValidationQueueIntent.RejectTapped(selected)) },
@@ -146,12 +147,12 @@ fun ValidationQueueScreen(
                 )
             }
 
-            val errorMsg = state.error
+            val errorMsg = state.errorRes
             if (errorMsg != null) {
                 AlertDialog(
                     onDismissRequest = { viewModel.onIntent(ValidationQueueIntent.ErrorDismissed) },
                     title = { Text(stringResource(R.string.validation_failed)) },
-                    text = { Text(errorMsg) },
+                    text = { Text(stringResource(errorMsg), color = MaterialTheme.colorScheme.error) },
                     confirmButton = {
                         Button(onClick = { viewModel.onIntent(ValidationQueueIntent.ErrorDismissed) }) {
                             Text(stringResource(R.string.ok))

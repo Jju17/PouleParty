@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.validation
 
+import dev.rahier.pouleparty.ui.common.errorMessageRes
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -26,15 +27,14 @@ data class ValidationQueueUiState(
     val registrations: List<Registration> = emptyList(),
     val selected: ChallengeSubmission? = null,
     val busyIds: Set<String> = emptySet(),
-    val error: String? = null,
+    @param:androidx.annotation.StringRes val errorRes: Int? = null,
 ) {
     fun challenge(of: ChallengeSubmission): Challenge? =
         challenges.firstOrNull { it.id == of.challengeId }
 
     fun teamName(forHunterId: String): String {
         val reg = registrations.firstOrNull { it.userId == forHunterId }
-        if (reg != null && reg.teamName.isNotBlank()) return reg.teamName
-        return "Hunter"
+        return reg?.teamName.orEmpty()
     }
 }
 
@@ -75,7 +75,7 @@ class ValidationQueueViewModel @Inject constructor(
             ValidationQueueIntent.DetailDismissed ->
                 _uiState.update { it.copy(selected = null) }
             ValidationQueueIntent.ErrorDismissed ->
-                _uiState.update { it.copy(error = null) }
+                _uiState.update { it.copy(errorRes = null) }
             is ValidationQueueIntent.ValidateTapped ->
                 validate(intent.submission, accept = true)
             is ValidationQueueIntent.RejectTapped ->
@@ -102,7 +102,7 @@ class ValidationQueueViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         busyIds = it.busyIds - id,
-                        error = e.message ?: "Validation failed",
+                        errorRes = e.errorMessageRes(),
                     )
                 }
             }

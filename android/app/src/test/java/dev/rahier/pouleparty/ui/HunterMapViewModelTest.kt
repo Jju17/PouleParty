@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui
 
+import dev.rahier.pouleparty.ui.common.UiText
 import com.mapbox.geojson.Point
 import com.google.firebase.Timestamp
 import dev.rahier.pouleparty.model.Game
@@ -130,8 +131,8 @@ class HunterMapViewModelTest {
     @Test
     fun `winner notification can be set and cleared`() {
         var state = HunterMapUiState()
-        state = state.copy(winnerNotification = "Julien found the chicken! 🐔")
-        assertEquals("Julien found the chicken! 🐔", state.winnerNotification)
+        state = state.copy(winnerNotification = UiText.Verbatim("Julien found the chicken! 🐔"))
+        assertEquals(UiText.Verbatim("Julien found the chicken! 🐔"), state.winnerNotification)
 
         state = state.copy(winnerNotification = null)
         assertNull(state.winnerNotification)

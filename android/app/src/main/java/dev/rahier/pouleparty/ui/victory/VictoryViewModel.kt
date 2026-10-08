@@ -151,7 +151,7 @@ fun buildLeaderboardEntries(
         val registration = registrationByUserId[hunterId]
         val winner = winnerById[hunterId]
         val teamName = registration?.teamName
-        val displayName = teamName ?: winner?.hunterName ?: "Hunter"
+        val displayName = teamName ?: winner?.hunterName.orEmpty()
         LeaderboardEntry(
             id = hunterId,
             displayName = displayName,

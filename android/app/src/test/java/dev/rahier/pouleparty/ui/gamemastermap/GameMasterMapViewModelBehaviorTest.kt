@@ -257,9 +257,9 @@ class GameMasterMapViewModelBehaviorTest {
         testDispatcher.scheduler.runCurrent()
 
         val labels = vm.uiState.value.hunterAnnotations.map { it.displayName }
-        assertTrue("Expected 'The Foxes' in $labels", labels.contains("The Foxes"))
-        assertTrue("Expected 'Les Coyotes' in $labels", labels.contains("Les Coyotes"))
-        assertFalse(labels.any { it.startsWith("Hunter ") })
+        assertTrue("Expected 'The Foxes' in $labels", labels.contains(dev.rahier.pouleparty.ui.common.UiText.Verbatim("The Foxes")))
+        assertTrue("Expected 'Les Coyotes' in $labels", labels.contains(dev.rahier.pouleparty.ui.common.UiText.Verbatim("Les Coyotes")))
+        assertFalse(labels.any { it is dev.rahier.pouleparty.ui.common.UiText.Resource })
     }
 
     @Test
@@ -279,8 +279,8 @@ class GameMasterMapViewModelBehaviorTest {
 
         // Sorted by hunterId: uid-aaa = "Hunter 1", uid-zzz = "Hunter 2".
         val byId = vm.uiState.value.hunterAnnotations.associate { it.id to it.displayName }
-        assertEquals("Hunter 1", byId["uid-aaa"])
-        assertEquals("Hunter 2", byId["uid-zzz"])
+        assertEquals(dev.rahier.pouleparty.ui.common.uiText(dev.rahier.pouleparty.R.string.hunter_number, 1), byId["uid-aaa"])
+        assertEquals(dev.rahier.pouleparty.ui.common.uiText(dev.rahier.pouleparty.R.string.hunter_number, 2), byId["uid-zzz"])
     }
 
     @Test
@@ -297,12 +297,12 @@ class GameMasterMapViewModelBehaviorTest {
             )
         )
         testDispatcher.scheduler.runCurrent()
-        assertEquals("Hunter 1", vm.uiState.value.hunterAnnotations.first().displayName)
+        assertEquals(dev.rahier.pouleparty.ui.common.uiText(dev.rahier.pouleparty.R.string.hunter_number, 1), vm.uiState.value.hunterAnnotations.first().displayName)
 
         // Registration arrives → label must flip to teamName.
         registrationsFlow.tryEmit(listOf(Registration(userId = "uid-1", teamName = "Apex Predators")))
         testDispatcher.scheduler.runCurrent()
-        assertEquals("Apex Predators", vm.uiState.value.hunterAnnotations.first().displayName)
+        assertEquals(dev.rahier.pouleparty.ui.common.UiText.Verbatim("Apex Predators"), vm.uiState.value.hunterAnnotations.first().displayName)
     }
 
     // ── Read-only stream surface (no power-up tray) ─────

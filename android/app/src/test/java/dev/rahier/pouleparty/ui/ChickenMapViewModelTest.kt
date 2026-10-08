@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui
 
+import dev.rahier.pouleparty.ui.common.UiText
 import com.mapbox.geojson.Point
 import com.google.firebase.Timestamp
 import dev.rahier.pouleparty.model.Game
@@ -39,18 +40,18 @@ class ChickenMapViewModelTest {
             HunterAnnotation(
                 id = "hunter-a",
                 coordinate = Point.fromLngLat(4.0, 50.0),
-                displayName = "Hunter 1"
+                displayName = UiText.Verbatim("Hunter 1")
             ),
             HunterAnnotation(
                 id = "hunter-b",
                 coordinate = Point.fromLngLat(5.0, 51.0),
-                displayName = "Hunter 2"
+                displayName = UiText.Verbatim("Hunter 2")
             )
         )
         val state = ChickenMapUiState(hunterAnnotations = annotations)
 
         assertEquals(2, state.hunterAnnotations.size)
-        assertEquals("Hunter 1", state.hunterAnnotations[0].displayName)
+        assertEquals(UiText.Verbatim("Hunter 1"), state.hunterAnnotations[0].displayName)
         assertEquals("hunter-a", state.hunterAnnotations[0].id)
     }
 
@@ -130,8 +131,8 @@ class ChickenMapViewModelTest {
     @Test
     fun `winner notification can be set and cleared`() {
         var state = ChickenMapUiState()
-        state = state.copy(winnerNotification = "Julien found the chicken! 🐔")
-        assertEquals("Julien found the chicken! 🐔", state.winnerNotification)
+        state = state.copy(winnerNotification = UiText.Verbatim("Julien found the chicken! 🐔"))
+        assertEquals(UiText.Verbatim("Julien found the chicken! 🐔"), state.winnerNotification)
 
         state = state.copy(winnerNotification = null)
         assertNull(state.winnerNotification)

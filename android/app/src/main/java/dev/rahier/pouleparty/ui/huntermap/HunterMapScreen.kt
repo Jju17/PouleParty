@@ -2,6 +2,8 @@
 
 package dev.rahier.pouleparty.ui.huntermap
 
+import dev.rahier.pouleparty.ui.gamelogic.hunterSubtitleRes
+import dev.rahier.pouleparty.ui.common.asString
 import dev.rahier.pouleparty.ui.common.LoadState
 import dev.rahier.pouleparty.ui.common.LoadStateScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -105,8 +107,9 @@ fun HunterMapScreen(
         return
     }
 
-    LaunchedEffect(state.winnerNotification) {
-        state.winnerNotification?.let { message ->
+    val winnerMessage = state.winnerNotification?.asString()
+    LaunchedEffect(winnerMessage) {
+        winnerMessage?.let { message ->
             HapticManager.success(view)
             snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Short)
         }
@@ -289,7 +292,7 @@ fun HunterMapScreen(
                 ) {
                     Icon(
                         Icons.Default.Navigation,
-                        contentDescription = "North",
+                        contentDescription = stringResource(R.string.map_reset_north),
                         modifier = Modifier.rotate(-currentBearing)
                     )
                 }
@@ -301,7 +304,7 @@ fun HunterMapScreen(
             // Top bar
             MapTopBar(
                 titleRes = R.string.you_are_hunter,
-                subtitle = viewModel.hunterSubtitle,
+                subtitle = stringResource(hunterSubtitleRes(state.game)),
                 gradientColors = listOf(HunterRed, CRPink),
                 onInfoTapped = { viewModel.onIntent(HunterMapIntent.InfoTapped) }
             )
@@ -407,7 +410,7 @@ fun HunterMapScreen(
             // Countdown overlay
             GameStartCountdownOverlay(
                 countdownNumber = state.countdownNumber,
-                countdownText = state.countdownText
+                countdownText = state.countdownText?.asString()
             )
 
             // PP-71: unified pre-game overlay. Status == READY_TO_LAUNCH
@@ -416,7 +419,7 @@ fun HunterMapScreen(
             if (state.game.gameStatusEnum == dev.rahier.pouleparty.model.GameStatus.READY_TO_LAUNCH) {
                 PreGameOverlay(
                     role = dev.rahier.pouleparty.ui.components.PreGameRole.HUNTER,
-                    gameModTitle = state.game.gameModEnum.title,
+                    gameModTitle = stringResource(state.game.gameModEnum.titleRes),
                     gameCode = null,
                     targetDate = state.game.hunterStartDate,
                     nowDate = state.nowDate,
@@ -426,7 +429,7 @@ fun HunterMapScreen(
             } else if (!state.hasGameStarted) {
                 PreGameOverlay(
                     role = dev.rahier.pouleparty.ui.components.PreGameRole.HUNTER,
-                    gameModTitle = state.game.gameModEnum.title,
+                    gameModTitle = stringResource(state.game.gameModEnum.titleRes),
                     gameCode = null,
                     targetDate = state.game.hunterStartDate,
                     nowDate = state.nowDate,
@@ -573,7 +576,7 @@ fun HunterMapScreen(
 
     // Power-up notification
     PowerUpNotificationOverlay(
-        notification = state.powerUpNotification,
+        notification = state.powerUpNotification?.asString(),
         powerUpType = state.lastActivatedPowerUpType
     )
 

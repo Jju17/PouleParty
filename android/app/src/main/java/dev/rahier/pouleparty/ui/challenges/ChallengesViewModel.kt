@@ -1,5 +1,8 @@
 package dev.rahier.pouleparty.ui.challenges
 
+import dev.rahier.pouleparty.R
+import dev.rahier.pouleparty.ui.common.errorMessageRes
+import dev.rahier.pouleparty.data.SubmissionRejectedException
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -97,7 +100,7 @@ data class ChallengesUiState(
                 val completion = completionByHunter[hunterId]
                 val team = registrations[hunterId]
                     ?: completion?.teamName?.takeIf { it.isNotBlank() }
-                    ?: "Hunter"
+                    ?: ""
                 LeaderboardHunterEntry(
                     hunterId = hunterId,
                     displayName = team,
@@ -203,7 +206,7 @@ class ChallengesViewModel @Inject constructor(
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to submit challenge", e)
                 _uiState.update { it.copy(submittingIds = it.submittingIds - challengeId) }
-                _effects.send(ChallengesEffect.ShowError(e.message ?: "Unknown error"))
+                _effects.send(ChallengesEffect.ShowError(submissionErrorRes(e)))
             }
         }
     }
@@ -271,4 +274,11 @@ class ChallengesViewModel @Inject constructor(
             }
         }
     }
+}
+
+@androidx.annotation.StringRes
+fun submissionErrorRes(error: Throwable): Int = when ((error as? SubmissionRejectedException)?.reason) {
+    SubmissionRejectedException.Reason.ALREADY_PENDING -> R.string.challenge_already_pending
+    SubmissionRejectedException.Reason.ALREADY_VALIDATED -> R.string.challenge_already_validated
+    null -> error.errorMessageRes()
 }

@@ -1,5 +1,7 @@
 package dev.rahier.pouleparty.ui.components
 
+import dev.rahier.pouleparty.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -45,13 +47,13 @@ fun DebugQAPanel(
                 onClick = onNextStep,
                 colors = ButtonDefaults.buttonColors(containerColor = purple),
             ) {
-                Text("Next", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.qa_next_step), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
             Button(
                 onClick = onEndNow,
                 colors = ButtonDefaults.buttonColors(containerColor = purple),
             ) {
-                Text("End", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.qa_end_game), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
         }
     }

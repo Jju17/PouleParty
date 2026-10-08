@@ -47,7 +47,7 @@ fun GameInfoDialog(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(stringResource(R.string.mode))
-                    Text(game.gameModEnum.title, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f))
+                    Text(stringResource(game.gameModEnum.titleRes), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f))
                 }
 
                 // Start time

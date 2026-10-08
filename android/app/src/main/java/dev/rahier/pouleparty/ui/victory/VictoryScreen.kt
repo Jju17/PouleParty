@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.victory
 
+import dev.rahier.pouleparty.ui.common.teamNameOrDefault
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.withInfiniteAnimationFrameMillis
@@ -141,7 +142,7 @@ fun VictoryScreen(
                 onDismissRequest = { viewModel.onReportDismissed() },
                 title = { Text(stringResource(R.string.report_player_title)) },
                 text = {
-                    Text(stringResource(R.string.report_player_message, reportTarget.displayName))
+                    Text(stringResource(R.string.report_player_message, teamNameOrDefault(reportTarget.displayName)))
                 },
                 confirmButton = {
                     TextButton(

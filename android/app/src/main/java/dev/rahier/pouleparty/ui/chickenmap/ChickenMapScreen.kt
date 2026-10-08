@@ -2,6 +2,8 @@
 
 package dev.rahier.pouleparty.ui.chickenmap
 
+import dev.rahier.pouleparty.ui.gamelogic.chickenSubtitleRes
+import dev.rahier.pouleparty.ui.common.asString
 import dev.rahier.pouleparty.ui.common.LoadState
 import dev.rahier.pouleparty.ui.common.LoadStateScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -98,8 +100,9 @@ fun ChickenMapScreen(
     }
 
     // Show winner notification as snackbar
-    LaunchedEffect(state.winnerNotification) {
-        state.winnerNotification?.let { message ->
+    val winnerMessage = state.winnerNotification?.asString()
+    LaunchedEffect(winnerMessage) {
+        winnerMessage?.let { message ->
             HapticManager.success(view)
             snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Short)
         }
@@ -227,7 +230,7 @@ fun ChickenMapScreen(
                         allowOverlapWithPuck(true)
                     }
                 ) {
-                    dev.rahier.pouleparty.ui.components.HunterMapMarker(displayName = hunter.displayName)
+                    dev.rahier.pouleparty.ui.components.HunterMapMarker(displayName = hunter.displayName.asString())
                 }
             }
         }
@@ -260,7 +263,7 @@ fun ChickenMapScreen(
             ) {
                 Icon(
                     Icons.Default.Navigation,
-                    contentDescription = "North",
+                    contentDescription = stringResource(R.string.map_reset_north),
                     modifier = Modifier.rotate(-currentBearing)
                 )
             }
@@ -303,7 +306,7 @@ fun ChickenMapScreen(
         // Top bar
         MapTopBar(
             titleRes = R.string.you_are_chicken,
-            subtitle = viewModel.chickenSubtitle,
+            subtitle = stringResource(chickenSubtitleRes(state.game)),
             gradientColors = listOf(ChickenYellow, CROrange),
             onInfoTapped = { viewModel.onIntent(ChickenMapIntent.InfoTapped) }
         )
@@ -390,7 +393,7 @@ fun ChickenMapScreen(
         // Game start countdown overlay
         GameStartCountdownOverlay(
             countdownNumber = state.countdownNumber,
-            countdownText = state.countdownText
+            countdownText = state.countdownText?.asString()
         )
 
         // PP-71: unified pre-game overlay. Status == READY_TO_LAUNCH
@@ -399,7 +402,7 @@ fun ChickenMapScreen(
         if (state.game.gameStatusEnum == dev.rahier.pouleparty.model.GameStatus.READY_TO_LAUNCH) {
             PreGameOverlay(
                 role = dev.rahier.pouleparty.ui.components.PreGameRole.CHICKEN,
-                gameModTitle = state.game.gameModEnum.title,
+                gameModTitle = stringResource(state.game.gameModEnum.titleRes),
                 gameCode = state.game.gameCode,
                 targetDate = state.game.startDate,
                 nowDate = state.nowDate,
@@ -407,14 +410,14 @@ fun ChickenMapScreen(
                 onCancelGame = { viewModel.onIntent(ChickenMapIntent.CancelGameTapped) },
                 isManualStart = true,
                 isLaunching = state.isLaunching,
-                launchErrorMessage = state.launchError,
+                launchErrorMessage = state.launchError?.asString(),
                 onLaunchTapped = { viewModel.onIntent(ChickenMapIntent.LaunchTapped) },
                 onLaunchErrorDismissed = { viewModel.onIntent(ChickenMapIntent.LaunchErrorDismissed) },
             )
         } else if (!state.hasGameStarted) {
             PreGameOverlay(
                 role = dev.rahier.pouleparty.ui.components.PreGameRole.CHICKEN,
-                gameModTitle = state.game.gameModEnum.title,
+                gameModTitle = stringResource(state.game.gameModEnum.titleRes),
                 gameCode = state.game.gameCode,
                 targetDate = state.game.startDate,
                 nowDate = state.nowDate,
@@ -506,7 +509,7 @@ fun ChickenMapScreen(
 
     // Power-up notification
     PowerUpNotificationOverlay(
-        notification = state.powerUpNotification,
+        notification = state.powerUpNotification?.asString(),
         powerUpType = state.lastActivatedPowerUpType
     )
 

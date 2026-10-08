@@ -1,5 +1,7 @@
 package dev.rahier.pouleparty.powerups.model
 
+import dev.rahier.pouleparty.R
+import androidx.annotation.StringRes
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.Exclude
 import com.google.firebase.firestore.GeoPoint
@@ -43,24 +45,21 @@ data class PowerUp(
 
 enum class PowerUpType(
     val firestoreValue: String,
-    val title: String,
+    @param:StringRes val titleRes: Int,
     val durationSeconds: Long?,
     val isHunterPowerUp: Boolean,
-    val description: String
+    @param:StringRes val descriptionRes: Int,
 ) {
-    ZONE_PREVIEW("zonePreview", "Zone Preview", null, true, "Shows the next zone boundary before it shrinks"),
-    // 3 s is intentionally short: Radar Ping is a "glimpse" mechanic now —
-    // the Chicken broadcasts position continuously so the Hunter just sees
-    // where the Chicken is right now, not a tracking window. Longer would
-    // turn this into a location stalker. Keep in lockstep with iOS
-    // `PowerUpType.radarPing.durationSeconds`.
-    RADAR_PING("radarPing", "Radar Ping", 3, true, "Reveals the chicken's position for 3 seconds"),
-    INVISIBILITY("invisibility", "Invisibility", 30, false, "Hides the chicken from all hunters for 30 seconds"),
-    ZONE_FREEZE("zoneFreeze", "Zone Freeze", 120, false, "Freezes the zone, preventing it from shrinking for 2 minutes"),
-    DECOY("decoy", "Decoy", 20, false, "Places a fake chicken signal on hunter maps for 20 seconds"),
-    JAMMER("jammer", "Jammer", 30, false, "Scrambles the chicken's position signal, adding noise for 30 seconds");
+    ZONE_PREVIEW("zonePreview", R.string.powerup_zone_preview, null, true, R.string.powerup_zone_preview_desc),
+    // Radar Ping is a glimpse: longer would turn it into tracking. Keep in lockstep with iOS.
+    RADAR_PING("radarPing", R.string.powerup_radar_ping, 3, true, R.string.powerup_radar_ping_desc),
+    INVISIBILITY("invisibility", R.string.powerup_invisibility, 30, false, R.string.powerup_invisibility_desc),
+    ZONE_FREEZE("zoneFreeze", R.string.powerup_zone_freeze, 120, false, R.string.powerup_zone_freeze_desc),
+    DECOY("decoy", R.string.powerup_decoy, 20, false, R.string.powerup_decoy_desc),
+    JAMMER("jammer", R.string.powerup_jammer, 30, false, R.string.powerup_jammer_desc);
 
-    val targetLabel: String get() = if (isHunterPowerUp) "Hunter" else "Chicken"
+    @get:StringRes
+    val targetLabelRes: Int get() = if (isHunterPowerUp) R.string.power_up_target_hunter else R.string.power_up_target_chicken
     val targetEmoji: String get() = if (isHunterPowerUp) "🎯" else "🐔"
 
     companion object {

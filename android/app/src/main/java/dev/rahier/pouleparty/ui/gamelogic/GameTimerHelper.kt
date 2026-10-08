@@ -1,5 +1,9 @@
 package dev.rahier.pouleparty.ui.gamelogic
 
+import androidx.annotation.StringRes
+import dev.rahier.pouleparty.R
+import dev.rahier.pouleparty.ui.common.uiText
+import dev.rahier.pouleparty.ui.common.UiText
 import dev.rahier.pouleparty.model.PlayerRole
 
 import dev.rahier.pouleparty.model.distanceMeters
@@ -52,7 +56,7 @@ fun checkZoneStatus(
 
 data class CountdownPhase(
     val targetDate: Date,
-    val completionText: String,
+    val completionText: UiText,
     val showNumericCountdown: Boolean,
     val isEnabled: Boolean
 )
@@ -60,7 +64,7 @@ data class CountdownPhase(
 sealed class CountdownResult {
     data object NoChange : CountdownResult()
     data class UpdateNumber(val number: Int) : CountdownResult()
-    data class ShowText(val text: String) : CountdownResult()
+    data class ShowText(val text: UiText) : CountdownResult()
 }
 
 /**
@@ -71,7 +75,7 @@ fun evaluateCountdown(
     phases: List<CountdownPhase>,
     now: Date,
     currentCountdownNumber: Int?,
-    currentCountdownText: String?
+    currentCountdownText: UiText?
 ): CountdownResult {
     for (phase in phases) {
         if (!phase.isEnabled) continue
@@ -516,15 +520,29 @@ fun computeDebugShiftedCircles(game: dev.rahier.pouleparty.model.Game): List<Deb
  * Returns a notification string when new winners appeared since [previousCount],
  * filtering out [ownHunterId] if supplied (so a hunter doesn't see their own win).
  */
+@StringRes
+fun chickenSubtitleRes(game: Game): Int = when {
+    game.chickenCanSeeHunters -> R.string.subtitle_chicken_sees
+    game.gameModEnum == GameMod.FOLLOW_THE_CHICKEN -> R.string.subtitle_chicken_hide
+    else -> R.string.subtitle_stay_in_zone
+}
+
+@StringRes
+fun hunterSubtitleRes(game: Game): Int = when {
+    game.chickenCanSeeHunters -> R.string.subtitle_hunter_seen
+    game.gameModEnum == GameMod.FOLLOW_THE_CHICKEN -> R.string.subtitle_hunter_catch
+    else -> R.string.subtitle_stay_in_zone
+}
+
 fun detectNewWinners(
     winners: List<Winner>,
     previousCount: Int,
     ownHunterId: String? = null
-): String? {
+): UiText? {
     if (winners.size <= previousCount) return null
     val latest = winners.last()
     if (ownHunterId != null && latest.hunterId == ownHunterId) return null
-    return "${latest.hunterName} found the chicken! 🐔"
+    return uiText(R.string.notif_winner_found, UiText.Verbatim(latest.hunterName))
 }
 
 // ── Jammer Noise ─────────────────────────────────────

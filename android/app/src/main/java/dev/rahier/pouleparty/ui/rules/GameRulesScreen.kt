@@ -53,7 +53,7 @@ private fun GameModesSection() {
         Text(stringResource(R.string.game_modes), style = bangerStyle(32), color = MaterialTheme.colorScheme.onBackground)
 
         GameModeCard(
-            title = GameMod.FOLLOW_THE_CHICKEN.title,
+            title = stringResource(GameMod.FOLLOW_THE_CHICKEN.titleRes),
             description = stringResource(R.string.mode_follow_desc),
             details = listOf(
                 stringResource(R.string.mode_follow_detail1),
@@ -63,7 +63,7 @@ private fun GameModesSection() {
         )
 
         GameModeCard(
-            title = GameMod.STAY_IN_THE_ZONE.title,
+            title = stringResource(GameMod.STAY_IN_THE_ZONE.titleRes),
             description = stringResource(R.string.mode_stay_desc),
             details = listOf(
                 stringResource(R.string.mode_stay_detail1),

@@ -45,7 +45,7 @@ fun PowerUpInventoryDialog(
                                 .padding(vertical = 4.dp)
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(powerUp.typeEnum.title, fontWeight = FontWeight.Bold)
+                                Text(stringResource(powerUp.typeEnum.titleRes), fontWeight = FontWeight.Bold)
                                 val durationText = powerUp.typeEnum.durationSeconds?.let { "${it}s" } ?: stringResource(R.string.instant)
                                 Text(durationText, fontSize = 12.sp, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f))
                             }

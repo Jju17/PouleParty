@@ -219,12 +219,12 @@ private fun PowerUpCard(
             ) {
                 Text(emoji, fontSize = 36.sp)
                 Text(
-                    type.title,
+                    stringResource(type.titleRes),
                     style = bangerStyle(18),
                     color = if (isEnabled) textColor else MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    type.description,
+                    stringResource(type.descriptionRes),
                     fontSize = 9.sp,
                     color = if (isEnabled) textColor.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                     textAlign = TextAlign.Center,

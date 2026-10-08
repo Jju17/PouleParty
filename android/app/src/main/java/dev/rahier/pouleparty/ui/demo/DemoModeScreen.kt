@@ -222,7 +222,7 @@ private fun DemoChickenMapContent() {
 
         DemoMapTopBar(
             titleRes = R.string.you_are_chicken,
-            subtitle = "Demo • ${game.gameModEnum.title}",
+            subtitle = "Demo • ${stringResource(game.gameModEnum.titleRes)}",
             gradientColors = listOf(ChickenYellow, CROrange),
         )
 
@@ -270,7 +270,7 @@ private fun DemoHunterMapContent() {
 
         DemoMapTopBar(
             titleRes = R.string.you_are_hunter,
-            subtitle = "Demo • ${game.gameModEnum.title}",
+            subtitle = "Demo • ${stringResource(game.gameModEnum.titleRes)}",
             gradientColors = listOf(HunterRed, CRPink),
         )
 

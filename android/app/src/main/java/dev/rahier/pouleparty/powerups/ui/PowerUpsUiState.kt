@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.powerups.ui
 
+import dev.rahier.pouleparty.ui.common.UiText
 import dev.rahier.pouleparty.powerups.model.PowerUp
 import dev.rahier.pouleparty.powerups.model.PowerUpType
 import dev.rahier.pouleparty.ui.map.MapUiState
@@ -18,7 +19,7 @@ interface PowerUpsUiState {
     val available: List<PowerUp>
     val collected: List<PowerUp>
     val showInventory: Boolean
-    val notification: String?
+    val notification: UiText?
     val lastActivatedType: PowerUpType?
     val activatingId: String?
 }
@@ -32,7 +33,7 @@ private data class PowerUpsView(
     override val available: List<PowerUp>,
     override val collected: List<PowerUp>,
     override val showInventory: Boolean,
-    override val notification: String?,
+    override val notification: UiText?,
     override val lastActivatedType: PowerUpType?,
     override val activatingId: String?,
 ) : PowerUpsUiState

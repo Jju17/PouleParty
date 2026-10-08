@@ -1,5 +1,8 @@
 package dev.rahier.pouleparty.ui.gamemastermap
 
+import dev.rahier.pouleparty.R
+import dev.rahier.pouleparty.ui.common.uiText
+import dev.rahier.pouleparty.ui.common.UiText
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -59,7 +62,7 @@ data class GameMasterMapUiState(
     /** PP-86: hunter awaiting confirmation. Non-null = alert showing. */
     val pendingChickenDesignation: dev.rahier.pouleparty.model.Registration? = null,
     /** PP-86: last error message from `designateChicken` to surface. */
-    val designationError: String? = null,
+    val designationError: UiText? = null,
     override val nextRadiusUpdate: Date? = null,
     override val nowDate: Date = Date(),
     override val radius: Int = 1500,
@@ -70,22 +73,22 @@ data class GameMasterMapUiState(
     val showHuntersDrawer: Boolean = false,
     val isLeaving: Boolean = false,
     @param:androidx.annotation.StringRes val leaveErrorRes: Int? = null,
-    override val winnerNotification: String? = null,
+    override val winnerNotification: UiText? = null,
     override val hasGameStarted: Boolean = false,
     override val countdownNumber: Int? = null,
-    override val countdownText: String? = null,
+    override val countdownText: UiText? = null,
     val previousWinnersCount: Int = -1,
     val pendingSubmissionsCount: Int = 0,
     override val isOutsideZone: Boolean = false,
     override val availablePowerUps: List<PowerUp> = emptyList(),
     override val collectedPowerUps: List<PowerUp> = emptyList(),
     override val showPowerUpInventory: Boolean = false,
-    override val powerUpNotification: String? = null,
+    override val powerUpNotification: UiText? = null,
     override val lastActivatedPowerUpType: PowerUpType? = null,
     /** PP-71: in flight while `launchGame` runs. */
     val isLaunching: Boolean = false,
     /** PP-71: last error from `launchGame`. Null clears the alert. */
-    val launchError: String? = null,
+    val launchError: UiText? = null,
     /** True once `game.status == DONE` lands. Drives the "Game ended"
      *  banner overlay; tapping the banner fires `ViewLeaderboardTapped`
      *  which routes to the Victory / leaderboard screen. */
@@ -165,7 +168,7 @@ class GameMasterMapViewModel @Inject constructor(
                         gameFunctions.designateChicken(gameId, reg.userId)
                         _uiState.update { it.copy(showHuntersDrawer = false) }
                     } catch (e: Exception) {
-                        _uiState.update { it.copy(designationError = e.message ?: "Failed to designate chicken") }
+                        _uiState.update { it.copy(designationError = uiText(e.errorMessageRes())) }
                     }
                 }
             }
@@ -201,7 +204,7 @@ class GameMasterMapViewModel @Inject constructor(
                 _uiState.update { it.copy(isLaunching = false) }
             } catch (e: Exception) {
                 Log.e("GameMasterMapVM", "launchGame failed", e)
-                _uiState.update { it.copy(isLaunching = false, launchError = e.message ?: "Launch failed") }
+                _uiState.update { it.copy(isLaunching = false, launchError = uiText(e.errorMessageRes())) }
             }
         }
     }
@@ -394,7 +397,8 @@ private fun buildHunterAnnotations(
         HunterAnnotation(
             id = hunter.hunterId,
             coordinate = Point.fromLngLat(hunter.location.longitude, hunter.location.latitude),
-            displayName = teamNameByUserId[hunter.hunterId] ?: "Hunter ${index + 1}",
+            displayName = teamNameByUserId[hunter.hunterId]?.takeIf { it.isNotBlank() }?.let { UiText.Verbatim(it) }
+                ?: uiText(R.string.hunter_number, index + 1),
         )
     }
 }

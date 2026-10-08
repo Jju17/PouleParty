@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.map
 
+import dev.rahier.pouleparty.ui.common.UiText
 import com.mapbox.geojson.Point
 import dev.rahier.pouleparty.model.Game
 import dev.rahier.pouleparty.powerups.model.PowerUp
@@ -18,13 +19,13 @@ interface MapUiState {
     val nowDate: Date
     val radius: Int
     val circleCenter: Point?
-    val winnerNotification: String?
+    val winnerNotification: UiText?
     val countdownNumber: Int?
-    val countdownText: String?
+    val countdownText: UiText?
     val isOutsideZone: Boolean
     val availablePowerUps: List<PowerUp>
     val collectedPowerUps: List<PowerUp>
-    val powerUpNotification: String?
+    val powerUpNotification: UiText?
     val lastActivatedPowerUpType: PowerUpType?
     val showGameInfo: Boolean
     val showPowerUpInventory: Boolean

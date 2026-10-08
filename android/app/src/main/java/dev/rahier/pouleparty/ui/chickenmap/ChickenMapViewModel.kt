@@ -1,5 +1,8 @@
 package dev.rahier.pouleparty.ui.chickenmap
 
+import dev.rahier.pouleparty.R
+import dev.rahier.pouleparty.ui.common.uiText
+import dev.rahier.pouleparty.ui.common.UiText
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.mapbox.geojson.Point
@@ -51,7 +54,7 @@ import javax.inject.Inject
 data class HunterAnnotation(
     val id: String,
     val coordinate: Point,
-    val displayName: String
+    val displayName: UiText,
 )
 
 data class ChickenMapUiState(
@@ -79,17 +82,17 @@ data class ChickenMapUiState(
     val chickenFoundCode: String = "",
     val previousWinnersCount: Int = -1,
     val pendingSubmissionsCount: Int = 0,
-    override val winnerNotification: String? = null,
+    override val winnerNotification: UiText? = null,
     override val hasGameStarted: Boolean = false,
     val hasHuntStarted: Boolean = false,
     override val countdownNumber: Int? = null,
-    override val countdownText: String? = null,
+    override val countdownText: UiText? = null,
     val userLocation: Point? = null,
     override val isOutsideZone: Boolean = false,
     override val availablePowerUps: List<PowerUp> = emptyList(),
     override val collectedPowerUps: List<PowerUp> = emptyList(),
     override val showPowerUpInventory: Boolean = false,
-    override val powerUpNotification: String? = null,
+    override val powerUpNotification: UiText? = null,
     override val lastActivatedPowerUpType: PowerUpType? = null,
     val activatingPowerUpId: String? = null,
     val shouldNavigateToVictory: Boolean = false,
@@ -105,7 +108,7 @@ data class ChickenMapUiState(
     /** PP-71: in flight while `launchGame` runs. */
     val isLaunching: Boolean = false,
     /** PP-71: last error from `launchGame`. Null clears the alert. */
-    val launchError: String? = null,
+    val launchError: UiText? = null,
     /** PP-107: one-time "you are the new chicken! 🐔" alert, shown right
      *  after a GameMaster re-designation routes the player onto this map. */
     val showNewChickenAlert: Boolean = false,
@@ -185,7 +188,7 @@ class ChickenMapViewModel @Inject constructor(
                 _uiState.update { it.copy(isLaunching = false) }
             } catch (e: Exception) {
                 Log.e(logTag, "launchGame failed", e)
-                _uiState.update { it.copy(isLaunching = false, launchError = e.message ?: "Launch failed") }
+                _uiState.update { it.copy(isLaunching = false, launchError = uiText(e.errorMessageRes())) }
             }
         }
     }
@@ -196,7 +199,7 @@ class ChickenMapViewModel @Inject constructor(
     override val currentAvailablePowerUps: List<PowerUp>
         get() = _uiState.value.availablePowerUps
 
-    override fun notifyPowerUp(message: String, type: PowerUpType?) {
+    override fun notifyPowerUp(message: UiText, type: PowerUpType?) {
         showNotification(message, type)
     }
 
@@ -292,13 +295,13 @@ class ChickenMapViewModel @Inject constructor(
                     phases = listOf(
                         CountdownPhase(
                             targetDate = state.game.effectiveStartDate,
-                            completionText = "RUN! \uD83D\uDC14",
+                            completionText = uiText(R.string.countdown_chicken_run),
                             showNumericCountdown = true,
                             isEnabled = hasLaunched
                         ),
                         CountdownPhase(
                             targetDate = state.game.hunterStartDate,
-                            completionText = "\uD83D\uDD0D Hunters incoming!",
+                            completionText = uiText(R.string.countdown_chicken_hunters_coming),
                             showNumericCountdown = false,
                             isEnabled = hasLaunched && state.game.timing.headStartMinutes > 0
                         )
@@ -417,7 +420,7 @@ class ChickenMapViewModel @Inject constructor(
                 HunterAnnotation(
                     id = hunter.hunterId,
                     coordinate = Point.fromLngLat(hunter.location.longitude, hunter.location.latitude),
-                    displayName = "Hunter ${index + 1}"
+                    displayName = uiText(R.string.hunter_number, index + 1)
                 )
             }
             _uiState.update { it.copy(hunterAnnotations = annotations) }
@@ -602,7 +605,7 @@ class ChickenMapViewModel @Inject constructor(
         }
     }
 
-    private fun showNotification(message: String, type: PowerUpType? = null) {
+    private fun showNotification(message: UiText, type: PowerUpType? = null) {
         showPowerUpNotification(message, type) { msg, pwrType ->
             _uiState.update { it.copy(powerUpNotification = msg, lastActivatedPowerUpType = pwrType) }
         }
@@ -621,7 +624,7 @@ class ChickenMapViewModel @Inject constructor(
         // also disables the button on `game.isActive(type)`, this is
         // the defensive server-adjacent check.
         if (_uiState.value.game.isActive(powerUp.typeEnum)) {
-            showNotification("${powerUp.typeEnum.title} is already active", powerUp.typeEnum)
+            showNotification(uiText(R.string.notif_powerup_already_active, uiText(powerUp.typeEnum.titleRes)), powerUp.typeEnum)
             return
         }
         _uiState.update { it.copy(activatingPowerUpId = powerUp.id) }
@@ -630,7 +633,7 @@ class ChickenMapViewModel @Inject constructor(
                 gameFunctions.activatePowerUp(gameId, powerUp.id)
                 analyticsRepository.powerUpActivated(type = powerUp.type, role = "chicken")
                 _uiState.update { it.copy(showPowerUpInventory = false) }
-                showNotification("Activated: ${powerUp.typeEnum.title}!", powerUp.typeEnum)
+                showNotification(uiText(R.string.notif_powerup_activated, uiText(powerUp.typeEnum.titleRes)), powerUp.typeEnum)
             } catch (e: Exception) {
                 Log.e("ChickenMapVM", "Failed to activate power-up", e)
             } finally {
@@ -646,13 +649,4 @@ class ChickenMapViewModel @Inject constructor(
     private fun dismissPowerUpInventory() {
         _uiState.update { it.copy(showPowerUpInventory = false) }
     }
-
-    val chickenSubtitle: String
-        get() {
-            if (_uiState.value.game.chickenCanSeeHunters) return "You can see them \uD83D\uDC40"
-            return when (_uiState.value.game.gameModEnum) {
-                GameMod.FOLLOW_THE_CHICKEN -> "Don't be seen !"
-                GameMod.STAY_IN_THE_ZONE -> "Stay in the zone \uD83D\uDCCD"
-            }
-        }
 }

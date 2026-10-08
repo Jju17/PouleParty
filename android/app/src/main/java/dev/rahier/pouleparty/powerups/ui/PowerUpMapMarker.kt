@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.powerups.ui
 
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -34,7 +35,7 @@ fun PowerUpMapMarker(
     ) {
         Icon(
             imageVector = powerUpIcon(type),
-            contentDescription = type.title,
+            contentDescription = stringResource(type.titleRes),
             tint = Color.White,
             modifier = Modifier.size(14.dp)
         )

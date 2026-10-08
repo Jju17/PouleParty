@@ -1,5 +1,8 @@
 package dev.rahier.pouleparty.ui.huntermap
 
+import dev.rahier.pouleparty.R
+import dev.rahier.pouleparty.ui.common.uiText
+import dev.rahier.pouleparty.ui.common.UiText
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
@@ -68,7 +71,7 @@ data class HunterMapUiState(
     val enteredCode: String = "",
     val showWrongCodeAlert: Boolean = false,
     val previousWinnersCount: Int = -1,
-    override val winnerNotification: String? = null,
+    override val winnerNotification: UiText? = null,
     val shouldNavigateToVictory: Boolean = false,
     /** PP-16: flipped when the game ends (time-out, zone collapse,
      *  all hunters found). The map stays visible, gameplay
@@ -77,7 +80,7 @@ data class HunterMapUiState(
     val isGameOver: Boolean = false,
     override val hasGameStarted: Boolean = false,
     override val countdownNumber: Int? = null,
-    override val countdownText: String? = null,
+    override val countdownText: UiText? = null,
     override val showGameInfo: Boolean = false,
     val codeCopied: Boolean = false,
     val wrongCodeAttempts: Int = 0,
@@ -87,7 +90,7 @@ data class HunterMapUiState(
     override val availablePowerUps: List<PowerUp> = emptyList(),
     override val collectedPowerUps: List<PowerUp> = emptyList(),
     override val showPowerUpInventory: Boolean = false,
-    override val powerUpNotification: String? = null,
+    override val powerUpNotification: UiText? = null,
     override val lastActivatedPowerUpType: PowerUpType? = null,
     val previewCircle: Pair<Point, Double>? = null,
     val activatingPowerUpId: String? = null,
@@ -156,7 +159,7 @@ class HunterMapViewModel @Inject constructor(
     override val currentAvailablePowerUps: List<PowerUp>
         get() = _uiState.value.availablePowerUps
 
-    override fun notifyPowerUp(message: String, type: PowerUpType?) {
+    override fun notifyPowerUp(message: UiText, type: PowerUpType?) {
         showNotification(message, type)
     }
 
@@ -304,13 +307,13 @@ class HunterMapViewModel @Inject constructor(
                     phases = listOf(
                         CountdownPhase(
                             targetDate = state.game.effectiveStartDate,
-                            completionText = "\uD83D\uDC14 is hiding!",
+                            completionText = uiText(R.string.countdown_hunter_chicken_hiding),
                             showNumericCountdown = true,
                             isEnabled = hasLaunched && state.game.timing.headStartMinutes > 0
                         ),
                         CountdownPhase(
                             targetDate = state.game.hunterStartDate,
-                            completionText = "LET'S HUNT! \uD83D\uDD0D",
+                            completionText = uiText(R.string.countdown_hunter_go),
                             showNumericCountdown = true,
                             isEnabled = hasLaunched
                         )
@@ -667,7 +670,7 @@ class HunterMapViewModel @Inject constructor(
         }
     }
 
-    private fun showNotification(message: String, type: PowerUpType? = null) {
+    private fun showNotification(message: UiText, type: PowerUpType? = null) {
         showPowerUpNotification(message, type) { msg, pwrType ->
             _uiState.update { it.copy(powerUpNotification = msg, lastActivatedPowerUpType = pwrType) }
         }
@@ -684,7 +687,7 @@ class HunterMapViewModel @Inject constructor(
         // in addition to the inventory UI button being disabled on
         // `game.isActive(type)`.
         if (_uiState.value.game.isActive(powerUp.typeEnum)) {
-            showNotification("${powerUp.typeEnum.title} is already active", powerUp.typeEnum)
+            showNotification(uiText(R.string.notif_powerup_already_active, uiText(powerUp.typeEnum.titleRes)), powerUp.typeEnum)
             return
         }
         _uiState.update { it.copy(activatingPowerUpId = powerUp.id) }
@@ -720,7 +723,7 @@ class HunterMapViewModel @Inject constructor(
                     }
                 }
                 _uiState.update { it.copy(showPowerUpInventory = false) }
-                showNotification("Activated: ${powerUp.typeEnum.title}!", powerUp.typeEnum)
+                showNotification(uiText(R.string.notif_powerup_activated, uiText(powerUp.typeEnum.titleRes)), powerUp.typeEnum)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to activate power-up", e)
             } finally {
@@ -890,15 +893,6 @@ class HunterMapViewModel @Inject constructor(
             _effects.send(HunterMapEffect.NavigateToMenu)
         }
     }
-
-    val hunterSubtitle: String
-        get() {
-            if (_uiState.value.game.chickenCanSeeHunters) return "Catch the \uD83D\uDC14 (she sees you! \uD83D\uDC40)"
-            return when (_uiState.value.game.gameModEnum) {
-                GameMod.FOLLOW_THE_CHICKEN -> "Catch the \uD83D\uDC14 !"
-                GameMod.STAY_IN_THE_ZONE -> "Stay in the zone \uD83D\uDCCD"
-            }
-        }
 
     private fun onInfoTapped() {
         _uiState.update { it.copy(showGameInfo = true) }

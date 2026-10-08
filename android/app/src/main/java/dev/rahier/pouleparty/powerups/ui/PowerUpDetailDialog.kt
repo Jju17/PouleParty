@@ -38,9 +38,9 @@ fun PowerUpDetailDialog(type: PowerUpType, onDismiss: () -> Unit) {
                     PowerUpType.JAMMER -> "📶"
                 }
                 Text(icon, fontSize = 32.sp)
-                Text(type.title)
+                Text(stringResource(type.titleRes))
                 Text(
-                    text = "${type.targetEmoji} ${type.targetLabel}",
+                    text = "${type.targetEmoji} ${stringResource(type.targetLabelRes)}",
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier
@@ -58,7 +58,7 @@ fun PowerUpDetailDialog(type: PowerUpType, onDismiss: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
-                    text = type.description,
+                    text = stringResource(type.descriptionRes),
                     textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.bodyMedium
                 )

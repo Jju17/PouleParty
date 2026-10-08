@@ -76,11 +76,11 @@ class PoulePartyApp : Application() {
         val manager = getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(
             NotificationChannel(
-                "game_events",
-                "Game Events",
+                getString(R.string.notification_channel_game_events_id),
+                getString(R.string.notification_channel_game_events),
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Notifications for game starts, zone shrinks, and player events"
+                description = getString(R.string.notification_channel_game_events_description)
             }
         )
         manager.createNotificationChannel(

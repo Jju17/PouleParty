@@ -127,7 +127,7 @@ class ChickenMapViewModelBehaviorTest {
     fun `chickenSubtitle for followTheChicken`() {
         val vm = createViewModel()
         // Default game mock is followTheChicken + chickenCanSeeHunters = true
-        assertEquals("You can see them 👀", vm.chickenSubtitle)
+        assertEquals(dev.rahier.pouleparty.R.string.subtitle_chicken_sees, dev.rahier.pouleparty.ui.gamelogic.chickenSubtitleRes(vm.uiState.value.game))
     }
 
     // MARK: - Confirm cancel game

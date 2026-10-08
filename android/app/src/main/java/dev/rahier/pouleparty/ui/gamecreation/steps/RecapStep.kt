@@ -69,7 +69,7 @@ fun RecapStep(
                 HorizontalDivider()
                 RecapRow(
                     label = stringResource(R.string.game_mode),
-                    value = game.gameModEnum.title
+                    value = stringResource(game.gameModEnum.titleRes)
                 )
                 HorizontalDivider()
                 RecapRow(
@@ -110,7 +110,8 @@ fun RecapStep(
                     HorizontalDivider()
                     val enabledNames = PowerUpType.entries
                         .filter { it.firestoreValue in game.powerUps.enabledTypes }
-                        .joinToString(", ") { it.title }
+                        .map { stringResource(it.titleRes) }
+                        .joinToString(", ")
                     RecapRow(
                         label = stringResource(R.string.active_types),
                         value = enabledNames

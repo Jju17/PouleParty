@@ -2,6 +2,8 @@
 
 package dev.rahier.pouleparty.ui.gamecreation.steps
 
+import dev.rahier.pouleparty.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -222,7 +224,7 @@ fun ZonesRecapStep(
                         modifier = Modifier.size(18.dp),
                     )
                     Spacer(Modifier.width(6.dp))
-                    Text("Shuffle", style = gameboyStyle(12), color = Color.Black)
+                    Text(stringResource(R.string.zone_shuffle), style = gameboyStyle(12), color = Color.Black)
                 }
             }
         }

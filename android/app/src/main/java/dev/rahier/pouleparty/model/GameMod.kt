@@ -1,8 +1,11 @@
 package dev.rahier.pouleparty.model
 
-enum class GameMod(val firestoreValue: String, val title: String) {
-    FOLLOW_THE_CHICKEN("followTheChicken", "Follow the chicken \uD83D\uDC14"),
-    STAY_IN_THE_ZONE("stayInTheZone", "Stay in the zone \uD83D\uDCCD");
+import androidx.annotation.StringRes
+import dev.rahier.pouleparty.R
+
+enum class GameMod(val firestoreValue: String, @param:StringRes val titleRes: Int) {
+    FOLLOW_THE_CHICKEN("followTheChicken", R.string.mode_follow_title),
+    STAY_IN_THE_ZONE("stayInTheZone", R.string.mode_stay_title);
 
     companion object {
         fun fromFirestore(value: String): GameMod =

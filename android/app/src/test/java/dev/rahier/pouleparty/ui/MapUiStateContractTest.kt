@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui
 
+import dev.rahier.pouleparty.ui.common.UiText
 import dev.rahier.pouleparty.ui.map.MapUiState
 import dev.rahier.pouleparty.powerups.ui.PowerUpsUiState
 import dev.rahier.pouleparty.powerups.ui.powerUps
@@ -64,14 +65,14 @@ class MapUiStateContractTest {
             availablePowerUps = listOf(powerUp),
             collectedPowerUps = emptyList(),
             showPowerUpInventory = true,
-            powerUpNotification = "Activated!",
+            powerUpNotification = UiText.Verbatim("Activated!"),
             lastActivatedPowerUpType = PowerUpType.INVISIBILITY
         )
         val projection = state.powerUps()
         assertEquals(1, projection.available.size)
         assertTrue(projection.collected.isEmpty())
         assertTrue(projection.showInventory)
-        assertEquals("Activated!", projection.notification)
+        assertEquals(UiText.Verbatim("Activated!"), projection.notification)
         assertEquals(PowerUpType.INVISIBILITY, projection.lastActivatedType)
         assertNull(projection.activatingId)
     }
@@ -116,14 +117,14 @@ class MapUiStateContractTest {
             radius = 750,
             isOutsideZone = true,
             countdownNumber = 3,
-            countdownText = "Go!",
-            powerUpNotification = "Hello"
+            countdownText = UiText.Verbatim("Go!"),
+            powerUpNotification = UiText.Verbatim("Hello")
         )
         val surface: MapUiState = updated
         assertEquals(750, surface.radius)
         assertTrue(surface.isOutsideZone)
         assertEquals(3, surface.countdownNumber)
-        assertEquals("Go!", surface.countdownText)
-        assertEquals("Hello", surface.powerUpNotification)
+        assertEquals(UiText.Verbatim("Go!"), surface.countdownText)
+        assertEquals(UiText.Verbatim("Hello"), surface.powerUpNotification)
     }
 }

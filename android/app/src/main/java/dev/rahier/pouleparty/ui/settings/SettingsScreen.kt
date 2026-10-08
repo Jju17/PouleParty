@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.settings
 
+import dev.rahier.pouleparty.ui.common.teamNameOrDefault
 import androidx.compose.runtime.remember
 import androidx.core.content.pm.PackageInfoCompat
 import android.util.Log
@@ -339,7 +340,7 @@ fun SettingsScreen(
             onDismissRequest = { viewModel.onIntent(SettingsIntent.ReportDismissed) },
             title = { Text(stringResource(R.string.report_player_title)) },
             text = {
-                Text(stringResource(R.string.report_player_message, reportTarget.entry.displayName))
+                Text(stringResource(R.string.report_player_message, teamNameOrDefault(reportTarget.entry.displayName)))
             },
             confirmButton = {
                 TextButton(
@@ -582,7 +583,7 @@ private fun GameDetailDialog(
             // Header
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                 Text(if (game.gameModEnum == GameMod.FOLLOW_THE_CHICKEN) "🐔" else "📍", style = bangerStyle(48))
-                Text(game.gameModEnum.title, style = bangerStyle(22), color = MaterialTheme.colorScheme.onBackground)
+                Text(stringResource(game.gameModEnum.titleRes), style = bangerStyle(22), color = MaterialTheme.colorScheme.onBackground)
                 Spacer(Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     RoleBadge(role = myGame.role)

@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.powerups.ui
 
+import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.shrinkHorizontally
@@ -132,7 +133,7 @@ private fun BadgeItem(
                 PowerUpType.DECOY -> Icons.Default.PersonPin
                 PowerUpType.JAMMER -> Icons.Default.SensorsOff
             },
-            contentDescription = type.title,
+            contentDescription = stringResource(type.titleRes),
             tint = fgColor,
             modifier = Modifier
                 .then(if (!isExpanded) Modifier.padding(8.dp) else Modifier)
@@ -148,7 +149,7 @@ private fun BadgeItem(
                 Spacer(Modifier.width(6.dp))
                 Column {
                     Text(
-                        type.title,
+                        stringResource(type.titleRes),
                         color = fgColor,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold

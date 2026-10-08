@@ -330,7 +330,7 @@ class HunterMapViewModelBehaviorTest {
     fun `hunterSubtitle for followTheChicken`() {
         val vm = createViewModel()
         // Default Game.mock is followTheChicken + chickenCanSeeHunters = true
-        assertEquals("Catch the \uD83D\uDC14 (she sees you! \uD83D\uDC40)", vm.hunterSubtitle)
+        assertEquals(dev.rahier.pouleparty.R.string.subtitle_hunter_seen, dev.rahier.pouleparty.ui.gamelogic.hunterSubtitleRes(vm.uiState.value.game))
     }
 
     // ── Edge cases ─────────────────────────────────────────

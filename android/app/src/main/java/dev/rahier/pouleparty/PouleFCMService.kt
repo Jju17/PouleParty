@@ -16,7 +16,6 @@ class PouleFCMService : FirebaseMessagingService() {
 
     companion object {
         private const val TAG = "PouleFCMService"
-        private const val CHANNEL_ID = "game_events"
 
         // Monotonic notification ID generator. `System.currentTimeMillis().toInt()`
         // overflows past Int.MAX_VALUE (January 19 2038, but also negative sooner
@@ -104,7 +103,7 @@ class PouleFCMService : FirebaseMessagingService() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
+        val builder = NotificationCompat.Builder(this, getString(R.string.notification_channel_game_events_id))
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(title)
             .setContentText(body)

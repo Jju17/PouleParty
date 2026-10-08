@@ -1,10 +1,12 @@
 package dev.rahier.pouleparty.ui.challenges
 
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.AlertDialog
+import dev.rahier.pouleparty.ui.common.teamNameOrDefault
 import android.util.Log
 import android.content.ContentValues
 import android.net.Uri
 import android.provider.MediaStore
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -91,15 +93,21 @@ fun ChallengesSheet(
     LaunchedEffect(isClosedForSubmissions) {
         viewModel.setClosedForSubmissions(isClosedForSubmissions)
     }
+    var uploadErrorRes by remember { mutableStateOf<Int?>(null) }
     LaunchedEffect(Unit) {
         viewModel.effects.collect { effect ->
             when (effect) {
-                is ChallengesEffect.ShowError -> {
-                    val msg = context.getString(R.string.challenge_upload_failed) + ": " + effect.message
-                    Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
-                }
+                is ChallengesEffect.ShowError -> uploadErrorRes = effect.messageRes
             }
         }
+    }
+    uploadErrorRes?.let { reason ->
+        AlertDialog(
+            onDismissRequest = { uploadErrorRes = null },
+            title = { Text(stringResource(R.string.challenge_upload_failed)) },
+            text = { Text(stringResource(reason), color = MaterialTheme.colorScheme.error) },
+            confirmButton = { TextButton(onClick = { uploadErrorRes = null }) { Text(stringResource(R.string.ok)) } },
+        )
     }
 
     val photoLauncher = rememberLauncherForActivityResult(
@@ -571,7 +579,7 @@ private fun TopPlayerRow(rank: Int, entry: LeaderboardHunterEntry) {
             modifier = Modifier.padding(end = 12.dp)
         )
         Text(
-            text = entry.displayName,
+            text = teamNameOrDefault(entry.displayName),
             style = bangerStyle(22),
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.weight(1f),
@@ -612,7 +620,7 @@ private fun RegularPlayerRow(rank: Int, entry: LeaderboardHunterEntry) {
             modifier = Modifier.padding(end = 12.dp)
         )
         Text(
-            text = entry.displayName,
+            text = teamNameOrDefault(entry.displayName),
             style = bangerStyle(18),
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.weight(1f),

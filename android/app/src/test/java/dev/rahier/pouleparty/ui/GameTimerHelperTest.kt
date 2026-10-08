@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui
 
+import dev.rahier.pouleparty.ui.common.UiText
 import dev.rahier.pouleparty.ui.gamelogic.*
 import dev.rahier.pouleparty.powerups.logic.*
 
@@ -21,7 +22,7 @@ class GameTimerHelperTest {
     fun `countdown no change when far from target`() {
         val phase = CountdownPhase(
             targetDate = Date(System.currentTimeMillis() + 60_000),
-            completionText = "GO!",
+            completionText = UiText.Verbatim("GO!"),
             showNumericCountdown = true,
             isEnabled = true
         )
@@ -38,7 +39,7 @@ class GameTimerHelperTest {
     fun `countdown shows number when within threshold`() {
         val phase = CountdownPhase(
             targetDate = Date(System.currentTimeMillis() + 2500),
-            completionText = "GO!",
+            completionText = UiText.Verbatim("GO!"),
             showNumericCountdown = true,
             isEnabled = true
         )
@@ -55,7 +56,7 @@ class GameTimerHelperTest {
     fun `countdown no change when number already shown`() {
         val phase = CountdownPhase(
             targetDate = Date(System.currentTimeMillis() + 2500),
-            completionText = "GO!",
+            completionText = UiText.Verbatim("GO!"),
             showNumericCountdown = true,
             isEnabled = true
         )
@@ -72,7 +73,7 @@ class GameTimerHelperTest {
     fun `countdown shows text on completion`() {
         val phase = CountdownPhase(
             targetDate = Date(System.currentTimeMillis() - 500),
-            completionText = "RUN!",
+            completionText = UiText.Verbatim("RUN!"),
             showNumericCountdown = true,
             isEnabled = true
         )
@@ -82,20 +83,20 @@ class GameTimerHelperTest {
             currentCountdownNumber = null,
             currentCountdownText = null
         )
-        assertEquals(CountdownResult.ShowText("RUN!"), result)
+        assertEquals(CountdownResult.ShowText(UiText.Verbatim("RUN!")), result)
     }
 
     @Test
     fun `countdown skips disabled phases`() {
         val disabled = CountdownPhase(
             targetDate = Date(System.currentTimeMillis() + 2000),
-            completionText = "SKIP",
+            completionText = UiText.Verbatim("SKIP"),
             showNumericCountdown = true,
             isEnabled = false
         )
         val enabled = CountdownPhase(
             targetDate = Date(System.currentTimeMillis() - 500),
-            completionText = "GO!",
+            completionText = UiText.Verbatim("GO!"),
             showNumericCountdown = true,
             isEnabled = true
         )
@@ -105,14 +106,14 @@ class GameTimerHelperTest {
             currentCountdownNumber = null,
             currentCountdownText = null
         )
-        assertEquals(CountdownResult.ShowText("GO!"), result)
+        assertEquals(CountdownResult.ShowText(UiText.Verbatim("GO!")), result)
     }
 
     @Test
     fun `countdown no change after all phases complete`() {
         val phase = CountdownPhase(
             targetDate = Date(System.currentTimeMillis() - 5000),
-            completionText = "GO!",
+            completionText = UiText.Verbatim("GO!"),
             showNumericCountdown = true,
             isEnabled = true
         )
@@ -129,7 +130,7 @@ class GameTimerHelperTest {
     fun `countdown no change when text already showing`() {
         val phase = CountdownPhase(
             targetDate = Date(System.currentTimeMillis() - 500),
-            completionText = "RUN!",
+            completionText = UiText.Verbatim("RUN!"),
             showNumericCountdown = true,
             isEnabled = true
         )
@@ -137,7 +138,7 @@ class GameTimerHelperTest {
             phases = listOf(phase),
             now = Date(),
             currentCountdownNumber = null,
-            currentCountdownText = "RUN!"
+            currentCountdownText = UiText.Verbatim("RUN!")
         )
         assertEquals(CountdownResult.NoChange, result)
     }
@@ -310,7 +311,7 @@ class GameTimerHelperTest {
             Winner("h1", "Alice", Timestamp.now()),
             Winner("h2", "Bob", Timestamp.now())
         )
-        assertEquals("Bob found the chicken! 🐔", detectNewWinners(winners, previousCount = 1))
+        assertEquals(dev.rahier.pouleparty.ui.common.uiText(dev.rahier.pouleparty.R.string.notif_winner_found, UiText.Verbatim("Bob")), detectNewWinners(winners, previousCount = 1))
     }
 
     @Test
@@ -332,7 +333,7 @@ class GameTimerHelperTest {
         val winners = listOf(
             Winner("h1", "Alice", Timestamp.now())
         )
-        assertEquals("Alice found the chicken! 🐔", detectNewWinners(winners, previousCount = 0))
+        assertEquals(dev.rahier.pouleparty.ui.common.uiText(dev.rahier.pouleparty.R.string.notif_winner_found, UiText.Verbatim("Alice")), detectNewWinners(winners, previousCount = 0))
     }
 
     // ── shouldCheckZone ────────────────────────────────
@@ -483,7 +484,7 @@ class GameTimerHelperTest {
         val now = Date(997_500L)      // 2.5s before target
         val phase = CountdownPhase(
             targetDate = target,
-            completionText = "GO!",
+            completionText = UiText.Verbatim("GO!"),
             showNumericCountdown = true,
             isEnabled = true
         )
@@ -502,7 +503,7 @@ class GameTimerHelperTest {
         val now = Date(1_000_500L) // 0.5s after target
         val phase = CountdownPhase(
             targetDate = target,
-            completionText = "RUN!",
+            completionText = UiText.Verbatim("RUN!"),
             showNumericCountdown = true,
             isEnabled = true
         )
@@ -512,7 +513,7 @@ class GameTimerHelperTest {
             currentCountdownNumber = null,
             currentCountdownText = null
         )
-        assertEquals(CountdownResult.ShowText("RUN!"), result)
+        assertEquals(CountdownResult.ShowText(UiText.Verbatim("RUN!")), result)
     }
 
     // ── interpolateZoneCenter edge cases ────────────
@@ -738,7 +739,7 @@ class GameTimerHelperTest {
     fun `countdown exactly at threshold boundary`() {
         val target = Date(1_000_000L)
         val now = Date(997_000L) // exactly 3.0s before
-        val phase = CountdownPhase(target, "GO!", showNumericCountdown = true, isEnabled = true)
+        val phase = CountdownPhase(target, UiText.Verbatim("GO!"), showNumericCountdown = true, isEnabled = true)
         val result = evaluateCountdown(listOf(phase), now, null, null)
         assertEquals(CountdownResult.UpdateNumber(3), result)
     }
@@ -748,16 +749,16 @@ class GameTimerHelperTest {
         // At t=0 exact: timeToTargetSec=0.0, strict > 0 check skips numeric countdown,
         // falls through to ShowText (matches iOS behavior)
         val target = Date(1_000_000L)
-        val phase = CountdownPhase(target, "GO!", showNumericCountdown = true, isEnabled = true)
+        val phase = CountdownPhase(target, UiText.Verbatim("GO!"), showNumericCountdown = true, isEnabled = true)
         val result = evaluateCountdown(listOf(phase), target, null, null)
-        assertEquals(CountdownResult.ShowText("GO!"), result)
+        assertEquals(CountdownResult.ShowText(UiText.Verbatim("GO!")), result)
     }
 
     @Test
     fun `countdown non-numeric phase skips number`() {
         val target = Date(1_000_000L)
         val now = Date(998_000L) // 2s before
-        val phase = CountdownPhase(target, "GO!", showNumericCountdown = false, isEnabled = true)
+        val phase = CountdownPhase(target, UiText.Verbatim("GO!"), showNumericCountdown = false, isEnabled = true)
         val result = evaluateCountdown(listOf(phase), now, null, null)
         assertEquals(CountdownResult.NoChange, result)
     }

@@ -1,5 +1,9 @@
 package dev.rahier.pouleparty.ui.map
 
+import dev.rahier.pouleparty.R
+import dev.rahier.pouleparty.ui.common.errorMessageRes
+import dev.rahier.pouleparty.ui.common.uiText
+import dev.rahier.pouleparty.ui.common.UiText
 import dev.rahier.pouleparty.model.distanceMeters
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -79,7 +83,7 @@ abstract class BaseMapViewModel(
     protected abstract val currentAvailablePowerUps: List<PowerUp>
 
     /** Shows a power-up notification in this VM's UiState. */
-    protected abstract fun notifyPowerUp(message: String, type: PowerUpType?)
+    protected abstract fun notifyPowerUp(message: UiText, type: PowerUpType?)
 
     // ── Shared helpers ───────────────────────────────────
 
@@ -109,9 +113,9 @@ abstract class BaseMapViewModel(
      *                    Called with `(message, type)` to show, then `(null, null)` to clear.
      */
     protected fun showPowerUpNotification(
-        message: String,
+        message: UiText,
         type: PowerUpType? = null,
-        updateState: (String?, PowerUpType?) -> Unit
+        updateState: (UiText?, PowerUpType?) -> Unit
     ) {
         notificationJob?.cancel()
         notificationJob = viewModelScope.launch {
@@ -148,10 +152,10 @@ abstract class BaseMapViewModel(
                 try {
                     gameFunctions.collectPowerUp(gameId, powerUp.id, userLoc.latitude(), userLoc.longitude())
                     analyticsRepository.powerUpCollected(powerUp.type, analyticsRole)
-                    notifyPowerUp("Collected: ${powerUp.typeEnum.title}!", powerUp.typeEnum)
+                    notifyPowerUp(uiText(R.string.notif_powerup_collected, uiText(powerUp.typeEnum.titleRes)), powerUp.typeEnum)
                 } catch (e: Exception) {
                     Log.e(logTag, "Failed to collect power-up", e)
-                    notifyPowerUp("Failed to collect power-up", null)
+                    notifyPowerUp(uiText(e.errorMessageRes()), null)
                 } finally {
                     collectingPowerUpIds.remove(powerUp.id)
                 }
@@ -183,7 +187,7 @@ abstract class BaseMapViewModel(
     protected fun detectCrossPlayerPowerUp(
         oldGame: Game,
         newGame: Game,
-        onNotification: (String, PowerUpType?) -> Unit
+        onNotification: (UiText, PowerUpType?) -> Unit
     ) {
         data class Check(val old: Timestamp?, val new: Timestamp?, val type: PowerUpType)
         val checks = listOf(
@@ -196,7 +200,7 @@ abstract class BaseMapViewModel(
         val now = java.util.Date()
         for (check in checks) {
             if (check.new != null && now.before(check.new.toDate()) && check.old?.toDate() != check.new.toDate()) {
-                onNotification("${powerUpEmoji(check.type)} ${check.type.title} activated!", check.type)
+                onNotification(uiText(R.string.notif_powerup_opponent, powerUpEmoji(check.type), uiText(check.type.titleRes)), check.type)
                 return
             }
         }

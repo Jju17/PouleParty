@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.home
 
+import dev.rahier.pouleparty.ui.common.errorMessageRes
 import kotlinx.coroutines.CancellationException
 import android.content.SharedPreferences
 import android.util.Log
@@ -225,7 +226,7 @@ class HomeViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         joinStep = JoinFlowStep.GameMasterPasswordEntry(game),
-                        gameMasterPasswordError = e.message ?: "Network error",
+                        gameMasterPasswordError = appContext.getString(e.errorMessageRes()),
                     )
                 }
             }

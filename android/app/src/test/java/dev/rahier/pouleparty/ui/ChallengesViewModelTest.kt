@@ -244,14 +244,14 @@ class ChallengesViewModelTest {
     }
 
     @Test
-    fun `leaderboard falls back to Hunter when no team registration`() {
+    fun `leaderboard leaves the name empty for the screen fallback when no team registration`() {
         val state = ChallengesUiState(
             hunterIds = listOf("h1"),
             currentHunterId = "h1"
         )
         val board = state.leaderboardEntries
         assertEquals(1, board.size)
-        assertEquals("Hunter", board[0].displayName)
+        assertEquals("", board[0].displayName)
     }
 
     @Test
