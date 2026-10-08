@@ -827,7 +827,8 @@ async function bumpValidationRateLimit(uid: string): Promise<void> {
       attempts,
       firstAttemptAt: rl.firstAttemptAt,
       lockedUntil,
-    } satisfies ValidationRateLimit);
+      expiresAt: Timestamp.fromMillis(now.toMillis() + 24 * 60 * 60 * 1000),
+    });
 
     if (reachedLock) {
       throw new HttpsError("resource-exhausted", "Too many validation attempts", {
@@ -900,3 +901,58 @@ export const validateRegistrationCode = onCall<
     return { status: "valid" } as const;
   });
 });
+
+/**
+ * Replays the confirmation email and the sheet row of paid registrations
+ * whose side effects failed after the webhook. Both are safe to rerun: the
+ * sheet append skips existing rows and the marker is resolved per effect.
+ */
+export async function replayFailedSideEffects(resendApiKey: string, sheetId: string): Promise<number> {
+  const markers = await db()
+    .collection("failedSideEffects")
+    .where("resolved", "==", false)
+    .limit(20)
+    .get();
+  let resolvedCount = 0;
+  for (const marker of markers.docs) {
+    const data = marker.data();
+    const registrationId = marker.id;
+    const regSnap = await db().collection(COLLECTION).doc(registrationId).get();
+    const reg = regSnap.data() as RegistrationDoc | undefined;
+    if (!reg || reg.paid !== true) {
+      await marker.ref.update({ resolved: true, resolvedReason: "notPaid", resolvedAt: FieldValue.serverTimestamp() });
+      resolvedCount++;
+      continue;
+    }
+    const updates: Record<string, unknown> = {};
+    let emailDone = data.emailFailedAt === undefined || data.emailResolvedAt !== undefined;
+    let sheetDone = data.sheetFailedAt === undefined || data.sheetResolvedAt !== undefined;
+    if (!emailDone) {
+      try {
+        await sendRegistrationConfirmationEmail(reg, resendApiKey);
+        updates.emailResolvedAt = FieldValue.serverTimestamp();
+        emailDone = true;
+      } catch (err) {
+        logger.warn("[replay] email still failing", { registrationId, error: String(err) });
+      }
+    }
+    if (!sheetDone) {
+      try {
+        await appendRegistrationRow(reg, sheetId);
+        updates.sheetResolvedAt = FieldValue.serverTimestamp();
+        sheetDone = true;
+      } catch (err) {
+        logger.warn("[replay] sheet still failing", { registrationId, error: String(err) });
+      }
+    }
+    if (emailDone && sheetDone) {
+      updates.resolved = true;
+      updates.resolvedAt = FieldValue.serverTimestamp();
+      resolvedCount++;
+    }
+    if (Object.keys(updates).length > 0) await marker.ref.update(updates);
+  }
+  return resolvedCount;
+}
+
+export const REGISTRATION_SECRETS = { RESEND_API_KEY, GOOGLE_SHEET_ID };

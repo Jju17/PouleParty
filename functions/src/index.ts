@@ -29,3 +29,4 @@ export { transitionGameStatus } from "./lifecycleTasks";
 export { spawnPowerUpBatch } from "./powerUpSpawnTask";
 export { onGameCreated, onGameDeleted, onGameUpdated } from "./gameTriggers";
 export { evaluateOutOfZone } from "./outOfZone";
+export { purgeFinishedGames, replayRegistrationSideEffects } from "./maintenance";
