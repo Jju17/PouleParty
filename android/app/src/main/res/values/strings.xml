@@ -19,11 +19,6 @@
     <string name="upcoming_game_cta_chicken">Open</string>
     <string name="upcoming_game_cta_hunter">Join</string>
     <string name="location_required">Location required</string>
-    <!-- AND-H2 (store-audit 2026-05-18): explicit prominent disclosure
-         per Google Play sensitive-permissions policy. Names the
-         third-party processor (Firebase), the data flow (real-time
-         sharing with other players in your session) and the stop
-         condition (game end). -->
     <string name="location_required_message">PouleParty collects your precise GPS location while a game is active and shares it in real time with other players in your session via Firebase Firestore. Location tracking stops automatically when the game ends. We never sell or share this data with advertisers or any third party outside the game.</string>
 
     <!-- Join / Register flow -->
@@ -69,7 +64,6 @@
     <string name="zone_radius">Zone radius</string>
     <string name="start_zone">Start zone</string>
     <string name="final_zone">Final zone</string>
-    <!-- PP-11 zone size picker (followTheChicken). -->
     <string name="zone_size_small">Small</string>
     <string name="zone_size_medium">Medium</string>
     <string name="zone_size_large">Large</string>
@@ -85,7 +79,6 @@
     <string name="cancel_game">Cancel game</string>
     <string name="cancel_game_message">Are you sure you want to cancel and finish the game now?</string>
     <string name="never_mind">Never mind</string>
-    <!-- PP-107: one-time alert when a GameMaster swaps this player to chicken. -->
     <string name="new_chicken_alert_title">You are the new chicken! 🐔</string>
     <string name="new_chicken_alert_message">A GameMaster made you the chicken. Get ready to run and hide!</string>
     <string name="game_info">Game info</string>
@@ -145,7 +138,6 @@
     <string name="hunt_starts_in_chicken">🐔 Hunt starts in:</string>
     <string name="hunt_starts_in_hunter">Hunt starts in:</string>
     <string name="map_update_in">Map update in:</string>
-    <!-- PP-17: shown after game endDate is reached. -->
     <string name="countdown_overtime">Overtime:</string>
 
     <!-- Onboarding -->
@@ -242,7 +234,6 @@
 
     <!-- Zone Warning -->
     <string name="return_to_zone">Return to the zone!</string>
-    <!-- PP-36 out-of-zone penalty pill shown on the hunter map -->
     <string name="out_of_zone_losing_points">⚠️ Out of zone: losing points</string>
 
     <!-- Map Config -->
@@ -266,9 +257,6 @@
     <string name="privacy_policy">Privacy policy</string>
     <string name="terms_of_use">Terms of use</string>
     <string name="contact_support">Contact support</string>
-    <!-- iOS-H6 / store-audit 2026-05-18: "Delete Account" (not "Delete My Data")
-         is the Apple-mandated wording for Guideline 5.1.1(v). Play Console's
-         account-deletion policy uses the same term. -->
     <string name="delete_my_data">Delete account</string>
     <string name="delete_data_footer">This deletes your anonymous Firebase Auth account and the profile data associated with it (nickname, push token). Past games keep the team name you used for them: they\'re visible only to participants of those sessions. You can continue using the app, a new anonymous account will be created automatically.</string>
     <string name="delete_data_title">Delete account</string>
@@ -329,11 +317,9 @@
     <string name="other_hunters">Other hunters</string>
     <string name="view_leaderboard">View leaderboard</string>
     <string name="open_settings">Open settings</string>
-    <!-- PP-88 GameMaster join flow -->
     <string name="join_as_hunter">Join as hunter</string>
     <string name="join_as_game_master">Join as GameMaster 🦅</string>
     <string name="gamemaster_join_title">GameMaster 🦅</string>
-    <!-- PP-52: paid-event registration code gate -->
     <string name="validation_code_title">Validate your ticket</string>
     <string name="validation_code_hint">This party is part of a registered event. Enter the code from your registration email to confirm your spot.</string>
     <string name="validation_code_label">Registration code</string>
@@ -342,12 +328,8 @@
     <string name="validation_code_already_used">This code has already been used to join.</string>
     <string name="gamemaster_password_hint">4-digit code</string>
 
-    <!-- CRIT-8 (audit 2026-05-17): JoinFlow error strings, previously
-         hardcoded in HomeViewModel — broke EN/NL users. -->
     <string name="join_flow_gm_too_many_attempts">Too many attempts. Try again in %1$d min.</string>
 
-    <!-- CRIT-8 (audit 2026-05-17): Game creation wizard steps, previously
-         hardcoded in French in the step composables. -->
     <string name="wizard_duration_title">How long?</string>
     <string name="wizard_duration_subtitle">Game duration</string>
     <string name="wizard_head_start_title">Chicken head start?</string>

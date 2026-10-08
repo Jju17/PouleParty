@@ -23,15 +23,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    // AND-M3 (store-audit 2026-05-18): namespace (Kotlin package root)
-    // intentionally diverges from `applicationId` (Play Store package
-    // identifier). The original Play Store listing was first created
-    // under `dev.rahier.pouleparty`, then archived; Play Store package
-    // names are permanent so we bumped to `…pouleparty2` for the new
-    // listing. The Kotlin/Java code keeps the original namespace to
-    // avoid a sweeping rename — they are decoupled by design. Do NOT
-    // try to "align" these unless we're prepared to ship a brand-new
-    // listing (which would lose the Play Store reviews).
+    // The Play listing id is permanent and differs from the code namespace on purpose; never align them.
     namespace = "dev.rahier.pouleparty"
     compileSdk = 37
 

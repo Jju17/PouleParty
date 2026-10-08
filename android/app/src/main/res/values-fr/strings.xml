@@ -17,7 +17,6 @@
     <string name="upcoming_game_cta_chicken">Ouvrir</string>
     <string name="upcoming_game_cta_hunter">Rejoindre</string>
     <string name="location_required">Localisation requise</string>
-    <!-- AND-H2 (store-audit 2026-05-18) -->
     <string name="location_required_message">PouleParty collecte ta position GPS précise pendant une partie active et la partage en temps réel avec les autres joueurs de ta session via Firebase Firestore. Le suivi s\'arrête automatiquement à la fin de la partie. Nous ne vendons ni ne partageons jamais ces données avec des annonceurs ou des tiers en dehors du jeu.</string>
 
     <!-- Join / Register flow -->
@@ -113,7 +112,6 @@
     <string name="hunt_starts_in_chicken">🐔 La chasse commence dans :</string>
     <string name="hunt_starts_in_hunter">La chasse commence dans :</string>
     <string name="map_update_in">Màj de la carte dans :</string>
-    <!-- PP-17: après l'expiration du timer principal. -->
     <string name="countdown_overtime">Prolongation :</string>
 
     <!-- Onboarding -->
@@ -195,7 +193,6 @@
     <string name="privacy_policy">Politique de confidentialité</string>
     <string name="terms_of_use">Conditions d\'utilisation</string>
     <string name="contact_support">Contacter le support</string>
-    <!-- iOS-H6 / store-audit 2026-05-18 -->
     <string name="delete_my_data">Supprimer mon compte</string>
     <string name="delete_data_footer">Cela supprime ton compte anonyme Firebase Auth et les données de profil associées (pseudo, token de notification). Les parties passées gardent le nom d\'équipe que tu as utilisé : il n\'est visible que par les participants de ces sessions. Tu peux continuer à utiliser l\'appli : un nouveau compte anonyme sera créé automatiquement.</string>
     <string name="delete_data_title">Supprimer mon compte</string>
@@ -210,7 +207,6 @@
 
     <!-- Zone Warning -->
     <string name="return_to_zone">Retourne dans la zone !</string>
-    <!-- PP-36 out-of-zone penalty pill shown on the hunter map -->
     <string name="out_of_zone_losing_points">⚠️ Hors zone : tu perds des points</string>
 
     <!-- Power-Ups -->
@@ -237,7 +233,6 @@
     <string name="set_start_and_final_zone">Place la zone de départ et la zone finale pour commencer</string>
     <string name="start_zone">Zone de départ</string>
     <string name="final_zone">Zone finale</string>
-    <!-- PP-11 picker de taille (followTheChicken). -->
     <string name="zone_size_small">Petite</string>
     <string name="zone_size_medium">Moyenne</string>
     <string name="zone_size_large">Grande</string>
@@ -322,11 +317,9 @@
     <string name="report_player_submit">Signaler</string>
     <string name="report_player_success">Merci, signalement envoyé</string>
     <string name="report_player_error">Impossible d\'envoyer le signalement. Réessaie dans un instant.</string>
-    <!-- PP-88 GameMaster join flow -->
     <string name="join_as_hunter">Rejoindre comme Chasseur</string>
     <string name="join_as_game_master">Rejoindre comme GameMaster 🦅</string>
     <string name="gamemaster_join_title">GameMaster 🦅</string>
-    <!-- PP-52: code d\'inscription événement payant -->
     <string name="validation_code_title">Valide ton billet</string>
     <string name="validation_code_hint">Cette partie fait partie d\'un événement sur inscription. Entre le code reçu dans ton email d\'inscription pour confirmer ta place.</string>
     <string name="validation_code_label">Code d\'inscription</string>
@@ -335,10 +328,8 @@
     <string name="validation_code_already_used">Ce code a déjà été utilisé pour rejoindre.</string>
     <string name="gamemaster_password_hint">Code à 4 chiffres</string>
 
-    <!-- CRIT-8 (audit 2026-05-17) -->
     <string name="join_flow_gm_too_many_attempts">Trop de tentatives. Réessaie dans %1$d min.</string>
 
-    <!-- CRIT-8 (audit 2026-05-17): wizard de création de partie -->
     <string name="wizard_duration_title">Combien de temps ?</string>
     <string name="wizard_duration_subtitle">Durée de la partie</string>
     <string name="wizard_head_start_title">Avance de la poule ?</string>

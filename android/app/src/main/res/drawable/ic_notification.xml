@@ -1,19 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-    AND-L2 (store-audit 2026-05-18) — monochrome status-bar notification
-    icon. Android strips color from status-bar icons (only the alpha
-    channel survives), so the previous `@mipmap/ic_launcher` (full-color
-    PNG) rendered as a solid white square. This vector drawable is a
-    stylized chicken silhouette built from white-on-transparent paths so
-    Android's tinting pipeline produces a recognizable monochrome glyph
-    everywhere (status bar, lock screen, notification shade).
-
-    Used by AndroidManifest.xml meta-data
-    `com.google.firebase.messaging.default_notification_icon`. The
-    foreground-service notification (LocationForegroundService) renders
-    in the persistent ongoing band where color is preserved, so it
-    keeps using `@mipmap/ic_launcher` directly — no change there.
--->
+<!-- Status-bar icons keep only the alpha channel, so this silhouette is white on transparent. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"

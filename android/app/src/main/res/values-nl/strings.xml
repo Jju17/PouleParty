@@ -17,7 +17,6 @@
     <string name="upcoming_game_cta_chicken">Openen</string>
     <string name="upcoming_game_cta_hunter">Meedoen</string>
     <string name="location_required">Locatie vereist</string>
-    <!-- AND-H2 (store-audit 2026-05-18) -->
     <string name="location_required_message">PouleParty verzamelt je precieze GPS-locatie tijdens een actief spel en deelt deze in real-time met de andere spelers in jouw sessie via Firebase Firestore. Het volgen stopt automatisch wanneer het spel eindigt. We verkopen of delen deze gegevens nooit met adverteerders of derden buiten het spel.</string>
 
     <!-- Join / Register flow -->
@@ -63,7 +62,6 @@
     <string name="zone_radius">Zonestraal</string>
     <string name="start_zone">Startzone</string>
     <string name="final_zone">Eindzone</string>
-    <!-- PP-11 grootteknop (followTheChicken). -->
     <string name="zone_size_small">Klein</string>
     <string name="zone_size_medium">Middel</string>
     <string name="zone_size_large">Groot</string>
@@ -138,7 +136,6 @@
     <string name="hunt_starts_in_chicken">🐔 Jacht begint over:</string>
     <string name="hunt_starts_in_hunter">Jacht begint over:</string>
     <string name="map_update_in">Kaartupdate over:</string>
-    <!-- PP-17: na het verlopen van de gametimer. -->
     <string name="countdown_overtime">Verlenging:</string>
 
     <!-- Onboarding -->
@@ -212,7 +209,6 @@
 
     <!-- Zone Warning -->
     <string name="return_to_zone">Keer terug naar de zone!</string>
-    <!-- PP-36 out-of-zone penalty pill shown on the hunter map -->
     <string name="out_of_zone_losing_points">⚠️ Buiten de zone: je verliest punten</string>
 
     <!-- Map Config -->
@@ -236,7 +232,6 @@
     <string name="privacy_policy">Privacybeleid</string>
     <string name="terms_of_use">Gebruiksvoorwaarden</string>
     <string name="contact_support">Contact opnemen met support</string>
-    <!-- iOS-H6 / store-audit 2026-05-18 -->
     <string name="delete_my_data">Account verwijderen</string>
     <string name="delete_data_footer">Dit verwijdert je anonieme Firebase Auth-account en de bijbehorende profielgegevens (gebruikersnaam, push-token). Voorgaande spellen behouden de teamnaam die je gebruikte: die is alleen zichtbaar voor de deelnemers van die sessies. Je kunt de app gewoon blijven gebruiken: er wordt automatisch een nieuw anoniem account aangemaakt.</string>
     <string name="delete_data_title">Account verwijderen</string>
@@ -318,11 +313,9 @@
     <string name="report_player_submit">Rapporteer</string>
     <string name="report_player_success">Bedankt, rapport verzonden</string>
     <string name="report_player_error">Rapport kon niet verzonden worden. Probeer straks opnieuw.</string>
-    <!-- PP-88 GameMaster join flow -->
     <string name="join_as_hunter">Word een Jager</string>
     <string name="join_as_game_master">Word GameMaster 🦅</string>
     <string name="gamemaster_join_title">GameMaster 🦅</string>
-    <!-- PP-52: inschrijvingscode betaald evenement -->
     <string name="validation_code_title">Valideer je ticket</string>
     <string name="validation_code_hint">Dit spel maakt deel uit van een evenement met inschrijving. Voer de code uit je inschrijvingsmail in om je plek te bevestigen.</string>
     <string name="validation_code_label">Inschrijvingscode</string>
@@ -331,10 +324,8 @@
     <string name="validation_code_already_used">Deze code is al gebruikt om mee te doen.</string>
     <string name="gamemaster_password_hint">Code van 4 cijfers</string>
 
-    <!-- CRIT-8 (audit 2026-05-17) -->
     <string name="join_flow_gm_too_many_attempts">Te veel pogingen. Probeer opnieuw over %1$d min.</string>
 
-    <!-- CRIT-8 (audit 2026-05-17): wizard voor het aanmaken van een spel -->
     <string name="wizard_duration_title">Hoe lang?</string>
     <string name="wizard_duration_subtitle">Duur van het spel</string>
     <string name="wizard_head_start_title">Voorsprong voor de kip?</string>
