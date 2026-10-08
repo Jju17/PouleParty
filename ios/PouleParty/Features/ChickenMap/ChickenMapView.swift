@@ -28,12 +28,18 @@ struct ChickenMapView: View {
     var body: some View {
         ChickenMapContent(store: store, selectedPowerUp: $selectedPowerUp)
             .safeAreaInset(edge: .top) {
-                MapTopBar(
-                    title: "You are the 🐔",
-                    subtitle: subtitle,
-                    gradient: LinearGradient(colors: [.chickenYellow, .CROrange], startPoint: .leading, endPoint: .trailing),
-                    onInfoTapped: { store.send(.view(.infoButtonTapped)) }
-                )
+                VStack(spacing: 8) {
+                    MapTopBar(
+                        title: "You are the 🐔",
+                        subtitle: subtitle,
+                        gradient: LinearGradient(colors: [.chickenYellow, .CROrange], startPoint: .leading, endPoint: .trailing),
+                        onInfoTapped: { store.send(.view(.infoButtonTapped)) }
+                    )
+                    if let zoneError = store.zoneScheduleError {
+                        LoadErrorBanner(message: zoneError) { store.send(.view(.retryScheduleTapped)) }
+                            .padding(.horizontal, 12)
+                    }
+                }
             }
             .safeAreaInset(edge: .bottom) {
                 MapBottomBar(

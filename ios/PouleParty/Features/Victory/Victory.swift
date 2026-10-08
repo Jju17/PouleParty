@@ -1,12 +1,6 @@
-//
-//  Victory.swift
-//  PouleParty
-//
-//  Created by Claude on 21/02/2026.
-//
-
 import ComposableArchitecture
 import FirebaseFirestore
+import os
 import SwiftUI
 
 @Reducer
@@ -21,6 +15,7 @@ struct VictoryFeature {
         var hunterName: String
         var isChicken: Bool = false
         var registrations: [Registration] = []
+        var registrationsError: String?
         var reportTarget: LeaderboardEntry?
         var reportResult: ReportResult?
     }
@@ -30,6 +25,8 @@ struct VictoryFeature {
         case menuButtonTapped
         case onTask
         case registrationsLoaded([Registration])
+        case registrationsFailed(String)
+        case retryRegistrationsTapped
         case reportInitiated(LeaderboardEntry)
         case reportDismissed
         case reportConfirmed
@@ -38,6 +35,17 @@ struct VictoryFeature {
     }
 
     @Dependency(\.apiClient) var apiClient
+
+    private func loadRegistrations(_ gameId: String) -> Effect<Action> {
+        .run { [apiClient] send in
+            do {
+                await send(.registrationsLoaded(try await apiClient.fetchAllRegistrations(gameId)))
+            } catch {
+                Logger(category: "Victory").warning("[victory] team names load failed: \(error.localizedDescription)")
+                await send(.registrationsFailed(error.userMessage))
+            }
+        }
+    }
 
     var body: some ReducerOf<Self> {
         Reduce { state, action in
@@ -54,17 +62,21 @@ struct VictoryFeature {
                             }
                         }
                     },
-                    .run { send in
-                        let registrations = (try? await apiClient.fetchAllRegistrations(gameId)) ?? []
-                        await send(.registrationsLoaded(registrations))
-                    }
+                    loadRegistrations(gameId)
                 )
             case let .gameUpdated(game):
                 state.game = game
                 return .none
             case let .registrationsLoaded(registrations):
+                state.registrationsError = nil
                 state.registrations = registrations
                 return .none
+            case let .registrationsFailed(message):
+                state.registrationsError = message
+                return .none
+            case .retryRegistrationsTapped:
+                state.registrationsError = nil
+                return loadRegistrations(state.game.id)
             case let .reportInitiated(entry):
                 state.reportTarget = entry
                 return .none
@@ -192,6 +204,9 @@ struct VictoryView: View {
 
                 ScrollView {
                     VStack(spacing: 16) {
+                        if let registrationsError = store.registrationsError {
+                            LoadErrorBanner(message: registrationsError) { store.send(.retryRegistrationsTapped) }
+                        }
                         if entries.isEmpty {
                             emptyStateSection
                         } else {

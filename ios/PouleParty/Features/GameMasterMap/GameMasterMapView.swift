@@ -12,12 +12,18 @@ struct GameMasterMapView: View {
     var body: some View {
         GameMasterMapContent(store: store)
             .safeAreaInset(edge: .top) {
-                MapTopBar(
-                    title: "GameMaster 🦅",
-                    subtitle: "Arbitre — \(store.hunterAnnotations.count) hunters",
-                    gradient: LinearGradient(colors: [.CRPink, .CROrange], startPoint: .leading, endPoint: .trailing),
-                    onInfoTapped: { store.send(.view(.infoButtonTapped)) }
-                )
+                VStack(spacing: 8) {
+                    MapTopBar(
+                        title: "GameMaster 🦅",
+                        subtitle: "Arbitre — \(store.hunterAnnotations.count) hunters",
+                        gradient: LinearGradient(colors: [.CRPink, .CROrange], startPoint: .leading, endPoint: .trailing),
+                        onInfoTapped: { store.send(.view(.infoButtonTapped)) }
+                    )
+                    if let zoneError = store.zoneScheduleError {
+                        LoadErrorBanner(message: zoneError) { store.send(.view(.retryScheduleTapped)) }
+                            .padding(.horizontal, 12)
+                    }
+                }
             }
             .safeAreaInset(edge: .bottom) {
                 HStack(spacing: 12) {

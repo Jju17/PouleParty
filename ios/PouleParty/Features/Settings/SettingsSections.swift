@@ -56,6 +56,8 @@ struct SettingsNicknameSection: View {
 struct SettingsMyGamesSection: View {
     let isLoading: Bool
     let games: [MyGame]
+    let errorMessage: String?
+    let onRetry: () -> Void
     let onTap: (MyGame) -> Void
 
     var body: some View {
@@ -72,6 +74,8 @@ struct SettingsMyGamesSection: View {
                     Spacer()
                 }
                 .padding(.vertical, 12)
+            } else if let errorMessage {
+                LoadErrorBanner(message: errorMessage, onRetry: onRetry)
             } else if games.isEmpty {
                 Text("No games yet")
                     .font(.gameboy(size: 8))

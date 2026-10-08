@@ -29,12 +29,18 @@ struct HunterMapView: View {
     var body: some View {
         HunterMapContent(store: store, selectedPowerUp: $selectedPowerUp)
             .safeAreaInset(edge: .top) {
-                MapTopBar(
-                    title: "You are the Hunter",
-                    subtitle: subtitle,
-                    gradient: LinearGradient(colors: [.hunterRed, .CRPink], startPoint: .leading, endPoint: .trailing),
-                    onInfoTapped: { store.send(.view(.infoButtonTapped)) }
-                )
+                VStack(spacing: 8) {
+                    MapTopBar(
+                        title: "You are the Hunter",
+                        subtitle: subtitle,
+                        gradient: LinearGradient(colors: [.hunterRed, .CRPink], startPoint: .leading, endPoint: .trailing),
+                        onInfoTapped: { store.send(.view(.infoButtonTapped)) }
+                    )
+                    if let zoneError = store.zoneScheduleError {
+                        LoadErrorBanner(message: zoneError) { store.send(.view(.retryScheduleTapped)) }
+                            .padding(.horizontal, 12)
+                    }
+                }
             }
             .safeAreaInset(edge: .bottom) {
                 MapBottomBar(

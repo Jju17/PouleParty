@@ -39,6 +39,7 @@ struct GameMasterMapFeature {
         /// PP-zone-stored: immutable circle schedule fetched once from
         /// `/games/{id}/zone/schedule`; runtime renders `circles[activeIndex]`.
         var circles: [ZoneCircle] = []
+        var zoneScheduleError: String?
         var showGameInfo: Bool = false
         var showHuntersDrawer: Bool = false
         var pendingSubmissionsCount: Int = 0
@@ -84,6 +85,7 @@ struct GameMasterMapFeature {
 
         @CasePathable
         enum View {
+            case retryScheduleTapped
             case onTask
             case infoButtonTapped
             case gameInfoDismissed
@@ -112,6 +114,7 @@ struct GameMasterMapFeature {
         @CasePathable
         enum Internal {
             case scheduleLoaded([ZoneCircle])
+            case scheduleLoadFailed(String)
             case gameUpdated(Game)
             case chickenLocationUpdated(CLLocationCoordinate2D?, isInvisible: Bool)
             case hunterLocationsUpdated([HunterLocation])
@@ -143,6 +146,18 @@ struct GameMasterMapFeature {
 
     @Dependency(\.apiClient) var apiClient
     @Dependency(\.continuousClock) var clock
+
+    private func loadScheduleEffect(_ gameId: String) -> Effect<Action> {
+        .run { [apiClient, clock] send in
+            switch await loadZoneSchedule(gameId, fetch: apiClient.fetchZoneSchedule, sleep: { try await clock.sleep(for: $0) }) {
+            case let .success(circles):
+                await send(.internal(.scheduleLoaded(circles)))
+            case let .failure(error):
+                logger.warning("[zone] schedule unavailable: \(error.localizedDescription)")
+                await send(.internal(.scheduleLoadFailed(error.userMessage)))
+            }
+        }
+    }
 
     var body: some ReducerOf<Self> {
         BindingReducer()
@@ -203,14 +218,17 @@ struct GameMasterMapFeature {
                             await send(.internal(.pendingSubmissionsUpdated(subs.count)))
                         }
                     },
-                    // PP-zone-stored: load the immutable circle schedule once.
-                    .run { send in
-                        let circles = (try? await apiClient.fetchZoneSchedule(gameId)) ?? []
-                        await send(.internal(.scheduleLoaded(circles)))
-                    }
+                    loadScheduleEffect(gameId)
                 )
                 .cancellable(id: CancelID.runtime, cancelInFlight: true)
+            case let .internal(.scheduleLoadFailed(message)):
+                state.zoneScheduleError = message
+                return .none
+            case .view(.retryScheduleTapped):
+                state.zoneScheduleError = nil
+                return loadScheduleEffect(state.game.id)
             case let .internal(.scheduleLoaded(circles)):
+                state.zoneScheduleError = nil
                 state.circles = circles
                 let z = zoneRenderState(
                     gameMode: state.game.gameMode,

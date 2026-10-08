@@ -23,6 +23,7 @@ struct SettingsFeature {
         var showingEmptyNicknameAlert = false
         var myGames: [MyGame] = []
         var isLoadingGames = false
+        var myGamesError: String?
         var selectedGame: MyGame?
     }
 
@@ -38,6 +39,7 @@ struct SettingsFeature {
         case profanityAlertDismissed
         case onAppear
         case myGamesLoaded([MyGame])
+        case myGamesFailed(String)
         case gameTapped(MyGame)
         case gameDetailDismissed
     }
@@ -104,14 +106,26 @@ struct SettingsFeature {
                 return .none
             case .onAppear:
                 state.isLoadingGames = true
+                state.myGamesError = nil
                 return .run { [userClient, apiClient] send in
-                    guard let userId = userClient.currentUserId() else { return }
-                    let games = (try? await apiClient.fetchMyGames(userId)) ?? []
-                    await send(.myGamesLoaded(games))
+                    guard let userId = userClient.currentUserId() else {
+                        await send(.myGamesFailed(ApiErrorCode.unauthenticated.message))
+                        return
+                    }
+                    do {
+                        await send(.myGamesLoaded(try await apiClient.fetchMyGames(userId)))
+                    } catch {
+                        Logger(category: "Settings").warning("[settings] my games load failed: \(error.localizedDescription)")
+                        await send(.myGamesFailed(error.userMessage))
+                    }
                 }
             case let .myGamesLoaded(myGames):
                 state.myGames = myGames
                 state.isLoadingGames = false
+                return .none
+            case let .myGamesFailed(message):
+                state.isLoadingGames = false
+                state.myGamesError = message
                 return .none
             case let .gameTapped(myGame):
                 state.selectedGame = myGame
@@ -141,6 +155,8 @@ struct SettingsView: View {
                 SettingsMyGamesSection(
                     isLoading: store.isLoadingGames,
                     games: store.myGames,
+                    errorMessage: store.myGamesError,
+                    onRetry: { store.send(.onAppear) },
                     onTap: { store.send(.gameTapped($0)) }
                 )
                 SettingsLinksSection()

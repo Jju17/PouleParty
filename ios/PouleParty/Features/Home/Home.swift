@@ -26,6 +26,8 @@ extension SharedKey where Self == FileStorageKey<Set<String>>.Default {
     }
 }
 
+
+private let logger = Logger(category: "Home")
 @Reducer
 struct HomeFeature {
 
@@ -48,6 +50,7 @@ struct HomeFeature {
         /// partie" (upcoming, `.waiting`) so the banner copy + CTA matches
         /// the game state. Nil when no active game.
         var activeGamePhase: GamePhase? = nil
+        var activeGameLookupError: String?
         /// PP-45 admin code modal state. The admin button on Home opens an
         /// alert with a TextField; on Validate, `adminCodeInput` is checked
         /// against `AdminCode.value` and either opens the wizard with
@@ -73,6 +76,7 @@ struct HomeFeature {
         case accountDeletionCompleted
         case activeGameBannerDismissed
         case activeGameFound(Game, GameRole, GamePhase)
+        case activeGameLookupFailed(String)
         case adminCodeAlertRequested
         case adminCodeDismissed
         case adminCodeValidateTapped
@@ -160,7 +164,11 @@ struct HomeFeature {
 
         Reduce { state, action in
             switch action {
+            case let .activeGameLookupFailed(message):
+                state.activeGameLookupError = message
+                return .none
             case let .activeGameFound(game, role, phase):
+                state.activeGameLookupError = nil
                 state.activeGame = game
                 state.activeGameRole = role
                 state.activeGamePhase = phase
@@ -427,6 +435,7 @@ struct HomeFeature {
                 )
                 return .none
             case .noActiveGameFound:
+                state.activeGameLookupError = nil
                 state.activeGame = nil
                 state.activeGameRole = nil
                 state.activeGamePhase = nil
@@ -448,14 +457,20 @@ struct HomeFeature {
                             await send(.activeGameFound(game, role, phase))
                         }
                     }
-                    // First attempt may fail on cold start while auth token refreshes
-                    if let triple = try? await apiClient.findActiveGame(userId) {
-                        await emit(triple)
+                    do {
+                        await emit(try await apiClient.findActiveGame(userId))
                         return
+                    } catch {
+                        logger.info("[home] active game lookup failed once, retrying: \(error.localizedDescription)")
                     }
-                    // Retry once after a short delay to allow auth token refresh
-                    try? await clock.sleep(for: .seconds(2))
-                    await emit(try? await apiClient.findActiveGame(userId))
+                    // The first call can fail on a cold start while the auth token refreshes.
+                    try await clock.sleep(for: .seconds(2))
+                    do {
+                        await emit(try await apiClient.findActiveGame(userId))
+                    } catch {
+                        logger.warning("[home] active game lookup failed: \(error.localizedDescription)")
+                        await send(.activeGameLookupFailed(error.userMessage))
+                    }
                 }
             case .rejoinGameTapped:
                 guard let game = state.activeGame, let role = state.activeGameRole else {
@@ -612,6 +627,10 @@ struct HomeView: View {
                             withAnimation { _ = store.send(.activeGameBannerDismissed) }
                         }
                     )
+                }
+                if let lookupError = store.activeGameLookupError {
+                    LoadErrorBanner(message: lookupError) { store.send(.onTask) }
+                        .padding(.horizontal, 16)
                 }
 
                 HStack {

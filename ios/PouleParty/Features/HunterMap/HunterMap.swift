@@ -33,6 +33,7 @@ struct HunterMapFeature {
         /// PP-zone-stored: ordered circle schedule read once from
         /// `/games/{id}/zone/schedule`; runtime renders `circles[activeIndex]`.
         var circles: [ZoneCircle] = []
+        var zoneScheduleError: String?
         var showGameInfo: Bool = false
         var winnerNotification: String? = nil
         var countdownNumber: Int? = nil
@@ -128,6 +129,7 @@ struct HunterMapFeature {
 
         @CasePathable
         enum View {
+            case retryScheduleTapped
             /// Sent from the view on `ScenePhase.active`. iOS can suspend
             /// the hunter-location writer coroutine while the app is in
             /// the background, which means the chicken sees a stale
@@ -161,6 +163,7 @@ struct HunterMapFeature {
             case powerUpCollected(PowerUp)
             case powerUpsUpdated([PowerUp])
             case scheduleLoaded([ZoneCircle])
+            case scheduleLoadFailed(String)
             case timerTicked
             case userLocationUpdated(CLLocationCoordinate2D)
             case winnerNotificationDismissed
@@ -220,6 +223,18 @@ struct HunterMapFeature {
     @Dependency(\.locationClient) var locationClient
     @Dependency(\.analyticsClient) var analyticsClient
     @Dependency(\.remoteConfigClient) var remoteConfigClient
+
+    private func loadScheduleEffect(_ gameId: String) -> Effect<Action> {
+        .run { [apiClient, clock] send in
+            switch await loadZoneSchedule(gameId, fetch: apiClient.fetchZoneSchedule, sleep: { try await clock.sleep(for: $0) }) {
+            case let .success(circles):
+                await send(.internal(.scheduleLoaded(circles)))
+            case let .failure(error):
+                logger.warning("[zone] schedule unavailable: \(error.localizedDescription)")
+                await send(.internal(.scheduleLoadFailed(error.userMessage)))
+            }
+        }
+    }
 
     var body: some ReducerOf<Self> {
         BindingReducer()
@@ -652,11 +667,7 @@ struct HunterMapFeature {
                             await send(.internal(.powerUpsUpdated(powerUps)))
                         }
                     },
-                    // PP-zone-stored: load the immutable circle schedule once.
-                    .run { send in
-                        let circles = (try? await apiClient.fetchZoneSchedule(scheduleGameId)) ?? []
-                        await send(.internal(.scheduleLoaded(circles)))
-                    }
+                    loadScheduleEffect(scheduleGameId)
                 ]
 
                 // Subscribe to chicken location stream in all modes.
@@ -927,7 +938,14 @@ struct HunterMapFeature {
 
                 return effects.isEmpty ? .none : .merge(effects)
 
+            case let .internal(.scheduleLoadFailed(message)):
+                state.zoneScheduleError = message
+                return .none
+            case .view(.retryScheduleTapped):
+                state.zoneScheduleError = nil
+                return loadScheduleEffect(state.game.id)
             case let .internal(.scheduleLoaded(circles)):
+                state.zoneScheduleError = nil
                 state.circles = circles
                 let z = zoneRenderState(
                     gameMode: state.game.gameMode,

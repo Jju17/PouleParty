@@ -53,6 +53,13 @@ extension Color {
             : UIColor.white
     })
 
+    /// Error text: AA contrast on the beige and the dark backgrounds.
+    static let errorText = Color(UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(Color(hex: 0xFF8A8A))
+            : UIColor(Color(hex: 0xB00020))
+    })
+
     static let onBackground = Color(UIColor { trait in
         trait.userInterfaceStyle == .dark
             ? UIColor.white
