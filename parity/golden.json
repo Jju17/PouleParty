@@ -1,0 +1,1017 @@
+{
+  "distance": [
+    {
+      "from": {
+        "latitude": 50.8466,
+        "longitude": 4.3528
+      },
+      "to": {
+        "latitude": 50.8333,
+        "longitude": 4.3667
+      },
+      "meters": 1771.938931823899
+    },
+    {
+      "from": {
+        "latitude": 50.8466,
+        "longitude": 4.3528
+      },
+      "to": {
+        "latitude": 48.8566,
+        "longitude": 2.3522
+      },
+      "meters": 263675.9201437038
+    },
+    {
+      "from": {
+        "latitude": 50.8466,
+        "longitude": 4.3528
+      },
+      "to": {
+        "latitude": 50.8466,
+        "longitude": 4.3528
+      },
+      "meters": 0
+    }
+  ],
+  "normalModeSettings": [
+    {
+      "initialRadius": 1500,
+      "gameDurationMinutes": 120,
+      "interval": 5,
+      "decline": 58.333333333333336
+    },
+    {
+      "initialRadius": 2000,
+      "gameDurationMinutes": 45,
+      "interval": 5,
+      "decline": 211.11111111111111
+    },
+    {
+      "initialRadius": 500,
+      "gameDurationMinutes": 0,
+      "interval": 5,
+      "decline": 0
+    }
+  ],
+  "interpolateZoneCenter": [
+    {
+      "initialCenter": {
+        "latitude": 50.8466,
+        "longitude": 4.3528
+      },
+      "finalCenter": {
+        "latitude": 50.8333,
+        "longitude": 4.3667
+      },
+      "initialRadius": 1500,
+      "currentRadius": 1500,
+      "result": {
+        "latitude": 50.8466,
+        "longitude": 4.3528
+      }
+    },
+    {
+      "initialCenter": {
+        "latitude": 50.8466,
+        "longitude": 4.3528
+      },
+      "finalCenter": {
+        "latitude": 50.8333,
+        "longitude": 4.3667
+      },
+      "initialRadius": 1500,
+      "currentRadius": 750,
+      "result": {
+        "latitude": 50.83995,
+        "longitude": 4.35975
+      }
+    },
+    {
+      "initialCenter": {
+        "latitude": 50.8466,
+        "longitude": 4.3528
+      },
+      "finalCenter": {
+        "latitude": 50.8333,
+        "longitude": 4.3667
+      },
+      "initialRadius": 1500,
+      "currentRadius": 50,
+      "result": {
+        "latitude": 50.83374333333334,
+        "longitude": 4.3662366666666665
+      }
+    },
+    {
+      "initialCenter": {
+        "latitude": 50.8466,
+        "longitude": 4.3528
+      },
+      "finalCenter": {
+        "latitude": 50.8333,
+        "longitude": 4.3667
+      },
+      "initialRadius": 1500,
+      "currentRadius": 0,
+      "result": {
+        "latitude": 50.8333,
+        "longitude": 4.3667
+      }
+    }
+  ],
+  "deterministicDriftCenter": [
+    {
+      "basePoint": {
+        "latitude": 50.8466,
+        "longitude": 4.3528
+      },
+      "oldRadius": 1500,
+      "newRadius": 1400,
+      "driftSeed": 7,
+      "finalCenter": null,
+      "result": {
+        "latitude": 50.8472998910646,
+        "longitude": 4.352140302692507
+      }
+    },
+    {
+      "basePoint": {
+        "latitude": 50.8466,
+        "longitude": 4.3528
+      },
+      "oldRadius": 1500,
+      "newRadius": 1400,
+      "driftSeed": 7,
+      "finalCenter": {
+        "latitude": 50.8333,
+        "longitude": 4.3667
+      },
+      "result": {
+        "latitude": 50.8458502207054,
+        "longitude": 4.353583603924436
+      }
+    },
+    {
+      "basePoint": {
+        "latitude": 50.8466,
+        "longitude": 4.3528
+      },
+      "oldRadius": 800,
+      "newRadius": 300,
+      "driftSeed": 7,
+      "finalCenter": {
+        "latitude": 50.8333,
+        "longitude": 4.3667
+      },
+      "result": {
+        "latitude": 50.84285110352698,
+        "longitude": 4.356718019622182
+      }
+    },
+    {
+      "basePoint": {
+        "latitude": 50.8466,
+        "longitude": 4.3528
+      },
+      "oldRadius": 1500,
+      "newRadius": 1400,
+      "driftSeed": 42,
+      "finalCenter": null,
+      "result": {
+        "latitude": 50.84696960616928,
+        "longitude": 4.353846433636171
+      }
+    },
+    {
+      "basePoint": {
+        "latitude": 50.8466,
+        "longitude": 4.3528
+      },
+      "oldRadius": 1500,
+      "newRadius": 1400,
+      "driftSeed": 42,
+      "finalCenter": {
+        "latitude": 50.8333,
+        "longitude": 4.3667
+      },
+      "result": {
+        "latitude": 50.8458502207054,
+        "longitude": 4.353583603924436
+      }
+    },
+    {
+      "basePoint": {
+        "latitude": 50.8466,
+        "longitude": 4.3528
+      },
+      "oldRadius": 800,
+      "newRadius": 300,
+      "driftSeed": 42,
+      "finalCenter": {
+        "latitude": 50.8333,
+        "longitude": 4.3667
+      },
+      "result": {
+        "latitude": 50.84285110352698,
+        "longitude": 4.356718019622182
+      }
+    },
+    {
+      "basePoint": {
+        "latitude": 50.8466,
+        "longitude": 4.3528
+      },
+      "oldRadius": 1500,
+      "newRadius": 1400,
+      "driftSeed": 12345,
+      "finalCenter": null,
+      "result": {
+        "latitude": 50.84583912478917,
+        "longitude": 4.352140612658659
+      }
+    },
+    {
+      "basePoint": {
+        "latitude": 50.8466,
+        "longitude": 4.3528
+      },
+      "oldRadius": 1500,
+      "newRadius": 1400,
+      "driftSeed": 12345,
+      "finalCenter": {
+        "latitude": 50.8333,
+        "longitude": 4.3667
+      },
+      "result": {
+        "latitude": 50.8458502207054,
+        "longitude": 4.353583603924436
+      }
+    },
+    {
+      "basePoint": {
+        "latitude": 50.8466,
+        "longitude": 4.3528
+      },
+      "oldRadius": 800,
+      "newRadius": 300,
+      "driftSeed": 12345,
+      "finalCenter": {
+        "latitude": 50.8333,
+        "longitude": 4.3667
+      },
+      "result": {
+        "latitude": 50.84285110352698,
+        "longitude": 4.356718019622182
+      }
+    },
+    {
+      "basePoint": {
+        "latitude": 50.8466,
+        "longitude": 4.3528
+      },
+      "oldRadius": 1500,
+      "newRadius": 1400,
+      "driftSeed": 2000000000,
+      "finalCenter": null,
+      "result": {
+        "latitude": 50.84664712694164,
+        "longitude": 4.352133707925471
+      }
+    },
+    {
+      "basePoint": {
+        "latitude": 50.8466,
+        "longitude": 4.3528
+      },
+      "oldRadius": 1500,
+      "newRadius": 1400,
+      "driftSeed": 2000000000,
+      "finalCenter": {
+        "latitude": 50.8333,
+        "longitude": 4.3667
+      },
+      "result": {
+        "latitude": 50.8458502207054,
+        "longitude": 4.353583603924436
+      }
+    },
+    {
+      "basePoint": {
+        "latitude": 50.8466,
+        "longitude": 4.3528
+      },
+      "oldRadius": 800,
+      "newRadius": 300,
+      "driftSeed": 2000000000,
+      "finalCenter": {
+        "latitude": 50.8333,
+        "longitude": 4.3667
+      },
+      "result": {
+        "latitude": 50.84285110352698,
+        "longitude": 4.356718019622182
+      }
+    },
+    {
+      "basePoint": {
+        "latitude": 50.8466,
+        "longitude": 4.3528
+      },
+      "oldRadius": 1500,
+      "newRadius": 1400,
+      "driftSeed": -2000000000,
+      "finalCenter": null,
+      "result": {
+        "latitude": 50.84735605567773,
+        "longitude": 4.353321346447358
+      }
+    },
+    {
+      "basePoint": {
+        "latitude": 50.8466,
+        "longitude": 4.3528
+      },
+      "oldRadius": 1500,
+      "newRadius": 1400,
+      "driftSeed": -2000000000,
+      "finalCenter": {
+        "latitude": 50.8333,
+        "longitude": 4.3667
+      },
+      "result": {
+        "latitude": 50.8458502207054,
+        "longitude": 4.353583603924436
+      }
+    },
+    {
+      "basePoint": {
+        "latitude": 50.8466,
+        "longitude": 4.3528
+      },
+      "oldRadius": 800,
+      "newRadius": 300,
+      "driftSeed": -2000000000,
+      "finalCenter": {
+        "latitude": 50.8333,
+        "longitude": 4.3667
+      },
+      "result": {
+        "latitude": 50.84285110352698,
+        "longitude": 4.356718019622182
+      }
+    },
+    {
+      "basePoint": {
+        "latitude": 50.8466,
+        "longitude": 4.3528
+      },
+      "oldRadius": 1500,
+      "newRadius": 1400,
+      "driftSeed": 2147483647,
+      "finalCenter": null,
+      "result": {
+        "latitude": 50.84584800512799,
+        "longitude": 4.3525398444719725
+      }
+    },
+    {
+      "basePoint": {
+        "latitude": 50.8466,
+        "longitude": 4.3528
+      },
+      "oldRadius": 1500,
+      "newRadius": 1400,
+      "driftSeed": 2147483647,
+      "finalCenter": {
+        "latitude": 50.8333,
+        "longitude": 4.3667
+      },
+      "result": {
+        "latitude": 50.8458502207054,
+        "longitude": 4.353583603924436
+      }
+    },
+    {
+      "basePoint": {
+        "latitude": 50.8466,
+        "longitude": 4.3528
+      },
+      "oldRadius": 800,
+      "newRadius": 300,
+      "driftSeed": 2147483647,
+      "finalCenter": {
+        "latitude": 50.8333,
+        "longitude": 4.3667
+      },
+      "result": {
+        "latitude": 50.84285110352698,
+        "longitude": 4.356718019622182
+      }
+    }
+  ],
+  "generatePowerUps": [
+    {
+      "center": {
+        "latitude": 50.8466,
+        "longitude": 4.3528
+      },
+      "radius": 1200,
+      "count": 4,
+      "driftSeed": 7,
+      "batchIndex": 0,
+      "enabledTypes": [
+        "zoneFreeze",
+        "zonePreview",
+        "radarPing",
+        "invisibility"
+      ],
+      "result": [
+        {
+          "id": "pu-0-0-217",
+          "type": "zonePreview",
+          "latitude": 50.84332600454377,
+          "longitude": 4.363914857416496
+        },
+        {
+          "id": "pu-0-1-344",
+          "type": "zoneFreeze",
+          "latitude": 50.838765245580845,
+          "longitude": 4.352225678994839
+        },
+        {
+          "id": "pu-0-2-471",
+          "type": "invisibility",
+          "latitude": 50.84385230147374,
+          "longitude": 4.34148098555648
+        },
+        {
+          "id": "pu-0-3-598",
+          "type": "radarPing",
+          "latitude": 50.85215784891643,
+          "longitude": 4.343901791334507
+        }
+      ]
+    },
+    {
+      "center": {
+        "latitude": 50.8466,
+        "longitude": 4.3528
+      },
+      "radius": 1200,
+      "count": 4,
+      "driftSeed": 7,
+      "batchIndex": 3,
+      "enabledTypes": [
+        "zoneFreeze",
+        "zonePreview",
+        "radarPing",
+        "invisibility"
+      ],
+      "result": [
+        {
+          "id": "pu-3-0-736374",
+          "type": "radarPing",
+          "latitude": 50.85088667411485,
+          "longitude": 4.358146388722859
+        },
+        {
+          "id": "pu-3-1-736501",
+          "type": "zonePreview",
+          "latitude": 50.84513398055771,
+          "longitude": 4.360983467361444
+        },
+        {
+          "id": "pu-3-2-736628",
+          "type": "zoneFreeze",
+          "latitude": 50.84090889130299,
+          "longitude": 4.353623464572288
+        },
+        {
+          "id": "pu-3-3-736755",
+          "type": "invisibility",
+          "latitude": 50.843847544046454,
+          "longitude": 4.345856068294956
+        }
+      ]
+    },
+    {
+      "center": {
+        "latitude": 50.8466,
+        "longitude": 4.3528
+      },
+      "radius": 1200,
+      "count": 4,
+      "driftSeed": 42,
+      "batchIndex": 0,
+      "enabledTypes": [
+        "zoneFreeze",
+        "zonePreview",
+        "radarPing",
+        "invisibility"
+      ],
+      "result": [
+        {
+          "id": "pu-0-0-1302",
+          "type": "radarPing",
+          "latitude": 50.850844738838184,
+          "longitude": 4.348927997288983
+        },
+        {
+          "id": "pu-0-1-1429",
+          "type": "zonePreview",
+          "latitude": 50.85043402830858,
+          "longitude": 4.357382438688002
+        },
+        {
+          "id": "pu-0-2-1556",
+          "type": "zoneFreeze",
+          "latitude": 50.845131904862235,
+          "longitude": 4.360589618333621
+        },
+        {
+          "id": "pu-0-3-1683",
+          "type": "invisibility",
+          "latitude": 50.84181091522441,
+          "longitude": 4.353570444102371
+        }
+      ]
+    },
+    {
+      "center": {
+        "latitude": 50.8466,
+        "longitude": 4.3528
+      },
+      "radius": 1200,
+      "count": 4,
+      "driftSeed": 42,
+      "batchIndex": 3,
+      "enabledTypes": [
+        "zoneFreeze",
+        "zonePreview",
+        "radarPing",
+        "invisibility"
+      ],
+      "result": [
+        {
+          "id": "pu-3-0-737273",
+          "type": "zonePreview",
+          "latitude": 50.84100223414602,
+          "longitude": 4.356992670523846
+        },
+        {
+          "id": "pu-3-1-737400",
+          "type": "zoneFreeze",
+          "latitude": 50.8418837457765,
+          "longitude": 4.346147227131051
+        },
+        {
+          "id": "pu-3-2-737527",
+          "type": "invisibility",
+          "latitude": 50.84890980273728,
+          "longitude": 4.343373397516127
+        },
+        {
+          "id": "pu-3-3-737654",
+          "type": "radarPing",
+          "latitude": 50.85269553563738,
+          "longitude": 4.351739302614647
+        }
+      ]
+    },
+    {
+      "center": {
+        "latitude": 50.8466,
+        "longitude": 4.3528
+      },
+      "radius": 1200,
+      "count": 4,
+      "driftSeed": 12345,
+      "batchIndex": 0,
+      "enabledTypes": [
+        "zoneFreeze",
+        "zonePreview",
+        "radarPing",
+        "invisibility"
+      ],
+      "result": [
+        {
+          "id": "pu-0-0-382695",
+          "type": "invisibility",
+          "latitude": 50.84239595808603,
+          "longitude": 4.3569042265941675
+        },
+        {
+          "id": "pu-0-1-382822",
+          "type": "radarPing",
+          "latitude": 50.842537080458825,
+          "longitude": 4.3480158726926925
+        },
+        {
+          "id": "pu-0-2-382949",
+          "type": "zonePreview",
+          "latitude": 50.84771717303294,
+          "longitude": 4.345503053501738
+        },
+        {
+          "id": "pu-0-3-383076",
+          "type": "zoneFreeze",
+          "latitude": 50.85162991338893,
+          "longitude": 4.35175828808718
+        }
+      ]
+    },
+    {
+      "center": {
+        "latitude": 50.8466,
+        "longitude": 4.3528
+      },
+      "radius": 1200,
+      "count": 4,
+      "driftSeed": 12345,
+      "batchIndex": 3,
+      "enabledTypes": [
+        "zoneFreeze",
+        "zonePreview",
+        "radarPing",
+        "invisibility"
+      ],
+      "result": [
+        {
+          "id": "pu-3-0-864652",
+          "type": "zoneFreeze",
+          "latitude": 50.854288614044755,
+          "longitude": 4.349664385763789
+        },
+        {
+          "id": "pu-3-1-864779",
+          "type": "invisibility",
+          "latitude": 50.851484451892006,
+          "longitude": 4.362896236154411
+        },
+        {
+          "id": "pu-3-2-864906",
+          "type": "radarPing",
+          "latitude": 50.8425963565987,
+          "longitude": 4.363998398978067
+        },
+        {
+          "id": "pu-3-3-865033",
+          "type": "zonePreview",
+          "latitude": 50.83897683778687,
+          "longitude": 4.350588463318432
+        }
+      ]
+    },
+    {
+      "center": {
+        "latitude": 50.8466,
+        "longitude": 4.3528
+      },
+      "radius": 1200,
+      "count": 4,
+      "driftSeed": 2000000000,
+      "batchIndex": 0,
+      "enabledTypes": [
+        "zoneFreeze",
+        "zonePreview",
+        "radarPing",
+        "invisibility"
+      ],
+      "result": [
+        {
+          "id": "pu-0-0-62000000000",
+          "type": "zoneFreeze",
+          "latitude": 50.84624432769511,
+          "longitude": 4.345479152972407
+        },
+        {
+          "id": "pu-0-1-62000000127",
+          "type": "invisibility",
+          "latitude": 50.85083404697556,
+          "longitude": 4.349321062667933
+        },
+        {
+          "id": "pu-0-2-62000000254",
+          "type": "radarPing",
+          "latitude": 50.850377815501325,
+          "longitude": 4.357742741223621
+        },
+        {
+          "id": "pu-0-3-62000000381",
+          "type": "zonePreview",
+          "latitude": 50.84509940696071,
+          "longitude": 4.359408544194318
+        }
+      ]
+    },
+    {
+      "center": {
+        "latitude": 50.8466,
+        "longitude": 4.3528
+      },
+      "radius": 1200,
+      "count": 4,
+      "driftSeed": 2000000000,
+      "batchIndex": 3,
+      "enabledTypes": [
+        "zoneFreeze",
+        "zonePreview",
+        "radarPing",
+        "invisibility"
+      ],
+      "result": [
+        {
+          "id": "pu-3-0-62000419027",
+          "type": "invisibility",
+          "latitude": 50.84214777844585,
+          "longitude": 4.3444232716158995
+        },
+        {
+          "id": "pu-3-1-62000419154",
+          "type": "radarPing",
+          "latitude": 50.84970580432463,
+          "longitude": 4.342834175074432
+        },
+        {
+          "id": "pu-3-2-62000419281",
+          "type": "zonePreview",
+          "latitude": 50.853340929287,
+          "longitude": 4.3537697300195815
+        },
+        {
+          "id": "pu-3-3-62000419408",
+          "type": "zoneFreeze",
+          "latitude": 50.84846513993429,
+          "longitude": 4.363635075905411
+        }
+      ]
+    },
+    {
+      "center": {
+        "latitude": 50.8466,
+        "longitude": 4.3528
+      },
+      "radius": 1200,
+      "count": 4,
+      "driftSeed": -2000000000,
+      "batchIndex": 0,
+      "enabledTypes": [
+        "zoneFreeze",
+        "zonePreview",
+        "radarPing",
+        "invisibility"
+      ],
+      "result": [
+        {
+          "id": "pu-0-0-62000000000",
+          "type": "zoneFreeze",
+          "latitude": 50.84624432769511,
+          "longitude": 4.345479152972407
+        },
+        {
+          "id": "pu-0-1-61999999873",
+          "type": "zonePreview",
+          "latitude": 50.84233854953515,
+          "longitude": 4.350528636009353
+        },
+        {
+          "id": "pu-0-2-61999999746",
+          "type": "radarPing",
+          "latitude": 50.8437105423252,
+          "longitude": 4.357954388060808
+        },
+        {
+          "id": "pu-0-3-61999999619",
+          "type": "invisibility",
+          "latitude": 50.848910961687956,
+          "longitude": 4.3595130369639135
+        }
+      ]
+    },
+    {
+      "center": {
+        "latitude": 50.8466,
+        "longitude": 4.3528
+      },
+      "radius": 1200,
+      "count": 4,
+      "driftSeed": -2000000000,
+      "batchIndex": 3,
+      "enabledTypes": [
+        "zoneFreeze",
+        "zonePreview",
+        "radarPing",
+        "invisibility"
+      ],
+      "result": [
+        {
+          "id": "pu-3-0-62000469805",
+          "type": "zonePreview",
+          "latitude": 50.840471731213356,
+          "longitude": 4.360315080126873
+        },
+        {
+          "id": "pu-3-1-62000469678",
+          "type": "radarPing",
+          "latitude": 50.84846375130604,
+          "longitude": 4.364560221253816
+        },
+        {
+          "id": "pu-3-2-62000469551",
+          "type": "invisibility",
+          "latitude": 50.85441910680422,
+          "longitude": 4.354313956068991
+        },
+        {
+          "id": "pu-3-3-62000469424",
+          "type": "zoneFreeze",
+          "latitude": 50.850103016870825,
+          "longitude": 4.342128703318218
+        }
+      ]
+    },
+    {
+      "center": {
+        "latitude": 50.8466,
+        "longitude": 4.3528
+      },
+      "radius": 1200,
+      "count": 4,
+      "driftSeed": 2147483647,
+      "batchIndex": 0,
+      "enabledTypes": [
+        "zoneFreeze",
+        "zonePreview",
+        "radarPing",
+        "invisibility"
+      ],
+      "result": [
+        {
+          "id": "pu-0-0-66571993057",
+          "type": "zonePreview",
+          "latitude": 50.84604633036242,
+          "longitude": 4.357747858443221
+        },
+        {
+          "id": "pu-0-1-66571993184",
+          "type": "zoneFreeze",
+          "latitude": 50.84946392324596,
+          "longitude": 4.363256659796173
+        },
+        {
+          "id": "pu-0-2-66571993311",
+          "type": "invisibility",
+          "latitude": 50.85352155671973,
+          "longitude": 4.352108392313412
+        },
+        {
+          "id": "pu-0-3-66571993438",
+          "type": "radarPing",
+          "latitude": 50.84879319348099,
+          "longitude": 4.3425672603801635
+        }
+      ]
+    },
+    {
+      "center": {
+        "latitude": 50.8466,
+        "longitude": 4.3528
+      },
+      "radius": 1200,
+      "count": 4,
+      "driftSeed": 2147483647,
+      "batchIndex": 3,
+      "enabledTypes": [
+        "zoneFreeze",
+        "zonePreview",
+        "radarPing",
+        "invisibility"
+      ],
+      "result": [
+        {
+          "id": "pu-3-0-66571256590",
+          "type": "radarPing",
+          "latitude": 50.84816459476487,
+          "longitude": 4.35335117060198
+        },
+        {
+          "id": "pu-3-1-66571256717",
+          "type": "zonePreview",
+          "latitude": 50.84683644484967,
+          "longitude": 4.354959007721539
+        },
+        {
+          "id": "pu-3-2-66571256844",
+          "type": "zoneFreeze",
+          "latitude": 50.84586427896782,
+          "longitude": 4.353533212782231
+        },
+        {
+          "id": "pu-3-3-66571256971",
+          "type": "invisibility",
+          "latitude": 50.845030374150845,
+          "longitude": 4.3509048419168
+        }
+      ]
+    }
+  ],
+  "pickInitialZoneCenter": [
+    {
+      "startPin": {
+        "latitude": 50.8466,
+        "longitude": 4.3528
+      },
+      "finalCenter": {
+        "latitude": 50.8333,
+        "longitude": 4.3667
+      },
+      "radius": 2500,
+      "seed": 7,
+      "result": {
+        "latitude": 50.84115128857709,
+        "longitude": 4.357455502026767
+      }
+    },
+    {
+      "startPin": {
+        "latitude": 50.8466,
+        "longitude": 4.3528
+      },
+      "finalCenter": {
+        "latitude": 50.8333,
+        "longitude": 4.3667
+      },
+      "radius": 2500,
+      "seed": 42,
+      "result": {
+        "latitude": 50.8341492680671,
+        "longitude": 4.359262701320279
+      }
+    },
+    {
+      "startPin": {
+        "latitude": 50.8466,
+        "longitude": 4.3528
+      },
+      "finalCenter": {
+        "latitude": 50.8333,
+        "longitude": 4.3667
+      },
+      "radius": 2500,
+      "seed": 12345,
+      "result": {
+        "latitude": 50.84482850226657,
+        "longitude": 4.366728306789661
+      }
+    },
+    {
+      "startPin": {
+        "latitude": 50.8466,
+        "longitude": 4.3528
+      },
+      "finalCenter": {
+        "latitude": 50.8333,
+        "longitude": 4.3667
+      },
+      "radius": 2500,
+      "seed": 2000000000,
+      "result": {
+        "latitude": 50.846937921899745,
+        "longitude": 4.373043056504291
+      }
+    },
+    {
+      "startPin": {
+        "latitude": 50.8466,
+        "longitude": 4.3528
+      },
+      "finalCenter": {
+        "latitude": 50.8333,
+        "longitude": 4.3667
+      },
+      "radius": 2500,
+      "seed": -2000000000,
+      "result": {
+        "latitude": 50.844938978692355,
+        "longitude": 4.349187348793661
+      }
+    },
+    {
+      "startPin": {
+        "latitude": 50.8466,
+        "longitude": 4.3528
+      },
+      "finalCenter": {
+        "latitude": 50.8333,
+        "longitude": 4.3667
+      },
+      "radius": 2500,
+      "seed": 2147483647,
+      "result": {
+        "latitude": 50.841828242573264,
+        "longitude": 4.3564720127559085
+      }
+    }
+  ]
+}
