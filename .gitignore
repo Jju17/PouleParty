@@ -5,8 +5,9 @@
 .env
 GoogleService-Info.plist
 *.xcbkptlist
-*.resolved
 xcuserdata/
+
+ios/Secrets.xcconfig
 
 # === Android ===
 android/.gradle/
@@ -40,7 +41,8 @@ web/dist/
 # === macOS ===
 .DS_Store
 
-.claude/
+.claude/*
+!.claude/rules/
 
 *.xcuserstate
 functions/service-account.json
