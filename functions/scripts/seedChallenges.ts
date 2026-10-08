@@ -3,17 +3,13 @@
  *
  * Usage (from the functions/ directory):
  *
- *   # With a service-account JSON (prod uses ./service-account.json by default):
- *   npx ts-node src/seedChallenges.ts
- *   FIREBASE_SERVICE_ACCOUNT=/path/to/staging-sa.json npx ts-node src/seedChallenges.ts
  *
  *   # With Application Default Credentials (`gcloud auth application-default login`):
- *   FIREBASE_PROJECT_ID=pouleparty-ba586 npx ts-node src/seedChallenges.ts
+ *   FIREBASE_PROJECT_ID=pouleparty-ba586 npx tsx scripts/seedChallenges.ts
  */
 
 import * as admin from "firebase-admin";
-import * as fs from "fs";
-import * as path from "path";
+import { initAdmin } from "./adminApp";
 
 /**
  * FR text only — seed lives FR-first; admin fills `en`/`nl` from the
@@ -163,66 +159,10 @@ const challenges: SeedChallenge[] = [
   },
 ];
 
-/**
- * Priority order is critical: `FIREBASE_PROJECT_ID` (explicit env
- * intent) wins over the legacy `functions/service-account.json` fallback.
- * Until 2026-05-23 the order was reversed, and the default SA file
- * silently re-routed a "staging" invocation to prod. If both an explicit
- * SA and an env project id are set and they disagree, refuse to run.
- */
-function resolveProjectAndInitAdmin(): string {
-  const explicitSaPath = process.env.FIREBASE_SERVICE_ACCOUNT;
-  const envProjectId = process.env.FIREBASE_PROJECT_ID;
-  const defaultSaPath = path.resolve(__dirname, "..", "service-account.json");
 
-  if (explicitSaPath) {
-    const sa = JSON.parse(fs.readFileSync(explicitSaPath, "utf8"));
-    if (envProjectId && envProjectId !== sa.project_id) {
-      console.error(
-        `Refusing to run: FIREBASE_SERVICE_ACCOUNT targets "${sa.project_id}" ` +
-          `but FIREBASE_PROJECT_ID is "${envProjectId}". Unset one or align them.`
-      );
-      process.exit(1);
-    }
-    admin.initializeApp({
-      credential: admin.credential.cert(sa),
-      projectId: sa.project_id,
-    });
-    return sa.project_id;
-  }
-
-  if (envProjectId) {
-    admin.initializeApp({
-      credential: admin.credential.applicationDefault(),
-      projectId: envProjectId,
-    });
-    return envProjectId;
-  }
-
-  if (fs.existsSync(defaultSaPath)) {
-    const sa = JSON.parse(fs.readFileSync(defaultSaPath, "utf8"));
-    console.warn(
-      `⚠️  Using default ./service-account.json (project "${sa.project_id}"). ` +
-        `Set FIREBASE_PROJECT_ID=<project> to override and silence this warning.`
-    );
-    admin.initializeApp({
-      credential: admin.credential.cert(sa),
-      projectId: sa.project_id,
-    });
-    return sa.project_id;
-  }
-
-  console.error(
-    "No credentials found. Set FIREBASE_PROJECT_ID=<project> with ADC " +
-      "(gcloud auth application-default login), or " +
-      "FIREBASE_SERVICE_ACCOUNT=/path/to/sa.json, " +
-      "or place a service-account.json in functions/."
-  );
-  process.exit(1);
-}
 
 async function main() {
-  const projectId = resolveProjectAndInitAdmin();
+  const projectId = initAdmin({ withDatabase: false });
 
   const db = admin.firestore();
   console.log(`Seeding ${challenges.length} challenges into project "${projectId}"...`);

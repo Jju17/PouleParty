@@ -139,18 +139,18 @@ describe("parity, generatePowerUps", () => {
 
     expect(out[0].id).toBe("pu-1-0-371690");
     expect(out[0].type).toBe("radarPing");
-    expect(out[0].location.latitude).toBeCloseTo(50.85167604533923, TOL);
-    expect(out[0].location.longitude).toBeCloseTo(4.36041475997135, TOL);
+    expect(Math.abs(out[0].location.latitude - 50.85167604533923)).toBeLessThan(TOL);
+    expect(Math.abs(out[0].location.longitude - 4.36041475997135)).toBeLessThan(TOL);
 
     expect(out[1].id).toBe("pu-1-1-371817");
     expect(out[1].type).toBe("invisibility");
-    expect(out[1].location.latitude).toBeCloseTo(50.84442779979479, TOL);
-    expect(out[1].location.longitude).toBeCloseTo(4.356573765300285, TOL);
+    expect(Math.abs(out[1].location.latitude - 50.84442779979479)).toBeLessThan(TOL);
+    expect(Math.abs(out[1].location.longitude - 4.356573765300285)).toBeLessThan(TOL);
 
     expect(out[2].id).toBe("pu-1-2-371944");
     expect(out[2].type).toBe("zoneFreeze");
-    expect(out[2].location.latitude).toBeCloseTo(50.84439414095354, TOL);
-    expect(out[2].location.longitude).toBeCloseTo(4.344395523809516, TOL);
+    expect(Math.abs(out[2].location.latitude - 50.84439414095354)).toBeLessThan(TOL);
+    expect(Math.abs(out[2].location.longitude - 4.344395523809516)).toBeLessThan(TOL);
   });
 
   test("reversing enabledTypes reshuffles assigned types (order is authoritative)", () => {
@@ -220,13 +220,13 @@ describe("parity, generatePowerUps", () => {
     );
     expect(out[0].id).toBe("pu-0-0-31");
     expect(out[0].type).toBe("radarPing");
-    expect(out[0].location.latitude).toBeCloseTo(50.85543657219541, TOL);
-    expect(out[0].location.longitude).toBeCloseTo(4.3525392519978965, TOL);
+    expect(Math.abs(out[0].location.latitude - 50.85543657219541)).toBeLessThan(TOL);
+    expect(Math.abs(out[0].location.longitude - 4.3525392519978965)).toBeLessThan(TOL);
 
     expect(out[1].id).toBe("pu-0-1-96");
     expect(out[1].type).toBe("invisibility");
-    expect(out[1].location.latitude).toBeCloseTo(50.85637613935454, TOL);
-    expect(out[1].location.longitude).toBeCloseTo(4.362005903305925, TOL);
+    expect(Math.abs(out[1].location.latitude - 50.85637613935454)).toBeLessThan(TOL);
+    expect(Math.abs(out[1].location.longitude - 4.362005903305925)).toBeLessThan(TOL);
   });
 });
 
@@ -346,7 +346,7 @@ describe("parity, large seeds don't blow up", () => {
       77,
       1,
       ["invisibility", "radarPing"],
-    ] as const;
+    ] as Parameters<typeof generatePowerUpsServer>;
     const a = generatePowerUpsServer(...args);
     const b = generatePowerUpsServer(...args);
     expect(a.length).toBe(b.length);

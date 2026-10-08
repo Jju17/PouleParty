@@ -10,64 +10,16 @@
  * map.
  *
  * Usage:
- *   FIREBASE_PROJECT_ID=pouleparty-ba586 npx ts-node src/qaBot.ts <GAMECODE> [botCount] [intervalSec]
+ *   FIREBASE_PROJECT_ID=pouleparty-ba586 npx tsx scripts/qaBot.ts <GAMECODE> [botCount] [intervalSec]
  *
  * Credentials resolve like `debugGame.ts`: FIREBASE_SERVICE_ACCOUNT, or
- * FIREBASE_PROJECT_ID + Application Default Credentials, or the local
- * `service-account.json`.
+ * FIREBASE_PROJECT_ID + Application Default Credentials.
  */
 
 import * as admin from "firebase-admin";
-import * as fs from "fs";
-import * as path from "path";
+import { initAdmin } from "./adminApp";
 
-function rtdbUrl(projectId: string): string {
-  return (
-    process.env.FIREBASE_DATABASE_URL ??
-    `https://${projectId}-default-rtdb.europe-west1.firebasedatabase.app`
-  );
-}
 
-function resolveProjectAndInitAdmin(): string {
-  const explicitSaPath = process.env.FIREBASE_SERVICE_ACCOUNT;
-  const envProjectId = process.env.FIREBASE_PROJECT_ID;
-  const defaultSaPath = path.resolve(__dirname, "..", "service-account.json");
-
-  if (explicitSaPath) {
-    const sa = JSON.parse(fs.readFileSync(explicitSaPath, "utf8"));
-    if (envProjectId && envProjectId !== sa.project_id) {
-      console.error(
-        `Refusing to run: SA targets "${sa.project_id}" vs env "${envProjectId}"`
-      );
-      process.exit(1);
-    }
-    admin.initializeApp({
-      credential: admin.credential.cert(sa),
-      projectId: sa.project_id,
-      databaseURL: rtdbUrl(sa.project_id),
-    });
-    return sa.project_id;
-  }
-  if (envProjectId) {
-    admin.initializeApp({
-      credential: admin.credential.applicationDefault(),
-      projectId: envProjectId,
-      databaseURL: rtdbUrl(envProjectId),
-    });
-    return envProjectId;
-  }
-  if (fs.existsSync(defaultSaPath)) {
-    const sa = JSON.parse(fs.readFileSync(defaultSaPath, "utf8"));
-    admin.initializeApp({
-      credential: admin.credential.cert(sa),
-      projectId: sa.project_id,
-      databaseURL: rtdbUrl(sa.project_id),
-    });
-    return sa.project_id;
-  }
-  console.error("No credentials.");
-  process.exit(1);
-}
 
 // ~metres → degrees (latitude is uniform; longitude scales by cos(lat)).
 function metresToLat(m: number): number {
@@ -83,12 +35,12 @@ async function main() {
   const intervalSec = Math.max(1, parseInt(process.argv[4] || "3", 10));
   if (!gameCode) {
     console.error(
-      "Usage: FIREBASE_PROJECT_ID=pouleparty-ba586 npx ts-node src/qaBot.ts <GAMECODE> [botCount] [intervalSec]"
+      "Usage: FIREBASE_PROJECT_ID=pouleparty-ba586 npx tsx scripts/qaBot.ts <GAMECODE> [botCount] [intervalSec]"
     );
     process.exit(1);
   }
 
-  const projectId = resolveProjectAndInitAdmin();
+  const projectId = initAdmin({ withDatabase: true });
   const db = admin.firestore();
   const rtdb = admin.database();
 

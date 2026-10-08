@@ -13,67 +13,19 @@
  *
  * Usage (from the functions/ directory) :
  *
- *   FIREBASE_PROJECT_ID=pouleparty-prod npx ts-node src/revertChallengesProd.ts
+ *   FIREBASE_PROJECT_ID=pouleparty-prod npx tsx scripts/revertChallengesProd.ts
  *
  *   # or with an explicit SA :
- *   FIREBASE_SERVICE_ACCOUNT=/path/to/prod-sa.json npx ts-node src/revertChallengesProd.ts
+ *   FIREBASE_SERVICE_ACCOUNT=/path/to/prod-sa.json npx tsx scripts/revertChallengesProd.ts
  */
 
 import * as admin from "firebase-admin";
-import * as fs from "fs";
-import * as path from "path";
+import { initAdmin } from "./adminApp";
 
-function resolveProjectAndInitAdmin(): string {
-  const explicitSaPath = process.env.FIREBASE_SERVICE_ACCOUNT;
-  const envProjectId = process.env.FIREBASE_PROJECT_ID;
-  const defaultSaPath = path.resolve(__dirname, "..", "service-account.json");
 
-  if (explicitSaPath) {
-    const sa = JSON.parse(fs.readFileSync(explicitSaPath, "utf8"));
-    if (envProjectId && envProjectId !== sa.project_id) {
-      console.error(
-        `Refusing to run: FIREBASE_SERVICE_ACCOUNT targets "${sa.project_id}" ` +
-          `but FIREBASE_PROJECT_ID is "${envProjectId}". Unset one or align them.`
-      );
-      process.exit(1);
-    }
-    admin.initializeApp({
-      credential: admin.credential.cert(sa),
-      projectId: sa.project_id,
-    });
-    return sa.project_id;
-  }
-
-  if (envProjectId) {
-    admin.initializeApp({
-      credential: admin.credential.applicationDefault(),
-      projectId: envProjectId,
-    });
-    return envProjectId;
-  }
-
-  if (fs.existsSync(defaultSaPath)) {
-    const sa = JSON.parse(fs.readFileSync(defaultSaPath, "utf8"));
-    console.warn(
-      `⚠️  Using default ./service-account.json (project "${sa.project_id}"). ` +
-        `Set FIREBASE_PROJECT_ID=<project> to override and silence this warning.`
-    );
-    admin.initializeApp({
-      credential: admin.credential.cert(sa),
-      projectId: sa.project_id,
-    });
-    return sa.project_id;
-  }
-
-  console.error(
-    "No credentials found. Set FIREBASE_PROJECT_ID=<project> with ADC, " +
-      "FIREBASE_SERVICE_ACCOUNT=/path/to/sa.json, or place service-account.json in functions/."
-  );
-  process.exit(1);
-}
 
 async function main() {
-  const projectId = resolveProjectAndInitAdmin();
+  const projectId = initAdmin({ withDatabase: false });
   if (projectId !== "pouleparty-prod") {
     console.error(
       `Refusing to run: this script targets prod only, but resolved project is "${projectId}".`
