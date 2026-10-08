@@ -198,7 +198,7 @@ struct SettingsRow: View {
                 BangerText(title, size: 18)
                 Spacer()
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(.caption, weight: .semibold))
                     .foregroundStyle(Color.onBackground.opacity(0.3))
             }
             .foregroundStyle(Color.onBackground)

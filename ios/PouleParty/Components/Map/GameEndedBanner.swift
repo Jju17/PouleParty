@@ -19,7 +19,7 @@ struct GameEndedBanner: View {
         Button(action: onTap) {
             HStack(spacing: 12) {
                 Image(systemName: "trophy.fill")
-                    .font(.system(size: 18, weight: .bold))
+                    .font(.system(.title3, weight: .bold))
                     .foregroundStyle(.white)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Game ended")
@@ -31,7 +31,7 @@ struct GameEndedBanner: View {
                 }
                 Spacer(minLength: 8)
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.system(.subheadline, weight: .bold))
                     .foregroundStyle(.white.opacity(0.85))
             }
             .padding(.horizontal, 14)

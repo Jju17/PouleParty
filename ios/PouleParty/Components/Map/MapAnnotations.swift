@@ -26,7 +26,7 @@ struct HunterMapMarker: View {
             // dark map tiles, Mapbox switches palette with the system
             // theme so any single colour would fail on one of the two.
             Text(displayName)
-                .font(.system(size: 9, weight: .bold))
+                .font(.system(.caption2, weight: .bold))
                 .foregroundStyle(.white)
                 .shadow(color: .black, radius: 0.5, x: 1, y: 0)
                 .shadow(color: .black, radius: 0.5, x: -1, y: 0)
@@ -38,7 +38,7 @@ struct HunterMapMarker: View {
                     .frame(width: 24, height: 24)
                 Image(systemName: "figure.walk")
                     .foregroundStyle(.white)
-                    .font(.system(size: 13))
+                    .font(.system(.footnote))
             }
             .shadow(color: .black.opacity(0.3), radius: 3, y: 1)
         }

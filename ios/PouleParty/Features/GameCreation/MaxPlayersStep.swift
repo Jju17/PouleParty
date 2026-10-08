@@ -67,7 +67,7 @@ struct MaxPlayersStep: GameCreationStepView {
                         store.send(.maxPlayersChanged(store.currentGame.maxPlayers - 1))
                     } label: {
                         Image(systemName: "minus.circle.fill")
-                            .font(.system(size: 32))
+                            .font(.system(.title))
                             .foregroundStyle(canDecrement ? Color.CROrange : Color.CROrange.opacity(0.3))
                     }
                     .accessibilityLabel("Decrease number of hunters")
@@ -77,7 +77,7 @@ struct MaxPlayersStep: GameCreationStepView {
                         store.send(.maxPlayersChanged(store.currentGame.maxPlayers + 1))
                     } label: {
                         Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 32))
+                            .font(.system(.title))
                             .foregroundStyle(canIncrement ? Color.CROrange : Color.CROrange.opacity(0.3))
                     }
                     .accessibilityLabel("Increase number of hunters")

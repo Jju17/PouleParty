@@ -86,7 +86,7 @@ private struct GMChickenMarker: View {
                 .frame(width: 24, height: 24)
                 .opacity(isInvisible ? 0.45 : 1)
             Text("🐔")
-                .font(.system(size: 13))
+                .font(.system(.footnote))
                 .opacity(isInvisible ? 0.65 : 1)
             if isInvisible {
                 Circle()

@@ -118,7 +118,7 @@ struct LeaderboardRowView: View {
                     onReport(entry)
                 } label: {
                     Image(systemName: "flag")
-                        .font(.system(size: 14))
+                        .font(.system(.subheadline))
                         .foregroundStyle(Color.onBackground.opacity(0.4))
                         .padding(6)
                         .contentShape(Rectangle())

@@ -15,16 +15,16 @@ struct DebugQAPanel: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("QA DEBUG")
-                .font(.system(size: 11, weight: .heavy, design: .monospaced))
+                .font(.system(.caption, design: .monospaced, weight: .heavy))
                 .foregroundStyle(.white)
             HStack(spacing: 8) {
                 Button(action: onNextStep) {
                     Label("Next", systemImage: "forward.fill")
-                        .font(.system(size: 12, weight: .bold))
+                        .font(.system(.caption, weight: .bold))
                 }
                 Button(action: onEndNow) {
                     Label("End", systemImage: "flag.checkered")
-                        .font(.system(size: 12, weight: .bold))
+                        .font(.system(.caption, weight: .bold))
                 }
             }
             .buttonStyle(.borderedProminent)

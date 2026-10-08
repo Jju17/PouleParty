@@ -17,7 +17,7 @@ struct EndGameCodeView: View {
                 .kerning(8)
 
             Text("The hunter must enter this code to prove they found you!")
-                .font(.system(size: 14))
+                .font(.system(.subheadline))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)

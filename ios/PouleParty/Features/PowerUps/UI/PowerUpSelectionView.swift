@@ -122,7 +122,7 @@ private struct PowerUpCard: View {
                         .shadow(color: isEnabled ? .black.opacity(0.2) : .clear, radius: 2, y: 1)
 
                     Text(type.description)
-                        .font(.system(size: 9))
+                        .font(.system(.caption2))
                         .foregroundStyle(isEnabled ? type.textColor.opacity(0.8) : .secondary)
                         .multilineTextAlignment(.center)
                         .lineLimit(3)

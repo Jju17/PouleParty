@@ -29,7 +29,7 @@ struct MapTopBar: View {
                 onInfoTapped()
             } label: {
                 Image(systemName: "info.circle")
-                    .font(.system(size: 20))
+                    .font(.system(.title3))
                     .foregroundStyle(.white.opacity(0.8))
             }
             .accessibilityLabel("Game info")

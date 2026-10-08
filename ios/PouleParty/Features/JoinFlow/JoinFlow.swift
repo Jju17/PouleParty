@@ -523,7 +523,7 @@ struct JoinFlowView: View {
                 .keyboardType(.numberPad)
                 .textContentType(.oneTimeCode)
                 .multilineTextAlignment(.center)
-                .font(.system(size: 32, weight: .bold, design: .monospaced))
+                .font(.system(.title, design: .monospaced, weight: .bold))
                 .frame(maxWidth: 200)
                 .padding(.vertical, 12)
                 .background(Color.onBackground.opacity(0.08))

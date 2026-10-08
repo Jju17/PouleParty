@@ -111,7 +111,7 @@ struct GameRulesView: View {
                 .foregroundStyle(Color.CROrange)
                 .frame(width: 20)
             Text(text)
-                .font(.system(size: 14))
+                .font(.system(.subheadline))
                 .foregroundStyle(Color.onBackground)
         }
     }
@@ -122,17 +122,17 @@ struct GameRulesView: View {
                 .foregroundStyle(Color.onBackground)
 
             Text(description)
-                .font(.system(size: 14))
+                .font(.system(.subheadline))
                 .foregroundStyle(Color.onBackground.opacity(0.7))
 
             ForEach(details.indices, id: \.self) { index in
                 let detail = details[index]
                 HStack(alignment: .top, spacing: 6) {
                     Text(">")
-                        .font(.system(size: 14, weight: .bold))
+                        .font(.system(.subheadline, weight: .bold))
                         .foregroundStyle(Color.CROrange)
                     Text(detail)
-                        .font(.system(size: 14))
+                        .font(.system(.subheadline))
                         .foregroundStyle(Color.onBackground)
                 }
             }
@@ -155,7 +155,7 @@ struct GameRulesView: View {
                 .font(.gameboy(size: 10))
                 .foregroundStyle(Color.CROrange)
             Text(explanation)
-                .font(.system(size: 14))
+                .font(.system(.subheadline))
                 .foregroundStyle(Color.onBackground.opacity(0.7))
         }
     }

@@ -46,9 +46,9 @@ struct MapBottomBar<S: MapFeatureState>: View {
                             .fill(Color.CROrange)
                         HStack(spacing: 2) {
                             Image(systemName: "bolt.fill")
-                                .font(.system(size: 10))
+                                .font(.system(.caption2))
                             Text("\(state.collectedPowerUps.count)")
-                                .font(.system(size: 11, weight: .bold))
+                                .font(.system(.caption, weight: .bold))
                         }
                         .foregroundStyle(.white)
                     }

@@ -125,7 +125,7 @@ struct PreGameOverlay: View {
                         .foregroundStyle(.white)
 
                     Text(gameModTitle)
-                        .font(.system(size: 16))
+                        .font(.system(.callout))
                         .foregroundStyle(.white.opacity(0.7))
 
                     if let code = gameCode {
@@ -138,7 +138,7 @@ struct PreGameOverlay: View {
                         } label: {
                             VStack(spacing: 8) {
                                 Text(codeCopied ? "Copied!" : "Tap to copy:")
-                                    .font(.system(size: 14))
+                                    .font(.system(.subheadline))
                                     .foregroundStyle(.white.opacity(0.6))
                                 HStack(spacing: 12) {
                                     Text(code)
@@ -157,22 +157,22 @@ struct PreGameOverlay: View {
                     VStack(spacing: 6) {
                         HStack(spacing: 6) {
                             Text("🐔")
-                                .font(.system(size: 14))
+                                .font(.system(.subheadline))
                             Text("1")
                                 .font(.gameboy(size: 16))
                                 .foregroundStyle(.white)
                             Text("connected")
-                                .font(.system(size: 14))
+                                .font(.system(.subheadline))
                                 .foregroundStyle(.white.opacity(0.6))
                         }
                         HStack(spacing: 6) {
                             Text("🔍")
-                                .font(.system(size: 14))
+                                .font(.system(.subheadline))
                             Text("\(connectedHunters)")
                                 .font(.gameboy(size: 16))
                                 .foregroundStyle(.white)
                             Text("connected")
-                                .font(.system(size: 14))
+                                .font(.system(.subheadline))
                                 .foregroundStyle(.white.opacity(0.6))
                         }
                     }
@@ -187,7 +187,7 @@ struct PreGameOverlay: View {
                                 onCancelGame()
                             } label: {
                                 Text("Cancel game")
-                                    .font(.system(size: 16, weight: .medium))
+                                    .font(.system(.callout, weight: .medium))
                                     .foregroundStyle(Color.danger)
                             }
                             .padding(.top, 8)
@@ -195,7 +195,7 @@ struct PreGameOverlay: View {
                     } else {
                         VStack(spacing: 8) {
                             Text("Game starts in")
-                                .font(.system(size: 14))
+                                .font(.system(.subheadline))
                                 .foregroundStyle(.white.opacity(0.6))
                             Text(formattedTime)
                                 .font(.gameboy(size: timerFontSize))
@@ -211,7 +211,7 @@ struct PreGameOverlay: View {
                                 onCancelGame()
                             } label: {
                                 Text("Cancel game")
-                                    .font(.system(size: 16, weight: .medium))
+                                    .font(.system(.callout, weight: .medium))
                                     .foregroundStyle(Color.danger)
                             }
                             .padding(.top, 8)
@@ -242,7 +242,7 @@ struct PreGameOverlay: View {
         if isLauncherRole, let onLaunchTapped {
             VStack(spacing: 12) {
                 Text("Ready when you are")
-                    .font(.system(size: 14))
+                    .font(.system(.subheadline))
                     .foregroundStyle(.white.opacity(0.6))
                 Button(action: onLaunchTapped) {
                     HStack(spacing: 12) {
@@ -271,7 +271,7 @@ struct PreGameOverlay: View {
         } else {
             VStack(spacing: 8) {
                 Text("Waiting for the chicken to launch")
-                    .font(.system(size: 14))
+                    .font(.system(.subheadline))
                     .foregroundStyle(.white.opacity(0.7))
                 ProgressView()
                     .progressViewStyle(.circular)

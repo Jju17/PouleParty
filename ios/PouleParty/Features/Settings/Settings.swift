@@ -239,7 +239,7 @@ struct GameRowView: View {
     var body: some View {
         HStack(spacing: 12) {
             Text(game.gameMode == .followTheChicken ? "🐔" : "📍")
-                .font(.system(size: 28))
+                .font(.system(.title))
 
             VStack(alignment: .leading, spacing: 6) {
                 // Top row: name + status badge on the right
@@ -265,7 +265,7 @@ struct GameRowView: View {
             }
 
             Image(systemName: "chevron.right")
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(.caption, weight: .semibold))
                 .foregroundStyle(Color.onBackground.opacity(0.3))
         }
         .padding(14)
@@ -278,7 +278,7 @@ private struct RoleBadge: View {
     var body: some View {
         HStack(spacing: 3) {
             Text(role == .chicken ? "🐔" : "🎯")
-                .font(.system(size: 9))
+                .font(.system(.caption2))
             Text(role == .chicken ? "CREATED" : "JOINED")
                 .font(.gameboy(size: 6))
                 .foregroundStyle(.white)
@@ -378,7 +378,7 @@ struct GameDetailView: View {
                 } label: {
                     HStack(spacing: 6) {
                         Text("🏆")
-                            .font(.system(size: 18))
+                            .font(.system(.title3))
                         BangerText("View Leaderboard", size: 18)
                             .foregroundStyle(.white)
                     }

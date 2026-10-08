@@ -130,7 +130,7 @@ struct OnboardingLocationSlide: View {
                     HStack(spacing: 8) {
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundStyle(Color.success)
-                            .font(.system(size: 24))
+                            .font(.system(.title2))
                         BangerText("Always allowed!", size: 20)
                             .foregroundStyle(Color.success)
                     }
@@ -245,7 +245,7 @@ struct OnboardingNotificationSlide: View {
                     HStack(spacing: 8) {
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundStyle(Color.success)
-                            .font(.system(size: 24))
+                            .font(.system(.title2))
                         BangerText("Notifications enabled!", size: 20)
                             .foregroundStyle(Color.success)
                     }

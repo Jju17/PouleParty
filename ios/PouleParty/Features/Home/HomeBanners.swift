@@ -77,7 +77,7 @@ struct RejoinGameBanner: View {
 
             Button(action: onDismiss) {
                 Image(systemName: "xmark")
-                    .font(.system(size: 12, weight: .bold))
+                    .font(.system(.caption, weight: .bold))
                     .foregroundStyle(.white)
                     .padding(8)
             }

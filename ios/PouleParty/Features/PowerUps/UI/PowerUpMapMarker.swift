@@ -18,7 +18,7 @@ struct PowerUpMapMarker: View {
     var body: some View {
         Button(action: onTap) {
             Image(systemName: powerUp.type.iconName)
-                .font(.system(size: 12))
+                .font(.system(.caption))
                 .foregroundStyle(.white)
                 .padding(5)
                 .background(powerUp.type.color)
@@ -32,7 +32,7 @@ struct PowerUpMapMarker: View {
 struct DecoyMapMarker: View {
     var body: some View {
         Text("🐔")
-            .font(.system(size: 28))
+            .font(.system(.title))
             .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
     }
 }
@@ -53,7 +53,7 @@ struct ChickenMapMarker: View {
                 .fill(Color.powerupRadar.opacity(0.25))
                 .frame(width: 36, height: 36)
             Text("🐔")
-                .font(.system(size: 26))
+                .font(.system(.title))
         }
         .shadow(color: Color.powerupRadar.opacity(0.6), radius: 6)
         .onAppear {

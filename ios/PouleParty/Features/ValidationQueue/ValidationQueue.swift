@@ -265,7 +265,7 @@ private struct SubmissionRow: View {
                         ZStack {
                             Color.black
                             Image(systemName: "play.rectangle.fill")
-                                .font(.system(size: 28))
+                                .font(.system(.title))
                                 .foregroundStyle(.white)
                         }
                     } else {
@@ -464,7 +464,7 @@ private struct VideoPlayerSection: View {
             if let errorMessage {
                 VStack(spacing: 12) {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 32))
+                        .font(.system(.title))
                         .foregroundStyle(Color.CROrange)
                     Text(errorMessage)
                         .font(.subheadline)

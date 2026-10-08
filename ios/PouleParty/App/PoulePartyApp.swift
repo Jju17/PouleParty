@@ -25,6 +25,7 @@ struct PoulePartyApp: App {
     var body: some Scene {
         WindowGroup {
             AppView(store: store)
+                .dynamicTypeSize(...DynamicTypeSize.accessibility2)
         }
     }
 }

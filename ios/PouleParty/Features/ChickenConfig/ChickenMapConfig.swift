@@ -252,7 +252,7 @@ struct ChickenMapConfigView: View {
                                     .shadow(color: Color.CROrange.opacity(0.5), radius: 6, y: 2)
                             )
                         Image(systemName: "triangle.fill")
-                            .font(.system(size: 8))
+                            .font(.system(.caption2))
                             .foregroundStyle(Color.CROrange)
                             .rotationEffect(.degrees(180))
                     }
@@ -279,7 +279,7 @@ struct ChickenMapConfigView: View {
                                     .shadow(color: Color.zoneGreen.opacity(0.5), radius: 6, y: 2)
                             )
                         Image(systemName: "triangle.fill")
-                            .font(.system(size: 8))
+                            .font(.system(.caption2))
                             .foregroundStyle(Color.zoneGreen)
                             .rotationEffect(.degrees(180))
                     }
@@ -384,11 +384,11 @@ struct ChickenMapConfigView: View {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(result.title)
                                         .foregroundColor(.primary)
-                                        .font(.system(size: 14, weight: .medium))
+                                        .font(.system(.subheadline, weight: .medium))
                                     if !result.subtitle.isEmpty {
                                         Text(result.subtitle)
                                             .foregroundColor(.secondary)
-                                            .font(.system(size: 12))
+                                            .font(.system(.caption))
                                     }
                                 }
                                 .padding(.horizontal, 16)

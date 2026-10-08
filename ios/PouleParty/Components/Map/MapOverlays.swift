@@ -17,7 +17,7 @@ import SwiftUI
 struct ZoneWarningOverlay: View {
     var body: some View {
         Text("Return to the zone!")
-            .font(.system(size: 16, weight: .bold))
+            .font(.system(.callout, weight: .bold))
             .foregroundStyle(.white)
             .padding(.horizontal, 24)
             .padding(.vertical, 12)
@@ -31,7 +31,7 @@ struct ZoneWarningOverlay: View {
 struct OutOfZonePenaltyOverlay: View {
     var body: some View {
         Text("⚠️ Out of zone: losing points")
-            .font(.system(size: 13, weight: .semibold))
+            .font(.system(.footnote, weight: .semibold))
             .foregroundStyle(.white)
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
@@ -79,7 +79,7 @@ struct WinnerNotificationOverlay: View {
     var body: some View {
         if let notification {
             Text(notification)
-                .font(.system(size: 14, weight: .semibold))
+                .font(.system(.subheadline, weight: .semibold))
                 .foregroundStyle(.white)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)

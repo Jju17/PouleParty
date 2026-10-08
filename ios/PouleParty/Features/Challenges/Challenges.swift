@@ -551,7 +551,7 @@ struct ChallengesView: View {
             store.send(.view(.tabChanged(tab)))
         } label: {
             Text(title)
-                .font(.system(size: 14, weight: .bold))
+                .font(.system(.subheadline, weight: .bold))
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 10)
                 .foregroundStyle(selected ? Color.white : Color.onSurface)
@@ -666,7 +666,7 @@ private struct ChallengeRow: View {
             Spacer()
             Button(action: buttonAction) {
                 Text(buttonLabel)
-                    .font(.system(size: 13, weight: .bold))
+                    .font(.system(.footnote, weight: .bold))
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
                     .background(Capsule().fill(buttonFill))
@@ -719,7 +719,7 @@ private struct LeaderboardRow: View {
                     .font(.system(size: emphasized ? 28 : 18))
             } else {
                 Text("\(rank)")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(.subheadline, weight: .semibold))
                     .foregroundStyle(.secondary)
                     .frame(minWidth: 24)
             }

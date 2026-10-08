@@ -14,7 +14,7 @@ struct PowerUpNotificationBanner: View {
     var body: some View {
         if let notification {
             Text(notification)
-                .font(.system(size: 14, weight: .semibold))
+                .font(.system(.subheadline, weight: .semibold))
                 .foregroundStyle(.white)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)

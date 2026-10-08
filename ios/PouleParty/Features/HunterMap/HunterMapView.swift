@@ -160,11 +160,11 @@ struct ChallengesFabButton: View {
                 Circle()
                     .fill(Color.darkBackground.opacity(0.85))
                 Image(systemName: "trophy.fill")
-                    .font(.system(size: 20, weight: .bold))
+                    .font(.system(.title3, weight: .bold))
                     .foregroundStyle(Color.CROrange)
                 if badgeCount > 0 {
                     Text("\(badgeCount)")
-                        .font(.system(size: 11, weight: .bold))
+                        .font(.system(.caption, weight: .bold))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)

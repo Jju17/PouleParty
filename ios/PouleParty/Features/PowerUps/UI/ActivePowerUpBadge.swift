@@ -59,16 +59,16 @@ struct ActivePowerUpBadge: View {
         } label: {
             HStack(spacing: 6) {
                 Image(systemName: type.iconName)
-                    .font(.system(size: 16))
+                    .font(.system(.callout))
                     .foregroundStyle(.white)
 
                 if isExpanded {
                     VStack(alignment: .leading, spacing: 1) {
                         Text(type.displayName)
-                            .font(.system(size: 11, weight: .bold))
+                            .font(.system(.caption, weight: .bold))
                             .foregroundStyle(.white)
                         Text("\(remaining)s remaining")
-                            .font(.system(size: 10))
+                            .font(.system(.caption2))
                             .foregroundStyle(.white.opacity(0.8))
                     }
                 }

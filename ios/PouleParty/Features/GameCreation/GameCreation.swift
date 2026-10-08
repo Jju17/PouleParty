@@ -605,7 +605,7 @@ struct GameCreationView: View {
                 if let onDismiss {
                     Button(action: onDismiss) {
                         Image(systemName: "xmark")
-                            .font(.system(size: 14, weight: .bold))
+                            .font(.system(.subheadline, weight: .bold))
                             .foregroundStyle(Color.onBackground.opacity(0.6))
                             .padding(10)
                             .background(Color.surface)

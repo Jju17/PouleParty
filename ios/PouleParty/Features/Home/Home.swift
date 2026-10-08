@@ -570,7 +570,7 @@ struct HomeView: View {
                         }
                     } label: {
                         Image(systemName: store.musicMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
-                            .font(.system(size: 20))
+                            .font(.system(.title3))
                             .foregroundColor(Color.onBackground)
                             .padding()
                             .contentTransition(.symbolEffect(.replace))
@@ -584,7 +584,7 @@ struct HomeView: View {
                         store.send(.settingsButtonTapped)
                     } label: {
                         Image(systemName: "gearshape")
-                            .font(.system(size: 20))
+                            .font(.system(.title3))
                             .foregroundColor(Color.onBackground)
                             .padding()
                     }
