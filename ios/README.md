@@ -1,13 +1,14 @@
-# iOS — SwiftUI + TCA
+# iOS: SwiftUI + TCA
 
 PouleParty iOS app built with SwiftUI and The Composable Architecture (TCA).
 
 ## Requirements
 
-- Xcode 16.2+
+- Xcode 26.2+ (Firebase 13)
 - iOS 17.0+ deployment target
 - `GoogleService-Info.plist` in `Firebase/Staging/` and `Firebase/Production/` (gitignored)
-- Mapbox access token in `Info.plist` (`MBXAccessToken`)
+- Mapbox public token in `Config/Secrets.xcconfig` (gitignored): copy `Config/Secrets.xcconfig.example` and fill `MBX_ACCESS_TOKEN`. `Info.plist` reads it as `$(MBX_ACCESS_TOKEN)`.
+- Versions and the deployment target live in `Config/Versions.xcconfig` for every target. Package versions are pinned and `Package.resolved` is committed.
 
 ## Build & run
 
@@ -27,7 +28,7 @@ ios/
 │   ├── App/                    # Entry point, AppDelegate, Constants, ProfanityFilter
 │   ├── Features/               # TCA features (12 reducers, each with State/Action/View)
 │   ├── Models/                 # Game, PowerUp, Registration, Winner, LiveActivityModels
-│   ├── Clients/                # TCA dependencies (ApiClient, LocationClient, AuthClient, etc.)
+│   ├── Clients/                # TCA dependencies (ApiClient, LocationClient, UserClient, etc.)
 │   ├── Components/             # Shared UI + pure game logic (GameTimerLogic, PowerUpSpawnLogic)
 │   ├── Extensions/             # Color+Utils, Font+Utils, GeoPoint+Utils
 │   └── Resources/              # Fonts, audio, Assets.xcassets, Launch Screen
@@ -36,7 +37,8 @@ ios/
 ├── PoulePartyWidgets/          # Live Activities (Lock Screen + Dynamic Island)
 ├── Firebase/                   # GoogleService-Info.plist (Staging/ + Production/)
 ├── Localizable.xcstrings       # Translations (en, fr, nl)
-└── *.gpx                       # Location test files (Brussels, Namur, Lille, etc.)
+├── Config/                     # Versions.xcconfig, Secrets.xcconfig (gitignored)
+└── Simulation/                 # GPX location files for the Simulator (not bundled)
 ```
 
 ## Architecture
@@ -82,7 +84,7 @@ These files have **no dependencies** and must match their Android equivalents ex
 | File | Purpose |
 |---|---|
 | `GameTimerLogic.swift` | Zone checks, countdown, radius updates, drift, winner/power-up detection, seeded random |
-| `PowerUpSpawnLogic.swift` | Reference implementation of deterministic power-up generation. Kept in sync with `functions/src/powerUpSpawn.ts` for cross-platform parity tests — **not called at runtime** since spawning moved server-side in April 2026. |
+| `PowerUpSpawnLogic.swift` | Reference implementation of deterministic power-up generation. Kept in sync with `functions/src/powerUpSpawn.ts` for cross-platform parity tests: **not called at runtime** since spawning moved server-side in April 2026. |
 
 ## Dependencies (SPM)
 
@@ -117,8 +119,8 @@ Computed properties and `findLastUpdate()` are in `Game+Computed.swift`.
 
 ## Fonts
 
-- **Bangers** — always use the `BangerText()` view helper (direct `.font(.custom(...))` causes clipping)
-- **Early GameBoy** — use `.font(.gameboy(size:))`
+- **Bangers**: always use the `BangerText()` view helper (direct `.font(.custom(...))` causes clipping)
+- **Early GameBoy**: use `.font(.gameboy(size:))`
 
 ## Live Activities
 

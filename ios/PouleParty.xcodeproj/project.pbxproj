@@ -503,7 +503,7 @@
 			shellScript = (
 				"# ⚠️ Have to be the last build phase, otherwise Crashlytics won't properly process dSYMs",
 				"",
-				"# Skip in Debug — Crashlytics symbol upload only matters for Release/TestFlight/App Store",
+				"# Skip in Debug: Crashlytics symbol upload only matters for Release/TestFlight/App Store",
 				"# builds. Saves 1-3 s per Debug build (PP-89).",
 				"if [ \"$CONFIGURATION\" = \"Debug\" ]; then exit 0; fi",
 				"",

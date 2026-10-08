@@ -64,7 +64,7 @@
                 <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
             </array>
         </dict>
-        <!-- Firebase Analytics — app launches, screen views -->
+        <!-- Firebase Analytics: app launches, screen views -->
         <dict>
             <key>NSPrivacyCollectedDataType</key>
             <string>NSPrivacyCollectedDataTypeProductInteraction</string>
@@ -77,7 +77,7 @@
                 <string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
             </array>
         </dict>
-        <!-- Firebase Crashlytics — crash reports -->
+        <!-- Firebase Crashlytics: crash reports -->
         <dict>
             <key>NSPrivacyCollectedDataType</key>
             <string>NSPrivacyCollectedDataTypeCrashData</string>
@@ -93,7 +93,7 @@
     </array>
     <key>NSPrivacyAccessedAPITypes</key>
     <array>
-        <!-- @Shared(.appStorage) + AppConstants prefs — same-app storage only -->
+        <!-- @Shared(.appStorage) + AppConstants prefs: same-app storage only -->
         <dict>
             <key>NSPrivacyAccessedAPIType</key>
             <string>NSPrivacyAccessedAPICategoryUserDefaults</string>
