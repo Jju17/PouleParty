@@ -1,6 +1,5 @@
 package dev.rahier.pouleparty.ui
 
-import android.location.Location
 import androidx.lifecycle.SavedStateHandle
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
@@ -17,8 +16,6 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.mockkStatic
-import io.mockk.unmockkStatic
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -28,11 +25,6 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import kotlin.math.atan2
-import kotlin.math.cos
-import kotlin.math.pow
-import kotlin.math.sin
-import kotlin.math.sqrt
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -60,28 +52,11 @@ class GameCreationViewModelTest {
         every { mockUser.uid } returns "user-abc"
         every { auth.currentUser } returns mockUser
 
-        // Mock `Location.distanceBetween` with a JVM-side Haversine so
-        // PP-12 `isFinalZoneConfigured` (≥ 100 m) is computable without
-        // an Android runtime. Mirrors `ChickenMapConfigViewModelTest`.
-        mockkStatic(Location::class)
-        every { Location.distanceBetween(any(), any(), any(), any(), any()) } answers {
-            val lat1 = Math.toRadians(arg<Double>(0))
-            val lon1 = Math.toRadians(arg<Double>(1))
-            val lat2 = Math.toRadians(arg<Double>(2))
-            val lon2 = Math.toRadians(arg<Double>(3))
-            val results = arg<FloatArray>(4)
-            val dlat = lat2 - lat1
-            val dlon = lon2 - lon1
-            val a = sin(dlat / 2).pow(2) + cos(lat1) * cos(lat2) * sin(dlon / 2).pow(2)
-            val c = 2 * atan2(sqrt(a), sqrt(1 - a))
-            results[0] = (6_371_000.0 * c).toFloat()
-        }
     }
 
     @After
     fun tearDown() {
         Dispatchers.resetMain()
-        unmockkStatic(Location::class)
     }
 
     private fun createViewModel(

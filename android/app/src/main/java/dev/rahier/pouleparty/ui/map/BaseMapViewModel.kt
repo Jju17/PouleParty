@@ -1,6 +1,6 @@
 package dev.rahier.pouleparty.ui.map
 
-import android.location.Location
+import dev.rahier.pouleparty.model.distanceMeters
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -132,13 +132,11 @@ abstract class BaseMapViewModel(
             return
         }
         for (powerUp in currentAvailablePowerUps) {
-            val results = FloatArray(1)
-            Location.distanceBetween(
+            val distance = distanceMeters(
                 userLoc.latitude(), userLoc.longitude(),
                 powerUp.location.latitude, powerUp.location.longitude,
-                results
             )
-            if (results[0] > AppConstants.POWER_UP_COLLECTION_RADIUS_METERS) continue
+            if (distance > AppConstants.POWER_UP_COLLECTION_RADIUS_METERS) continue
             // Atomic check-and-claim: `add` returns false if the id was already
             // present, which means another tick is already collecting this same
             // power-up. The previous "if-in then add" pattern was racy across

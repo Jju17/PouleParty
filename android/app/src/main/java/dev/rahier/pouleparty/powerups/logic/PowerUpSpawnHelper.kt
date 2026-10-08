@@ -36,14 +36,14 @@ fun generatePowerUps(
     if (powerUpTypes.isEmpty()) return emptyList()
 
     val result = mutableListOf<PowerUp>()
+    // Mirrors the server's JavaScript arithmetic: bitwise operators work on
+    // 32-bit integers, products on doubles.
     val baseSeed = driftSeed xor (batchIndex * 7919)
 
     for (i in 0 until count) {
-        val itemSeed = abs(baseSeed * 31 + i * 127)
-
-        // Position within the zone circle using polar coordinates (Long to match iOS Int64)
-        val angleSeed = abs(itemSeed.toLong() * 53 xor (i.toLong() * 97))
-        val distSeed = abs(itemSeed.toLong() * 79 xor (i.toLong() * 151))
+        val itemSeed = abs(baseSeed.toLong() * 31 + i * 127L)
+        val angleSeed = abs(((itemSeed * 53).toInt() xor (i * 97)).toLong())
+        val distSeed = abs(((itemSeed * 79).toInt() xor (i * 151)).toLong())
 
         val angle = (angleSeed % 36000) / 36000.0 * 2.0 * PI
         val distFraction = (distSeed % 10000) / 10000.0
@@ -60,11 +60,11 @@ fun generatePowerUps(
         val lng = center.longitude() + dLng
 
         // Alternate between hunter and chicken power-ups
-        val typeIndex = (itemSeed % powerUpTypes.size)
+        val typeIndex = (itemSeed % powerUpTypes.size).toInt()
         val type = powerUpTypes[typeIndex]
 
         // Deterministic ID based on seed for idempotency
-        val id = "pu-${batchIndex}-${i}-${abs(itemSeed)}"
+        val id = "pu-${batchIndex}-${i}-$itemSeed"
 
         result.add(
             PowerUp(

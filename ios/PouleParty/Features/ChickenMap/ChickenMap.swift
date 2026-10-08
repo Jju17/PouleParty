@@ -281,10 +281,7 @@ struct ChickenMapFeature {
                 // transactions while the first is still in flight.
                 guard !state.powerUps.collectingIds.contains(powerUp.id) else { return .none }
                 state.powerUps.collectingIds.insert(powerUp.id)
-                let distance: Double? = state.userLocation.map { userLoc in
-                    CLLocation(latitude: userLoc.latitude, longitude: userLoc.longitude)
-                        .distance(from: CLLocation(latitude: powerUp.coordinate.latitude, longitude: powerUp.coordinate.longitude))
-                }
+                let distance: Double? = state.userLocation.map { distanceMeters($0, powerUp.coordinate) }
                 let distanceLog = distance.map { String(format: "%.1fm", $0) } ?? "unknown"
                 logger.info("Collecting power-up id=\(powerUp.id) type=\(powerUp.type.rawValue) distance=\(distanceLog) chickenId=\(userId)")
                 return .run { [analyticsClient] send in

@@ -1,6 +1,5 @@
 package dev.rahier.pouleparty.model
 
-import android.location.Location
 import com.mapbox.geojson.Point
 import kotlin.random.Random
 
@@ -55,13 +54,7 @@ fun computeZoneRadius(
         if (finalCenter == null) {
             ZONE_MINIMUM_INITIAL_RADIUS_METERS
         } else {
-            val results = FloatArray(1)
-            Location.distanceBetween(
-                start.latitude(), start.longitude(),
-                finalCenter.latitude(), finalCenter.longitude(),
-                results,
-            )
-            val distance = results[0].toDouble()
+            val distance = distanceMeters(start, finalCenter)
             maxOf(
                 distance * 1.5,
                 distance + ZONE_FINAL_RADIUS_METERS + ZONE_INTERIOR_MARGIN_METERS,
@@ -99,21 +92,14 @@ fun pickInitialZoneCenter(
     radius: Double,
     seed: Int,
 ): Point {
-    val results = FloatArray(1)
-    android.location.Location.distanceBetween(
-        startPin.latitude(), startPin.longitude(),
-        finalCenter.latitude(), finalCenter.longitude(),
-        results,
-    )
-    val distance = results[0].toDouble()
+    val distance = distanceMeters(startPin, finalCenter)
     val midLat = (startPin.latitude() + finalCenter.latitude()) / 2.0
     val midLng = (startPin.longitude() + finalCenter.longitude()) / 2.0
     val maxOffset = maxOf(0.0, radius - distance / 2.0)
 
-    var s = seed.toLong()
-    if (s == 0L) s = 1L
-    val r1 = splitmix64Next(s).also { s = it }
-    val r2 = splitmix64Next(s).also { s = it }
+    val random = SplitMix64(if (seed == 0) 1L else seed.toLong())
+    val r1 = random.next()
+    val r2 = random.next()
     val u1 = (r1.toULong().toDouble()) / ULong.MAX_VALUE.toDouble()
     val u2 = (r2.toULong().toDouble()) / ULong.MAX_VALUE.toDouble()
     val angle = u1 * 2.0 * Math.PI
@@ -129,9 +115,13 @@ fun pickInitialZoneCenter(
     return Point.fromLngLat(midLng + dLng, midLat + dLat)
 }
 
-private fun splitmix64Next(state: Long): Long {
-    var z = state + -7046029254386353131L // 0x9E3779B97F4A7C15
-    z = (z xor (z ushr 30)) * -4658895280553007687L // 0xBF58476D1CE4E5B9
-    z = (z xor (z ushr 27)) * -7723592293110705685L // 0x94D049BB133111EB
-    return z xor (z ushr 31)
+/** Standard splitmix64: advance the state, then mix it. Same stream as iOS. */
+private class SplitMix64(private var state: Long) {
+    fun next(): Long {
+        state += -7046029254386353131L
+        var z = state
+        z = (z xor (z ushr 30)) * -4658895280553007687L
+        z = (z xor (z ushr 27)) * -7723592293110705685L
+        return z xor (z ushr 31)
+    }
 }

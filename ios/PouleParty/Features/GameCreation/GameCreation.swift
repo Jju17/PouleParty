@@ -171,15 +171,10 @@ struct GameCreationFeature {
         /// and on the recap fallback when stayInTheZone.
         var isFinalZoneConfigured: Bool {
             guard let finalCenter = game.zone.finalCenter else { return false }
-            let start = CLLocation(
-                latitude: game.zone.center.latitude,
-                longitude: game.zone.center.longitude
-            )
-            let end = CLLocation(
-                latitude: finalCenter.latitude,
-                longitude: finalCenter.longitude
-            )
-            return start.distance(from: end) >= 100
+            return distanceMeters(
+                game.zone.center.latitude, game.zone.center.longitude,
+                finalCenter.latitude, finalCenter.longitude
+            ) >= 100
         }
 
         /// Combined gate kept for backwards compatibility with the recap

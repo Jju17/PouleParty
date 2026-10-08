@@ -1,6 +1,6 @@
 package dev.rahier.pouleparty.ui.gamelogic
 
-import android.location.Location
+import dev.rahier.pouleparty.model.distanceMeters
 import com.mapbox.geojson.Point
 import dev.rahier.pouleparty.AppConstants
 import dev.rahier.pouleparty.model.GameMod
@@ -55,13 +55,7 @@ fun checkZoneStatus(
     zoneCenter: Point,
     zoneRadius: Double
 ): ZoneCheckResult {
-    val results = FloatArray(1)
-    Location.distanceBetween(
-        userLocation.latitude(), userLocation.longitude(),
-        zoneCenter.latitude(), zoneCenter.longitude(),
-        results
-    )
-    val distance = results[0]
+    val distance = distanceMeters(userLocation, zoneCenter).toFloat()
     return ZoneCheckResult(isOutsideZone = distance > zoneRadius, distanceToCenter = distance)
 }
 
@@ -117,7 +111,10 @@ fun evaluateCountdown(
 
 // ── Game over by time ────────────────────────────────
 
-fun checkGameOverByTime(endDate: Date): Boolean = Date().after(endDate)
+/** Upper bound on shrink walks, shared with iOS and the server. */
+const val MAX_SHRINK_ITERATIONS = 10_000
+
+fun checkGameOverByTime(endDate: Date, now: Date = Date()): Boolean = !now.before(endDate)
 
 // ── Center Interpolation ─────────────────────────────
 
@@ -410,7 +407,9 @@ fun selectActiveCircle(
 
     var index = 0
     var lastUpdate = hunterStartDate
-    while (Date(lastUpdate.time + intervalMs).before(now) && index < lastIndex) {
+    var iterations = 0
+    while (Date(lastUpdate.time + intervalMs).before(now) && index < lastIndex && iterations < MAX_SHRINK_ITERATIONS) {
+        iterations += 1
         lastUpdate = Date(lastUpdate.time + intervalMs)
         val isFrozen = freezeStart != null
             && !lastUpdate.before(freezeStart) && lastUpdate.before(freezeEnd)
@@ -495,7 +494,7 @@ fun computeDebugShiftedCircles(game: dev.rahier.pouleparty.model.Game): List<Deb
 
     val initialCenter = game.initialLocation
     val finalCenter = game.finalLocation
-    val driftSeed = game.zone.driftSeed
+    val driftSeed = game.zone.driftSeed.toInt()
     val declinePerUpdate = game.zone.shrinkMetersPerUpdate
     val intervalSeconds = game.zone.shrinkIntervalMinutes * 60.0
     val duration = (game.endDate.time - game.hunterStartDate.time) / 1000.0
@@ -551,12 +550,12 @@ fun detectNewWinners(
  */
 fun applyJammerNoise(
     coordinate: com.mapbox.geojson.Point,
-    driftSeed: Int,
+    driftSeed: Long,
     nowMillis: Long = System.currentTimeMillis(),
     jammerNoiseDegrees: Double = dev.rahier.pouleparty.AppConstants.JAMMER_NOISE_DEGREES
 ): com.mapbox.geojson.Point {
     val bucket = nowMillis / 1000L
-    val seed = driftSeed.toLong() xor bucket
+    val seed = driftSeed xor bucket
     val halfNoise = jammerNoiseDegrees / 2.0
     val latNoise = (seededRandom(seed, 0) * 2.0 - 1.0) * halfNoise
     val lonNoise = (seededRandom(seed, 1) * 2.0 - 1.0) * halfNoise

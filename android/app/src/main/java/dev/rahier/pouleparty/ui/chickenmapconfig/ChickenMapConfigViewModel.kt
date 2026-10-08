@@ -1,8 +1,8 @@
 package dev.rahier.pouleparty.ui.chickenmapconfig
 
 import android.content.Context
+import dev.rahier.pouleparty.model.distanceMeters
 import android.location.Geocoder
-import android.location.Location
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mapbox.geojson.Point
@@ -94,13 +94,7 @@ class ChickenMapConfigViewModel @Inject constructor(
         // Validate final zone against new radius
         val state = _uiState.value
         state.finalMarkerPosition?.let { finalPos ->
-            val results = FloatArray(1)
-            Location.distanceBetween(
-                state.markerPosition.latitude(), state.markerPosition.longitude(),
-                finalPos.latitude(), finalPos.longitude(),
-                results
-            )
-            if (results[0] > radius) {
+            if (distanceMeters(state.markerPosition, finalPos) > radius) {
                 _uiState.update { it.copy(finalMarkerPosition = null) }
             }
         }
@@ -131,13 +125,7 @@ class ChickenMapConfigViewModel @Inject constructor(
                 // If the new start is < 100 m from the existing final,
                 // clear final so PP-12 forces the user to re-place.
                 _uiState.value.finalMarkerPosition?.let { finalPos ->
-                    val results = FloatArray(1)
-                    Location.distanceBetween(
-                        point.latitude(), point.longitude(),
-                        finalPos.latitude(), finalPos.longitude(),
-                        results
-                    )
-                    if (results[0] < 100f) {
+                    if (distanceMeters(point, finalPos) < 100.0) {
                         _uiState.update { it.copy(finalMarkerPosition = null) }
                     }
                 }

@@ -51,9 +51,7 @@ func computeZoneRadius(
         return [500.0, 1000.0, 2000.0].contains(hint) ? hint : 1000
     case .stayInTheZone:
         guard let finalCenter else { return zoneMinimumInitialRadiusMeters }
-        let startLoc = CLLocation(latitude: start.latitude, longitude: start.longitude)
-        let finalLoc = CLLocation(latitude: finalCenter.latitude, longitude: finalCenter.longitude)
-        let distance = startLoc.distance(from: finalLoc)
+        let distance = distanceMeters(start, finalCenter)
         let candidate1 = distance * 1.5
         let candidate2 = distance + zoneFinalRadiusMeters + zoneInteriorMarginMeters
         return max(candidate1, candidate2, zoneMinimumInitialRadiusMeters)
@@ -67,7 +65,7 @@ func computeZoneRadius(
 func generateDriftSeed() -> Int {
     var seed = 0
     while seed == 0 {
-        seed = Int.random(in: 1...Int.max)
+        seed = Int.random(in: 1...Int(Int32.max))
     }
     return seed
 }
@@ -98,9 +96,7 @@ func pickInitialZoneCenter(
     radius: Double,
     seed: Int
 ) -> CLLocationCoordinate2D {
-    let startLoc = CLLocation(latitude: startPin.latitude, longitude: startPin.longitude)
-    let finalLoc = CLLocation(latitude: finalCenter.latitude, longitude: finalCenter.longitude)
-    let distance = startLoc.distance(from: finalLoc)
+    let distance = distanceMeters(startPin, finalCenter)
     let midLat = (startPin.latitude + finalCenter.latitude) / 2
     let midLng = (startPin.longitude + finalCenter.longitude) / 2
 

@@ -31,14 +31,14 @@ func generatePowerUps(
     guard !powerUpTypes.isEmpty else { return [] }
 
     var result: [PowerUp] = []
-    let baseSeed = driftSeed ^ (batchIndex * 7919)
+    // Mirrors the server's JavaScript arithmetic: bitwise operators work on
+    // 32-bit integers, products on doubles.
+    let baseSeed = Int32(truncatingIfNeeded: driftSeed) ^ Int32(truncatingIfNeeded: batchIndex &* 7919)
 
     for i in 0..<count {
-        let itemSeed = abs(baseSeed * 31 + i * 127)
-
-        // Position within the zone circle using polar coordinates
-        let angleSeed = abs(Int64(itemSeed) * 53 ^ (Int64(i) * 97))
-        let distSeed = abs(Int64(itemSeed) * 79 ^ (Int64(i) * 151))
+        let itemSeed = abs(Int64(baseSeed) * 31 + Int64(i) * 127)
+        let angleSeed = abs(Int64(Int32(truncatingIfNeeded: itemSeed * 53) ^ Int32(truncatingIfNeeded: i * 97)))
+        let distSeed = abs(Int64(Int32(truncatingIfNeeded: itemSeed * 79) ^ Int32(truncatingIfNeeded: i * 151)))
 
         let angle = Double(angleSeed % 36000) / 36000.0 * 2.0 * .pi
         let distFraction = Double(distSeed % 10000) / 10000.0
@@ -55,11 +55,11 @@ func generatePowerUps(
         let lng = center.longitude + dLng
 
         // Alternate between power-up types
-        let typeIndex = itemSeed % powerUpTypes.count
+        let typeIndex = Int(itemSeed % Int64(powerUpTypes.count))
         let type = powerUpTypes[typeIndex]
 
         // Deterministic ID based on seed for idempotency
-        let id = "pu-\(batchIndex)-\(i)-\(abs(itemSeed))"
+        let id = "pu-\(batchIndex)-\(i)-\(itemSeed)"
 
         result.append(
             PowerUp(

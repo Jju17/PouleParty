@@ -46,8 +46,7 @@ func checkZoneStatus(
     zoneCenter: CLLocationCoordinate2D,
     zoneRadius: CLLocationDistance
 ) -> ZoneCheckResult {
-    let distance = CLLocation(latitude: userLocation.latitude, longitude: userLocation.longitude)
-        .distance(from: CLLocation(latitude: zoneCenter.latitude, longitude: zoneCenter.longitude))
+    let distance = distanceMeters(userLocation, zoneCenter)
     return ZoneCheckResult(isOutsideZone: distance > zoneRadius, distanceToCenter: distance)
 }
 
@@ -101,8 +100,8 @@ func evaluateCountdown(
 // MARK: - Game Over
 
 /// Returns true if the game has ended by time.
-func checkGameOverByTime(endDate: Date) -> Bool {
-    Date.now >= endDate
+func checkGameOverByTime(endDate: Date, now: Date = .now) -> Bool {
+    now >= endDate
 }
 
 // MARK: - Center Interpolation
@@ -536,12 +535,7 @@ func findNearbyPowerUps(
     collectionRadius: Double = AppConstants.powerUpCollectionRadiusMeters
 ) -> [PowerUp] {
     guard let userLoc = userLocation else { return [] }
-    let userCLLocation = CLLocation(latitude: userLoc.latitude, longitude: userLoc.longitude)
-    return availablePowerUps.filter { powerUp in
-        userCLLocation
-            .distance(from: CLLocation(latitude: powerUp.coordinate.latitude, longitude: powerUp.coordinate.longitude))
-            <= collectionRadius
-    }
+    return availablePowerUps.filter { distanceMeters(userLoc, $0.coordinate) <= collectionRadius }
 }
 
 // MARK: - Live Activity Update

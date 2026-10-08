@@ -1,15 +1,12 @@
 package dev.rahier.pouleparty.ui
 
 import android.content.Context
-import android.location.Location
 import com.mapbox.geojson.Point
 import dev.rahier.pouleparty.data.LocationRepository
 import dev.rahier.pouleparty.ui.chickenmapconfig.ChickenMapConfigViewModel
 import dev.rahier.pouleparty.ui.chickenmapconfig.MapConfigPinMode
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.mockkStatic
-import io.mockk.unmockkStatic
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -42,26 +39,11 @@ class ChickenMapConfigViewModelTest {
         context = mockk(relaxed = true)
         every { locationRepository.hasFineLocationPermission() } returns false
 
-        // Mock Location.distanceBetween using Haversine formula
-        mockkStatic(Location::class)
-        every { Location.distanceBetween(any(), any(), any(), any(), any()) } answers {
-            val lat1 = Math.toRadians(arg<Double>(0))
-            val lon1 = Math.toRadians(arg<Double>(1))
-            val lat2 = Math.toRadians(arg<Double>(2))
-            val lon2 = Math.toRadians(arg<Double>(3))
-            val results = arg<FloatArray>(4)
-            val dlat = lat2 - lat1
-            val dlon = lon2 - lon1
-            val a = sin(dlat / 2).pow(2) + cos(lat1) * cos(lat2) * sin(dlon / 2).pow(2)
-            val c = 2 * atan2(sqrt(a), sqrt(1 - a))
-            results[0] = (6371000.0 * c).toFloat()
-        }
     }
 
     @After
     fun tearDown() {
         Dispatchers.resetMain()
-        unmockkStatic(Location::class)
     }
 
     private fun createViewModel(): ChickenMapConfigViewModel {

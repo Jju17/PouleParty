@@ -114,9 +114,7 @@ struct ChickenMapConfigFeature {
                     // the existing final pin falls below 100 m, clear it
                     // so they're forced to re-place it on PP-12.
                     if let finalCoord = state.game.finalLocation {
-                        let newStart = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
-                        let finalLoc = CLLocation(latitude: finalCoord.latitude, longitude: finalCoord.longitude)
-                        if newStart.distance(from: finalLoc) < 100 {
+                        if distanceMeters(coordinate, finalCoord) < 100 {
                             state.$game.withLock { $0.finalLocation = nil }
                             state.finalMarker = nil
                         }
@@ -128,9 +126,7 @@ struct ChickenMapConfigFeature {
                 self.updateMapComponents(state: &state)
                 // Validate final zone against new radius
                 if let finalCoord = state.game.finalLocation {
-                    let start = CLLocation(latitude: state.game.initialLocation.latitude, longitude: state.game.initialLocation.longitude)
-                    let finalLoc = CLLocation(latitude: finalCoord.latitude, longitude: finalCoord.longitude)
-                    if start.distance(from: finalLoc) > radius {
+                    if distanceMeters(state.game.initialLocation, finalCoord) > radius {
                         state.$game.withLock { $0.finalLocation = nil }
                         state.finalMarker = nil
                     }
