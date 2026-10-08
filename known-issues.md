@@ -7,7 +7,7 @@ The living list of what is still open. Close an item by deleting it in the commi
 - **App Check is enforced by default** on every callable (`ENFORCE_APP_CHECK=true`). Check the App Check metrics for both apps and the web site first; set the parameter to false in `functions/.env.<project>` only as a temporary escape hatch.
 - **Rotate the Mapbox public token**: it was committed in Android `strings.xml` and iOS `Info.plist`. Restrict the new token to the app identifiers.
 - **Run `infra/apply.sh`** on staging and production (backups, proof lifecycle, secrets check).
-- **First CI run**: confirm the macOS runner's Xcode can build the project and add the `MAPBOX_DOWNLOADS_TOKEN` repository secret for Android.
+- **First CI run**: confirm the macOS runner's Xcode can build the project.
 
 ## Open from the October 2026 review
 
@@ -39,7 +39,7 @@ Remove once a minimum app version forces everyone past the October 2026 builds.
 
 ## Tooling
 
-- Android Mapbox SDK stays on 11.20.2: newer versions need the Mapbox downloads token, not available on this machine. Composables mixing map and UI content suppress `COMPOSE_APPLIER_CALL_MISMATCH` until then.
+- Android Mapbox SDK stays on 11.20.2, which downloads without a token. Newer versions need a secret token (`sk.`, `DOWNLOADS:READ` scope) as `MAPBOX_DOWNLOADS_TOKEN` in `~/.gradle/gradle.properties` and as a GitHub secret; a public `pk.` token gets a 403. Composables mixing map and UI content suppress `COMPOSE_APPLIER_CALL_MISMATCH` until then.
 - Gradle 9.8.1 prints a deprecation (`Configuration.setVisible`) that comes from AGP 9.4.1 itself.
 - Android `targetSdk` is 36, the Play requirement. Moving to 37 needs a device test pass for the new behaviour changes.
 - Web and functions lint with oxlint: TypeScript 7 no longer exposes the compiler API that typescript-eslint needs.
