@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.gamecreation.steps
 
+import dev.rahier.pouleparty.ui.theme.AccentText
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -59,7 +60,7 @@ fun FinalZoneSetupStep(
                 Text(
                     text = stringResource(R.string.set_start_and_final_zone),
                     style = gameboyStyle(8),
-                    color = CROrange,
+                    color = AccentText,
                     textAlign = TextAlign.Center
                 )
             }

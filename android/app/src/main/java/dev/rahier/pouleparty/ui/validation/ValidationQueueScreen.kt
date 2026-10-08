@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.validation
 
+import dev.rahier.pouleparty.ui.theme.AccentText
 import androidx.core.net.toUri
 import dev.rahier.pouleparty.model.SubmissionMediaType
 import dev.rahier.pouleparty.ui.common.teamNameOrDefault
@@ -235,7 +236,7 @@ private fun SubmissionRow(
                 Text(
                     text = stringResource(R.string.challenge_points_format, challengePoints),
                     fontSize = 12.sp,
-                    color = CROrange,
+                    color = AccentText,
                     fontWeight = FontWeight.Bold,
                 )
             }
@@ -294,7 +295,7 @@ private fun SubmissionDetailDialog(
                     Spacer(Modifier.height(4.dp))
                     Text(
                         text = stringResource(R.string.challenge_points_format, challengePoints),
-                        color = CROrange,
+                        color = AccentText,
                         fontWeight = FontWeight.Bold,
                     )
                 }

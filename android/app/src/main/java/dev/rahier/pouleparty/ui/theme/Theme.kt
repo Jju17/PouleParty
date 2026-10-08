@@ -50,6 +50,10 @@ val GradientFree = Brush.linearGradient(listOf(PlanFreeStart, PlanFreeEnd))
 val GradientDeposit = Brush.linearGradient(listOf(PlanDepositStart, PlanDepositEnd))
 val GradientBackgroundWarmth = Brush.radialGradient(listOf(CRBeige, CRBeigeWarm))
 
+/** Orange for text: the brand orange fails AA on beige, so light mode uses a darker shade (5.2:1). */
+val AccentText: Color
+    @Composable get() = if (isSystemInDarkTheme()) CROrange else CROrangeText
+
 @Composable
 fun PoulePartyTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),

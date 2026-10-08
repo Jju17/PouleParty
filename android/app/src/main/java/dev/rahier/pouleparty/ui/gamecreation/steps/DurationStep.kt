@@ -64,7 +64,7 @@ fun DurationStep(
                 Text(
                     text = label,
                     style = bangerStyle(24),
-                    color = if (isSelected) Color.White else MaterialTheme.colorScheme.onBackground
+                    color = if (isSelected) Color.Black else MaterialTheme.colorScheme.onBackground
                 )
             }
         }

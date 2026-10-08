@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.gamecreation
 
+import dev.rahier.pouleparty.ui.theme.AccentText
 import java.util.Date
 import dev.rahier.pouleparty.ui.common.currentLocale
 import dev.rahier.pouleparty.util.formatTime
@@ -133,7 +134,7 @@ fun GameCreationScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(4.dp),
-                    color = CROrange,
+                    color = AccentText,
                     trackColor = MaterialTheme.colorScheme.surfaceVariant,
                     drawStopIndicator = {},
                 )
@@ -327,7 +328,7 @@ private fun BottomBar(
             ) {
                 Text(
                     stringResource(R.string.start_game),
-                    color = Color.White.copy(alpha = if (state.isZoneConfigured) 1f else 0.5f),
+                    color = Color.Black.copy(alpha = if (state.isZoneConfigured) 1f else 0.5f),
                     style = bangerStyle(22)
                 )
             }
@@ -348,7 +349,7 @@ private fun BottomBar(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         stringResource(R.string.next),
-                        color = Color.White.copy(alpha = if (canProceed) 1f else 0.5f),
+                        color = Color.Black.copy(alpha = if (canProceed) 1f else 0.5f),
                         style = bangerStyle(22)
                     )
                     Spacer(Modifier.width(8.dp))

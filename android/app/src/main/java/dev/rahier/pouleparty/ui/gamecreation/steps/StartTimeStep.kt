@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.gamecreation.steps
 
+import dev.rahier.pouleparty.ui.theme.AccentText
 import dev.rahier.pouleparty.ui.common.currentLocale
 import dev.rahier.pouleparty.util.formatDateTime
 import androidx.compose.foundation.background
@@ -79,7 +80,7 @@ fun StartTimeStep(
             Text(
                 text = formatDateTime(startDate, locale),
                 style = bangerStyle(28),
-                color = CROrange,
+                color = AccentText,
                 textAlign = TextAlign.Center
             )
         }

@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.challenges
 
+import dev.rahier.pouleparty.ui.theme.AccentText
 import dev.rahier.pouleparty.ui.theme.PodiumBronze
 import dev.rahier.pouleparty.ui.theme.PodiumSilver
 import dev.rahier.pouleparty.ui.theme.PodiumGold
@@ -411,7 +412,7 @@ private fun ChallengeRow(
                     Text(
                         text = "#${challenge.number}",
                         style = bangerStyle(18),
-                        color = CROrange,
+                        color = AccentText,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(end = 6.dp),
                     )
@@ -435,7 +436,7 @@ private fun ChallengeRow(
             Text(
                 text = stringResource(R.string.challenge_points_format, challenge.points),
                 style = gameboyStyle(10),
-                color = CROrange
+                color = AccentText
             )
         }
         Spacer(Modifier.size(12.dp))
@@ -516,7 +517,7 @@ private fun LeaderboardTabContent(
                 Text(
                     text = stringResource(R.string.podium),
                     style = bangerStyle(22),
-                    color = CROrange
+                    color = AccentText
                 )
             }
             items(topThree, key = { "top-${it.hunterId}" }) { entry ->

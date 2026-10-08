@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.gamecreation.steps
 
+import dev.rahier.pouleparty.ui.theme.AccentText
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -134,7 +135,7 @@ fun RecapStep(
                         else
                             stringResource(R.string.set_start_zone),
                         style = gameboyStyle(8),
-                        color = CROrange,
+                        color = AccentText,
                         modifier = Modifier.fillMaxWidth(),
                         textAlign = TextAlign.Center
                     )

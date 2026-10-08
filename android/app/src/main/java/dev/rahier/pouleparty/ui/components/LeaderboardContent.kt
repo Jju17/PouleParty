@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.components
 
+import dev.rahier.pouleparty.ui.theme.AccentText
 import dev.rahier.pouleparty.ui.common.teamNameOrDefault
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -55,7 +56,7 @@ fun LeaderboardContent(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         if (podium.isNotEmpty()) {
-            Text(stringResource(R.string.podium), style = bangerStyle(20), color = CROrange)
+            Text(stringResource(R.string.podium), style = bangerStyle(20), color = AccentText)
             podium.forEachIndexed { index, entry ->
                 itemRenderer(index + 1, entry)
             }

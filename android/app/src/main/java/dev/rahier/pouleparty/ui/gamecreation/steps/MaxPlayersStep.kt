@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.gamecreation.steps
 
+import dev.rahier.pouleparty.ui.theme.AccentText
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -79,7 +80,7 @@ fun MaxPlayersStep(
                 inputText = newText.filter { it.isDigit() }.take(3)
             },
             singleLine = true,
-            textStyle = bangerStyle(64).copy(color = CROrange, textAlign = TextAlign.Center),
+            textStyle = bangerStyle(64).copy(color = AccentText, textAlign = TextAlign.Center),
             cursorBrush = androidx.compose.ui.graphics.SolidColor(CROrange),
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Number,

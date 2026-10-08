@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.gamecreation.steps
 
+import dev.rahier.pouleparty.ui.theme.AccentText
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
@@ -28,7 +29,7 @@ fun HeadStartStep(
         Text(
             text = "${headStartMinutes.toInt()} min",
             style = bangerStyle(64),
-            color = CROrange
+            color = AccentText
         )
 
         Slider(

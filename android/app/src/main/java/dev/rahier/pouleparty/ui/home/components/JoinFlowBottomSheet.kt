@@ -1,5 +1,10 @@
 package dev.rahier.pouleparty.ui.home.components
 
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
+import dev.rahier.pouleparty.ui.components.SecondaryButton
+import dev.rahier.pouleparty.ui.components.PrimaryButton
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -132,70 +137,33 @@ private fun CodeEntryContent(
             fontSize = 10.sp,
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
         )
+        val codeError = when (step) {
+            is JoinFlowStep.CodeNotFound -> stringResource(R.string.no_game_found_with_this_code)
+            is JoinFlowStep.GameFull -> stringResource(R.string.party_full)
+            is JoinFlowStep.NetworkError -> stringResource(R.string.network_error_please_try_again)
+            else -> null
+        }
         OutlinedTextField(
             value = state.gameCode,
             onValueChange = onCodeChanged,
             singleLine = true,
+            isError = codeError != null,
+            supportingText = codeError?.let { message -> { FieldError(message) } },
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
             modifier = Modifier.fillMaxWidth(0.7f),
             placeholder = { Text("ABC123") }
         )
-        when (step) {
-            is JoinFlowStep.Validating -> CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-            is JoinFlowStep.CodeNotFound -> Text(
-                stringResource(R.string.no_game_found_with_this_code),
-                fontFamily = GameBoyFont,
-                fontSize = 9.sp,
-                color = MaterialTheme.colorScheme.error
-            )
-            is JoinFlowStep.GameFull -> Text(
-                stringResource(R.string.party_full),
-                fontFamily = GameBoyFont,
-                fontSize = 9.sp,
-                color = MaterialTheme.colorScheme.error
-            )
-            is JoinFlowStep.NetworkError -> Text(
-                stringResource(R.string.network_error_please_try_again),
-                fontFamily = GameBoyFont,
-                fontSize = 9.sp,
-                color = MaterialTheme.colorScheme.error
-            )
-            else -> Spacer(Modifier.height(1.dp))
+        if (step is JoinFlowStep.Validating) CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+        if (step is JoinFlowStep.NetworkError) {
+            SecondaryButton(text = stringResource(R.string.retry), onClick = { onCodeChanged(state.gameCode) })
         }
-        TextButton(
+        PrimaryButton(
+            text = if (gmAvailable) stringResource(R.string.join_as_hunter) else stringResource(R.string.join),
             onClick = onJoinAsHunterTapped,
             enabled = isEnabled,
-            modifier = Modifier
-                .background(
-                    if (isEnabled) GradientFire else SolidColor(Color.Gray.copy(alpha = 0.3f)),
-                    RoundedCornerShape(50)
-                )
-                .padding(horizontal = 24.dp, vertical = 4.dp)
-        ) {
-            Text(
-                if (gmAvailable) stringResource(R.string.join_as_hunter) else stringResource(R.string.join),
-                fontFamily = GameBoyFont,
-                fontSize = 18.sp,
-                color = Color.White.copy(alpha = if (isEnabled) 1f else 0.4f)
-            )
-        }
+        )
         if (gmAvailable) {
-            TextButton(
-                onClick = onJoinAsGameMasterTapped,
-                modifier = Modifier
-                    .background(
-                        SolidColor(MaterialTheme.colorScheme.primary),
-                        RoundedCornerShape(50)
-                    )
-                    .padding(horizontal = 24.dp, vertical = 4.dp)
-            ) {
-                Text(
-                    stringResource(R.string.join_as_game_master),
-                    fontFamily = GameBoyFont,
-                    fontSize = 18.sp,
-                    color = Color.White,
-                )
-            }
+            SecondaryButton(text = stringResource(R.string.join_as_game_master), onClick = onJoinAsGameMasterTapped)
         }
         Spacer(Modifier.height(20.dp))
     }
@@ -235,38 +203,11 @@ private fun ValidationCodeContent(
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
             modifier = Modifier.fillMaxWidth(0.7f),
             placeholder = { Text(stringResource(R.string.validation_code_label)) },
+            isError = error != null,
+            supportingText = error?.let { message -> { FieldError(message) } },
             enabled = !isSubmitting,
         )
-        if (error != null) {
-            Text(
-                error,
-                fontFamily = GameBoyFont,
-                fontSize = 9.sp,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(horizontal = 8.dp),
-            )
-        }
-        TextButton(
-            onClick = onSubmit,
-            enabled = code.trim().isNotEmpty() && !isSubmitting,
-            modifier = Modifier
-                .background(
-                    if (code.trim().isNotEmpty() && !isSubmitting) GradientFire else SolidColor(Color.Gray.copy(alpha = 0.3f)),
-                    RoundedCornerShape(50)
-                )
-                .padding(horizontal = 24.dp, vertical = 4.dp)
-        ) {
-            if (isSubmitting) {
-                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp))
-            } else {
-                Text(
-                    stringResource(R.string.validation_code_submit),
-                    fontFamily = GameBoyFont,
-                    fontSize = 18.sp,
-                    color = Color.White,
-                )
-            }
-        }
+        PrimaryButton(text = stringResource(R.string.validation_code_submit), onClick = onSubmit, enabled = code.trim().isNotEmpty(), isLoading = isSubmitting)
         Spacer(Modifier.height(20.dp))
     }
 }
@@ -306,38 +247,11 @@ private fun GameMasterPasswordContent(
             visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth(0.4f),
             placeholder = { Text("••••") },
+            isError = error != null,
+            supportingText = error?.let { message -> { FieldError(message) } },
             enabled = !isSubmitting,
         )
-        if (error != null) {
-            Text(
-                error,
-                fontFamily = GameBoyFont,
-                fontSize = 9.sp,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(horizontal = 8.dp),
-            )
-        }
-        TextButton(
-            onClick = onSubmit,
-            enabled = password.length == 4 && !isSubmitting,
-            modifier = Modifier
-                .background(
-                    if (password.length == 4 && !isSubmitting) GradientFire else SolidColor(Color.Gray.copy(alpha = 0.3f)),
-                    RoundedCornerShape(50)
-                )
-                .padding(horizontal = 24.dp, vertical = 4.dp)
-        ) {
-            if (isSubmitting) {
-                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp))
-            } else {
-                Text(
-                    stringResource(R.string.submit),
-                    fontFamily = GameBoyFont,
-                    fontSize = 18.sp,
-                    color = Color.White,
-                )
-            }
-        }
+        PrimaryButton(text = stringResource(R.string.submit), onClick = onSubmit, enabled = password.length == 4, isLoading = isSubmitting)
         Spacer(Modifier.height(20.dp))
     }
 }
@@ -377,41 +291,20 @@ private fun TeamNameFormContent(
             onValueChange = onTeamNameChanged,
             label = { Text(stringResource(R.string.team_name)) },
             singleLine = true,
+            isError = isTeamNameProfane,
+            supportingText = if (isTeamNameProfane) {
+                { FieldError(stringResource(R.string.team_name_profane)) }
+            } else null,
             modifier = Modifier.fillMaxWidth()
         )
-        if (isTeamNameProfane) {
-            Text(
-                stringResource(R.string.team_name_profane),
-                fontFamily = GameBoyFont,
-                fontSize = 9.sp,
-                color = MaterialTheme.colorScheme.error
-            )
-        }
         Spacer(Modifier.height(8.dp))
-        TextButton(
-            onClick = onSubmit,
-            enabled = isTeamNameValid && !isSubmitting,
-            modifier = Modifier
-                .background(
-                    if (isTeamNameValid && !isSubmitting) GradientFire else SolidColor(Color.Gray.copy(alpha = 0.3f)),
-                    RoundedCornerShape(50)
-                )
-                .padding(horizontal = 24.dp, vertical = 4.dp)
-        ) {
-            if (isSubmitting) {
-                CircularProgressIndicator(
-                    color = Color.White,
-                    modifier = Modifier.size(20.dp)
-                )
-            } else {
-                Text(
-                    stringResource(R.string.join),
-                    fontFamily = GameBoyFont,
-                    fontSize = 18.sp,
-                    color = Color.White
-                )
-            }
-        }
+        PrimaryButton(text = stringResource(R.string.join), onClick = onSubmit, enabled = isTeamNameValid, isLoading = isSubmitting)
         Spacer(Modifier.height(20.dp))
     }
+}
+
+/** Error under a field: red, and announced by TalkBack as soon as it appears. */
+@Composable
+private fun FieldError(message: String) {
+    Text(message, color = MaterialTheme.colorScheme.error, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
 }

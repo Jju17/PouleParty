@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.onboarding
 
+import dev.rahier.pouleparty.ui.theme.AccentText
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.Manifest
 import android.content.Intent
@@ -220,7 +221,7 @@ fun OnboardingScreen(
                     Text(
                         text = if (viewModel.isLastPage) stringResource(R.string.lets_go) else stringResource(R.string.next),
                         style = bangerStyle(22),
-                        color = Color.White,
+                        color = Color.Black,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                     )
                 }
@@ -385,7 +386,7 @@ private fun SlideLocation(
                     Text(
                         stringResource(R.string.allow_always),
                         style = bangerStyle(20),
-                        color = Color.White,
+                        color = Color.Black,
                         modifier = Modifier.padding(horizontal = 24.dp)
                     )
                 }
@@ -410,7 +411,7 @@ private fun SlideLocation(
                     Text(
                         stringResource(R.string.allow_location_access),
                         style = bangerStyle(20),
-                        color = Color.White,
+                        color = Color.Black,
                         modifier = Modifier.padding(horizontal = 24.dp)
                     )
                 }
@@ -465,7 +466,7 @@ private fun SlideNotifications(
                 Text(
                     stringResource(R.string.notif_enable_button),
                     style = bangerStyle(20),
-                    color = Color.White,
+                    color = Color.Black,
                     modifier = Modifier.padding(horizontal = 24.dp)
                 )
             }
@@ -527,7 +528,7 @@ private fun SlideReady() {
         Text(
             stringResource(R.string.safety_banner_title),
             style = bangerStyle(16),
-            color = CROrange,
+            color = AccentText,
             textAlign = TextAlign.Center
         )
         Spacer(Modifier.height(6.dp))

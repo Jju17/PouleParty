@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.demo
 
+import dev.rahier.pouleparty.ui.theme.AccentText
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -98,7 +99,7 @@ fun DemoModeScreen(onExit: () -> Unit) {
         Column(modifier = Modifier.fillMaxSize()) {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                color = CROrange,
+                color = AccentText,
             ) {
                 Row(
                     modifier = Modifier
@@ -342,7 +343,7 @@ private fun DemoGameMasterMapContent() {
 
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            color = CROrange,
+            color = AccentText,
             shape = RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp),
         ) {
             Column(

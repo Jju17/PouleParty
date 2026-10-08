@@ -276,7 +276,7 @@ fun HomeScreen(
                             stringResource(titleRes),
                             fontFamily = GameBoyFont,
                             fontSize = 14.sp,
-                            color = Color.White
+                            color = Color.Black
                         )
                         Text(
                             activeGame.gameCode,

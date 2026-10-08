@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.rules
 
+import dev.rahier.pouleparty.ui.theme.AccentText
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -102,7 +103,7 @@ private fun RuleRow(text: String) {
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.Top
     ) {
-        Text("●", color = CROrange, fontSize = 10.sp)
+        Text("●", color = AccentText, fontSize = 10.sp)
         Text(text, fontSize = 14.sp, color = MaterialTheme.colorScheme.onBackground)
     }
 }
@@ -121,7 +122,7 @@ private fun GameModeCard(title: String, description: String, details: List<Strin
 
         details.forEach { detail ->
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.Top) {
-                Text(">", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = CROrange)
+                Text(">", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AccentText)
                 Text(detail, fontSize = 14.sp, color = MaterialTheme.colorScheme.onBackground)
             }
         }
@@ -131,7 +132,7 @@ private fun GameModeCard(title: String, description: String, details: List<Strin
 @Composable
 private fun SettingRow(name: String, explanation: String) {
     Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-        Text(name, style = gameboyStyle(10), color = CROrange)
+        Text(name, style = gameboyStyle(10), color = AccentText)
         Text(explanation, fontSize = 14.sp, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
     }
 }

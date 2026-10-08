@@ -6,6 +6,7 @@ import androidx.compose.ui.graphics.Color
 val CRBeige = Color(0xFFFDF9D5)
 val CRBeigeWarm = Color(0xFFFFE8C8)
 val CROrange = Color(0xFFFE6A00)
+val CROrangeText = Color(0xFFB34700)
 val CRPink = Color(0xFFEF0778)
 
 // Game Roles

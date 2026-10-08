@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.components
 
+import dev.rahier.pouleparty.ui.theme.AccentText
 import java.util.Locale
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
@@ -54,14 +55,14 @@ fun GameStartCountdownOverlay(
                 Text(
                     text = "$countdownNumber",
                     style = gameboyStyle(80),
-                    color = CROrange,
+                    color = AccentText,
                     modifier = Modifier.neonGlow(CROrange, NeonGlowIntensity.INTENSE)
                 )
             } else if (countdownText != null) {
                 Text(
                     text = countdownText,
                     style = bangerStyle(48),
-                    color = CROrange,
+                    color = AccentText,
                     modifier = Modifier.neonGlow(CROrange, NeonGlowIntensity.MEDIUM)
                 )
             }
@@ -313,7 +314,7 @@ fun PreGameOverlay(
                         Text(
                             text = formattedTime,
                             style = gameboyStyle(timerFontSize),
-                            color = CROrange
+                            color = AccentText
                         )
                     }
                 }

@@ -2,6 +2,7 @@
 
 package dev.rahier.pouleparty.ui.gamecreation.steps
 
+import dev.rahier.pouleparty.ui.theme.AccentText
 import dev.rahier.pouleparty.R
 import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background

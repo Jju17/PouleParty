@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.settings
 
+import dev.rahier.pouleparty.ui.theme.AccentText
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.res.pluralStringResource
 import java.util.Date
