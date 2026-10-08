@@ -1,5 +1,7 @@
 package dev.rahier.pouleparty.ui.huntermap
 
+import dev.rahier.pouleparty.util.SystemClock
+import dev.rahier.pouleparty.util.AppClock
 import dev.rahier.pouleparty.ui.gamelogic.requestLaunch
 import dev.rahier.pouleparty.ui.gamelogic.zoneRenderState
 import dev.rahier.pouleparty.config.RemoteConfigProvider
@@ -123,8 +125,9 @@ class HunterMapViewModel @Inject constructor(
     analyticsRepository: AnalyticsRepository,
     auth: FirebaseAuth,
     savedStateHandle: SavedStateHandle,
+    clock: AppClock = SystemClock(),
     private val remoteConfig: RemoteConfigProvider,
-) : BaseMapViewModel(gameRepository, presenceRepository, gameFunctions, locationRepository, analyticsRepository, auth) {
+) : BaseMapViewModel(gameRepository, presenceRepository, gameFunctions, locationRepository, analyticsRepository, auth, clock) {
 
     companion object {
         private const val TAG = "HunterMapViewModel"
@@ -222,7 +225,7 @@ class HunterMapViewModel @Inject constructor(
                 _uiState.update { it.copy(loadState = LoadState.Failed(error.errorMessageRes())) }
                 return@launch
             }
-            val z = game.zoneRenderState(circles, Date())
+            val z = game.zoneRenderState(circles, clock.now())
 
             _uiState.update {
                 it.copy(
@@ -261,7 +264,7 @@ class HunterMapViewModel @Inject constructor(
                     break
                 }
                 val state = _uiState.value
-                val now = Date()
+                val now = clock.now()
                 val gameStarted = now.after(state.game.hunterStartDate) || now == state.game.hunterStartDate
                 _uiState.update { it.copy(nowDate = now, hasGameStarted = gameStarted) }
 
@@ -401,7 +404,7 @@ class HunterMapViewModel @Inject constructor(
                 // PP-zone-stored: re-resolve the active circle from the stored
                 // schedule on every config tick (covers QA debug anchor-rewind
                 // too). Geometry is read, never recomputed on-device.
-                val z = updatedGame.zoneRenderState(_uiState.value.circles, Date())
+                val z = updatedGame.zoneRenderState(_uiState.value.circles, clock.now())
                 _uiState.update {
                     it.copy(
                         game = updatedGame,
@@ -468,7 +471,7 @@ class HunterMapViewModel @Inject constructor(
      * so hunter will only receive updates during pings.
      */
     private suspend fun streamChickenLocation(game: Game) {
-        val delayMs = game.hunterStartDate.time - System.currentTimeMillis()
+        val delayMs = game.hunterStartDate.time - clock.millis()
         if (delayMs > 0) delay(delayMs)
         presenceRepository.chickenLocationFlow(gameId).collect { chickenLoc ->
             if (chickenLoc == null || chickenLoc.invisible) {
@@ -505,7 +508,7 @@ class HunterMapViewModel @Inject constructor(
     private suspend fun trackHunterSelfLocation(game: Game) {
         val shouldWrite = game.chickenCanSeeHunters || game.gameMasterIds.isNotEmpty()
 
-        val delayMs = game.hunterStartDate.time - System.currentTimeMillis()
+        val delayMs = game.hunterStartDate.time - clock.millis()
         if (delayMs > 0) delay(delayMs)
 
         // Seed state immediately with the cached fix so the rest of the
@@ -665,7 +668,7 @@ class HunterMapViewModel @Inject constructor(
     }
 
     private fun submitFoundCode() {
-        if (_uiState.value.codeCooldownUntil > System.currentTimeMillis()) return
+        if (_uiState.value.codeCooldownUntil > clock.millis()) return
         // Lock against double-tap: if a winner submission is already in
         // flight, ignore further taps until it resolves.
         if (_uiState.value.isSubmittingWinner) return
@@ -681,7 +684,7 @@ class HunterMapViewModel @Inject constructor(
         val attempts = _uiState.value.wrongCodeAttempts + 1
         analyticsRepository.hunterWrongCode(attemptNumber = attempts)
         val localCooldown = if (attempts >= remoteConfig.codeMaxWrongAttempts)
-            System.currentTimeMillis() + remoteConfig.codeCooldownMs
+            clock.millis() + remoteConfig.codeCooldownMs
         else 0L
         val cooldown = maxOf(localCooldown, serverLockedUntilMs ?: 0L)
         _uiState.update {

@@ -1,5 +1,7 @@
 package dev.rahier.pouleparty.ui.gamecreation
 
+import dev.rahier.pouleparty.util.SystemClock
+import dev.rahier.pouleparty.util.AppClock
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.GeoPoint
 import dev.rahier.pouleparty.AppConstants
@@ -123,8 +125,7 @@ data class GameCreationUiState(
             return true
         }
 
-    val minimumStartDate: Date
-        get() = Date(System.currentTimeMillis() + 60_000L)
+    fun minimumStartDate(now: Date): Date = Date(now.time + 60_000L)
 }
 
 @HiltViewModel
@@ -135,7 +136,8 @@ class GameCreationViewModel @Inject constructor(
     private val analyticsRepository: AnalyticsRepository,
     private val auth: FirebaseAuth,
     private val remoteConfig: RemoteConfigProvider,
-    savedStateHandle: SavedStateHandle
+    savedStateHandle: SavedStateHandle,
+    private val clock: AppClock = SystemClock(),
 ) : ViewModel() {
 
     private val gameId: String = savedStateHandle["gameId"] ?: ""
@@ -367,7 +369,7 @@ class GameCreationViewModel @Inject constructor(
     private fun updateStartTime(hour: Int, minute: Int) {
         _uiState.update { state ->
             val cal = calendarAt(state.game.startDate, hour, minute)
-            val minDate = state.minimumStartDate
+            val minDate = state.minimumStartDate(clock.now())
             if (cal.time.before(minDate)) {
                 cal.time = minDate
             }
@@ -493,7 +495,7 @@ class GameCreationViewModel @Inject constructor(
     /** Mirrors iOS `clampStartDateToMinimum`: pushes the start date forward
      *  if it falls before the wizard's minimum allowed (now + 1 min). */
     private fun clampStartDateToMinimum() {
-        val minimum = Date(System.currentTimeMillis() + 60_000L)
+        val minimum = Date(clock.millis() + 60_000L)
         val current = _uiState.value.game.startDate
         if (current.before(minimum)) {
             _uiState.update {
@@ -531,7 +533,7 @@ class GameCreationViewModel @Inject constructor(
     private fun applyDebugTiming(game: Game): Game {
         val durationMinutes = 5.0
         val shrinkIntervalMinutes = 1.0
-        val start = _uiState.value.minimumStartDate
+        val start = _uiState.value.minimumStartDate(clock.now())
         val end = Date(start.time + (durationMinutes * 60 * 1000).toLong())
         val shrinks = maxOf(1.0, durationMinutes / shrinkIntervalMinutes)
         val decline = maxOf(0.0, (game.zone.radius - 100.0) / shrinks)

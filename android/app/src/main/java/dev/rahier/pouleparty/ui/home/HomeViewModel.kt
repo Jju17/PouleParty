@@ -1,5 +1,7 @@
 package dev.rahier.pouleparty.ui.home
 
+import dev.rahier.pouleparty.util.SystemClock
+import dev.rahier.pouleparty.util.AppClock
 import androidx.core.content.edit
 import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.config.RemoteConfigProvider
@@ -96,6 +98,7 @@ class HomeViewModel @Inject constructor(
     @dagger.hilt.android.qualifiers.ApplicationContext
     private val appContext: android.content.Context,
     private val remoteConfig: RemoteConfigProvider,
+    private val clock: AppClock = SystemClock(),
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -207,7 +210,7 @@ class HomeViewModel @Inject constructor(
                     _effects.send(HomeEffect.NavigateToGameMasterMap(game.id))
                 } else {
                     val msg = if (result.lockedUntilMs != null) {
-                        val mins = ((result.lockedUntilMs - System.currentTimeMillis()) / 60_000L).coerceAtLeast(1L).toInt()
+                        val mins = ((result.lockedUntilMs - clock.millis()) / 60_000L).coerceAtLeast(1L).toInt()
                         appContext.getString(R.string.join_flow_gm_too_many_attempts, mins)
                     } else {
                         appContext.resources.getQuantityString(R.plurals.join_flow_gm_wrong_code, result.attemptsRemaining, result.attemptsRemaining)

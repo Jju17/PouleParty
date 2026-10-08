@@ -33,7 +33,7 @@ enum class ReportResult { SUCCESS, FAILURE }
 class VictoryViewModel @Inject constructor(
     private val gameRepository: GameRepository,
     private val auth: FirebaseAuth,
-    savedStateHandle: SavedStateHandle
+    savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
     private val gameId: String = savedStateHandle["gameId"] ?: ""

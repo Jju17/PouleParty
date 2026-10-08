@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.map
 
+import dev.rahier.pouleparty.util.AppClock
 import java.util.Collections
 import java.util.Date
 import dev.rahier.pouleparty.R
@@ -40,7 +41,8 @@ abstract class BaseMapViewModel(
     protected val gameFunctions: GameFunctions,
     protected val locationRepository: LocationRepository,
     protected val analyticsRepository: AnalyticsRepository,
-    protected val auth: FirebaseAuth
+    protected val auth: FirebaseAuth,
+    protected val clock: AppClock,
 ) : ViewModel() {
 
     protected val streamJobs: MutableList<Job> =
@@ -192,7 +194,7 @@ abstract class BaseMapViewModel(
             Check(oldGame.powerUps.activeEffects.decoy, newGame.powerUps.activeEffects.decoy, PowerUpType.DECOY),
             Check(oldGame.powerUps.activeEffects.jammer, newGame.powerUps.activeEffects.jammer, PowerUpType.JAMMER),
         )
-        val now = Date()
+        val now = clock.now()
         for (check in checks) {
             if (check.new != null && now.before(check.new.toDate()) && check.old?.toDate() != check.new.toDate()) {
                 onNotification(uiText(R.string.notif_powerup_opponent, powerUpEmoji(check.type), uiText(check.type.titleRes)), check.type)

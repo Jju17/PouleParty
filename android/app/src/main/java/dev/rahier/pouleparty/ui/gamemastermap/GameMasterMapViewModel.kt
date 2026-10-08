@@ -1,5 +1,7 @@
 package dev.rahier.pouleparty.ui.gamemastermap
 
+import dev.rahier.pouleparty.util.SystemClock
+import dev.rahier.pouleparty.util.AppClock
 import dev.rahier.pouleparty.ui.gamelogic.requestLaunch
 import dev.rahier.pouleparty.ui.gamelogic.zoneRenderState
 import dev.rahier.pouleparty.model.HunterLocation
@@ -97,6 +99,7 @@ class GameMasterMapViewModel @Inject constructor(
     private val gameFunctions: GameFunctions,
     auth: FirebaseAuth,
     savedStateHandle: SavedStateHandle,
+    private val clock: AppClock = SystemClock(),
 ) : ViewModel() {
 
     private val gameId: String = savedStateHandle["gameId"] ?: ""
@@ -204,7 +207,7 @@ class GameMasterMapViewModel @Inject constructor(
                 _uiState.update { it.copy(loadState = LoadState.Failed(error.errorMessageRes())) }
                 return@launch
             }
-            val z = game.zoneRenderState(circles, Date())
+            val z = game.zoneRenderState(circles, clock.now())
             _uiState.update {
                 it.copy(
                     game = game,
@@ -213,7 +216,7 @@ class GameMasterMapViewModel @Inject constructor(
                     nextRadiusUpdate = z.nextUpdate,
                     radius = z.radius,
                     circleCenter = z.center ?: it.circleCenter,
-                    hasGameStarted = Date().after(game.startDate),
+                    hasGameStarted = clock.now().after(game.startDate),
                     previousWinnersCount = game.winners.size,
                 )
             }
@@ -274,11 +277,11 @@ class GameMasterMapViewModel @Inject constructor(
         }
         streamJobs += viewModelScope.launch {
             while (!_uiState.value.isGameOver) {
-                _uiState.update { it.copy(nowDate = Date()) }
+                _uiState.update { it.copy(nowDate = clock.now()) }
                 val state = _uiState.value
                 val next = state.nextRadiusUpdate
                 if (next != null && state.nowDate.after(next)) {
-                    val z = state.game.zoneRenderState(state.circles, Date())
+                    val z = state.game.zoneRenderState(state.circles, clock.now())
                     _uiState.update {
                         it.copy(
                             nextRadiusUpdate = z.nextUpdate,
@@ -287,7 +290,7 @@ class GameMasterMapViewModel @Inject constructor(
                         )
                     }
                 }
-                _uiState.update { it.copy(hasGameStarted = Date().after(it.game.startDate)) }
+                _uiState.update { it.copy(hasGameStarted = clock.now().after(it.game.startDate)) }
                 delay(1000L)
             }
         }
@@ -305,7 +308,7 @@ class GameMasterMapViewModel @Inject constructor(
             // next-update / circle from the fresh timing on every config tick.
             // Real games keep the timer-tick path untouched.
             if (game.isDebugGame) {
-                val z = game.zoneRenderState(it.circles, Date())
+                val z = game.zoneRenderState(it.circles, clock.now())
                 it.copy(
                     game = game,
                     winnerNotification = notif ?: it.winnerNotification,

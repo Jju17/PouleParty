@@ -1,5 +1,7 @@
 package dev.rahier.pouleparty.ui.chickenmap
 
+import dev.rahier.pouleparty.util.SystemClock
+import dev.rahier.pouleparty.util.AppClock
 import dev.rahier.pouleparty.ui.gamelogic.requestLaunch
 import dev.rahier.pouleparty.ui.gamelogic.zoneRenderState
 import dev.rahier.pouleparty.data.AnalyticsRepository
@@ -118,8 +120,9 @@ class ChickenMapViewModel @Inject constructor(
     analyticsRepository: AnalyticsRepository,
     auth: FirebaseAuth,
     private val prefs: android.content.SharedPreferences,
-    savedStateHandle: SavedStateHandle
-) : BaseMapViewModel(gameRepository, presenceRepository, gameFunctions, locationRepository, analyticsRepository, auth) {
+    savedStateHandle: SavedStateHandle,
+    clock: AppClock = SystemClock(),
+) : BaseMapViewModel(gameRepository, presenceRepository, gameFunctions, locationRepository, analyticsRepository, auth, clock) {
 
     override val gameId: String = savedStateHandle["gameId"] ?: ""
     override val playerId: String = auth.currentUser?.uid ?: ""
@@ -218,7 +221,7 @@ class ChickenMapViewModel @Inject constructor(
                 _uiState.update { it.copy(loadState = LoadState.Failed(error.errorMessageRes())) }
                 return@launch
             }
-            val z = game.zoneRenderState(circles, Date())
+            val z = game.zoneRenderState(circles, clock.now())
             _uiState.update {
                 it.copy(
                     game = game,
@@ -250,7 +253,7 @@ class ChickenMapViewModel @Inject constructor(
             while (isActive) {
                 delay(1000)
                 val state = _uiState.value
-                val now = Date()
+                val now = clock.now()
                 val gameStarted = now.after(state.game.startDate) || now == state.game.startDate
                 val huntStarted = now.after(state.game.hunterStartDate) || now == state.game.hunterStartDate
                 _uiState.update { it.copy(nowDate = now, hasGameStarted = gameStarted, hasHuntStarted = huntStarted) }
@@ -345,7 +348,7 @@ class ChickenMapViewModel @Inject constructor(
 
     /** Keeps the chicken's own position in state; the zone follows it only in followTheChicken. */
     private suspend fun trackLocation(game: Game) {
-        val delayMs = game.startDate.time - System.currentTimeMillis()
+        val delayMs = game.startDate.time - clock.millis()
         if (delayMs > 0) delay(delayMs)
         val zoneFollowsChicken = game.gameModEnum != GameMod.STAY_IN_THE_ZONE
         val onFix: (Point) -> Unit = { latLng ->
@@ -365,7 +368,7 @@ class ChickenMapViewModel @Inject constructor(
      * so a radar ping always finds a recent point.
      */
     private suspend fun broadcastChickenLocation(game: Game) {
-        val delayMs = game.startDate.time - System.currentTimeMillis()
+        val delayMs = game.startDate.time - clock.millis()
         if (delayMs > 0) delay(delayMs)
         while (currentCoroutineContext().isActive && !_uiState.value.isGameOver) {
             val state = _uiState.value
@@ -383,7 +386,7 @@ class ChickenMapViewModel @Inject constructor(
     private suspend fun trackHunters(game: Game) {
         if (!game.chickenCanSeeHunters) return
 
-        val delayMs = game.hunterStartDate.time - System.currentTimeMillis()
+        val delayMs = game.hunterStartDate.time - clock.millis()
         if (delayMs > 0) delay(delayMs)
         presenceRepository.hunterLocationsFlow(gameId).collect { hunters ->
             val sorted = hunters.sortedBy { it.hunterId }
@@ -445,7 +448,7 @@ class ChickenMapViewModel @Inject constructor(
                         // QA debug: the `advanceStep` callable rewinds the start
                         // anchor so more shrinks appear "elapsed", re-derive the
                         // active circle from the stored schedule on each tick.
-                        val z = updatedGame.zoneRenderState(it.circles, Date())
+                        val z = updatedGame.zoneRenderState(it.circles, clock.now())
                         it.copy(
                             game = updatedGame,
                             previousWinnersCount = updatedGame.winners.size,
@@ -539,7 +542,7 @@ class ChickenMapViewModel @Inject constructor(
 
     /** A failed heartbeat must never end the loop: the next tick retries. */
     private suspend fun sendHeartbeat(game: Game) {
-        val delayMs = game.startDate.time - System.currentTimeMillis()
+        val delayMs = game.startDate.time - clock.millis()
         if (delayMs > 0) delay(delayMs)
         while (currentCoroutineContext().isActive && !_uiState.value.isGameOver) {
             try {

@@ -14,7 +14,9 @@ import dev.rahier.pouleparty.data.PresenceRepository
 import dev.rahier.pouleparty.data.RealtimePresenceRepository
 import dev.rahier.pouleparty.data.FirestoreUserProfileRepository
 import dev.rahier.pouleparty.data.UserProfileRepository
+import dev.rahier.pouleparty.util.AppClock
 import dev.rahier.pouleparty.util.JpegProofMediaPreparer
+import dev.rahier.pouleparty.util.SystemClock
 import dev.rahier.pouleparty.util.ProofMediaPreparer
 
 @Module
@@ -26,4 +28,5 @@ abstract class DataModule {
     @Binds abstract fun challengeSubmissions(impl: FirebaseChallengeSubmissionRepository): ChallengeSubmissionRepository
     @Binds abstract fun userProfiles(impl: FirestoreUserProfileRepository): UserProfileRepository
     @Binds abstract fun proofMedia(impl: JpegProofMediaPreparer): ProofMediaPreparer
+    @Binds abstract fun clock(impl: SystemClock): AppClock
 }

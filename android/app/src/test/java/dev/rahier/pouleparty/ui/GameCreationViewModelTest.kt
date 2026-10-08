@@ -418,11 +418,10 @@ class GameCreationViewModelTest {
     // ── Minimum start date ──
 
     @Test
-    fun `minimumStartDate is 1 minute from now`() {
+    fun `minimumStartDate is 1 minute after now`() {
         val vm = createViewModel()
-        val min = vm.uiState.value.minimumStartDate
-        val expected = System.currentTimeMillis() + 60_000L
-        assertTrue("Minimum should be ~1 min", Math.abs(min.time - expected) < 1000)
+        val now = java.util.Date(1_800_000_000_000L)
+        assertEquals(1_800_000_060_000L, vm.uiState.value.minimumStartDate(now).time)
     }
 
     // ── Duration ──
