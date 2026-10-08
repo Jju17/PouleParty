@@ -29,6 +29,14 @@ workflows:
             echo "$GOOGLE_SERVICE_INFO_PLIST_BASE64" | base64 --decode > "$BITRISE_SOURCE_DIR/ios/Firebase/Production/GoogleService-Info.plist"
             echo "GoogleService-Info.plist restored successfully"
     - script@1:
+        title: Write the Mapbox token into Secrets.xcconfig
+        inputs:
+        - content: |
+            #!/bin/bash
+            set -e
+            if [ -z "$MAPBOX_ACCESS_TOKEN" ]; then echo "MAPBOX_ACCESS_TOKEN secret is missing"; exit 1; fi
+            echo "MBX_ACCESS_TOKEN = $MAPBOX_ACCESS_TOKEN" > "$BITRISE_SOURCE_DIR/ios/Config/Secrets.xcconfig"
+    - script@1:
         inputs:
         - content: defaults write com.apple.dt.Xcode
             IDESkipPackagePluginFingerprintValidatation -bool YES
