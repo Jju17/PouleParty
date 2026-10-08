@@ -11,7 +11,7 @@ import Testing
 struct GameCreationSnapshotTests {
 
     private func makeStore(
-        step: Int = 0,
+        step: GameCreationStep = .participation,
         isParticipating: Bool = true,
         gameMod: Game.GameMode = .stayInTheZone,
         powerUpsEnabled: Bool = false,
@@ -34,7 +34,8 @@ struct GameCreationSnapshotTests {
             game: shared,
             mapConfigState: mapConfig
         )
-        state.currentStepIndex = step
+        state.steps = GameCreationFeature.State.recomputedSteps(isParticipating: isParticipating, gameMode: gameMod)
+        state.currentStepIndex = state.steps.firstIndex(of: step) ?? 0
         state.isParticipating = isParticipating
         state.gameDurationMinutes = duration
 
@@ -57,67 +58,42 @@ struct GameCreationSnapshotTests {
     // MARK: - Step Snapshots
 
     @Test func participationStep() {
-        let vc = makeVC(store: makeStore(step: 0))
-        assertSnapshot(of: vc, as: .image(size: size))
-    }
-
-    @Test func zoneSetupStep() {
-        let vc = makeVC(store: makeStore(step: 2))
-        assertSnapshot(of: vc, as: .image(size: size))
+        assertSnapshot(of: makeVC(store: makeStore()), as: .image(size: size))
     }
 
     @Test func chickenSelectionStep() {
-        let vc = makeVC(store: makeStore(step: 1, isParticipating: false))
-        assertSnapshot(of: vc, as: .image(size: size))
+        assertSnapshot(of: makeVC(store: makeStore(step: .chickenSelection, isParticipating: false)), as: .image(size: size))
     }
 
-    @Test func gameModeStep() {
-        let vc = makeVC(store: makeStore(step: 1))
-        assertSnapshot(of: vc, as: .image(size: size))
+    @Test func maxPlayersStep() {
+        assertSnapshot(of: makeVC(store: makeStore(step: .maxPlayers)), as: .image(size: size))
     }
 
     @Test func startTimeStep() {
-        let vc = makeVC(store: makeStore(step: 3))
-        assertSnapshot(of: vc, as: .image(size: size))
+        assertSnapshot(of: makeVC(store: makeStore(step: .startTime)), as: .image(size: size))
     }
 
-    @Test func durationStep() {
-        let vc = makeVC(store: makeStore(step: 4))
-        assertSnapshot(of: vc, as: .image(size: size))
+    @Test func timingStep() {
+        assertSnapshot(of: makeVC(store: makeStore(step: .timing)), as: .image(size: size))
     }
 
-    @Test func headStartStep() {
-        let vc = makeVC(store: makeStore(step: 5))
-        assertSnapshot(of: vc, as: .image(size: size))
+    @Test func gameModeStep() {
+        assertSnapshot(of: makeVC(store: makeStore(step: .gameMode)), as: .image(size: size))
     }
 
-    @Test func powerUpsStepDisabled() {
-        let vc = makeVC(store: makeStore(step: 6, powerUpsEnabled: false))
-        assertSnapshot(of: vc, as: .image(size: size))
+    @Test func optionsStepPowerUpsOff() {
+        assertSnapshot(of: makeVC(store: makeStore(step: .options, powerUpsEnabled: false)), as: .image(size: size))
     }
 
-    @Test func powerUpsStepEnabled() {
-        let vc = makeVC(store: makeStore(step: 6, powerUpsEnabled: true))
-        assertSnapshot(of: vc, as: .image(size: size))
-    }
-
-    @Test func chickenSeesHuntersStep() {
-        let vc = makeVC(store: makeStore(step: 7, gameMod: .followTheChicken))
-        assertSnapshot(of: vc, as: .image(size: size))
-    }
-
-    @Test func registrationStepStayInZone() {
-        let vc = makeVC(store: makeStore(step: 7))
-        assertSnapshot(of: vc, as: .image(size: size))
+    @Test func optionsStepPowerUpsOn() {
+        assertSnapshot(of: makeVC(store: makeStore(step: .options, powerUpsEnabled: true)), as: .image(size: size))
     }
 
     @Test func recapStepStayInZone() {
-        let vc = makeVC(store: makeStore(step: 8))
-        assertSnapshot(of: vc, as: .image(size: size))
+        assertSnapshot(of: makeVC(store: makeStore(step: .recap)), as: .image(size: size))
     }
 
     @Test func recapStepFollowChicken() {
-        let vc = makeVC(store: makeStore(step: 9, gameMod: .followTheChicken))
-        assertSnapshot(of: vc, as: .image(size: size))
+        assertSnapshot(of: makeVC(store: makeStore(step: .recap, gameMod: .followTheChicken)), as: .image(size: size))
     }
 }

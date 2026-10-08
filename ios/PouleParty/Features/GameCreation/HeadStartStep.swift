@@ -1,19 +1,12 @@
-//
-//  HeadStartStep.swift
-//  PouleParty
-//
-
 import ComposableArchitecture
 import SwiftUI
 
-struct HeadStartStep: GameCreationStepView {
-    static let step: GameCreationStep = .headStart
+struct HeadStartStep: View {
     @Bindable var store: StoreOf<GameCreationFeature>
 
     var body: some View {
         VStack(spacing: 24) {
-            Spacer()
-            StepHeader(
+            SectionHeader(
                 title: "Head Start",
                 subtitle: "Time to hide before the hunt"
             )
@@ -40,7 +33,6 @@ struct HeadStartStep: GameCreationStepView {
                     .padding(.horizontal, 32)
             }
 
-            Spacer()
         }
     }
 }

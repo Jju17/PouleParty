@@ -1,19 +1,12 @@
-//
-//  ChickenSeesHuntersStep.swift
-//  PouleParty
-//
-
 import ComposableArchitecture
 import SwiftUI
 
-struct ChickenSeesHuntersStep: GameCreationStepView {
-    static let step: GameCreationStep = .chickenSeesHunters
+struct ChickenSeesHuntersStep: View {
     @Bindable var store: StoreOf<GameCreationFeature>
 
     var body: some View {
         VStack(spacing: 24) {
-            Spacer()
-            StepHeader(
+            SectionHeader(
                 title: "Chicken Visibility",
                 subtitle: "Can the chicken see the hunters?"
             )
@@ -40,7 +33,6 @@ struct ChickenSeesHuntersStep: GameCreationStepView {
                 }
             }
             .padding(.horizontal, 24)
-            Spacer()
         }
     }
 }

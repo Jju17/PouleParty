@@ -186,7 +186,7 @@ struct SettingsVersionSection: View {
 
 struct SettingsRow: View {
     let icon: String
-    let title: String
+    let title: LocalizedStringResource
     let action: () -> Void
 
     var body: some View {

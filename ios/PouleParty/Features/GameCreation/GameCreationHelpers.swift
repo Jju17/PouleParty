@@ -11,8 +11,8 @@ import SwiftUI
 // MARK: - Step Header
 
 struct StepHeader: View {
-    let title: String
-    let subtitle: String
+    let title: LocalizedStringResource
+    let subtitle: LocalizedStringResource
 
     var body: some View {
         VStack(spacing: 8) {
@@ -28,12 +28,31 @@ struct StepHeader: View {
     }
 }
 
+/// A titled block inside a step that groups several settings.
+struct SectionHeader: View {
+    let title: LocalizedStringResource
+    let subtitle: LocalizedStringResource
+
+    var body: some View {
+        VStack(spacing: 4) {
+            BangerText(title, size: 22)
+                .foregroundStyle(Color.onBackground)
+                .multilineTextAlignment(.center)
+            Text(subtitle)
+                .font(.gameboy(size: 9))
+                .foregroundStyle(Color.onBackground.opacity(0.6))
+                .multilineTextAlignment(.center)
+        }
+        .padding(.horizontal, 24)
+    }
+}
+
 // MARK: - Selection Card
 
 struct SelectionCard: View {
-    let title: String
+    let title: LocalizedStringResource
     let emoji: String
-    let subtitle: String
+    let subtitle: LocalizedStringResource
     let isSelected: Bool
     let gradient: LinearGradient
     let action: () -> Void
@@ -78,7 +97,7 @@ struct SelectionCard: View {
 // MARK: - Recap Row
 
 struct RecapRow: View {
-    let label: String
+    let label: LocalizedStringResource
     let value: String
 
     var body: some View {

@@ -1,13 +1,7 @@
-//
-//  DurationStep.swift
-//  PouleParty
-//
-
 import ComposableArchitecture
 import SwiftUI
 
-struct DurationStep: GameCreationStepView {
-    static let step: GameCreationStep = .duration
+struct DurationStep: View {
     @Bindable var store: StoreOf<GameCreationFeature>
 
     private let durationOptions: [(String, Double)] = [
@@ -20,8 +14,7 @@ struct DurationStep: GameCreationStepView {
 
     var body: some View {
         VStack(spacing: 24) {
-            Spacer()
-            StepHeader(
+            SectionHeader(
                 title: "Game Duration",
                 subtitle: "How long should the game last?"
             )
@@ -69,7 +62,6 @@ struct DurationStep: GameCreationStepView {
             }
             .padding(.horizontal, 28)
 
-            Spacer()
         }
     }
 }

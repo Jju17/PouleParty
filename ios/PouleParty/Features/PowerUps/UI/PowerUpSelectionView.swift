@@ -72,7 +72,7 @@ struct PowerUpSelectionView: View {
         }
     }
 
-    private func sectionHeader(title: String, emoji: String, gradient: LinearGradient, textColor: Color = .white) -> some View {
+    private func sectionHeader(title: LocalizedStringResource, emoji: String, gradient: LinearGradient, textColor: Color = .white) -> some View {
         HStack(spacing: 8) {
             Text(emoji)
                 .font(.title2)

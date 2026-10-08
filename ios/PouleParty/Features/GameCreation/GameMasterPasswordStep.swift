@@ -1,21 +1,19 @@
 import ComposableArchitecture
 import SwiftUI
 
-struct GameMasterPasswordStep: GameCreationStepView {
-    static let step: GameCreationStep = .gameMasterPassword
+struct GameMasterPasswordStep: View {
     @Bindable var store: StoreOf<GameCreationFeature>
     @FocusState private var passwordFieldFocused: Bool
 
     var body: some View {
         VStack(spacing: 24) {
-            Spacer()
-            StepHeader(
-                title: "GameMaster",
-                subtitle: "Un arbitre peut rejoindre avec un code"
+            SectionHeader(
+                title: "Referees",
+                subtitle: "A referee can join with a code"
             )
 
             Toggle(isOn: $store.isGameMasterEnabled) {
-                Text("Enable GameMaster role")
+                Text("Allow referees")
                     .font(.gameboy(size: 10))
                     .foregroundStyle(Color.onBackground)
             }
@@ -56,7 +54,6 @@ struct GameMasterPasswordStep: GameCreationStepView {
                 .onDisappear { passwordFieldFocused = false }
             }
 
-            Spacer()
         }
     }
 }

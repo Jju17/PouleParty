@@ -51,7 +51,7 @@ struct ChickenMapConfigFeature {
                 self.updateMapComponents(state: &state)
                 // Restore final marker if game has a final location
                 if let finalCoord = state.game.finalLocation {
-                    state.finalMarker = MarkerOverlay(title: "Final", coordinate: finalCoord)
+                    state.finalMarker = MarkerOverlay(title: String(localized: "Final"), coordinate: finalCoord)
                 }
                 return .none
             case .onTask:

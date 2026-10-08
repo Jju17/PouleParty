@@ -48,22 +48,10 @@ struct GameCreationFeatureTests {
 
     @Test func stepsOrderInStayInTheZoneParticipating() {
         let state = makeState(gameMode: .stayInTheZone)
-        let steps = state.steps
-        #expect(steps[0] == .participation)
-        #expect(steps[1] == .maxPlayers)
-        // Wizard order: When → How long → Mode → Where → Rules.
-        #expect(steps[2] == .startTime)
-        #expect(steps[3] == .duration)
-        #expect(steps[4] == .headStart)
-        #expect(steps[5] == .gameMode)
-        #expect(steps[6] == .startZoneSetup)
-        #expect(steps[7] == .finalZoneSetup)
-        #expect(steps[8] == .zonesRecap)
-        #expect(steps[9] == .gameMasterPassword)
-        #expect(steps[10] == .powerUps)
-        #expect(steps[11] == .chickenSeesHunters)
-        #expect(steps[12] == .recap)
-        #expect(steps.count == 13)
+        #expect(state.steps == [
+            .participation, .maxPlayers, .startTime, .timing, .gameMode,
+            .startZoneSetup, .finalZoneSetup, .zonesRecap, .options, .recap,
+        ])
     }
 
     @Test func stepsOrderInFollowTheChickenSkipsFinalZone() async {
@@ -71,10 +59,8 @@ struct GameCreationFeatureTests {
         store.exhaustivity = .off
         await store.send(.gameModChanged(.followTheChicken))
         let steps = store.state.steps
-        #expect(steps.contains(.startZoneSetup))
         #expect(!steps.contains(.finalZoneSetup))
-        #expect(steps.contains(.zonesRecap))
-        #expect(steps.count == 12)
+        #expect(steps.count == 9)
     }
 
     @Test func stepsIncludeChickenSelectionWhenNotParticipating() async {
@@ -85,21 +71,40 @@ struct GameCreationFeatureTests {
         #expect(steps[0] == .participation)
         #expect(steps[1] == .chickenSelection)
         #expect(steps[2] == .maxPlayers)
-        // Same step count = base (13) + chickenSelection.
-        #expect(steps.count == 14)
+        #expect(steps.count == 11)
     }
 
     @Test func togglingParticipationKeepsStepListInSync() async {
         let store = makeStore()
         store.exhaustivity = .off
-        #expect(store.state.steps.count == 13)
+        #expect(store.state.steps.count == 10)
         await store.send(.participationChanged(false))
-        #expect(store.state.steps.count == 14)
+        #expect(store.state.steps.count == 11)
         await store.send(.participationChanged(true))
-        #expect(store.state.steps.count == 13)
-        await store.send(.participationChanged(false))
-        await store.send(.participationChanged(false))
-        #expect(store.state.steps.count == 14)
+        #expect(store.state.steps.count == 10)
+    }
+
+    @Test func optionsStepBlocksNextUntilTheRefereeCodeIsComplete() async {
+        var state = makeState()
+        state.currentStepIndex = state.steps.firstIndex(of: .options)!
+        state.isGameMasterEnabled = true
+        state.gameMasterPassword = "12"
+        let store = makeStore(state: state)
+        store.exhaustivity = .off
+        #expect(!store.state.isGameMasterCodeValid)
+        await store.send(.nextTapped)
+        #expect(store.state.currentStep == .options)
+        await store.send(.binding(.set(\.gameMasterPassword, "1234")))
+        #expect(store.state.isGameMasterCodeValid)
+        await store.send(.nextTapped)
+        #expect(store.state.currentStep == .recap)
+    }
+
+    @Test func turningRefereesOffUnblocksTheOptionsStep() {
+        var state = makeState()
+        state.isGameMasterEnabled = false
+        state.gameMasterPassword = ""
+        #expect(state.isGameMasterCodeValid)
     }
 
     @Test func isStartZoneConfiguredFalseAtDefaultBrussels() {

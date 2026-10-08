@@ -10,15 +10,12 @@ enum GameCreationStep: Equatable {
     case chickenSelection
     case maxPlayers
     case gameMode
-    case gameMasterPassword
     case startZoneSetup
     case finalZoneSetup
     case zonesRecap
     case startTime
-    case duration
-    case headStart
-    case powerUps
-    case chickenSeesHunters
+    case timing
+    case options
     case recap
 }
 
@@ -74,8 +71,7 @@ struct GameCreationFeature {
             result.append(contentsOf: [
                 .maxPlayers,
                 .startTime,
-                .duration,
-                .headStart,
+                .timing,
                 .gameMode,
                 .startZoneSetup,
             ])
@@ -83,9 +79,7 @@ struct GameCreationFeature {
                 result.append(.finalZoneSetup)
             }
             result.append(.zonesRecap)
-            result.append(.gameMasterPassword)
-            result.append(.powerUps)
-            result.append(.chickenSeesHunters)
+            result.append(.options)
             result.append(.recap)
             return result
         }
@@ -104,6 +98,10 @@ struct GameCreationFeature {
             let allSteps = steps
             guard !allSteps.isEmpty else { return 0 }
             return Double(currentStepIndex + 1) / Double(allSteps.count)
+        }
+
+        var isGameMasterCodeValid: Bool {
+            !isGameMasterEnabled || gameMasterPassword.count == 4
         }
 
         var canGoBack: Bool {
@@ -381,6 +379,7 @@ struct GameCreationFeature {
                 return .none
 
             case .nextTapped:
+                if state.currentStep == .options, !state.isGameMasterCodeValid { return .none }
                 let maxIndex = state.steps.count - 1
                 if state.currentStepIndex < maxIndex {
                     state.goingForward = true
@@ -704,7 +703,8 @@ struct GameCreationView: View {
                 }
                 .disabled(!store.isZoneConfigured)
             } else {
-                let nextDisabled = isMapStep && !mapStepIsConfigured
+                let nextDisabled = (isMapStep && !mapStepIsConfigured)
+                    || (store.currentStep == .options && !store.isGameMasterCodeValid)
                 Button {
                     store.send(.nextTapped)
                 } label: {
@@ -736,15 +736,12 @@ struct GameCreationView: View {
         case .chickenSelection:    ChickenSelectionStep(store: store)
         case .maxPlayers:          MaxPlayersStep(store: store)
         case .gameMode:            GameModeStep(store: store)
-        case .gameMasterPassword:  GameMasterPasswordStep(store: store)
         case .startZoneSetup:      StartZoneSetupStep(store: store)
         case .finalZoneSetup:      FinalZoneSetupStep(store: store)
         case .zonesRecap:          ZonesRecapStep(store: store)
         case .startTime:           StartTimeStep(store: store)
-        case .duration:            DurationStep(store: store)
-        case .headStart:           HeadStartStep(store: store)
-        case .powerUps:            PowerUpsStep(store: store)
-        case .chickenSeesHunters:  ChickenSeesHuntersStep(store: store)
+        case .timing:              TimingStep(store: store)
+        case .options:             OptionsStep(store: store)
         case .recap:               RecapStep(store: store)
         }
     }

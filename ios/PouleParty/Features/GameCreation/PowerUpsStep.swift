@@ -1,19 +1,12 @@
-//
-//  PowerUpsStep.swift
-//  PouleParty
-//
-
 import ComposableArchitecture
 import SwiftUI
 
-struct PowerUpsStep: GameCreationStepView {
-    static let step: GameCreationStep = .powerUps
+struct PowerUpsStep: View {
     @Bindable var store: StoreOf<GameCreationFeature>
 
     var body: some View {
         VStack(spacing: 24) {
-            Spacer()
-            StepHeader(
+            SectionHeader(
                 title: "Power-Ups",
                 subtitle: "Enable special abilities?"
             )
@@ -74,7 +67,6 @@ struct PowerUpsStep: GameCreationStepView {
                 }
             }
             .padding(.horizontal, 24)
-            Spacer()
         }
     }
 }

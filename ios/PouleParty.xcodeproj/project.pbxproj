@@ -16,7 +16,6 @@
 		6464E52C2BA5C3ED0039C387 /* FirebaseFunctionsCombine-Community in Frameworks */ = {isa = PBXBuildFile; productRef = 6464E52B2BA5C3ED0039C387 /* FirebaseFunctionsCombine-Community */; };
 		648F56402CF3DC4900B1BC28 /* ComposableArchitecture in Frameworks */ = {isa = PBXBuildFile; productRef = 648F563F2CF3DC4900B1BC28 /* ComposableArchitecture */; };
 		64CE0F842CEE8E8200762232 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 64CE0F832CEE8E8200762232 /* Localizable.xcstrings */; };
-		F9C0A0012F90000100A0B001 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 64CE0F832CEE8E8200762232 /* Localizable.xcstrings */; };
 		BB0000012F47000100000001 /* Sharing in Frameworks */ = {isa = PBXBuildFile; productRef = BB0000022F47000100000001 /* Sharing */; };
 		BB0000032F47000100000001 /* Clocks in Frameworks */ = {isa = PBXBuildFile; productRef = BB0000042F47000100000001 /* Clocks */; };
 		BB0000052F47000100000001 /* CasePathsCore in Frameworks */ = {isa = PBXBuildFile; productRef = BB0000062F47000100000001 /* CasePathsCore */; };
@@ -33,6 +32,7 @@
 		F9B1BE252F58DCD200E066D6 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F9B1BE242F58DCD200E066D6 /* SwiftUI.framework */; };
 		F9B1BE322F58DCD300E066D6 /* PoulePartyWidgetsExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F9B1BE202F58DCD200E066D6 /* PoulePartyWidgetsExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		F9B5A2222F53A73B004EBFD7 /* MapboxMaps in Frameworks */ = {isa = PBXBuildFile; productRef = F9B5A2212F53A73B004EBFD7 /* MapboxMaps */; };
+		F9C0A0012F90000100A0B001 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 64CE0F832CEE8E8200762232 /* Localizable.xcstrings */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -81,13 +81,13 @@
 		646D8E392F467E520068ABBF /* PoulePartyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PoulePartyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		647D9FC12BA3ABF2005B6566 /* PouleParty.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PouleParty.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		647D9FCA2BA3ABF3005B6566 /* PouleParty.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PouleParty.entitlements; sourceTree = "<group>"; };
-		F9C0A0022F90000100A0B001 /* Versions.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Versions.xcconfig; path = Config/Versions.xcconfig; sourceTree = "<group>"; };
 		64CE0F832CEE8E8200762232 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		64FDBE382BC32AD60073DC85 /* La Rochelle.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; name = "La Rochelle.gpx"; path = "Simulation/La Rochelle.gpx"; sourceTree = "<group>"; };
 		F9A8B03D2F829054008B15E2 /* PoulePartySnapshotTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PoulePartySnapshotTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F9B1BE202F58DCD200E066D6 /* PoulePartyWidgetsExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PoulePartyWidgetsExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		F9B1BE222F58DCD200E066D6 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		F9B1BE242F58DCD200E066D6 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		F9C0A0022F90000100A0B001 /* Versions.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Versions.xcconfig; path = Config/Versions.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */

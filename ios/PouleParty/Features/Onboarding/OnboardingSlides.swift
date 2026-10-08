@@ -6,15 +6,15 @@ import UserNotifications
 // MARK: - Generic Slide Layout
 
 struct OnboardingSlideLayout<Icon: View, Extra: View>: View {
-    let title: String
-    let subtitle: String?
+    let title: LocalizedStringResource
+    let subtitle: LocalizedStringResource?
     let titleSize: CGFloat
     @ViewBuilder let icon: () -> Icon
     @ViewBuilder let extraContent: () -> Extra
 
     init(
-        title: String,
-        subtitle: String? = nil,
+        title: LocalizedStringResource,
+        subtitle: LocalizedStringResource? = nil,
         titleSize: CGFloat = 32,
         @ViewBuilder icon: @escaping () -> Icon,
         @ViewBuilder extraContent: @escaping () -> Extra = { EmptyView() }
@@ -229,7 +229,7 @@ struct OnboardingNotificationSlide: View {
     }
 
     var body: some View {
-        OnboardingSlideLayout(title: String(localized: "Stay in the Loop")) {
+        OnboardingSlideLayout(title: "Stay in the Loop") {
             Text(emoji)
                 .font(.system(size: 80))
         } extraContent: {
