@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.gamecreation.steps
 
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -43,7 +44,7 @@ fun HeadStartStep(
             text = if (headStartMinutes.toInt() == 0)
                 stringResource(R.string.wizard_head_start_none)
             else
-                stringResource(R.string.wizard_head_start_minutes, headStartMinutes.toInt()),
+                pluralStringResource(R.plurals.wizard_head_start_minutes, headStartMinutes.toInt(), headStartMinutes.toInt()),
             style = gameboyStyle(9),
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
             textAlign = TextAlign.Center

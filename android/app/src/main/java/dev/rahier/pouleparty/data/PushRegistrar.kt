@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.data
 
+import androidx.core.content.edit
 import android.content.SharedPreferences
 import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
@@ -27,7 +28,7 @@ class PushRegistrar @Inject constructor(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     fun onRegistered(registrationId: String) {
-        prefs.edit().putString(AppConstants.PREF_PUSH_REGISTRATION_ID, registrationId).apply()
+        prefs.edit { putString(AppConstants.PREF_PUSH_REGISTRATION_ID, registrationId) }
         scope.launch { saveForCurrentUser() }
     }
 

@@ -31,36 +31,16 @@
     <string name="no_game_found_with_this_code">No game found with this code.</string>
     <string name="party_full">This party is full.</string>
     <string name="network_error_please_try_again">Network error. Please try again.</string>
-    <string name="register">Register</string>
-    <string name="sign_up">Sign up</string>
     <string name="team_name">Team name</string>
     <string name="team_name_profane">Please choose a different team name.</string>
-    <string name="registered_to_game">Registered to game</string>
-    <string name="collapse">Collapse</string>
-    <string name="expand_registered_game_banner">Expand registered game banner</string>
 
     <!-- Leaderboard -->
     <string name="no_participants">No participants</string>
     <string name="this_game_ended_without_any_hunters_joining">This game ended without any hunters joining.</string>
-    <string name="game_ended">Game ended</string>
-    <string name="view_results">View results</string>
 
     <!-- Hunter map registration gate -->
-    <string name="you_must_register_before_joining_this_game">You must register for this game before joining. Ask the chicken for the registration link.</string>
 
     <!-- Game creation registration step -->
-    <string name="registration">Registration</string>
-    <string name="do_hunters_need_to_register_before_joining">Do hunters need to register before joining?</string>
-    <string name="registration_required">Registration required</string>
-    <string name="open_join">Open join</string>
-    <string name="registration_closes">Registration closes</string>
-    <string name="at_game_start">At game start</string>
-    <string name="fifteen_min_before">15 min before</string>
-    <string name="thirty_min_before">30 min before</string>
-    <string name="one_hour_before">1 hour before</string>
-    <string name="two_hours_before">2 hours before</string>
-    <string name="one_day_before">1 day before</string>
-    <string name="registration_closed_for_this_game">Registration is closed for this game.</string>
 
     <!-- Chicken Config -->
     <string name="game_settings">Game Settings</string>
@@ -73,7 +53,6 @@
     <string name="radius_interval_update">Radius interval update</string>
     <string name="radius_decline">Radius decline</string>
     <string name="chicken_head_start">Chicken head start</string>
-    <string name="meters_format">%d meters</string>
     <string name="error">Error</string>
     <string name="duration">Duration</string>
     <string name="ends_at">Ends at</string>
@@ -81,7 +60,6 @@
     <string name="max_players">Max players</string>
     <string name="number_of_players">Number of players</string>
     <string name="how_many_hunters_can_join">How many hunters can join?</string>
-    <string name="between_x_and_y_hunters">Between %1$d and %2$d hunters</string>
     <string name="decrease_max_players">Decrease number of hunters</string>
     <string name="increase_max_players">Increase number of hunters</string>
     <string name="admin_mode">Admin mode</string>
@@ -91,7 +69,6 @@
     <string name="zone_radius">Zone radius</string>
     <string name="start_zone">Start zone</string>
     <string name="final_zone">Final zone</string>
-    <string name="final_zone_hint">Tap inside the start zone to place the final zone center</string>
     <!-- PP-11 zone size picker (followTheChicken). -->
     <string name="zone_size_small">Small</string>
     <string name="zone_size_medium">Medium</string>
@@ -127,7 +104,6 @@
     <!-- GameMaster screen -->
     <string name="gm_hunters_count">Hunters (%1$d)</string>
     <string name="gm_hunters_title">Hunters</string>
-    <string name="gm_subtitle">Referee · %1$d hunters</string>
     <string name="hunter_fallback_name">Hunter</string>
     <string name="gm_connected_count">Connected: %1$d / %2$d</string>
     <string name="designate_chicken_title">Designate the chicken</string>
@@ -329,9 +305,7 @@
     <string name="leaderboard">Leaderboard</string>
     <string name="challenge_validate">Validate</string>
     <string name="challenge_done">✓ Validated</string>
-    <string name="challenge_validate_confirm">Did you send the proof on WhatsApp?</string>
     <string name="challenge_doing_it">Doing it!</string>
-    <string name="challenge_submitting">Submitting…</string>
     <string name="challenge_rejected">Rejected</string>
     <string name="challenge_uploading">Uploading…</string>
     <string name="challenge_awaiting_validation">⏳ Awaiting validation</string>
@@ -344,8 +318,6 @@
     <string name="validation_queue_empty">No submissions pending</string>
     <string name="validation_failed">Validation failed</string>
     <string name="reject">Reject</string>
-    <string name="challenges_pending_banner_one">1 challenge to submit</string>
-    <string name="challenges_pending_banner_other">%1$d challenges to submit</string>
     <string name="challenges_closed_banner">Time\'s up, challenges are closed.</string>
     <string name="challenge_points_format">%d pts</string>
     <string name="challenges_empty">No challenges yet. Check back later!</string>
@@ -373,9 +345,6 @@
     <!-- CRIT-8 (audit 2026-05-17): JoinFlow error strings, previously
          hardcoded in HomeViewModel — broke EN/NL users. -->
     <string name="join_flow_gm_too_many_attempts">Too many attempts. Try again in %1$d min.</string>
-    <string name="join_flow_gm_wrong_code">Wrong code. %1$d attempt(s) remaining.</string>
-    <string name="join_flow_gm_generic_error">Could not verify the GameMaster code. Try again.</string>
-    <string name="join_flow_network_error">Network error</string>
 
     <!-- CRIT-8 (audit 2026-05-17): Game creation wizard steps, previously
          hardcoded in French in the step composables. -->
@@ -384,7 +353,6 @@
     <string name="wizard_head_start_title">Chicken head start?</string>
     <string name="wizard_head_start_subtitle">Time before the hunters can start</string>
     <string name="wizard_head_start_none">No head start</string>
-    <string name="wizard_head_start_minutes">%1$d minutes head start for the chicken</string>
     <string name="wizard_power_ups_title">Power-Ups?</string>
     <string name="wizard_power_ups_subtitle">Enable in-game bonuses</string>
     <string name="wizard_chicken_sees_hunters_title">Can the chicken see the hunters?</string>
@@ -500,7 +468,6 @@
     <string name="default_team_name">Hunter</string>
     <string name="power_up_target_hunter">Hunter</string>
     <string name="power_up_target_chicken">Chicken</string>
-    <string name="power_up_collect_failed">Could not collect the power-up</string>
     <string name="notification_channel_game_events">Game events</string>
     <string name="notification_channel_game_events_description">Game start, zone shrinks and players finding the chicken</string>
     <string name="map_reset_north">Turn the map north</string>
@@ -511,4 +478,21 @@
     <string name="challenge_already_pending">A proof for this challenge is already waiting for a referee.</string>
     <string name="challenge_already_validated">This challenge is already validated.</string>
     <string name="challenge_video_too_large">This video is too long to send. Film a shorter clip (about 20 seconds).</string>
+    <plurals name="between_x_and_y_hunters">
+        <item quantity="one">Between %1$d and %2$d hunters</item>
+        <item quantity="other">Between %1$d and %2$d hunters</item>
+    </plurals>
+    <plurals name="gm_subtitle">
+        <item quantity="one">Referee · %1$d hunter</item>
+        <item quantity="other">Referee · %1$d hunters</item>
+    </plurals>
+    <plurals name="join_flow_gm_wrong_code">
+        <item quantity="one">Wrong code. %1$d attempt left.</item>
+        <item quantity="other">Wrong code. %1$d attempts left.</item>
+    </plurals>
+    <plurals name="wizard_head_start_minutes">
+        <item quantity="one">%1$d minute head start for the chicken</item>
+        <item quantity="other">%1$d minutes head start for the chicken</item>
+    </plurals>
+    <string name="countdown_days_format">%1$dd %2$02d:%3$02d:%4$02d</string>
 </resources>

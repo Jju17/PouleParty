@@ -25,36 +25,16 @@
     <string name="no_game_found_with_this_code">Geen spel gevonden met deze code.</string>
     <string name="party_full">Deze partij is vol.</string>
     <string name="network_error_please_try_again">Netwerkfout. Probeer opnieuw.</string>
-    <string name="register">Inschrijven</string>
-    <string name="sign_up">Aanmelden</string>
     <string name="team_name">Teamnaam</string>
     <string name="team_name_profane">Kies een andere teamnaam.</string>
-    <string name="registered_to_game">Ingeschreven voor het spel</string>
-    <string name="collapse">Inklappen</string>
-    <string name="expand_registered_game_banner">Toon registratiebanner</string>
 
     <!-- Leaderboard -->
     <string name="no_participants">Geen deelnemers</string>
     <string name="this_game_ended_without_any_hunters_joining">Dit spel eindigde zonder dat er jagers meededen.</string>
-    <string name="game_ended">Spel beëindigd</string>
-    <string name="view_results">Resultaten bekijken</string>
 
     <!-- Hunter map registration gate -->
-    <string name="you_must_register_before_joining_this_game">Je moet je inschrijven voor dit spel voordat je kunt meedoen. Vraag de kip om de inschrijflink.</string>
 
     <!-- Game creation registration step -->
-    <string name="registration">Inschrijving</string>
-    <string name="do_hunters_need_to_register_before_joining">Moeten jagers zich registreren voordat ze meedoen?</string>
-    <string name="registration_required">Inschrijving vereist</string>
-    <string name="open_join">Open toegang</string>
-    <string name="registration_closes">Inschrijving sluit om</string>
-    <string name="at_game_start">Bij aanvang van het spel</string>
-    <string name="fifteen_min_before">15 min voor</string>
-    <string name="thirty_min_before">30 min voor</string>
-    <string name="one_hour_before">1 uur voor</string>
-    <string name="two_hours_before">2 uur voor</string>
-    <string name="one_day_before">1 dag voor</string>
-    <string name="registration_closed_for_this_game">De inschrijvingen voor dit spel zijn gesloten.</string>
 
     <!-- Chicken Config -->
     <string name="game_settings">Spelinstellingen</string>
@@ -67,7 +47,6 @@
     <string name="radius_interval_update">Straalupdate elke</string>
     <string name="radius_decline">Straalvermindering van</string>
     <string name="chicken_head_start">Voorsprong kip</string>
-    <string name="meters_format">%d meter</string>
     <string name="error">Fout</string>
     <string name="duration">Duur</string>
     <string name="ends_at">Eindigt om</string>
@@ -75,7 +54,6 @@
     <string name="max_players">Max spelers</string>
     <string name="number_of_players">Aantal spelers</string>
     <string name="how_many_hunters_can_join">Hoeveel jagers mogen meedoen?</string>
-    <string name="between_x_and_y_hunters">Tussen %1$d en %2$d jagers</string>
     <string name="decrease_max_players">Aantal jagers verlagen</string>
     <string name="increase_max_players">Aantal jagers verhogen</string>
     <string name="admin_mode">Adminmodus</string>
@@ -85,7 +63,6 @@
     <string name="zone_radius">Zonestraal</string>
     <string name="start_zone">Startzone</string>
     <string name="final_zone">Eindzone</string>
-    <string name="final_zone_hint">Tik in de startzone om het centrum van de eindzone te plaatsen</string>
     <!-- PP-11 grootteknop (followTheChicken). -->
     <string name="zone_size_small">Klein</string>
     <string name="zone_size_medium">Middel</string>
@@ -120,7 +97,6 @@
     <!-- GameMaster screen -->
     <string name="gm_hunters_count">Jagers (%1$d)</string>
     <string name="gm_hunters_title">Jagers</string>
-    <string name="gm_subtitle">Scheidsrechter · %1$d jagers</string>
     <string name="hunter_fallback_name">Jager</string>
     <string name="gm_connected_count">Verbonden: %1$d / %2$d</string>
     <string name="designate_chicken_title">De kip aanwijzen</string>
@@ -292,9 +268,7 @@
     <string name="leaderboard">Ranglijst</string>
     <string name="challenge_validate">Valideren</string>
     <string name="challenge_done">✓ Gevalideerd</string>
-    <string name="challenge_validate_confirm">Heb je het bewijs naar WhatsApp gestuurd?</string>
     <string name="challenge_doing_it">Ik doe het!</string>
-    <string name="challenge_submitting">Verzenden…</string>
     <string name="challenge_rejected">Geweigerd</string>
     <string name="challenge_uploading">Uploaden…</string>
     <string name="challenge_awaiting_validation">⏳ Wacht op validatie</string>
@@ -307,8 +281,6 @@
     <string name="validation_queue_empty">Geen wachtende inzendingen</string>
     <string name="validation_failed">Validatie mislukt</string>
     <string name="reject">Weigeren</string>
-    <string name="challenges_pending_banner_one">1 uitdaging in te dienen</string>
-    <string name="challenges_pending_banner_other">%1$d uitdagingen in te dienen</string>
     <string name="challenges_closed_banner">Tijd is om, de uitdagingen zijn gesloten.</string>
     <string name="challenge_points_format">%d pnt</string>
     <string name="challenges_empty">Nog geen uitdagingen. Kom later terug!</string>
@@ -361,9 +333,6 @@
 
     <!-- CRIT-8 (audit 2026-05-17) -->
     <string name="join_flow_gm_too_many_attempts">Te veel pogingen. Probeer opnieuw over %1$d min.</string>
-    <string name="join_flow_gm_wrong_code">Verkeerde code. %1$d poging(en) over.</string>
-    <string name="join_flow_gm_generic_error">Kon de GameMaster-code niet verifiëren. Probeer opnieuw.</string>
-    <string name="join_flow_network_error">Netwerkfout</string>
 
     <!-- CRIT-8 (audit 2026-05-17): wizard voor het aanmaken van een spel -->
     <string name="wizard_duration_title">Hoe lang?</string>
@@ -371,7 +340,6 @@
     <string name="wizard_head_start_title">Voorsprong voor de kip?</string>
     <string name="wizard_head_start_subtitle">Tijd voordat de jagers beginnen</string>
     <string name="wizard_head_start_none">Geen voorsprong</string>
-    <string name="wizard_head_start_minutes">%1$d minuten voorsprong voor de kip</string>
     <string name="wizard_power_ups_title">Power-Ups?</string>
     <string name="wizard_power_ups_subtitle">Activeer in-game bonussen</string>
     <string name="wizard_chicken_sees_hunters_title">Ziet de kip de jagers?</string>
@@ -487,7 +455,6 @@
     <string name="default_team_name">Jager</string>
     <string name="power_up_target_hunter">Jager</string>
     <string name="power_up_target_chicken">Kip</string>
-    <string name="power_up_collect_failed">Kon de power-up niet oprapen</string>
     <string name="notification_channel_game_events">Spelgebeurtenissen</string>
     <string name="notification_channel_game_events_description">Start van het spel, krimpende zone en jagers die de kip vinden</string>
     <string name="map_reset_north">Kaart naar het noorden draaien</string>
@@ -497,4 +464,21 @@
     <string name="challenge_already_pending">Er wacht al een bewijs voor deze uitdaging op een scheidsrechter.</string>
     <string name="challenge_already_validated">Deze uitdaging is al gevalideerd.</string>
     <string name="challenge_video_too_large">Deze video is te lang om te versturen. Film een kortere clip (ongeveer 20 seconden).</string>
+    <plurals name="between_x_and_y_hunters">
+        <item quantity="one">Tussen %1$d en %2$d jagers</item>
+        <item quantity="other">Tussen %1$d en %2$d jagers</item>
+    </plurals>
+    <plurals name="gm_subtitle">
+        <item quantity="one">Scheidsrechter · %1$d jager</item>
+        <item quantity="other">Scheidsrechter · %1$d jagers</item>
+    </plurals>
+    <plurals name="join_flow_gm_wrong_code">
+        <item quantity="one">Verkeerde code. Nog %1$d poging.</item>
+        <item quantity="other">Verkeerde code. Nog %1$d pogingen.</item>
+    </plurals>
+    <plurals name="wizard_head_start_minutes">
+        <item quantity="one">%1$d minuut voorsprong voor de kip</item>
+        <item quantity="other">%1$d minuten voorsprong voor de kip</item>
+    </plurals>
+    <string name="countdown_days_format">%1$dd %2$02d:%3$02d:%4$02d</string>
 </resources>

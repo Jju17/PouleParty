@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.settings
 
+import androidx.core.content.edit
 import dev.rahier.pouleparty.ui.victory.LeaderboardEntry
 import dev.rahier.pouleparty.ui.victory.ReportResult
 import android.content.SharedPreferences
@@ -154,7 +155,7 @@ class SettingsViewModel @Inject constructor(
             _uiState.update { it.copy(isShowingProfanityAlert = true) }
             return
         }
-        prefs.edit().putString(AppConstants.PREF_USER_NICKNAME, trimmed).apply()
+        prefs.edit { putString(AppConstants.PREF_USER_NICKNAME, trimmed) }
         _uiState.update { it.copy(nickname = trimmed, isShowingNicknameSaved = true) }
         viewModelScope.launch {
             auth.currentUser?.uid?.let { userId ->
@@ -191,7 +192,7 @@ class SettingsViewModel @Inject constructor(
                     profiles.deleteProfile(userId)
                 }
                 auth.currentUser?.delete()?.await()
-                prefs.edit().clear().apply()
+                prefs.edit { clear() }
                 auth.signInAnonymously().await()
                 true
             } catch (e: Exception) {

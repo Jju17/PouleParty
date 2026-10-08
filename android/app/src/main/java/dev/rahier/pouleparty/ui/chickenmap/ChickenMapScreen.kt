@@ -1,5 +1,7 @@
 package dev.rahier.pouleparty.ui.chickenmap
 
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.WindowInsets
 import dev.rahier.pouleparty.model.GameStatus
 import dev.rahier.pouleparty.powerups.ui.PowerUpsMapOverlay
 import dev.rahier.pouleparty.ui.components.DebugQAPanel
@@ -122,9 +124,10 @@ fun ChickenMapScreen(
     var selectedPowerUpType by remember { mutableStateOf<PowerUpType?>(null) }
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { _ ->
-    Box(modifier = Modifier.fillMaxSize()) {
+    ) { padding ->
+    Box(modifier = Modifier.fillMaxSize().padding(padding)) {
         // Mapbox Map
         val mapViewportState = rememberMapViewportState()
         var currentBearing by remember { mutableFloatStateOf(0f) }

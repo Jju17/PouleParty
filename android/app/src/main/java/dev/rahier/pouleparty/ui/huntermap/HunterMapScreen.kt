@@ -1,5 +1,7 @@
 package dev.rahier.pouleparty.ui.huntermap
 
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.WindowInsets
 import dev.rahier.pouleparty.model.GameStatus
 import dev.rahier.pouleparty.powerups.ui.PowerUpsMapOverlay
 import dev.rahier.pouleparty.ui.components.GameEndedBanner
@@ -141,11 +143,13 @@ fun HunterMapScreen(
     var isChallengesSheetVisible by remember { mutableStateOf(false) }
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { _ ->
+    ) { padding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .padding(padding)
         ) {
             val mapViewportState = rememberMapViewportState()
             var currentBearing by remember { mutableFloatStateOf(0f) }

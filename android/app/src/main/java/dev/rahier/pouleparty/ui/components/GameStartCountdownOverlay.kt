@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.components
 
+import java.util.Locale
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -111,9 +112,9 @@ fun PreGameOverlay(
     val minutes = (secondsRemaining % 3600) / 60
     val seconds = secondsRemaining % 60
     val formattedTime = when {
-        days > 0 -> String.format("%dj %02d:%02d:%02d", days, hours, minutes, seconds)
-        hours > 0 -> String.format("%d:%02d:%02d", hours, minutes, seconds)
-        else -> String.format("%d:%02d", minutes, seconds)
+        days > 0 -> stringResource(R.string.countdown_days_format, days, hours, minutes, seconds)
+        hours > 0 -> String.format(Locale.ROOT, "%d:%02d:%02d", hours, minutes, seconds)
+        else -> String.format(Locale.ROOT, "%d:%02d", minutes, seconds)
     }
     val timerFontSize = when {
         days > 0 -> 30

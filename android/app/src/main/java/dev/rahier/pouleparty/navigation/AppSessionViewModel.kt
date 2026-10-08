@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.navigation
 
+import androidx.core.content.edit
 import android.content.SharedPreferences
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -50,10 +51,7 @@ class AppSessionViewModel @Inject constructor(
     }
 
     fun onOnboardingCompleted(nickname: String) {
-        prefs.edit()
-            .putBoolean(AppConstants.PREF_ONBOARDING_COMPLETED, true)
-            .putString(AppConstants.PREF_USER_NICKNAME, nickname)
-            .apply()
+        prefs.edit { putBoolean(AppConstants.PREF_ONBOARDING_COMPLETED, true); putString(AppConstants.PREF_USER_NICKNAME, nickname) }
         _state.value = _state.value.copy(hasCompletedOnboarding = true)
         val userId = auth.currentUser?.uid ?: return
         viewModelScope.launch {
@@ -70,7 +68,7 @@ class AppSessionViewModel @Inject constructor(
         if (auth.currentUser != null) return false
         return try {
             val isNewUser = auth.signInAnonymously().await().additionalUserInfo?.isNewUser == true
-            if (isNewUser) prefs.edit().putBoolean(AppConstants.PREF_ONBOARDING_COMPLETED, false).apply()
+            if (isNewUser) prefs.edit { putBoolean(AppConstants.PREF_ONBOARDING_COMPLETED, false) }
             isNewUser
         } catch (e: Exception) {
             Log.e(TAG, "[auth] anonymous sign-in failed", e)

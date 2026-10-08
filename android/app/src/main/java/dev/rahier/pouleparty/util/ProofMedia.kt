@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.util
 
+import androidx.core.graphics.scale
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import dev.rahier.pouleparty.model.SubmissionMediaType
@@ -30,7 +31,7 @@ class JpegProofMediaPreparer @Inject constructor() : ProofMediaPreparer {
         if (type != SubmissionMediaType.IMAGE) return bytes
         val source = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return bytes
         val (width, height) = scaledSize(source.width, source.height, MAX_PHOTO_DIMENSION)
-        val scaled = if (width != source.width) Bitmap.createScaledBitmap(source, width, height, true) else source
+        val scaled = if (width != source.width) source.scale(width, height) else source
         val output = ByteArrayOutputStream()
         scaled.compress(Bitmap.CompressFormat.JPEG, PHOTO_QUALITY, output)
         return output.toByteArray()

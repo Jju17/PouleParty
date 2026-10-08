@@ -1,6 +1,6 @@
 package dev.rahier.pouleparty
 
-import android.graphics.drawable.ColorDrawable
+import androidx.core.graphics.drawable.toDrawable
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -26,7 +26,7 @@ class MainActivity : ComponentActivity() {
             PoulePartyTheme {
                 val bgColor = if (isSystemInDarkTheme()) CRDarkBackground else CRBeige
                 SideEffect {
-                    window.setBackgroundDrawable(ColorDrawable(bgColor.toArgb()))
+                    window.setBackgroundDrawable(bgColor.toArgb().toDrawable())
                 }
                 AppNavigation()
             }

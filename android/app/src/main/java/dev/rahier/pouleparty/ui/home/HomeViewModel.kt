@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.home
 
+import androidx.core.content.edit
 import dev.rahier.pouleparty.R
 import dev.rahier.pouleparty.config.RemoteConfigProvider
 import dev.rahier.pouleparty.data.AnalyticsRepository
@@ -209,7 +210,7 @@ class HomeViewModel @Inject constructor(
                         val mins = ((result.lockedUntilMs - System.currentTimeMillis()) / 60_000L).coerceAtLeast(1L).toInt()
                         appContext.getString(R.string.join_flow_gm_too_many_attempts, mins)
                     } else {
-                        appContext.getString(R.string.join_flow_gm_wrong_code, result.attemptsRemaining)
+                        appContext.resources.getQuantityString(R.plurals.join_flow_gm_wrong_code, result.attemptsRemaining, result.attemptsRemaining)
                     }
                     _uiState.update {
                         it.copy(
@@ -320,23 +321,19 @@ class HomeViewModel @Inject constructor(
 
     private fun addDismissedActiveGameId(gameId: String) {
         val current = loadDismissedActiveGameIds()
-        prefs.edit()
-            .putStringSet(AppConstants.PREF_DISMISSED_ACTIVE_GAME_IDS, current + gameId)
-            .apply()
+        prefs.edit { putStringSet(AppConstants.PREF_DISMISSED_ACTIVE_GAME_IDS, current + gameId) }
     }
 
     private fun removeDismissedActiveGameId(gameId: String) {
         val current = loadDismissedActiveGameIds()
         if (gameId !in current) return
-        prefs.edit()
-            .putStringSet(AppConstants.PREF_DISMISSED_ACTIVE_GAME_IDS, current - gameId)
-            .apply()
+        prefs.edit { putStringSet(AppConstants.PREF_DISMISSED_ACTIVE_GAME_IDS, current - gameId) }
     }
 
     private fun toggleMusicMuted() {
         val newValue = !_uiState.value.isMusicMuted
         _uiState.update { it.copy(isMusicMuted = newValue) }
-        prefs.edit().putBoolean(AppConstants.PREF_IS_MUSIC_MUTED, newValue).apply()
+        prefs.edit { putBoolean(AppConstants.PREF_IS_MUSIC_MUTED, newValue) }
     }
 
     private fun dismissActiveGame() {

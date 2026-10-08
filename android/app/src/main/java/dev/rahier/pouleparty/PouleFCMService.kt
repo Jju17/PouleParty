@@ -20,6 +20,21 @@ class PouleFCMService : FirebaseMessagingService() {
     companion object {
         private const val TAG = "PouleFCMService"
 
+        /**
+         * Keys the server sends as `titleLocKey` / `locKey`. Referencing them here also keeps
+         * the resource shrinker from dropping strings the system resolves by name in background.
+         */
+        internal val NOTIFICATION_STRINGS = mapOf(
+            "notif_chicken_start_title" to R.string.notif_chicken_start_title,
+            "notif_chicken_start_body" to R.string.notif_chicken_start_body,
+            "notif_hunter_start_title" to R.string.notif_hunter_start_title,
+            "notif_hunter_start_body" to R.string.notif_hunter_start_body,
+            "notif_zone_shrink_title" to R.string.notif_zone_shrink_title,
+            "notif_zone_shrink_body" to R.string.notif_zone_shrink_body,
+            "notif_hunter_found_title" to R.string.notif_hunter_found_title,
+            "notif_hunter_found_body" to R.string.notif_hunter_found_body,
+        )
+
         // Monotonic notification ID generator. `System.currentTimeMillis().toInt()`
         // overflows past Int.MAX_VALUE (January 19 2038, but also negative sooner
         // due to the toInt() cast), which collides notifications and makes them
@@ -69,7 +84,7 @@ class PouleFCMService : FirebaseMessagingService() {
      */
     private fun resolveString(key: String?, args: Array<String>?, fallback: String?): String? {
         if (key.isNullOrBlank()) return fallback
-        val resId = resources.getIdentifier(key, "string", packageName)
+        val resId = NOTIFICATION_STRINGS[key] ?: 0
         if (resId == 0) {
             Log.w(TAG, "String resource not found for key: $key")
             return fallback

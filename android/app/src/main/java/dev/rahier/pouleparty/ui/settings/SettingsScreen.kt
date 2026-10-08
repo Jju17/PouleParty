@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.settings
 
+import androidx.core.net.toUri
 import dev.rahier.pouleparty.model.MyGame
 import dev.rahier.pouleparty.model.MyGameRole
 import dev.rahier.pouleparty.ui.components.GameLeaderboardSheet
@@ -10,7 +11,6 @@ import androidx.core.content.pm.PackageInfoCompat
 import android.util.Log
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -159,7 +159,7 @@ fun SettingsScreen(
                         icon = Icons.Outlined.PrivacyTip,
                         title = stringResource(R.string.privacy_policy),
                         onClick = {
-                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://pouleparty.be/privacy")))
+                            context.startActivity(Intent(Intent.ACTION_VIEW, "https://pouleparty.be/privacy".toUri()))
                         }
                     )
                     HorizontalDivider(
@@ -170,7 +170,7 @@ fun SettingsScreen(
                         icon = Icons.Outlined.Description,
                         title = stringResource(R.string.terms_of_use),
                         onClick = {
-                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://pouleparty.be/terms")))
+                            context.startActivity(Intent(Intent.ACTION_VIEW, "https://pouleparty.be/terms".toUri()))
                         }
                     )
                     HorizontalDivider(
@@ -181,7 +181,7 @@ fun SettingsScreen(
                         icon = Icons.Filled.Email,
                         title = stringResource(R.string.contact_support),
                         onClick = {
-                            context.startActivity(Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:julien@rahier.dev")))
+                            context.startActivity(Intent(Intent.ACTION_SENDTO, "mailto:julien@rahier.dev".toUri()))
                         }
                     )
                 }

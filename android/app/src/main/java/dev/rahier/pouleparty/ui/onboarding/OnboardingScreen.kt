@@ -138,9 +138,7 @@ fun OnboardingScreen(
                 4 -> SlideNotifications(
                     hasPermission = state.hasNotificationPermission,
                     onRequestPermission = {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                        }
+                        notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                     }
                 )
                 5 -> SlideNickname(

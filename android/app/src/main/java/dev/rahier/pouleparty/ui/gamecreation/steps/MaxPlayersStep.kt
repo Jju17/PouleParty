@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.gamecreation.steps
 
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -133,7 +134,7 @@ fun MaxPlayersStep(
         }
 
         Text(
-            text = stringResource(R.string.between_x_and_y_hunters, range.first, range.last),
+            text = pluralStringResource(R.plurals.between_x_and_y_hunters, range.last, range.first, range.last),
             style = gameboyStyle(9),
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
             textAlign = TextAlign.Center,

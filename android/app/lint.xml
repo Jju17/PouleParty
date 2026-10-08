@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<lint>
+    <!-- Target follows the Play requirement; raising it needs a device test pass, tracked in known-issues.md. -->
+    <issue id="OldTargetApi" severity="ignore" />
+    <!-- Push uses Firebase installation ids (onRegistered), the token callback is deprecated. -->
+    <issue id="MissingFirebaseInstanceTokenRefresh" severity="ignore" />
+</lint>

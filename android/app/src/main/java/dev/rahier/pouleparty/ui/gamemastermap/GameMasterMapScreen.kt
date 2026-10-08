@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.gamemastermap
 
+import androidx.compose.ui.res.pluralStringResource
 import dev.rahier.pouleparty.model.GameStatus
 import dev.rahier.pouleparty.model.Registration
 import dev.rahier.pouleparty.powerups.ui.PowerUpsMapOverlay
@@ -159,7 +160,7 @@ fun GameMasterMapScreen(
             Box(modifier = Modifier.align(Alignment.TopCenter)) {
                 MapTopBar(
                     titleRes = R.string.you_are_gamemaster,
-                    subtitle = stringResource(R.string.gm_subtitle, state.hunterAnnotations.size),
+                    subtitle = pluralStringResource(R.plurals.gm_subtitle, state.hunterAnnotations.size, state.hunterAnnotations.size),
                     gradientColors = listOf(CRPink, CROrange),
                     onInfoTapped = { viewModel.onIntent(GameMasterMapIntent.InfoTapped) },
                 )

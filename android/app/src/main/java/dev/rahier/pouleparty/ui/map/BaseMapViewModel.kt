@@ -97,7 +97,6 @@ abstract class BaseMapViewModel(
         cancelStreams()
         notificationJob?.cancel()
         notificationJob = null
-        super.onCleared()
     }
 
     /**

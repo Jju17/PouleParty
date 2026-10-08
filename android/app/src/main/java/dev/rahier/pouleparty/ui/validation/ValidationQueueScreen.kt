@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.validation
 
+import androidx.core.net.toUri
 import dev.rahier.pouleparty.model.SubmissionMediaType
 import dev.rahier.pouleparty.ui.common.teamNameOrDefault
 import androidx.compose.foundation.background
@@ -263,7 +264,7 @@ private fun SubmissionDetailDialog(
                     androidx.compose.ui.viewinterop.AndroidView(
                         factory = { ctx ->
                             android.widget.VideoView(ctx).apply {
-                                setVideoURI(android.net.Uri.parse(submission.mediaUrl))
+                                setVideoURI(submission.mediaUrl.toUri())
                                 setMediaController(android.widget.MediaController(ctx).also { mc -> mc.setAnchorView(this) })
                                 setOnPreparedListener { it.isLooping = false }
                                 start()

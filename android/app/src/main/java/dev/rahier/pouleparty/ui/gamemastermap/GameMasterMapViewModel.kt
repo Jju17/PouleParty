@@ -358,7 +358,6 @@ class GameMasterMapViewModel @Inject constructor(
         streamJobs.forEach { it.cancel() }
         streamJobs.clear()
         winnerNotificationJob?.cancel()
-        super.onCleared()
     }
 }
 

@@ -90,6 +90,12 @@ android {
         resValues = true
     }
 
+    lint {
+        warningsAsErrors = true
+        abortOnError = true
+        checkDependencies = true
+    }
+
     testOptions {
         unitTests.isReturnDefaultValues = false
     }

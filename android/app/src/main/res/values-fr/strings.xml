@@ -25,36 +25,16 @@
     <string name="no_game_found_with_this_code">Aucune partie trouvée avec ce code.</string>
     <string name="party_full">Cette partie est complète.</string>
     <string name="network_error_please_try_again">Erreur réseau. Réessaie.</string>
-    <string name="register">S\'inscrire</string>
-    <string name="sign_up">S\'inscrire</string>
     <string name="team_name">Nom d\'équipe</string>
     <string name="team_name_profane">Choisis un autre nom d\'équipe.</string>
-    <string name="registered_to_game">Inscrit à la partie</string>
-    <string name="collapse">Réduire</string>
-    <string name="expand_registered_game_banner">Afficher la bannière d\'inscription</string>
 
     <!-- Leaderboard -->
     <string name="no_participants">Aucun participant</string>
     <string name="this_game_ended_without_any_hunters_joining">Cette partie s\'est terminée sans qu\'aucun chasseur ne rejoigne.</string>
-    <string name="game_ended">Partie terminée</string>
-    <string name="view_results">Voir les résultats</string>
 
     <!-- Hunter map registration gate -->
-    <string name="you_must_register_before_joining_this_game">Tu dois t\'inscrire à cette partie avant de la rejoindre. Demande le lien d\'inscription à la poule.</string>
 
     <!-- Game creation registration step -->
-    <string name="registration">Inscription</string>
-    <string name="do_hunters_need_to_register_before_joining">Les chasseurs doivent-ils s\'inscrire avant de rejoindre ?</string>
-    <string name="registration_required">Inscription requise</string>
-    <string name="open_join">Accès libre</string>
-    <string name="registration_closes">L\'inscription ferme</string>
-    <string name="at_game_start">Au début du jeu</string>
-    <string name="fifteen_min_before">15 min avant</string>
-    <string name="thirty_min_before">30 min avant</string>
-    <string name="one_hour_before">1 heure avant</string>
-    <string name="two_hours_before">2 heures avant</string>
-    <string name="one_day_before">1 jour avant</string>
-    <string name="registration_closed_for_this_game">Les inscriptions sont fermées pour cette partie.</string>
 
     <!-- Chicken Config -->
     <string name="game_settings">Réglages du jeu</string>
@@ -65,7 +45,6 @@
     <string name="radius_interval_update">Update du rayon toutes les</string>
     <string name="radius_decline">Rétrécissement du rayon de</string>
     <string name="chicken_head_start">Avance de la poule</string>
-    <string name="meters_format">%d mètres</string>
     <string name="error">Erreur</string>
 
     <!-- Chicken Map -->
@@ -93,7 +72,6 @@
     <!-- GameMaster screen -->
     <string name="gm_hunters_count">Chasseurs (%1$d)</string>
     <string name="gm_hunters_title">Chasseurs</string>
-    <string name="gm_subtitle">Arbitre · %1$d chasseurs</string>
     <string name="hunter_fallback_name">Chasseur</string>
     <string name="gm_connected_count">Connectés : %1$d / %2$d</string>
     <string name="designate_chicken_title">Désigner la poule</string>
@@ -248,7 +226,6 @@
     <string name="max_players">Joueurs max</string>
     <string name="number_of_players">Nombre de joueurs</string>
     <string name="how_many_hunters_can_join">Combien de chasseurs peuvent rejoindre ?</string>
-    <string name="between_x_and_y_hunters">Entre %1$d et %2$d chasseurs</string>
     <string name="decrease_max_players">Diminuer le nombre de chasseurs</string>
     <string name="increase_max_players">Augmenter le nombre de chasseurs</string>
     <string name="admin_mode">Mode admin</string>
@@ -260,7 +237,6 @@
     <string name="set_start_and_final_zone">Place la zone de départ et la zone finale pour commencer</string>
     <string name="start_zone">Zone de départ</string>
     <string name="final_zone">Zone finale</string>
-    <string name="final_zone_hint">Appuie dans la zone de départ pour placer le centre de la zone finale</string>
     <!-- PP-11 picker de taille (followTheChicken). -->
     <string name="zone_size_small">Petite</string>
     <string name="zone_size_medium">Moyenne</string>
@@ -296,9 +272,7 @@
     <string name="leaderboard">Classement</string>
     <string name="challenge_validate">Valider</string>
     <string name="challenge_done">✓ Validé</string>
-    <string name="challenge_validate_confirm">Avez-vous bien envoyé la preuve sur WhatsApp ?</string>
     <string name="challenge_doing_it">Je le fais !</string>
-    <string name="challenge_submitting">Envoi…</string>
     <string name="challenge_rejected">Refusé</string>
     <string name="challenge_uploading">Envoi…</string>
     <string name="challenge_awaiting_validation">⏳ En attente de validation</string>
@@ -311,8 +285,6 @@
     <string name="validation_queue_empty">Aucune soumission en attente</string>
     <string name="validation_failed">Échec de la validation</string>
     <string name="reject">Refuser</string>
-    <string name="challenges_pending_banner_one">1 défi à soumettre</string>
-    <string name="challenges_pending_banner_other">%1$d défis à soumettre</string>
     <string name="challenges_closed_banner">Temps écoulé, les défis sont fermés.</string>
     <string name="challenge_points_format">%d pts</string>
     <string name="challenges_empty">Aucun défi pour l\'instant. Reviens plus tard !</string>
@@ -365,9 +337,6 @@
 
     <!-- CRIT-8 (audit 2026-05-17) -->
     <string name="join_flow_gm_too_many_attempts">Trop de tentatives. Réessaie dans %1$d min.</string>
-    <string name="join_flow_gm_wrong_code">Mauvais code. %1$d tentative(s) restante(s).</string>
-    <string name="join_flow_gm_generic_error">Impossible de vérifier le code GameMaster. Réessaie.</string>
-    <string name="join_flow_network_error">Erreur réseau</string>
 
     <!-- CRIT-8 (audit 2026-05-17): wizard de création de partie -->
     <string name="wizard_duration_title">Combien de temps ?</string>
@@ -375,7 +344,6 @@
     <string name="wizard_head_start_title">Avance de la poule ?</string>
     <string name="wizard_head_start_subtitle">Temps avant que les chasseurs ne commencent</string>
     <string name="wizard_head_start_none">Pas d\'avance</string>
-    <string name="wizard_head_start_minutes">%1$d minutes d\'avance pour la poule</string>
     <string name="wizard_power_ups_title">Power-Ups ?</string>
     <string name="wizard_power_ups_subtitle">Active les bonus en jeu</string>
     <string name="wizard_chicken_sees_hunters_title">La poule voit les chasseurs ?</string>
@@ -491,7 +459,6 @@
     <string name="default_team_name">Chasseur</string>
     <string name="power_up_target_hunter">Chasseur</string>
     <string name="power_up_target_chicken">Poule</string>
-    <string name="power_up_collect_failed">Impossible de ramasser le power-up</string>
     <string name="notification_channel_game_events">Événements de partie</string>
     <string name="notification_channel_game_events_description">Début de partie, rétrécissement de la zone et chasseurs qui trouvent la poule</string>
     <string name="map_reset_north">Orienter la carte vers le nord</string>
@@ -501,4 +468,25 @@
     <string name="challenge_already_pending">Une preuve pour ce défi attend déjà un arbitre.</string>
     <string name="challenge_already_validated">Ce défi est déjà validé.</string>
     <string name="challenge_video_too_large">Cette vidéo est trop longue à envoyer. Filme un extrait plus court (environ 20 secondes).</string>
+    <plurals name="between_x_and_y_hunters">
+        <item quantity="one">Entre %1$d et %2$d chasseurs</item>
+        <item quantity="many">Entre %1$d et %2$d chasseurs</item>
+        <item quantity="other">Entre %1$d et %2$d chasseurs</item>
+    </plurals>
+    <plurals name="gm_subtitle">
+        <item quantity="one">Arbitre · %1$d chasseur</item>
+        <item quantity="many">Arbitre · %1$d chasseurs</item>
+        <item quantity="other">Arbitre · %1$d chasseurs</item>
+    </plurals>
+    <plurals name="join_flow_gm_wrong_code">
+        <item quantity="one">Mauvais code. %1$d tentative restante.</item>
+        <item quantity="many">Mauvais code. %1$d tentatives restantes.</item>
+        <item quantity="other">Mauvais code. %1$d tentatives restantes.</item>
+    </plurals>
+    <plurals name="wizard_head_start_minutes">
+        <item quantity="one">%1$d minute d\'avance pour la poule</item>
+        <item quantity="many">%1$d minutes d\'avance pour la poule</item>
+        <item quantity="other">%1$d minutes d\'avance pour la poule</item>
+    </plurals>
+    <string name="countdown_days_format">%1$dj %2$02d:%3$02d:%4$02d</string>
 </resources>
