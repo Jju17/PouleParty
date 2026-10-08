@@ -210,6 +210,7 @@ struct HunterMapFeature {
     enum CancelID {
         case powerUpNotificationDismiss
         case timer
+        case runtime
     }
 
     @Dependency(\.apiClient) var apiClient
@@ -248,6 +249,7 @@ struct HunterMapFeature {
                 let hunterId = state.hunterId
                 guard state.game.chickenCanSeeHunters || !state.game.gameMasterIds.isEmpty,
                       !hunterId.isEmpty,
+                      !state.isGameOver,
                       state.hasGameStarted else {
                     return .none
                 }
@@ -522,9 +524,9 @@ struct HunterMapFeature {
                     isOutsideZone: false,
                     gamePhase: .gameOver
                 )
-                return .run { _ in
+                return .merge(.cancel(id: CancelID.runtime), .run { _ in
                     await liveActivityClient.end(endState)
-                }
+                })
             case .view(.infoButtonTapped):
                 state.showGameInfo = true
                 return .none
@@ -773,7 +775,7 @@ struct HunterMapFeature {
                     }
                 )
 
-                return .merge(effects)
+                return .merge(effects).cancellable(id: CancelID.runtime, cancelInFlight: true)
             case let .internal(.challengesAvailabilityUpdated(hasChallenges)):
                 state.hasChallenges = hasChallenges
                 return .none
@@ -802,9 +804,9 @@ struct HunterMapFeature {
                         isOutsideZone: false,
                         gamePhase: .gameOver
                     )
-                    return .run { _ in
+                    return .merge(.cancel(id: CancelID.runtime), .run { _ in
                         await liveActivityClient.end(endState)
-                    }
+                    })
                 }
 
                 let activatedPowerUp = detectActivatedPowerUp(oldGame: state.game, newGame: game)
@@ -814,9 +816,11 @@ struct HunterMapFeature {
                 // modal was up (sheet, alert), the early branch above didn't
                 // get to flip `isGameOver`. Catch it here so the bottom-bar
                 // trophy CTA still appears as soon as the modal closes.
+                var effects: [Effect<Action>] = []
                 if game.status == .done && !state.isGameOver {
                     state.isGameOver = true
                     locationClient.stopTracking()
+                    effects.append(.cancel(id: CancelID.runtime))
                 }
 
                 // PP-zone-stored: re-resolve the active circle from the stored
@@ -864,7 +868,6 @@ struct HunterMapFeature {
                 }
 
                 // Update Live Activity with new game state
-                var effects: [Effect<Action>] = []
                 if let laUpdate = checkLiveActivityUpdate(
                     currentState: state.liveActivityState,
                     lastState: state.lastLiveActivityState
@@ -916,6 +919,7 @@ struct HunterMapFeature {
                    game.winners.count >= game.hunterIds.count {
                     state.isGameOver = true
                     locationClient.stopTracking()
+                    effects.append(.cancel(id: CancelID.runtime))
                     effects.append(.run { _ in
                         await liveActivityClient.end(nil)
                     })
@@ -1006,9 +1010,9 @@ struct HunterMapFeature {
                         isOutsideZone: false,
                         gamePhase: .gameOver
                     )
-                    return .run { _ in
+                    return .merge(.cancel(id: CancelID.runtime), .run { _ in
                         await liveActivityClient.end(endState)
-                    }
+                    })
                 }
 
                 // PP-zone-stored: resolve the active circle from the stored

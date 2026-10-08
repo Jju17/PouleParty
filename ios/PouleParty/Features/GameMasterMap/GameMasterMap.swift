@@ -137,6 +137,10 @@ struct GameMasterMapFeature {
         }
     }
 
+    enum CancelID {
+        case runtime
+    }
+
     @Dependency(\.apiClient) var apiClient
     @Dependency(\.continuousClock) var clock
 
@@ -205,6 +209,7 @@ struct GameMasterMapFeature {
                         await send(.internal(.scheduleLoaded(circles)))
                     }
                 )
+                .cancellable(id: CancelID.runtime, cancelInFlight: true)
             case let .internal(.scheduleLoaded(circles)):
                 state.circles = circles
                 let z = zoneRenderState(
@@ -224,7 +229,9 @@ struct GameMasterMapFeature {
                 }
                 return .none
             case let .internal(.gameUpdated(game)):
+                let endedNow = game.status == .done && state.game.status != .done
                 state.game = game
+                let stopRuntime: Effect<Action> = endedNow ? .cancel(id: CancelID.runtime) : .none
                 // QA debug games drive zone shrinks server-side (the
                 // `advanceStep` callable rewinds the start anchor), so re-derive
                 // radius / next-update / circle from the fresh timing on every
@@ -258,13 +265,13 @@ struct GameMasterMapFeature {
                    ) {
                     state.winnerNotification = notif
                     state.previousWinnersCount = game.winners.count
-                    return .run { send in
+                    return .merge(stopRuntime, .run { send in
                         try await clock.sleep(for: .seconds(AppConstants.winnerNotificationSeconds))
                         await send(.internal(.winnerNotificationDismissed))
-                    }
+                    })
                 }
                 state.previousWinnersCount = game.winners.count
-                return .none
+                return stopRuntime
             case let .internal(.chickenLocationUpdated(coord, isInvisible)):
                 state.chickenLocation = coord
                 state.chickenIsInvisible = isInvisible

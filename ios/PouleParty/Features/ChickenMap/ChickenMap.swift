@@ -206,6 +206,7 @@ struct ChickenMapFeature {
 
     enum CancelID {
         case powerUpNotificationDismiss
+        case runtime
     }
 
     @Dependency(\.apiClient) var apiClient
@@ -231,7 +232,7 @@ struct ChickenMapFeature {
                 state.isCancelling = true
                 let gameId = state.game.id
                 let winnersCount = state.game.winners.count
-                return .run { [analyticsClient] send in
+                return .concatenate(.cancel(id: CancelID.runtime), .run { [analyticsClient] send in
                     await liveActivityClient.end(nil)
                     do {
                         try await apiClient.updateGameStatus(gameId, .done)
@@ -241,7 +242,7 @@ struct ChickenMapFeature {
                             .error("Failed to update game status to done: \(error.localizedDescription)")
                     }
                     await send(.delegate(.returnedToMenu))
-                }
+                })
             case .destination:
                 return .none
             case .newChickenAlert:
@@ -433,6 +434,7 @@ struct ChickenMapFeature {
                     locationClient.stopTracking()
                     let gameId = game.id
                     let winnersCount = game.winners.count
+                    effects.append(.cancel(id: CancelID.runtime))
                     effects.append(.run { [analyticsClient] _ in
                         do {
                             try await apiClient.updateGameStatus(gameId, .done)
@@ -456,6 +458,8 @@ struct ChickenMapFeature {
                 if !wasDone, game.status == .done, !state.isCancelling, !state.isGameOver {
                     state.isGameOver = true
                     locationClient.stopTracking()
+                    effects.append(.cancel(id: CancelID.runtime))
+                    effects.append(.run { _ in await liveActivityClient.end(nil) })
                 }
 
                 return effects.isEmpty ? .none : .merge(effects)
@@ -591,7 +595,6 @@ struct ChickenMapFeature {
                 return .none
             case .view(.onTask):
                 let gameId = state.game.id
-                let gameMod = state.game.gameMode
                 let startDate = state.game.startDate
                 let powerUpsEnabled = state.game.powerUps.enabled
                 let driftSeed = state.game.zone.driftSeed
@@ -599,7 +602,6 @@ struct ChickenMapFeature {
                 // Shared references so the tracking loop can check active effects
                 let invisibilityUntil = LockIsolated<Date?>(nil)
                 let jammerUntil = LockIsolated<Date?>(nil)
-                let radarPingUntil = LockIsolated<Date?>(nil)
 
                 var effects: [Effect<Action>] = [
                     // CRIT-2 (audit 2026-05-17): fetch the foundCode once
@@ -626,7 +628,6 @@ struct ChickenMapFeature {
                             if let game {
                                 invisibilityUntil.setValue(game.powerUps.activeEffects.invisibility?.dateValue())
                                 jammerUntil.setValue(game.powerUps.activeEffects.jammer?.dateValue())
-                                radarPingUntil.setValue(game.powerUps.activeEffects.radarPing?.dateValue())
                                 await send(.internal(.gameUpdated(game)))
                             }
                         }
@@ -651,140 +652,58 @@ struct ChickenMapFeature {
                         if delay > 0 {
                             try await clock.sleep(for: .seconds(delay))
                         }
-                        while true {
+                        while !Task.isCancelled {
                             do {
                                 try await apiClient.updateHeartbeat(gameId)
                             } catch {
                                 logger.error("Failed to update heartbeat: \(error)")
                             }
-                            try await clock.sleep(for: .seconds(30))
+                            try await clock.sleep(for: .seconds(AppConstants.heartbeatIntervalSeconds))
                         }
                     }
                 )
 
-                // followTheChicken: chicken sends position to hunters
-                // stayInTheZone: track location for zone check only (no Firestore writes)
-                // Gated behind startDate to avoid leaking position early
-                if gameMod != .stayInTheZone {
-                    effects.append(
-                        .run { send in
-                            let delay = startDate.timeIntervalSinceNow
-                            if delay > 0 {
-                                try await clock.sleep(for: .seconds(delay))
-                            }
-                            // If we have a cached fix, broadcast it now.
-                            // Otherwise `lastWrite` stays at `.distantPast`
-                            // so the first coord from `startTracking()` is
-                            // broadcast immediately — without this, the
-                            // hunters' map shows no chicken puck for the
-                            // first 5 s + however long CoreLocation's 10 m
-                            // distance filter takes to emit, which in a
-                            // small 2-device test can look like a "stuck"
-                            // chicken even though it's moving.
-                            var lastWrite: Date = .distantPast
-                            if let currentLocation = locationClient.lastLocation() {
-                                await send(.internal(.newLocationFetched(currentLocation)))
-                                let isInvisible = invisibilityUntil.value.map { Date.now < $0 } ?? false
-                                do {
-                                    try apiClient.setChickenLocation(gameId, currentLocation, isInvisible)
-                                    lastWrite = .now
-                                } catch {
-                                    logger.error("Failed to send initial chicken location: \(error)")
-                                }
-                            }
-                            for await coordinate in locationClient.startTracking() {
-                                await send(.internal(.newLocationFetched(coordinate)))
-                                // PP-87: chicken always writes its position
-                                // — hunters filter the marker out on the
-                                // `invisible: true` flag. GameMaster ignores
-                                // the flag. Keeps the doc fresh so the
-                                // moment Invisibility ends, hunters get the
-                                // current location without a throttle gap.
-                                let isInvisible = invisibilityUntil.value.map { Date.now < $0 } ?? false
-                                if Date.now.timeIntervalSince(lastWrite) >= AppConstants.locationThrottleSeconds {
-                                    let isJammed = jammerUntil.value.map { Date.now < $0 } ?? false
-                                    let sendCoordinate = isJammed ? applyJammerNoise(to: coordinate, driftSeed: driftSeed) : coordinate
-                                    do {
-                                        try apiClient.setChickenLocation(gameId, sendCoordinate, isInvisible)
-                                    } catch {
-                                        logger.error("Failed to send chicken location: \(error)")
-                                    }
-                                    lastWrite = .now
-                                }
-                            }
+                let latestLocation = LockIsolated<CLLocationCoordinate2D?>(nil)
+                effects.append(
+                    .run { send in
+                        let delay = startDate.timeIntervalSinceNow
+                        if delay > 0 {
+                            try await clock.sleep(for: .seconds(delay))
                         }
-                    )
-                } else {
-                    // stayInTheZone: Chicken broadcasts its position continuously
-                    // (same cadence as followTheChicken) so Radar Ping can reveal a
-                    // fresh position to Hunters on demand. The earlier "only write
-                    // during a ping" gate left the Hunter seeing nothing when
-                    // Radar Ping fired (with a 3 s duration, any stale broadcast
-                    // window would be visible-for-nothing). Hunters don't see the
-                    // Chicken's marker client-side unless `game.isRadarPingActive`
-                    // is true — so the continuous write is purely "always have a
-                    // fresh last-known position ready" and the UI gates visibility.
-                    effects.append(
-                        .run { send in
-                            let delay = startDate.timeIntervalSinceNow
-                            if delay > 0 {
-                                try await clock.sleep(for: .seconds(delay))
-                            }
-                            var lastWrite: Date = .distantPast
-                            if let currentLocation = locationClient.lastLocation() {
-                                await send(.internal(.newLocationFetched(currentLocation)))
-                                let isInvisible = invisibilityUntil.value.map { Date.now < $0 } ?? false
-                                let isJammed = jammerUntil.value.map { Date.now < $0 } ?? false
-                                let sendCoordinate = isJammed ? applyJammerNoise(to: currentLocation, driftSeed: driftSeed) : currentLocation
-                                do {
-                                    try apiClient.setChickenLocation(gameId, sendCoordinate, isInvisible)
-                                    lastWrite = .now
-                                } catch {
-                                    logger.error("Failed to send initial chicken location: \(error)")
-                                }
-                            }
-                            for await coordinate in locationClient.startTracking() {
-                                await send(.internal(.newLocationFetched(coordinate)))
-                                let isInvisible = invisibilityUntil.value.map { Date.now < $0 } ?? false
-                                if Date.now.timeIntervalSince(lastWrite) >= AppConstants.locationThrottleSeconds {
-                                    let isJammed = jammerUntil.value.map { Date.now < $0 } ?? false
-                                    let sendCoordinate = isJammed ? applyJammerNoise(to: coordinate, driftSeed: driftSeed) : coordinate
-                                    do {
-                                        try apiClient.setChickenLocation(gameId, sendCoordinate, isInvisible)
-                                    } catch {
-                                        logger.error("Failed to send chicken location: \(error)")
-                                    }
-                                    lastWrite = .now
-                                }
-                            }
+                        if let currentLocation = locationClient.lastLocation() {
+                            latestLocation.setValue(currentLocation)
+                            await send(.internal(.newLocationFetched(currentLocation)))
                         }
-                    )
-
-                    // Timer-driven rebroadcast so a stationary chicken still
-                    // refreshes its Firestore position every throttle period —
-                    // otherwise CoreLocation's 10 m distance filter means a
-                    // chicken hiding in one spot stops updating after one
-                    // write, and Radar Ping's 3 s window can land between
-                    // broadcasts with nothing fresh to show. PP-87: keeps
-                    // ticking during Invisibility too so the GameMaster
-                    // always has a fresh chicken position to render.
-                    effects.append(
-                        .run { _ in
-                            let tick = Duration.milliseconds(Int(AppConstants.locationThrottleSeconds * 1000))
-                            for await _ in self.clock.timer(interval: tick) {
-                                guard let coordinate = locationClient.lastLocation() else { continue }
-                                let isInvisible = invisibilityUntil.value.map { Date.now < $0 } ?? false
-                                let isJammed = jammerUntil.value.map { Date.now < $0 } ?? false
+                        for await coordinate in locationClient.startTracking() {
+                            latestLocation.setValue(coordinate)
+                            await send(.internal(.newLocationFetched(coordinate)))
+                        }
+                    }
+                )
+                // The only position writer: one write per throttle window, moving or not,
+                // so a radar ping always finds a recent point.
+                effects.append(
+                    .run { _ in
+                        let delay = startDate.timeIntervalSinceNow
+                        if delay > 0 {
+                            try await clock.sleep(for: .seconds(delay))
+                        }
+                        while !Task.isCancelled {
+                            if let coordinate = latestLocation.value {
+                                let now = Date.now
+                                let isInvisible = invisibilityUntil.value.map { now < $0 } ?? false
+                                let isJammed = jammerUntil.value.map { now < $0 } ?? false
                                 let sendCoordinate = isJammed ? applyJammerNoise(to: coordinate, driftSeed: driftSeed) : coordinate
                                 do {
                                     try apiClient.setChickenLocation(gameId, sendCoordinate, isInvisible)
                                 } catch {
-                                    logger.error("Failed to rebroadcast chicken location: \(error)")
+                                    logger.error("Failed to send chicken location: \(error)")
                                 }
                             }
+                            try await clock.sleep(for: .seconds(AppConstants.locationThrottleSeconds))
                         }
-                    )
-                }
+                    }
+                )
 
                 // chickenCanSeeHunters: chicken can see all hunters
                 // Gated behind hunterStartDate (hunters aren't active until then)
@@ -803,7 +722,7 @@ struct ChickenMapFeature {
                     )
                 }
 
-                return .merge(effects)
+                return .merge(effects).cancellable(id: CancelID.runtime, cancelInFlight: true)
             case .view(.gameInitialized):
                 // PP-zone-stored: seed an initial circle from the zone center
                 // so the map isn't empty before the schedule fetch lands; the
@@ -923,7 +842,7 @@ struct ChickenMapFeature {
                     )
                     let gameId = state.game.id
                     let winnersCount = state.game.winners.count
-                    return .run { [analyticsClient] _ in
+                    return .merge(.cancel(id: CancelID.runtime), .run { [analyticsClient] _ in
                         await liveActivityClient.end(endState)
                         do {
                             try await apiClient.updateGameStatus(gameId, .done)
@@ -931,7 +850,7 @@ struct ChickenMapFeature {
                         } catch {
                             logger.error("Failed to update game status: \(error)")
                         }
-                    }
+                    })
                 }
 
                 // PP-zone-stored: resolve the active circle from the stored
