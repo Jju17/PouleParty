@@ -688,7 +688,7 @@ class HunterMapViewModelBehaviorTest {
         assertFalse(
             "circleCenter was overwritten by a stray chicken broadcast in stayInTheZone",
             centerNow?.latitude() == strayChicken.latitude() &&
-                centerNow?.longitude() == strayChicken.longitude()
+                centerNow.longitude() == strayChicken.longitude()
         )
     }
 
@@ -901,7 +901,7 @@ class HunterMapViewModelBehaviorTest {
         assertTrue(
             "expected NavigateToChickenMap, got $effect",
             effect is HunterMapEffect.NavigateToChickenMap &&
-                (effect as HunterMapEffect.NavigateToChickenMap).gameId == "test-id"
+                effect.gameId == "test-id"
         )
     }
 

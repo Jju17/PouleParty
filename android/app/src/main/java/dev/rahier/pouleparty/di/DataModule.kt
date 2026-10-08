@@ -14,6 +14,8 @@ import dev.rahier.pouleparty.data.PresenceRepository
 import dev.rahier.pouleparty.data.RealtimePresenceRepository
 import dev.rahier.pouleparty.data.FirestoreUserProfileRepository
 import dev.rahier.pouleparty.data.UserProfileRepository
+import dev.rahier.pouleparty.util.JpegProofMediaPreparer
+import dev.rahier.pouleparty.util.ProofMediaPreparer
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -23,4 +25,5 @@ abstract class DataModule {
     @Binds abstract fun gameFunctions(impl: FirebaseGameFunctions): GameFunctions
     @Binds abstract fun challengeSubmissions(impl: FirebaseChallengeSubmissionRepository): ChallengeSubmissionRepository
     @Binds abstract fun userProfiles(impl: FirestoreUserProfileRepository): UserProfileRepository
+    @Binds abstract fun proofMedia(impl: JpegProofMediaPreparer): ProofMediaPreparer
 }

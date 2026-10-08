@@ -83,7 +83,7 @@ android {
     }
 
     testOptions {
-        unitTests.isReturnDefaultValues = true
+        unitTests.isReturnDefaultValues = false
     }
 
     // AND-M7 (store-audit 2026-05-18): 16 KB page-size alignment for

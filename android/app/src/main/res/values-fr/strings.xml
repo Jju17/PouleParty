@@ -500,4 +500,5 @@
     <string name="qa_end_game">Terminer</string>
     <string name="challenge_already_pending">Une preuve pour ce défi attend déjà un arbitre.</string>
     <string name="challenge_already_validated">Ce défi est déjà validé.</string>
+    <string name="challenge_video_too_large">Cette vidéo est trop longue à envoyer. Filme un extrait plus court (environ 20 secondes).</string>
 </resources>

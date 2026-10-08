@@ -511,4 +511,5 @@
     <string name="notification_channel_game_events_id" translatable="false">game_events</string>
     <string name="challenge_already_pending">A proof for this challenge is already waiting for a referee.</string>
     <string name="challenge_already_validated">This challenge is already validated.</string>
+    <string name="challenge_video_too_large">This video is too long to send. Film a shorter clip (about 20 seconds).</string>
 </resources>

@@ -19,7 +19,8 @@ import dev.rahier.pouleparty.model.SubmissionMediaType
 import dev.rahier.pouleparty.model.SubmissionStatus
 import dev.rahier.pouleparty.ui.gamelogic.ChallengeProgress
 import dev.rahier.pouleparty.ui.gamelogic.LevelProgress
-import dev.rahier.pouleparty.util.ImageCompression
+import dev.rahier.pouleparty.util.ProofMediaPreparer
+import dev.rahier.pouleparty.util.isProofTooLarge
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -125,6 +126,7 @@ data class LeaderboardHunterEntry(
 class ChallengesViewModel @Inject constructor(
     private val gameRepository: GameRepository,
     private val challengeSubmissions: ChallengeSubmissionRepository,
+    private val proofMedia: ProofMediaPreparer,
     auth: FirebaseAuth,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -181,6 +183,11 @@ class ChallengesViewModel @Inject constructor(
     private fun onMediaCaptured(challengeId: String, bytes: ByteArray, mediaType: SubmissionMediaType) {
         val state = _uiState.value
         val challenge = state.challenges.firstOrNull { it.id == challengeId } ?: return
+        if (isProofTooLarge(bytes.size, mediaType)) {
+            _uiState.update { it.copy(captureTargetChallengeId = null) }
+            viewModelScope.launch { _effects.send(ChallengesEffect.ShowError(R.string.challenge_video_too_large)) }
+            return
+        }
         _uiState.update {
             it.copy(
                 captureTargetChallengeId = null,
@@ -189,11 +196,7 @@ class ChallengesViewModel @Inject constructor(
         }
         viewModelScope.launch {
             try {
-                val payload = if (mediaType == SubmissionMediaType.IMAGE) {
-                    ImageCompression.compressJpeg(bytes)
-                } else {
-                    bytes
-                }
+                val payload = proofMedia.prepare(bytes, mediaType)
                 challengeSubmissions.submitChallenge(
                     gameId = gameId,
                     challengeId = challengeId,

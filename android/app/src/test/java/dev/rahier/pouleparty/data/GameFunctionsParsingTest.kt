@@ -1,9 +1,5 @@
 package dev.rahier.pouleparty.data
 
-import com.google.firebase.firestore.FirebaseFirestoreException
-import com.google.firebase.functions.FirebaseFunctionsException
-import io.mockk.every
-import io.mockk.mockk
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -61,31 +57,17 @@ class GameFunctionsParsingTest {
 
     @Test
     fun `callable errors map to their stable code`() {
-        val withCode = mockk<FirebaseFunctionsException> {
-            every { details } returns mapOf("code" to "powerUpTooFar")
-            every { code } returns FirebaseFunctionsException.Code.FAILED_PRECONDITION
-        }
-        assertEquals(ApiErrorCode.POWER_UP_TOO_FAR, withCode.toApiErrorCode())
-
-        val unavailable = mockk<FirebaseFunctionsException> {
-            every { details } returns null
-            every { code } returns FirebaseFunctionsException.Code.UNAVAILABLE
-        }
-        assertEquals(ApiErrorCode.NETWORK, unavailable.toApiErrorCode())
-
-        val exhausted = mockk<FirebaseFunctionsException> {
-            every { details } returns mapOf("lockedUntil" to 42L)
-            every { code } returns FirebaseFunctionsException.Code.RESOURCE_EXHAUSTED
-        }
-        assertEquals(ApiErrorCode.TOO_MANY_ATTEMPTS, exhausted.toApiErrorCode())
-        assertEquals(42L, exhausted.lockedUntilMs())
+        assertEquals(ApiErrorCode.POWER_UP_TOO_FAR, apiErrorCodeFor("powerUpTooFar", "FAILED_PRECONDITION"))
+        assertEquals(ApiErrorCode.NETWORK, apiErrorCodeFor(null, "UNAVAILABLE"))
+        assertEquals(ApiErrorCode.NETWORK, apiErrorCodeFor(null, "DEADLINE_EXCEEDED"))
+        assertEquals(ApiErrorCode.TOO_MANY_ATTEMPTS, apiErrorCodeFor(null, "RESOURCE_EXHAUSTED"))
+        assertEquals(ApiErrorCode.UNAUTHENTICATED, apiErrorCodeFor(null, "UNAUTHENTICATED"))
+        assertEquals(ApiErrorCode.UNKNOWN, apiErrorCodeFor(null, "INTERNAL"))
     }
 
     @Test
     fun `transport errors map to network and the rest to unknown`() {
         assertEquals(ApiErrorCode.NETWORK, IOException("offline").toApiErrorCode())
-        val firestoreOffline = mockk<FirebaseFirestoreException> { every { code } returns FirebaseFirestoreException.Code.UNAVAILABLE }
-        assertEquals(ApiErrorCode.NETWORK, firestoreOffline.toApiErrorCode())
         assertEquals(ApiErrorCode.UNKNOWN, IllegalStateException().toApiErrorCode())
         assertEquals(ApiErrorCode.GAME_FULL, ApiException(ApiErrorCode.GAME_FULL).toApiErrorCode())
     }

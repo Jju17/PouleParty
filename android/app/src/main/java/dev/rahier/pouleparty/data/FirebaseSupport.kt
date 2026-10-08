@@ -92,19 +92,18 @@ class ApiException(val code: ApiErrorCode, cause: Throwable? = null) : Exception
 
 internal fun Throwable.toApiErrorCode(): ApiErrorCode = when (this) {
     is ApiException -> code
-    is FirebaseFunctionsException -> {
-        val wire = (details as? Map<*, *>)?.get("code") as? String
-        when {
-            wire != null -> ApiErrorCode.fromWire(wire)
-            code == FirebaseFunctionsException.Code.UNAVAILABLE ||
-                code == FirebaseFunctionsException.Code.DEADLINE_EXCEEDED -> ApiErrorCode.NETWORK
-            code == FirebaseFunctionsException.Code.RESOURCE_EXHAUSTED -> ApiErrorCode.TOO_MANY_ATTEMPTS
-            else -> ApiErrorCode.UNKNOWN
-        }
-    }
-    is FirebaseFirestoreException ->
-        if (code == FirebaseFirestoreException.Code.UNAVAILABLE) ApiErrorCode.NETWORK else ApiErrorCode.UNKNOWN
+    is FirebaseFunctionsException -> apiErrorCodeFor(callableDetailsCode = (details as? Map<*, *>)?.get("code") as? String, statusName = code.name)
+    is FirebaseFirestoreException -> apiErrorCodeFor(callableDetailsCode = null, statusName = code.name)
     is java.io.IOException -> ApiErrorCode.NETWORK
+    else -> ApiErrorCode.UNKNOWN
+}
+
+/** Maps a callable `details.code`, or failing that a gRPC status name, to a code the UI translates. */
+internal fun apiErrorCodeFor(callableDetailsCode: String?, statusName: String?): ApiErrorCode = when {
+    callableDetailsCode != null -> ApiErrorCode.fromWire(callableDetailsCode)
+    statusName == "UNAVAILABLE" || statusName == "DEADLINE_EXCEEDED" -> ApiErrorCode.NETWORK
+    statusName == "RESOURCE_EXHAUSTED" -> ApiErrorCode.TOO_MANY_ATTEMPTS
+    statusName == "UNAUTHENTICATED" -> ApiErrorCode.UNAUTHENTICATED
     else -> ApiErrorCode.UNKNOWN
 }
 

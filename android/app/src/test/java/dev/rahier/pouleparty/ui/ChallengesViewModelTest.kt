@@ -77,6 +77,7 @@ class ChallengesViewModelTest {
         return ChallengesViewModel(
             gameRepository = gameRepository,
             challengeSubmissions = challengeSubmissions,
+            proofMedia = { bytes, _ -> bytes },
             auth = auth,
             savedStateHandle = SavedStateHandle(mapOf("gameId" to gameId))
         )

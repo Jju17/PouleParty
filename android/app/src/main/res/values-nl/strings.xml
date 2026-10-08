@@ -496,4 +496,5 @@
     <string name="qa_end_game">Beëindigen</string>
     <string name="challenge_already_pending">Er wacht al een bewijs voor deze uitdaging op een scheidsrechter.</string>
     <string name="challenge_already_validated">Deze uitdaging is al gevalideerd.</string>
+    <string name="challenge_video_too_large">Deze video is te lang om te versturen. Film een kortere clip (ongeveer 20 seconden).</string>
 </resources>
