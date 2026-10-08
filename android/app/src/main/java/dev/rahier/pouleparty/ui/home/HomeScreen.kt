@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.home
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.content.Intent
 import android.media.MediaPlayer
 import android.net.Uri
@@ -48,7 +49,7 @@ fun HomeScreen(
     onNavigateToDemoMode: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     // One-shot navigation effects from the ViewModel.

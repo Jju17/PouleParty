@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.onboarding
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.Manifest
 import android.content.Intent
 import android.net.Uri
@@ -43,7 +44,7 @@ fun OnboardingScreen(
     onOnboardingCompleted: (String) -> Unit,
     viewModel: OnboardingViewModel = hiltViewModel()
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
     val pagerState = rememberPagerState(pageCount = { OnboardingViewModel.TOTAL_PAGES })
     val context = LocalContext.current
 

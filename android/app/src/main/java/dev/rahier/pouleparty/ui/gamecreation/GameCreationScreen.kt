@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.gamecreation
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -63,7 +64,7 @@ fun GameCreationScreen(
     onDismiss: () -> Unit,
     viewModel: GameCreationViewModel = hiltViewModel()
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
     val dateFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
 
     // One-shot navigation effects from the ViewModel.

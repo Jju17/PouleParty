@@ -2,6 +2,7 @@
 
 package dev.rahier.pouleparty.ui.chickenmap
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -67,7 +68,7 @@ fun ChickenMapScreen(
     onBecameHunter: (gameId: String, teamName: String) -> Unit = { _, _ -> },
     viewModel: ChickenMapViewModel = hiltViewModel()
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     KeepScreenOn()

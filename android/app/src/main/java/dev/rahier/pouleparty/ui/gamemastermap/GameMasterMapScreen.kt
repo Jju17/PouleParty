@@ -2,6 +2,7 @@
 
 package dev.rahier.pouleparty.ui.gamemastermap
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.rahier.pouleparty.ui.common.ActionErrorDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -53,7 +54,7 @@ fun GameMasterMapScreen(
     onVictory: (gameId: String) -> Unit = {},
     viewModel: GameMasterMapViewModel = hiltViewModel(),
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(viewModel) {

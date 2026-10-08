@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.victory
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.withInfiniteAnimationFrameMillis
 import androidx.compose.foundation.Canvas
@@ -41,7 +42,7 @@ fun VictoryScreen(
     onGoToMenu: () -> Unit,
     viewModel: VictoryViewModel = hiltViewModel()
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
     val isCurrentUserAWinner = state.game.winners.any { it.hunterId == state.hunterId }
     val showConfetti = isCurrentUserAWinner && !state.isChicken
 

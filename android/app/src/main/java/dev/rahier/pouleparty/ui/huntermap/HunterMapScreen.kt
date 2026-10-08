@@ -2,6 +2,7 @@
 
 package dev.rahier.pouleparty.ui.huntermap
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.rahier.pouleparty.ui.common.ActionErrorDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -73,7 +74,7 @@ fun HunterMapScreen(
     onBecameChicken: (gameId: String) -> Unit = {},
     viewModel: HunterMapViewModel = hiltViewModel()
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     KeepScreenOn()

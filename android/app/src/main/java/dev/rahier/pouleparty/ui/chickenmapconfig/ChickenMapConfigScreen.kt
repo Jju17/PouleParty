@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.chickenmapconfig
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -55,7 +56,7 @@ fun ChickenMapConfigScreen(
     forcedPinMode: MapConfigPinMode = MapConfigPinMode.START,
     viewModel: ChickenMapConfigViewModel = hiltViewModel()
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         viewModel.initialize(initialRadius, finalMarker)
