@@ -14,7 +14,7 @@ struct QADebugFlowTests {
     // MARK: - Debug panel actions (chicken)
 
     @Test func chickenDebugEndNowCallsCallable() async {
-        let captured = LockIsolated<String?>(nil)
+        let captured = LockIsolated<DebugAction?>(nil)
         let store = TestStore(initialState: ChickenMapFeature.State(game: .mock)) {
             ChickenMapFeature()
         } withDependencies: {
@@ -25,11 +25,11 @@ struct QADebugFlowTests {
         await store.send(.view(.debugEndNowTapped))
         await store.finish()
 
-        #expect(captured.value == "endNow")
+        #expect(captured.value == .endNow)
     }
 
     @Test func chickenDebugAdvanceStepCallsCallable() async {
-        let captured = LockIsolated<String?>(nil)
+        let captured = LockIsolated<DebugAction?>(nil)
         let store = TestStore(initialState: ChickenMapFeature.State(game: .mock)) {
             ChickenMapFeature()
         } withDependencies: {
@@ -40,13 +40,13 @@ struct QADebugFlowTests {
         await store.send(.view(.debugAdvanceStepTapped))
         await store.finish()
 
-        #expect(captured.value == "advanceStep")
+        #expect(captured.value == .advanceStep)
     }
 
     // MARK: - Debug panel actions (GameMaster)
 
     @Test func gameMasterDebugEndNowCallsCallable() async {
-        let captured = LockIsolated<String?>(nil)
+        let captured = LockIsolated<DebugAction?>(nil)
         let store = TestStore(initialState: GameMasterMapFeature.State(game: .mock)) {
             GameMasterMapFeature()
         } withDependencies: {
@@ -57,11 +57,11 @@ struct QADebugFlowTests {
         await store.send(.view(.debugEndNowTapped))
         await store.finish()
 
-        #expect(captured.value == "endNow")
+        #expect(captured.value == .endNow)
     }
 
     @Test func gameMasterDebugAdvanceStepCallsCallable() async {
-        let captured = LockIsolated<String?>(nil)
+        let captured = LockIsolated<DebugAction?>(nil)
         let store = TestStore(initialState: GameMasterMapFeature.State(game: .mock)) {
             GameMasterMapFeature()
         } withDependencies: {
@@ -72,7 +72,7 @@ struct QADebugFlowTests {
         await store.send(.view(.debugAdvanceStepTapped))
         await store.finish()
 
-        #expect(captured.value == "advanceStep")
+        #expect(captured.value == .advanceStep)
     }
 
     // MARK: - Debug game creation compresses the timing

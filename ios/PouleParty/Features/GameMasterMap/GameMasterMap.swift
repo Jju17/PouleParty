@@ -331,12 +331,12 @@ struct GameMasterMapFeature {
             case .view(.debugEndNowTapped):
                 let gameId = state.game.id
                 return .run { _ in
-                    try? await apiClient.debugAdvanceGame(gameId, "endNow")
+                    try? await apiClient.debugAdvanceGame(gameId, .endNow)
                 }
             case .view(.debugAdvanceStepTapped):
                 let gameId = state.game.id
                 return .run { _ in
-                    try? await apiClient.debugAdvanceGame(gameId, "advanceStep")
+                    try? await apiClient.debugAdvanceGame(gameId, .advanceStep)
                 }
 
             case .view(.launchTapped):

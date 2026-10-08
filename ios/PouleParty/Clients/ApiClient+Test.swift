@@ -1,0 +1,45 @@
+import ComposableArchitecture
+import Foundation
+
+extension ApiClient: TestDependencyKey {
+    static let testValue = ApiClient(
+        findActiveGame: { _ in nil },
+        submitFoundCode: { _, _, _ in },
+        getFoundCode: { _ in "" },
+        fetchZoneSchedule: { _ in [] },
+        findGameByCode: { _ in nil },
+        joinGame: { _, _ in },
+        leaveGame: { _ in },
+        updateGameStatus: { _, _ in },
+        chickenLocationStream: { _ in AsyncStream { _ in } },
+        gameConfigStream: { _ in AsyncStream { _ in } },
+        hunterLocationsStream: { _ in AsyncStream { _ in } },
+        setChickenLocation: { _, _, _ in },
+        setConfig: { _ in },
+        setHunterLocation: { _, _, _ in },
+        collectPowerUp: { _, _, _ in },
+        activatePowerUp: { _, _ in },
+        powerUpsStream: { _ in AsyncStream { _ in } },
+        updateHeartbeat: { _ in },
+        fetchMyGames: { _ in [] },
+        findRegistration: { _, _ in nil },
+        fetchAllRegistrations: { _ in [] },
+        registrationsStream: { _ in AsyncStream { _ in } },
+        challengesStream: { _ in AsyncStream { _ in } },
+        leaderboardStream: { _ in AsyncStream { _ in } },
+        myCompletionStream: { _, _ in AsyncStream { _ in } },
+        hunterSubmissionsStream: { _, _ in AsyncStream { _ in } },
+        pendingSubmissionsStream: { _ in AsyncStream { _ in } },
+        submitChallenge: { _, _, _, _, _, _ in ChallengeSubmission() },
+        validateChallengeSubmission: { _, _, _ in },
+        applyOutOfZonePenalty: { _ in },
+        reportPlayer: { _, _, _ in },
+        newGameId: { "test-game-id" },
+        setGameMasterPassword: { _, _ in },
+        joinAsGameMaster: { _, _ in JoinAsGameMasterResult(success: true, attemptsRemaining: 5, lockedUntilMs: nil) },
+        designateChicken: { _, _ in },
+        validateRegistrationCode: { _, _ in .valid },
+        launchGame: { _ in Date() },
+        debugAdvanceGame: { _, _ in }
+    )
+}

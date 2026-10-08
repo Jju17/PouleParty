@@ -13,8 +13,6 @@ extension ApiClient {
             findActiveGame: { _ in nil },
             submitFoundCode: { _, _, _ in },
             getFoundCode: { _ in MockDemoData.liveGame.foundCode },
-            deleteConfig: { _ in },
-            getConfig: { _ in MockDemoData.liveGame },
             fetchZoneSchedule: { _ in [] },
             findGameByCode: { _ in MockDemoData.liveGame },
             joinGame: { _, _ in },
@@ -40,7 +38,7 @@ extension ApiClient {
             setConfig: { _ in },
             setHunterLocation: { _, _, _ in },
             collectPowerUp: { _, _, _ in },
-            activatePowerUp: { _, _, _, _ in },
+            activatePowerUp: { _, _ in },
             powerUpsStream: { _ in
                 demoStream { continuation in
                     continuation.yield(MockDemoData.powerUps)
@@ -84,29 +82,17 @@ extension ApiClient {
             },
             submitChallenge: { _, _, _, _, _, _ in ChallengeSubmission() },
             validateChallengeSubmission: { _, _, _ in },
-            decrementTotalPoints: { _, _ in },
+            applyOutOfZonePenalty: { _ in },
             reportPlayer: { _, _, _ in },
             newGameId: { MockDemoData.liveGame.id },
             setGameMasterPassword: { _, _ in },
-            clearGameMasterPassword: { _ in },
             joinAsGameMaster: { _, _ in
                 JoinAsGameMasterResult(success: true, attemptsRemaining: 5, lockedUntilMs: nil)
             },
             designateChicken: { _, _ in },
             validateRegistrationCode: { _, _ in .valid },
-            computeZoneConfiguration: { _ in
-                ComputeZoneConfigurationOutput(
-                    initialRadius: MockDemoData.liveGame.zone.radius,
-                    validatedFinal: nil,
-                    driftSeed: MockDemoData.liveGame.zone.driftSeed,
-                    finalZoneRadius: 50,
-                    interiorMargin: 200,
-                    shrinkIntervalMinutes: 5,
-                    shrinkMetersPerUpdate: 50,
-                    circles: []
-                )
-            },
-            launchGame: { _ in Date() }
+            launchGame: { _ in Date() },
+            debugAdvanceGame: { _, _ in }
         )
     }
 

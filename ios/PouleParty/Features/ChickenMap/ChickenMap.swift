@@ -279,14 +279,13 @@ struct ChickenMapFeature {
                 // Atomic dedup — see HunterMap for the rationale. At 1 Hz
                 // a stationary chicken would otherwise spam N duplicate
                 // transactions while the first is still in flight.
-                guard !state.powerUps.collectingIds.contains(powerUp.id) else { return .none }
+                guard let location = state.userLocation,
+                      !state.powerUps.collectingIds.contains(powerUp.id) else { return .none }
                 state.powerUps.collectingIds.insert(powerUp.id)
-                let distance: Double? = state.userLocation.map { distanceMeters($0, powerUp.coordinate) }
-                let distanceLog = distance.map { String(format: "%.1fm", $0) } ?? "unknown"
-                logger.info("Collecting power-up id=\(powerUp.id) type=\(powerUp.type.rawValue) distance=\(distanceLog) chickenId=\(userId)")
+                logger.info("Collecting power-up id=\(powerUp.id) type=\(powerUp.type.rawValue) distance=\(String(format: "%.1fm", distanceMeters(location, powerUp.coordinate))) chickenId=\(userId)")
                 return .run { [analyticsClient] send in
                     do {
-                        try await apiClient.collectPowerUp(gameId, powerUp.id, userId)
+                        try await apiClient.collectPowerUp(gameId, powerUp.id, location)
                         analyticsClient.powerUpCollected(type: powerUp.type.rawValue, role: "chicken")
                         logger.info("Collected power-up id=\(powerUp.id) type=\(powerUp.type.rawValue)")
                         await send(.powerUps(.collectSucceeded(powerUp)))
@@ -321,18 +320,9 @@ struct ChickenMapFeature {
                     .cancellable(id: CancelID.powerUpNotificationDismiss, cancelInFlight: true)
                 }
                 let gameId = state.game.id
-                let duration = powerUp.type.durationSeconds ?? 0
-                let expiresAt = Timestamp(date: .now.addingTimeInterval(duration))
                 return .run { [analyticsClient] send in
-                    let effectField: String?
-                    switch powerUp.type {
-                    case .invisibility, .zoneFreeze, .decoy, .jammer:
-                        effectField = powerUp.type.firestoreEffectField
-                    default:
-                        effectField = nil
-                    }
                     do {
-                        try await apiClient.activatePowerUp(gameId, powerUp.id, effectField, expiresAt)
+                        try await apiClient.activatePowerUp(gameId, powerUp.id)
                     } catch {
                         // Server rejected the activation (rule denied, offline, ...).
                         // The next `gameConfigStream` tick will reconcile the
@@ -564,12 +554,12 @@ struct ChickenMapFeature {
             case .view(.debugEndNowTapped):
                 let gameId = state.game.id
                 return .run { _ in
-                    try? await apiClient.debugAdvanceGame(gameId, "endNow")
+                    try? await apiClient.debugAdvanceGame(gameId, .endNow)
                 }
             case .view(.debugAdvanceStepTapped):
                 let gameId = state.game.id
                 return .run { _ in
-                    try? await apiClient.debugAdvanceGame(gameId, "advanceStep")
+                    try? await apiClient.debugAdvanceGame(gameId, .advanceStep)
                 }
             case .validationQueue:
                 return .none

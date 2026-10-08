@@ -16,7 +16,7 @@
 //  - `state.userLocation` and `state.mapCircle` are left `nil` so the
 //    zone-check block is skipped and `isOutsideZone` keeps the value we
 //    seed.
-//  - `apiClient.decrementTotalPoints` is mocked with a call counter so
+//  - `apiClient.applyOutOfZonePenalty` is mocked with a call counter so
 //    we assert "fires exactly N times" for each scenario.
 //
 
@@ -76,7 +76,7 @@ struct OutOfZonePenaltyTests {
         let firstStore = TestStore(initialState: firstState) {
             HunterMapFeature()
         } withDependencies: {
-            $0.apiClient.decrementTotalPoints = { _, _ in
+            $0.apiClient.applyOutOfZonePenalty = { _ in
                 calls.withValue { $0 += 1 }
             }
         }
@@ -89,7 +89,7 @@ struct OutOfZonePenaltyTests {
         let secondStore = TestStore(initialState: secondState) {
             HunterMapFeature()
         } withDependencies: {
-            $0.apiClient.decrementTotalPoints = { _, _ in
+            $0.apiClient.applyOutOfZonePenalty = { _ in
                 calls.withValue { $0 += 1 }
             }
         }
@@ -109,7 +109,7 @@ struct OutOfZonePenaltyTests {
         let store = TestStore(initialState: state) {
             HunterMapFeature()
         } withDependencies: {
-            $0.apiClient.decrementTotalPoints = { _, _ in
+            $0.apiClient.applyOutOfZonePenalty = { _ in
                 calls.withValue { $0 += 1 }
             }
         }
@@ -144,7 +144,7 @@ struct OutOfZonePenaltyTests {
         let store = TestStore(initialState: state) {
             HunterMapFeature()
         } withDependencies: {
-            $0.apiClient.decrementTotalPoints = { _, _ in
+            $0.apiClient.applyOutOfZonePenalty = { _ in
                 calls.withValue { $0 += 1 }
             }
         }
@@ -168,7 +168,7 @@ struct OutOfZonePenaltyTests {
         let store = TestStore(initialState: state) {
             HunterMapFeature()
         } withDependencies: {
-            $0.apiClient.decrementTotalPoints = { _, _ in
+            $0.apiClient.applyOutOfZonePenalty = { _ in
                 calls.withValue { $0 += 1 }
             }
         }
@@ -201,7 +201,7 @@ struct OutOfZonePenaltyTests {
         let store = TestStore(initialState: state) {
             HunterMapFeature()
         } withDependencies: {
-            $0.apiClient.decrementTotalPoints = { _, _ in
+            $0.apiClient.applyOutOfZonePenalty = { _ in
                 calls.withValue { $0 += 1 }
             }
         }
@@ -236,7 +236,7 @@ struct OutOfZonePenaltyTests {
         let store = TestStore(initialState: state) {
             HunterMapFeature()
         } withDependencies: {
-            $0.apiClient.decrementTotalPoints = { _, _ in
+            $0.apiClient.applyOutOfZonePenalty = { _ in
                 calls.withValue { $0 += 1 }
             }
         }
@@ -262,7 +262,7 @@ struct OutOfZonePenaltyTests {
         let store = TestStore(initialState: state) {
             HunterMapFeature()
         } withDependencies: {
-            $0.apiClient.decrementTotalPoints = { _, _ in
+            $0.apiClient.applyOutOfZonePenalty = { _ in
                 calls.withValue { $0 += 1 }
             }
         }
@@ -288,7 +288,7 @@ struct OutOfZonePenaltyTests {
         let store = TestStore(initialState: state) {
             HunterMapFeature()
         } withDependencies: {
-            $0.apiClient.decrementTotalPoints = { _, _ in
+            $0.apiClient.applyOutOfZonePenalty = { _ in
                 calls.withValue { $0 += 1 }
             }
         }

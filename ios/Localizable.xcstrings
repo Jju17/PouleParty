@@ -5222,6 +5222,502 @@
           }
         }
       }
+    },
+    "Your session has expired. Restart the app and try again.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ta session a expiré. Relance l'app et réessaie."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Je sessie is verlopen. Start de app opnieuw en probeer het nog eens."
+          }
+        }
+      }
+    },
+    "Something in the request is not valid. Check what you entered.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une information envoyée n'est pas valide. Vérifie ta saisie."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Iets in je aanvraag klopt niet. Controleer wat je invoerde."
+          }
+        }
+      }
+    },
+    "This game no longer exists.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cette partie n'existe plus."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dit spel bestaat niet meer."
+          }
+        }
+      }
+    },
+    "This game can no longer be joined.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On ne peut plus rejoindre cette partie."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Je kunt dit spel niet meer joinen."
+          }
+        }
+      }
+    },
+    "This game is full.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cette partie est complète."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dit spel is vol."
+          }
+        }
+      }
+    },
+    "You already play in this game.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu joues déjà dans cette partie."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Je speelt al mee in dit spel."
+          }
+        }
+      }
+    },
+    "This event needs the code from your registration email.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cet événement demande le code reçu par email à l'inscription."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voor dit evenement heb je de code uit je inschrijvingsmail nodig."
+          }
+        }
+      }
+    },
+    "You are not allowed to do this in this game.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu n'as pas le droit de faire ça dans cette partie."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Je mag dit niet doen in dit spel."
+          }
+        }
+      }
+    },
+    "Only a hunter can do this.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seul un chasseur peut faire ça."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alleen een jager kan dit doen."
+          }
+        }
+      }
+    },
+    "The game has not started yet.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La partie n'a pas encore commencé."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Het spel is nog niet begonnen."
+          }
+        }
+      }
+    },
+    "The game is over.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La partie est terminée."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Het spel is afgelopen."
+          }
+        }
+      }
+    },
+    "Too many attempts. Wait a moment before trying again.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trop d'essais. Attends un peu avant de réessayer."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Te veel pogingen. Wacht even voor je het opnieuw probeert."
+          }
+        }
+      }
+    },
+    "This game has no game master code.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cette partie n'a pas de code arbitre."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dit spel heeft geen scheidsrechterscode."
+          }
+        }
+      }
+    },
+    "This is only possible before the game starts.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce n'est possible qu'avant le début de la partie."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dit kan alleen voor het spel begint."
+          }
+        }
+      }
+    },
+    "The chicken cannot leave. Cancel the game instead.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La poule ne peut pas quitter. Annule plutôt la partie."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "De kip kan niet vertrekken. Annuleer het spel in de plaats."
+          }
+        }
+      }
+    },
+    "This power-up is gone.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce power-up a disparu."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deze power-up is verdwenen."
+          }
+        }
+      }
+    },
+    "Someone was faster on this power-up.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quelqu'un a été plus rapide sur ce power-up."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Iemand was sneller bij deze power-up."
+          }
+        }
+      }
+    },
+    "This power-up is for the other side.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce power-up est pour l'autre camp."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deze power-up is voor de andere kant."
+          }
+        }
+      }
+    },
+    "Get closer to the power-up to collect it.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rapproche-toi du power-up pour le ramasser."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kom dichter bij de power-up om hem op te rapen."
+          }
+        }
+      }
+    },
+    "This power-up is already active.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce power-up est déjà actif."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deze power-up is al actief."
+          }
+        }
+      }
+    },
+    "Your position is not known yet. Wait for the GPS.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ta position n'est pas encore connue. Attends le GPS."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Je positie is nog niet bekend. Wacht op de gps."
+          }
+        }
+      }
+    },
+    "This proof no longer exists.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cette preuve n'existe plus."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dit bewijs bestaat niet meer."
+          }
+        }
+      }
+    },
+    "Another referee already handled this proof.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un autre arbitre a déjà traité cette preuve."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Een andere scheidsrechter heeft dit bewijs al behandeld."
+          }
+        }
+      }
+    },
+    "This challenge no longer exists.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce défi n'existe plus."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deze uitdaging bestaat niet meer."
+          }
+        }
+      }
+    },
+    "The game has already been launched.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La partie est déjà lancée."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Het spel is al gestart."
+          }
+        }
+      }
+    },
+    "The game cannot be launched yet.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La partie ne peut pas encore être lancée."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Het spel kan nog niet gestart worden."
+          }
+        }
+      }
+    },
+    "This action only works in a test game.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cette action ne marche que dans une partie de test."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deze actie werkt alleen in een testspel."
+          }
+        }
+      }
+    },
+    "No connection. Check your network and try again.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pas de connexion. Vérifie ton réseau et réessaie."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geen verbinding. Controleer je netwerk en probeer opnieuw."
+          }
+        }
+      }
+    },
+    "Something went wrong. Try again.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un problème est survenu. Réessaie."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Er ging iets mis. Probeer opnieuw."
+          }
+        }
+      }
+    },
+    "Could not leave the game": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible de quitter la partie"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kon het spel niet verlaten"
+          }
+        }
+      }
+    },
+    "Try again": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réessayer"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opnieuw proberen"
+          }
+        }
+      }
     }
   },
   "version": "1.1"

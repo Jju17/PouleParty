@@ -169,7 +169,7 @@ struct HunterMapFeature {
             /// rejected the code as wrong. Routes back to the
             /// "Wrong code" alert + cooldown logic that used to
             /// fire on the client-side comparison.
-            case wrongCodeRejected
+            case wrongCodeRejected(lockedUntil: Date?)
         }
 
         @CasePathable
@@ -320,16 +320,15 @@ struct HunterMapFeature {
                 // insert in the same pass is race-free — subsequent ticks
                 // for the same id short-circuit until `collectSucceeded` /
                 // `collectFailed` clears the entry.
-                guard !state.powerUps.collectingIds.contains(powerUp.id) else { return .none }
+                guard let location = state.userLocation,
+                      !state.powerUps.collectingIds.contains(powerUp.id) else { return .none }
                 state.powerUps.collectingIds.insert(powerUp.id)
                 let gameId = state.game.id
                 let hunterId = state.hunterId
-                let distance: Double? = state.userLocation.map { distanceMeters($0, powerUp.coordinate) }
-                let distanceLog = distance.map { String(format: "%.1fm", $0) } ?? "unknown"
-                logger.info("Collecting power-up id=\(powerUp.id) type=\(powerUp.type.rawValue) distance=\(distanceLog) hunterId=\(hunterId)")
+                logger.info("Collecting power-up id=\(powerUp.id) type=\(powerUp.type.rawValue) distance=\(String(format: "%.1fm", distanceMeters(location, powerUp.coordinate))) hunterId=\(hunterId)")
                 return .run { [analyticsClient] send in
                     do {
-                        try await apiClient.collectPowerUp(gameId, powerUp.id, hunterId)
+                        try await apiClient.collectPowerUp(gameId, powerUp.id, location)
                         analyticsClient.powerUpCollected(type: powerUp.type.rawValue, role: "hunter")
                         logger.info("Collected power-up id=\(powerUp.id) type=\(powerUp.type.rawValue)")
                         await send(.powerUps(.collectSucceeded(powerUp)))
@@ -358,8 +357,6 @@ struct HunterMapFeature {
                     .cancellable(id: CancelID.powerUpNotificationDismiss, cancelInFlight: true)
                 }
                 let gameId = state.game.id
-                let duration = powerUp.type.durationSeconds ?? 0
-                let expiresAt = Timestamp(date: .now.addingTimeInterval(duration))
 
                 // PP-zone-stored: the NEXT zone boundary is just the next entry
                 // in the stored schedule — no client recompute. In
@@ -390,9 +387,8 @@ struct HunterMapFeature {
                 }
 
                 return .run { [analyticsClient] send in
-                    let effectField: String? = powerUp.type == .radarPing ? powerUp.type.firestoreEffectField : nil
                     do {
-                        try await apiClient.activatePowerUp(gameId, powerUp.id, effectField, expiresAt)
+                        try await apiClient.activatePowerUp(gameId, powerUp.id)
                     } catch {
                         // Server rejected the activation (rule denied, offline, ...).
                         // The next `gameConfigStream` tick will reconcile the
@@ -441,7 +437,7 @@ struct HunterMapFeature {
                     hunterName: hunterName,
                     attempts: totalAttempts
                 )
-            case .internal(.wrongCodeRejected):
+            case let .internal(.wrongCodeRejected(lockedUntil)):
                 state.isSubmittingWinner = false
                 state.pendingFoundCode = nil
                 HapticManager.notification(.error)
@@ -450,6 +446,9 @@ struct HunterMapFeature {
                 if state.wrongCodeAttempts >= remoteConfigClient.codeMaxWrongAttempts() {
                     state.codeCooldownUntil = .now.addingTimeInterval(remoteConfigClient.codeCooldownSeconds())
                     state.wrongCodeAttempts = 0
+                }
+                if let lockedUntil, lockedUntil > (state.codeCooldownUntil ?? .distantPast) {
+                    state.codeCooldownUntil = lockedUntil
                 }
                 state.destination = .alert(
                     AlertState {
@@ -1047,10 +1046,9 @@ struct HunterMapFeature {
                     } else if let due = dueAt, now >= due {
                         state.lastPenaltyAt = now
                         let gameId = state.game.id
-                        let hunterId = state.hunterId
                         return .run { _ in
                             do {
-                                try await apiClient.decrementTotalPoints(gameId, hunterId)
+                                try await apiClient.applyOutOfZonePenalty(gameId)
                             } catch {
                                 logger.error("Out-of-zone penalty write failed: \(error.localizedDescription)")
                             }
@@ -1113,11 +1111,9 @@ struct HunterMapFeature {
                     locationClient.stopTracking()
                     await send(.internal(.winnerRegistered))
                 case .invalidCode:
-                    // CRIT-2 (audit 2026-05-17): the server rejected
-                    // the code. Route back to the wrong-code UX (alert
-                    // + cooldown) instead of the network-failure
-                    // retry alert.
-                    await send(.internal(.wrongCodeRejected))
+                    await send(.internal(.wrongCodeRejected(lockedUntil: nil)))
+                case let .cooldown(until):
+                    await send(.internal(.wrongCodeRejected(lockedUntil: until)))
                 default:
                     logger.error("submitFoundCode rejected: \(String(describing: err))")
                     await send(.internal(.winnerRegistrationFailed))
