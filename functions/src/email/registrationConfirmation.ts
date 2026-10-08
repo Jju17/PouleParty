@@ -1,4 +1,6 @@
 import { logger } from "firebase-functions/v2";
+import { fetchWithRetry } from "../http";
+import { eventBatch } from "../events";
 
 // PP-52 — Confirmation email sent by `confirmRegistrationPayment`
 // (functions/src/registrations.ts) after Stripe confirms the payment.
@@ -39,7 +41,6 @@ interface EmailStrings {
   support: string;
   reference: string;
   footer: string;
-  dDay: string;
 }
 
 const FROM_ADDRESS = "PouleParty <noreply@pouleparty.be>";
@@ -58,7 +59,6 @@ const STRINGS: Record<Locale, EmailStrings> = {
     support: "Une question&nbsp;? Écris à",
     reference: "Référence inscription",
     footer: "PouleParty — Bruxelles 🇧🇪",
-    dDay: "samedi 6 juin 2026",
   },
   en: {
     subject: "Your PouleParty registration is confirmed 🎉",
@@ -72,7 +72,6 @@ const STRINGS: Record<Locale, EmailStrings> = {
     support: "Anything wrong? Email",
     reference: "Registration reference",
     footer: "PouleParty — Brussels 🇧🇪",
-    dDay: "Saturday, June 6, 2026",
   },
   nl: {
     subject: "Je PouleParty-inschrijving is bevestigd 🎉",
@@ -86,9 +85,12 @@ const STRINGS: Record<Locale, EmailStrings> = {
     support: "Een probleem? Mail naar",
     reference: "Inschrijvingsreferentie",
     footer: "PouleParty — Brussel 🇧🇪",
-    dDay: "zaterdag 6 juni 2026",
   },
 };
+
+function eventDateText(reg: RegistrationSnapshot, lang: Locale): string {
+  return eventBatch(reg.batchId)?.dateText[lang] ?? "";
+}
 
 function pickStrings(locale: string): { strings: EmailStrings; lang: Locale } {
   if (locale === "en" || locale === "nl") return { strings: STRINGS[locale], lang: locale };
@@ -148,7 +150,7 @@ function renderHtml(reg: RegistrationSnapshot, s: EmailStrings, lang: Locale): s
             <tr>
               <td class="pp-text" style="padding:32px 28px 16px;">
                 <p style="margin:0 0 16px;font-size:16px;line-height:1.5;">${s.greeting(reg.playerName)}</p>
-                <p style="margin:0 0 16px;font-size:16px;line-height:1.5;">${s.body(reg.teamName, reg.teamSize, s.dDay)}</p>
+                <p style="margin:0 0 16px;font-size:16px;line-height:1.5;">${s.body(reg.teamName, reg.teamSize, eventDateText(reg, lang))}</p>
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" class="pp-code-box" style="margin:24px 0;border-radius:12px;">
                   <tr>
                     <td style="padding:20px;text-align:center;">
@@ -180,11 +182,11 @@ function stripTags(value: string): string {
   return value.replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&");
 }
 
-function renderText(reg: RegistrationSnapshot, s: EmailStrings): string {
+function renderText(reg: RegistrationSnapshot, s: EmailStrings, lang: Locale): string {
   return [
     stripTags(s.greeting(reg.playerName)),
     ``,
-    stripTags(s.body(reg.teamName, reg.teamSize, s.dDay)),
+    stripTags(s.body(reg.teamName, reg.teamSize, eventDateText(reg, lang))),
     ``,
     `${s.codeLabel} : ${reg.code}`,
     ``,
@@ -211,7 +213,7 @@ export async function sendRegistrationConfirmationEmail(
   const { strings, lang } = pickStrings(reg.locale);
   // Resend's REST API is simpler than the SDK + smaller bundle than
   // adding the `resend` npm package. Same auth, same response shape.
-  const response = await fetch("https://api.resend.com/emails", {
+  const response = await fetchWithRetry("https://api.resend.com/emails", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -222,7 +224,7 @@ export async function sendRegistrationConfirmationEmail(
       to: [reg.email],
       subject: strings.subject,
       html: renderHtml(reg, strings, lang),
-      text: renderText(reg, strings),
+      text: renderText(reg, strings, lang),
     }),
   });
 
@@ -230,5 +232,5 @@ export async function sendRegistrationConfirmationEmail(
     const body = await response.text();
     throw new Error(`Resend returned ${response.status}: ${body}`);
   }
-  logger.info(`Confirmation email (${lang}) sent to ${reg.email} for ${reg.registrationId}`);
+  logger.info("[email] confirmation sent", { registrationId: reg.registrationId, lang });
 }

@@ -14,6 +14,8 @@ import { randomInt } from "crypto";
 import Stripe = require("stripe");
 
 import { CALLABLE_OPTIONS, requireUid } from "./config";
+import { eventBatch } from "./events";
+import { fetchWithRetry } from "./http";
 import { sendRegistrationConfirmationEmail } from "./email/registrationConfirmation";
 import { appendRegistrationRow, markRegistrationRefunded } from "./sheets";
 
@@ -30,8 +32,6 @@ const STRIPE_WEBHOOK_SECRET = defineSecret("STRIPE_WEBHOOK_SECRET");
 const RESEND_API_KEY = defineSecret("RESEND_API_KEY");
 const GOOGLE_SHEET_ID = defineSecret("GOOGLE_SHEET_ID");
 
-// 12.00 EUR per player. Charged as teamSize × UNIT_PRICE_CENTS.
-const UNIT_PRICE_CENTS = 1200;
 const CURRENCY = "eur";
 const ALLOWED_TEAM_SIZES = [3, 4, 5] as const;
 type TeamSize = (typeof ALLOWED_TEAM_SIZES)[number];
@@ -119,17 +119,13 @@ interface RegistrationDoc {
   claimedBy?: string;
 }
 
+function unitPriceCents(batchId: string): number {
+  return eventBatch(batchId)?.unitPriceCents ?? 0;
+}
+
 function db() {
   return getFirestore();
 }
-
-// CRIT-4 (audit 2026-05-17): allowlist of accepted batchIds. Today only
-// D-Day 06/06/2026 is in scope. Adding a new event = add it here. Without
-// this allowlist any string was accepted as a batchId, polluting Firestore
-// + Stripe with garbage / spoofed registrations.
-const ALLOWED_BATCH_IDS = new Set<string>([
-  "game-06-06-2026",
-]);
 
 // CRIT-4: max lengths on free-text fields. The previous validation only
 // checked `length > 0`, so a 10 MB playerName could pass and either
@@ -160,7 +156,7 @@ export function validatePayload(body: unknown): RegistrationFormPayload {
 
   const batchId = typeof b.batchId === "string" ? b.batchId.trim() : "";
   if (!batchId) throw new Error("batchId is required");
-  if (!ALLOWED_BATCH_IDS.has(batchId)) {
+  if (!eventBatch(batchId)) {
     throw new Error("batchId is not recognized");
   }
 
@@ -369,10 +365,10 @@ export const createPendingRegistration = onRequest(
               quantity: payload.teamSize,
               price_data: {
                 currency: CURRENCY,
-                unit_amount: UNIT_PRICE_CENTS,
+                unit_amount: unitPriceCents(payload.batchId),
                 product_data: {
-                  name: "PouleParty — Inscription événement physique 06/06/2026 Ixelles",
-                  description: `Inscription événement en présentiel, samedi 6 juin 2026, 20h30, Ixelles (Bruxelles). Équipe « ${payload.teamName} » (${payload.teamSize} joueur·euse·s).`,
+                  name: eventBatch(payload.batchId)!.productName,
+                  description: eventBatch(payload.batchId)!.productDescription(payload.teamName, payload.teamSize),
                 },
               },
             },
@@ -508,12 +504,12 @@ export const confirmRegistrationPayment = onRequest(
         if (data.refunded === true) return { kind: "alreadyRefunded" };
         // Defense-in-depth, mirroring the completed-session path: only flip
         // when the charge currency + amount match what this registration was
-        // billed (teamSize × UNIT_PRICE_CENTS). A forged refund event with a
+        // billed (teamSize × unit price). A forged refund event with a
         // mismatched amount/currency can't strip a code.
         if (charge.currency !== CURRENCY) {
           return { kind: "currencyMismatch", got: charge.currency };
         }
-        const expected = data.teamSize * UNIT_PRICE_CENTS;
+        const expected = data.teamSize * unitPriceCents(data.batchId);
         if (charge.amount !== expected) {
           return { kind: "amountMismatch", expected, got: charge.amount };
         }
@@ -616,7 +612,7 @@ export const confirmRegistrationPayment = onRequest(
 
     // Idempotent flip: a second delivery of the same event MUST be a noop.
     // HIGH-5 cross-check: also verify the amount matches the expected
-    // teamSize × UNIT_PRICE_CENTS for this registration. Done inside
+    // teamSize × unit price for this registration. Done inside
     // the transaction so the check sees the canonical doc state.
     // HIGH-FN-M9 (audit 2026-05-17): catch the missing-doc case
     // explicitly so Stripe doesn't retry the webhook for 3 days on a
@@ -631,7 +627,7 @@ export const confirmRegistrationPayment = onRequest(
       const snap = await tx.get(docRef);
       if (!snap.exists) return { kind: "notFound" };
       const data = snap.data() as RegistrationDoc;
-      const expected = data.teamSize * UNIT_PRICE_CENTS;
+      const expected = data.teamSize * unitPriceCents(data.batchId);
       if (session.amount_total !== expected) {
         return { kind: "amountMismatch", expected, got: session.amount_total };
       }
@@ -734,7 +730,7 @@ async function recordFailedSideEffect(
     );
 
   try {
-    const response = await fetch("https://api.resend.com/emails", {
+    const response = await fetchWithRetry("https://api.resend.com/emails", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${resendApiKey}`,

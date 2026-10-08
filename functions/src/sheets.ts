@@ -1,5 +1,6 @@
 import { google } from "googleapis";
 import { logger } from "firebase-functions/v2";
+import { formatBrussels } from "./time";
 
 // PP-52 — Append a row to the D-Day Google Sheet whenever a
 // registration is paid. The sheet is shared with Martin / l'orga for
@@ -140,7 +141,7 @@ export async function appendRegistrationRow(
     return;
   }
 
-  const nowIso = new Date().toISOString();
+  const nowIso = formatBrussels(new Date());
   await sheets.spreadsheets.values.append({
     spreadsheetId: sheetId,
     range: `${SHEET_TAB}!A:K`,
@@ -199,7 +200,7 @@ export async function markRegistrationRefunded(
   // at idx >= 1. Sheets is 1-indexed → spreadsheet row = idx + 1.
   const rowNumber = idx + 1;
 
-  const nowIso = new Date().toISOString();
+  const nowIso = formatBrussels(new Date());
   await sheets.spreadsheets.values.batchUpdate({
     spreadsheetId: sheetId,
     requestBody: {

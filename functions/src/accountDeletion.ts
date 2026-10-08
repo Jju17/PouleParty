@@ -2,6 +2,7 @@ import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { getAppCheck } from "firebase-admin/app-check";
 import { onRequest } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/v2";
+import { fetchWithRetry } from "./http";
 import { defineSecret } from "firebase-functions/params";
 
 // AND-H6 (store-audit 2026-05-18) — self-service account-deletion request
@@ -95,7 +96,7 @@ async function notifyJulien(
   const text = lines.join("\n");
   const html = `<pre style="font-family:ui-monospace,monospace;font-size:13px;line-height:1.6">${escapeHtml(text)}</pre>`;
 
-  const response = await fetch("https://api.resend.com/emails", {
+  const response = await fetchWithRetry("https://api.resend.com/emails", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -174,9 +175,7 @@ export const processAccountDeletion = onRequest(
         processed: false,
         processedAt: null,
       });
-      logger.info(
-        `Account deletion request ${requestId} recorded for ${payload.email}`
-      );
+      logger.info("[accountDeletion] request recorded", { requestId });
 
       // Best-effort notification. A Resend outage shouldn't fail the
       // request — the Firestore doc is the canonical record and Julien
