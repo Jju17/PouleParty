@@ -371,9 +371,6 @@ struct GameTests {
     // MARK: - Enum safe decoding (unknown values → safe defaults)
 
     @Test func gameStatusDecodesUnknownToWaiting() throws {
-        let json = #"{"_0": "unknownStatus"}"#
-        let data = json.data(using: .utf8)!
-        // Decode via JSONDecoder to simulate unknown rawValue
         let decoded = try JSONDecoder().decode(Game.GameStatus.self, from: #""unknownStatus""#.data(using: .utf8)!)
         #expect(decoded == .waiting)
     }

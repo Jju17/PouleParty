@@ -165,7 +165,7 @@ struct PowerUpLifecycleTests {
     // MARK: - Activation & Expiration Detection
 
     @Test func detectActivatedPowerUpDetectsNewInvisibility() {
-        var oldGame = Game.mock
+        let oldGame = Game.mock
         var newGame = Game.mock
         let future = Date.now.addingTimeInterval(30)
         newGame.powerUps.activeEffects.invisibility = Timestamp(date: future)

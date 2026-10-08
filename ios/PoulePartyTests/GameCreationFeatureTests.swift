@@ -133,7 +133,7 @@ struct GameCreationFeatureTests {
     }
 
     @Test func isStartZoneConfiguredTrueAfterMovingPin() {
-        var state = makeState()
+        let state = makeState()
         state.$game.withLock {
             $0.zone.center = GeoPoint(latitude: 50.9, longitude: 4.4)
         }
@@ -143,7 +143,7 @@ struct GameCreationFeatureTests {
     // MARK: - PP-12 isFinalZoneConfigured (≥ 100 m haversine)
 
     @Test func isFinalZoneConfiguredFalseWithoutFinal() {
-        var state = makeState()
+        let state = makeState()
         state.$game.withLock {
             $0.zone.center = GeoPoint(latitude: 50.9, longitude: 4.4)
         }
@@ -153,7 +153,7 @@ struct GameCreationFeatureTests {
     @Test func isFinalZoneConfiguredFalseWhenWithin100m() {
         // ~10 m offset: 0.00009° latitude near 51°N → ~10 m. Well below
         // PP-12's 100 m threshold so Next stays gated.
-        var state = makeState()
+        let state = makeState()
         state.$game.withLock {
             $0.zone.center = GeoPoint(latitude: 50.9, longitude: 4.4)
             $0.zone.finalCenter = GeoPoint(latitude: 50.90009, longitude: 4.4)
@@ -164,7 +164,7 @@ struct GameCreationFeatureTests {
 
     @Test func isFinalZoneConfiguredTrueWhenAtLeast100mAway() {
         // ~166 m offset: 0.0015° latitude near 51°N.
-        var state = makeState()
+        let state = makeState()
         state.$game.withLock {
             $0.zone.center = GeoPoint(latitude: 50.9, longitude: 4.4)
             $0.zone.finalCenter = GeoPoint(latitude: 50.9015, longitude: 4.4)
@@ -174,7 +174,7 @@ struct GameCreationFeatureTests {
     }
 
     @Test func isZoneConfiguredTrueForFollowTheChickenWithoutFinal() {
-        var state = makeState(gameMode: .followTheChicken)
+        let state = makeState(gameMode: .followTheChicken)
         state.$game.withLock {
             $0.zone.center = GeoPoint(latitude: 50.9, longitude: 4.4)
         }
@@ -186,7 +186,7 @@ struct GameCreationFeatureTests {
     // MARK: - Game mode change clears finalCenter on follow
 
     @Test func gameModChangedToFollowTheChickenClearsFinalCenter() async {
-        var state = makeState()
+        let state = makeState()
         state.$game.withLock {
             $0.zone.finalCenter = GeoPoint(latitude: 51.0, longitude: 5.0)
         }
@@ -198,7 +198,7 @@ struct GameCreationFeatureTests {
     }
 
     @Test func gameModChangedToStayInTheZonePreservesFinalCenter() async {
-        var state = makeState(gameMode: .followTheChicken)
+        let state = makeState(gameMode: .followTheChicken)
         state.$game.withLock {
             $0.zone.finalCenter = GeoPoint(latitude: 51.0, longitude: 5.0)
         }
@@ -211,7 +211,7 @@ struct GameCreationFeatureTests {
     // MARK: - PP-13 zonesRecapEntered computes radius + drift seed
 
     @Test func zonesRecapEnteredInStayInTheZoneComputesRadiusFromPins() async {
-        var state = makeState()
+        let state = makeState()
         state.$game.withLock {
             $0.zone.startPin = GeoPoint(latitude: 50.85, longitude: 4.35)
             $0.zone.center = GeoPoint(latitude: 50.85, longitude: 4.35)
@@ -229,7 +229,7 @@ struct GameCreationFeatureTests {
     }
 
     @Test func zonesRecapEnteredKeepsExistingDriftSeed() async {
-        var state = makeState()
+        let state = makeState()
         state.$game.withLock {
             $0.zone.startPin = GeoPoint(latitude: 50.85, longitude: 4.35)
             $0.zone.center = GeoPoint(latitude: 50.85, longitude: 4.35)
@@ -245,7 +245,7 @@ struct GameCreationFeatureTests {
     }
 
     @Test func zonesRecapEnteredInFollowTheChickenUsesRadiusHint() async {
-        var state = makeState(gameMode: .followTheChicken)
+        let state = makeState(gameMode: .followTheChicken)
         state.$game.withLock {
             $0.zone.startPin = GeoPoint(latitude: 50.85, longitude: 4.35)
             $0.zone.center = GeoPoint(latitude: 50.85, longitude: 4.35)
@@ -260,7 +260,7 @@ struct GameCreationFeatureTests {
     // MARK: - PP-14 Shuffle button
 
     @Test func shuffleDriftSeedReplacesSeedAndKeepsPins() async {
-        var state = makeState()
+        let state = makeState()
         state.$game.withLock {
             $0.zone.startPin = GeoPoint(latitude: 50.85, longitude: 4.35)
             $0.zone.center = GeoPoint(latitude: 50.85, longitude: 4.35)
@@ -349,7 +349,7 @@ struct GameCreationFeatureTests {
     // MARK: - Power-ups (PP-35 default + filter)
 
     @Test func powerUpTypeToggledCannotRemoveLastAvailableTypeInFollowTheChicken() async {
-        var state = makeState(gameMode: .followTheChicken)
+        let state = makeState(gameMode: .followTheChicken)
         // PP-35 default ships only `zoneFreeze` + `zonePreview`. Seed
         // every other type ON so the guard below trips on the LAST one.
         state.$game.withLock { game in
