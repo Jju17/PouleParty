@@ -77,7 +77,7 @@ extension AnalyticsClient: TestDependencyKey {
 }
 
 extension AnalyticsClient: DependencyKey {
-    static var liveValue = AnalyticsClient(
+    static let liveValue = AnalyticsClient(
         logEvent: { name, parameters in
             Analytics.logEvent(name, parameters: parameters)
         }

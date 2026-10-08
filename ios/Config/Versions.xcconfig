@@ -1,0 +1,8 @@
+// Shared by every target so the app, widget and test bundles never drift.
+MARKETING_VERSION = 1.14.1
+CURRENT_PROJECT_VERSION = 1
+IPHONEOS_DEPLOYMENT_TARGET = 17.0
+SWIFT_STRICT_CONCURRENCY = targeted
+
+// Local secrets (gitignored). Copy Secrets.xcconfig.example to Secrets.xcconfig.
+#include? "Secrets.xcconfig"

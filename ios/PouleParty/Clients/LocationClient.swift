@@ -36,7 +36,7 @@ extension LocationClient: TestDependencyKey {
 }
 
 extension LocationClient: DependencyKey {
-    static var liveValue: LocationClient = {
+    static let liveValue: LocationClient = {
         let manager = LiveLocationManager()
         return LocationClient(
             authorizationStatus: {

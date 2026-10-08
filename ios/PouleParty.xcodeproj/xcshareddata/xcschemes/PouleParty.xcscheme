@@ -80,7 +80,7 @@
          </BuildableReference>
       </BuildableProductRunnable>
       <LocationScenarioReference
-         identifier = "../../Bxl.gpx"
+         identifier = "../../Simulation/Bxl.gpx"
          referenceType = "0">
       </LocationScenarioReference>
    </LaunchAction>

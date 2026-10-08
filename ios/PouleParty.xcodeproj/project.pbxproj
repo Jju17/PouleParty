@@ -7,8 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		645DF8282D306D0B005D8731 /* Lille.gpx in Resources */ = {isa = PBXBuildFile; fileRef = 645DF8272D306D0B005D8731 /* Lille.gpx */; };
-		645DF82B2D306E5D005D8731 /* Stockholm.gpx in Resources */ = {isa = PBXBuildFile; fileRef = 645DF82A2D306E5D005D8731 /* Stockholm.gpx */; };
 		6464E51C2BA5C3ED0039C387 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 6464E51B2BA5C3ED0039C387 /* FirebaseAnalytics */; };
 		6464E5202BA5C3ED0039C387 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 6464E51F2BA5C3ED0039C387 /* FirebaseAuth */; };
 		6464E5222BA5C3ED0039C387 /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = 6464E5212BA5C3ED0039C387 /* FirebaseCrashlytics */; };
@@ -74,17 +72,18 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		6405C2912BFC871B00A35A50 /* Bxl.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = Bxl.gpx; sourceTree = "<group>"; };
-		643A59942BC9C1E8002B53B6 /* Lasne.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = Lasne.gpx; sourceTree = "<group>"; };
-		643A59952BC9C38B002B53B6 /* Namur.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = Namur.gpx; sourceTree = "<group>"; };
-		645DF8272D306D0B005D8731 /* Lille.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = Lille.gpx; sourceTree = "<group>"; };
-		645DF82A2D306E5D005D8731 /* Stockholm.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = Stockholm.gpx; sourceTree = "<group>"; };
+		6405C2912BFC871B00A35A50 /* Bxl.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; name = Bxl.gpx; path = Simulation/Bxl.gpx; sourceTree = "<group>"; };
+		643A59942BC9C1E8002B53B6 /* Lasne.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; name = Lasne.gpx; path = Simulation/Lasne.gpx; sourceTree = "<group>"; };
+		643A59952BC9C38B002B53B6 /* Namur.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; name = Namur.gpx; path = Simulation/Namur.gpx; sourceTree = "<group>"; };
+		645DF8272D306D0B005D8731 /* Lille.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; name = Lille.gpx; path = Simulation/Lille.gpx; sourceTree = "<group>"; };
+		645DF82A2D306E5D005D8731 /* Stockholm.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; name = Stockholm.gpx; path = Simulation/Stockholm.gpx; sourceTree = "<group>"; };
 		64620C802BA3C81C006B329C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		646D8E392F467E520068ABBF /* PoulePartyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PoulePartyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		647D9FC12BA3ABF2005B6566 /* PouleParty.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PouleParty.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		647D9FCA2BA3ABF3005B6566 /* PouleParty.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PouleParty.entitlements; sourceTree = "<group>"; };
+		F9C0A0022F90000100A0B001 /* Versions.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Versions.xcconfig; path = Config/Versions.xcconfig; sourceTree = "<group>"; };
 		64CE0F832CEE8E8200762232 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
-		64FDBE382BC32AD60073DC85 /* La Rochelle.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = "La Rochelle.gpx"; sourceTree = "<group>"; };
+		64FDBE382BC32AD60073DC85 /* La Rochelle.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; name = "La Rochelle.gpx"; path = "Simulation/La Rochelle.gpx"; sourceTree = "<group>"; };
 		F9A8B03D2F829054008B15E2 /* PoulePartySnapshotTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PoulePartySnapshotTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F9B1BE202F58DCD200E066D6 /* PoulePartyWidgetsExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PoulePartyWidgetsExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		F9B1BE222F58DCD200E066D6 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
@@ -238,6 +237,7 @@
 		647D9FB82BA3ABF2005B6566 = {
 			isa = PBXGroup;
 			children = (
+				F9C0A0022F90000100A0B001 /* Versions.xcconfig */,
 				64CE0F832CEE8E8200762232 /* Localizable.xcstrings */,
 				6405C2912BFC871B00A35A50 /* Bxl.gpx */,
 				64FDBE382BC32AD60073DC85 /* La Rochelle.gpx */,
@@ -471,8 +471,6 @@
 		647D9FBF2BA3ABF2005B6566 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			files = (
-				645DF8282D306D0B005D8731 /* Lille.gpx in Resources */,
-				645DF82B2D306E5D005D8731 /* Stockholm.gpx in Resources */,
 				64CE0F842CEE8E8200762232 /* Localizable.xcstrings in Resources */,
 			);
 		};
@@ -592,11 +590,8 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 1.14.1;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.rahier.PoulePartyTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -615,10 +610,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 1.14.1;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.rahier.PoulePartyTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -635,6 +627,7 @@
 		};
 		647D9FCE2BA3ABF3005B6566 /* Debug configuration for PBXProject "PouleParty" */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = F9C0A0022F90000100A0B001 /* Versions.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -688,7 +681,6 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -702,6 +694,7 @@
 		};
 		647D9FCF2BA3ABF3005B6566 /* Release configuration for PBXProject "PouleParty" */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = F9C0A0022F90000100A0B001 /* Versions.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -749,7 +742,6 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
@@ -769,7 +761,6 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = PouleParty/PouleParty.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"PouleParty/Resources/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
@@ -785,11 +776,9 @@
 				INFOPLIST_KEY_UILaunchStoryboardName = "Launch Screen.storyboard";
 				INFOPLIST_KEY_UIStatusBarStyle = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.4;
-				MARKETING_VERSION = 1.14.1;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.rahier.pouleparty;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -811,7 +800,6 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = PouleParty/PouleParty.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"PouleParty/Resources/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
@@ -827,11 +815,9 @@
 				INFOPLIST_KEY_UILaunchStoryboardName = "Launch Screen.storyboard";
 				INFOPLIST_KEY_UIStatusBarStyle = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.4;
-				MARKETING_VERSION = 1.14.1;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.rahier.pouleparty;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -848,12 +834,9 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = YXXNH92P5F;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
-				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.rahier.PoulePartySnapshotTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -872,11 +855,8 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = YXXNH92P5F;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
-				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.rahier.PoulePartySnapshotTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -897,19 +877,16 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PoulePartyWidgets/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = PoulePartyWidgets;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.14.1;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.rahier.pouleparty.PoulePartyWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -929,18 +906,15 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PoulePartyWidgets/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = PoulePartyWidgets;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.14.1;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.rahier.pouleparty.PoulePartyWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -1005,16 +979,16 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
 			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 12.9.0;
+				kind = exactVersion;
+				version = 12.19.2;
 			};
 		};
 		648F563E2CF3DC4900B1BC28 /* XCRemoteSwiftPackageReference "swift-composable-architecture" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/pointfreeco/swift-composable-architecture.git";
 			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.23.2;
+				kind = exactVersion;
+				version = 1.26.2;
 			};
 			traits = (
 			);
@@ -1023,16 +997,16 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/pointfreeco/swift-snapshot-testing";
 			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.19.2;
+				kind = exactVersion;
+				version = 1.19.6;
 			};
 		};
 		F9B5A21F2F53A61C004EBFD7 /* XCRemoteSwiftPackageReference "mapbox-maps-ios" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/mapbox/mapbox-maps-ios";
 			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 11.0.0;
+				kind = exactVersion;
+				version = 11.32.0;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */

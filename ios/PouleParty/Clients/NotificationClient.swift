@@ -20,7 +20,7 @@ extension NotificationClient: TestDependencyKey {
 }
 
 extension NotificationClient: DependencyKey {
-    static var liveValue = NotificationClient(
+    static let liveValue = NotificationClient(
         authorizationStatus: {
             let settings = await UNUserNotificationCenter.current().notificationSettings()
             return settings.authorizationStatus
