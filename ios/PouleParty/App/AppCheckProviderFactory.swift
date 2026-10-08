@@ -7,11 +7,7 @@ final class PoulePartyAppCheckProviderFactory: NSObject, AppCheckProviderFactory
         #if DEBUG
         return AppCheckDebugProvider(app: app)
         #else
-        // App Attest only works on real iOS devices (iOS 14+). On a release
-        // build running in the simulator (rare but happens during TestFlight
-        // sideload tests) Apple's DeviceCheck refuses to issue an attestation,
-        // so `AppAttestProvider` returns nil tokens. That's tolerable, the
-        // server is in monitoring-only mode until enforce is flipped.
+        // App Attest needs a real device: a release build in the simulator gets no token and callables reject it.
         return AppAttestProvider(app: app)
         #endif
     }
