@@ -7,6 +7,181 @@ export const POWER_UP_INITIAL_BATCH_SIZE = 5;
 export const POWER_UP_PERIODIC_BATCH_SIZE = 2;
 export const MAX_POWER_UP_SHRINK_BATCHES = 100;
 export const MAX_SHRINK_NOTIFICATIONS = 100;
+export const READY_TO_LAUNCH_GRACE_MS = 60 * 60 * 1000;
+export const IN_PROGRESS_GRACE_MS = 24 * 60 * 60 * 1000;
+
+export type QueueName = "transitionGameStatus" | "sendGameNotification" | "spawnPowerUpBatch" | "evaluateOutOfZone";
+export type TaskManifest = Record<string, string[]>;
+
+export interface PlannedTask {
+  queue: QueueName;
+  id: string;
+  scheduleTime: Date;
+  payload: Record<string, unknown>;
+}
+
+/**
+ * Enqueues a task by deterministic id. A redelivered trigger hitting an id
+ * that already exists is the expected idempotent outcome, not a failure.
+ */
+export async function enqueueTask(task: PlannedTask): Promise<void> {
+  const queue = getFunctions().taskQueue(`locations/${REGION}/functions/${task.queue}`);
+  try {
+    await queue.enqueue(task.payload, { scheduleTime: task.scheduleTime, id: task.id });
+  } catch (err) {
+    const code = (err as { code?: string }).code ?? "";
+    if (code.endsWith("task-already-exists")) {
+      logger.info("[tasks] task already enqueued", { id: task.id });
+      return;
+    }
+    throw err;
+  }
+}
+
+export async function enqueueAll(tasks: PlannedTask[]): Promise<TaskManifest> {
+  const CHUNK = 25;
+  for (let i = 0; i < tasks.length; i += CHUNK) {
+    await Promise.all(tasks.slice(i, i + CHUNK).map(enqueueTask));
+  }
+  const manifest: TaskManifest = {};
+  for (const task of tasks) {
+    (manifest[task.queue] ??= []).push(task.id);
+  }
+  return manifest;
+}
+
+export async function mergeIntoTaskManifest(gameId: string, additions: TaskManifest): Promise<void> {
+  const ref = db().collection("games").doc(gameId).collection("lifecycle").doc("taskManifest");
+  await db().runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const existing = (snap.data()?.enqueuedTasksByQueue as TaskManifest | undefined) ?? {};
+    for (const [queue, ids] of Object.entries(additions)) {
+      existing[queue] = [...new Set([...(existing[queue] ?? []), ...ids])];
+    }
+    tx.set(ref, { enqueuedTasksByQueue: existing }, { merge: true });
+  });
+}
+
+/**
+ * Plans the tasks anchored on the effective start: initial spawn, status end,
+ * hunter start notification, one shrink notification and one power-up batch
+ * per shrink, and the first out-of-zone evaluation.
+ */
+export function planRuntimeTasks(
+  gameId: string,
+  start: Date,
+  end: Date,
+  headStartMinutes: number,
+  shrinkIntervalMinutes: number,
+  idSuffix: string
+): PlannedTask[] {
+  const tasks: PlannedTask[] = [];
+  tasks.push({
+    queue: "spawnPowerUpBatch",
+    id: `spawn-${gameId}${idSuffix}-0`,
+    scheduleTime: start,
+    payload: { gameId, batchIndex: 0, count: POWER_UP_INITIAL_BATCH_SIZE },
+  });
+  tasks.push({
+    queue: "transitionGameStatus",
+    id: `status-end-${gameId}${idSuffix}`,
+    scheduleTime: end,
+    payload: { gameId, targetStatus: "done", expectedCurrentStatus: "inProgress" },
+  });
+
+  const hunterStartDate = new Date(start.getTime() + headStartMinutes * 60 * 1000);
+  const hunterStartId = `notif-hunterstart-${gameId}${idSuffix}`;
+  tasks.push({
+    queue: "sendGameNotification",
+    id: hunterStartId,
+    scheduleTime: hunterStartDate,
+    payload: { gameId, notificationType: "hunter_start", notifId: hunterStartId },
+  });
+  tasks.push({
+    queue: "evaluateOutOfZone",
+    id: `ooz-${gameId}${idSuffix}-0`,
+    scheduleTime: hunterStartDate,
+    payload: { gameId, step: 0, idSuffix },
+  });
+
+  const intervalMs = shrinkIntervalMinutes * 60 * 1000;
+  let shrinkTime = new Date(hunterStartDate.getTime() + intervalMs);
+  let shrinkCount = 0;
+  while (shrinkTime < end && shrinkCount < MAX_SHRINK_NOTIFICATIONS) {
+    const notifId = `notif-shrink-${gameId}${idSuffix}-${shrinkCount}`;
+    tasks.push({
+      queue: "sendGameNotification",
+      id: notifId,
+      scheduleTime: shrinkTime,
+      payload: { gameId, notificationType: "zone_shrink", notifId },
+    });
+    if (shrinkCount < MAX_POWER_UP_SHRINK_BATCHES) {
+      const batchIndex = shrinkCount + 1;
+      tasks.push({
+        queue: "spawnPowerUpBatch",
+        id: `spawn-${gameId}${idSuffix}-${batchIndex}`,
+        scheduleTime: shrinkTime,
+        payload: { gameId, batchIndex, count: POWER_UP_PERIODIC_BATCH_SIZE },
+      });
+    }
+    shrinkTime = new Date(shrinkTime.getTime() + intervalMs);
+    shrinkCount++;
+  }
+  return tasks;
+}
+
+/**
+ * Plans every task scheduled at creation time. Manual-start games only get
+ * the start transition, the gathering reminder and a fallback end; the rest is
+ * planned at launch from the effective start.
+ */
+export function planCreationTasks(
+  gameId: string,
+  start: Date,
+  end: Date,
+  headStartMinutes: number,
+  shrinkIntervalMinutes: number,
+  manualStartEnabled: boolean
+): PlannedTask[] {
+  const chickenStartId = `notif-chickenstart-${gameId}`;
+  const tasks: PlannedTask[] = [
+    {
+      queue: "transitionGameStatus",
+      id: `status-start-${gameId}`,
+      scheduleTime: start,
+      payload: {
+        gameId,
+        targetStatus: manualStartEnabled ? "readyToLaunch" : "inProgress",
+        expectedCurrentStatus: "waiting",
+      },
+    },
+    {
+      queue: "sendGameNotification",
+      id: chickenStartId,
+      scheduleTime: start,
+      payload: { gameId, notificationType: "chicken_start", notifId: chickenStartId },
+    },
+    {
+      queue: "transitionGameStatus",
+      id: `status-end-fallback-${gameId}`,
+      scheduleTime: new Date(end.getTime() + IN_PROGRESS_GRACE_MS),
+      payload: { gameId, targetStatus: "done", expectedCurrentStatus: "inProgress" },
+    },
+  ];
+  if (manualStartEnabled) {
+    tasks.push({
+      queue: "transitionGameStatus",
+      id: `status-unlaunched-${gameId}`,
+      scheduleTime: new Date(end.getTime() + READY_TO_LAUNCH_GRACE_MS),
+      payload: { gameId, targetStatus: "done", expectedCurrentStatus: "readyToLaunch" },
+    });
+    return tasks;
+  }
+  return [
+    ...tasks,
+    ...planRuntimeTasks(gameId, start, end, headStartMinutes, shrinkIntervalMinutes, ""),
+  ];
+}
 
 /**
  * Task handler: transitions a game's status if it's still in the expected state.
@@ -48,12 +223,31 @@ export const transitionGameStatus = onTaskDispatched(
   }
 );
 
+export type ScheduleRejection = "invalidInterval" | "startNotBeforeEnd" | "negativeHeadStart" | "missingTiming" | "inThePast";
+
+export function validateSchedulingInput(
+  start: Date | undefined,
+  end: Date | undefined,
+  headStartMinutes: number,
+  shrinkIntervalMinutes: number,
+  nowMs: number
+): ScheduleRejection | null {
+  if (!start || !end) return "missingTiming";
+  if (shrinkIntervalMinutes < 1) return "invalidInterval";
+  if (start >= end) return "startNotBeforeEnd";
+  if (headStartMinutes < 0) return "negativeHeadStart";
+  // Cloud Tasks fires past-scheduled tasks immediately, which would avalanche
+  // the whole lifecycle the instant the doc is created.
+  const PAST_THRESHOLD_MS = 60 * 1000;
+  if (start.getTime() < nowMs - PAST_THRESHOLD_MS || end.getTime() < nowMs - PAST_THRESHOLD_MS) {
+    return "inThePast";
+  }
+  return null;
+}
+
 /**
- * Enqueues all lifecycle Cloud Tasks (status transitions, notifications,
- * power-up batches) for a game that is ready to be played.
- *
- * Returns true if tasks were scheduled, false if the game was rejected due
- * to a validation error (timing past, etc.).
+ * Enqueues all lifecycle Cloud Tasks for a newly created game and records
+ * their ids so `onGameDeleted` can cancel them.
  */
 export async function scheduleGameLifecycleTasks(
   gameId: string,
@@ -61,155 +255,26 @@ export async function scheduleGameLifecycleTasks(
 ): Promise<boolean> {
   const timing = data.timing as { start?: FirebaseFirestore.Timestamp; end?: FirebaseFirestore.Timestamp; headStartMinutes?: number } | undefined;
   const zone = data.zone as { shrinkIntervalMinutes?: number } | undefined;
+  const start = timing?.start?.toDate();
+  const end = timing?.end?.toDate();
+  const headStartMinutes = timing?.headStartMinutes ?? 0;
+  const shrinkIntervalMinutes = zone?.shrinkIntervalMinutes ?? 5;
 
-  const startTimestamp = timing?.start?.toDate() as Date | undefined;
-  const endTimestamp = timing?.end?.toDate() as Date | undefined;
-  const headStartMinutes = (timing?.headStartMinutes as number) ?? 0;
-  const shrinkIntervalMinutes = (zone?.shrinkIntervalMinutes as number) ?? 5;
-
-  if (shrinkIntervalMinutes < 1) {
-    logger.error("[schedule] invalid shrinkIntervalMinutes", { gameId, shrinkIntervalMinutes });
-    return false;
-  }
-  if (startTimestamp && endTimestamp && startTimestamp >= endTimestamp) {
-    logger.error("[schedule] start is not before end", { gameId });
-    return false;
-  }
-  if (headStartMinutes < 0) {
-    logger.error("[schedule] negative headStartMinutes", { gameId, headStartMinutes });
-    return false;
-  }
-  // Cloud Tasks fires past-scheduled tasks immediately, which would avalanche
-  // the whole lifecycle the instant the doc is created.
-  const now = Date.now();
-  const PAST_THRESHOLD_MS = 60 * 1000;
-  if (startTimestamp && startTimestamp.getTime() < now - PAST_THRESHOLD_MS) {
-    logger.error("[schedule] start is in the past", { gameId, start: startTimestamp.toISOString() });
-    return false;
-  }
-  if (endTimestamp && endTimestamp.getTime() < now - PAST_THRESHOLD_MS) {
-    logger.error("[schedule] end is in the past", { gameId, end: endTimestamp.toISOString() });
+  const rejection = validateSchedulingInput(start, end, headStartMinutes, shrinkIntervalMinutes, Date.now());
+  if (rejection || !start || !end) {
+    logger.error("[schedule] refusing to schedule tasks", { gameId, reason: rejection });
     return false;
   }
 
-  const statusQueue = getFunctions().taskQueue(
-    `locations/${REGION}/functions/transitionGameStatus`
+  const tasks = planCreationTasks(
+    gameId,
+    start,
+    end,
+    headStartMinutes,
+    shrinkIntervalMinutes,
+    data.manualStartEnabled === true
   );
-  const notifQueue = getFunctions().taskQueue(
-    `locations/${REGION}/functions/sendGameNotification`
-  );
-  const spawnQueue = getFunctions().taskQueue(
-    `locations/${REGION}/functions/spawnPowerUpBatch`
-  );
-
-  // Every enqueued task id, so `onGameDeleted` can cancel them.
-  const enqueuedTasksByQueue: Record<string, string[]> = {
-    transitionGameStatus: [],
-    sendGameNotification: [],
-    spawnPowerUpBatch: [],
-  };
-
-  // Manual-start games defer everything that depends on the effective start
-  // to `launchGame`.
-  const manualStartEnabled = data.manualStartEnabled === true;
-
-  if (startTimestamp) {
-    const id = `status-start-${gameId}`;
-    const chosenTarget = manualStartEnabled ? "readyToLaunch" : "inProgress";
-    await statusQueue.enqueue(
-      {
-        gameId,
-        targetStatus: chosenTarget,
-        expectedCurrentStatus: "waiting",
-      },
-      { scheduleTime: startTimestamp, id }
-    );
-    enqueuedTasksByQueue.transitionGameStatus.push(id);
-
-    const chickenStartId = `notif-chickenstart-${gameId}`;
-    await notifQueue.enqueue(
-      { gameId, notificationType: "chicken_start", notifId: chickenStartId },
-      { scheduleTime: startTimestamp, id: chickenStartId }
-    );
-    enqueuedTasksByQueue.sendGameNotification.push(chickenStartId);
-
-    if (!manualStartEnabled) {
-      const initialSpawnId = `spawn-${gameId}-0`;
-      await spawnQueue.enqueue(
-        { gameId, batchIndex: 0, count: POWER_UP_INITIAL_BATCH_SIZE },
-        { scheduleTime: startTimestamp, id: initialSpawnId }
-      );
-      enqueuedTasksByQueue.spawnPowerUpBatch.push(initialSpawnId);
-    }
-  }
-
-  if (endTimestamp && !manualStartEnabled) {
-    const id = `status-end-${gameId}`;
-    await statusQueue.enqueue(
-      {
-        gameId,
-        targetStatus: "done",
-        expectedCurrentStatus: "inProgress",
-      },
-      { scheduleTime: endTimestamp, id }
-    );
-    enqueuedTasksByQueue.transitionGameStatus.push(id);
-  }
-
-  if (startTimestamp && endTimestamp && !manualStartEnabled) {
-    const hunterStartDate = new Date(
-      startTimestamp.getTime() + headStartMinutes * 60 * 1000
-    );
-
-    const hunterStartId = `notif-hunterstart-${gameId}`;
-    await notifQueue.enqueue(
-      { gameId, notificationType: "hunter_start", notifId: hunterStartId },
-      { scheduleTime: hunterStartDate, id: hunterStartId }
-    );
-    enqueuedTasksByQueue.sendGameNotification.push(hunterStartId);
-
-    const intervalMs = shrinkIntervalMinutes * 60 * 1000;
-    let shrinkTime = new Date(hunterStartDate.getTime() + intervalMs);
-    let shrinkCount = 0;
-
-    while (shrinkTime < endTimestamp && shrinkCount < MAX_SHRINK_NOTIFICATIONS) {
-      const id = `notif-shrink-${gameId}-${shrinkCount}`;
-      await notifQueue.enqueue(
-        { gameId, notificationType: "zone_shrink", notifId: id },
-        { scheduleTime: shrinkTime, id }
-      );
-      enqueuedTasksByQueue.sendGameNotification.push(id);
-      shrinkTime = new Date(shrinkTime.getTime() + intervalMs);
-      shrinkCount++;
-    }
-
-    const spawnCount = Math.min(shrinkCount, MAX_POWER_UP_SHRINK_BATCHES);
-    let spawnTime = new Date(hunterStartDate.getTime() + intervalMs);
-    for (let batchIndex = 1; batchIndex <= spawnCount; batchIndex++) {
-      const id = `spawn-${gameId}-${batchIndex}`;
-      await spawnQueue.enqueue(
-        {
-          gameId,
-          batchIndex,
-          count: POWER_UP_PERIODIC_BATCH_SIZE,
-        },
-        { scheduleTime: spawnTime, id }
-      );
-      enqueuedTasksByQueue.spawnPowerUpBatch.push(id);
-      spawnTime = new Date(spawnTime.getTime() + intervalMs);
-    }
-  }
-
-  try {
-    await db()
-      .collection("games")
-      .doc(gameId)
-      .collection("lifecycle")
-      .doc("taskManifest")
-      .set({ enqueuedTasksByQueue });
-  } catch (err) {
-    logger.warn("[schedule] task manifest write failed", { gameId, error: String(err) });
-  }
-
+  const manifest = await enqueueAll(tasks);
+  await mergeIntoTaskManifest(gameId, manifest);
   return true;
 }

@@ -1,8 +1,9 @@
 import { GeoPoint, Timestamp } from "firebase-admin/firestore";
+import { getStorage } from "firebase-admin/storage";
 import { onDocumentCreated, onDocumentDeleted, onDocumentUpdated } from "firebase-functions/v2/firestore";
 import * as logger from "firebase-functions/logger";
 import { REGION, db } from "./config";
-import { chickenIdOf, huntersOf } from "./roles";
+import { chickenIdOf, gameMastersOf, huntersOf, rolesOf } from "./roles";
 import { computeShrinkSchedule } from "./zoneCalculation";
 import { scheduleGameLifecycleTasks } from "./lifecycleTasks";
 import { getTokensForUserIds, sendNotificationToTokens } from "./notifications";
@@ -93,50 +94,84 @@ async function snapshotChallengesIntoGame(gameId: string): Promise<void> {
   logger.info("[snapshotChallenges] copied template", { gameId, count: templateSnap.size });
 }
 
+export function derivedGameCode(gameId: string): string {
+  return gameId.slice(0, 6).toUpperCase();
+}
+
+/**
+ * Released iOS versions write a 64-bit seed that Android cannot decode. The
+ * server PRNG already truncates to 32 bits, so normalizing keeps the schedule.
+ */
+export function normalizedDriftSeed(seed: unknown): number | null {
+  if (typeof seed !== "number" || !Number.isFinite(seed)) return null;
+  if (seed >= -2147483648 && seed <= 2147483647 && Number.isInteger(seed)) return null;
+  const truncated = seed | 0;
+  return truncated === 0 ? 1 : truncated;
+}
+
+export function randomFoundCode(): string {
+  return String(Math.floor(Math.random() * 10000)).padStart(4, "0");
+}
+
+async function ensureFoundCode(gameRef: FirebaseFirestore.DocumentReference): Promise<void> {
+  const securityRef = gameRef.collection("private").doc("security");
+  await db().runTransaction(async (tx) => {
+    const snap = await tx.get(securityRef);
+    if (typeof snap.data()?.foundCode === "string" && snap.data()?.foundCode !== "") return;
+    tx.set(securityRef, { foundCode: randomFoundCode() }, { merge: true });
+  });
+}
+
+/**
+ * Claims `/gameCodes/{code}` for this game. A code still pointing at another
+ * live game is never overwritten.
+ */
+async function claimGameCode(gameId: string): Promise<void> {
+  const code = derivedGameCode(gameId);
+  const codeRef = db().collection("gameCodes").doc(code);
+  await db().runTransaction(async (tx) => {
+    const existing = await tx.get(codeRef);
+    const owner = existing.data()?.gameId as string | undefined;
+    if (owner && owner !== gameId) {
+      const ownerSnap = await tx.get(db().collection("games").doc(owner));
+      if (ownerSnap.exists && ownerSnap.data()?.status !== "done") {
+        logger.error("[gameCodes] code collision with a live game", { code, gameId, owner });
+        return;
+      }
+    }
+    tx.set(codeRef, { gameId, createdAt: Timestamp.now() });
+  });
+}
+
 export const onGameCreated = onDocumentCreated(
   {
     document: "games/{gameId}",
     region: REGION,
+    retry: true,
   },
   async (event) => {
     const snap = event.data;
     if (!snap) return;
+    // Retries stop after a day: a failure that old is not transient.
+    if (Date.now() - Date.parse(event.time) > 24 * 60 * 60 * 1000) {
+      logger.error("[onGameCreated] giving up on a stale event", { gameId: event.params.gameId });
+      return;
+    }
 
-    const data = snap.data();
+    let data = snap.data();
     const gameId = event.params.gameId;
 
-    // The found code is generated here and stored only in the admin-only
-    // private subcollection; the chicken reads it through getFoundCode.
-    const foundCode = String(Math.floor(Math.random() * 10000)).padStart(4, "0");
-    try {
-      await snap.ref
-        .collection("private")
-        .doc("security")
-        .set({ foundCode }, { merge: true });
-    } catch (err) {
-      logger.error("[onGameCreated] foundCode write failed", { gameId, error: String(err) });
-      throw err;
+    const seed = normalizedDriftSeed(data.zone?.driftSeed);
+    if (seed !== null) {
+      await snap.ref.update({ "zone.driftSeed": seed });
+      data = { ...data, zone: { ...data.zone, driftSeed: seed } };
     }
 
-    try {
-      await writeZoneScheduleForGame(gameId, data);
-    } catch (error) {
-      logger.error("[onGameCreated] zone schedule write failed", { gameId, error: String(error) });
-    }
-
-    try {
-      await scheduleGameLifecycleTasks(gameId, data);
-    } catch (error) {
-      logger.error("[onGameCreated] task scheduling failed", { gameId, error: String(error) });
-      throw error;
-    }
-
-    try {
-      await snapshotChallengesIntoGame(gameId);
-    } catch (error) {
-      logger.error("[onGameCreated] challenge snapshot failed", { gameId, error: String(error) });
-      throw error;
-    }
+    await ensureFoundCode(snap.ref);
+    await claimGameCode(gameId);
+    await writeZoneScheduleForGame(gameId, data);
+    await snapshotChallengesIntoGame(gameId);
+    await scheduleGameLifecycleTasks(gameId, data);
   }
 );
 
@@ -154,6 +189,7 @@ export const onGameDeleted = onDocumentDeleted(
     const project = process.env.GCLOUD_PROJECT || process.env.GCP_PROJECT;
     if (!project) {
       logger.warn("[onGameDeleted] GCLOUD_PROJECT not set", { gameId });
+      await purgeGameData(gameId, event.data?.data());
       return;
     }
 
@@ -163,14 +199,8 @@ export const onGameDeleted = onDocumentDeleted(
       .collection("lifecycle")
       .doc("taskManifest");
     const manifestSnap = await manifestRef.get();
-    if (!manifestSnap.exists) {
-      logger.info("[onGameDeleted] no task manifest, nothing to cancel", { gameId });
-      return;
-    }
-    const manifest = manifestSnap.data() as {
-      enqueuedTasksByQueue?: Record<string, string[]>;
-    };
-    const byQueue = manifest.enqueuedTasksByQueue ?? {};
+    const byQueue =
+      (manifestSnap.data()?.enqueuedTasksByQueue as Record<string, string[]> | undefined) ?? {};
 
     const { google } = await import("googleapis");
     const auth = new google.auth.GoogleAuth({
@@ -197,13 +227,45 @@ export const onGameDeleted = onDocumentDeleted(
     }
     logger.info("[onGameDeleted] tasks cancelled", { gameId, deleted: deletedCount, failed: failedCount });
 
-    try {
-      await db().recursiveDelete(event.data!.ref);
-    } catch (err) {
-      logger.warn("[onGameDeleted] recursiveDelete failed", { gameId, error: String(err) });
-    }
+    await purgeGameData(gameId, event.data?.data());
   }
 );
+
+/**
+ * Removes everything a game leaves behind outside its own document:
+ * subcollections, the code index, each member's membership entry and the
+ * challenge proofs in Storage.
+ */
+export async function purgeGameData(
+  gameId: string,
+  data: FirebaseFirestore.DocumentData | undefined
+): Promise<void> {
+  const gameRef = db().collection("games").doc(gameId);
+  try {
+    await db().recursiveDelete(gameRef);
+  } catch (err) {
+    logger.warn("[purge] recursiveDelete failed", { gameId, error: String(err) });
+  }
+
+  const batch = db().batch();
+  for (const uid of Object.keys(rolesOf(data))) {
+    batch.delete(db().collection("users").doc(uid).collection("memberships").doc(gameId));
+  }
+  const codeRef = db().collection("gameCodes").doc(derivedGameCode(gameId));
+  const codeSnap = await codeRef.get();
+  if (codeSnap.data()?.gameId === gameId) batch.delete(codeRef);
+  try {
+    await batch.commit();
+  } catch (err) {
+    logger.warn("[purge] index cleanup failed", { gameId, error: String(err) });
+  }
+
+  try {
+    await getStorage().bucket().deleteFiles({ prefix: `gameSubmissions/${gameId}/` });
+  } catch (err) {
+    logger.warn("[purge] storage cleanup failed", { gameId, error: String(err) });
+  }
+}
 
 /**
  * Deduplicates winners and notifies every player when a new hunter finds
@@ -259,6 +321,7 @@ export const onGameUpdated = onDocumentUpdated(
     const allUserIds = [
       ...(afterChicken ? [afterChicken] : []),
       ...huntersOf(after),
+      ...gameMastersOf(after),
     ];
     const tokens = await getTokensForUserIds(allUserIds);
 

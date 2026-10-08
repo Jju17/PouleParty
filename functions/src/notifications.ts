@@ -3,7 +3,7 @@ import { getMessaging } from "firebase-admin/messaging";
 import { onTaskDispatched } from "firebase-functions/v2/tasks";
 import * as logger from "firebase-functions/logger";
 import { REGION, db } from "./config";
-import { chickenIdOf, huntersOf } from "./roles";
+import { chickenIdOf, gameMastersOf, huntersOf } from "./roles";
 
 export type GameNotificationType = "chicken_start" | "hunter_start" | "zone_shrink";
 
@@ -160,11 +160,11 @@ export function recipientsFor(
   const chicken = chickenIdOf(game);
   switch (notificationType) {
     case "chicken_start":
-      return chicken ? [chicken] : [];
+      return [...(chicken ? [chicken] : []), ...gameMastersOf(game)];
     case "hunter_start":
       return huntersOf(game);
     case "zone_shrink":
-      return [...(chicken ? [chicken] : []), ...huntersOf(game)];
+      return [...(chicken ? [chicken] : []), ...huntersOf(game), ...gameMastersOf(game)];
   }
 }
 
