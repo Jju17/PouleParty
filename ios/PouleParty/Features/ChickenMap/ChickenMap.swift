@@ -307,7 +307,7 @@ struct ChickenMapFeature {
                         await send(.powerUps(.collectSucceeded(powerUp)))
                     } catch {
                         logger.error("Failed to collect power-up id=\(powerUp.id) type=\(powerUp.type.rawValue): \(String(describing: error))")
-                        await send(.powerUps(.collectFailed(powerUp)))
+                        await send(.powerUps(.collectFailed(powerUp, message: error.userMessage)))
                     }
                     try await clock.sleep(for: .seconds(2))
                     await send(.powerUps(.notificationCleared))
@@ -327,7 +327,7 @@ struct ChickenMapFeature {
                 // button based on the same `isActive(effectOf:)` check,
                 // this is belt-and-braces.
                 if state.game.isActive(effectOf: powerUp.type) {
-                    state.powerUps.notification = "\(powerUp.type.displayName) is already active"
+                    state.powerUps.notification = String(localized: "\(powerUp.type.displayName) is already active")
                     state.powerUps.lastActivatedType = powerUp.type
                     return .run { send in
                         try await clock.sleep(for: .seconds(2))
@@ -814,13 +814,13 @@ struct ChickenMapFeature {
                     phases: [
                         CountdownPhase(
                             targetDate: state.game.effectiveStartDate,
-                            completionText: "RUN! 🐔",
+                            completionText: String(localized: "RUN! 🐔"),
                             showNumericCountdown: true,
                             isEnabled: hasLaunched
                         ),
                         CountdownPhase(
                             targetDate: state.game.hunterStartDate,
-                            completionText: "🔍 Hunters incoming!",
+                            completionText: String(localized: "🔍 Hunters incoming!"),
                             showNumericCountdown: false,
                             isEnabled: hasLaunched && state.game.timing.headStartMinutes > 0
                         )

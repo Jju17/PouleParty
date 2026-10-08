@@ -73,12 +73,12 @@ struct PowerUp: Codable, Equatable, Identifiable {
 
         var displayName: String {
             switch self {
-            case .zonePreview: return "Zone Preview"
-            case .radarPing: return "Radar Ping"
-            case .invisibility: return "Invisibility"
-            case .zoneFreeze: return "Zone Freeze"
-            case .decoy: return "Decoy"
-            case .jammer: return "Jammer"
+            case .zonePreview: return String(localized: "Zone Preview")
+            case .radarPing: return String(localized: "Radar Ping")
+            case .invisibility: return String(localized: "Invisibility")
+            case .zoneFreeze: return String(localized: "Zone Freeze")
+            case .decoy: return String(localized: "Decoy")
+            case .jammer: return String(localized: "Jammer")
             }
         }
 
@@ -106,12 +106,12 @@ struct PowerUp: Codable, Equatable, Identifiable {
 
         var description: String {
             switch self {
-            case .zonePreview: return "Shows the next zone boundary before it shrinks"
-            case .radarPing: return "Reveals the chicken's position for 3 seconds"
-            case .invisibility: return "Hides the chicken from all hunters for 30 seconds"
-            case .zoneFreeze: return "Freezes the zone, preventing it from shrinking for 2 minutes"
-            case .decoy: return "Places a fake chicken signal on hunter maps for 20 seconds"
-            case .jammer: return "Scrambles the chicken's position signal, adding noise for 30 seconds"
+            case .zonePreview: return String(localized: "Shows the next zone boundary before it shrinks")
+            case .radarPing: return String(localized: "Reveals the chicken's position for 3 seconds")
+            case .invisibility: return String(localized: "Hides the chicken from all hunters for 30 seconds")
+            case .zoneFreeze: return String(localized: "Freezes the zone, preventing it from shrinking for 2 minutes")
+            case .decoy: return String(localized: "Places a fake chicken signal on hunter maps for 20 seconds")
+            case .jammer: return String(localized: "Scrambles the chicken's position signal, adding noise for 30 seconds")
             }
         }
 

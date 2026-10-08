@@ -304,15 +304,9 @@ struct JoinFlowFeature {
                 if let lockedUntilMs {
                     let secs = max(0, (lockedUntilMs - Int(Date.now.timeIntervalSince1970 * 1000)) / 1000)
                     let mins = max(1, secs / 60)
-                    state.gameMasterError = String(
-                        format: String(localized: "Too many attempts. Try again in %d min."),
-                        mins
-                    )
+                    state.gameMasterError = String(localized: "Too many attempts. Try again in \(mins) min.")
                 } else {
-                    state.gameMasterError = String(
-                        format: String(localized: "Wrong code. %d attempt(s) remaining."),
-                        attemptsRemaining
-                    )
+                    state.gameMasterError = String(localized: "Wrong code. \(attemptsRemaining) attempts remaining.")
                 }
                 state.gameMasterPassword = ""
                 if case let .submittingGameMasterPassword(game) = state.step {

@@ -499,7 +499,7 @@ func detectNewWinners(
     let newWinners = Array(winners.suffix(from: previousCount))
     guard let latest = newWinners.last else { return nil }
     if let ownId = ownHunterId, latest.hunterId == ownId { return nil }
-    return "\(latest.hunterName) found the chicken! 🐔"
+    return String(localized: "\(latest.hunterName) found the chicken! 🐔")
 }
 
 // MARK: - Power-Up Activation Detection
@@ -520,7 +520,7 @@ func detectActivatedPowerUp(
     for (keyPath, type) in checks {
         if let until = newGame[keyPath: keyPath]?.dateValue(), until > now,
            oldGame[keyPath: keyPath]?.dateValue() != until {
-            return ("\(type.emoji) \(type.displayName) activated!", type)
+            return (String(localized: "\(type.emoji) \(type.displayName) activated!"), type)
         }
     }
     return nil

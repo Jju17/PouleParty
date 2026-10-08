@@ -14,8 +14,8 @@ struct GameMasterMapView: View {
             .safeAreaInset(edge: .top) {
                 VStack(spacing: 8) {
                     MapTopBar(
-                        title: "GameMaster 🦅",
-                        subtitle: "Arbitre — \(store.hunterAnnotations.count) hunters",
+                        title: String(localized: "Game master 🦅"),
+                        subtitle: String(localized: "Referee: \(store.hunterAnnotations.count) hunters"),
                         gradient: LinearGradient(colors: [.CRPink, .CROrange], startPoint: .leading, endPoint: .trailing),
                         onInfoTapped: { store.send(.view(.infoButtonTapped)) }
                     )

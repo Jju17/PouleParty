@@ -619,7 +619,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Allow Always"
+            "value": "Allow always"
           }
         },
         "fr": {
@@ -642,7 +642,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Allow Location Access"
+            "value": "Allow location access"
           }
         },
         "fr": {
@@ -926,6 +926,12 @@
             "state": "translated",
             "value": "Kipkaart"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chicken map"
+          }
         }
       }
     },
@@ -960,6 +966,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Power-Ups kiezen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose power-ups"
           }
         }
       }
@@ -1213,6 +1225,12 @@
             "state": "translated",
             "value": "Maak een spel"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create party"
+          }
         }
       }
     },
@@ -1266,6 +1284,12 @@
             "state": "translated",
             "value": "Gegevens verwijderd"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Data deleted"
+          }
         }
       }
     },
@@ -1284,6 +1308,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Debugvoorbeeld"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Debug preview"
           }
         }
       },
@@ -1339,6 +1369,12 @@
             "state": "translated",
             "value": "Account verwijderen"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete account"
+          }
         }
       }
     },
@@ -1354,6 +1390,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Demo-modus"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Demo mode"
           }
         }
       }
@@ -1372,6 +1414,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Demoweergave"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Demo view"
           }
         }
       }
@@ -1529,6 +1577,12 @@
             "state": "translated",
             "value": "Lege bijnaam"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Empty nickname"
+          }
         }
       }
     },
@@ -1555,7 +1609,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enable Notifications"
+            "value": "Enable notifications"
           }
         },
         "fr": {
@@ -1622,6 +1676,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Voer gevonden code in"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter found code"
           }
         }
       }
@@ -1840,6 +1900,12 @@
             "state": "translated",
             "value": "Spelcode"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Game code"
+          }
         }
       }
     },
@@ -1947,6 +2013,12 @@
             "state": "translated",
             "value": "Spelinfo"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Game info"
+          }
         }
       }
     },
@@ -1963,6 +2035,12 @@
             "state": "translated",
             "value": "Spelmodus"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Game mode"
+          }
         }
       }
     },
@@ -1972,7 +2050,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Game Modes"
+            "value": "Game modes"
           }
         },
         "fr": {
@@ -2020,6 +2098,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Game Over"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Game over"
           }
         }
       }
@@ -2091,6 +2175,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Scheidsrechterkaart"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GameMaster map"
           }
         }
       }
@@ -2172,6 +2262,12 @@
             "state": "translated",
             "value": "Jagerskaart"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hunter map"
+          }
         }
       }
     },
@@ -2225,6 +2321,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ongepaste bijnaam"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inappropriate nickname"
           }
         }
       }
@@ -2314,6 +2416,12 @@
             "state": "translated",
             "value": "Deelnemen als jager"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Join as hunter"
+          }
         }
       }
     },
@@ -2329,6 +2437,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Meedoen aan spel"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Join game"
           }
         }
       }
@@ -2585,6 +2699,12 @@
             "state": "translated",
             "value": "Locatie vereist"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Location required"
+          }
         }
       }
     },
@@ -2674,6 +2794,12 @@
             "state": "translated",
             "value": "Mijn spellen"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "My games"
+          }
         }
       }
     },
@@ -2691,6 +2817,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Netwerkfout"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Network error"
           }
         }
       }
@@ -3493,6 +3625,12 @@
             "state": "translated",
             "value": "Demo verlaten"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quit demo"
+          }
         }
       }
     },
@@ -3563,6 +3701,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Straal %lld meter"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Radius %lld metres"
           }
         }
       }
@@ -4068,7 +4212,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Start Game"
+            "value": "Start game"
           }
         },
         "fr": {
@@ -4129,6 +4273,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Blijf op de hoogte"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stay in the loop"
           }
         }
       }
@@ -4566,22 +4716,6 @@
         }
       }
     },
-    "Too many attempts. Try again in %d min.": {
-      "localizations": {
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Trop de tentatives. Réessaie dans %d min."
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Te veel pogingen. Probeer over %d min opnieuw."
-          }
-        }
-      }
-    },
     "Unmute music": {
       "localizations": {
         "fr": {
@@ -4724,7 +4858,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "View Leaderboard"
+            "value": "View leaderboard"
           }
         },
         "fr": {
@@ -4848,22 +4982,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Verkeerde code"
-          }
-        }
-      }
-    },
-    "Wrong code. %d attempt(s) remaining.": {
-      "localizations": {
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mauvais code. %d tentative(s) restante(s)."
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Verkeerde code. Nog %d poging(en)."
           }
         }
       }
@@ -5715,6 +5833,1078 @@
           "stringUnit": {
             "state": "translated",
             "value": "Opnieuw proberen"
+          }
+        }
+      }
+    },
+    "Zone Preview": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aperçu de zone"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zonevoorbeeld"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zone preview"
+          }
+        }
+      }
+    },
+    "Radar Ping": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ping radar"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Radarping"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Radar ping"
+          }
+        }
+      }
+    },
+    "Invisibility": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invisibilité"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Onzichtbaarheid"
+          }
+        }
+      }
+    },
+    "Zone Freeze": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gel de zone"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zonebevriezing"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zone freeze"
+          }
+        }
+      }
+    },
+    "Decoy": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leurre"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lokaas"
+          }
+        }
+      }
+    },
+    "Jammer": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brouilleur"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stoorzender"
+          }
+        }
+      }
+    },
+    "Shows the next zone boundary before it shrinks": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Montre la prochaine limite de zone avant qu'elle rétrécisse"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toont de volgende zonegrens voordat ze krimpt"
+          }
+        }
+      }
+    },
+    "Reveals the chicken's position for 3 seconds": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Révèle la position de la poule pendant 3 secondes"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toont de positie van de kip gedurende 3 seconden"
+          }
+        }
+      }
+    },
+    "Hides the chicken from all hunters for 30 seconds": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cache la poule à tous les chasseurs pendant 30 secondes"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbergt de kip 30 seconden voor alle jagers"
+          }
+        }
+      }
+    },
+    "Freezes the zone, preventing it from shrinking for 2 minutes": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gèle la zone, qui ne rétrécit plus pendant 2 minutes"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bevriest de zone, zodat ze 2 minuten niet krimpt"
+          }
+        }
+      }
+    },
+    "Places a fake chicken signal on hunter maps for 20 seconds": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Place un faux signal de poule sur la carte des chasseurs pendant 20 secondes"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plaatst 20 seconden een nepsignaal van de kip op de kaart van de jagers"
+          }
+        }
+      }
+    },
+    "Scrambles the chicken's position signal, adding noise for 30 seconds": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brouille le signal de position de la poule pendant 30 secondes"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verstoort het positiesignaal van de kip gedurende 30 seconden"
+          }
+        }
+      }
+    },
+    "%@ found the chicken! 🐔": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ a trouvé la poule ! 🐔"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ heeft de kip gevonden! 🐔"
+          }
+        }
+      }
+    },
+    "%@ %@ activated!": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@ activé !"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@ geactiveerd!"
+          }
+        }
+      }
+    },
+    "Activated: %@!": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activé : %1$@ !"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geactiveerd: %1$@!"
+          }
+        }
+      }
+    },
+    "Collected: %@!": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ramassé : %1$@ !"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opgeraapt: %1$@!"
+          }
+        }
+      }
+    },
+    "%@ is already active": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ est déjà actif"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ is al actief"
+          }
+        }
+      }
+    },
+    "RUN! 🐔": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "COURS ! 🐔"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "RENNEN! 🐔"
+          }
+        }
+      }
+    },
+    "🔍 Hunters incoming!": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "🔍 Les chasseurs arrivent !"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "🔍 De jagers komen eraan!"
+          }
+        }
+      }
+    },
+    "🐔 is hiding!": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "🐔 se cache !"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "🐔 verstopt zich!"
+          }
+        }
+      }
+    },
+    "LET'S HUNT! 🔍": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "À LA CHASSE ! 🔍"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OP JACHT! 🔍"
+          }
+        }
+      }
+    },
+    "You can see them 👀": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu les vois 👀"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jij ziet hen 👀"
+          }
+        }
+      }
+    },
+    "Don't be seen!": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ne te fais pas voir !"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Laat je niet zien!"
+          }
+        }
+      }
+    },
+    "Catch the 🐔 (she sees you! 👀)": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attrape la 🐔 (elle te voit ! 👀)"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vang de 🐔 (ze ziet je! 👀)"
+          }
+        }
+      }
+    },
+    "Catch the 🐔!": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attrape la 🐔 !"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vang de 🐔!"
+          }
+        }
+      }
+    },
+    "You are the 🐔": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu es la 🐔"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jij bent de 🐔"
+          }
+        }
+      }
+    },
+    "You are the hunter": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu es le chasseur"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jij bent de jager"
+          }
+        }
+      }
+    },
+    "Game master 🦅": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arbitre 🦅"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scheidsrechter 🦅"
+          }
+        }
+      }
+    },
+    "Referee: %lld hunters": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Referee: %lld hunter"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Referee: %lld hunters"
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Arbitre : %lld chasseur"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Arbitre : %lld chasseurs"
+                }
+              }
+            }
+          }
+        },
+        "nl": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Scheidsrechter: %lld jager"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Scheidsrechter: %lld jagers"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Wrong code. %lld attempts remaining.": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Wrong code. %lld attempt remaining."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Wrong code. %lld attempts remaining."
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Code incorrect. Encore %lld essai."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Code incorrect. Encore %lld essais."
+                }
+              }
+            }
+          }
+        },
+        "nl": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Verkeerde code. Nog %lld poging."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Verkeerde code. Nog %lld pogingen."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Too many attempts. Try again in %lld min.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trop d'essais. Réessaie dans %lld min."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Te veel pogingen. Probeer opnieuw over %lld min."
+          }
+        }
+      }
+    },
+    "%lld hunters caught the chicken!": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld hunter caught the chicken!"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld hunters caught the chicken!"
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld chasseur a attrapé la poule !"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld chasseurs ont attrapé la poule !"
+                }
+              }
+            }
+          }
+        },
+        "nl": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld jager heeft de kip gevangen!"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld jagers hebben de kip gevangen!"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld d %@": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld j %@"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld d %@"
+          }
+        }
+      }
+    },
+    "Did not find the chicken": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "N'a pas trouvé la poule"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heeft de kip niet gevonden"
+          }
+        }
+      }
+    },
+    "Game Settings": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Game settings"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réglages de la partie"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spelinstellingen"
+          }
+        }
+      }
+    },
+    "No participants": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun participant"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geen deelnemers"
+          }
+        }
+      }
+    },
+    "Other hunters": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Autres chasseurs"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Andere jagers"
+          }
+        }
+      }
+    },
+    "Podium": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Podium"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Podium"
+          }
+        }
+      }
+    },
+    "PouleParty uses your GPS during a game so the Chicken and Hunters can find each other on the map.\n\nYou can grant access now, or wait. We'll ask again when you start your first game.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PouleParty utilise ton GPS pendant une partie pour que la Poule et les Chasseurs se retrouvent sur la carte.\n\nTu peux autoriser l'accès maintenant ou attendre. On te redemandera au lancement de ta première partie."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PouleParty gebruikt je gps tijdens een spel zodat de Kip en de Jagers elkaar op de kaart kunnen vinden.\n\nJe kunt nu toegang geven of wachten. We vragen het opnieuw wanneer je je eerste spel start."
+          }
+        }
+      }
+    },
+    "Set up location": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configurer la localisation"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Locatie instellen"
+          }
+        }
+      }
+    },
+    "Watch for traffic. Respect private property. Don't run where you wouldn't normally run. PouleParty is not responsible for injuries or damage.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attention à la circulation. Respecte les propriétés privées. Ne cours pas là où tu ne courrais pas d'habitude. PouleParty n'est pas responsable des blessures ou des dégâts."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Let op het verkeer. Respecteer privé-eigendom. Ren niet waar je normaal niet zou rennen. PouleParty is niet verantwoordelijk voor letsels of schade."
+          }
+        }
+      }
+    },
+    "⚠️ Play safely": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⚠️ Joue prudemment"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⚠️ Speel veilig"
+          }
+        }
+      }
+    },
+    "%lld min": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld min"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld min"
+          }
+        }
+      }
+    },
+    "%lld/%lld hunting": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld/%2$lld en chasse"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld/%2$lld op jacht"
+          }
+        }
+      }
+    },
+    "%lld/%lld hunting · %@": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld/%2$lld en chasse · %3$@"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld/%2$lld op jacht · %3$@"
+          }
+        }
+      }
+    },
+    "%lld found": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld found"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld found"
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld trouvé"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld trouvés"
+                }
+              }
+            }
+          }
+        },
+        "nl": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld gevonden"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld gevonden"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lldm": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld m"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld m"
+          }
+        }
+      }
+    },
+    "Chicken is hiding...": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La poule se cache…"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "De kip verstopt zich…"
+          }
+        }
+      }
+    },
+    "Code: **%@**": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Code : **%@**"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Code: **%@**"
+          }
+        }
+      }
+    },
+    "Ends %@": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fin à %@"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eindigt om %@"
+          }
+        }
+      }
+    },
+    "Starts %@": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Début à %@"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Begint om %@"
+          }
+        }
+      }
+    },
+    "Outside the zone!": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hors de la zone !"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buiten de zone!"
+          }
+        }
+      }
+    },
+    "You are outside the zone!": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu es hors de la zone !"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Je bent buiten de zone!"
+          }
+        }
+      }
+    },
+    "Run! Hunters incoming!": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cours ! Les chasseurs arrivent !"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rennen! De jagers komen eraan!"
+          }
+        }
+      }
+    },
+    "The chicken survived!": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La poule a survécu !"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "De kip heeft het overleefd!"
           }
         }
       }

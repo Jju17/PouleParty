@@ -82,7 +82,7 @@ struct PreGameOverlay: View {
         let minutes = (secondsRemaining % 3600) / 60
         let seconds = secondsRemaining % 60
         if days > 0 {
-            return String(format: "%dj %02d:%02d:%02d", days, hours, minutes, seconds)
+            return String(localized: "\(days) d \(String(format: "%02d:%02d:%02d", hours, minutes, seconds))")
         } else if hours > 0 {
             return String(format: "%d:%02d:%02d", hours, minutes, seconds)
         } else {

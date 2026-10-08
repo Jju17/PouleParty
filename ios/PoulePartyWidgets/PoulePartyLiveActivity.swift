@@ -97,7 +97,7 @@ struct PoulePartyLiveActivity: Widget {
                         if context.state.winnersCount > 0 {
                             HStack(spacing: 4) {
                                 Text("🏆")
-                                Text("\(context.state.winnersCount) hunter\(context.state.winnersCount == 1 ? "" : "s") caught the chicken!")
+                                Text("\(context.state.winnersCount) hunters caught the chicken!")
                                     .font(.caption)
                                     .fontWeight(.semibold)
                             }

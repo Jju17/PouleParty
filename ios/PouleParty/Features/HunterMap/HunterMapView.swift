@@ -18,11 +18,11 @@ struct HunterMapView: View {
 
     private var subtitle: String {
         if store.game.chickenCanSeeHunters {
-            return "Catch the 🐔 (she sees you! 👀)"
+            return String(localized: "Catch the 🐔 (she sees you! 👀)")
         }
         switch store.game.gameMode {
-        case .followTheChicken: return "Catch the 🐔 !"
-        case .stayInTheZone:    return "Stay in the zone 📍"
+        case .followTheChicken: return String(localized: "Catch the 🐔!")
+        case .stayInTheZone:    return String(localized: "Stay in the zone 📍")
         }
     }
 
@@ -31,7 +31,7 @@ struct HunterMapView: View {
             .safeAreaInset(edge: .top) {
                 VStack(spacing: 8) {
                     MapTopBar(
-                        title: "You are the Hunter",
+                        title: String(localized: "You are the hunter"),
                         subtitle: subtitle,
                         gradient: LinearGradient(colors: [.hunterRed, .CRPink], startPoint: .leading, endPoint: .trailing),
                         onInfoTapped: { store.send(.view(.infoButtonTapped)) }

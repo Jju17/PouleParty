@@ -1,10 +1,3 @@
-//
-//  Font+Utils.swift
-//  PouleParty
-//
-//  Created by Julien Rahier on 04/04/2024.
-//
-
 import SwiftUI
 
 extension Font {
@@ -20,7 +13,16 @@ extension Font {
 struct BangerText: View {
     private let attributedString: AttributedString
 
+    init(_ key: LocalizedStringResource, size: CGFloat) {
+        self.init(verbatim: String(localized: key), size: size)
+    }
+
+    @_disfavoredOverload
     init(_ text: String, size: CGFloat) {
+        self.init(verbatim: text, size: size)
+    }
+
+    private init(verbatim text: String, size: CGFloat) {
         var attr = AttributedString(text)
         attr.font = .custom("Bangers-Regular", fixedSize: size)
         if let lastIndex = attr.characters.indices.last {

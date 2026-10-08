@@ -33,11 +33,6 @@ struct MapPowerUpsFeature {
     enum Action {
         /// User tapped the Activate button in the inventory sheet.
         case activateTapped(PowerUp)
-        /// Atomic check-and-claim: parent calls this in the same reducer
-        /// pass that kicks off the Firestore transaction. If the id is
-        /// already in `collectingIds`, the parent bails instead of firing
-        /// a duplicate write.
-        case collectStarted(String)
         /// Transaction succeeded — removes the id from `collectingIds` and
         /// shows a "Collected: <name>!" banner so the user has the same
         /// feedback Android already gives (`BaseMapViewModel.notifyPowerUp`).
@@ -46,7 +41,7 @@ struct MapPowerUpsFeature {
         /// shows a "Failed to collect power-up" banner. Matches the
         /// Android toast path so any future rule / network regression is
         /// visible to the player instead of being swallowed in logs.
-        case collectFailed(PowerUp)
+        case collectFailed(PowerUp, message: String)
         /// Parent hands in the filtered lists after a Firestore stream tick.
         case dataUpdated(available: [PowerUp], collected: [PowerUp])
         case delegate(Delegate)
@@ -69,23 +64,19 @@ struct MapPowerUpsFeature {
             switch action {
             case let .activateTapped(powerUp):
                 state.showInventory = false
-                state.notification = "Activated: \(powerUp.type.displayName)!"
+                state.notification = String(localized: "Activated: \(powerUp.type.displayName)!")
                 state.lastActivatedType = powerUp.type
                 return .send(.delegate(.activated(powerUp)))
 
-            case let .collectStarted(id):
-                state.collectingIds.insert(id)
-                return .none
-
             case let .collectSucceeded(powerUp):
                 state.collectingIds.remove(powerUp.id)
-                state.notification = "Collected: \(powerUp.type.displayName)!"
+                state.notification = String(localized: "Collected: \(powerUp.type.displayName)!")
                 state.lastActivatedType = powerUp.type
                 return .none
 
-            case let .collectFailed(powerUp):
+            case let .collectFailed(powerUp, message):
                 state.collectingIds.remove(powerUp.id)
-                state.notification = "Failed to collect power-up"
+                state.notification = message
                 return .none
 
             case let .dataUpdated(available, collected):

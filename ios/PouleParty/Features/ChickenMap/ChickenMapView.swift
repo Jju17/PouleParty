@@ -17,11 +17,11 @@ struct ChickenMapView: View {
 
     private var subtitle: String {
         if store.game.chickenCanSeeHunters {
-            return "You can see them 👀"
+            return String(localized: "You can see them 👀")
         }
         switch store.game.gameMode {
-        case .followTheChicken: return "Don't be seen !"
-        case .stayInTheZone:    return "Stay in the zone 📍"
+        case .followTheChicken: return String(localized: "Don't be seen!")
+        case .stayInTheZone:    return String(localized: "Stay in the zone 📍")
         }
     }
 
@@ -30,7 +30,7 @@ struct ChickenMapView: View {
             .safeAreaInset(edge: .top) {
                 VStack(spacing: 8) {
                     MapTopBar(
-                        title: "You are the 🐔",
+                        title: String(localized: "You are the 🐔"),
                         subtitle: subtitle,
                         gradient: LinearGradient(colors: [.chickenYellow, .CROrange], startPoint: .leading, endPoint: .trailing),
                         onInfoTapped: { store.send(.view(.infoButtonTapped)) }

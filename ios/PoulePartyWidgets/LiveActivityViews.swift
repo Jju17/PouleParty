@@ -177,7 +177,7 @@ private struct GameOverPhaseView: View {
             HStack {
                 if context.state.winnersCount > 0 {
                     Label {
-                        Text("\(context.state.winnersCount) hunter\(context.state.winnersCount == 1 ? "" : "s") caught the chicken!")
+                        Text("\(context.state.winnersCount) hunters caught the chicken!")
                             .font(.subheadline)
                             .fontWeight(.semibold)
                     } icon: {

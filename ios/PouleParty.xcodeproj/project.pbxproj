@@ -18,6 +18,7 @@
 		6464E52C2BA5C3ED0039C387 /* FirebaseFunctionsCombine-Community in Frameworks */ = {isa = PBXBuildFile; productRef = 6464E52B2BA5C3ED0039C387 /* FirebaseFunctionsCombine-Community */; };
 		648F56402CF3DC4900B1BC28 /* ComposableArchitecture in Frameworks */ = {isa = PBXBuildFile; productRef = 648F563F2CF3DC4900B1BC28 /* ComposableArchitecture */; };
 		64CE0F842CEE8E8200762232 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 64CE0F832CEE8E8200762232 /* Localizable.xcstrings */; };
+		F9C0A0012F90000100A0B001 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 64CE0F832CEE8E8200762232 /* Localizable.xcstrings */; };
 		BB0000012F47000100000001 /* Sharing in Frameworks */ = {isa = PBXBuildFile; productRef = BB0000022F47000100000001 /* Sharing */; };
 		BB0000032F47000100000001 /* Clocks in Frameworks */ = {isa = PBXBuildFile; productRef = BB0000042F47000100000001 /* Clocks */; };
 		BB0000052F47000100000001 /* CasePathsCore in Frameworks */ = {isa = PBXBuildFile; productRef = BB0000062F47000100000001 /* CasePathsCore */; };
@@ -483,6 +484,7 @@
 		F9B1BE1E2F58DCD200E066D6 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			files = (
+				F9C0A0012F90000100A0B001 /* Localizable.xcstrings in Resources */,
 			);
 		};
 /* End PBXResourcesBuildPhase section */

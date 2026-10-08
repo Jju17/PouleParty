@@ -282,17 +282,7 @@ struct MapPowerUpsFeatureTests {
         await store.send(.dataUpdated(available: [p], collected: [p]))
     }
 
-    // MARK: - collectStarted / collectSucceeded / collectFailed (1.11.1)
-
-    @Test func collectStartedInsertsIntoCollectingIds() async {
-        let store = TestStore(initialState: MapPowerUpsFeature.State()) {
-            MapPowerUpsFeature()
-        }
-
-        await store.send(.collectStarted("pu-99")) {
-            $0.collectingIds = ["pu-99"]
-        }
-    }
+    // MARK: - collectSucceeded / collectFailed
 
     @Test func collectSucceededRemovesFromInFlightAndShowsBanner() async {
         let p = makePowerUp(id: "pu-7", type: .zonePreview)
@@ -317,29 +307,13 @@ struct MapPowerUpsFeatureTests {
             MapPowerUpsFeature()
         }
 
-        await store.send(.collectFailed(p)) {
+        await store.send(.collectFailed(p, message: ApiErrorCode.powerUpTooFar.message)) {
             $0.collectingIds = []
-            $0.notification = "Failed to collect power-up"
+            $0.notification = ApiErrorCode.powerUpTooFar.message
             // lastActivatedType stays at its previous value — a failed
             // collect shouldn't retint the banner to the type that just
             // failed.
         }
-    }
-
-    @Test func collectStartedIsIdempotent() async {
-        // A second `.collectStarted` for the same id is a no-op state
-        // change — the set already contains the id. The parent reducer
-        // uses the set as an atomic guard before dispatching, so this
-        // case should never reach the child in practice, but the reducer
-        // tolerates it.
-        let store = TestStore(
-            initialState: MapPowerUpsFeature.State(collectingIds: ["pu-1"])
-        ) {
-            MapPowerUpsFeature()
-        }
-
-        // Set.insert on an existing member is a no-op — no state change.
-        await store.send(.collectStarted("pu-1"))
     }
 
     @Test func collectSucceededOnlyRemovesMatchingId() async {
