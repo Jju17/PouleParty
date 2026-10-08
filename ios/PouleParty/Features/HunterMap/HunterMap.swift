@@ -226,15 +226,13 @@ struct HunterMapFeature {
     @Dependency(\.remoteConfigClient) var remoteConfigClient
 
     private func loadScheduleEffect(_ gameId: String) -> Effect<Action> {
-        .run { [apiClient, clock] send in
-            switch await loadZoneSchedule(gameId, fetch: apiClient.fetchZoneSchedule, sleep: { try await clock.sleep(for: $0) }) {
-            case let .success(circles):
-                await send(.internal(.scheduleLoaded(circles)))
-            case let .failure(error):
-                logger.warning("[zone] schedule unavailable: \(error.localizedDescription)")
-                await send(.internal(.scheduleLoadFailed(error.userMessage)))
-            }
-        }
+        zoneScheduleEffect(
+            gameId: gameId,
+            apiClient: apiClient,
+            clock: clock,
+            loaded: { .internal(.scheduleLoaded($0)) },
+            failed: { .internal(.scheduleLoadFailed($0)) }
+        )
     }
 
     var body: some ReducerOf<Self> {
@@ -532,14 +530,7 @@ struct HunterMapFeature {
                 return .none
             case .internal(.winnerRegistered):
                 state.isSubmittingWinner = false
-                let endState = PoulePartyAttributes.ContentState(
-                    radiusMeters: state.radius,
-                    nextShrinkDate: nil,
-                    activeHunters: max(0, state.game.hunterIds.count - state.game.winners.count),
-                    winnersCount: state.game.winners.count,
-                    isOutsideZone: false,
-                    gamePhase: .gameOver
-                )
+                let endState = gameOverLiveActivityState(game: state.game, radius: state.radius)
                 return .merge(.cancel(id: CancelID.runtime), .run { _ in
                     await liveActivityClient.end(endState)
                 })
@@ -814,14 +805,7 @@ struct HunterMapFeature {
                     locationClient.stopTracking()
                     state.game = game
                     state.isGameOver = true
-                    let endState = PoulePartyAttributes.ContentState(
-                        radiusMeters: state.radius,
-                        nextShrinkDate: nil,
-                        activeHunters: max(0, game.hunterIds.count - game.winners.count),
-                        winnersCount: game.winners.count,
-                        isOutsideZone: false,
-                        gamePhase: .gameOver
-                    )
+                    let endState = gameOverLiveActivityState(game: game, radius: state.radius)
                     return .merge(.cancel(id: CancelID.runtime), .run { _ in
                         await liveActivityClient.end(endState)
                     })
@@ -844,14 +828,7 @@ struct HunterMapFeature {
                 // PP-zone-stored: re-resolve the active circle from the stored
                 // schedule on every config tick (covers QA debug anchor-rewind).
                 let zCfg = zoneRenderState(for: game, circles: state.circles, now: now.now)
-                state.radius = zCfg.radius
-                if let next = zCfg.nextUpdate { state.nextRadiusUpdate = next }
-                if let center = zCfg.center {
-                    state.mapCircle = CircleOverlay(center: center, radius: CLLocationDistance(zCfg.radius))
-                } else if let currentCircle = state.mapCircle {
-                    // followTheChicken: keep the live chicken center, refresh radius.
-                    state.mapCircle = CircleOverlay(center: currentCircle.center, radius: CLLocationDistance(zCfg.radius))
-                }
+                state.applyZone(zCfg)
 
                 // Decoy: show a fake chicken marker when decoy is active
                 if game.isDecoyActive {
@@ -947,15 +924,7 @@ struct HunterMapFeature {
                 state.zoneScheduleError = nil
                 state.circles = circles
                 let z = zoneRenderState(for: state.game, circles: circles, now: now.now)
-                state.radius = z.radius
-                if let next = z.nextUpdate { state.nextRadiusUpdate = next }
-                // stayInTheZone: use the stored center. followTheChicken: keep
-                // the live chicken center if we already have one, else nil.
-                if let center = z.center {
-                    state.mapCircle = CircleOverlay(center: center, radius: CLLocationDistance(z.radius))
-                } else if let existing = state.mapCircle {
-                    state.mapCircle = CircleOverlay(center: existing.center, radius: CLLocationDistance(z.radius))
-                }
+                state.applyZone(z)
                 return .none
 
             case .internal(.timerTicked):
@@ -969,35 +938,13 @@ struct HunterMapFeature {
                 // the chicken: in manual-start mode, nothing counts down
                 // until the chicken/GM actually taps LAUNCH and the
                 // server stamps `actualStart`.
-                let hasLaunched = !state.game.manualStartEnabled
-                    || state.game.timing.actualStart != nil
                 let countdownResult = evaluateCountdown(
-                    phases: [
-                        CountdownPhase(
-                            targetDate: state.game.effectiveStartDate,
-                            completionText: String(localized: "🐔 is hiding!"),
-                            showNumericCountdown: true,
-                            isEnabled: hasLaunched && state.game.timing.headStartMinutes > 0
-                        ),
-                        CountdownPhase(
-                            targetDate: state.game.hunterStartDate,
-                            completionText: String(localized: "LET'S HUNT! 🔍"),
-                            showNumericCountdown: true,
-                            isEnabled: hasLaunched
-                        )
-                    ],
+                    phases: countdownPhases(for: .hunter, game: state.game),
+                    now: state.nowDate,
                     currentCountdownNumber: state.countdownNumber,
                     currentCountdownText: state.countdownText
                 )
-                switch countdownResult {
-                case .noChange:
-                    break
-                case .updateNumber(let n):
-                    state.countdownNumber = n
-                    state.countdownText = nil
-                case .showText(let text):
-                    state.countdownNumber = nil
-                    state.countdownText = text
+                if state.applyCountdown(countdownResult) {
                     return .run { send in
                         try await clock.sleep(for: .seconds(AppConstants.countdownDisplaySeconds))
                         await send(.internal(.countdownDismissed))
@@ -1011,14 +958,7 @@ struct HunterMapFeature {
                     HapticManager.notification(.warning)
                     state.isGameOver = true
                     locationClient.stopTracking()
-                    let endState = PoulePartyAttributes.ContentState(
-                        radiusMeters: state.radius,
-                        nextShrinkDate: nil,
-                        activeHunters: max(0, state.game.hunterIds.count - state.game.winners.count),
-                        winnersCount: state.game.winners.count,
-                        isOutsideZone: false,
-                        gamePhase: .gameOver
-                    )
+                    let endState = gameOverLiveActivityState(game: state.game, radius: state.radius)
                     return .merge(.cancel(id: CancelID.runtime), .run { _ in
                         await liveActivityClient.end(endState)
                     })
@@ -1030,12 +970,7 @@ struct HunterMapFeature {
                 // followTheChicken keeps the live chicken GPS center.
                 let prevRadiusHM = state.radius
                 let zTick = zoneRenderState(for: state.game, circles: state.circles, now: now.now)
-                state.radius = zTick.radius
-                if let next = zTick.nextUpdate { state.nextRadiusUpdate = next }
-                let tickCenterHM = zTick.center ?? state.mapCircle?.center
-                if let tickCenterHM {
-                    state.mapCircle = CircleOverlay(center: tickCenterHM, radius: CLLocationDistance(zTick.radius))
-                }
+                state.applyZone(zTick)
                 // Clear zone preview once the zone actually shrinks past it.
                 if zTick.radius != prevRadiusHM { state.previewCircle = nil }
 

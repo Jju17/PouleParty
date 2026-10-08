@@ -149,15 +149,13 @@ struct GameMasterMapFeature {
     @Dependency(\.continuousClock) var clock
 
     private func loadScheduleEffect(_ gameId: String) -> Effect<Action> {
-        .run { [apiClient, clock] send in
-            switch await loadZoneSchedule(gameId, fetch: apiClient.fetchZoneSchedule, sleep: { try await clock.sleep(for: $0) }) {
-            case let .success(circles):
-                await send(.internal(.scheduleLoaded(circles)))
-            case let .failure(error):
-                logger.warning("[zone] schedule unavailable: \(error.localizedDescription)")
-                await send(.internal(.scheduleLoadFailed(error.userMessage)))
-            }
-        }
+        zoneScheduleEffect(
+            gameId: gameId,
+            apiClient: apiClient,
+            clock: clock,
+            loaded: { .internal(.scheduleLoaded($0)) },
+            failed: { .internal(.scheduleLoadFailed($0)) }
+        )
     }
 
     var body: some ReducerOf<Self> {
@@ -232,12 +230,7 @@ struct GameMasterMapFeature {
                 state.zoneScheduleError = nil
                 state.circles = circles
                 let z = zoneRenderState(for: state.game, circles: circles, now: now.now)
-                state.radius = z.radius
-                if let next = z.nextUpdate { state.nextRadiusUpdate = next }
-                let center = z.center ?? state.mapCircle?.center
-                if let center {
-                    state.mapCircle = CircleOverlay(center: center, radius: CLLocationDistance(z.radius))
-                }
+                state.applyZone(z)
                 return .none
             case let .internal(.gameUpdated(game)):
                 let endedNow = game.status == .done && state.game.status != .done
@@ -249,12 +242,7 @@ struct GameMasterMapFeature {
                 // config tick. Real games keep the timer-tick path untouched.
                 if game.isDebugGame {
                     let zDebug = zoneRenderState(for: game, circles: state.circles, now: now.now)
-                    state.radius = zDebug.radius
-                    if let next = zDebug.nextUpdate { state.nextRadiusUpdate = next }
-                    let dbgCenter = zDebug.center ?? state.mapCircle?.center
-                    if let dbgCenter {
-                        state.mapCircle = CircleOverlay(center: dbgCenter, radius: CLLocationDistance(zDebug.radius))
-                    }
+                    state.applyZone(zDebug)
                 }
                 // Game ended (status flipped to `.done`). The GM stays
                 // on the map with `isGameOver` (computed from
@@ -294,12 +282,7 @@ struct GameMasterMapFeature {
                 state.nowDate = now
                 if let next = state.nextRadiusUpdate, now >= next {
                     let zTick = zoneRenderState(for: state.game, circles: state.circles, now: now)
-                    state.radius = zTick.radius
-                    if let nextUpdate = zTick.nextUpdate { state.nextRadiusUpdate = nextUpdate }
-                    let tickCenter = zTick.center ?? state.mapCircle?.center
-                    if let tickCenter {
-                        state.mapCircle = CircleOverlay(center: tickCenter, radius: CLLocationDistance(zTick.radius))
-                    }
+                    state.applyZone(zTick)
                 }
                 return .none
             case .internal(.winnerNotificationDismissed):

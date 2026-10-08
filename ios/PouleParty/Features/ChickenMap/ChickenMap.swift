@@ -221,15 +221,13 @@ struct ChickenMapFeature {
     @Dependency(\.analyticsClient) var analyticsClient
 
     private func loadScheduleEffect(_ gameId: String) -> Effect<Action> {
-        .run { [apiClient, clock] send in
-            switch await loadZoneSchedule(gameId, fetch: apiClient.fetchZoneSchedule, sleep: { try await clock.sleep(for: $0) }) {
-            case let .success(circles):
-                await send(.internal(.scheduleLoaded(circles)))
-            case let .failure(error):
-                logger.warning("[zone] schedule unavailable: \(error.localizedDescription)")
-                await send(.internal(.scheduleLoadFailed(error.userMessage)))
-            }
-        }
+        zoneScheduleEffect(
+            gameId: gameId,
+            apiClient: apiClient,
+            clock: clock,
+            loaded: { .internal(.scheduleLoaded($0)) },
+            failed: { .internal(.scheduleLoadFailed($0)) }
+        )
     }
 
     var body: some ReducerOf<Self> {
@@ -380,12 +378,7 @@ struct ChickenMapFeature {
                 // (which handles the zone-freeze window) untouched.
                 if game.isDebugGame {
                     let zDebug = zoneRenderState(for: game, circles: state.circles, now: now.now)
-                    state.radius = zDebug.radius
-                    if let next = zDebug.nextUpdate { state.nextRadiusUpdate = next }
-                    let dbgCenter = zDebug.center ?? state.mapCircle?.center
-                    if let dbgCenter {
-                        state.mapCircle = CircleOverlay(center: dbgCenter, radius: CLLocationDistance(zDebug.radius))
-                    }
+                    state.applyZone(zDebug)
                 }
 
                 // Update Live Activity with new game state
@@ -786,10 +779,7 @@ struct ChickenMapFeature {
                 state.zoneScheduleError = nil
                 state.circles = circles
                 let z = zoneRenderState(for: state.game, circles: circles, now: now.now)
-                state.radius = z.radius
-                if let next = z.nextUpdate { state.nextRadiusUpdate = next }
-                let center = z.center ?? state.mapCircle?.center ?? state.game.zone.center.toCLCoordinates
-                state.mapCircle = CircleOverlay(center: center, radius: CLLocationDistance(z.radius))
+                state.applyZone(z, fallbackCenter: state.game.zone.center.toCLCoordinates)
                 return .none
 
             case .internal(.timerTicked):
@@ -801,35 +791,13 @@ struct ChickenMapFeature {
                 // whenever the chicken/GM taps LAUNCH and the server
                 // stamps `actualStart`. Both phases gate on that so the
                 // 3-2-1 RUN doesn't fire before LAUNCH.
-                let hasLaunched = !state.game.manualStartEnabled
-                    || state.game.timing.actualStart != nil
                 let countdownResult = evaluateCountdown(
-                    phases: [
-                        CountdownPhase(
-                            targetDate: state.game.effectiveStartDate,
-                            completionText: String(localized: "RUN! 🐔"),
-                            showNumericCountdown: true,
-                            isEnabled: hasLaunched
-                        ),
-                        CountdownPhase(
-                            targetDate: state.game.hunterStartDate,
-                            completionText: String(localized: "🔍 Hunters incoming!"),
-                            showNumericCountdown: false,
-                            isEnabled: hasLaunched && state.game.timing.headStartMinutes > 0
-                        )
-                    ],
+                    phases: countdownPhases(for: .chicken, game: state.game),
+                    now: state.nowDate,
                     currentCountdownNumber: state.countdownNumber,
                     currentCountdownText: state.countdownText
                 )
-                switch countdownResult {
-                case .noChange:
-                    break
-                case .updateNumber(let n):
-                    state.countdownNumber = n
-                    state.countdownText = nil
-                case .showText(let text):
-                    state.countdownNumber = nil
-                    state.countdownText = text
+                if state.applyCountdown(countdownResult) {
                     return .run { send in
                         try await clock.sleep(for: .seconds(AppConstants.countdownDisplaySeconds))
                         await send(.internal(.countdownDismissed))
@@ -843,14 +811,7 @@ struct ChickenMapFeature {
                     HapticManager.notification(.warning)
                     state.isGameOver = true
                     locationClient.stopTracking()
-                    let endState = PoulePartyAttributes.ContentState(
-                        radiusMeters: state.radius,
-                        nextShrinkDate: nil,
-                        activeHunters: max(0, state.game.hunterIds.count - state.game.winners.count),
-                        winnersCount: state.game.winners.count,
-                        isOutsideZone: false,
-                        gamePhase: .gameOver
-                    )
+                    let endState = gameOverLiveActivityState(game: state.game, radius: state.radius)
                     let gameId = state.game.id
                     let winnersCount = state.game.winners.count
                     return .merge(.cancel(id: CancelID.runtime), .run { [analyticsClient] _ in
@@ -871,12 +832,7 @@ struct ChickenMapFeature {
                 // followTheChicken keeps the live chicken GPS center (set on
                 // location updates); only the radius comes from the schedule.
                 let zTick = zoneRenderState(for: state.game, circles: state.circles, now: now.now)
-                state.radius = zTick.radius
-                if let next = zTick.nextUpdate { state.nextRadiusUpdate = next }
-                let tickCenter = zTick.center ?? state.mapCircle?.center
-                if let tickCenter {
-                    state.mapCircle = CircleOverlay(center: tickCenter, radius: CLLocationDistance(zTick.radius))
-                }
+                state.applyZone(zTick)
                 // Periodic power-ups are spawned by the `spawnPowerUpBatch`
                 // Cloud Task scheduled at game creation — no client-side spawn.
 
