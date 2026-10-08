@@ -497,6 +497,7 @@ struct HomeFeature {
 struct HomeView: View {
     @Bindable var store: StoreOf<HomeFeature>
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isVisible = true
     @State private var audioPlayer: AVAudioPlayer?
     @State private var musicButtonScale: CGFloat = 1.0
@@ -529,10 +530,7 @@ struct HomeView: View {
                                 RoundedRectangle(cornerRadius: 12)
                                     .stroke(Color.onBackground, lineWidth: 4)
                             )
-                            .opacity(self.isVisible ? 1 : 0)
-                            .onAppear {
-                                self.isVisible.toggle()
-                            }
+                            .opacity(self.isVisible || reduceMotion ? 1 : 0)
                     }
                     .accessibilityLabel("Start game")
                     .frame(width: 200, height: 50)
@@ -775,7 +773,7 @@ struct HomeView: View {
     }
 
     private func animateBlinking() async {
-        while !Task.isCancelled {
+        while !Task.isCancelled && !reduceMotion {
             withAnimation(Animation.easeInOut(duration: 0.5)) {
                 self.isVisible.toggle()
             }
