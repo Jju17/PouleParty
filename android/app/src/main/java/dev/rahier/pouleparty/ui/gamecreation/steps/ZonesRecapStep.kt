@@ -170,7 +170,7 @@ fun ZonesRecapStep(
                     allowOverlap(true)
                 }
             ) {
-                MapLabel(text = "START", background = CROrange, textColor = Color.White)
+                MapLabel(text = stringResource(R.string.recap_label_start), background = CROrange, textColor = Color.Black)
             }
 
             if (isStay) {
@@ -181,7 +181,7 @@ fun ZonesRecapStep(
                             allowOverlap(true)
                         }
                     ) {
-                        MapLabel(text = "FINAL", background = ZoneGreen, textColor = Color.Black)
+                        MapLabel(text = stringResource(R.string.recap_label_final), background = ZoneGreen, textColor = Color.Black)
                     }
                 }
             }

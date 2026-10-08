@@ -1,5 +1,7 @@
 package dev.rahier.pouleparty.ui.home
 
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Settings
 import com.google.firebase.firestore.FirebaseFirestore
 import dev.rahier.pouleparty.model.GamePhase
 import dev.rahier.pouleparty.model.PlayerRole
@@ -213,13 +215,13 @@ fun HomeScreen(
                 Icon(
                     imageVector = if (state.isMusicMuted) Icons.AutoMirrored.Filled.VolumeOff
                     else Icons.AutoMirrored.Filled.VolumeUp,
-                    contentDescription = if (state.isMusicMuted) "Unmute music" else "Mute music",
+                    contentDescription = stringResource(if (state.isMusicMuted) R.string.unmute_music else R.string.mute_music),
                     tint = MaterialTheme.colorScheme.onBackground
                 )
             }
             IconButton(onClick = onNavigateToSettings) {
                 Icon(
-                    painter = painterResource(android.R.drawable.ic_menu_preferences),
+                    imageVector = Icons.Default.Settings,
                     contentDescription = stringResource(R.string.settings),
                     tint = MaterialTheme.colorScheme.onBackground
                 )
@@ -301,10 +303,10 @@ fun HomeScreen(
                         onClick = { viewModel.onIntent(HomeIntent.ActiveGameDismissed) },
                         modifier = Modifier.align(Alignment.TopEnd)
                     ) {
-                        Text(
-                            "✕",
-                            color = Color.White,
-                            fontSize = 14.sp
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = stringResource(R.string.dismiss_active_game),
+                            tint = Color.White,
                         )
                     }
                 }

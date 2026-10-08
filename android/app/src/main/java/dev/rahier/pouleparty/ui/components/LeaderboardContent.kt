@@ -143,7 +143,6 @@ fun LeaderboardEntryRow(
         if (onReport != null && !entry.isCurrentUser) {
             IconButton(
                 onClick = { onReport(entry) },
-                modifier = Modifier.size(32.dp)
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Flag,

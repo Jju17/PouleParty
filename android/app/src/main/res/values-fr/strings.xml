@@ -511,4 +511,14 @@
         <item quantity="other">%1$d min</item>
     </plurals>
     <string name="my_games_load_failed">Impossible de charger tes parties.</string>
+    <string name="game_ended_banner_title">Partie terminée</string>
+    <string name="game_ended_banner_subtitle">Touche pour voir le classement</string>
+    <string name="recap_label_start">DÉPART</string>
+    <string name="recap_label_final">FINALE</string>
+    <string name="power_up_duration">Durée : %1$d s</string>
+    <string name="mute_music">Couper la musique</string>
+    <string name="unmute_music">Jouer la musique</string>
+    <string name="dismiss_active_game">Masquer cette partie</string>
+    <string name="qa_debug_title">QA DEBUG</string>
+    <string name="clear_search">Effacer la recherche</string>
 </resources>

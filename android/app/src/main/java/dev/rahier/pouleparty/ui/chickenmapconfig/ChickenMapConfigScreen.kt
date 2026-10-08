@@ -179,7 +179,7 @@ fun ChickenMapConfigScreen(
                 trailingIcon = {
                     if (state.searchQuery.isNotEmpty()) {
                         IconButton(onClick = { viewModel.clearSearch() }) {
-                            Icon(Icons.Default.Clear, contentDescription = null, tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f))
+                            Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.clear_search), tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f))
                         }
                     }
                 },

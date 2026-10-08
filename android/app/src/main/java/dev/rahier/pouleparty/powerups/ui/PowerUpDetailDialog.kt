@@ -64,7 +64,7 @@ fun PowerUpDetailDialog(type: PowerUpType, onDismiss: () -> Unit) {
                 )
                 type.durationSeconds?.let { duration ->
                     Text(
-                        text = "Duration: ${duration}s",
+                        text = stringResource(R.string.power_up_duration, duration.toInt()),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

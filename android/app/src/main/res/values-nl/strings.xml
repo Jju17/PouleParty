@@ -502,4 +502,14 @@
         <item quantity="other">%1$d min</item>
     </plurals>
     <string name="my_games_load_failed">Je spellen konden niet geladen worden.</string>
+    <string name="game_ended_banner_title">Spel afgelopen</string>
+    <string name="game_ended_banner_subtitle">Tik om het klassement te zien</string>
+    <string name="recap_label_start">START</string>
+    <string name="recap_label_final">FINALE</string>
+    <string name="power_up_duration">Duur: %1$d s</string>
+    <string name="mute_music">Muziek dempen</string>
+    <string name="unmute_music">Muziek afspelen</string>
+    <string name="dismiss_active_game">Dit spel verbergen</string>
+    <string name="qa_debug_title">QA DEBUG</string>
+    <string name="clear_search">Zoekopdracht wissen</string>
 </resources>

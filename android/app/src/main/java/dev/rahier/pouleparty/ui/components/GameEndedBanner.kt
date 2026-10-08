@@ -1,5 +1,7 @@
 package dev.rahier.pouleparty.ui.components
 
+import dev.rahier.pouleparty.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -67,13 +69,13 @@ fun GameEndedBanner(
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             Text(
-                text = "Game ended",
+                text = stringResource(R.string.game_ended_banner_title),
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp,
             )
             Text(
-                text = "Tap to see the leaderboard",
+                text = stringResource(R.string.game_ended_banner_subtitle),
                 color = Color.White.copy(alpha = 0.85f),
                 fontSize = 12.sp,
             )

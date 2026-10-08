@@ -42,7 +42,7 @@ fun DebugQAPanel(
             .padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text("QA DEBUG", color = Color.White, fontWeight = FontWeight.Black, fontSize = 11.sp)
+        Text(stringResource(R.string.qa_debug_title), color = Color.White, fontWeight = FontWeight.Black, fontSize = 11.sp)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(
                 onClick = onNextStep,

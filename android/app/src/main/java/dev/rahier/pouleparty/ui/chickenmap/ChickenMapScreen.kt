@@ -1,5 +1,6 @@
 package dev.rahier.pouleparty.ui.chickenmap
 
+import dev.rahier.pouleparty.ui.theme.MinTouchTarget
 import dev.rahier.pouleparty.ui.theme.MapOverlayOffsets
 import androidx.compose.runtime.saveable.rememberSaveable
 import dev.rahier.pouleparty.ui.components.FinalZoneOutline
@@ -219,7 +220,7 @@ fun ChickenMapScreen(
                     .padding(end = 8.dp)
                     .shadow(4.dp, CircleShape)
                     .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.9f), CircleShape)
-                    .size(40.dp)
+                    .size(MinTouchTarget)
             ) {
                 Icon(
                     Icons.Default.Navigation,
@@ -237,7 +238,7 @@ fun ChickenMapScreen(
                     modifier = Modifier
                         .shadow(4.dp, CircleShape)
                         .background(CRPink, CircleShape)
-                        .size(40.dp),
+                        .size(MinTouchTarget),
                 ) {
                     Icon(
                         Icons.Default.CheckCircle,

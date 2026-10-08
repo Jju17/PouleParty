@@ -516,4 +516,14 @@
         <item quantity="other">%1$d min</item>
     </plurals>
     <string name="my_games_load_failed">Your games could not be loaded.</string>
+    <string name="game_ended_banner_title">Game ended</string>
+    <string name="game_ended_banner_subtitle">Tap to see the leaderboard</string>
+    <string name="recap_label_start">START</string>
+    <string name="recap_label_final">FINAL</string>
+    <string name="power_up_duration">Duration: %1$d s</string>
+    <string name="mute_music">Mute music</string>
+    <string name="unmute_music">Play music</string>
+    <string name="dismiss_active_game">Hide this game</string>
+    <string name="qa_debug_title">QA DEBUG</string>
+    <string name="clear_search">Clear search</string>
 </resources>
