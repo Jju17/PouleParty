@@ -2,7 +2,7 @@ import { GeoPoint, Timestamp } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import { onDocumentCreated, onDocumentDeleted, onDocumentUpdated } from "firebase-functions/v2/firestore";
 import * as logger from "firebase-functions/logger";
-import { REGION, db } from "./config";
+import { GOOGLEAPIS_MEMORY, REGION, db } from "./config";
 import { chickenIdOf, gameMastersOf, huntersOf, rolesOf } from "./roles";
 import { computeShrinkSchedule } from "./zoneCalculation";
 import { scheduleGameLifecycleTasks } from "./lifecycleTasks";
@@ -183,6 +183,7 @@ export const onGameDeleted = onDocumentDeleted(
   {
     document: "games/{gameId}",
     region: REGION,
+    memory: GOOGLEAPIS_MEMORY,
   },
   async (event) => {
     const gameId = event.params.gameId;

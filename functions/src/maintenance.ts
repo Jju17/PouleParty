@@ -1,7 +1,7 @@
 import { Timestamp } from "firebase-admin/firestore";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import * as logger from "firebase-functions/logger";
-import { REGION, db } from "./config";
+import { GOOGLEAPIS_MEMORY, REGION, db } from "./config";
 import { REGISTRATION_SECRETS, replayFailedSideEffects } from "./registrations";
 
 export const FINISHED_GAME_RETENTION_DAYS = 30;
@@ -39,6 +39,7 @@ export const replayRegistrationSideEffects = onSchedule(
   {
     schedule: "every 15 minutes",
     region: REGION,
+    memory: GOOGLEAPIS_MEMORY,
     secrets: [REGISTRATION_SECRETS.RESEND_API_KEY, REGISTRATION_SECRETS.GOOGLE_SHEET_ID],
   },
   async () => {

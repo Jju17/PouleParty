@@ -13,7 +13,7 @@ import { randomInt } from "crypto";
 // + discriminated-union narrowing on `event.type`.
 import Stripe = require("stripe");
 
-import { CALLABLE_OPTIONS, requireUid } from "./config";
+import { CALLABLE_OPTIONS, GOOGLEAPIS_MEMORY, requireUid } from "./config";
 import { eventBatch } from "./events";
 import { fetchWithRetry } from "./http";
 import { sendRegistrationConfirmationEmail } from "./email/registrationConfirmation";
@@ -338,6 +338,7 @@ export const createPendingRegistration = onRequest(
 export const confirmRegistrationPayment = onRequest(
   {
     region: REGION,
+    memory: GOOGLEAPIS_MEMORY,
     secrets: [STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, RESEND_API_KEY, GOOGLE_SHEET_ID],
   },
   async (req, res) => {

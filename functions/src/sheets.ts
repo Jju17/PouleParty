@@ -1,4 +1,4 @@
-import { google } from "googleapis";
+import type { sheets_v4 } from "googleapis";
 import { logger } from "firebase-functions/v2";
 import { formatBrussels } from "./time";
 
@@ -43,7 +43,8 @@ export function escapeForSheet(value: string): string {
   return /^[=+\-@]/.test(value) ? `'${value}` : value;
 }
 
-async function sheetsClient() {
+async function sheetsClient(): Promise<sheets_v4.Sheets> {
+  const { google } = await import("googleapis");
   const auth = new google.auth.GoogleAuth({
     scopes: ["https://www.googleapis.com/auth/spreadsheets"],
   });
@@ -63,7 +64,7 @@ async function sheetsClient() {
  * never got the "refunded" / "refundedAt" headers without this nudge.
  */
 async function ensureHeader(
-  sheets: ReturnType<typeof google.sheets>,
+  sheets: sheets_v4.Sheets,
   sheetId: string
 ): Promise<void> {
   const existing = await sheets.spreadsheets.values.get({

@@ -9,6 +9,8 @@ export const ENFORCE_APP_CHECK = defineBoolean("ENFORCE_APP_CHECK", {
   description: "Reject callable requests without a valid App Check token.",
 });
 
+export const GOOGLEAPIS_MEMORY = "512MiB" as const;
+
 export const CALLABLE_OPTIONS = {
   region: REGION,
   enforceAppCheck: ENFORCE_APP_CHECK,
