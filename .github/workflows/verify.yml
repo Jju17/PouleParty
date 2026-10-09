@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_call:
 
 permissions:
   contents: read
@@ -17,7 +18,7 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - run: scripts/check-commit-messages.sh "origin/${{ github.base_ref }}..HEAD"
@@ -28,13 +29,13 @@ jobs:
       run:
         working-directory: functions
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
           cache-dependency-path: functions/package-lock.json
-      - uses: actions/setup-java@v5
+      - uses: actions/setup-java@v6
         with:
           distribution: jetbrains
           java-version: 21
@@ -51,8 +52,8 @@ jobs:
       run:
         working-directory: web
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
@@ -70,12 +71,12 @@ jobs:
       ORG_GRADLE_PROJECT_MAPBOX_DOWNLOADS_TOKEN: ${{ secrets.MAPBOX_DOWNLOADS_TOKEN }}
       MAPBOX_ACCESS_TOKEN: pk.ci-placeholder
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-java@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
         with:
           distribution: jetbrains
           java-version: 21
-      - uses: gradle/actions/setup-gradle@v5
+      - uses: gradle/actions/setup-gradle@v6
       - run: cp ../ci/firebase/google-services.placeholder.json app/google-services.json
       - run: ./gradlew testStagingDebugUnitTest lintStagingDebug koverXmlReportStagingDebug
 
@@ -85,7 +86,15 @@ jobs:
       run:
         working-directory: ios
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
+      - name: Select the newest Xcode
+        run: Scripts/ci/select-xcode.sh
+      - name: Cache Swift packages
+        uses: actions/cache@v6
+        with:
+          path: SourcePackages
+          key: spm-${{ hashFiles('ios/PouleParty.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          restore-keys: spm-
       - run: mkdir -p Firebase/Staging && cp ../ci/firebase/GoogleService-Info.placeholder.plist Firebase/Staging/GoogleService-Info.plist
       - run: cp Config/Secrets.xcconfig.example Config/Secrets.xcconfig
       - run: brew install swiftlint
@@ -95,4 +104,5 @@ jobs:
           -scheme PoulePartyTests
           -destination 'platform=iOS Simulator,OS=latest,name=iPhone 17'
           -enableCodeCoverage YES
+          -clonedSourcePackagesDirPath ../SourcePackages
           -skipPackagePluginValidation -skipMacroValidation

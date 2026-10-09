@@ -49,3 +49,6 @@ functions/service-account.json
 
 # Emulator logs
 *-debug.log
+
+# === CI ===
+/SourcePackages/
