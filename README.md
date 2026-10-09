@@ -43,7 +43,7 @@ Local builds need the Firebase config files, which stay out of git. For tests, t
 
 - Every push and pull request runs `.github/workflows/verify.yml` on all four targets.
 - Backend changes ship with `scripts/deploy.sh`: it refuses a dirty tree or a branch other than `main`, replays the gates, deploys staging first, checks the live pages, then asks before production.
-- Mobile builds go through Bitrise (`bitrise.yml`) and the store consoles; see `.claude/rules/release.md`.
+- iOS ships to TestFlight from a `ios-v<version>` tag through `.github/workflows/deploy-ios.yml`; Android still builds on Bitrise until the Play account change. See `.claude/rules/release.md`.
 
 ## Documentation
 

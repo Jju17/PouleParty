@@ -8,6 +8,11 @@ The living list of what is still open. Close an item by deleting it in the commi
 - **Android debug builds** need an App Check debug token registered on staging (none yet; iOS has some).
 - **Revoke the old Mapbox public token** (ending `kzhYo5q-xC_2gC8S73SDrA`) once a store release ships the new one; installed builds still use it.
 
+## Release pipeline
+
+- **TestFlight from GitHub Actions** has not run yet: the first `ios-v*` tag will confirm cloud-managed signing for PouleParty. Once it uploads, delete the `deploy_testflight` workflow from `bitrise.yml`.
+- **Android release from GitHub Actions** waits for the Play Console account change; Bitrise `deploy_play_store` stays until then.
+
 ## Open from the October 2026 review
 
 Larger refactors left for later; the app behaves correctly without them.
