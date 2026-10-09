@@ -7,20 +7,21 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: deploy-ios
   cancel-in-progress: false
 
 jobs:
-  verify:
-    uses: ./.github/workflows/verify.yml
-
   testflight:
-    needs: verify
     runs-on: macos-latest
-    timeout-minutes: 60
+    timeout-minutes: 75
     environment: production
+    env:
+      APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+      APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+      APP_STORE_CONNECT_API_KEY_P8: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8 }}
     steps:
       - uses: actions/checkout@v7
 
@@ -43,10 +44,14 @@ jobs:
           MAPBOX_ACCESS_TOKEN: ${{ secrets.MAPBOX_ACCESS_TOKEN }}
         run: ios/Scripts/ci/restore-ios-config.sh
 
-      - name: Archive and upload to TestFlight
+      - name: Archive
+        run: ios/Scripts/ci/archive.sh "$((GITHUB_RUN_NUMBER + 1000))" "$RUNNER_TEMP/PouleParty.xcarchive"
+
+      - name: Wait for Verify on this commit
         env:
-          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-          APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
-          APP_STORE_CONNECT_API_KEY_P8: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8 }}
-          BUILD_NUMBER: ${{ github.run_number }}
-        run: ios/Scripts/ci/upload-testflight.sh "$((BUILD_NUMBER + 1000))"
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: scripts/ci/wait-for-verify.sh "$GITHUB_SHA"
+
+      - name: Upload to TestFlight
+        run: ios/Scripts/ci/upload-testflight.sh "$RUNNER_TEMP/PouleParty.xcarchive"
