@@ -6,6 +6,37 @@ Format: [Keep a Changelog](https://keepachangelog.com/). Versions follow [Semant
 
 ---
 
+## [1.15.0], 2026-10-09
+
+**iOS**: 1.15.0 (build number set by CI, 1000 + run) · **Android**: 1.15.0 (44) · **Functions, Firestore, RTDB and Storage rules, web**: deployed to staging and prod on 2026-10-09
+
+> Release built from the October 2026 full review: 112 of its 129 findings fixed across both apps, the backend, the web site and the tooling. Open items live in `known-issues.md`. First iOS build shipped to TestFlight by GitHub Actions instead of Bitrise.
+
+### Added
+
+- **Shorter game creation.** Start time, duration and head start share one "When?" screen; referee code, power-ups and hunter visibility share one "Options" screen (9 to 11 screens instead of up to 14).
+- **Retry screens.** A game, team list or zone that fails to load shows a translated error with a Retry button instead of an empty list or demo data, on both apps.
+- **Connection lost banner** on the Android maps.
+- **Nickname saved confirmation** in the settings on both apps.
+- **Server-side out-of-zone penalty** on top of the client report, daily purge of finished games after 30 days, and automatic replay of failed registration emails.
+
+### Changed
+
+- **Accessibility.** Text scales with Dynamic Type on iOS, icon buttons are labelled for VoiceOver and TalkBack, touch targets are at least 44 pt / 48 dp, orange text and error text meet AA contrast, Reduce Motion is respected and form errors are announced.
+- **Copy.** Every visible string is translated in English, French and Dutch with real plurals, sentence case and British English; times are shown in Brussels time.
+- **Push notifications** register with the Firebase installation id on both apps.
+- **Music** is off by default; the referee's phone buzzes when the game ends.
+- **Tooling.** Android on AGP 9.4, Kotlin 2.4 and compileSdk 37 with warnings as errors; iOS on Firebase 13 with SwiftLint strict; functions on Node 24 and TypeScript 7; GitHub Actions verifies all four targets on every push.
+
+### Fixed
+
+- **The chicken and referees can see hunters again** in the Realtime Database (the read rule sat one level too low).
+- **Paid games can only be joined with a claimed paid code**, checked server-side by `joinGame`.
+- **Games created on iPhone decode on Android** (64-bit zone seed); shared maths is pinned by server-generated golden vectors on all three code bases.
+- **Every map stops its timers, GPS writes and listeners when the game ends**, and leaving a game goes through the server.
+- **Security hardening.** App Check enforced on every callable, rate limits on codes, stricter Firestore and Storage rules, idempotent game lifecycle tasks.
+- **Proof videos** are size-limited with a translated message instead of a failed upload.
+
 ## [1.14.1], 2026-06-04
 
 **iOS**: 1.14.1 (1) · **Android**: 1.14.1 (43) · **Functions**: deployed staging + prod · **Firestore + RTDB rules**: deployed staging + prod · **Web**: copy unchanged, locale key-parity locked

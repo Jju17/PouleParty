@@ -157,6 +157,92 @@ Gemaakt in Brussel met veel te veel kip-thema energie.
 
 ---
 
+# Release 1.15.0
+
+> ⚠️ **Do not paste any "Summary" paragraph into any store field.** Only the blocks explicitly labelled **App Store Connect**, **Google Play Console**, or **App Review Notes** below are store-safe.
+
+---
+
+## Build prepared 2026-10-09
+
+**iOS**: 1.15.0 (build number from the GitHub Actions run, 1000 + run) · **Android**: 1.15.0 (44)
+
+**Summary (internal, do not paste):** release built from the October 2026 full review (112 of 129 findings fixed). Shorter creation wizard, retry screens instead of empty lists, full FR/NL translation with plurals, accessibility pass (Dynamic Type, VoiceOver/TalkBack labels, touch targets, AA contrast, Reduce Motion), maps that stop cleanly at game end, push by installation id, server-side security hardening (App Check, paid joins, rate limits). Backend already deployed to staging and prod on 2026-10-09. No permission-string changes on iOS; Android only adds ACCESS_NETWORK_STATE (no prompt). See `CHANGELOG.md`.
+
+### 📱 App Store Connect: field "What's New in This Version"
+
+**English (U.S.)**
+
+```
+New this version:
+
+Faster game setup. Start time, duration and head start now share one screen, and all the options sit together, so creating a game takes fewer taps.
+
+Clearer when something goes wrong. If a game or a team list can't load, you now see what happened and a Retry button instead of an empty screen.
+
+Easier to read and use. Text follows your iPhone text size, every button works with VoiceOver, small buttons are easier to tap, colours are more readable and animations respect Reduce Motion.
+
+Fully translated. Every screen is now in English, French and Dutch, with proper plurals, and times are shown in Belgian time.
+
+Plus a confirmation when you save your nickname, music off by default, the game stopping cleanly on every phone when it ends, and many security and stability fixes.
+```
+
+**French**
+
+```
+Nouveautés de cette version :
+
+Créer une partie plus vite. L'heure de départ, la durée et l'avance sont sur un seul écran, et toutes les options sont réunies : moins d'étapes pour lancer une partie.
+
+Plus clair quand ça coince. Si une partie ou une liste d'équipes ne se charge pas, tu vois ce qui se passe et un bouton Réessayer au lieu d'un écran vide.
+
+Plus lisible et plus accessible. Le texte suit la taille choisie sur ton iPhone, tous les boutons fonctionnent avec VoiceOver, les petits boutons sont plus faciles à toucher, les couleurs sont plus lisibles et les animations respectent Réduire les animations.
+
+Entièrement traduit. Tous les écrans existent en français, néerlandais et anglais, avec de vrais pluriels, et les heures sont affichées à l'heure belge.
+
+En prime : une confirmation quand tu enregistres ton pseudo, la musique coupée par défaut, une fin de partie propre sur tous les téléphones et de nombreux correctifs de sécurité et de stabilité.
+```
+
+**Dutch**
+
+```
+Nieuw in deze versie:
+
+Sneller een spel maken. Starttijd, duur en voorsprong staan nu op één scherm en alle opties zitten samen, dus een spel maken vraagt minder tikken.
+
+Duidelijker als er iets misgaat. Als een spel of teamlijst niet laadt, zie je wat er gebeurt en een knop Opnieuw proberen in plaats van een leeg scherm.
+
+Beter leesbaar en toegankelijker. Tekst volgt de tekstgrootte van je iPhone, elke knop werkt met VoiceOver, kleine knoppen zijn makkelijker aan te tikken, kleuren zijn beter leesbaar en animaties volgen Verminder beweging.
+
+Volledig vertaald. Elk scherm is nu in het Nederlands, Frans en Engels, met echte meervouden, en tijden staan in Belgische tijd.
+
+Plus een bevestiging als je je bijnaam bewaart, muziek standaard uit, een spel dat op elke telefoon netjes stopt en veel beveiligings- en stabiliteitsfixes.
+```
+
+### 🤖 Google Play Console: field "Release notes"
+
+```
+<en-US>
+Faster game setup with fewer screens. Retry screens instead of empty lists when something fails to load, and a banner when you lose connection. Easier to use: TalkBack labels, bigger touch targets, more readable colours, reduced motion. Fully translated in English, French and Dutch, times in Belgian time. Plus nickname confirmation, music off by default and many fixes.
+</en-US>
+<fr-FR>
+Création de partie plus rapide, avec moins d'écrans. Un écran Réessayer au lieu d'une liste vide quand un chargement échoue, et un bandeau quand la connexion est perdue. Plus accessible : TalkBack, boutons plus grands, couleurs plus lisibles, animations réduites. Entièrement traduit, heures à l'heure belge. Et une confirmation du pseudo, la musique coupée par défaut, de nombreux correctifs.
+</fr-FR>
+<nl-NL>
+Sneller een spel maken, met minder schermen. Een scherm Opnieuw proberen in plaats van een lege lijst als laden mislukt, en een melding als je verbinding wegvalt. Toegankelijker: TalkBack, grotere knoppen, beter leesbare kleuren, minder beweging. Volledig vertaald, tijden in Belgische tijd. Plus een bevestiging van je bijnaam, muziek standaard uit en veel fixes.
+</nl-NL>
+```
+
+### 📝 App Store Connect: field "App Review Information, Notes"
+
+```
+No new permissions or permission-string changes in this version. Location usage is unchanged: precise GPS is used only during an active game, and tracking stops automatically when the game ends.
+
+To review the app's features without a real multiplayer game or GPS hardware, use the built-in Demo Mode: on the Home screen, long-press the START button (about 1.5 seconds), then enter the code: appreview. This opens a tabbed demo (Chicken map / Hunter map / GameMaster map / Victory) that renders the real UI with mocked data. Tap "Quit Demo" to exit.
+```
+
+---
+
 # Release 1.14.1
 
 > ⚠️ **Do not paste any "Summary" paragraph into any store field.** Only the blocks explicitly labelled **App Store Connect**, **Google Play Console**, or **App Review Notes** below are store-safe.
