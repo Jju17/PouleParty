@@ -92,7 +92,7 @@ jobs:
       - name: Cache Swift packages
         uses: actions/cache@v6
         with:
-          path: SourcePackages
+          path: DerivedData/SourcePackages
           key: spm-${{ hashFiles('ios/PouleParty.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
           restore-keys: spm-
       - run: mkdir -p Firebase/Staging && cp ../ci/firebase/GoogleService-Info.placeholder.plist Firebase/Staging/GoogleService-Info.plist
@@ -104,5 +104,5 @@ jobs:
           -scheme PoulePartyTests
           -destination 'platform=iOS Simulator,OS=latest,name=iPhone 17'
           -enableCodeCoverage YES
-          -clonedSourcePackagesDirPath ../SourcePackages
+          -derivedDataPath ../DerivedData
           -skipPackagePluginValidation -skipMacroValidation

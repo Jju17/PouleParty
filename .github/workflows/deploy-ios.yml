@@ -33,7 +33,7 @@ jobs:
       - name: Cache Swift packages
         uses: actions/cache@v6
         with:
-          path: SourcePackages
+          path: DerivedData/SourcePackages
           key: spm-${{ hashFiles('ios/PouleParty.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
           restore-keys: spm-
 

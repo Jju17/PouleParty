@@ -30,7 +30,7 @@ xcodebuild archive \
   -configuration Release \
   -destination "generic/platform=iOS" \
   -archivePath "$work_dir/PouleParty.xcarchive" \
-  -clonedSourcePackagesDirPath "$ios_dir/../SourcePackages" \
+  -derivedDataPath "$ios_dir/../DerivedData" \
   -skipPackagePluginValidation -skipMacroValidation \
   "${authentication[@]}" \
   CURRENT_PROJECT_VERSION="$build_number"

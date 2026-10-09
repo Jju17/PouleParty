@@ -51,4 +51,4 @@ functions/service-account.json
 *-debug.log
 
 # === CI ===
-/SourcePackages/
+/DerivedData/
