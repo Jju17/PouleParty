@@ -1,0 +1,52 @@
+name: Deploy iOS
+
+on:
+  push:
+    tags:
+      - ios-v*
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-ios
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    uses: ./.github/workflows/verify.yml
+
+  testflight:
+    needs: verify
+    runs-on: macos-latest
+    timeout-minutes: 60
+    environment: production
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check the tag matches the iOS and Android versions
+        run: scripts/check-release-version.sh "${GITHUB_REF_NAME#ios-v}"
+
+      - name: Select the newest Xcode
+        run: ios/Scripts/ci/select-xcode.sh
+
+      - name: Cache Swift packages
+        uses: actions/cache@v6
+        with:
+          path: SourcePackages
+          key: spm-${{ hashFiles('ios/PouleParty.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          restore-keys: spm-
+
+      - name: Restore the production Firebase plist and the Mapbox token
+        env:
+          GOOGLE_SERVICE_INFO_PLIST_PROD_BASE64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_PROD_BASE64 }}
+          MAPBOX_ACCESS_TOKEN: ${{ secrets.MAPBOX_ACCESS_TOKEN }}
+        run: ios/Scripts/ci/restore-ios-config.sh
+
+      - name: Archive and upload to TestFlight
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_P8: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8 }}
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: ios/Scripts/ci/upload-testflight.sh "$((BUILD_NUMBER + 1000))"
