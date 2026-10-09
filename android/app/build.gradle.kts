@@ -31,8 +31,8 @@ android {
         applicationId = "dev.rahier.pouleparty2"
         minSdk = 26
         targetSdk = 36
-        versionCode = 43
-        versionName = "1.14.1"
+        versionCode = 44
+        versionName = "1.15.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         resValue("string", "mapbox_access_token", mapboxAccessToken)
