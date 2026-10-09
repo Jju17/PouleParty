@@ -29,14 +29,17 @@ jobs:
         run: scripts/check-release-version.sh "${GITHUB_REF_NAME#ios-v}"
 
       - name: Select the newest Xcode
+        id: xcode
         run: ios/Scripts/ci/select-xcode.sh
 
-      - name: Cache Swift packages
-        uses: actions/cache@v6
+      - name: Restore Swift packages from the main branch cache
+        uses: actions/cache/restore@v6
         with:
-          path: DerivedData/SourcePackages
-          key: spm-${{ hashFiles('ios/PouleParty.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
-          restore-keys: spm-
+          path: |
+            DerivedData
+            !DerivedData/Logs
+          key: ios-deriveddata-${{ steps.xcode.outputs.version }}-${{ hashFiles('ios/PouleParty.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          restore-keys: ios-deriveddata-${{ steps.xcode.outputs.version }}-
 
       - name: Restore the production Firebase plist and the Mapbox token
         env:

@@ -87,13 +87,16 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Select the newest Xcode
+        id: xcode
         run: Scripts/ci/select-xcode.sh
-      - name: Cache Swift packages
+      - name: Cache Swift packages and their build products
         uses: actions/cache@v6
         with:
-          path: DerivedData/SourcePackages
-          key: spm-${{ hashFiles('ios/PouleParty.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
-          restore-keys: spm-
+          path: |
+            DerivedData
+            !DerivedData/Logs
+          key: ios-deriveddata-${{ steps.xcode.outputs.version }}-${{ hashFiles('ios/PouleParty.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          restore-keys: ios-deriveddata-${{ steps.xcode.outputs.version }}-
       - run: mkdir -p Firebase/Staging && cp ../ci/firebase/GoogleService-Info.placeholder.plist Firebase/Staging/GoogleService-Info.plist
       - run: cp Config/Secrets.xcconfig.example Config/Secrets.xcconfig
       - run: brew install swiftlint

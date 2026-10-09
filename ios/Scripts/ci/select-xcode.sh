@@ -9,3 +9,4 @@ if [ -z "$newest_xcode" ]; then
 fi
 sudo xcode-select --switch "$newest_xcode"
 xcodebuild -version
+echo "version=$(xcodebuild -version | sed -n 's/^Xcode //p')" >> "${GITHUB_OUTPUT:-/dev/null}"
