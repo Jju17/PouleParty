@@ -10,7 +10,6 @@ The living list of what is still open. Close an item by deleting it in the commi
 
 ## Release pipeline
 
-- **Bitrise iOS workflow** is redundant since 1.15.0 (1002) reached TestFlight from GitHub Actions: delete `deploy_testflight` from `bitrise.yml`.
 - **Android release from GitHub Actions** waits for the Play Console account change; Bitrise `deploy_play_store` stays until then.
 
 ## Open from the October 2026 review
