@@ -22,6 +22,7 @@ deploy() {
   [[ "$alias" == "production" ]] && site="https://pouleparty.be" || site="https://pouleparty-ba586.web.app"
   echo "== Deploying to $alias"
   local live code removed
+  firebase functions:list --project "$alias" --json > /dev/null 2>&1 || { echo "FAILED: cannot list the live functions on $alias; run firebase login --reauth"; exit 1; }
   live=$(firebase functions:list --project "$alias" --json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const r=JSON.parse(s);console.log((r.result||[]).map(f=>f.id).join("\n"))})' | LC_ALL=C sort)
   code=$(cd functions && node -e 'console.log(Object.keys(require("./lib/index.js")).join("\n"))' | LC_ALL=C sort)
   removed=$(LC_ALL=C comm -23 <(echo "$live") <(echo "$code"))
